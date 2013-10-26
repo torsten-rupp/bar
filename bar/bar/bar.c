@@ -1155,23 +1155,21 @@ LOCAL void output(FILE *file, const String string)
 * Purpose: init server
 * Input  : server     - server
 *          serverType - server type
-*          name       - server name
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initServer(Server *server, ServerTypes serverType, const String name)
+LOCAL void initServer(Server *server, ServerTypes serverType)
 {
   assert(server != NULL);
-  assert(name != NULL);
 
   if (!Semaphore_init(&server->lock))
   {
     HALT_FATAL_ERROR("cannot initialize server lock semaphore");
   }
   server->type                                = serverType;
-  server->name                                = String_duplicate(name);
+  server->name                                = String_new();
   switch (serverType)
   {
     case SERVER_TYPE_FTP:
@@ -1198,6 +1196,8 @@ LOCAL void initServer(Server *server, ServerTypes serverType, const String name)
         break;
     #endif /* NDEBUG */
   }
+  server->maxConnectionCount                  = MAX_CONNECTION_COUNT_UNLIMITED;
+  server->maxStorageSize                      = MAX_STORAGE_SIZE_UNLIMITED;
   server->connection.lowPriorityRequestCount  = 0;
   server->connection.highPriorityRequestCount = 0;
   server->connection.connectionCount          = 0;
@@ -1219,20 +1219,20 @@ LOCAL void doneServer(Server *server)
   switch (server->type)
   {
     case SERVER_TYPE_FTP:
-      if (defaultWebDAVServer.ftpServer.password != NULL) Password_delete(server->ftpServer.password);
-      if (defaultWebDAVServer.ftpServer.loginName != NULL) String_delete(server->ftpServer.loginName);
+      if (server->ftpServer.password != NULL) Password_delete(server->ftpServer.password);
+      if (server->ftpServer.loginName != NULL) String_delete(server->ftpServer.loginName);
       break;
     case SERVER_TYPE_SSH:
-      if (defaultWebDAVServer.sshServer.privateKeyFileName != NULL) String_delete(server->sshServer.privateKeyFileName);
-      if (defaultWebDAVServer.sshServer.publicKeyFileName != NULL) String_delete(server->sshServer.publicKeyFileName);
-      if (defaultWebDAVServer.sshServer.password != NULL) Password_delete(server->sshServer.password);
-      if (defaultWebDAVServer.sshServer.loginName != NULL) String_delete(server->sshServer.loginName);
+      if (server->sshServer.privateKeyFileName != NULL) String_delete(server->sshServer.privateKeyFileName);
+      if (server->sshServer.publicKeyFileName != NULL) String_delete(server->sshServer.publicKeyFileName);
+      if (server->sshServer.password != NULL) Password_delete(server->sshServer.password);
+      if (server->sshServer.loginName != NULL) String_delete(server->sshServer.loginName);
       break;
     case SERVER_TYPE_WEBDAV:
-      if (defaultWebDAVServer.webDAVServer.privateKeyFileName != NULL) String_delete(server->webDAVServer.privateKeyFileName);
-      if (defaultWebDAVServer.webDAVServer.publicKeyFileName != NULL) String_delete(server->webDAVServer.publicKeyFileName);
-      if (defaultWebDAVServer.webDAVServer.password != NULL) Password_delete(server->webDAVServer.password);
-      if (defaultWebDAVServer.webDAVServer.loginName != NULL) String_delete(server->webDAVServer.loginName);
+      if (server->webDAVServer.privateKeyFileName != NULL) String_delete(server->webDAVServer.privateKeyFileName);
+      if (server->webDAVServer.publicKeyFileName != NULL) String_delete(server->webDAVServer.publicKeyFileName);
+      if (server->webDAVServer.password != NULL) Password_delete(server->webDAVServer.password);
+      if (server->webDAVServer.loginName != NULL) String_delete(server->webDAVServer.loginName);
       break;
     #ifndef NDEBUG
       default:
@@ -1242,6 +1242,31 @@ LOCAL void doneServer(Server *server)
   }
   String_delete(server->name);
   Semaphore_done(&server->lock);
+}
+
+/***********************************************************************\
+* Name   : newServerNode
+* Purpose: new server node
+* Input  : serverType - server type
+*          name       - server name
+* Output : -
+* Return : server node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ServerNode *newServerNode(ServerTypes serverType, const String name)
+{
+  ServerNode *serverNode;
+
+  serverNode = LIST_NEW_NODE(ServerNode);
+  if (serverNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  initServer(&serverNode->server,serverType);
+  String_set(serverNode->server.name,name);
+
+  return serverNode;
 }
 
 /***********************************************************************\
@@ -1261,6 +1286,58 @@ LOCAL void freeServerNode(ServerNode *serverNode, void *userData)
   UNUSED_VARIABLE(userData);
 
   doneServer(&serverNode->server);
+}
+
+/***********************************************************************\
+* Name   : initDevice
+* Purpose: init device
+* Input  : device - device
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initDevice(Device *device)
+{
+  assert(device != NULL);
+
+  device->requestVolumeCommand    = NULL;
+  device->unloadVolumeCommand     = NULL;
+  device->loadVolumeCommand       = NULL;
+  device->volumeSize              = 0LL;
+  device->imagePreProcessCommand  = NULL;
+  device->imagePostProcessCommand = NULL;
+  device->imageCommand            = NULL;
+  device->eccPreProcessCommand    = NULL;
+  device->eccPostProcessCommand   = NULL;
+  device->eccCommand              = NULL;
+  device->writePreProcessCommand  = NULL;
+  device->writePostProcessCommand = NULL;
+  device->writeCommand            = NULL;
+}
+
+/***********************************************************************\
+* Name   : newDeviceNode
+* Purpose: new server node
+* Input  : name - device name
+* Output : -
+* Return : device node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL DeviceNode *newDeviceNode(const String name)
+{
+  DeviceNode *deviceNode;
+
+  deviceNode = LIST_NEW_NODE(DeviceNode);
+  if (deviceNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  initDevice(&deviceNode->device);
+  deviceNode->name = String_duplicate(name);
+
+  return deviceNode;
 }
 
 /***********************************************************************\
@@ -1363,92 +1440,32 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
     {
       ServerNode *serverNode;
 
-      serverNode = LIST_NEW_NODE(ServerNode);
-      if (serverNode == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-      initServer(&serverNode->server,SERVER_TYPE_FTP,name);
-      serverNode->server.ftpServer.loginName          = NULL;
-      serverNode->server.ftpServer.password           = NULL;
-//      serverNode->server.ftpServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
-//      serverNode->server.ftpServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
-
+      serverNode = newServerNode(SERVER_TYPE_FTP,name);
       List_append(&serverList,serverNode);
-
       currentFTPServer = &serverNode->server;
     }
     else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
     {
       ServerNode *serverNode;
 
-      serverNode = LIST_NEW_NODE(ServerNode);
-      if (serverNode == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-      initServer(&serverNode->server,SERVER_TYPE_SSH,name);
-      serverNode->server.sshServer.port               = 22;
-      serverNode->server.sshServer.loginName          = NULL;
-      serverNode->server.sshServer.password           = NULL;
-      serverNode->server.sshServer.publicKeyFileName  = NULL;
-      serverNode->server.sshServer.privateKeyFileName = NULL;
-//      serverNode->server.sshServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
-//      serverNode->server.sshServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
-
+      serverNode = newServerNode(SERVER_TYPE_SSH,name);
       List_append(&serverList,serverNode);
-
       currentSSHServer = &serverNode->server;
     }
     else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
     {
       ServerNode *serverNode;
 
-      serverNode = LIST_NEW_NODE(ServerNode);
-      if (serverNode == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-      initServer(&serverNode->server,SERVER_TYPE_WEBDAV,name);
-#warning TODO: remove?
-//      serverNode->server.webDAVServer.port               = 80;
-      serverNode->server.webDAVServer.loginName          = NULL;
-      serverNode->server.webDAVServer.password           = NULL;
-      serverNode->server.webDAVServer.publicKeyFileName  = NULL;
-      serverNode->server.webDAVServer.privateKeyFileName = NULL;
-//      serverNode->server.webDAVServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
-//      serverNode->server.webDAVServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
-
+      serverNode = newServerNode(SERVER_TYPE_WEBDAV,name);
       List_append(&serverList,serverNode);
-
       currentWebDAVServer = &serverNode->server;
     }
     else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
     {
       DeviceNode *deviceNode;
 
-      deviceNode = LIST_NEW_NODE(DeviceNode);
-      if (deviceNode == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-      deviceNode->name                           = String_duplicate(name);
-      deviceNode->device.requestVolumeCommand    = NULL;
-      deviceNode->device.unloadVolumeCommand     = NULL;
-      deviceNode->device.loadVolumeCommand       = NULL;
-      deviceNode->device.volumeSize              = 0LL;
-      deviceNode->device.imagePreProcessCommand  = NULL;
-      deviceNode->device.imagePostProcessCommand = NULL;
-      deviceNode->device.imageCommand            = NULL;
-      deviceNode->device.eccPreProcessCommand    = NULL;
-      deviceNode->device.eccPostProcessCommand   = NULL;
-      deviceNode->device.eccCommand              = NULL;
-      deviceNode->device.writePreProcessCommand  = NULL;
-      deviceNode->device.writePostProcessCommand = NULL;
-      deviceNode->device.writeCommand            = NULL;
-
+      deviceNode = newDeviceNode(name);
       List_append(&deviceList,deviceNode);
-
       currentDevice = &deviceNode->device;
     }
     else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
@@ -2611,28 +2628,9 @@ LOCAL Errors initAll(void)
   PatternList_init(&excludePatternList);
   PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
-  defaultFTPServer.ftpServer.loginName             = NULL;
-  defaultFTPServer.ftpServer.password              = NULL;
-  defaultFTPServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
-  defaultFTPServer.maxStorageSize        = MAX_STORAGE_SIZE_UNLIMITED;
-//  initServerAllocation(&defaultFTPServerAllocation);
-  defaultSSHServer.sshServer.port                  = 22;
-  defaultSSHServer.sshServer.loginName             = NULL;
-  defaultSSHServer.sshServer.password              = NULL;
-  defaultSSHServer.sshServer.publicKeyFileName     = NULL;
-  defaultSSHServer.sshServer.privateKeyFileName    = NULL;
-  defaultSSHServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
-  defaultSSHServer.maxStorageSize        = MAX_STORAGE_SIZE_UNLIMITED;
-//  initServerAllocation(&defaultSSHServerAllocation);
-#warning TODO: remove?
-//  defaultWebDAVServer.port               = 80;
-  defaultWebDAVServer.webDAVServer.loginName          = NULL;
-  defaultWebDAVServer.webDAVServer.password           = NULL;
-  defaultWebDAVServer.webDAVServer.publicKeyFileName  = NULL;
-  defaultWebDAVServer.webDAVServer.privateKeyFileName = NULL;
-//  defaultWebDAVServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
-  defaultWebDAVServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
-//  initServerAllocation(&defaultWebDAVServerAllocation);
+  initServer(&defaultFTPServer,SERVER_TYPE_FTP);
+  initServer(&defaultSSHServer,SERVER_TYPE_SSH);
+  initServer(&defaultWebDAVServer,SERVER_TYPE_WEBDAV);
   defaultDevice.requestVolumeCommand     = NULL;
   defaultDevice.unloadVolumeCommand      = NULL;
   defaultDevice.loadVolumeCommand        = NULL;
@@ -2690,26 +2688,20 @@ LOCAL Errors initAll(void)
   indexDatabaseHandle                    = NULL;
 
   // initialize default ssh keys
-  fileName = File_appendFileNameCString(String_newCString(getenv("HOME")),".ssh/id_rsa.pub");
+  fileName = String_new();
+  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
   if (File_exists(fileName))
   {
-    defaultSSHServer.sshServer.publicKeyFileName    = fileName;
-    defaultSSHServer.webDAVServer.publicKeyFileName = fileName;
+    defaultSSHServer.sshServer.publicKeyFileName       = String_duplicate(fileName);
+    defaultWebDAVServer.webDAVServer.publicKeyFileName = String_duplicate(fileName);
   }
-  else
-  {
-    String_delete(fileName);
-  }
-  fileName = File_appendFileNameCString(String_newCString(getenv("HOME")),".ssh/id_rsa");
+  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
   if (File_exists(fileName))
   {
-    defaultSSHServer.sshServer.privateKeyFileName    = fileName;
-    defaultSSHServer.webDAVServer.privateKeyFileName = fileName;
+    defaultSSHServer.sshServer.privateKeyFileName       = String_duplicate(fileName);
+    defaultWebDAVServer.webDAVServer.privateKeyFileName = String_duplicate(fileName);
   }
-  else
-  {
-    String_delete(fileName);
-  }
+  String_delete(fileName);
 
   // initialize command line options and config values
   ConfigValue_init(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
@@ -3384,7 +3376,7 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   return n;
 }
 
-bool allocateServerConnection(Server *server, ServerConnectionPriorities priority)
+bool allocateServerConnection(Server *server, ServerConnectionPriorities priority, long timeout)
 {
   SemaphoreLock semaphoreLock;
 
@@ -3405,7 +3397,11 @@ bool allocateServerConnection(Server *server, ServerConnectionPriorities priorit
           // wait for free connection
           while (server->connection.connectionCount >= server->maxConnectionCount)
           {
-            Semaphore_waitModified(&server->lock,SEMAPHORE_WAIT_FOREVER);
+            if (!Semaphore_waitModified(&server->lock,timeout))
+            {
+              Semaphore_unlock(&server->lock);
+              return FALSE;
+            }
           }
 
           // low priority request done
@@ -3424,7 +3420,11 @@ bool allocateServerConnection(Server *server, ServerConnectionPriorities priorit
           // wait for free connection
           while (server->connection.connectionCount >= server->maxConnectionCount)
           {
-            Semaphore_waitModified(&server->lock,SEMAPHORE_WAIT_FOREVER);
+            if (!Semaphore_waitModified(&server->lock,timeout))
+            {
+              Semaphore_unlock(&server->lock);
+              return FALSE;
+            }
           }
 
           // high priority request done
