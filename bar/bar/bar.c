@@ -1200,7 +1200,7 @@ LOCAL void initServer(Server *server, ServerTypes serverType)
   server->maxStorageSize                      = MAX_STORAGE_SIZE_UNLIMITED;
   server->connection.lowPriorityRequestCount  = 0;
   server->connection.highPriorityRequestCount = 0;
-  server->connection.connectionCount          = 0;
+  server->connection.count                    = 0;
 }
 
 /***********************************************************************\
@@ -3388,14 +3388,14 @@ bool allocateServerConnection(Server *server, ServerConnectionPriorities priorit
     {
       case SERVER_CONNECTION_PRIORITY_LOW:
         if (   (server->maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
-            && (server->connection.connectionCount >= server->maxConnectionCount)
+            && (server->connection.count >= server->maxConnectionCount)
            )
         {
           // request low priority connection
           server->connection.lowPriorityRequestCount++;
 
           // wait for free connection
-          while (server->connection.connectionCount >= server->maxConnectionCount)
+          while (server->connection.count >= server->maxConnectionCount)
           {
             if (!Semaphore_waitModified(&server->lock,timeout))
             {
@@ -3411,14 +3411,14 @@ bool allocateServerConnection(Server *server, ServerConnectionPriorities priorit
         break;
       case SERVER_CONNECTION_PRIORITY_HIGH:
         if (   (server->maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
-            && (server->connection.connectionCount >= server->maxConnectionCount)
+            && (server->connection.count >= server->maxConnectionCount)
            )
         {
           // request high priority connection
           server->connection.highPriorityRequestCount++;
 
           // wait for free connection
-          while (server->connection.connectionCount >= server->maxConnectionCount)
+          while (server->connection.count >= server->maxConnectionCount)
           {
             if (!Semaphore_waitModified(&server->lock,timeout))
             {
@@ -3440,7 +3440,7 @@ bool allocateServerConnection(Server *server, ServerConnectionPriorities priorit
     }
 
     // allocated connection
-    server->connection.connectionCount++;
+    server->connection.count++;
   }
 
   return TRUE;
@@ -3451,16 +3451,16 @@ void freeServerConnection(Server *server)
   SemaphoreLock semaphoreLock;
 
   assert(server != NULL);
-  assert(server->connection.connectionCount > 0);
+  assert(server->connection.count > 0);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&server->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // free connection
-    server->connection.connectionCount--;
+    server->connection.count--;
   }
 }
 
-bool isServerConnectionAllocationPending(Server *server, ServerConnectionPriorities priority)
+bool isServerAllocationPending(Server *server)
 {
   SemaphoreLock semaphoreLock;
   bool          pendingFlag;
@@ -3470,20 +3470,7 @@ bool isServerConnectionAllocationPending(Server *server, ServerConnectionPriorit
   pendingFlag = FALSE;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&server->lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    switch (priority)
-    {
-      case SERVER_CONNECTION_PRIORITY_LOW:
-        pendingFlag = (server->connection.lowPriorityRequestCount);
-        break;
-      case SERVER_CONNECTION_PRIORITY_HIGH:
-        pendingFlag = (server->connection.highPriorityRequestCount);
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
+    pendingFlag = (server->connection.highPriorityRequestCount > 0);
   }
 
   return pendingFlag;

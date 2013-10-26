@@ -221,7 +221,7 @@ typedef struct
   {
     uint      lowPriorityRequestCount;                   // number of waiting low priority connection requests
     uint      highPriorityRequestCount;                  // number of waiting high priority connection requests
-    uint      connectionCount;                           // number of connections
+    uint      count;                                     // number of current connections
   }           connection;
 } Server;
 
@@ -816,17 +816,16 @@ bool allocateServerConnection(Server *server, ServerConnectionPriorities priorit
 void freeServerConnection(Server *server);
 
 /***********************************************************************\
-* Name   : isServerConnectionAllocationPending
-* Purpose: check if another server allocation is pending
-* Input  : server   - server
-*          priority - priority of other server allocation
+* Name   : isServerAllocationPending
+* Purpose: check if a server allocation with high priority is pending
+* Input  : server - server
 * Output : -
-* Return : TRUE if another server connection allocation with higher
-*          priority is pending, FALSE otherwise
+* Return : TRUE if server allocation with high priority is pending,
+*          FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool isServerConnectionAllocationPending(Server *server, ServerConnectionPriorities priority);
+bool isServerAllocationPending(Server *server);
 
 /***********************************************************************\
 * Name   : inputCryptPassword
