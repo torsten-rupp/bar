@@ -1782,9 +1782,7 @@ Errors File_tell(FileHandle *fileHandle, uint64 *offset)
   {
     return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
   }
-#warning TODO
-//assert(sizeof(off_t)==8);
-assert(n == (off_t)fileHandle->index);
+  assert((uint64)n == fileHandle->index);
 
   (*offset) = fileHandle->index;
 
