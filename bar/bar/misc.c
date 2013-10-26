@@ -987,11 +987,8 @@ void Misc_waitEnter(void)
       termioSettings.c_lflag &= ~ECHO;
       tcsetattr(File_getDescriptor(stdin),TCSANOW,&termioSettings);
 
-      // read line
-      if (fgets(s,2,stdin) == NULL)
-      {
-        // ignore error
-      }
+      // read line (and ignore)
+      (void)fgets(s,2,stdin);
 
       // restore console settings
       tcsetattr(File_getDescriptor(stdin),TCSANOW,&oldTermioSettings);
@@ -1007,7 +1004,7 @@ bool Misc_getYesNo(const char *message)
   #if   defined(PLATFORM_LINUX)
     struct termios oldTermioSettings;
     struct termios termioSettings;
-    char           ch;
+    int            keyCode;
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
 
@@ -1027,16 +1024,16 @@ bool Misc_getYesNo(const char *message)
       // read yes/no
       do
       {
-        ch = toupper(fgetc(stdin));
+        keyCode = toupper(fgetc(stdin));
       }
-      while ((ch != 'Y') && (ch != 'N') && (ch != '\n'));
+      while ((keyCode != (int)'Y') && (keyCode != (int)'N') && (keyCode != 13));
 
       // restore console settings
       tcsetattr(File_getDescriptor(stdin),TCSANOW,&oldTermioSettings);
 
       fputc('\n',stdout);
 
-      return (ch == 'Y');
+      return (keyCode == (int)'Y');
     }
     else
     {
