@@ -186,7 +186,6 @@ LOCAL Errors createLocalStorageArchive(String           localFileName,
                                       )
 {
   StorageSpecifier storageSpecifier;
-  String           storageFileName;
   Errors           error;
 
   assert(localFileName != NULL);
@@ -194,7 +193,6 @@ LOCAL Errors createLocalStorageArchive(String           localFileName,
 
   // parse storage name
   Storage_initSpecifier(&storageSpecifier);
-  storageFileName = String_new();
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
@@ -202,7 +200,6 @@ LOCAL Errors createLocalStorageArchive(String           localFileName,
                String_cString(storageName),
                Errors_getText(error)
               );
-    String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
@@ -211,14 +208,12 @@ LOCAL Errors createLocalStorageArchive(String           localFileName,
   error = File_getTmpFileName(localFileName,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
-    String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
 
   // copy storage to local file
   error = Storage_copy(&storageSpecifier,
-                       storageFileName,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        NULL,//StorageRequestVolumeFunction storageRequestVolumeFunction,
@@ -230,13 +225,11 @@ LOCAL Errors createLocalStorageArchive(String           localFileName,
   if (error != ERROR_NONE)
   {
     File_delete(localFileName,FALSE);
-    String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
 
   // free resources
-  String_delete(storageFileName);
   Storage_doneSpecifier(&storageSpecifier);
 
   return ERROR_NONE;
@@ -292,7 +285,6 @@ LOCAL Errors restoreFile(const String                    storageName,
 {
   bool              restoredFlag;
   StorageSpecifier  storageSpecifier;
-  String            storageFileName;
   StorageHandle     storageHandle;
   byte              *buffer;
 //  bool              abortFlag;
@@ -319,7 +311,6 @@ LOCAL Errors restoreFile(const String                    storageName,
 
   // parse storage name
   Storage_initSpecifier(&storageSpecifier);
-  storageFileName = String_new();
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
@@ -327,7 +318,6 @@ LOCAL Errors restoreFile(const String                    storageName,
                String_cString(storageName),
                Errors_getText(error)
               );
-    String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
@@ -335,7 +325,6 @@ LOCAL Errors restoreFile(const String                    storageName,
   // init storage
   error = Storage_init(&storageHandle,
                        &storageSpecifier,
-                       storageFileName,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
@@ -348,7 +337,6 @@ LOCAL Errors restoreFile(const String                    storageName,
                String_cString(storageName),
                Errors_getText(error)
               );
-    String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
@@ -357,15 +345,12 @@ LOCAL Errors restoreFile(const String                    storageName,
   error = Archive_open(&archiveInfo,
                        &storageHandle,
                        &storageSpecifier,
-                       storageFileName,
                        jobOptions,
-                       archiveGetCryptPasswordFunction,
-                       archiveGetCryptPasswordUserData
+                       CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData)
                       );
   if (error != ERROR_NONE)
   {
     (void)Storage_done(&storageHandle);
-    String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
@@ -836,7 +821,6 @@ LOCAL Errors restoreFile(const String                    storageName,
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
-  String_delete(storageFileName);
   free(buffer);
 
   if      (failError != ERROR_NONE)

@@ -2916,7 +2916,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   Errors Archive_open(ArchiveInfo                     *archiveInfo,
                       StorageHandle                   *storageHandle,
                       const StorageSpecifier          *storageSpecifier,
-                      const String                    storageFileName,
                       const JobOptions                *jobOptions,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData
@@ -2927,7 +2926,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                         ArchiveInfo                     *archiveInfo,
                         StorageHandle                   *storageHandle,
                         const StorageSpecifier          *storageSpecifier,
-                        const String                    storageFileName,
                         const JobOptions                *jobOptions,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData
@@ -2941,7 +2939,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   assert(archiveInfo != NULL);
   assert(storageSpecifier != NULL);
-  assert(storageFileName != NULL);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -2966,7 +2963,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   archiveInfo->ioType                          = ARCHIVE_IO_TYPE_STORAGE_FILE;
   Storage_duplicateSpecifier(&archiveInfo->storage.storageSpecifier,storageSpecifier);
-  archiveInfo->storage.storageFileName         = String_duplicate(storageFileName);
   archiveInfo->storage.storageHandle           = storageHandle;
   archiveInfo->chunkIO                         = &CHUNK_IO_STORAGE_FILE;
   archiveInfo->chunkIOUserData                 = storageHandle;
@@ -2988,22 +2984,18 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->lock,{ Semaphore_done(&archiveInfo->lock); });
   AUTOFREE_ADD(&autoFreeList,archiveInfo->printableName,{ String_delete(archiveInfo->printableName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->storage.storageSpecifier,{ Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier); });
-  AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storageFileName,{ String_delete(archiveInfo->storage.storageFileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->archiveEntryList,{ List_done(&archiveInfo->archiveEntryList,NULL,NULL); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->archiveEntryList.lock,{ Semaphore_done(&archiveInfo->archiveEntryList.lock); });
 
-  error = Storage_open(archiveInfo->storage.storageHandle,
-                       &archiveInfo->storage.storageSpecifier,
-                       archiveInfo->storage.storageFileName
-                      );
+  error = Storage_open(archiveInfo->storage.storageHandle,&archiveInfo->storage.storageSpecifier);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
   DEBUG_TESTCODE("Archive_open2") { Storage_close(archiveInfo->storage.storageHandle); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storageFileName,{ Storage_close(archiveInfo->storage.storageHandle); Storage_done(archiveInfo->storage.storageHandle); });
+  AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storageHandle,{ Storage_close(archiveInfo->storage.storageHandle); Storage_done(archiveInfo->storage.storageHandle); });
 
   // check if BAR archive file
   error = getNextChunkHeader(archiveInfo,&chunkHeader);
@@ -3097,7 +3089,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       if (archiveInfo->file.fileName != NULL) String_delete(archiveInfo->file.fileName);
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      String_delete(archiveInfo->storage.storageFileName);
       Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier);
       break;
     #ifndef NDEBUG
@@ -3183,10 +3174,7 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
       }
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      error = Storage_open(archiveInfo->storage.storageHandle,
-                           &archiveInfo->storage.storageSpecifier,
-                           archiveInfo->storage.storageFileName
-                          );
+      error = Storage_open(archiveInfo->storage.storageHandle,&archiveInfo->storage.storageSpecifier);
       if (error != ERROR_NONE)
       {
         return error;
@@ -10112,7 +10100,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     error = Archive_open(&archiveInfo,
                          storageHandle,
                          &storageSpecifier,
-storageSpecifier.fileName,
                          jobOptions,
                          CALLBACK(NULL,NULL)
                         );
@@ -10124,7 +10111,6 @@ storageSpecifier.fileName,
       error = Archive_open(&archiveInfo,
                            storageHandle,
                            &storageSpecifier,
-storageSpecifier.fileName,
                            jobOptions,
                            CALLBACK(NULL,NULL)
                           );
@@ -10136,7 +10122,6 @@ storageSpecifier.fileName,
     error = Archive_open(&archiveInfo,
                          storageHandle,
                          &storageSpecifier,
-storageSpecifier.fileName,
                          jobOptions,
                          CALLBACK(NULL,NULL)
                         );
@@ -10697,7 +10682,6 @@ Errors Archive_copy(const String                    storageName,
   // open source
   error = Archive_open(&sourceArchiveInfo,
                        &storageSpecifier,
-                       storageFileName,
                        jobOptions,
                        archiveGetCryptPassword,
                        archiveGetCryptPasswordData

@@ -788,7 +788,6 @@ Errors Storage_prepare(const String     storageName,
 * Purpose: init new storage
 * Input  : storageHandle                - storage handle variable
 *          storageSpecifier             - storage specifier structure
-*          storageFileName              - storage file name
 *          jobOptions                   - job options
 *          maxBandWidthList             - list with max. band width to
 *                                         use [bits/s] or NULL
@@ -806,7 +805,6 @@ Errors Storage_prepare(const String     storageName,
 
 Errors Storage_init(StorageHandle                *storageHandle,
                     const StorageSpecifier       *storageSpecifier,
-                    const String                 storageFileName,
                     const JobOptions             *jobOptions,
                     BandWidthList                *maxBandWidthList,
                     ServerConnectionPriorities   serverConnectionPriority,
@@ -957,15 +955,13 @@ Errors Storage_create(StorageHandle *storageHandle,
 * Purpose: open storage file
 * Input  : storageHandle    - storage handle
 *          storageSpecifier - storage specifier structure
-*          storageFileName  - storage file name
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Storage_open(StorageHandle          *storageHandle,
-                    const StorageSpecifier *storageSpecifier,
-                    const String           storageFileName
+                    const StorageSpecifier *storageSpecifier
                    );
 
 /***********************************************************************\
@@ -1144,7 +1140,6 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 * Name   : Storage_copy
 * Purpose: copy storage file to local file
 * Input  : storageSpecifier             - storage specifier structure
-*          storageFileName              - storage file name
 *          jobOptions                   - job options
 *          maxBandWidthLIst             - list with max. band width to use [bits/s] or NULL
 *          storageRequestVolumeFunction - volume request call back
@@ -1160,7 +1155,6 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 \***********************************************************************/
 
 Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
-                    const String                 storageFileName,
                     const JobOptions             *jobOptions,
                     BandWidthList                *maxBandWidthList,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,

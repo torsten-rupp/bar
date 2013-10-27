@@ -2817,7 +2817,6 @@ fprintf(stderr,"%s, %d: %ld %s\n",__FILE__,__LINE__,storageId,String_cString(sto
       initJobOptions(&jobOptions);
       error = Storage_init(&storageHandle,
                            &storageSpecifier,
-storageSpecifier.fileName,
                            &jobOptions,
                            &globalOptions.indexDatabaseMaxBandWidthList,
                            SERVER_CONNECTION_PRIORITY_LOW,
@@ -7047,7 +7046,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 {
   String            storageName;
   StorageSpecifier  storageSpecifier;
-  String            storageFileName;
   StorageHandle     storageHandle;
   Errors            error;
   ArchiveInfo       archiveInfo;
@@ -7066,7 +7064,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   }
 
   // parse storage name
-  storageFileName = String_new();
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
@@ -7074,7 +7071,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                String_cString(storageName),
                Errors_getText(error)
               );
-    String_delete(storageFileName);
     sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
     String_delete(storageName);
     return;
@@ -7083,7 +7079,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   // init storage
   error = Storage_init(&storageHandle,
                        &storageSpecifier,
-                       storageFileName,
                        &clientInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
@@ -7096,7 +7091,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                String_cString(storageName),
                Errors_getText(error)
               );
-    String_delete(storageFileName);
     sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
     String_delete(storageName);
     return;
@@ -7106,13 +7100,11 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   error = Archive_open(&archiveInfo,
                        &storageHandle,
                        &storageSpecifier,
-                       storageFileName,
                        &clientInfo->jobOptions,
                        CALLBACK(NULL,NULL)
                       );
   if (error != ERROR_NONE)
   {
-    String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
     sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
     String_delete(storageName);
@@ -7481,7 +7473,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(storageFileName);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(storageName);
 }
@@ -7609,7 +7600,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   DatabaseId       storageId;
   String           storageName;
   StorageSpecifier storageSpecifier;
-  String           storageFileName;
   String           fileName;
   Errors           error;
   StorageHandle    storageHandle;
@@ -7642,7 +7632,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     }
 
     // parse storage name
-    storageFileName = String_new();
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
@@ -7660,7 +7649,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       storageSpecifier.type = STORAGE_TYPE_SFTP;
       error = Storage_init(&storageHandle,
                            &storageSpecifier,
-                           storageFileName,
                            &clientInfo->jobOptions,
                            &globalOptions.indexDatabaseMaxBandWidthList,
                            SERVER_CONNECTION_PRIORITY_HIGH,
@@ -7673,7 +7661,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
         storageSpecifier.type = STORAGE_TYPE_SCP;
         error = Storage_init(&storageHandle,
                              &storageSpecifier,
-                             storageFileName,
                              &clientInfo->jobOptions,
                              &globalOptions.indexDatabaseMaxBandWidthList,
                              SERVER_CONNECTION_PRIORITY_HIGH,
@@ -7687,7 +7674,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       // init other storage types
       error = Storage_init(&storageHandle,
                            &storageSpecifier,
-                           storageFileName,
                            &clientInfo->jobOptions,
                            &globalOptions.indexDatabaseMaxBandWidthList,
                            SERVER_CONNECTION_PRIORITY_HIGH,
@@ -7698,7 +7684,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     if (error != ERROR_NONE)
     {
       String_delete(fileName);
-      String_delete(storageFileName);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
       sendClientResult(clientInfo,id,TRUE,error,"init storage fail: %s",Errors_getText(error));
@@ -7712,7 +7697,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     if (error != ERROR_NONE)
     {
       String_delete(fileName);
-      String_delete(storageFileName);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
       sendClientResult(clientInfo,id,TRUE,error,"delete storage file fail: %s",Errors_getText(error));
@@ -7729,7 +7713,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     if (error != ERROR_NONE)
     {
       String_delete(fileName);
-      String_delete(storageFileName);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
       sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Errors_getText(error));
@@ -7738,7 +7721,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
     // free resources
     String_delete(fileName);
-    String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
   }

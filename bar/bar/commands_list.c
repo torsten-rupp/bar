@@ -1619,7 +1619,6 @@ remoteBarFlag=FALSE;
     // init storage
     error = Storage_init(&storageHandle,
                          &storageSpecifier,
-storageSpecifier.fileName,
                          jobOptions,
                          &globalOptions.maxBandWidthList,
                          SERVER_CONNECTION_PRIORITY_HIGH,
@@ -1656,8 +1655,6 @@ storageSpecifier.fileName,
           error = Archive_open(&archiveInfo,
                                &storageHandle,
                                &storageSpecifier,
-#warning todo
-storageSpecifier.fileName,
                                jobOptions,
                                archiveGetCryptPasswordFunction,
                                archiveGetCryptPasswordUserData

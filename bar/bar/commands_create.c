@@ -4894,7 +4894,6 @@ storageSpecifier.fileName,
   // init storage
   error = Storage_init(&createInfo.storageHandle,
                        createInfo.storageSpecifier,
-                       createInfo.storageFileName,
                        createInfo.jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,

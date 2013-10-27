@@ -464,7 +464,6 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 * Input  : archiveInfo                     - archive info data
 *          storageHandle                   - storage handle
 *          storageSpecifier                - storage specifier structure
-*          storageFileName                 - storage file name
 *          storageName                     - storage name
 *          jobOptions                      - option settings
 *          archiveGetCryptPasswordFunction - get password call back (can
@@ -480,7 +479,6 @@ const Password *Archive_appendDecryptPassword(const Password *password);
   Errors Archive_open(ArchiveInfo                     *archiveInfo,
                       StorageHandle                   *storageHandle,
                       const StorageSpecifier          *storageSpecifier,
-                      const String                    storageFileName,
                       const JobOptions                *jobOptions,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData
@@ -491,7 +489,6 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                         ArchiveInfo                     *archiveInfo,
                         StorageHandle                   *storageHandle,
                         const StorageSpecifier          *storageSpecifier,
-                        const String                    storageFileName,
                         const JobOptions                *jobOptions,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData
