@@ -436,7 +436,6 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 * Notes  : -
 \***********************************************************************/
 
-#warning TODO add maxBandWidthList,serverConnectionPriority?
 #ifdef NDEBUG
   Errors Archive_create(ArchiveInfo                     *archiveInfo,
                         const JobOptions                *jobOptions,

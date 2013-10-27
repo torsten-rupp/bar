@@ -219,7 +219,6 @@ Errors Command_restore(const StringList                *storageNameList,
   byte              *buffer;
   FragmentList      fragmentList;
   StorageSpecifier  storageSpecifier;
-  String            storageFileName;
   String            printableStorageName;
   StorageHandle     storageHandle;
   StringNode        *stringNode;
@@ -268,10 +267,8 @@ Errors Command_restore(const StringList                *storageNameList,
   }
   FragmentList_init(&fragmentList);
   Storage_initSpecifier(&storageSpecifier);
-  storageFileName      = String_new();
   printableStorageName = String_new();
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,storageFileName,{ String_delete(storageFileName); });
   AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
   AUTOFREE_ADD(&autoFreeList,&fragmentList,{ FragmentList_done(&fragmentList); });
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
@@ -287,7 +284,7 @@ Errors Command_restore(const StringList                *storageNameList,
     }
 
     // parse storage name, get printable name
-    error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+    error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
       printError("Invalid storage '%s' (error: %s)!\n",
@@ -297,14 +294,14 @@ Errors Command_restore(const StringList                *storageNameList,
       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
       continue;
     }
-    Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+    Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
     printInfo(0,"Restore from archive '%s':\n",String_cString(printableStorageName));
 
     // init storage
     error = Storage_init(&storageHandle,
                          &storageSpecifier,
-                         storageFileName,
+storageSpecifier.fileName,
                          jobOptions,
                          &globalOptions.maxBandWidthList,
                          SERVER_CONNECTION_PRIORITY_HIGH,
@@ -325,7 +322,7 @@ Errors Command_restore(const StringList                *storageNameList,
     error = Archive_open(&archiveInfo,
                          &storageHandle,
                          &storageSpecifier,
-                         storageFileName,
+storageSpecifier.fileName,
                          jobOptions,
                          archiveGetCryptPasswordFunction,
                          archiveGetCryptPasswordUserData
@@ -2337,7 +2334,6 @@ Errors Command_restore(const StringList                *storageNameList,
 
   // free resources
   String_delete(printableStorageName);
-  String_delete(storageFileName);
   Storage_doneSpecifier(&storageSpecifier);
   FragmentList_done(&fragmentList);
   free(buffer);

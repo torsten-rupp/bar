@@ -637,6 +637,25 @@ LOCAL INLINE bool isAborted(const CreateInfo *createInfo)
 }
 
 /***********************************************************************\
+* Name   : pauseCreate
+* Purpose: pause create
+* Input  : createInfo - create info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void pauseCreate(const CreateInfo *createInfo)
+{
+  assert(createInfo != NULL);
+
+  while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
+  {
+    Misc_udelay(500L*1000L);
+  }
+}
+
+/***********************************************************************\
 * Name   : pauseStorage
 * Purpose: pause storage
 * Input  : createInfo - create info
@@ -1459,10 +1478,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         )
   {
     // pause
-    while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-    {
-      Misc_udelay(500L*1000L);
-    }
+    pauseCreate(createInfo);
 
     // find base path
     File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
@@ -1491,10 +1507,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
           )
     {
       // pause
-      while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-      {
-        Misc_udelay(500L*1000L);
-      }
+      pauseCreate(createInfo);
 
       // get next file/directory to process
       name = StringList_getLast(&nameList,name);
@@ -1578,10 +1591,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                           )
                     {
                       // pause
-                      while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-                      {
-                        Misc_udelay(500L*1000L);
-                      }
+                      pauseCreate(createInfo);
 
                       // read next directory entry
                       error = File_readDirectoryList(&directoryListHandle,fileName);
@@ -1901,10 +1911,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         )
   {
     // pause
-    while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-    {
-      Misc_udelay(500L*1000L);
-    }
+    pauseCreate(createInfo);
 
     // find base path
     File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
@@ -1933,10 +1940,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           )
     {
       // pause
-      while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-      {
-        Misc_udelay(500L*1000L);
-      }
+      pauseCreate(createInfo);
 
       // get next entry to process
       name = StringList_getLast(&nameList,name);
@@ -2028,10 +2032,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           )
                     {
                       // pause
-                      while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-                      {
-                        Misc_udelay(500L*1000L);
-                      }
+                      pauseCreate(createInfo);
 
                       // read next directory entry
                       error = File_readDirectoryList(&directoryListHandle,fileName);
@@ -2738,10 +2739,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     if (createInfo->failError == ERROR_NONE)
     {
       // pause
-      while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
-      {
-        Misc_udelay(500L*1000L);
-      }
+      pauseStorage(createInfo);
 
       // initial pre-process
       error = Storage_preProcess(&createInfo->storageHandle,TRUE);
@@ -2807,14 +2805,14 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     DEBUG_TESTCODE("storageThreadCode2") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 
     // get storage name
-    Storage_getHandleName(storageName,
-                          &createInfo->storageHandle,
-                          storageMsg.destinationFileName
-                         );
-    Storage_getPrintableName(printableStorageName,
-                             &createInfo->storageHandle.storageSpecifier,
-                             storageMsg.destinationFileName
-                            );
+    Storage_getNameFromHandle(storageName,
+                              &createInfo->storageHandle,
+                              storageMsg.destinationFileName
+                             );
+    Storage_getPrintableNameFromHandle(printableStorageName,
+                                       &createInfo->storageHandle,
+                                       storageMsg.destinationFileName
+                                      );
 
     // set database storage name and state
     if (storageMsg.storageId != DATABASE_ID_NONE)
@@ -3010,7 +3008,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     {
       // delete old indizes for same storage file
       while (   Index_findByName(indexDatabaseHandle,
-                                 STORAGE_TYPE_UNKNOWN,
+                                 STORAGE_TYPE_ANY,
                                  hostName,
                                  loginName,
                                  deviceName,
@@ -3380,10 +3378,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
     do
     {
       // pause
-      while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-      {
-        Misc_udelay(500L*1000L);
-      }
+      pauseCreate(createInfo);
 
       // read file data
       error = File_read(&fileHandle,buffer,bufferSize,&bufferLength);
@@ -3700,10 +3695,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
           )
     {
       // pause
-      while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-      {
-        Misc_udelay(500L*1000L);
-      }
+      pauseCreate(createInfo);
 
       // read blocks from device
       bufferBlockCount = 0;
@@ -4356,10 +4348,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     do
     {
       // pause
-      while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-      {
-        Misc_udelay(500L*1000L);
-      }
+      pauseCreate(createInfo);
 
       // read file data
       error = File_read(&fileHandle,buffer,bufferSize,&bufferLength);
@@ -4676,10 +4665,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
         )
   {
     // pause
-    while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-    {
-      Misc_udelay(500L*1000L);
-    }
+    pauseCreate(createInfo);
 
     // check if own file (in temporary directory or storage file)
     ownFileFlag =    String_startsWith(entryMsg.name,tmpDirectory)
@@ -4835,7 +4821,6 @@ Errors Command_create(const String                    storageName,
                      )
 {
   AutoFreeList     autoFreeList;
-  String           storageFileName;
   StorageSpecifier storageSpecifier;
   CreateInfo       createInfo;
   String           printableStorageName;
@@ -4862,30 +4847,25 @@ Errors Command_create(const String                    storageName,
 
   // parse storage name
   Storage_initSpecifier(&storageSpecifier);
-  storageFileName = String_new();
-  error = Storage_parseName(storageName,
-                            &storageSpecifier,
-                            storageFileName
-                           );
+  error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize storage '%s' (error: %s)\n",
                String_cString(storageName),
                Errors_getText(error)
               );
-    String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Command_create1") { String_delete(storageFileName); Storage_doneSpecifier(&storageSpecifier); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE("Command_create1") { Storage_doneSpecifier(&storageSpecifier); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
-  AUTOFREE_ADD(&autoFreeList,storageFileName,{ String_delete(storageFileName); });
 
   // init threads
   initCreateInfo(&createInfo,
                  &storageSpecifier,
-                 storageFileName,
+#warning todo
+storageSpecifier.fileName,
                  includeEntryList,
                  excludePatternList,
                  compressExcludePatternList,
@@ -4908,8 +4888,7 @@ Errors Command_create(const String                    storageName,
   AUTOFREE_ADD(&autoFreeList,createThreads,{ free(createThreads); });
 
   // get printable storage name
-  printableStorageName = String_new();
-  Storage_getPrintableName(printableStorageName,createInfo.storageSpecifier,createInfo.storageFileName);
+  printableStorageName = Storage_getPrintableName(String_new(),createInfo.storageSpecifier,NULL);
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // init storage
@@ -5166,7 +5145,6 @@ createThreadCode(&createInfo);
   doneCreateInfo(&createInfo);
   free(createThreads);
   Storage_doneSpecifier(&storageSpecifier);
-  String_delete(storageFileName);
   AutoFree_done(&autoFreeList);
 
   return error;

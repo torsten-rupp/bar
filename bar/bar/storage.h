@@ -142,18 +142,23 @@ typedef enum
   STORAGE_TYPE_BD,
   STORAGE_TYPE_DEVICE,
 
+  STORAGE_TYPE_ANY,
+
   STORAGE_TYPE_UNKNOWN
 } StorageTypes;
+
+//#define STORAGE_TYPE_ALL STORAGE_TYPE_NONE
 
 // storage specifier
 typedef struct
 {
-  StorageTypes type;
-  String       hostName;
-  uint         hostPort;
-  String       loginName;
-  Password     *loginPassword;
-  String       deviceName;
+  StorageTypes type;                                       // storage type
+  String       hostName;                                   // host name
+  uint         hostPort;                                   // host port
+  String       loginName;                                  // login name
+  Password     *loginPassword;                             // login name
+  String       deviceName;                                 // device name
+  String       fileName;                                   // file name
 } StorageSpecifier;
 
 // volume states
@@ -707,17 +712,16 @@ StorageTypes Storage_getType(const String storageName);
 /***********************************************************************\
 * Name   : Storage_parseName
 * Purpose: parse storage name and get storage type
-* Input  : storageName - storage name
-* Output : storageSpecifier - storage specific data (can be NULL)
-*          fileName         - storage file name (can be NULL)
+* Input  : storageSpecifier - storage specific variable
+*          storageName - storage name
+* Output : storageSpecifier - storage specific data
 * Return : ERROR_NONE or error code
 * Notes  : name structure:
 *            <type>://<storage specifier>/<filename>
 \***********************************************************************/
 
-Errors Storage_parseName(const String     storageName,
-                         StorageSpecifier *storageSpecifier,
-                         String           fileName
+Errors Storage_parseName(StorageSpecifier *storageSpecifier,
+                         const String     storageName
                         );
 
 /***********************************************************************\
@@ -738,10 +742,10 @@ bool Storage_equalNames(const String storageName1,
 * Purpose: get storage name
 * Input  : storageName            - storage name variable
 *          storageSpecifierString - storage specifier string
-*          fileName               - file name (can be NULL)
+*          fileName               - fileName (can be NULL)
 * Output : storageName - storage name
 * Return : storage name variable
-* Notes  : -
+* Notes  : if fileName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
 String Storage_getName(String                 storageName,
@@ -754,10 +758,10 @@ String Storage_getName(String                 storageName,
 * Purpose: get printable storage name (without password)
 * Input  : storageName            - storage name variable
 *          storageSpecifierString - storage specifier string
-*          fileName               - file name (can be NULL)
+*          fileName               - fileName (can be NULL)
 * Output : storageName - storage name
 * Return : storage name variable
-* Notes  : -
+* Notes  : if fileName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
 String Storage_getPrintableName(String                 storageName,
@@ -836,20 +840,37 @@ Errors Storage_done(StorageHandle *storageHandle);
 bool Storage_isServerAllocationPending(StorageHandle *storageHandle);
 
 /***********************************************************************\
-* Name   : Storage_getHandleName
+* Name   : Storage_getNameFromHandle
 * Purpose: get storage name from storage handle
 * Input  : storageName   - storage name variable
 *          storageHandle - storage handle
-*          fileName      - file name (can be NULL)
+*          fileName      - fileName (can be NULL)
 * Output : storageName - storage name
 * Return : storage name variable
-* Notes  : -
+* Notes  : if fileName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
-String Storage_getHandleName(String              storageName,
-                             const StorageHandle *storageHandle,
-                             const String        fileName
-                            );
+String Storage_getNameFromHandle(String              storageName,
+                                 const StorageHandle *storageHandle,
+                                 const String        fileName
+                                );
+
+/***********************************************************************\
+* Name   : Storage_getPrintableNameFromHandle
+* Purpose: get printable storage name from storage handle (without
+*          password)
+* Input  : storageName   - storage name variable
+*          storageHandle - storage handle
+*          fileName      - fileName (can be NULL)
+* Output : storageName - storage name
+* Return : storage name variable
+* Notes  : if fileName is NULL file name from storageSpecifier is used
+\***********************************************************************/
+
+String Storage_getPrintableNameFromHandle(String              storageName,
+                                          const StorageHandle *storageHandle,
+                                          const String        fileName
+                                         );
 
 /***********************************************************************\
 * Name   : Storage_preProcess

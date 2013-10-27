@@ -2089,7 +2089,6 @@ LOCAL void jobThreadCode(void)
 {
   StorageSpecifier storageSpecifier;
   String           storageName;
-  String           storageFileName;
   String           printableStorageName;
   EntryList        includeEntryList;
   PatternList      excludePatternList;
@@ -2104,7 +2103,6 @@ LOCAL void jobThreadCode(void)
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
-  storageFileName      = String_new();
   printableStorageName = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
@@ -2152,11 +2150,11 @@ String scheduleCustomText = String_new();
     Semaphore_unlock(&jobList.lock);
 
     // parse storage name
-    jobNode->runningInfo.error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+    jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
     if (jobNode->runningInfo.error == ERROR_NONE)
     {
       // get printable name
-      Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+      Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
       // run job
       #ifdef SIMULATOR
@@ -2183,8 +2181,8 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
 
           jobNode->runningInfo.doneEntries++;
           jobNode->runningInfo.doneBytes += 100;
-        //  jobNode->runningInfo.totalEntries += 3;
-        //  jobNode->runningInfo.totalBytes += 181;
+//          jobNode->runningInfo.totalEntries += 3;
+//          jobNode->runningInfo.totalBytes += 181;
           jobNode->runningInfo.estimatedRestTime=120-z;
           String_clear(jobNode->runningInfo.fileName);String_format(jobNode->runningInfo.fileName,"file %d",z);
           String_clear(jobNode->runningInfo.storageName);String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
@@ -2336,7 +2334,6 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   String_delete(printableStorageName);
-  String_delete(storageFileName);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
 }
@@ -2609,7 +2606,6 @@ LOCAL void indexThreadCode(void)
   DatabaseQueryHandle    databaseQueryHandle1,databaseQueryHandle2;
   StorageSpecifier       storageSpecifier;
   String                 storageName;
-  String                 storageFileName;
   StorageHandle          storageHandle;
   int64                  duplicateStorageId;
   String                 duplicateStorageName;
@@ -2625,7 +2621,6 @@ LOCAL void indexThreadCode(void)
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
-  storageFileName      = String_new();
   printableStorageName = String_new();
   List_init(&indexCryptPasswordList);
 
@@ -2659,10 +2654,10 @@ LOCAL void indexThreadCode(void)
         )
   {
     // get printable name (if possible)
-    error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+    error = Storage_parseName(&storageSpecifier,storageName);
     if (error == ERROR_NONE)
     {
-      Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+      Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
     }
     else
     {
@@ -2729,10 +2724,10 @@ LOCAL void indexThreadCode(void)
              )
           {
             // get printable name (if possible)
-            error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+            error = Storage_parseName(&storageSpecifier,storageName);
             if (error == ERROR_NONE)
             {
-              Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+              Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
             }
             else
             {
@@ -2808,10 +2803,10 @@ LOCAL void indexThreadCode(void)
     {
 fprintf(stderr,"%s, %d: %ld %s\n",__FILE__,__LINE__,storageId,String_cString(storageName));
       // parse storage name
-      error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+      error = Storage_parseName(&storageSpecifier,storageName);
       if (error == ERROR_NONE)
       {
-        Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+        Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
       }
       else
       {
@@ -2822,7 +2817,7 @@ fprintf(stderr,"%s, %d: %ld %s\n",__FILE__,__LINE__,storageId,String_cString(sto
       initJobOptions(&jobOptions);
       error = Storage_init(&storageHandle,
                            &storageSpecifier,
-                           storageFileName,
+storageSpecifier.fileName,
                            &jobOptions,
                            &globalOptions.indexDatabaseMaxBandWidthList,
                            SERVER_CONNECTION_PRIORITY_LOW,
@@ -2975,9 +2970,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 LOCAL void autoIndexUpdateThreadCode(void)
 {
   StorageSpecifier           storageSpecifier;
-  String                     fileName;
   String                     storageName;
-  String                     storageFileName;
   String                     printableStorageName;
   StringList                 storageDirectoryList;
   String                     storageDirectoryName;
@@ -2985,6 +2978,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
   StringNode                 *storageDirectoryNode;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
+  String                     fileName;
   FileInfo                   fileInfo;
   int64                      storageId;
   uint64                     createdDateTime;
@@ -3001,9 +2995,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
 
   // run continous check for index updates
   Storage_initSpecifier(&storageSpecifier);
-  fileName             = String_new();
   storageName          = String_new();
-  storageFileName      = String_new();
   printableStorageName = String_new();
   while (!quitFlag)
   {
@@ -3021,7 +3013,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
     copyJobOptions(serverDefaultJobOptions,&jobOptions);
     STRINGLIST_ITERATE(&storageDirectoryList,storageDirectoryNode,storageDirectoryName)
     {
-      error = Storage_parseName(storageDirectoryName,&storageSpecifier,NULL);
+      error = Storage_parseName(&storageSpecifier,storageDirectoryName);
       if (error == ERROR_NONE)
       {
         if (   (storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
@@ -3040,6 +3032,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                            );
           if (error == ERROR_NONE)
           {
+            fileName = String_new();
             while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && !quitFlag)
             {
               // read next directory entry
@@ -3057,7 +3050,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                 continue;
               }
 
-              // get storage name
+              // get storage names
               Storage_getName(storageName,&storageSpecifier,fileName);
               Storage_getPrintableName(printableStorageName,&storageSpecifier,fileName);
 
@@ -3067,7 +3060,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                    storageSpecifier.hostName,
                                    storageSpecifier.loginName,
                                    storageSpecifier.deviceName,
-                                   fileName,
+                                   storageSpecifier.fileName,
                                    &storageId,
                                    &indexState,
                                    NULL
@@ -3105,6 +3098,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                 pprintInfo(4,"INDEX: ","Requested auto-index for '%s'\n",String_cString(printableStorageName));
               }
             }
+            String_delete(fileName);
 
             // close directory
             Storage_closeDirectoryList(&storageDirectoryListHandle);
@@ -3137,10 +3131,10 @@ LOCAL void autoIndexUpdateThreadCode(void)
             )
       {
         // get printable name (if possible)
-        error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+        error = Storage_parseName(&storageSpecifier,storageName);
         if (error == ERROR_NONE)
         {
-          Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+          Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
         }
         else
         {
@@ -3179,7 +3173,6 @@ LOCAL void autoIndexUpdateThreadCode(void)
   }
   String_delete(printableStorageName);
   String_delete(storageName);
-  String_delete(fileName);
   Storage_doneSpecifier(&storageSpecifier);
 
   // free resources
@@ -7074,7 +7067,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 
   // parse storage name
   storageFileName = String_new();
-  error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+  error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize storage '%s' (error: %s)\n",
@@ -7650,7 +7643,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
     // parse storage name
     storageFileName = String_new();
-    error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+    error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
       String_delete(storageName);
@@ -8037,10 +8030,10 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
           )
     {
       // get printable name (if possible)
-      error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+      error = Storage_parseName(&storageSpecifier,storageName);
       if (error == ERROR_NONE)
       {
-        Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+        Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
       }
       else
       {

@@ -2956,7 +2956,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
 
-  archiveInfo->printableName                   = Storage_getPrintableName(String_new(),storageSpecifier,storageFileName);
+  archiveInfo->printableName                   = Storage_getPrintableName(String_new(),storageSpecifier,NULL);
 
   archiveInfo->cryptPassword                   = NULL;
   archiveInfo->cryptPasswordReadFlag           = FALSE;
@@ -10056,10 +10056,8 @@ Errors Archive_addToIndex(DatabaseHandle   *databaseHandle,
                               storageHandle,
                               storageName,
                               jobOptions,
-                              maxBandWidthList,
-                              NULL,
-                              NULL,
-                              NULL
+                              CALLBACK(NULL,NULL),
+                              CALLBACK(NULL,NULL)
                              );
   if (error != ERROR_NONE)
   {
@@ -10082,7 +10080,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                           )
 {
   StorageSpecifier  storageSpecifier;
-  String            storageFileName;
   String            printableStorageName;
   Errors            error;
   bool              abortedFlag,serverAllocationPendingFlag;
@@ -10095,13 +10092,12 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
-  storageFileName      = String_new();
   printableStorageName = String_new();
 
   // get printable name (if possible)
-  if (Storage_parseName(storageName,&storageSpecifier,storageFileName) == ERROR_NONE)
+  if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
   {
-    Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+    Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
   }
   else
   {
@@ -10116,7 +10112,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     error = Archive_open(&archiveInfo,
                          storageHandle,
                          &storageSpecifier,
-                         storageFileName,
+storageSpecifier.fileName,
                          jobOptions,
                          CALLBACK(NULL,NULL)
                         );
@@ -10128,7 +10124,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
       error = Archive_open(&archiveInfo,
                            storageHandle,
                            &storageSpecifier,
-                           storageFileName,
+storageSpecifier.fileName,
                            jobOptions,
                            CALLBACK(NULL,NULL)
                           );
@@ -10140,7 +10136,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     error = Archive_open(&archiveInfo,
                          storageHandle,
                          &storageSpecifier,
-                         storageFileName,
+storageSpecifier.fileName,
                          jobOptions,
                          CALLBACK(NULL,NULL)
                         );
@@ -10157,7 +10153,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                    Errors_getText(error),
                    Errors_getCode(error)
                   );
-    String_delete(storageFileName);
     String_delete(printableStorageName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
@@ -10180,7 +10175,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                    Errors_getText(error),
                    Errors_getCode(error)
                   );
-    String_delete(storageFileName);
     String_delete(printableStorageName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
@@ -10664,7 +10658,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   Archive_close(&archiveInfo);
 
   // free resources
-  String_delete(storageFileName);
   String_delete(printableStorageName);
   Storage_doneSpecifier(&storageSpecifier);
 

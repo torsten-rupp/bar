@@ -71,7 +71,6 @@ Errors Command_test(const StringList                *storageNameList,
   byte              *archiveBuffer,*fileBuffer;
   FragmentList      fragmentList;
   StorageSpecifier  storageSpecifier;
-  String            storageFileName;
   String            printableStorageName;
   StorageHandle     storageHandle;
   StringNode        *stringNode;
@@ -102,14 +101,13 @@ Errors Command_test(const StringList                *storageNameList,
   }
   FragmentList_init(&fragmentList);
   Storage_initSpecifier(&storageSpecifier);
-  storageFileName      = String_new();
   printableStorageName = String_new();
 
   failError = ERROR_NONE;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
     // parse storage name, get printable name
-    error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+    error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
       printError("Invalid storage '%s' (error: %s)!\n",
@@ -119,12 +117,12 @@ Errors Command_test(const StringList                *storageNameList,
       if (failError == ERROR_NONE) failError = error;
       continue;
     }
-    Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+    Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
     // init storage
     error = Storage_init(&storageHandle,
                          &storageSpecifier,
-                         storageFileName,
+storageSpecifier.fileName,
                          jobOptions,
                          &globalOptions.maxBandWidthList,
                          SERVER_CONNECTION_PRIORITY_HIGH,
@@ -147,7 +145,7 @@ Errors Command_test(const StringList                *storageNameList,
     error = Archive_open(&archiveInfo,
                          &storageHandle,
                          &storageSpecifier,
-                         storageFileName,
+storageSpecifier.fileName,
                          jobOptions,
                          archiveGetCryptPasswordFunction,
                          archiveGetCryptPasswordUserData
@@ -903,7 +901,6 @@ Errors Command_test(const StringList                *storageNameList,
 
   // free resources
   String_delete(printableStorageName);
-  String_delete(storageFileName);
   Storage_doneSpecifier(&storageSpecifier);
   FragmentList_done(&fragmentList);
   free(fileBuffer);

@@ -1258,8 +1258,6 @@ LOCAL void doneServer(Server *server)
 LOCAL ServerNode *newServerNode(const String name, ServerTypes serverType)
 {
   ServerNode *serverNode;
-  uint       maxConnectionCount;
-  uint64     maxStorageSize;
 
   assert(name != NULL);
 

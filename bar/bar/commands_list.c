@@ -1566,7 +1566,6 @@ Errors Command_list(StringList                      *storageNameList,
   AutoFreeList     autoFreeList;
   String           storageName;
   StorageSpecifier storageSpecifier;
-  String           storageFileName;
   String           printableStorageName;
   StorageHandle    storageHandle;
   bool             printedInfoFlag;
@@ -1592,10 +1591,8 @@ remoteBarFlag=FALSE;
   List_init(&archiveContentList);
   storageName          = String_new();
   Storage_initSpecifier(&storageSpecifier);
-  storageFileName      = String_new();
   printableStorageName = String_new();
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,storageFileName,{ String_delete(storageFileName); });
   AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
   AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(storageName); });
   AUTOFREE_ADD(&autoFreeList,&archiveContentList,{ List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL); });
@@ -1607,7 +1604,7 @@ remoteBarFlag=FALSE;
     StringList_getFirst(storageNameList,storageName);
 
     // parse storage name, get printable name
-    error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+    error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
       printError("Invalid storage '%s' (error: %s)!\n",
@@ -1617,12 +1614,12 @@ remoteBarFlag=FALSE;
       if (failError == ERROR_NONE) failError = error;
       continue;
     }
-    Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+    Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
     // init storage
     error = Storage_init(&storageHandle,
                          &storageSpecifier,
-                         storageFileName,
+storageSpecifier.fileName,
                          jobOptions,
                          &globalOptions.maxBandWidthList,
                          SERVER_CONNECTION_PRIORITY_HIGH,
@@ -1659,7 +1656,8 @@ remoteBarFlag=FALSE;
           error = Archive_open(&archiveInfo,
                                &storageHandle,
                                &storageSpecifier,
-                               storageFileName,
+#warning todo
+storageSpecifier.fileName,
                                jobOptions,
                                archiveGetCryptPasswordFunction,
                                archiveGetCryptPasswordUserData
@@ -2368,7 +2366,7 @@ remoteBarFlag=FALSE;
             }
 
             // send list archive command
-            String_format(String_clear(line),"2 ARCHIVE_LIST %S",storageFileName);
+            String_format(String_clear(line),"2 ARCHIVE_LIST %S",storageSpecifier.fileName);
             Network_executeWriteLine(&networkExecuteHandle,line);
             Network_executeSendEOF(&networkExecuteHandle);
 
@@ -2960,7 +2958,6 @@ remoteBarFlag=FALSE;
 
   // free resources
   String_delete(printableStorageName);
-  String_delete(storageFileName);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(storageName);
   List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);

@@ -2056,6 +2056,7 @@ void Storage_doneAll(void)
   storageSpecifier->loginName     = String_new();
   storageSpecifier->loginPassword = Password_new();
   storageSpecifier->deviceName    = String_new();
+  storageSpecifier->fileName      = String_new();
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE("storage specifier",storageSpecifier);
@@ -2081,6 +2082,7 @@ void Storage_doneAll(void)
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageSpecifier);
   #endif /* NDEBUG */
 
+  String_delete(storageSpecifier->fileName);
   String_delete(storageSpecifier->deviceName);
   Password_delete(storageSpecifier->loginPassword);
   String_delete(storageSpecifier->loginName);
@@ -2101,6 +2103,7 @@ void Storage_duplicateSpecifier(StorageSpecifier       *destinationStorageSpecif
   destinationStorageSpecifier->loginName     = String_duplicate(sourceStorageSpecifier->loginName);
   destinationStorageSpecifier->loginPassword = Password_duplicate(sourceStorageSpecifier->loginPassword);
   destinationStorageSpecifier->deviceName    = String_duplicate(sourceStorageSpecifier->deviceName);
+  destinationStorageSpecifier->fileName      = String_duplicate(sourceStorageSpecifier->fileName);
 
   DEBUG_ADD_RESOURCE_TRACE("duplicated storage specifier",destinationStorageSpecifier);
 }
@@ -2329,7 +2332,7 @@ StorageTypes Storage_getType(const String storageName)
   StorageTypes     type;
 
   Storage_initSpecifier(&storageSpecifier);
-  if (Storage_parseName(storageName,&storageSpecifier,NULL) == ERROR_NONE)
+  if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
   {
     type = storageSpecifier.type;
   }
@@ -2342,9 +2345,8 @@ StorageTypes Storage_getType(const String storageName)
   return type;
 }
 
-Errors Storage_parseName(const String     storageName,
-                         StorageSpecifier *storageSpecifier,
-                         String           fileName
+Errors Storage_parseName(StorageSpecifier *storageSpecifier,
+                         const String     storageName
                         )
 {
   String string;
@@ -2382,12 +2384,12 @@ Errors Storage_parseName(const String     storageName,
       {
         return ERROR_INVALID_FTP_SPECIFIER;
       }
-      if (fileName != NULL) String_sub(fileName,storageName,6+nextIndex,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,6+nextIndex,STRING_END);
     }
     else
     {
       // ftp://<file name>
-      if (fileName != NULL) String_sub(fileName,storageName,6,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,6,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_FTP;
@@ -2410,12 +2412,12 @@ Errors Storage_parseName(const String     storageName,
       {
         return ERROR_INVALID_SSH_SPECIFIER;
       }
-      if (fileName != NULL) String_sub(fileName,storageName,6+nextIndex,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,6+nextIndex,STRING_END);
     }
     else
     {
       // ssh://<file name>
-      if (fileName != NULL) String_sub(fileName,storageName,6,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,6,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_SSH;
@@ -2438,12 +2440,12 @@ Errors Storage_parseName(const String     storageName,
       {
         return ERROR_INVALID_SSH_SPECIFIER;
       }
-      if (fileName != NULL) String_sub(fileName,storageName,6+nextIndex,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,6+nextIndex,STRING_END);
     }
     else
     {
       // scp://<file name>
-      if (fileName != NULL) String_sub(fileName,storageName,6,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,6,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_SCP;
@@ -2466,12 +2468,12 @@ Errors Storage_parseName(const String     storageName,
       {
         return ERROR_INVALID_SSH_SPECIFIER;
       }
-      if (fileName != NULL) String_sub(fileName,storageName,7+nextIndex,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,7+nextIndex,STRING_END);
     }
     else
     {
       // sftp://<file name>
-      if (fileName != NULL) String_sub(fileName,storageName,7,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,7,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_SFTP;
@@ -2494,12 +2496,12 @@ Errors Storage_parseName(const String     storageName,
       {
         return ERROR_INVALID_FTP_SPECIFIER;
       }
-      if (fileName != NULL) String_sub(fileName,storageName,9+nextIndex,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,9+nextIndex,STRING_END);
     }
     else
     {
       // webdav://<file name>
-      if (fileName != NULL) String_sub(fileName,storageName,9,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,9,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_WEBDAV;
@@ -2519,12 +2521,12 @@ Errors Storage_parseName(const String     storageName,
       {
         return ERROR_INVALID_DEVICE_SPECIFIER;
       }
-      if (fileName != NULL) String_sub(fileName,storageName,5+nextIndex,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,5+nextIndex,STRING_END);
     }
     else
     {
       // cd://<file name>
-      if (fileName != NULL) String_sub(fileName,storageName,5,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,5,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_CD;
@@ -2544,12 +2546,12 @@ Errors Storage_parseName(const String     storageName,
       {
         return ERROR_INVALID_DEVICE_SPECIFIER;
       }
-      if (fileName != NULL) String_sub(fileName,storageName,6+nextIndex,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,6+nextIndex,STRING_END);
     }
     else
     {
       // dvd://<file name>
-      if (fileName != NULL) String_sub(fileName,storageName,6,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,6,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_DVD;
@@ -2569,12 +2571,12 @@ Errors Storage_parseName(const String     storageName,
       {
         return ERROR_INVALID_DEVICE_SPECIFIER;
       }
-      if (fileName != NULL) String_sub(fileName,storageName,5+nextIndex,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,5+nextIndex,STRING_END);
     }
     else
     {
       // bd://<file name>
-      if (fileName != NULL) String_sub(fileName,storageName,5,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,5,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_BD;
@@ -2594,25 +2596,25 @@ Errors Storage_parseName(const String     storageName,
       {
         return ERROR_INVALID_DEVICE_SPECIFIER;
       }
-      if (fileName != NULL) String_sub(fileName,storageName,9+nextIndex,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,9+nextIndex,STRING_END);
     }
     else
     {
       // device://<file name>
-      if (fileName != NULL) String_sub(fileName,storageName,9,STRING_END);
+      String_sub(storageSpecifier->fileName,storageName,9,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_DEVICE;
   }
   else if (String_startsWithCString(storageName,"file://"))
   {
-    if (fileName != NULL) String_sub(fileName,storageName,7,STRING_END);
+    String_sub(storageSpecifier->fileName,storageName,7,STRING_END);
 
     storageSpecifier->type = STORAGE_TYPE_FILESYSTEM;
   }
   else
   {
-    if (fileName != NULL) String_set(fileName,storageName);
+    String_set(storageSpecifier->fileName,storageName);
 
     storageSpecifier->type = STORAGE_TYPE_FILESYSTEM;
   }
@@ -2628,20 +2630,15 @@ bool Storage_equalNames(const String storageName1,
                        )
 {
   StorageSpecifier storageSpecifier1,storageSpecifier2;
-  String           fileName1,fileName2;
   bool             result;
 
   // parse storage names
   Storage_initSpecifier(&storageSpecifier1);
   Storage_initSpecifier(&storageSpecifier2);
-  fileName1         = String_new();
-  fileName2         = String_new();
-  if (   (Storage_parseName(storageName1,&storageSpecifier1,fileName1) != ERROR_NONE)
-      || (Storage_parseName(storageName2,&storageSpecifier2,fileName2) != ERROR_NONE)
+  if (   (Storage_parseName(&storageSpecifier1,storageName1) != ERROR_NONE)
+      || (Storage_parseName(&storageSpecifier2,storageName2) != ERROR_NONE)
      )
   {
-    String_delete(fileName2);
-    String_delete(fileName1);
     Storage_doneSpecifier(&storageSpecifier2);
     Storage_doneSpecifier(&storageSpecifier1);
     return FALSE;
@@ -2654,7 +2651,7 @@ bool Storage_equalNames(const String storageName1,
     switch (storageSpecifier1.type)
     {
       case STORAGE_TYPE_FILESYSTEM:
-        result = String_equals(fileName1,fileName2);
+        result = String_equals(storageSpecifier1.fileName,storageSpecifier2.fileName);
         break;
       case STORAGE_TYPE_FTP:
       case STORAGE_TYPE_SSH:
@@ -2663,15 +2660,14 @@ bool Storage_equalNames(const String storageName1,
       case STORAGE_TYPE_WEBDAV:
         result =    String_equals(storageSpecifier1.hostName,storageSpecifier2.hostName)
                  && String_equals(storageSpecifier1.loginName,storageSpecifier2.loginName)
-                 && String_equals(fileName1,fileName2);
+                 && String_equals(storageSpecifier1.fileName,storageSpecifier2.fileName);
         break;
       case STORAGE_TYPE_CD:
       case STORAGE_TYPE_DVD:
       case STORAGE_TYPE_BD:
       case STORAGE_TYPE_DEVICE:
         result =    String_equals(storageSpecifier1.deviceName,storageSpecifier2.deviceName)
-                 && String_equals(fileName1,fileName2);
-        result = String_equals(fileName1,fileName2);
+                 && String_equals(storageSpecifier1.fileName,storageSpecifier2.fileName);
         break;
       default:
         break;
@@ -2679,8 +2675,6 @@ bool Storage_equalNames(const String storageName1,
   }
 
   // free resources
-  String_delete(fileName2);
-  String_delete(fileName1);
   Storage_doneSpecifier(&storageSpecifier2);
   Storage_doneSpecifier(&storageSpecifier1);
 
@@ -2692,10 +2686,14 @@ String Storage_getName(String                 storageName,
                        const String           fileName
                       )
 {
+  String     storageFileName;
   const char *plainLoginPassword;
 
   assert(storageName != NULL);
   assert(storageSpecifier != NULL);
+
+  // get file to use
+  storageFileName = (fileName != NULL) ? fileName : storageSpecifier->fileName;
 
   String_clear(storageName);
   switch (storageSpecifier->type)
@@ -2703,9 +2701,9 @@ String Storage_getName(String                 storageName,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_FTP:
@@ -2727,16 +2725,16 @@ String Storage_getName(String                 storageName,
       {
         String_format(storageName,":%d",storageSpecifier->hostPort);
       }
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SSH:
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SCP:
@@ -2754,10 +2752,10 @@ String Storage_getName(String                 storageName,
         String_appendChar(storageName,'@');
       }
       String_append(storageName,storageSpecifier->hostName);
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SFTP:
@@ -2775,10 +2773,10 @@ String Storage_getName(String                 storageName,
         String_appendChar(storageName,'@');
       }
       String_append(storageName,storageSpecifier->hostName);
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_WEBDAV:
@@ -2796,10 +2794,10 @@ String Storage_getName(String                 storageName,
         String_appendChar(storageName,'@');
       }
       String_append(storageName,storageSpecifier->hostName);
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_CD:
@@ -2809,10 +2807,10 @@ String Storage_getName(String                 storageName,
         String_append(storageName,storageSpecifier->deviceName);
         String_appendChar(storageName,':');
       }
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_DVD:
@@ -2822,10 +2820,10 @@ String Storage_getName(String                 storageName,
         String_append(storageName,storageSpecifier->deviceName);
         String_appendChar(storageName,':');
       }
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_BD:
@@ -2835,10 +2833,10 @@ String Storage_getName(String                 storageName,
         String_append(storageName,storageSpecifier->deviceName);
         String_appendChar(storageName,':');
       }
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_DEVICE:
@@ -2848,10 +2846,10 @@ String Storage_getName(String                 storageName,
         String_append(storageName,storageSpecifier->deviceName);
         String_appendChar(storageName,':');
       }
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     default:
@@ -2869,8 +2867,13 @@ String Storage_getPrintableName(String                 storageName,
                                 const String           fileName
                                )
 {
+  String storageFileName;
+
   assert(storageName != NULL);
   assert(storageSpecifier != NULL);
+
+  // get file to use
+  storageFileName = (fileName != NULL) ? fileName : storageSpecifier->fileName;
 
   String_clear(storageName);
   switch (storageSpecifier->type)
@@ -2878,9 +2881,9 @@ String Storage_getPrintableName(String                 storageName,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_FTP:
@@ -2895,16 +2898,16 @@ String Storage_getPrintableName(String                 storageName,
       {
         String_format(storageName,":%d",storageSpecifier->hostPort);
       }
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SSH:
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SCP:
@@ -2914,10 +2917,10 @@ String Storage_getPrintableName(String                 storageName,
       {
         String_format(storageName,":%d",storageSpecifier->hostPort);
       }
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SFTP:
@@ -2927,10 +2930,10 @@ String Storage_getPrintableName(String                 storageName,
       {
         String_format(storageName,":%d",storageSpecifier->hostPort);
       }
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_WEBDAV:
@@ -2941,10 +2944,10 @@ String Storage_getPrintableName(String                 storageName,
         String_appendChar(storageName,'@');
       }
       String_append(storageName,storageSpecifier->hostName);
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_CD:
@@ -2954,10 +2957,10 @@ String Storage_getPrintableName(String                 storageName,
         String_append(storageName,storageSpecifier->deviceName);
         String_appendChar(storageName,':');
       }
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_DVD:
@@ -2967,10 +2970,10 @@ String Storage_getPrintableName(String                 storageName,
         String_append(storageName,storageSpecifier->deviceName);
         String_appendChar(storageName,':');
       }
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_BD:
@@ -2980,10 +2983,10 @@ String Storage_getPrintableName(String                 storageName,
         String_append(storageName,storageSpecifier->deviceName);
         String_appendChar(storageName,':');
       }
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_DEVICE:
@@ -2993,10 +2996,10 @@ String Storage_getPrintableName(String                 storageName,
         String_append(storageName,storageSpecifier->deviceName);
         String_appendChar(storageName,':');
       }
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageName,'/');
-        String_append(storageName,fileName);
+        String_append(storageName,storageFileName);
       }
       break;
     default:
@@ -4022,15 +4025,28 @@ bool Storage_isServerAllocationPending(StorageHandle *storageHandle)
   }
 }
 
-String Storage_getHandleName(String              storageName,
-                             const StorageHandle *storageHandle,
-                             const String        fileName
-                            )
+String Storage_getNameFromHandle(String              storageName,
+                                 const StorageHandle *storageHandle,
+                                 const String        fileName
+                                )
 {
   assert(storageName != NULL);
   assert(storageHandle != NULL);
 
   Storage_getName(storageName,&storageHandle->storageSpecifier,fileName);
+
+  return storageName;
+}
+
+String Storage_getPrintableNameFromHandle(String              storageName,
+                                          const StorageHandle *storageHandle,
+                                          const String        fileName
+                                         )
+{
+  assert(storageName != NULL);
+  assert(storageHandle != NULL);
+
+  Storage_getPrintableName(storageName,&storageHandle->storageSpecifier,fileName);
 
   return storageName;
 }
@@ -9234,7 +9250,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 {
   Errors           error;
   StorageSpecifier storageSpecifier;
-  String           pathName;
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageName != NULL);
@@ -9242,11 +9257,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
   // get storage specifier, file name, path name
   Storage_initSpecifier(&storageSpecifier);
-  pathName = String_new();
-  error = Storage_parseName(storageName,&storageSpecifier,pathName);
+  error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
-    String_delete(pathName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
@@ -9265,7 +9278,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
       // open directory
       error = File_openDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,
-                                     pathName
+                                     storageSpecifier.fileName
                                     );
       break;
     case STORAGE_TYPE_FTP:
@@ -9387,7 +9400,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           // get URL
           url = String_format(String_new(),"ftp://%S",storageSpecifier.hostName);
           if (storageSpecifier.hostPort != 0) String_format(url,":d",storageSpecifier.hostPort);
-          File_initSplitFileName(&nameTokenizer,pathName);
+          File_initSplitFileName(&nameTokenizer,storageSpecifier.fileName);
           while (File_getNextSplitFileName(&nameTokenizer,&name))
           {
             String_appendChar(url,'/');
@@ -9646,7 +9659,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           storageDirectoryListHandle->sftp.entryReadFlag = FALSE;
 
           // set pathname
-          String_set(storageDirectoryListHandle->sftp.pathName,pathName);
+          String_set(storageDirectoryListHandle->sftp.pathName,storageSpecifier.fileName);
 
           // get SSH server settings
           getSSHServerSettings(storageSpecifier.hostName,jobOptions,&sshServer);
@@ -9822,7 +9835,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           // get URL
           url = String_format(String_new(),"http://%S",storageSpecifier.hostName);
           if (storageSpecifier.hostPort != 0) String_format(url,":d",storageSpecifier.hostPort);
-          File_initSplitFileName(&nameTokenizer,pathName);
+          File_initSplitFileName(&nameTokenizer,storageSpecifier.fileName);
           while (File_getNextSplitFileName(&nameTokenizer,&name))
           {
             String_appendChar(url,'/');
@@ -9930,7 +9943,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #ifdef HAVE_ISO9660
         UNUSED_VARIABLE(jobOptions);
 
-        storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(pathName);
+        storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(storageSpecifier.fileName);
 
         // check if device exists
         if (!File_exists(storageName))
@@ -9954,12 +9967,12 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 
         // open directory for reading
         storageDirectoryListHandle->opticalDisk.cdioList = iso9660_ifs_readdir(storageDirectoryListHandle->opticalDisk.iso9660Handle,
-                                                                               String_cString(pathName)
+                                                                               String_cString(storageSpecifier.fileName)
                                                                               );
         if (storageDirectoryListHandle->opticalDisk.cdioList == NULL)
         {
           iso9660_close(storageDirectoryListHandle->opticalDisk.iso9660Handle);
-          return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(pathName));
+          return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(storageSpecifier.fileName));
         }
 
         storageDirectoryListHandle->opticalDisk.cdioNextNode = _cdio_list_begin(storageDirectoryListHandle->opticalDisk.cdioList);
@@ -9984,7 +9997,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
   assert(error != ERROR_UNKNOWN);
 
   // free resources
-  String_delete(pathName);
   Storage_doneSpecifier(&storageSpecifier);
 
   return error;

@@ -69,30 +69,28 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
   StorageSpecifier           storageSpecifier;
   String                     baseStorageName;
   String                     basePath;
-  String                     fileName;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
+  String                     fileName;
   SourceNode                 *sourceNode;
 
   // init variables
   initJobOptions(&jobOptions);
   Storage_initSpecifier(&storageSpecifier);
   baseStorageName = String_new();
-  fileName        = String_new();
   basePath        = String_new();
 
   // find base storage path
-  error = Storage_parseName(storageName,&storageSpecifier,fileName);
+  error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
     String_delete(basePath);
-    String_delete(fileName);
     String_delete(baseStorageName);
     Storage_doneSpecifier(&storageSpecifier);
     doneJobOptions(&jobOptions);
     return;
   }
-  File_getFilePathName(basePath,fileName);
+  File_getFilePathName(basePath,storageSpecifier.fileName);
   Storage_getName(baseStorageName,&storageSpecifier,basePath);
 
   // open directory list
@@ -105,6 +103,7 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
   if (error == ERROR_NONE)
   {
     // read directory
+    fileName = String_new();
     while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
     {
       error = Storage_readDirectoryList(&storageDirectoryListHandle,
@@ -128,6 +127,7 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
         }
       }
     }
+    String_delete(fileName);
     Storage_closeDirectoryList(&storageDirectoryListHandle);
   }
 
@@ -144,7 +144,6 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
   }
 
   // free resources
-  String_delete(fileName);
   String_delete(basePath);
   String_delete(baseStorageName);
   Storage_doneSpecifier(&storageSpecifier);
@@ -196,10 +195,7 @@ LOCAL Errors createLocalStorageArchive(String           localFileName,
   // parse storage name
   Storage_initSpecifier(&storageSpecifier);
   storageFileName = String_new();
-  error = Storage_parseName(storageName,
-                            &storageSpecifier,
-                            storageFileName
-                           );
+  error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize storage '%s' (error: %s)\n",
@@ -324,10 +320,7 @@ LOCAL Errors restoreFile(const String                    storageName,
   // parse storage name
   Storage_initSpecifier(&storageSpecifier);
   storageFileName = String_new();
-  error = Storage_parseName(storageName,
-                            &storageSpecifier,
-                            storageFileName
-                           );
+  error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize storage '%s' (error: %s)\n",
