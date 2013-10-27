@@ -131,7 +131,6 @@ class TabRestore
     UPDATE,
     ERROR,
 
-    ALL,
     UNKNOWN;
 
     public static EnumSet<IndexStates> ALL()
@@ -1750,7 +1749,7 @@ Dprintf.dprintf("process line by line");
             Combo widget = (Combo)selectionEvent.widget;
             switch (widget.getSelectionIndex())
             {
-              case 0:  storageIndexStateSet = new IndexStateSet(IndexStates.ALL);                                                   break;
+              case 0:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  break;
               case 1:  storageIndexStateSet = new IndexStateSet(IndexStates.OK);                                                    break;
               case 2:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR);                                                 break;
               case 3:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE);                                                break;
