@@ -7868,17 +7868,20 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 * Return : -
 * Notes  : Arguments:
 *          Result:
-*            <entries OK> <entries create> <entries update requested> \
-*            <entries update> <entries error>
+*            okCount=<entries OK count>
+*            createCount=<entries create count>
+*            updateRequestedCount=<entries update requested count>
+*            updateCount=<entries update count>
+*            errorCount=<entries error count>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  long storageEntryCountOK;
-  long storageEntryCountCreate;
-  long storageEntryCountUpdateRequested;
-  long storageEntryCountUpdate;
-  long storageEntryCountError;
+  long storageEntryOKCount;
+  long storageEntryCreateCount;
+  long storageEntryUpdateRequestedCount;
+  long storageEntryUpdateCount;
+  long storageEntryErrorCount;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7887,26 +7890,26 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 
   if (indexDatabaseHandle != NULL)
   {
-    storageEntryCountOK              = Index_countState(indexDatabaseHandle,INDEX_STATE_OK              );
-    storageEntryCountCreate          = Index_countState(indexDatabaseHandle,INDEX_STATE_CREATE          );
-    storageEntryCountUpdateRequested = Index_countState(indexDatabaseHandle,INDEX_STATE_UPDATE_REQUESTED);
-    storageEntryCountUpdate          = Index_countState(indexDatabaseHandle,INDEX_STATE_UPDATE          );
-    storageEntryCountError           = Index_countState(indexDatabaseHandle,INDEX_STATE_ERROR           );
+    storageEntryOKCount              = Index_countState(indexDatabaseHandle,INDEX_STATE_OK              );
+    storageEntryCreateCount          = Index_countState(indexDatabaseHandle,INDEX_STATE_CREATE          );
+    storageEntryUpdateRequestedCount = Index_countState(indexDatabaseHandle,INDEX_STATE_UPDATE_REQUESTED);
+    storageEntryUpdateCount          = Index_countState(indexDatabaseHandle,INDEX_STATE_UPDATE          );
+    storageEntryErrorCount           = Index_countState(indexDatabaseHandle,INDEX_STATE_ERROR           );
 
-    if (   (storageEntryCountOK              >= 0L)
-        && (storageEntryCountCreate          >= 0L)
-        && (storageEntryCountUpdateRequested >= 0L)
-        && (storageEntryCountUpdate          >= 0L)
-        && (storageEntryCountError           >= 0L)
+    if (   (storageEntryOKCount              >= 0L)
+        && (storageEntryCreateCount          >= 0L)
+        && (storageEntryUpdateRequestedCount >= 0L)
+        && (storageEntryUpdateCount          >= 0L)
+        && (storageEntryErrorCount           >= 0L)
        )
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                       "%ld %ld %ld %ld %ld",
-                       storageEntryCountOK,
-                       storageEntryCountCreate,
-                       storageEntryCountUpdateRequested,
-                       storageEntryCountUpdate,
-                       storageEntryCountError
+                       "okCount=%ld createCount=%ld updateRequestedCount=%ld updateCount=%ld errorCount=%ld",
+                       storageEntryOKCount,
+                       storageEntryCreateCount,
+                       storageEntryUpdateRequestedCount,
+                       storageEntryUpdateCount,
+                       storageEntryErrorCount
                       );
     }
     else
@@ -7971,11 +7974,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   assert(argumentMap != NULL);
 
   // get max. count, status pattern, filter pattern,
-  if (!StringMap_getUInt(argumentMap,"maxCount",&maxCount,0))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxCount=<n>");
-    return;
-  }
+  StringMap_getUInt(argumentMap,"maxCount",&maxCount,0);
   if (!StringMap_getEnumSet(argumentMap,"indexState",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_ALL,"|",0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
@@ -8026,7 +8025,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
       return;
     }
     n = 0L;
-    while (   ((maxCount == 0L) || (n < maxCount))
+    while (   ((maxCount == 0) || (n < maxCount))
            && Index_getNextStorage(&indexQueryHandle,
                                    &storageId,
                                    storageName,
