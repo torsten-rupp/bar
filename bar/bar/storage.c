@@ -4023,30 +4023,11 @@ bool Storage_isServerAllocationPending(StorageHandle *storageHandle)
   }
 }
 
-String Storage_getNameFromHandle(String              storageName,
-                                 const StorageHandle *storageHandle,
-                                 const String        fileName
-                                )
+StorageSpecifier *Storage_getStorageSpecifier(const StorageHandle *storageHandle)
 {
-  assert(storageName != NULL);
   assert(storageHandle != NULL);
 
-  Storage_getName(storageName,&storageHandle->storageSpecifier,fileName);
-
-  return storageName;
-}
-
-String Storage_getPrintableNameFromHandle(String              storageName,
-                                          const StorageHandle *storageHandle,
-                                          const String        fileName
-                                         )
-{
-  assert(storageName != NULL);
-  assert(storageHandle != NULL);
-
-  Storage_getPrintableName(storageName,&storageHandle->storageSpecifier,fileName);
-
-  return storageName;
+  return &storageHandle->storageSpecifier;
 }
 
 Errors Storage_preProcess(StorageHandle *storageHandle,

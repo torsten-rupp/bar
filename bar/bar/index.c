@@ -73,6 +73,46 @@ LOCAL const struct
 #endif
 
 /***********************************************************************\
+* Name   : initIndexQueryHandle
+* Purpose: init index query handle
+* Input  : indexQueryHandle - index query handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initIndexQueryHandle(IndexQueryHandle *indexQueryHandle)
+{
+  assert(indexQueryHandle != NULL);
+
+  indexQueryHandle->storage.type              = STORAGE_TYPE_NONE;
+  indexQueryHandle->storage.hostNamePattern   = NULL;
+  indexQueryHandle->storage.loginNamePattern  = NULL;
+  indexQueryHandle->storage.deviceNamePattern = NULL;
+  indexQueryHandle->storage.fileNamePattern   = NULL;
+}
+
+/***********************************************************************\
+* Name   : doneIndexQueryHandle
+* Purpose: done index query handle
+* Input  : indexQueryHandle - index query handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneIndexQueryHandle(IndexQueryHandle *indexQueryHandle)
+{
+  assert(indexQueryHandle != NULL);
+
+  if (indexQueryHandle->storage.fileNamePattern   != NULL) Pattern_delete(indexQueryHandle->storage.fileNamePattern);
+  if (indexQueryHandle->storage.deviceNamePattern != NULL) Pattern_delete(indexQueryHandle->storage.deviceNamePattern);
+  if (indexQueryHandle->storage.loginNamePattern  != NULL) Pattern_delete(indexQueryHandle->storage.loginNamePattern);
+  if (indexQueryHandle->storage.hostNamePattern   != NULL) Pattern_delete(indexQueryHandle->storage.hostNamePattern);
+}
+
+
+/***********************************************************************\
 * Name   : getIndexStateSetString
 * Purpose: get index state filter string
 * Input  : string        - string variable
@@ -99,6 +139,7 @@ LOCAL String getIndexStateSetString(String string, IndexStateSet indexStateSet)
   return string;
 }
 
+#if 0
 /***********************************************************************\
 * Name   : getIndexModeSetString
 * Purpose: get index state filter string
@@ -125,6 +166,7 @@ LOCAL String getIndexModeSetString(String string, IndexModeSet indexModeSet)
 
   return string;
 }
+#endif /* 0 */
 
 /***********************************************************************\
 * Name   : getREGEXPString
@@ -478,7 +520,7 @@ bool Index_findById(DatabaseHandle *databaseHandle,
                     int64          storageId,
                     String         name,
                     IndexStates    *indexState,
-                    uint64         *lastChecked
+                    uint64         *lastCheckedTimestamp
                    )
 {
   DatabaseQueryHandle databaseQueryHandle;
@@ -506,7 +548,7 @@ bool Index_findById(DatabaseHandle *databaseHandle,
                                "%S %d %llu",
                                &name,
                                indexState,
-                               lastChecked
+                               lastCheckedTimestamp
                               );
   Database_finalize(&databaseQueryHandle);
 
@@ -521,7 +563,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                       const String   fileName,
                       int64          *storageId,
                       IndexStates    *indexState,
-                      uint64         *lastChecked
+                      uint64         *lastCheckedTimestamp
                      )
 {
   DatabaseQueryHandle databaseQueryHandle;
@@ -557,7 +599,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                                  storageId,
                                  &storageName,
                                  indexState,
-                                 lastChecked
+                                 lastCheckedTimestamp
                                 )
          && !foundFlag
         )
@@ -635,7 +677,7 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
                        IndexStateSet  indexStateSet,
                        int64          *storageId,
                        String         name,
-                       uint64         *lastChecked
+                       uint64         *lastCheckedTimestamp
                       )
 {
   String              indexStateSetString;
@@ -648,7 +690,7 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
 
   (*storageId) = DATABASE_ID_NONE;
   if (name != NULL) String_clear(name);
-  if (lastChecked != NULL) (*lastChecked) = 0LL;
+  if (lastCheckedTimestamp != NULL) (*lastCheckedTimestamp) = 0LL;
 
   indexStateSetString = String_new();
   error = Database_prepare(&databaseQueryHandle,
@@ -673,7 +715,7 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
                                "%lld %S %llu",
                                storageId,
                                &name,
-                               lastChecked
+                               lastCheckedTimestamp
                               );
   Database_finalize(&databaseQueryHandle);
 
@@ -896,7 +938,7 @@ Errors Index_update(DatabaseHandle *databaseHandle,
 Errors Index_getState(DatabaseHandle *databaseHandle,
                       int64          storageId,
                       IndexStates    *indexState,
-                      uint64         *lastChecked,
+                      uint64         *lastCheckedTimestamp,
                       String         errorMessage
                      )
 {
@@ -920,7 +962,7 @@ Errors Index_getState(DatabaseHandle *databaseHandle,
   if (!Database_getNextRow(&databaseQueryHandle,
                            "%d %llu %S",
                            indexState,
-                           lastChecked,
+                           lastCheckedTimestamp,
                            errorMessage
                           )
      )
@@ -936,7 +978,7 @@ Errors Index_getState(DatabaseHandle *databaseHandle,
 Errors Index_setState(DatabaseHandle *databaseHandle,
                       int64          storageId,
                       IndexStates    indexState,
-                      uint64         lastChecked,
+                      uint64         lastCheckedTimestamp,
                       const char     *errorMessage,
                       ...
                      )
@@ -964,7 +1006,7 @@ Errors Index_setState(DatabaseHandle *databaseHandle,
     return error;
   }
 
-  if (lastChecked != 0LL)
+  if (lastCheckedTimestamp != 0LL)
   {
     error = Database_execute(databaseHandle,
                              NULL,
@@ -973,7 +1015,7 @@ Errors Index_setState(DatabaseHandle *databaseHandle,
                               SET lastChecked=DATETIME(%llu,'unixepoch') \
                               WHERE id=%ld; \
                              ",
-                             lastChecked,
+                             lastCheckedTimestamp,
                              storageId
                             );
     if (error != ERROR_NONE)
@@ -1051,21 +1093,31 @@ long Index_countState(DatabaseHandle *databaseHandle,
   return count;
 }
 
-Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
-                             DatabaseHandle      *databaseHandle,
-                             IndexStateSet       indexStateSet,
-                             String              pattern
+Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
+                             DatabaseHandle   *databaseHandle,
+                             StorageTypes     storageType,
+                             const String     hostName,
+                             const String     loginName,
+                             const String     deviceName,
+                             const String     fileName,
+                             IndexStateSet    indexStateSet
                             )
 {
-  String regexpString,indexStateSetString;
+  String indexStateSetString;
   Errors error;
 
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  regexpString        = String_new();
+  initIndexQueryHandle(indexQueryHandle);
+  indexQueryHandle->storage.type = storageType;
+  if (hostName   != NULL) indexQueryHandle->storage.hostNamePattern   = Pattern_new(hostName,  PATTERN_TYPE_REGEX,PATTERN_FLAG_NONE);
+  if (loginName  != NULL) indexQueryHandle->storage.loginNamePattern  = Pattern_new(loginName, PATTERN_TYPE_REGEX,PATTERN_FLAG_NONE);
+  if (deviceName != NULL) indexQueryHandle->storage.deviceNamePattern = Pattern_new(deviceName,PATTERN_TYPE_REGEX,PATTERN_FLAG_NONE);
+  if (fileName   != NULL) indexQueryHandle->storage.fileNamePattern   = Pattern_new(fileName,  PATTERN_TYPE_REGEX,PATTERN_FLAG_NONE);
+
   indexStateSetString = String_new();
-  error = Database_prepare(databaseQueryHandle,
+  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
                            "SELECT id, \
                                    name, \
@@ -1076,51 +1128,119 @@ Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
                                    STRFTIME('%%s',lastChecked), \
                                    errorMessage \
                             FROM storage \
-                            WHERE %S \
-                                  AND state IN (%S) \
+                            WHERE state IN (%S) \
                             ORDER BY created DESC \
                            ",
-                           getREGEXPString(regexpString,"name",pattern),
-                           getIndexStateSetString(indexStateSetString,indexStateSet),
-                           INDEX_STATE_CREATE
+                           getIndexStateSetString(indexStateSetString,indexStateSet)
                           );
   String_delete(indexStateSetString);
-  String_delete(regexpString);
 
   return error;
 }
 
-bool Index_getNextStorage(DatabaseQueryHandle *databaseQueryHandle,
-                          DatabaseId          *databaseId,
-                          String              storageName,
-                          uint64              *createDateTime,
-                          uint64              *size,
-                          IndexStates         *indexState,
-                          IndexModes          *indexMode,
-                          uint64              *lastCheckedDateTime,
-                          String              errorMessage
+bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
+                          DatabaseId       *databaseId,
+                          String           storageName,
+                          uint64           *createDateTime,
+                          uint64           *size,
+                          IndexStates      *indexState,
+                          IndexModes       *indexMode,
+                          uint64           *lastCheckedDateTime,
+                          String           errorMessage
                          )
 {
-  assert(databaseQueryHandle != NULL);
+  StorageSpecifier storageSpecifier;
+  bool             foundFlag;
 
-  return Database_getNextRow(databaseQueryHandle,
-                             "%lld %S %llu %llu %d %d %llu %S",
-                             databaseId,
-                             &storageName,
-                             createDateTime,
-                             size,
-                             indexState,
-                             indexMode,
-                             lastCheckedDateTime,
-                             &errorMessage
-                            );
+  assert(indexQueryHandle != NULL);
+
+  Storage_initSpecifier(&storageSpecifier);
+  foundFlag = FALSE;
+  while (   !foundFlag
+         && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
+                                "%lld %S %llu %llu %d %d %llu %S",
+                                databaseId,
+                                &storageName,
+                                createDateTime,
+                                size,
+                                indexState,
+                                indexMode,
+                                lastCheckedDateTime,
+                                &errorMessage
+                               )
+        )
+  {
+    if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
+    {
+      switch (storageSpecifier.type)
+      {
+        case STORAGE_TYPE_FILESYSTEM:
+          foundFlag =     ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_FILESYSTEM))
+                      && ((indexQueryHandle->storage.fileNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,storageSpecifier.fileName,PATTERN_MATCH_MODE_EXACT));
+          break;
+        case STORAGE_TYPE_FTP:
+          foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_FTP))
+                      && ((indexQueryHandle->storage.hostNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName ,PATTERN_MATCH_MODE_EXACT))
+                      && ((indexQueryHandle->storage.loginNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,PATTERN_MATCH_MODE_EXACT))
+                      && ((indexQueryHandle->storage.fileNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.fileName ,PATTERN_MATCH_MODE_EXACT));
+          break;
+        case STORAGE_TYPE_SSH:
+        case STORAGE_TYPE_SCP:
+          foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_SSH) || (indexQueryHandle->storage.type == STORAGE_TYPE_SCP))
+                      && ((indexQueryHandle->storage.hostNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName ,PATTERN_MATCH_MODE_EXACT))
+                      && ((indexQueryHandle->storage.loginNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,PATTERN_MATCH_MODE_EXACT))
+                      && ((indexQueryHandle->storage.fileNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.fileName ,PATTERN_MATCH_MODE_EXACT));
+          break;
+        case STORAGE_TYPE_SFTP:
+          foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_SFTP))
+                      && ((indexQueryHandle->storage.hostNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName ,PATTERN_MATCH_MODE_EXACT))
+                      && ((indexQueryHandle->storage.loginNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,PATTERN_MATCH_MODE_EXACT))
+                      && ((indexQueryHandle->storage.fileNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.fileName ,PATTERN_MATCH_MODE_EXACT));
+          break;
+        case STORAGE_TYPE_WEBDAV:
+          foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_WEBDAV))
+                      && ((indexQueryHandle->storage.hostNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName ,PATTERN_MATCH_MODE_EXACT))
+                      && ((indexQueryHandle->storage.loginNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,PATTERN_MATCH_MODE_EXACT))
+                      && ((indexQueryHandle->storage.fileNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.fileName ,PATTERN_MATCH_MODE_EXACT));
+          break;
+        case STORAGE_TYPE_CD:
+          foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_CD))
+                      && ((indexQueryHandle->storage.deviceNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName,PATTERN_MATCH_MODE_EXACT))
+                      && ((indexQueryHandle->storage.fileNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.fileName  ,PATTERN_MATCH_MODE_EXACT));
+          break;
+        case STORAGE_TYPE_DVD:
+          foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_DVD))
+                      && ((indexQueryHandle->storage.deviceNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName,PATTERN_MATCH_MODE_EXACT))
+                      && ((indexQueryHandle->storage.fileNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.fileName  ,PATTERN_MATCH_MODE_EXACT));
+          break;
+        case STORAGE_TYPE_BD:
+          foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_BD))
+                      && ((indexQueryHandle->storage.deviceNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName,PATTERN_MATCH_MODE_EXACT))
+                      && ((indexQueryHandle->storage.fileNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.fileName  ,PATTERN_MATCH_MODE_EXACT));
+          break;
+        case STORAGE_TYPE_DEVICE:
+          foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_DEVICE))
+                      && ((indexQueryHandle->storage.deviceNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName,PATTERN_MATCH_MODE_EXACT))
+                      && ((indexQueryHandle->storage.fileNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.fileName  ,PATTERN_MATCH_MODE_EXACT));
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break;
+      }
+    }
+  }
+  Storage_doneSpecifier(&storageSpecifier);
+
+  return foundFlag;
 }
 
-Errors Index_initListFiles(DatabaseQueryHandle *databaseQueryHandle,
-                           DatabaseHandle      *databaseHandle,
-                           const DatabaseId    *storageIds,
-                           uint                storageIdCount,
-                           String              pattern
+Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
+                           DatabaseHandle   *databaseHandle,
+                           const DatabaseId *storageIds,
+                           uint             storageIdCount,
+                           String           pattern
                           )
 {
   String regexpString;
@@ -1128,8 +1248,10 @@ Errors Index_initListFiles(DatabaseQueryHandle *databaseQueryHandle,
   uint   z;
   Errors error;
 
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
+
+  initIndexQueryHandle(indexQueryHandle);
 
   regexpString = getREGEXPString(String_new(),"files.name",pattern);
 
@@ -1147,7 +1269,7 @@ Errors Index_initListFiles(DatabaseQueryHandle *databaseQueryHandle,
     storageIdsString = String_newCString("1");
   }
 
-  error = Database_prepare(databaseQueryHandle,
+  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
                            "SELECT files.id, \
                                    storage.name, \
@@ -1175,23 +1297,23 @@ Errors Index_initListFiles(DatabaseQueryHandle *databaseQueryHandle,
   return error;
 }
 
-bool Index_getNextFile(DatabaseQueryHandle *databaseQueryHandle,
-                       DatabaseId          *databaseId,
-                       String              storageName,
-                       uint64              *storageDateTime,
-                       String              fileName,
-                       uint64              *size,
-                       uint64              *timeModified,
-                       uint32              *userId,
-                       uint32              *groupId,
-                       uint32              *permission,
-                       uint64              *fragmentOffset,
-                       uint64              *fragmentSize
+bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
+                       DatabaseId       *databaseId,
+                       String           storageName,
+                       uint64           *storageDateTime,
+                       String           fileName,
+                       uint64           *size,
+                       uint64           *timeModified,
+                       uint32           *userId,
+                       uint32           *groupId,
+                       uint32           *permission,
+                       uint64           *fragmentOffset,
+                       uint64           *fragmentSize
                       )
 {
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
 
-  return Database_getNextRow(databaseQueryHandle,
+  return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %llu %d %d %d %llu %llu",
                              databaseId,
                              &storageName,
@@ -1207,11 +1329,11 @@ bool Index_getNextFile(DatabaseQueryHandle *databaseQueryHandle,
                             );
 }
 
-Errors Index_initListImages(DatabaseQueryHandle *databaseQueryHandle,
-                            DatabaseHandle      *databaseHandle,
-                            const DatabaseId    *storageIds,
-                            uint                storageIdCount,
-                            String              pattern
+Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
+                            DatabaseHandle   *databaseHandle,
+                            const DatabaseId *storageIds,
+                            uint             storageIdCount,
+                            String           pattern
                            )
 {
   String regexpString;
@@ -1219,8 +1341,10 @@ Errors Index_initListImages(DatabaseQueryHandle *databaseQueryHandle,
   uint   z;
   Errors error;
 
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
+
+  initIndexQueryHandle(indexQueryHandle);
 
   regexpString = getREGEXPString(String_new(),"images.name",pattern);
 
@@ -1238,7 +1362,7 @@ Errors Index_initListImages(DatabaseQueryHandle *databaseQueryHandle,
     storageIdsString = String_newCString("1");
   }
 
-  error = Database_prepare(databaseQueryHandle,
+  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
                            "SELECT images.id, \
                                    storage.name, \
@@ -1262,19 +1386,19 @@ Errors Index_initListImages(DatabaseQueryHandle *databaseQueryHandle,
   return error;
 }
 
-bool Index_getNextImage(DatabaseQueryHandle *databaseQueryHandle,
-                        DatabaseId          *databaseId,
-                        String              storageName,
-                        uint64              *storageDateTime,
-                        String              imageName,
-                        uint64              *size,
-                        uint64              *blockOffset,
-                        uint64              *blockCount
+bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
+                        DatabaseId       *databaseId,
+                        String           storageName,
+                        uint64           *storageDateTime,
+                        String           imageName,
+                        uint64           *size,
+                        uint64           *blockOffset,
+                        uint64           *blockCount
                        )
 {
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
 
-  return Database_getNextRow(databaseQueryHandle,
+  return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %llu %llu",
                              databaseId,
                              &storageName,
@@ -1286,11 +1410,11 @@ bool Index_getNextImage(DatabaseQueryHandle *databaseQueryHandle,
                             );
 }
 
-Errors Index_initListDirectories(DatabaseQueryHandle *databaseQueryHandle,
-                                 DatabaseHandle      *databaseHandle,
-                                 const DatabaseId    *storageIds,
-                                 uint                storageIdCount,
-                                 String              pattern
+Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
+                                 DatabaseHandle   *databaseHandle,
+                                 const DatabaseId *storageIds,
+                                 uint             storageIdCount,
+                                 String           pattern
                                 )
 {
   String regexpString;
@@ -1298,8 +1422,10 @@ Errors Index_initListDirectories(DatabaseQueryHandle *databaseQueryHandle,
   uint   z;
   Errors error;
 
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
+
+  initIndexQueryHandle(indexQueryHandle);
 
   regexpString = getREGEXPString(String_new(),"directories.name",pattern);
 
@@ -1317,7 +1443,7 @@ Errors Index_initListDirectories(DatabaseQueryHandle *databaseQueryHandle,
     storageIdsString = String_newCString("1");
   }
 
-  error = Database_prepare(databaseQueryHandle,
+  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
                            "SELECT directories.id,\
                                    storage.name, \
@@ -1342,20 +1468,20 @@ Errors Index_initListDirectories(DatabaseQueryHandle *databaseQueryHandle,
   return error;
 }
 
-bool Index_getNextDirectory(DatabaseQueryHandle *databaseQueryHandle,
-                            DatabaseId          *databaseId,
-                            String              storageName,
-                            uint64              *storageDateTime,
-                            String              directoryName,
-                            uint64              *timeModified,
-                            uint32              *userId,
-                            uint32              *groupId,
-                            uint32              *permission
+bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
+                            DatabaseId       *databaseId,
+                            String           storageName,
+                            uint64           *storageDateTime,
+                            String           directoryName,
+                            uint64           *timeModified,
+                            uint32           *userId,
+                            uint32           *groupId,
+                            uint32           *permission
                            )
 {
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
 
-  return Database_getNextRow(databaseQueryHandle,
+  return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %d %d %d",
                              databaseId,
                              &storageName,
@@ -1368,11 +1494,11 @@ bool Index_getNextDirectory(DatabaseQueryHandle *databaseQueryHandle,
                             );
 }
 
-Errors Index_initListLinks(DatabaseQueryHandle *databaseQueryHandle,
-                           DatabaseHandle      *databaseHandle,
-                           const DatabaseId    *storageIds,
-                           uint                storageIdCount,
-                           String              pattern
+Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
+                           DatabaseHandle   *databaseHandle,
+                           const DatabaseId *storageIds,
+                           uint             storageIdCount,
+                           String           pattern
                           )
 {
   String regexpString;
@@ -1380,8 +1506,10 @@ Errors Index_initListLinks(DatabaseQueryHandle *databaseQueryHandle,
   uint   z;
   Errors error;
 
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
+
+  initIndexQueryHandle(indexQueryHandle);
 
   regexpString = getREGEXPString(String_new(),"links.name",pattern);
 
@@ -1399,7 +1527,7 @@ Errors Index_initListLinks(DatabaseQueryHandle *databaseQueryHandle,
     storageIdsString = String_newCString("1");
   }
 
-  error = Database_prepare(databaseQueryHandle,
+  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
                            "SELECT links.id,\
                                    storage.name, \
@@ -1425,21 +1553,21 @@ Errors Index_initListLinks(DatabaseQueryHandle *databaseQueryHandle,
   return error;
 }
 
-bool Index_getNextLink(DatabaseQueryHandle *databaseQueryHandle,
-                       DatabaseId          *databaseId,
-                       String              storageName,
-                       uint64              *storageDateTime,
-                       String              linkName,
-                       String              destinationName,
-                       uint64              *timeModified,
-                       uint32              *userId,
-                       uint32              *groupId,
-                       uint32              *permission
+bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
+                       DatabaseId       *databaseId,
+                       String           storageName,
+                       uint64           *storageDateTime,
+                       String           linkName,
+                       String           destinationName,
+                       uint64           *timeModified,
+                       uint32           *userId,
+                       uint32           *groupId,
+                       uint32           *permission
                       )
 {
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
 
-  return Database_getNextRow(databaseQueryHandle,
+  return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %S %llu %d %d %d",
                              databaseId,
                              &storageName,
@@ -1453,11 +1581,11 @@ bool Index_getNextLink(DatabaseQueryHandle *databaseQueryHandle,
                             );
 }
 
-Errors Index_initListHardLinks(DatabaseQueryHandle *databaseQueryHandle,
-                               DatabaseHandle      *databaseHandle,
-                               const DatabaseId    *storageIds,
-                               uint                storageIdCount,
-                               String              pattern
+Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
+                               DatabaseHandle   *databaseHandle,
+                               const DatabaseId *storageIds,
+                               uint             storageIdCount,
+                               String           pattern
                               )
 {
   String regexpString;
@@ -1465,8 +1593,10 @@ Errors Index_initListHardLinks(DatabaseQueryHandle *databaseQueryHandle,
   uint   z;
   Errors error;
 
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
+
+  initIndexQueryHandle(indexQueryHandle);
 
   regexpString = getREGEXPString(String_new(),"hardlinks.name",pattern);
 
@@ -1484,7 +1614,7 @@ Errors Index_initListHardLinks(DatabaseQueryHandle *databaseQueryHandle,
     storageIdsString = String_newCString("1");
   }
 
-  error = Database_prepare(databaseQueryHandle,
+  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
                            "SELECT hardlinks.id,\
                                    storage.name, \
@@ -1512,23 +1642,23 @@ Errors Index_initListHardLinks(DatabaseQueryHandle *databaseQueryHandle,
   return error;
 }
 
-bool Index_getNextHardLink(DatabaseQueryHandle *databaseQueryHandle,
-                           DatabaseId          *databaseId,
-                           String              storageName,
-                           uint64              *storageDateTime,
-                           String              fileName,
-                           uint64              *size,
-                           uint64              *timeModified,
-                           uint32              *userId,
-                           uint32              *groupId,
-                           uint32              *permission,
-                           uint64              *fragmentOffset,
-                           uint64              *fragmentSize
+bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
+                           DatabaseId       *databaseId,
+                           String           storageName,
+                           uint64           *storageDateTime,
+                           String           fileName,
+                           uint64           *size,
+                           uint64           *timeModified,
+                           uint32           *userId,
+                           uint32           *groupId,
+                           uint32           *permission,
+                           uint64           *fragmentOffset,
+                           uint64           *fragmentSize
                           )
 {
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
 
-  return Database_getNextRow(databaseQueryHandle,
+  return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %llu %d %d %d %llu %llu",
                              databaseId,
                              &storageName,
@@ -1544,11 +1674,11 @@ bool Index_getNextHardLink(DatabaseQueryHandle *databaseQueryHandle,
                             );
 }
 
-Errors Index_initListSpecial(DatabaseQueryHandle *databaseQueryHandle,
-                             DatabaseHandle      *databaseHandle,
-                             const DatabaseId    *storageIds,
-                             uint                storageIdCount,
-                             String              pattern
+Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
+                             DatabaseHandle   *databaseHandle,
+                             const DatabaseId *storageIds,
+                             uint             storageIdCount,
+                             String           pattern
                             )
 {
   String regexpString;
@@ -1556,8 +1686,10 @@ Errors Index_initListSpecial(DatabaseQueryHandle *databaseQueryHandle,
   uint   z;
   Errors error;
 
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
+
+  initIndexQueryHandle(indexQueryHandle);
 
   regexpString = getREGEXPString(String_new(),"special.name",pattern);
 
@@ -1575,7 +1707,7 @@ Errors Index_initListSpecial(DatabaseQueryHandle *databaseQueryHandle,
     storageIdsString = String_newCString("1");
   }
 
-  error = Database_prepare(databaseQueryHandle,
+  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
                            "SELECT special.id,\
                                    storage.name, \
@@ -1600,20 +1732,20 @@ Errors Index_initListSpecial(DatabaseQueryHandle *databaseQueryHandle,
   return error;
 }
 
-bool Index_getNextSpecial(DatabaseQueryHandle *databaseQueryHandle,
-                          DatabaseId          *databaseId,
-                          String              storageName,
-                          uint64              *storageDateTime,
-                          String              name,
-                          uint64              *timeModified,
-                          uint32              *userId,
-                          uint32              *groupId,
-                          uint32              *permission
+bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
+                          DatabaseId       *databaseId,
+                          String           storageName,
+                          uint64           *storageDateTime,
+                          String           name,
+                          uint64           *timeModified,
+                          uint32           *userId,
+                          uint32           *groupId,
+                          uint32           *permission
                          )
 {
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
 
-  return Database_getNextRow(databaseQueryHandle,
+  return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %d %d %d",
                              databaseId,
                              &storageName,
@@ -1626,11 +1758,12 @@ bool Index_getNextSpecial(DatabaseQueryHandle *databaseQueryHandle,
                             );
 }
 
-void Index_doneList(DatabaseQueryHandle *databaseQueryHandle)
+void Index_doneList(IndexQueryHandle *indexQueryHandle)
 {
-  assert(databaseQueryHandle != NULL);
+  assert(indexQueryHandle != NULL);
 
-  Database_finalize(databaseQueryHandle);
+  Database_finalize(&indexQueryHandle->databaseQueryHandle);
+  doneIndexQueryHandle(indexQueryHandle);
 }
 
 Errors Index_addFile(DatabaseHandle *databaseHandle,

@@ -838,37 +838,15 @@ Errors Storage_done(StorageHandle *storageHandle);
 bool Storage_isServerAllocationPending(StorageHandle *storageHandle);
 
 /***********************************************************************\
-* Name   : Storage_getNameFromHandle
-* Purpose: get storage name from storage handle
-* Input  : storageName   - storage name variable
-*          storageHandle - storage handle
-*          fileName      - fileName (can be NULL)
-* Output : storageName - storage name
-* Return : storage name variable
-* Notes  : if fileName is NULL file name from storageSpecifier is used
+* Name   : Storage_getStorageSpecifier
+* Purpose: get storage specifier from from storage handle
+* Input  : storageHandle - storage handle
+* Output : -
+* Return : storage specifier
+* Notes  : -
 \***********************************************************************/
 
-String Storage_getNameFromHandle(String              storageName,
-                                 const StorageHandle *storageHandle,
-                                 const String        fileName
-                                );
-
-/***********************************************************************\
-* Name   : Storage_getPrintableNameFromHandle
-* Purpose: get printable storage name from storage handle (without
-*          password)
-* Input  : storageName   - storage name variable
-*          storageHandle - storage handle
-*          fileName      - fileName (can be NULL)
-* Output : storageName - storage name
-* Return : storage name variable
-* Notes  : if fileName is NULL file name from storageSpecifier is used
-\***********************************************************************/
-
-String Storage_getPrintableNameFromHandle(String              storageName,
-                                          const StorageHandle *storageHandle,
-                                          const String        fileName
-                                         );
+StorageSpecifier *Storage_getStorageSpecifier(const StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_preProcess

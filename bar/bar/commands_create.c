@@ -2695,9 +2695,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   AutoFreeList               autoFreeList;
   byte                       *buffer;
-  String                     storageName;
-  String                     hostName,loginName,deviceName,fileName;
-  String                     printableStorageName;
+  String                     storageName,printableStorageName;
   void                       *autoFreeSavePoint;
   StorageMsg                 storageMsg;
   Errors                     error;
@@ -2708,12 +2706,15 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   SemaphoreLock              semaphoreLock;
   String                     pattern;
   String                     storagePath;
+  IndexQueryHandle           indexQueryHandle;
   int64                      oldStorageId;
   StorageDirectoryListHandle storageDirectoryListHandle;
+  String                     fileName;
 
   assert(createInfo != NULL);
+  assert(createInfo->storageSpecifier != NULL);
 
-  // allocate resources
+  // init variables
   AutoFree_init(&autoFreeList);
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
@@ -2721,16 +2722,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
   storageName          = String_new();
-  hostName             = String_new();
-  loginName            = String_new();
-  deviceName           = String_new();
-  fileName             = String_new();
   printableStorageName = String_new();
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
   AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(storageName); });
-  AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
-  AUTOFREE_ADD(&autoFreeList,loginName,{ String_delete(loginName); });
-  AUTOFREE_ADD(&autoFreeList,deviceName,{ String_delete(deviceName); });
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // initial pre-processing
@@ -2762,13 +2756,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   {
     AUTOFREE_ADD(&autoFreeList,&storageMsg,
                  {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                    storageInfoDecrement(createInfo,storageMsg.fileSize);
                    File_delete(storageMsg.fileName,FALSE);
                    if (storageMsg.storageId != DATABASE_ID_NONE) Index_delete(indexDatabaseHandle,storageMsg.storageId);
                    freeStorageMsg(&storageMsg,NULL);
                  }
                 );
+#warning todo
 fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cString(storageMsg.fileName));
 
     // pause
@@ -2804,15 +2798,15 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     }
     DEBUG_TESTCODE("storageThreadCode2") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 
-    // get storage name
-    Storage_getNameFromHandle(storageName,
-                              &createInfo->storageHandle,
-                              storageMsg.destinationFileName
-                             );
-    Storage_getPrintableNameFromHandle(printableStorageName,
-                                       &createInfo->storageHandle,
-                                       storageMsg.destinationFileName
-                                      );
+    // get storage names
+    Storage_getName(storageName,
+                    createInfo->storageSpecifier,
+                    storageMsg.destinationFileName
+                   );
+    Storage_getPrintableName(printableStorageName,
+                             createInfo->storageSpecifier,
+                             storageMsg.destinationFileName
+                            );
 
     // set database storage name and state
     if (storageMsg.storageId != DATABASE_ID_NONE)
@@ -3007,32 +3001,43 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     if (storageMsg.storageId != DATABASE_ID_NONE)
     {
       // delete old indizes for same storage file
-      while (   Index_findByName(indexDatabaseHandle,
-                                 STORAGE_TYPE_ANY,
-                                 hostName,
-                                 loginName,
-                                 deviceName,
-                                 fileName,
-                                 &oldStorageId,
-                                 NULL,
-                                 NULL
-                                )
-             && (oldStorageId != DATABASE_ID_NONE)
+      error = Index_initListStorage(&indexQueryHandle,
+                                    indexDatabaseHandle,
+                                    STORAGE_TYPE_ANY,
+                                    createInfo->storageSpecifier->hostName,
+                                    createInfo->storageSpecifier->loginName,
+                                    createInfo->storageSpecifier->deviceName,
+                                    storageMsg.destinationFileName,
+                                    INDEX_STATE_ALL
+                                   );
+      while (Index_getNextStorage(&indexQueryHandle,
+                                  &oldStorageId,
+                                  storageName,
+                                  NULL, // createdDateTime
+                                  NULL, // size
+                                  NULL, // indexState,
+                                  NULL, // indexMode,
+                                  NULL, // lastCheckedDateTime,
+                                  NULL  // errorMessage
+                                 )
             )
       {
-#warning avoid delete own index?
-        error = Index_delete(indexDatabaseHandle,oldStorageId);
-        if (error != ERROR_NONE)
+        if (oldStorageId != storageMsg.storageId)
         {
-          printError("Cannot delete old index for storage '%s' (error: %s)!\n",
-                     String_cString(printableStorageName),
-                     Errors_getText(error)
-                    );
-          createInfo->failError = error;
-          break;
+          error = Index_delete(indexDatabaseHandle,oldStorageId);
+          if (error != ERROR_NONE)
+          {
+            printError("Cannot delete old index for storage '%s' (error: %s)!\n",
+                       String_cString(printableStorageName),
+                       Errors_getText(error)
+                      );
+            createInfo->failError = error;
+            break;
+          }
+          DEBUG_TESTCODE("storageThreadCode8") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
         }
-        DEBUG_TESTCODE("storageThreadCode8") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
       }
+      Index_doneList(&indexQueryHandle);
       if (createInfo->failError != ERROR_NONE)
       {
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
@@ -3198,10 +3203,6 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
 
   // free resoures
   String_delete(printableStorageName);
-  String_delete(fileName);
-  String_delete(deviceName);
-  String_delete(loginName);
-  String_delete(hostName);
   String_delete(storageName);
   free(buffer);
   AutoFree_done(&autoFreeList);

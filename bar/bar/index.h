@@ -60,6 +60,20 @@ typedef uint64 IndexModeSet;
 
 #define INDEX_MODE_ALL (INDEX_MODE_MANUAL|INDEX_MODE_AUTO)
 
+// index query handle
+typedef struct
+{
+  DatabaseQueryHandle databaseQueryHandle;
+  struct
+  {
+    StorageTypes type;
+    Pattern      *hostNamePattern;
+    Pattern      *loginNamePattern;
+    Pattern      *deviceNamePattern;
+    Pattern      *fileNamePattern;
+  } storage;
+} IndexQueryHandle;
+
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
@@ -194,9 +208,10 @@ bool Index_parseMode(const char *name, IndexModes *indexMode);
 * Purpose: find index by id
 * Input  : databaseHandle - database handle
 *          storageId   - database id of index
-* Output : name        - name
-*          indexState  - index state (can be NULL)
-*          lastChecked - last checked date/time stamp [s] (can be NULL)
+* Output : name                 - name
+*          indexState           - index state (can be NULL)
+*          lastCheckedTimestamp - last checked date/time stamp [s] (can
+*                                 be NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -205,21 +220,22 @@ bool Index_findById(DatabaseHandle *databaseHandle,
                     int64          storageId,
                     String         name,
                     IndexStates    *indexState,
-                    uint64         *lastChecked
+                    uint64         *lastCheckedTimestamp
                    );
 
 /***********************************************************************\
 * Name   : Index_findByName
 * Purpose: find index by name
 * Input  : databaseHandle  - database handle
-*          findStorageType - storage type to find or STORAGE_TYPE_UNKNOWN
+*          findStorageType - storage type to find or STORAGE_TYPE_ANY
 *          findHostName    - host naem to find or NULL
 *          findLoginName   - login name to find or NULL
-*          findDeviceName  - device naem to find or NULL
+*          findDeviceName  - device name to find or NULL
 *          findFileName    - file name to find or NULL
-* Output : storageId   - database id of index
-*          indexState  - index state (can be NULL)
-*          lastChecked - last checked date/time stamp [s] (can be NULL)
+* Output : storageId            - database id of index
+*          indexState           - index state (can be NULL)
+*          lastCheckedTimestamp - last checked date/time stamp [s] (can
+*                                 be NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -232,7 +248,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                       const String   findFileName,
                       int64          *storageId,
                       IndexStates    *indexState,
-                      uint64         *lastChecked
+                      uint64         *lastCheckedTimestamp
                      );
 
 /***********************************************************************\
@@ -240,9 +256,10 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 * Purpose: find index by state
 * Input  : databaseHandle - database handle
 *          indexState     - index state
-* Output : storageId   - database id of index
-*          name        - index name (can be NULL)
-*          lastChecked - last checked date/time stamp [s] (can be NULL)
+* Output : storageId            - database id of index
+*          name                 - index name (can be NULL)
+*          lastCheckedTimestamp - last checked date/time stamp [s] (can
+*                                 be NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -251,7 +268,7 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
                        IndexStateSet  indexStateSet,
                        int64          *storageId,
                        String         name,
-                       uint64         *lastChecked
+                       uint64         *lastCheckedTimestamp
                       );
 
 /***********************************************************************\
@@ -324,9 +341,10 @@ Errors Index_update(DatabaseHandle *databaseHandle,
 * Purpose: get index state
 * Input  : databaseHandle - database handle
 *          storageId      - database id of index
-* Output : indexState   - index state; see IndexStates
-*          lastChecked  - last checked date/time stamp [s] (can be NULL)
-*          errorMessage - error message (can be NULL)
+* Output : indexState           - index state; see IndexStates
+*          lastCheckedTimestamp - last checked date/time stamp [s] (can
+*                                 be NULL)
+*          errorMessage         - error message (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -334,19 +352,20 @@ Errors Index_update(DatabaseHandle *databaseHandle,
 Errors Index_getState(DatabaseHandle *databaseHandle,
                       int64          storageId,
                       IndexStates    *indexState,
-                      uint64         *lastChecked,
+                      uint64         *lastCheckedTimestamp,
                       String         errorMessage
                      );
 
 /***********************************************************************\
 * Name   : Index_setState
 * Purpose: set index state
-* Input  : databaseHandle - database handle
-*          storageId      - database id of index
-*          indexState     - index state; see IndexStates
-*          lastChecked    - last checked date/time stamp [s] (can be 0LL)
-*          errorMessage   - error message (can be NULL)
-*          ...            - optional arguments for error message
+* Input  : databaseHandle       - database handle
+*          storageId            - database id of index
+*          indexState           - index state; see IndexStates
+*          lastCheckedTimestamp - last checked date/time stamp [s] (can
+*                                 be 0LL)
+*          errorMessage         - error message (can be NULL)
+*          ...                  - optional arguments for error message
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -355,7 +374,7 @@ Errors Index_getState(DatabaseHandle *databaseHandle,
 Errors Index_setState(DatabaseHandle *databaseHandle,
                       int64          storageId,
                       IndexStates    indexState,
-                      uint64         lastChecked,
+                      uint64         lastCheckedTimestamp,
                       const char     *errorMessage,
                       ...
                      );
@@ -377,24 +396,33 @@ long Index_countState(DatabaseHandle *databaseHandle,
 /***********************************************************************\
 * Name   : Index_initListStorage
 * Purpose: list storage entries
-* Input  : databaseHandle - database handle
-*          indexState     - index state
-*          pattern        - name pattern (can be NULL)
-* Output : databaseQueryHandle - database query handle
+* Input  : IndexQueryHandle - index query handle variable
+*          databaseHandle   - database handle
+*          storageType      - storage type to find or STORAGE_TYPE_ANY
+*          hostName         - host naem pattern or NULL
+*          loginName        - login name pattern or NULL
+*          deviceName       - device name pattern or NULL
+*          fileName         - file name pattern or NULL
+*          indexState       - index state
+* Output : IndexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
-                             DatabaseHandle      *databaseHandle,
-                             IndexStateSet       indexStateSet,
-                             String              pattern
+Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
+                             DatabaseHandle   *databaseHandle,
+                             StorageTypes     storageType,
+                             const String     hostName,
+                             const String     loginName,
+                             const String     deviceName,
+                             const String     fileName,
+                             IndexStateSet    indexStateSet
                             );
 
 /***********************************************************************\
 * Name   : Index_getNextStorage
 * Purpose: get next index storage entry
-* Input  : databaseQueryHandle - database query handle
+* Input  : IndexQueryHandle    - index query handle
 * Output : databaseId          - database id of entry
 *          storageName         - storage name
 *          createdDateTime     - date/time stamp [s]
@@ -407,38 +435,39 @@ Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_getNextStorage(DatabaseQueryHandle *databaseQueryHandle,
-                          DatabaseId          *databaseId,
-                          String              storageName,
-                          uint64              *createdDateTime,
-                          uint64              *size,
-                          IndexStates         *indexState,
-                          IndexModes          *indexMode,
-                          uint64              *lastCheckedDateTime,
-                          String              errorMessage
+bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
+                          DatabaseId       *databaseId,
+                          String           storageName,
+                          uint64           *createdDateTime,
+                          uint64           *size,
+                          IndexStates      *indexState,
+                          IndexModes       *indexMode,
+                          uint64           *lastCheckedDateTime,
+                          String           errorMessage
                          );
 
 /***********************************************************************\
 * Name   : Index_initListFiles
 * Purpose: list file entries
-* Input  : databaseHandle - database handle
-*          pattern        - name pattern (can be NULL)
-* Output : databaseQueryHandle - database query handle
+* Input  : indexQueryHandle - index query handle variable
+*          databaseHandle   - database handle
+*          pattern          - name pattern (can be NULL)
+* Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListFiles(DatabaseQueryHandle *databaseQueryHandle,
-                           DatabaseHandle      *databaseHandle,
-                           const DatabaseId    *storageIds,
-                           uint                storageIdCount,
-                           String              pattern
+Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
+                           DatabaseHandle   *databaseHandle,
+                           const DatabaseId *storageIds,
+                           uint             storageIdCount,
+                           String           pattern
                           );
 
 /***********************************************************************\
 * Name   : Index_getNextFile
 * Purpose: get next file entry
-* Input  : databaseQueryHandle - database query handle
+* Input  : indexQueryHandle - index query handle
 * Output : databaseId     - database id of entry
 *          storageName    - storage name
 *          fileName       - name
@@ -453,18 +482,18 @@ Errors Index_initListFiles(DatabaseQueryHandle *databaseQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_getNextFile(DatabaseQueryHandle *databaseQueryHandle,
-                       DatabaseId          *databaseId,
-                       String              storageName,
-                       uint64              *storageDateTime,
-                       String              fileName,
-                       uint64              *size,
-                       uint64              *timeModified,
-                       uint32              *userId,
-                       uint32              *groupId,
-                       uint32              *permission,
-                       uint64              *fragmentOffset,
-                       uint64              *fragmentSize
+bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
+                       DatabaseId       *databaseId,
+                       String           storageName,
+                       uint64           *storageDateTime,
+                       String           fileName,
+                       uint64           *size,
+                       uint64           *timeModified,
+                       uint32           *userId,
+                       uint32           *groupId,
+                       uint32           *permission,
+                       uint64           *fragmentOffset,
+                       uint64           *fragmentSize
                       );
 
 /***********************************************************************\
@@ -472,22 +501,22 @@ bool Index_getNextFile(DatabaseQueryHandle *databaseQueryHandle,
 * Purpose: list image entries
 * Input  : databaseHandle - database handle
 *          pattern        - name pattern (can be NULL)
-* Output : databaseQueryHandle - database query handle
+* Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListImages(DatabaseQueryHandle *databaseQueryHandle,
-                            DatabaseHandle      *databaseHandle,
-                            const DatabaseId    *storageIds,
-                            uint                storageIdCount,
-                            String              pattern
+Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
+                            DatabaseHandle   *databaseHandle,
+                            const DatabaseId *storageIds,
+                            uint             storageIdCount,
+                            String           pattern
                            );
 
 /***********************************************************************\
 * Name   : Index_getNextImage
 * Purpose: get next image entry
-* Input  : databaseQueryHandle - database query handle
+* Input  : indexQueryHandle - index query handle
 * Output : databaseId   - database id of entry
 *          storageName  - storage name
 *          imageName    - image name
@@ -498,14 +527,14 @@ Errors Index_initListImages(DatabaseQueryHandle *databaseQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_getNextImage(DatabaseQueryHandle *databaseQueryHandle,
-                        DatabaseId          *databaseId,
-                        String              storageName,
-                        uint64              *storageDateTime,
-                        String              imageName,
-                        uint64              *size,
-                        uint64              *blockOffset,
-                        uint64              *blockCount
+bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
+                        DatabaseId       *databaseId,
+                        String           storageName,
+                        uint64           *storageDateTime,
+                        String           imageName,
+                        uint64           *size,
+                        uint64           *blockOffset,
+                        uint64           *blockCount
                        );
 
 /***********************************************************************\
@@ -513,22 +542,22 @@ bool Index_getNextImage(DatabaseQueryHandle *databaseQueryHandle,
 * Purpose: list directory entries
 * Input  : databaseHandle - database handle
 *          pattern        - name pattern (can be NULL)
-* Output : databaseQueryHandle - database query handle
+* Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListDirectories(DatabaseQueryHandle *databaseQueryHandle,
-                                 DatabaseHandle      *databaseHandle,
-                                 const DatabaseId    *storageIds,
-                                 uint                storageIdCount,
-                                 String              pattern
+Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
+                                 DatabaseHandle   *databaseHandle,
+                                 const DatabaseId *storageIds,
+                                 uint             storageIdCount,
+                                 String           pattern
                                 );
 
 /***********************************************************************\
 * Name   : Index_getNextDirectory
 * Purpose: get next directory entry
-* Input  : databaseQueryHandle - database query handle
+* Input  : indexQueryHandle - index query handle
 * Output : databaseId    - database id of entry
 *          storageName   - storage name
 *          directoryName - directory name
@@ -540,15 +569,15 @@ Errors Index_initListDirectories(DatabaseQueryHandle *databaseQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_getNextDirectory(DatabaseQueryHandle *databaseQueryHandle,
-                            DatabaseId          *databaseId,
-                            String              storageName,
-                            uint64              *storageDateTime,
-                            String              directoryName,
-                            uint64              *timeModified,
-                            uint32              *userId,
-                            uint32              *groupId,
-                            uint32              *permission
+bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
+                            DatabaseId       *databaseId,
+                            String           storageName,
+                            uint64           *storageDateTime,
+                            String           directoryName,
+                            uint64           *timeModified,
+                            uint32           *userId,
+                            uint32           *groupId,
+                            uint32           *permission
                            );
 
 /***********************************************************************\
@@ -556,22 +585,22 @@ bool Index_getNextDirectory(DatabaseQueryHandle *databaseQueryHandle,
 * Purpose: list link entries
 * Input  : databaseHandle - database handle
 *          pattern        - name pattern (can be NULL)
-* Output : databaseQueryHandle - database query handle
+* Output : indexQueryHandle - inxe query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListLinks(DatabaseQueryHandle *databaseQueryHandle,
-                           DatabaseHandle      *databaseHandle,
-                           const DatabaseId    *storageIds,
-                           uint                storageIdCount,
-                           String              pattern
+Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
+                           DatabaseHandle   *databaseHandle,
+                           const DatabaseId *storageIds,
+                           uint             storageIdCount,
+                           String           pattern
                           );
 
 /***********************************************************************\
 * Name   : Index_getNextLink
 * Purpose: get next link entry
-* Input  : databaseQueryHandle - database query handle
+* Input  : indexQueryHandle - index query handle
 * Output : databaseId      - database id of entry
 *          storageName     - storage name
 *          linkName        - link name
@@ -584,16 +613,16 @@ Errors Index_initListLinks(DatabaseQueryHandle *databaseQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_getNextLink(DatabaseQueryHandle *databaseQueryHandle,
-                       DatabaseId          *databaseId,
-                       String              storageName,
-                       uint64              *storageDateTime,
-                       String              name,
-                       String              destinationName,
-                       uint64              *timeModified,
-                       uint32              *userId,
-                       uint32              *groupId,
-                       uint32              *permission
+bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
+                       DatabaseId       *databaseId,
+                       String           storageName,
+                       uint64           *storageDateTime,
+                       String           name,
+                       String           destinationName,
+                       uint64           *timeModified,
+                       uint32           *userId,
+                       uint32           *groupId,
+                       uint32           *permission
                       );
 
 /***********************************************************************\
@@ -601,22 +630,22 @@ bool Index_getNextLink(DatabaseQueryHandle *databaseQueryHandle,
 * Purpose: list hard link entries
 * Input  : databaseHandle - database handle
 *          pattern        - name pattern (can be NULL)
-* Output : databaseQueryHandle - database query handle
+* Output : indexQueryHandle - indxe query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListHardLinks(DatabaseQueryHandle *databaseQueryHandle,
-                               DatabaseHandle      *databaseHandle,
-                               const DatabaseId    *storageIds,
-                               uint                storageIdCount,
-                               String              pattern
+Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
+                               DatabaseHandle   *databaseHandle,
+                               const DatabaseId *storageIds,
+                               uint             storageIdCount,
+                               String           pattern
                                );
 
 /***********************************************************************\
 * Name   : Index_getNextHardLink
 * Purpose: get next hard link entry
-* Input  : databaseQueryHandle - database query handle
+* Input  : indexQueryHandle - index query handle
 * Output : databaseId          - database id of entry
 *          storageName         - storage name
 *          fileName            - file name
@@ -632,18 +661,18 @@ Errors Index_initListHardLinks(DatabaseQueryHandle *databaseQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_getNextHardLink(DatabaseQueryHandle *databaseQueryHandle,
-                           DatabaseId          *databaseId,
-                           String              storageName,
-                           uint64              *storageDateTime,
-                           String              fileName,
-                           uint64              *size,
-                           uint64              *timeModified,
-                           uint32              *userId,
-                           uint32              *groupId,
-                           uint32              *permission,
-                           uint64              *fragmentOffset,
-                           uint64              *fragmentSize
+bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
+                           DatabaseId       *databaseId,
+                           String           storageName,
+                           uint64           *storageDateTime,
+                           String           fileName,
+                           uint64           *size,
+                           uint64           *timeModified,
+                           uint32           *userId,
+                           uint32           *groupId,
+                           uint32           *permission,
+                           uint64           *fragmentOffset,
+                           uint64           *fragmentSize
                           );
 
 /***********************************************************************\
@@ -651,22 +680,22 @@ bool Index_getNextHardLink(DatabaseQueryHandle *databaseQueryHandle,
 * Purpose: list special entries
 * Input  : databaseHandle - database handle
 *          pattern        - name pattern (can be NULL)
-* Output : databaseQueryHandle - database query handle
+* Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListSpecial(DatabaseQueryHandle *databaseQueryHandle,
-                             DatabaseHandle      *databaseHandle,
-                             const DatabaseId    *storageIds,
-                             uint                storageIdCount,
-                             String              pattern
+Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
+                             DatabaseHandle   *databaseHandle,
+                             const DatabaseId *storageIds,
+                             uint             storageIdCount,
+                             String           pattern
                             );
 
 /***********************************************************************\
 * Name   : Index_getNextSpecial
 * Purpose: get next special entry
-* Input  : databaseQueryHandle - database query handle
+* Input  : indexQueryHandle - index query handle
 * Output : databaseId   - database id of entry
 *          storageName  - storage name
 *          name         - name
@@ -678,27 +707,27 @@ Errors Index_initListSpecial(DatabaseQueryHandle *databaseQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_getNextSpecial(DatabaseQueryHandle *databaseQueryHandle,
-                          DatabaseId          *databaseId,
-                          String              storageName,
-                          uint64              *storageDateTime,
-                          String              name,
-                          uint64              *timeModified,
-                          uint32              *userId,
-                          uint32              *groupId,
-                          uint32              *permission
+bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
+                          DatabaseId       *databaseId,
+                          String           storageName,
+                          uint64           *storageDateTime,
+                          String           name,
+                          uint64           *timeModified,
+                          uint32           *userId,
+                          uint32           *groupId,
+                          uint32           *permission
                          );
 
 /***********************************************************************\
 * Name   : Index_doneList
 * Purpose: done index list
-* Input  : databaseQueryHandle - database query handle
+* Input  : indexQueryHandle - index query handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Index_doneList(DatabaseQueryHandle *databaseQueryHandle);
+void Index_doneList(IndexQueryHandle *indexQueryHandle);
 
 /***********************************************************************\
 * Name   : Index_addFile

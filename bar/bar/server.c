@@ -74,9 +74,8 @@
 // sleep times [s]
 #define SLEEP_TIME_SCHEDULER_THREAD         ( 1*60)
 #define SLEEP_TIME_PAUSE_THREAD             ( 1*60)
-#define SLEEP_TIME_INDEX_THREAD             (10*60)
-//#define SLEEP_TIME_INDEX_UPDATE_THREAD (10*60)
-#define SLEEP_TIME_INDEX_UPDATE_THREAD      (10)
+#define SLEEP_TIME_INDEX_THREAD             ( 1*60)
+#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD (10*60)
 
 /***************************** Datatypes *******************************/
 
@@ -2603,7 +2602,7 @@ LOCAL bool indexAbortCallback(void *userData)
 LOCAL void indexThreadCode(void)
 {
   int64                  storageId;
-  DatabaseQueryHandle    databaseQueryHandle1,databaseQueryHandle2;
+  IndexQueryHandle       indexQueryHandle1,indexQueryHandle2;
   StorageSpecifier       storageSpecifier;
   String                 storageName;
   StorageHandle          storageHandle;
@@ -2681,14 +2680,18 @@ LOCAL void indexThreadCode(void)
 #if 1
   // delete duplicate index entries
   duplicateStorageName = String_new();
-  error = Index_initListStorage(&databaseQueryHandle1,
+  error = Index_initListStorage(&indexQueryHandle1,
                                 indexDatabaseHandle,
-                                INDEX_STATE_ALL,
-                                NULL
+                                STORAGE_TYPE_ANY,
+                                NULL, // hostName
+                                NULL, // loginName
+                                NULL, // deviceName
+                                NULL, // fileName
+                                INDEX_STATE_ALL
                                );
   if (error == ERROR_NONE)
   {
-    while (Index_getNextStorage(&databaseQueryHandle1,
+    while (Index_getNextStorage(&indexQueryHandle1,
                                 &storageId,
                                 storageName,
                                 NULL,
@@ -2700,14 +2703,18 @@ LOCAL void indexThreadCode(void)
                                )
           )
     {
-      error = Index_initListStorage(&databaseQueryHandle2,
+      error = Index_initListStorage(&indexQueryHandle2,
                                     indexDatabaseHandle,
-                                    INDEX_STATE_ALL,
-                                    NULL
+                                    STORAGE_TYPE_ANY,
+                                    NULL, // hostName
+                                    NULL, // loginName
+                                    NULL, // deviceName
+                                    NULL, // fileName
+                                    INDEX_STATE_ALL
                                    );
       if (error == ERROR_NONE)
       {
-        while (Index_getNextStorage(&databaseQueryHandle2,
+        while (Index_getNextStorage(&indexQueryHandle2,
                                     &duplicateStorageId,
                                     duplicateStorageName,
                                     NULL,
@@ -2738,10 +2745,10 @@ LOCAL void indexThreadCode(void)
             if (error == ERROR_NONE) plogMessage(LOG_TYPE_INDEX,"INDEX","Deleted duplicate index #%lld: %s\n",duplicateStorageId,String_cString(printableStorageName));
           }
         }
-        Index_doneList(&databaseQueryHandle2);
+        Index_doneList(&indexQueryHandle2);
       }
     }
-    Index_doneList(&databaseQueryHandle1);
+    Index_doneList(&indexQueryHandle1);
   }
   String_delete(duplicateStorageName);
 #endif /* 0 */
@@ -2801,7 +2808,6 @@ LOCAL void indexThreadCode(void)
            && !quitFlag
           )
     {
-fprintf(stderr,"%s, %d: %ld %s\n",__FILE__,__LINE__,storageId,String_cString(storageName));
       // parse storage name
       error = Storage_parseName(&storageSpecifier,storageName);
       if (error == ERROR_NONE)
@@ -2835,7 +2841,7 @@ fprintf(stderr,"%s, %d: %ld %s\n",__FILE__,__LINE__,storageId,String_cString(sto
         LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
         {
           // index update
-  #warning todo init?
+#warning todo init?
           jobOptions.cryptPassword           = Password_duplicate(indexCryptPasswordNode->cryptPassword);
           jobOptions.cryptPrivateKeyFileName = String_duplicate(indexCryptPasswordNode->cryptPrivateKeyFileName);
           error = Archive_updateIndex(indexDatabaseHandle,
@@ -2958,6 +2964,23 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 }
 
 /***********************************************************************\
+* Name   : pauseIndexUpdate
+* Purpose: pause index update
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void pauseIndexUpdate()
+{
+  while (pauseFlags.indexUpdate && !quitFlag)
+  {
+    Misc_udelay(500L*1000L);
+  }
+}
+
+/***********************************************************************\
 * Name   : autoIndexUpdateThreadCode
 * Purpose: auto index update thread entry
 * Input  : -
@@ -2986,7 +3009,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
   int                        z;
   uint64                     now;
   String                     dateTime;
-  DatabaseQueryHandle        databaseQueryHandle;
+  IndexQueryHandle           indexQueryHandle;
   IndexModes                 indexMode;
 
   // initialize variables
@@ -2999,10 +3022,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
   while (!quitFlag)
   {
     // pause
-    while (pauseFlags.indexUpdate && !quitFlag)
-    {
-      Misc_udelay(500L*1000L);
-    }
+    pauseIndexUpdate();
 
     // collect storage locations to check for BAR files
     getStorageDirectories(&storageDirectoryList);
@@ -3059,7 +3079,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                    storageSpecifier.hostName,
                                    storageSpecifier.loginName,
                                    storageSpecifier.deviceName,
-                                   storageSpecifier.fileName,
+                                   fileName,
                                    &storageId,
                                    &indexState,
                                    NULL
@@ -3108,16 +3128,20 @@ LOCAL void autoIndexUpdateThreadCode(void)
     doneJobOptions(&jobOptions);
 
     // delete not existing indizes
-    error = Index_initListStorage(&databaseQueryHandle,
+    error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
-                                  INDEX_STATE_ALL,
-                                  NULL
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_ALL
                                  );
     if (error == ERROR_NONE)
     {
       now      = Misc_getCurrentDateTime();
       dateTime = String_new();
-      while (Index_getNextStorage(&databaseQueryHandle,
+      while (Index_getNextStorage(&indexQueryHandle,
                                   &storageId,
                                   storageName,
                                   &createdDateTime,
@@ -3158,13 +3182,13 @@ LOCAL void autoIndexUpdateThreadCode(void)
                      );
         }
       }
-      Index_doneList(&databaseQueryHandle);
+      Index_doneList(&indexQueryHandle);
       String_delete(dateTime);
     }
 
     // sleep, check quit flag
     z = 0;
-    while ((z < SLEEP_TIME_INDEX_UPDATE_THREAD) && !quitFlag)
+    while ((z < SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD) && !quitFlag)
     {
       Misc_udelay(10LL*MISC_US_PER_SECOND);
       z += 10;
@@ -7924,24 +7948,24 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint                maxCount;
-  IndexStateSet       indexStateSet;
-  IndexModeSet        indexModeSet;
-  String              patternText;
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
-  ulong               n;
-  StorageSpecifier    storageSpecifier;
-  String              storageName;
-  String              storageFileName;
-  String              printableStorageName;
-  String              errorMessage;
-  DatabaseId          storageId;
-  uint64              storageDateTime;
-  uint64              size;
-  IndexStates         indexState;
-  IndexModes          indexMode;
-  uint64              lastCheckedDateTime;
+  uint             maxCount;
+  IndexStateSet    indexStateSet;
+  IndexModeSet     indexModeSet;
+  String           patternText;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  ulong            n;
+  StorageSpecifier storageSpecifier;
+  String           storageName;
+  String           storageFileName;
+  String           printableStorageName;
+  String           errorMessage;
+  DatabaseId       storageId;
+  uint64           storageDateTime;
+  uint64           size;
+  IndexStates      indexState;
+  IndexModes       indexMode;
+  uint64           lastCheckedDateTime;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7979,10 +8003,14 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     printableStorageName = String_new();
 
     // list index
-    error = Index_initListStorage(&databaseQueryHandle,
+    error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
-                                  indexStateSet,
-                                  patternText
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  patternText,
+                                  indexStateSet
                                  );
     if (error != ERROR_NONE)
     {
@@ -7999,7 +8027,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     }
     n = 0L;
     while (   ((maxCount == 0L) || (n < maxCount))
-           && Index_getNextStorage(&databaseQueryHandle,
+           && Index_getNextStorage(&indexQueryHandle,
                                    &storageId,
                                    storageName,
                                    &storageDateTime,
@@ -8035,7 +8063,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                       );
       n++;
     }
-    Index_doneList(&databaseQueryHandle);
+    Index_doneList(&indexQueryHandle);
 
     // free resources
     String_delete(printableStorageName);
@@ -8133,12 +8161,12 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
 
 LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  bool                stateAny;
-  IndexStates         state;
-  DatabaseId          storageId;
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
-  IndexStates         storageState;
+  bool             stateAny;
+  IndexStates      state;
+  DatabaseId       storageId;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexStates      storageState;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8179,17 +8207,21 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     }
     else
     {
-      error = Index_initListStorage(&databaseQueryHandle,
+      error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
-                                    INDEX_STATE_ALL,
-                                    NULL
+                                    STORAGE_TYPE_ANY,
+                                    NULL, // hostName
+                                    NULL, // loginName
+                                    NULL, // deviceName
+                                    NULL, // fileName
+                                    INDEX_STATE_ALL
                                    );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Errors_getText(error));
         return;
       }
-      while (Index_getNextStorage(&databaseQueryHandle,
+      while (Index_getNextStorage(&indexQueryHandle,
                                   &storageId,
                                   NULL,
                                   NULL,
@@ -8209,13 +8241,13 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
                               );
           if (error != ERROR_NONE)
           {
-            Index_doneList(&databaseQueryHandle);
+            Index_doneList(&indexQueryHandle);
             sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Errors_getText(error));
             return;
           }
         }
       }
-      Index_doneList(&databaseQueryHandle);
+      Index_doneList(&indexQueryHandle);
     }
   }
   else
@@ -8244,12 +8276,12 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 
 LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  bool                stateAny;
-  IndexStates         state;
-  int64               storageId;
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
-  IndexStates         storageState;
+  bool             stateAny;
+  IndexStates      state;
+  int64            storageId;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexStates      storageState;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8288,17 +8320,21 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     }
     else
     {
-      error = Index_initListStorage(&databaseQueryHandle,
+      error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
-                                    INDEX_STATE_ALL,
-                                    NULL
+                                    STORAGE_TYPE_ANY,
+                                    NULL, // hostName
+                                    NULL, // loginName
+                                    NULL, // deviceName
+                                    NULL, // fileName
+                                    INDEX_STATE_ALL
                                    );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Errors_getText(error));
         return;
       }
-      while (Index_getNextStorage(&databaseQueryHandle,
+      while (Index_getNextStorage(&indexQueryHandle,
                                   &storageId,
                                   NULL,
                                   NULL,
@@ -8321,7 +8357,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
                         );
         }
       }
-      Index_doneList(&databaseQueryHandle);
+      Index_doneList(&indexQueryHandle);
     }
   }
   else
@@ -8662,27 +8698,27 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     } \
     while (0)
 
-  String              entryPattern;
-  bool                checkedStorageOnlyFlag;
-  uint                entryMaxCount;
-  bool                newestEntriesOnlyFlag;
-  uint                entryCount;
-  IndexList           indexList;
-  IndexNode           *indexNode;
-  String              regexpString;
-  DatabaseId          storageId;
-  String              storageName;
-  uint64              storageDateTime;
-  String              name;
-  String              destinationName;
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
-  uint64              size;
-  uint64              timeModified;
-  uint                userId,groupId;
-  uint                permission;
-  uint64              fragmentOffset,fragmentSize;
-  uint64              blockOffset,blockCount;
+  String           entryPattern;
+  bool             checkedStorageOnlyFlag;
+  uint             entryMaxCount;
+  bool             newestEntriesOnlyFlag;
+  uint             entryCount;
+  IndexList        indexList;
+  IndexNode        *indexNode;
+  String           regexpString;
+  DatabaseId       storageId;
+  String           storageName;
+  uint64           storageDateTime;
+  String           name;
+  String           destinationName;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  uint64           size;
+  uint64           timeModified;
+  uint             userId,groupId;
+  uint             permission;
+  uint64           fragmentOffset,fragmentSize;
+  uint64           blockOffset,blockCount;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8728,7 +8764,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       if (checkedStorageOnlyFlag)
       {
-        error = Index_initListFiles(&databaseQueryHandle,
+        error = Index_initListFiles(&indexQueryHandle,
                                     indexDatabaseHandle,
                                     Array_cArray(clientInfo->storageIdArray),
                                     Array_length(clientInfo->storageIdArray),
@@ -8737,7 +8773,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       else
       {
-        error = Index_initListFiles(&databaseQueryHandle,
+        error = Index_initListFiles(&indexQueryHandle,
                                     indexDatabaseHandle,
                                     NULL,
                                     0,
@@ -8756,7 +8792,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
              && !commandAborted(clientInfo,id)
-             && Index_getNextFile(&databaseQueryHandle,
+             && Index_getNextFile(&indexQueryHandle,
                                   &storageId,
                                   storageName,
                                   &storageDateTime,
@@ -8804,14 +8840,14 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
           entryCount++;
         }
       }
-      Index_doneList(&databaseQueryHandle);
+      Index_doneList(&indexQueryHandle);
     }
 
     if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
     {
       if (checkedStorageOnlyFlag)
       {
-        error = Index_initListImages(&databaseQueryHandle,
+        error = Index_initListImages(&indexQueryHandle,
                                      indexDatabaseHandle,
                                      Array_cArray(clientInfo->storageIdArray),
                                      Array_length(clientInfo->storageIdArray),
@@ -8820,7 +8856,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       else
       {
-        error = Index_initListImages(&databaseQueryHandle,
+        error = Index_initListImages(&indexQueryHandle,
                                      indexDatabaseHandle,
                                      NULL,
                                      0,
@@ -8839,7 +8875,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
              && !commandAborted(clientInfo,id)
-             && Index_getNextImage(&databaseQueryHandle,
+             && Index_getNextImage(&indexQueryHandle,
                                    &storageId,
                                    storageName,
                                    &storageDateTime,
@@ -8880,14 +8916,14 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
           entryCount++;
       }
       }
-      Index_doneList(&databaseQueryHandle);
+      Index_doneList(&indexQueryHandle);
     }
 
     if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
     {
       if (checkedStorageOnlyFlag)
       {
-        error = Index_initListDirectories(&databaseQueryHandle,
+        error = Index_initListDirectories(&indexQueryHandle,
                                           indexDatabaseHandle,
                                           Array_cArray(clientInfo->storageIdArray),
                                           Array_length(clientInfo->storageIdArray),
@@ -8896,7 +8932,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       else
       {
-        error = Index_initListDirectories(&databaseQueryHandle,
+        error = Index_initListDirectories(&indexQueryHandle,
                                           indexDatabaseHandle,
                                           NULL,
                                           0,
@@ -8915,7 +8951,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
              && !commandAborted(clientInfo,id)
-             && Index_getNextDirectory(&databaseQueryHandle,
+             && Index_getNextDirectory(&indexQueryHandle,
                                        &storageId,
                                        storageName,
                                        &storageDateTime,
@@ -8957,14 +8993,14 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
           entryCount++;
         }
       }
-      Index_doneList(&databaseQueryHandle);
+      Index_doneList(&indexQueryHandle);
     }
 
     if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
     {
       if (checkedStorageOnlyFlag)
       {
-        error = Index_initListLinks(&databaseQueryHandle,
+        error = Index_initListLinks(&indexQueryHandle,
                                     indexDatabaseHandle,
                                     Array_cArray(clientInfo->storageIdArray),
                                     Array_length(clientInfo->storageIdArray),
@@ -8973,7 +9009,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       else
       {
-        error = Index_initListLinks(&databaseQueryHandle,
+        error = Index_initListLinks(&indexQueryHandle,
                                     indexDatabaseHandle,
                                     NULL,
                                     0,
@@ -8993,7 +9029,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       destinationName = String_new();
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
              && !commandAborted(clientInfo,id)
-             && Index_getNextLink(&databaseQueryHandle,
+             && Index_getNextLink(&indexQueryHandle,
                                   &storageId,
                                   storageName,
                                   &storageDateTime,
@@ -9037,7 +9073,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
           entryCount++;
         }
       }
-      Index_doneList(&databaseQueryHandle);
+      Index_doneList(&indexQueryHandle);
       String_delete(destinationName);
     }
 
@@ -9045,7 +9081,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       if (checkedStorageOnlyFlag)
       {
-        error = Index_initListHardLinks(&databaseQueryHandle,
+        error = Index_initListHardLinks(&indexQueryHandle,
                                         indexDatabaseHandle,
                                         Array_cArray(clientInfo->storageIdArray),
                                         Array_length(clientInfo->storageIdArray),
@@ -9054,7 +9090,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       else
       {
-        error = Index_initListHardLinks(&databaseQueryHandle,
+        error = Index_initListHardLinks(&indexQueryHandle,
                                         indexDatabaseHandle,
                                         NULL,
                                         0,
@@ -9074,7 +9110,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       destinationName = String_new();
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
              && !commandAborted(clientInfo,id)
-             && Index_getNextHardLink(&databaseQueryHandle,
+             && Index_getNextHardLink(&indexQueryHandle,
                                       &storageId,
                                       storageName,
                                       &storageDateTime,
@@ -9122,7 +9158,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
           entryCount++;
         }
       }
-      Index_doneList(&databaseQueryHandle);
+      Index_doneList(&indexQueryHandle);
       String_delete(destinationName);
     }
 
@@ -9130,7 +9166,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       if (checkedStorageOnlyFlag)
       {
-        error = Index_initListSpecial(&databaseQueryHandle,
+        error = Index_initListSpecial(&indexQueryHandle,
                                       indexDatabaseHandle,
                                       Array_cArray(clientInfo->storageIdArray),
                                       Array_length(clientInfo->storageIdArray),
@@ -9139,7 +9175,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       else
       {
-        error = Index_initListSpecial(&databaseQueryHandle,
+        error = Index_initListSpecial(&indexQueryHandle,
                                       indexDatabaseHandle,
                                       NULL,
                                       0,
@@ -9158,7 +9194,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
              && !commandAborted(clientInfo,id)
-             && Index_getNextSpecial(&databaseQueryHandle,
+             && Index_getNextSpecial(&indexQueryHandle,
                                      &storageId,
                                      storageName,
                                      &storageDateTime,
@@ -9200,7 +9236,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
           entryCount++;
         }
       }
-      Index_doneList(&databaseQueryHandle);
+      Index_doneList(&indexQueryHandle);
     }
 
     // send data
