@@ -3031,6 +3031,13 @@ class TabJobs
 
             widgetCompressExcludeListEdit = Widgets.newButton(subComposite,"Edit\u2026");
             Widgets.layout(widgetCompressExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+            Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListEdit,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
+            {
+              public void modified(Control control, WidgetVariable byteCompressAlgorithm)
+              {
+                Widgets.setEnabled(control,!deltaCompressAlgorithm.equals("none") || !byteCompressAlgorithm.equals("none"));
+              }
+            });
             widgetCompressExcludeListEdit.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
