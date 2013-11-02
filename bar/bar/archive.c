@@ -2732,23 +2732,29 @@ const Password *Archive_appendDecryptPassword(const Password *password)
                          )
 #endif /* NDEBUG */
 {
-  Errors error;
-  bool   okFlag;
-  ulong  maxCryptKeyDataLength;
+  AutoFreeList autoFreeList;
+  Errors       error;
+  bool         okFlag;
+  ulong        maxCryptKeyDataLength;
 
   assert(archiveInfo != NULL);
   assert(archiveCreatedFunction != NULL);
   assert(jobOptions != NULL);
 
+  // init variables
+  AutoFree_init(&autoFreeList);
+
   // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(jobOptions->cryptAlgorithm,&archiveInfo->blockLength);
   if (error != ERROR_NONE)
   {
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
   assert(archiveInfo->blockLength > 0);
   if (archiveInfo->blockLength > MAX_BUFFER_SIZE)
   {
+    AutoFree_cleanup(&autoFreeList);
     return ERROR_UNSUPPORTED_BLOCK_SIZE;
   }
 
@@ -2785,6 +2791,10 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 
   archiveInfo->interrupt.openFlag              = FALSE;
   archiveInfo->interrupt.offset                = 0LL;
+  AUTOFREE_ADD(&autoFreeList,&archiveInfo->lock,{ Semaphore_done(&archiveInfo->lock); });
+  AUTOFREE_ADD(&autoFreeList,archiveInfo->printableName,{ String_delete(archiveInfo->printableName); });
+  AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileName,{ String_delete(archiveInfo->file.fileName); });
+  AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
 
   // init key (if asymmetric encryption used)
   if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -2792,9 +2802,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
     // check if public key available
     if (jobOptions->cryptPublicKeyFileName == NULL)
     {
-      String_delete(archiveInfo->printableName);
-      String_delete(archiveInfo->file.fileName);
-      Semaphore_done(&archiveInfo->chunkIOLock);
+      AutoFree_cleanup(&autoFreeList);
       return ERROR_NO_PUBLIC_KEY;
     }
 
@@ -2806,9 +2814,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
                              );
     if (error != ERROR_NONE)
     {
-      String_delete(archiveInfo->printableName);
-      String_delete(archiveInfo->file.fileName);
-      Semaphore_done(&archiveInfo->chunkIOLock);
+      AutoFree_cleanup(&autoFreeList);
       return error;
     }
 
@@ -2836,9 +2842,8 @@ const Password *Archive_appendDecryptPassword(const Password *password)
                                        );
       if (error != ERROR_NONE)
       {
-        String_delete(archiveInfo->printableName);
-        String_delete(archiveInfo->file.fileName);
-        Semaphore_done(&archiveInfo->chunkIOLock);
+        free(archiveInfo->cryptKeyData);
+        AutoFree_cleanup(&autoFreeList);
         return error;
       }
       if (archiveInfo->cryptKeyDataLength < maxCryptKeyDataLength)
@@ -2861,6 +2866,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 }
 #endif /* 0 */
   }
+
+  // free resources
+  AutoFree_done(&autoFreeList);
 
   #ifndef NDEBUG
     DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive create",archiveInfo);
