@@ -208,7 +208,6 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 * Purpose: initialize create info
 * Input  : createInfo                 - create info variable
 *          storageSpecifier           - storage specifier structure
-*          storageFileName            - storage file name
 *          includeEntryList           - include entry list
 *          excludePatternList         - exclude pattern list
 *          compressExcludePatternList - exclude compression pattern list
@@ -231,7 +230,6 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 
 LOCAL void initCreateInfo(CreateInfo               *createInfo,
                           StorageSpecifier         *storageSpecifier,
-                          const String             storageFileName,
                           const EntryList          *includeEntryList,
                           const PatternList        *excludePatternList,
                           const PatternList        *compressExcludePatternList,
@@ -250,7 +248,6 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
 
   // init variables
   createInfo->storageSpecifier             = storageSpecifier;
-  createInfo->storageFileName              = storageFileName;
   createInfo->includeEntryList             = includeEntryList;
   createInfo->excludePatternList           = excludePatternList;
   createInfo->compressExcludePatternList   = compressExcludePatternList;
@@ -2610,6 +2607,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
   SemaphoreLock semaphoreLock;
 
   assert(createInfo != NULL);
+  assert(createInfo->storageSpecifier != NULL);
   assert(fileName != NULL);
   assert(!String_isEmpty(fileName));
 
@@ -2625,7 +2623,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
   destinationFileName = String_new();
   error = formatArchiveFileName(destinationFileName,
                                 FORMAT_MODE_ARCHIVE_FILE_NAME,
-                                createInfo->storageFileName,
+                                createInfo->storageSpecifier->fileName,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
                                 createInfo->scheduleCustomText,
@@ -3156,7 +3154,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
       pattern = String_new();
       error = formatArchiveFileName(pattern,
                                     FORMAT_MODE_PATTERN,
-                                    createInfo->storageFileName,
+                                    createInfo->storageSpecifier->fileName,
                                     createInfo->archiveType,
                                     createInfo->scheduleTitle,
                                     createInfo->scheduleCustomText,
@@ -3167,7 +3165,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
       if (error == ERROR_NONE)
       {
         // open directory
-        storagePath = File_getFilePathName(String_new(),createInfo->storageFileName);
+        storagePath = File_getFilePathName(String_new(),createInfo->storageSpecifier->fileName);
         error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                           storagePath,
                                           createInfo->jobOptions,
@@ -4865,8 +4863,6 @@ Errors Command_create(const String                    storageName,
   // init threads
   initCreateInfo(&createInfo,
                  &storageSpecifier,
-#warning todo
-storageSpecifier.fileName,
                  includeEntryList,
                  excludePatternList,
                  compressExcludePatternList,
