@@ -93,26 +93,11 @@ typedef struct
   #define STRING_CHECKSUM(string) \
     ((ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data)
 
+  void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, const String string);
   #define STRING_CHECK_VALID(string) \
     do \
     { \
-      if (string != NULL) \
-      { \
-        ulong __checkSum; \
-        \
-        __checkSum = STRING_CHECKSUM(string); \
-        if (__checkSum != (string)->checkSum) \
-        { \
-          debugDumpCurrentStackTrace(stderr,"",0); \
-          HALT_INTERNAL_ERROR("Invalid checksum 0x%08x in string %p, length %ld (max. %ld) (expected 0x%08x)!", \
-                              (string)->checkSum, \
-                              string, \
-                              (string)->length, \
-                              (string)->maxLength, \
-                              __checkSum \
-                             ); \
-        } \
-      } \
+      String_debugCheckValid(__FILE__,__LINE__,string); \
     } \
     while (0)
   #define STRING_UPDATE_VALID(string) \
@@ -927,6 +912,7 @@ String String_toString(String string, const String convertString, ulong index, l
 char* String_toCString(const String string);
 
 #ifndef NDEBUG
+
 /***********************************************************************\
 * Name   : String_debugInit
 * Purpose: init string debug functions

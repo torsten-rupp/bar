@@ -235,7 +235,49 @@ LOCAL_INLINE struct __String* allocString(void)
 
 LOCAL_INLINE struct __String* allocTmpString(void)
 {
-  return allocString();
+  String tmpString;
+  #ifndef NDEBUG
+    DebugStringNode *debugStringNode;
+  #endif /* not NDEBUG */
+
+  tmpString = allocString();
+
+  #ifndef NDEBUG
+    pthread_once(&debugStringInitFlag,debugStringInit);
+
+    pthread_mutex_lock(&debugStringLock);
+    {
+      // update allocation info
+      debugStringAllocList.allocatedMemory += sizeof(struct __String)+tmpString->maxLength;
+
+      // allocate new debug node
+      debugStringNode = (DebugStringNode*)__List_newNode(__FILE__,__LINE__,sizeof(DebugStringNode));
+      if (debugStringNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      debugStringAllocList.allocatedMemory += sizeof(DebugStringNode);
+
+      // init string node
+      debugStringNode->allocFileName  = NULL;
+      debugStringNode->allocLineNb    = 0L;
+      #ifdef HAVE_BACKTRACE
+        debugStringNode->stackTraceSize = backtrace((void*)debugStringNode->stackTrace,SIZE_OF_ARRAY(debugStringNode->stackTrace));
+      #endif /* HAVE_BACKTRACE */
+      debugStringNode->deleteFileName = NULL;
+      debugStringNode->deleteLineNb   = 0L;
+      #ifdef HAVE_BACKTRACE
+        debugStringNode->deleteStackTraceSize = 0;
+      #endif /* HAVE_BACKTRACE */
+      debugStringNode->string         = tmpString;
+
+      // add string to allocated-list
+      List_append(&debugStringAllocList,debugStringNode);
+    }
+    pthread_mutex_unlock(&debugStringLock);
+  #endif /* not NDEBUG */
+
+  return tmpString;
 }
 
 /***********************************************************************\
@@ -250,13 +292,17 @@ LOCAL_INLINE struct __String* allocTmpString(void)
 
 LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpString)
 {
+  #ifndef NDEBUG
+    DebugStringNode *debugStringNode;
+  #endif /* not NDEBUG */
+
   assert(string != NULL);
   assert(string->data != NULL);
   assert(tmpString != NULL);
   assert(tmpString->data != NULL);
 
+  // assign temporary string
   free(string->data);
-
   string->length    = tmpString->length;
   string->maxLength = tmpString->maxLength;
   string->data      = tmpString->data;
@@ -265,6 +311,30 @@ LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpS
     tmpString->maxLength = 0L;
     tmpString->data      = NULL;
   #endif /* not NDEBUG */
+
+  #ifndef NDEBUG
+    pthread_once(&debugStringInitFlag,debugStringInit);
+
+    pthread_mutex_lock(&debugStringLock);
+    {
+      // remove string from allocated list
+      debugStringNode = debugStringAllocList.head;
+      while ((debugStringNode != NULL) && (debugStringNode->string != tmpString))
+      {
+        debugStringNode = debugStringNode->next;
+      }
+      if (debugStringNode == NULL)
+      {
+        HALT_INTERNAL_ERROR("Temporary string not found in allocated string list!");
+      }
+      List_remove(&debugStringAllocList,debugStringNode);
+      assert(debugStringAllocList.allocatedMemory >= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength);
+      debugStringAllocList.allocatedMemory -= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength;
+    }
+    pthread_mutex_unlock(&debugStringLock);
+  #endif /* not NDEBUG */
+
+  // free resources
   free(tmpString);
 
   STRING_UPDATE_VALID(string);
@@ -1880,7 +1950,7 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
         debugStringNode->stackTraceSize = backtrace((void*)debugStringNode->stackTrace,SIZE_OF_ARRAY(debugStringNode->stackTrace));
       #endif /* HAVE_BACKTRACE */
       debugStringNode->deleteFileName = NULL;
-      debugStringNode->deleteLineNb   = 0;
+      debugStringNode->deleteLineNb   = 0L;
       #ifdef HAVE_BACKTRACE
         debugStringNode->deleteStackTraceSize = 0;
       #endif /* HAVE_BACKTRACE */
@@ -4587,6 +4657,74 @@ char* String_toCString(const String string)
 }
 
 #ifndef NDEBUG
+
+void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, const String string)
+{
+  DebugStringNode *debugStringNode;
+
+  if (string != NULL)
+  {
+    ulong checkSum;
+
+    checkSum = STRING_CHECKSUM(string);
+    if (checkSum != string->checkSum)
+    {
+      debugDumpCurrentStackTrace(stderr,"",0);
+      HALT_INTERNAL_ERROR_AT(__fileName__,
+                             __lineNb__,
+                             "Invalid checksum 0x%08x in string %p, length %ld (max. %ld) (expected 0x%08x)!",
+                             string->checkSum,
+                             string,
+                             string->length,
+                             string->maxLength,
+                             checkSum
+                            );
+    }
+
+    pthread_once(&debugStringInitFlag,debugStringInit);
+
+    pthread_mutex_lock(&debugStringLock);
+    {
+      debugStringNode = debugStringAllocList.head;
+      while ((debugStringNode != NULL) && (debugStringNode->string != string))
+      {
+        debugStringNode = debugStringNode->next;
+      }
+      if (debugStringNode == NULL)
+      {
+        debugStringNode = debugStringFreeList.head;
+        while ((debugStringNode != NULL) && (debugStringNode->string != string))
+        {
+          debugStringNode = debugStringNode->next;
+        }
+
+        debugDumpCurrentStackTrace(stderr,"",0);
+        if (debugStringNode != NULL)
+        {
+          HALT_INTERNAL_ERROR_AT(__fileName__,
+                                 __lineNb__,
+                                 "String %p allocated at %s, %lu is already freed at %s, %l!",
+                                 string,
+                                 debugStringNode->allocFileName,
+                                 debugStringNode->allocLineNb,
+                                 debugStringNode->deleteFileName,
+                                 debugStringNode->deleteLineNb
+                                );
+        }
+        else
+        {
+          HALT_INTERNAL_ERROR_AT(__fileName__,
+                                 __lineNb__,
+                                 "String %p is not allocated and not known!",
+                                 string
+                                );
+        }
+      }
+    }
+    pthread_mutex_unlock(&debugStringLock);
+  }
+}
+
 void String_debugDone(void)
 {
   pthread_once(&debugStringInitFlag,debugStringInit);
