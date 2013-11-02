@@ -511,7 +511,7 @@ void StringList_debugDump(FILE *handle, const StringList *stringList)
   z = 1;
   while (stringNode != NULL)
   {
-    fprintf(handle,"DEBUG %03d %08p: %s\n",z,stringNode,String_cString(stringNode->string));
+    fprintf(handle,"DEBUG %03d %p: %s\n",z,stringNode,String_cString(stringNode->string));
     stringNode = stringNode->next;
     z++;
   }
