@@ -2939,7 +2939,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->storage.storageSpecifier,{ Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
 
-  error = Storage_open(archiveInfo->storage.storageHandle,&archiveInfo->storage.storageSpecifier);
+  error = Storage_open(archiveInfo->storage.storageHandle);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -3121,7 +3121,7 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
       }
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      error = Storage_open(archiveInfo->storage.storageHandle,&archiveInfo->storage.storageSpecifier);
+      error = Storage_open(archiveInfo->storage.storageHandle);
       if (error != ERROR_NONE)
       {
         return error;

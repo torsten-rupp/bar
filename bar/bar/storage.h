@@ -930,16 +930,13 @@ Errors Storage_create(StorageHandle *storageHandle,
 /***********************************************************************\
 * Name   : Storage_open
 * Purpose: open storage file
-* Input  : storageHandle    - storage handle
-*          storageSpecifier - storage specifier structure
+* Input  : storageHandle - storage handle
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_open(StorageHandle          *storageHandle,
-                    const StorageSpecifier *storageSpecifier
-                   );
+Errors Storage_open(StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_close
