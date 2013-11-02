@@ -585,8 +585,6 @@ LOCAL Thread                indexThread;
 LOCAL Thread                autoIndexUpdateThread;
 LOCAL Semaphore             serverStateLock;
 LOCAL ServerStates          serverState;
-LOCAL bool                  createFlag;            // TRUE iff create archive in progress
-LOCAL bool                  restoreFlag;           // TRUE iff restore archive in progress
 LOCAL struct
       {
         bool create;
@@ -1585,7 +1583,6 @@ LOCAL StringNode *deleteJobSections(StringList *stringList,
   StringNode *stringNode;
   String     line;
   String     string;
-  ulong      nextIndex;
 
   nextStringNode = NULL;
 
@@ -2107,7 +2104,6 @@ LOCAL void jobThreadCode(void)
   JobOptions       jobOptions;
   ArchiveTypes     archiveType;
   StringList       archiveFileNameList;
-  int              z;
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
@@ -2140,6 +2136,8 @@ LOCAL void jobThreadCode(void)
       break;
     }
     assert(jobNode != NULL);
+#warning todo
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 String scheduleTitle = String_new();
 String scheduleCustomText = String_new();
 
@@ -2180,7 +2178,6 @@ String scheduleCustomText = String_new();
           extern void sleep(int);
           if (jobNode->requestedAbortFlag) break;
 
-fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
           sleep(1);
 
           if (z==40) {
@@ -2205,21 +2202,6 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
           case JOB_TYPE_CREATE:
             logMessage(LOG_TYPE_ALWAYS,"Start job '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
 
-#if 0
-            // try to pause background index thread, do short delay to make sure network connection is possible
-            createFlag = TRUE;
-            if (indexFlag)
-            {
-              z = 0;
-              while ((z < 5*60) && indexFlag)
-              {
-                Misc_udelay(10LL*MISC_US_PER_SECOND);
-                z += 10;
-              }
-              Misc_udelay(30LL*MISC_US_PER_SECOND);
-            }
-#endif
-
             // create archive
             jobNode->runningInfo.error = Command_create(storageName,
                                                         &includeEntryList,
@@ -2237,9 +2219,6 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
                                                         &jobNode->requestedAbortFlag
                                                        );
 
-            // allow background index thread again
-            createFlag = FALSE;
-
             if (!jobNode->requestedAbortFlag)
             {
               logMessage(LOG_TYPE_ALWAYS,"Done job '%s': '%s' (error: %s)\n",String_cString(jobNode->name),String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
@@ -2251,21 +2230,6 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
             break;
           case JOB_TYPE_RESTORE:
             logMessage(LOG_TYPE_ALWAYS,"Start restore archive '%s'\n",String_cString(printableStorageName));
-
-#if 0
-            // try to pause background index thread, make a short delay to make sure network connection is possible
-            restoreFlag = TRUE;
-            if (indexFlag)
-            {
-              z = 0;
-              while ((z < 5*60) && indexFlag)
-              {
-                Misc_udelay(10LL*MISC_US_PER_SECOND);
-                z += 10;
-              }
-              Misc_udelay(30LL*MISC_US_PER_SECOND);
-            }
-#endif
 
             // restore archive
             StringList_init(&archiveFileNameList);
@@ -2282,9 +2246,6 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
                                                          &jobNode->requestedAbortFlag
                                                         );
             StringList_done(&archiveFileNameList);
-
-            // allow background threads
-            restoreFlag = FALSE;
 
             logMessage(LOG_TYPE_ALWAYS,"Done restore archive '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
             break;
@@ -2577,9 +2538,7 @@ LOCAL bool indexPauseCallback(void *userData)
 {
   UNUSED_VARIABLE(userData);
 
-  return    (createFlag  && !pauseFlags.create )
-         || (restoreFlag && !pauseFlags.restore)
-         || pauseFlags.indexUpdate;
+  return pauseFlags.indexUpdate;
 }
 
 /***********************************************************************\
@@ -2595,9 +2554,7 @@ LOCAL bool indexAbortCallback(void *userData)
 {
   UNUSED_VARIABLE(userData);
 
-  return    (createFlag  && !pauseFlags.create )
-         || (restoreFlag && !pauseFlags.restore)
-         || quitFlag;
+  return quitFlag;
 }
 
 /***********************************************************************\
@@ -2912,16 +2869,6 @@ LOCAL void indexThreadCode(void)
 
     // free resources
     List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
-
-    // wait until create/restore is done or paused
-    while (   (   (createFlag  && !pauseFlags.create )
-               || (restoreFlag && !pauseFlags.storage)
-              )
-           && !quitFlag
-          )
-    {
-      Misc_udelay(10LL*MISC_US_PER_SECOND);
-    }
 
     // sleep, check quit flag
     z = 0;
@@ -7793,7 +7740,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 {
   String             storageName;
   String             name;
-  uint               z;
   StringList         storageNameList;
   EntryList          restoreEntryList;
   RestoreCommandInfo restoreCommandInfo;
@@ -7825,21 +7771,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
 
-#if 0
-  // try to pause background index thread, do short delay to make sure network connection is possible
-  restoreFlag = TRUE;
-  if (indexFlag)
-  {
-    z = 0;
-    while ((z < 5*60) && indexFlag)
-    {
-      Misc_udelay(10LL*MISC_US_PER_SECOND);
-      z += 10;
-    }
-    Misc_udelay(30LL*MISC_US_PER_SECOND);
-  }
-#endif
-
   // restore
   StringList_init(&storageNameList);
   StringList_append(&storageNameList,storageName);
@@ -7864,9 +7795,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   sendClientResult(clientInfo,id,TRUE,error,Errors_getText(error));
   EntryList_done(&restoreEntryList);
   StringList_done(&storageNameList);
-
-  // allow background threads
-  restoreFlag = FALSE;
 
   // free resources
   String_delete(storageName);
@@ -10183,8 +10111,6 @@ Errors Server_run(uint             port,
   List_init(&clientList);
   List_init(&authorizationFailList);
   serverState             = SERVER_STATE_RUNNING;
-  createFlag              = FALSE;
-  restoreFlag             = FALSE;
   pauseFlags.create       = FALSE;
   pauseFlags.restore      = FALSE;
   pauseFlags.indexUpdate  = FALSE;
