@@ -187,7 +187,6 @@ typedef struct
 {
   StorageModes                 mode;                       // storage mode: READ, WRITE
   StorageSpecifier             storageSpecifier;           // storage specifier data
-#warning TODO: add storageName, printableStorageName
   const JobOptions             *jobOptions;
 
   StorageRequestVolumeFunction requestVolumeFunction;      // call back for request new volume
@@ -846,7 +845,7 @@ bool Storage_isServerAllocationPending(StorageHandle *storageHandle);
 * Notes  : -
 \***********************************************************************/
 
-StorageSpecifier *Storage_getStorageSpecifier(const StorageHandle *storageHandle);
+const StorageSpecifier *Storage_getStorageSpecifier(const StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_preProcess

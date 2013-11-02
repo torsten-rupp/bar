@@ -2097,7 +2097,6 @@ void Storage_duplicateSpecifier(StorageSpecifier       *destinationStorageSpecif
   assert(sourceStorageSpecifier != NULL);
 
   destinationStorageSpecifier->type          = sourceStorageSpecifier->type;
-//  destinationStorageSpecifier->string        = String_duplicate(sourceStorageSpecifier->string);
   destinationStorageSpecifier->hostName      = String_duplicate(sourceStorageSpecifier->hostName);
   destinationStorageSpecifier->hostPort      = sourceStorageSpecifier->hostPort;
   destinationStorageSpecifier->loginName     = String_duplicate(sourceStorageSpecifier->loginName);
@@ -2357,7 +2356,6 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   // initialise variables
   string = String_new();
 
-//  String_clear(storageSpecifier->string);
   String_clear(storageSpecifier->hostName);
   storageSpecifier->hostPort = 0;
   String_clear(storageSpecifier->loginName);
@@ -2366,10 +2364,12 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
 
   if      (String_startsWithCString(storageName,"ftp://"))
   {
-#warning ftp port?
-    if (   String_matchCString(storageName,6,"^[^:]+:([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)  // ftp://<login name>:<login password>@<host name>:[<host port>]/<file name>
-        || String_matchCString(storageName,6,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // ftp://<login name>@<host name>:[<host port>]/<file name>
-        || String_matchCString(storageName,6,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // ftp://<host name>[:<host port>]/<file name>
+    if (   String_matchCString(storageName,6,"^[^:]+:([^@]|\\@)+?@[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)  // ftp://<login name>:<login password>@<host name>:[<host port>]/<file name>
+        || String_matchCString(storageName,6,"^[^:]+:([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)       // ftp://<login name>:<login password>@<host name>/<file name>
+        || String_matchCString(storageName,6,"^([^@]|\\@)+?@[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)        // ftp://<login name>@<host name>:[<host port>]/<file name>
+        || String_matchCString(storageName,6,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)             // ftp://<login name>@<host name>/<file name>
+        || String_matchCString(storageName,6,"^[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)                     // ftp://<host name>:[<host port>]/<file name>
+        || String_matchCString(storageName,6,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                          // ftp://<host name>/<file name>
        )
     {
       String_sub(string,storageName,6,nextIndex);
@@ -2397,6 +2397,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   else if (String_startsWithCString(storageName,"ssh://"))
   {
     if (   String_matchCString(storageName,6,"^([^@]|\\@)+?@[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)   // ssh://<login name>@<host name>:[<host port>]/<file name>
+        || String_matchCString(storageName,6,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // ssh://<login name>@<host name>/<file name>
         || String_matchCString(storageName,6,"^[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)                // ssh://<host name>:[<host port>]/<file name>
         || String_matchCString(storageName,6,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // ssh://<host name>/<file name>
        )
@@ -2425,6 +2426,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   else if (String_startsWithCString(storageName,"scp://"))
   {
     if (   String_matchCString(storageName,6,"^([^@]|\\@)+?@[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)   // scp://<login name>@<host name>:[<host port>]/<file name>
+        || String_matchCString(storageName,6,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // scp://<login name>@<host name>/<file name>
         || String_matchCString(storageName,6,"^[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)                // scp://<host name>:[<host port>]/<file name>
         || String_matchCString(storageName,6,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // scp://<host name>/<file name>
        )
@@ -2453,6 +2455,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   else if (String_startsWithCString(storageName,"sftp://"))
   {
     if (   String_matchCString(storageName,7,"^([^@]|\\@)+?@[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)   // sftp://<login name>@<host name>:[<host port>]/<file name>
+        || String_matchCString(storageName,7,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // sftp://<login name>@<host name>/<file name>
         || String_matchCString(storageName,7,"^[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)                // sftp://<host name>:[<host port>]/<file name>
         || String_matchCString(storageName,7,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // sftp://<host name>/<file name>
        )
@@ -3982,30 +3985,29 @@ Errors Storage_done(StorageHandle *storageHandle)
 
 bool Storage_isServerAllocationPending(StorageHandle *storageHandle)
 {
+  bool serverAllocationPending;
+
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-
+  serverAllocationPending = FALSE;
   switch (storageHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
-      return FALSE;
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      return FALSE;
       break;
     case STORAGE_TYPE_FTP:
-      return isServerAllocationPending(storageHandle->ftp.server);
+      serverAllocationPending = isServerAllocationPending(storageHandle->ftp.server);
       break;
     case STORAGE_TYPE_SSH:
-      return isServerAllocationPending(storageHandle->ssh.server);
+      serverAllocationPending = isServerAllocationPending(storageHandle->ssh.server);
       break;
     case STORAGE_TYPE_SCP:
-      return isServerAllocationPending(storageHandle->scp.server);
+      serverAllocationPending = isServerAllocationPending(storageHandle->scp.server);
       break;
     case STORAGE_TYPE_SFTP:
-      return isServerAllocationPending(storageHandle->sftp.server);
+      serverAllocationPending = isServerAllocationPending(storageHandle->sftp.server);
       break;
     case STORAGE_TYPE_WEBDAV:
       return isServerAllocationPending(storageHandle->webdav.server);
@@ -4013,7 +4015,6 @@ bool Storage_isServerAllocationPending(StorageHandle *storageHandle)
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      return FALSE;
       break;
     default:
       #ifndef NDEBUG
@@ -4021,9 +4022,11 @@ bool Storage_isServerAllocationPending(StorageHandle *storageHandle)
       #endif /* NDEBUG */
       break;
   }
+
+  return serverAllocationPending;
 }
 
-StorageSpecifier *Storage_getStorageSpecifier(const StorageHandle *storageHandle)
+const StorageSpecifier *Storage_getStorageSpecifier(const StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
 
