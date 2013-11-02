@@ -2083,6 +2083,36 @@ void Storage_doneAll(void)
 }
 
 #ifdef NDEBUG
+  void Storage_duplicateSpecifier(StorageSpecifier       *destinationStorageSpecifier,
+                                  const StorageSpecifier *sourceStorageSpecifier
+                                 )
+#else /* not NDEBUG */
+  void __Storage_duplicateSpecifier(const char             *__fileName__,
+                                    ulong                  __lineNb__,
+                                    StorageSpecifier       *destinationStorageSpecifier,
+                                    const StorageSpecifier *sourceStorageSpecifier
+                                   )
+#endif /* NDEBUG */
+{
+  assert(destinationStorageSpecifier != NULL);
+  assert(sourceStorageSpecifier != NULL);
+
+  destinationStorageSpecifier->type          = sourceStorageSpecifier->type;
+  destinationStorageSpecifier->hostName      = String_duplicate(sourceStorageSpecifier->hostName);
+  destinationStorageSpecifier->hostPort      = sourceStorageSpecifier->hostPort;
+  destinationStorageSpecifier->loginName     = String_duplicate(sourceStorageSpecifier->loginName);
+  destinationStorageSpecifier->loginPassword = Password_duplicate(sourceStorageSpecifier->loginPassword);
+  destinationStorageSpecifier->deviceName    = String_duplicate(sourceStorageSpecifier->deviceName);
+  destinationStorageSpecifier->fileName      = String_duplicate(sourceStorageSpecifier->fileName);
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE("duplicated storage specifier",destinationStorageSpecifier);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"duplicated storage specifier",destinationStorageSpecifier);
+  #endif /* NDEBUG */
+}
+
+#ifdef NDEBUG
   void Storage_doneSpecifier(StorageSpecifier *storageSpecifier)
 #else /* not NDEBUG */
   void __Storage_doneSpecifier(const char       *__fileName__,
@@ -2104,24 +2134,6 @@ void Storage_doneAll(void)
   Password_delete(storageSpecifier->loginPassword);
   String_delete(storageSpecifier->loginName);
   String_delete(storageSpecifier->hostName);
-}
-
-void Storage_duplicateSpecifier(StorageSpecifier       *destinationStorageSpecifier,
-                                const StorageSpecifier *sourceStorageSpecifier
-                               )
-{
-  assert(destinationStorageSpecifier != NULL);
-  assert(sourceStorageSpecifier != NULL);
-
-  destinationStorageSpecifier->type          = sourceStorageSpecifier->type;
-  destinationStorageSpecifier->hostName      = String_duplicate(sourceStorageSpecifier->hostName);
-  destinationStorageSpecifier->hostPort      = sourceStorageSpecifier->hostPort;
-  destinationStorageSpecifier->loginName     = String_duplicate(sourceStorageSpecifier->loginName);
-  destinationStorageSpecifier->loginPassword = Password_duplicate(sourceStorageSpecifier->loginPassword);
-  destinationStorageSpecifier->deviceName    = String_duplicate(sourceStorageSpecifier->deviceName);
-  destinationStorageSpecifier->fileName      = String_duplicate(sourceStorageSpecifier->fileName);
-
-  DEBUG_ADD_RESOURCE_TRACE("duplicated storage specifier",destinationStorageSpecifier);
 }
 
 bool Storage_parseFTPSpecifier(const String ftpSpecifier,

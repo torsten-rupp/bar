@@ -47,6 +47,7 @@
 #endif /* HAVE_ISO9660 */
 #include <assert.h>
 
+#warning exists?
 #include "mxml.h"
 
 #include "global.h"
@@ -527,8 +528,9 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Storage_initSpecifier(...) __Storage_initSpecifier(__FILE__,__LINE__,__VA_ARGS__)
-  #define Storage_doneSpecifier(...) __Storage_doneSpecifier(__FILE__,__LINE__,__VA_ARGS__)
+  #define Storage_initSpecifier(...)      __Storage_initSpecifier(__FILE__,__LINE__,__VA_ARGS__)
+  #define Storage_duplicateSpecifier(...) __Storage_duplicateSpecifier(__FILE__,__LINE__,__VA_ARGS__)
+  #define Storage_doneSpecifier(...)      __Storage_doneSpecifier(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -580,6 +582,28 @@ void Storage_doneAll(void);
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Storage_duplicateSpecifier
+* Purpose: duplicate storage specifier structure
+* Input  : destinationStorageSpecifier - storage specifier variable
+*          sourceStorageSpecifier      - source storage specifier
+* Output : destinationStorageSpecifier - duplicated storage specifier
+* Return : duplicated storage specifier
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  void Storage_duplicateSpecifier(StorageSpecifier       *destinationStorageSpecifier,
+                                  const StorageSpecifier *sourceStorageSpecifier
+                                 );
+#else /* not NDEBUG */
+  void __Storage_duplicateSpecifier(const char             *__fileName__,
+                                    ulong                  __lineNb__,
+                                    StorageSpecifier       *destinationStorageSpecifier,
+                                    const StorageSpecifier *sourceStorageSpecifier
+                                   );
+#endif /* NDEBUG */
+
+/***********************************************************************\
 * Name   : Storage_doneSpecifier
 * Purpose: done storage specifier
 * Input  : storageSpecifier - storage specifier variable
@@ -596,20 +620,6 @@ void Storage_doneAll(void);
                                StorageSpecifier *storageSpecifier
                               );
 #endif /* NDEBUG */
-
-/***********************************************************************\
-* Name   : Storage_duplicateSpecifier
-* Purpose: duplicate storage specifier structure
-* Input  : destinationStorageSpecifier - storage specifier variable
-*          sourceStorageSpecifier      - source storage specifier
-* Output : destinationStorageSpecifier - duplicated storage specifier
-* Return : duplicated storage specifier
-* Notes  : -
-\***********************************************************************/
-
-void Storage_duplicateSpecifier(StorageSpecifier       *destinationStorageSpecifier,
-                                const StorageSpecifier *sourceStorageSpecifier
-                               );
 
 /***********************************************************************\
 * Name   : Storage_parseFTPSpecifier
