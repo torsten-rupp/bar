@@ -88,6 +88,7 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
+LOCAL sighandler_t oldSignalAlarmHandler;
 #if defined(HAVE_CURL) || defined(HAVE_FTP)
   LOCAL Password *defaultFTPPassword;
   LOCAL Password *defaultWebDAVPassword;
@@ -105,6 +106,27 @@
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : signalHandler
+* Purpose: signal handler
+* Input  : signalHandler - signal number
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void signalHandler(int signalNumber)
+{
+  /* Note: curl trigger from time to time a SIGALRM. The curl option
+           CURLOPT_NOSIGNAL should stop this. But it seems there is
+           a bug in curl which cause random crashes when
+           CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+           Instead install this signal handler to catch the not wanted
+           signal and discard it.
+  */
+  UNUSED_VARIABLE(signalNumber);
+}
 
 /***********************************************************************\
 * Name   : updateStatusInfo
@@ -919,7 +941,7 @@ LOCAL Errors checkSSHLogin(const String loginName,
 *          abstract - pointer to user data
 * Output : -
 * Return : number of bytes sent
-* Notes  : -
+* Notes  : parameters are hidden in LIBSSH2_SEND_FUNC()!
 \***********************************************************************/
 
 LOCAL LIBSSH2_SEND_FUNC(sshSendCallback)
@@ -929,7 +951,6 @@ LOCAL LIBSSH2_SEND_FUNC(sshSendCallback)
 
   assert(abstract != NULL);
 
-#warning TODO abstact?
   storageHandle = *((StorageHandle**)abstract);
   assert(storageHandle != NULL);
   assert(storageHandle->scp.oldSendCallback != NULL);
@@ -952,7 +973,7 @@ LOCAL LIBSSH2_SEND_FUNC(sshSendCallback)
 *          abstract - pointer to user data
 * Output : -
 * Return : number of bytes received
-* Notes  : -
+* Notes  : parameters are hidden in LIBSSH2_RECV_FUNC()!
 \***********************************************************************/
 
 LOCAL LIBSSH2_RECV_FUNC(sshReceiveCallback)
@@ -962,7 +983,6 @@ LOCAL LIBSSH2_RECV_FUNC(sshReceiveCallback)
 
   assert(abstract != NULL);
 
-#warning TODO abstract?
   storageHandle = *((StorageHandle**)abstract);
   assert(storageHandle != NULL);
   assert(storageHandle->scp.oldReceiveCallback != NULL);
@@ -985,7 +1005,7 @@ LOCAL LIBSSH2_RECV_FUNC(sshReceiveCallback)
 *          abstract - pointer to user data
 * Output : -
 * Return : number of bytes sent
-* Notes  : -
+* Notes  : parameters are hidden in LIBSSH2_SEND_FUNC()!
 \***********************************************************************/
 
 LOCAL LIBSSH2_SEND_FUNC(sftpSendCallback)
@@ -995,7 +1015,6 @@ LOCAL LIBSSH2_SEND_FUNC(sftpSendCallback)
 
   assert(abstract != NULL);
 
-#warning TODO abstract?
   storageHandle = *((StorageHandle**)abstract);
   assert(storageHandle != NULL);
   assert(storageHandle->sftp.oldSendCallback != NULL);
@@ -1018,7 +1037,7 @@ LOCAL LIBSSH2_SEND_FUNC(sftpSendCallback)
 *          abstract - pointer to user data
 * Output : -
 * Return : number of bytes received
-* Notes  : -
+* Notes  : parameters are hidden in LIBSSH2_RECV_FUNC()!
 \***********************************************************************/
 
 LOCAL LIBSSH2_RECV_FUNC(sftpReceiveCallback)
@@ -1028,7 +1047,6 @@ LOCAL LIBSSH2_RECV_FUNC(sftpReceiveCallback)
 
   assert(abstract != NULL);
 
-#warning TODO abstract?
   storageHandle = *((StorageHandle**)abstract);
   assert(storageHandle != NULL);
   assert(storageHandle->sftp.oldReceiveCallback != NULL);
@@ -1998,19 +2016,14 @@ LOCAL void executeIOgrowisofs(StorageHandle *storageHandle,
 
 /*---------------------------------------------------------------------*/
 
-void myhandler(int signalNumber)
-{
-  fprintf(stderr,"XXXXXX signal %d\n",signalNumber);
-}
-
 Errors Storage_initAll(void)
 {
+  oldSignalAlarmHandler = signal(SIGALRM,signalHandler);
   #if   defined(HAVE_CURL)
     if (curl_global_init(CURL_GLOBAL_ALL) != 0)
     {
       return ERROR_INIT_STORAGE;
     }
-signal(SIGALRM,myhandler);
   #elif defined(HAVE_FTP)
     FtpInit();
   #endif /* HAVE_CURL || HAVE_FTP */
@@ -2038,6 +2051,10 @@ void Storage_doneAll(void)
     curl_global_cleanup();
   #elif defined(HAVE_FTP)
   #endif /* HAVE_CURL || HAVE_FTP */
+  if (oldSignalAlarmHandler != SIG_ERR)
+  {
+    (void)signal(SIGALRM,oldSignalAlarmHandler);
+  }
 }
 
 #ifdef NDEBUG
@@ -5069,13 +5086,15 @@ Errors Storage_create(StorageHandle *storageHandle,
             (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_VERBOSE,1L);
           }
 
-          /* work-around for curl limitation/bug: curl trigger sometimes an alarm
-             signal if signal are not switched off.
-             Note: if signals are switched of c-ares library for asynchronous DNS
-             is recommented to avoid infinite lookups
+          /* Note: curl trigger from time to time a SIGALRM. The curl option
+                   CURLOPT_NOSIGNAL should stop this. But it seems there is
+                   a bug in curl which cause random crashes when
+                   CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+                   Instead install a signal handler to catch the not wanted
+                   signal.
+          (void)curl_easy_setopt(storageHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1L);
           */
-//          (void)curl_easy_setopt(storageHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
-//          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1L);
 
           // get pathname, basename
           pathName = File_getFilePathName(String_new(),fileName);
@@ -5481,13 +5500,15 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_VERBOSE,1L);
           }
 
-          /* work-around for curl limitation/bug: curl trigger sometimes an alarm
-             signal if signal are not switched off.
-             Note: if signals are switched of c-ares library for asynchronous DNS
-             is recommented to avoid infinite lookups
+          /* Note: curl trigger from time to time a SIGALRM. The curl option
+                   CURLOPT_NOSIGNAL should stop this. But it seems there is
+                   a bug in curl which cause random crashes when
+                   CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+                   Instead install a signal handler to catch the not wanted
+                   signal.
+          (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
           */
-//          (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
-//          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
 
           // get base URL
           baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
@@ -5833,13 +5854,15 @@ Errors Storage_open(StorageHandle          *storageHandle,
             (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_VERBOSE,1L);
           }
 
-          /* work-around for curl limitation/bug: curl trigger sometimes an alarm
-             signal if signal are not switched off.
-             Note: if signals are switched of c-ares library for asynchronous DNS
-             is recommented to avoid infinite lookups
+          /* Note: curl trigger from time to time a SIGALRM. The curl option
+                   CURLOPT_NOSIGNAL should stop this. But it seems there is
+                   a bug in curl which cause random crashes when
+                   CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+                   Instead install a signal handler to catch the not wanted
+                   signal.
+          (void)curl_easy_setopt(storageHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1L);
           */
-//          (void)curl_easy_setopt(storageHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
-//          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1L);
 
           // get pathname, basename
           pathName = File_getFilePathName(String_new(),storageSpecifier->fileName);
@@ -6336,13 +6359,15 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
             (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_VERBOSE,1L);
           }
 
-          /* work-around for curl limitation/bug: curl trigger sometimes an alarm
-             signal if signal are not switched off.
-             Note: if signals are switched of c-ares library for asynchronous DNS
-             is recommented to avoid infinite lookups
+          /* Note: curl trigger from time to time a SIGALRM. The curl option
+                   CURLOPT_NOSIGNAL should stop this. But it seems there is
+                   a bug in curl which cause random crashes when
+                   CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+                   Instead install a signal handler to catch the not wanted
+                   signal.
+          (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
           */
-//          (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
-//          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
 
           // get base URL
           baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
@@ -6633,9 +6658,15 @@ void Storage_close(StorageHandle *storageHandle)
         assert(storageHandle->ftp.curlHandle != NULL);
         assert(storageHandle->ftp.curlMultiHandle != NULL);
 
-        // for some reason signals must be reenabled, otherwise curl is crashing!
-//        (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,0L);
-//        (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,0L);
+        /* Note: curl trigger from time to time a SIGALRM. The curl option
+                 CURLOPT_NOSIGNAL should stop this. But it seems there is
+                 a bug in curl which cause random crashes when
+                 CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+                 Instead install a signal handler to catch the not wanted
+                 signal.
+        (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,0L);
+        (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,0L);
+        */
 
         (void)curl_multi_remove_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
         (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
@@ -6732,9 +6763,15 @@ void Storage_close(StorageHandle *storageHandle)
         assert(storageHandle->webdav.curlHandle != NULL);
         assert(storageHandle->webdav.curlMultiHandle != NULL);
 
-        // for some reason signals must be reenabled, otherwise curl is crashing!
-//        (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,0L);
-//        (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,0L);
+        /* Note: curl trigger from time to time a SIGALRM. The curl option
+                 CURLOPT_NOSIGNAL should stop this. But it seems there is
+                 a bug in curl which cause random crashes when
+                 CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+                 Instead install a signal handler to catch the not wanted
+                 signal.
+        (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,0L);
+        (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,0L);
+        */
 
         (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
         (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
@@ -6850,8 +6887,14 @@ Errors Storage_delete(StorageHandle *storageHandle,
             {
               return ERROR_FTP_SESSION_FAIL;
             }
-//            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
+            /* Note: curl trigger from time to time a SIGALRM. The curl option
+                     CURLOPT_NOSIGNAL should stop this. But it seems there is
+                     a bug in curl which cause random crashes when
+                     CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+                     Instead install a signal handler to catch the not wanted
+                     signal.
             (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
+            */
             if (globalOptions.verboseLevel >= 6)
             {
               // enable debug mode
@@ -7052,7 +7095,14 @@ whould this be a possible implementation?
             {
               return ERROR_WEBDAV_SESSION_FAIL;
             }
-//            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
+            /* Note: curl trigger from time to time a SIGALRM. The curl option
+                     CURLOPT_NOSIGNAL should stop this. But it seems there is
+                     a bug in curl which cause random crashes when
+                     CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+                     Instead install a signal handler to catch the not wanted
+                     signal.
+            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
+            */
             (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
             if (globalOptions.verboseLevel >= 6)
             {
@@ -9366,7 +9416,14 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERROR_FTP_SESSION_FAIL;
             break;
           }
-//          (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
+          /* Note: curl trigger from time to time a SIGALRM. The curl option
+                   CURLOPT_NOSIGNAL should stop this. But it seems there is
+                   a bug in curl which cause random crashes when
+                   CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+                   Instead install a signal handler to catch the not wanted
+                   signal.
+          (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
+          */
           (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -9800,7 +9857,14 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             error = ERROR_WEBDAV_SESSION_FAIL;
             break;
           }
-//          (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
+          /* Note: curl trigger from time to time a SIGALRM. The curl option
+                   CURLOPT_NOSIGNAL should stop this. But it seems there is
+                   a bug in curl which cause random crashes when
+                   CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+                   Instead install a signal handler to catch the not wanted
+                   signal.
+          (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
+          */
           (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
           if (globalOptions.verboseLevel >= 6)
           {
