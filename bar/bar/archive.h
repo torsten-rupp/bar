@@ -164,13 +164,6 @@ typedef struct
     bool                          openFlag;                            // TRUE iff archive is open
     uint64                        offset;                              // interrupt offset
   } interrupt;
-
-  // list of open archive entries
-  struct
-  {
-    LIST_HEADER(struct ArchiveEntryInfo);
-    Semaphore lock;
-  } archiveEntryList;
 } ArchiveInfo;
 
 // archive entry info
@@ -1194,10 +1187,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 *          storageHandle           - storage handle
 *          storageName             - storage name
 *          indexMode               - index mode
-*          cryptPassword           - encryption password
-*          cryptPrivateKeyFileName - encryption private key file name
-*          maxBandWidthList        - list with max. band width to use
-*                                    [bits/s] or NULL
+*          jobOptions              - job options
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1207,8 +1197,7 @@ Errors Archive_addToIndex(DatabaseHandle    *databaseHandle,
                           StorageHandle     *storageHandle,
                           const String      storageName,
                           IndexModes        indexMode,
-                          const JobOptions  *jobOptions,
-                          BandWidthList     *maxBandWidthList
+                          const JobOptions  *jobOptions
                          );
 
 /***********************************************************************\

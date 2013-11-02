@@ -123,47 +123,6 @@ LOCAL PasswordList decryptPasswordList;
 #endif
 
 /***********************************************************************\
-* Name   : registerArchiveEntry
-* Purpose: register archive entry as open
-* Input  : archiveEntryInfo - archive file entry info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#warning required?
-LOCAL void registerArchiveEntry(ArchiveEntryInfo *archiveEntryInfo)
-{
-  SemaphoreLock semaphoreLock;
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->archiveEntryList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
-    List_append(&archiveEntryInfo->archiveInfo->archiveEntryList,archiveEntryInfo);
-//fprintf(stderr,"%s, %d: count=%d\n",__FILE__,__LINE__,List_count(&archiveEntryInfo->archiveInfo->archiveEntryList));
-  }
-}
-
-/***********************************************************************\
-* Name   : unregisterArchiveEntry
-* Purpose: remove registration of open archive entry
-* Input  : archiveEntryInfo - archive file entry info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#warning required?
-LOCAL void unregisterArchiveEntry(ArchiveEntryInfo *archiveEntryInfo)
-{
-  SemaphoreLock semaphoreLock;
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->archiveEntryList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
-    List_remove(&archiveEntryInfo->archiveInfo->archiveEntryList,archiveEntryInfo);
-  }
-}
-
-/***********************************************************************\
 * Name   : freePasswordNode
 * Purpose: free password node
 * Input  : passwordNode - password node
@@ -2827,9 +2786,6 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->interrupt.openFlag              = FALSE;
   archiveInfo->interrupt.offset                = 0LL;
 
-  List_init(&archiveInfo->archiveEntryList);
-  Semaphore_init(&archiveInfo->archiveEntryList.lock);
-
   // init key (if asymmetric encryption used)
   if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
   {
@@ -2978,15 +2934,10 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   archiveInfo->interrupt.openFlag              = FALSE;
   archiveInfo->interrupt.offset                = 0LL;
-
-  List_init(&archiveInfo->archiveEntryList);
-  Semaphore_init(&archiveInfo->archiveEntryList.lock);
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->lock,{ Semaphore_done(&archiveInfo->lock); });
   AUTOFREE_ADD(&autoFreeList,archiveInfo->printableName,{ String_delete(archiveInfo->printableName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->storage.storageSpecifier,{ Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
-  AUTOFREE_ADD(&autoFreeList,&archiveInfo->archiveEntryList,{ List_done(&archiveInfo->archiveEntryList,NULL,NULL); });
-  AUTOFREE_ADD(&autoFreeList,&archiveInfo->archiveEntryList.lock,{ Semaphore_done(&archiveInfo->archiveEntryList.lock); });
 
   error = Storage_open(archiveInfo->storage.storageHandle,&archiveInfo->storage.storageSpecifier);
   if (error != ERROR_NONE)
@@ -3045,7 +2996,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   Errors error;
 
   assert(archiveInfo != NULL);
-  assert(List_isEmpty(&archiveInfo->archiveEntryList));
 
   #ifndef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveInfo);
@@ -3070,9 +3020,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   }
 
   // free resources
-  Semaphore_done(&archiveInfo->archiveEntryList.lock);
-  Semaphore_done(&archiveInfo->chunkIOLock);
-
   if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
   {
     assert(archiveInfo->cryptKeyData != NULL);
@@ -3741,9 +3688,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // create new part
   writeFileChunks(archiveEntryInfo);
 
-  // registers as open archive entry
-  registerArchiveEntry(archiveEntryInfo);
-
   // done resources
   AutoFree_done(&autoFreeList);
 
@@ -4064,9 +4008,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // create new part
   writeImageChunks(archiveEntryInfo);
 
-  // registers as open archive entry
-  registerArchiveEntry(archiveEntryInfo);
-
   // done resources
   AutoFree_done(&autoFreeList);
 
@@ -4308,9 +4249,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       return error;
     }
   }
-
-  // registers as open archive entry
-  registerArchiveEntry(archiveEntryInfo);
 
   // done resources
   AutoFree_done(&autoFreeList);
@@ -4557,9 +4495,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       return error;
     }
   }
-
-  // registers as open archive entry
-  registerArchiveEntry(archiveEntryInfo);
 
   // done resources
   AutoFree_done(&autoFreeList);
@@ -4973,9 +4908,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // create new part
   writeHardLinkChunks(archiveEntryInfo);
 
-  // registers as open archive entry
-  registerArchiveEntry(archiveEntryInfo);
-
   // done resources
   AutoFree_done(&autoFreeList);
 
@@ -5220,9 +5152,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       return error;
     }
   }
-
-  // registers as open archive entry
-  registerArchiveEntry(archiveEntryInfo);
 
   // done resources
   AutoFree_done(&autoFreeList);
@@ -6001,9 +5930,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
-  // registers as open archive entry
-  registerArchiveEntry(archiveEntryInfo);
-
   // done resources
   AutoFree_done(&autoFreeList2);
   AutoFree_done(&autoFreeList1);
@@ -6495,9 +6421,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
-  // registers as open archive entry
-  registerArchiveEntry(archiveEntryInfo);
-
   // done resources
   AutoFree_done(&autoFreeList2);
   AutoFree_done(&autoFreeList1);
@@ -6870,9 +6793,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithm;
   if (cryptType      != NULL) (*cryptType)      = archiveInfo->cryptType;
-
-  // registers as open archive entry
-  registerArchiveEntry(archiveEntryInfo);
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -7252,9 +7172,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithm;
   if (cryptType      != NULL) (*cryptType)      = archiveInfo->cryptType;
-
-  // registers as open archive entry
-  registerArchiveEntry(archiveEntryInfo);
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -7857,9 +7774,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
-  // registers as open archive entry
-  registerArchiveEntry(archiveEntryInfo);
-
   // done resources
   AutoFree_done(&autoFreeList2);
   AutoFree_done(&autoFreeList1);
@@ -8238,9 +8152,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithm;
   if (cryptType      != NULL) (*cryptType)      = archiveInfo->cryptType;
-
-  // registers as open archive entry
-  registerArchiveEntry(archiveEntryInfo);
 
   // done resources
   AutoFree_done(&autoFreeList2);
@@ -9043,9 +8954,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
         break; /* not reached */
     #endif /* NDEBUG */
   }
-
-  // remove registration as open archive entry
-  unregisterArchiveEntry(archiveEntryInfo);
 
   return error;
 }
@@ -10016,8 +9924,7 @@ Errors Archive_addToIndex(DatabaseHandle   *databaseHandle,
                           StorageHandle    *storageHandle,
                           const String     storageName,
                           IndexModes       indexMode,
-                          const JobOptions *jobOptions,
-                          BandWidthList    *maxBandWidthList
+                          const JobOptions *jobOptions
                          )
 {
   Errors error;
