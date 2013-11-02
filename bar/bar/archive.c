@@ -565,7 +565,7 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_KEY,
                      CHUNK_DEFINITION_KEY,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &chunkKey
                     );
@@ -671,7 +671,7 @@ LOCAL Errors writeFileInfo(ArchiveInfo *archiveInfo)
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_BAR,
                      CHUNK_DEFINITION_BAR,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &chunkBar
                     );
@@ -725,7 +725,7 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_KEY,
                      CHUNK_DEFINITION_KEY,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &chunkKey
                     );
@@ -3458,12 +3458,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // init file chunk
   error = Chunk_init(&archiveEntryInfo->file.chunkFile.info,
                      NULL,  // parentChunkInfo
-#warning todo
-&CHUNK_IO_FILE,//                     archiveInfo->chunkIO,
-&archiveEntryInfo->file.tmpFileHandle,//                     archiveInfo->chunkIOUserData,
+                     &CHUNK_IO_FILE,
+                     &archiveEntryInfo->file.tmpFileHandle,
                      CHUNK_ID_FILE,
                      CHUNK_DEFINITION_FILE,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->file.chunkFile
                     );
@@ -3780,9 +3779,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveEntryInfo->image.deltaBuffer            = NULL;
   archiveEntryInfo->image.deltaBufferSize        = 0L;
 
-  // tmp
-#warning todo create tmp file and multi core support
-
   // allocate buffers
   archiveEntryInfo->image.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
   archiveEntryInfo->image.byteBuffer = (byte*)malloc(archiveEntryInfo->image.byteBufferSize);
@@ -3838,7 +3834,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_IMAGE,
                      CHUNK_DEFINITION_IMAGE,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->image.chunkImage
                     );
@@ -4091,7 +4087,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_DIRECTORY,
                      CHUNK_DEFINITION_DIRECTORY,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->directory.chunkDirectory
                     );
@@ -4335,7 +4331,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_LINK,
                      CHUNK_DEFINITION_LINK,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->link.chunkLink
                     );
@@ -4447,7 +4443,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     error = Chunk_create(&archiveEntryInfo->link.chunkLink.info);
     if (error != ERROR_NONE)
     {
-#warning semaphore when locking?
       Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
       AutoFree_cleanup(&autoFreeList);
       return error;
@@ -4653,12 +4648,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // init hard link chunk
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLink.info,
                      NULL,  // parentChunkInfo
-#warning todo
-&CHUNK_IO_FILE,//                     archiveInfo->chunkIO,
-&archiveEntryInfo->hardLink.tmpFileHandle,//                     archiveInfo->chunkIOUserData,
+                     &CHUNK_IO_FILE,
+                     &archiveEntryInfo->hardLink.tmpFileHandle,
                      CHUNK_ID_HARDLINK,
                      CHUNK_DEFINITION_HARDLINK,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->hardLink.chunkHardLink
                     );
@@ -4991,7 +4985,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_SPECIAL,
                      CHUNK_DEFINITION_SPECIAL,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->special.chunkSpecial
                     );
@@ -5460,7 +5454,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_FILE,
                      CHUNK_DEFINITION_FILE,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->file.chunkFile
                     );
@@ -6020,7 +6014,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_IMAGE,
                      CHUNK_DEFINITION_IMAGE,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->image.chunkImage
                     );
@@ -6493,7 +6487,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_DIRECTORY,
                      CHUNK_DEFINITION_DIRECTORY,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->directory.chunkDirectory
                     );
@@ -6868,7 +6862,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_LINK,
                      CHUNK_DEFINITION_LINK,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->link.chunkLink
                     );
@@ -7265,7 +7259,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_HARDLINK,
                      CHUNK_DEFINITION_HARDLINK,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->hardLink.chunkHardLink
                     );
@@ -7846,7 +7840,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_SPECIAL,
                      CHUNK_DEFINITION_SPECIAL,
-                     0,
+                     0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->special.chunkSpecial
                     );
