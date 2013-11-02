@@ -2794,6 +2794,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
     {
       String_delete(archiveInfo->printableName);
       String_delete(archiveInfo->file.fileName);
+      Semaphore_done(&archiveInfo->chunkIOLock);
       return ERROR_NO_PUBLIC_KEY;
     }
 
@@ -2807,6 +2808,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
     {
       String_delete(archiveInfo->printableName);
       String_delete(archiveInfo->file.fileName);
+      Semaphore_done(&archiveInfo->chunkIOLock);
       return error;
     }
 
@@ -2836,6 +2838,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
       {
         String_delete(archiveInfo->printableName);
         String_delete(archiveInfo->file.fileName);
+        Semaphore_done(&archiveInfo->chunkIOLock);
         return error;
       }
       if (archiveInfo->cryptKeyDataLength < maxCryptKeyDataLength)
@@ -3028,6 +3031,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     Crypt_doneKey(&archiveInfo->cryptKey);
   }
 
+  Semaphore_done(&archiveInfo->chunkIOLock);
   if (archiveInfo->cryptPassword  != NULL) Password_delete(archiveInfo->cryptPassword);
   if (archiveInfo->printableName != NULL) String_delete(archiveInfo->printableName);
   switch (archiveInfo->ioType)
