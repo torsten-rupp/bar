@@ -39,19 +39,6 @@
 
 /***************************** Datatypes *******************************/
 
-// source node
-typedef struct SourceNode
-{
-  LIST_NODE_HEADER(struct SourceNode);
-
-  String storageName;          // storage archive name
-} SourceNode;
-
-typedef struct
-{
-  LIST_HEADER(SourceNode);
-} SourceList;
-
 // source handle
 typedef struct
 {

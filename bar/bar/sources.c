@@ -27,6 +27,7 @@
 #include "fragmentlists.h"
 
 #include "errors.h"
+#include "storage.h"
 #include "archive.h"
 
 #include "sources.h"
@@ -39,6 +40,19 @@
 #define BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
+// source node
+typedef struct SourceNode
+{
+  LIST_NODE_HEADER(struct SourceNode);
+
+  String           storageName;          // storage archive name
+  StorageSpecifier storageSpecifier;     // storage specifier
+} SourceNode;
+
+typedef struct
+{
+  LIST_HEADER(SourceNode);
+} SourceList;
 
 /***************************** Variables *******************************/
 LOCAL SourceList sourceList;
@@ -122,6 +136,8 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
             HALT_INSUFFICIENT_MEMORY();
           }
           sourceNode->storageName = String_duplicate(fileName);
+          Storage_duplicateSpecifier(&sourceNode->storageSpecifier,&storageSpecifier);
+          String_set(sourceNode->storageSpecifier.fileName,fileName);
           List_append(&sourceList,sourceNode);
           break;
         }
@@ -140,6 +156,7 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
       HALT_INSUFFICIENT_MEMORY();
     }
     sourceNode->storageName = String_duplicate(storageName);
+    Storage_duplicateSpecifier(&sourceNode->storageSpecifier,&storageSpecifier);
     List_append(&sourceList,sourceNode);
   }
 
@@ -166,6 +183,7 @@ LOCAL void freeSourceNode(SourceNode *sourceNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
+  Storage_doneSpecifier(&sourceNode->storageSpecifier);
   String_delete(sourceNode->storageName);
 }
 
@@ -939,12 +957,12 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
   {
     LIST_ITERATE(&sourceList,sourceNode)
     {
-      if (File_isFile(sourceNode->storageName))
+      if (sourceNode->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
       {
-        if (!Archive_isArchiveFile(sourceNode->storageName))
+        if (!Archive_isArchiveFile(sourceNode->storageSpecifier.fileName))
         {
           // open local file as source
-          error = File_open(&sourceHandle->tmpFileHandle,sourceNode->storageName,FILE_OPEN_READ);
+          error = File_open(&sourceHandle->tmpFileHandle,sourceNode->storageSpecifier.fileName,FILE_OPEN_READ);
           if (error == ERROR_NONE)
           {
             sourceHandle->name = sourceNode->storageName;
@@ -972,12 +990,12 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
       // restore from source list
       LIST_ITERATE(&sourceList,sourceNode)
       {
-        if (File_isFile(sourceNode->storageName))
+        if (sourceNode->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
         {
-          if (Archive_isArchiveFile(sourceNode->storageName))
+          if (Archive_isArchiveFile(sourceNode->storageSpecifier.fileName))
           {
             // restore to temporary file (ignore error)
-            error = restoreFile(sourceNode->storageName,
+            error = restoreFile(sourceNode->storageSpecifier.fileName,
                                 name,
                                 jobOptions,
                                 tmpFileName,
@@ -1046,7 +1064,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
       // restore from source list
       LIST_ITERATE(&sourceList,sourceNode)
       {
-        if (!File_isFile(sourceNode->storageName))
+        if (sourceNode->storageSpecifier.type != STORAGE_TYPE_FILESYSTEM)
         {
           // create local copy of storage file
           localStorageName = String_new();
