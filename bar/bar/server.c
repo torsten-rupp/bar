@@ -652,12 +652,23 @@ LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
 LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 {
   assert(scheduleNode != NULL);
+  assert(scheduleNode->title != NULL);
+  assert(scheduleNode->customText != NULL);
 
   UNUSED_VARIABLE(userData);
 
   String_delete(scheduleNode->customText);
   String_delete(scheduleNode->title);
 }
+
+/***********************************************************************\
+* Name   : newScheduleNode
+* Purpose: allocate new schedule node
+* Input  : -
+* Output : -
+* Return : new schedule node
+* Notes  : -
+\***********************************************************************/
 
 LOCAL ScheduleNode *newScheduleNode(void)
 {
@@ -1541,7 +1552,7 @@ LOCAL StringNode *deleteJobEntries(StringList *stringList,
       stringNode = StringList_remove(stringList,stringNode);
 
       // store next line
-      if (nextStringNode == NULL) nextStringNode = stringNode;
+      nextStringNode = stringNode;
     }
     else
     {
@@ -1597,20 +1608,19 @@ LOCAL StringNode *deleteJobSections(StringList *stringList,
        )
     {
       // delete section
-      do
+      stringNode = StringList_remove(stringList,stringNode);
+      while (   (stringNode != NULL)
+             && !String_matchCString(stringNode->string,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+            )
       {
         stringNode = StringList_remove(stringList,stringNode);
-        String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
-        if (String_isEmpty(line) || String_startsWithChar(line,'#'))
-        {
-          stringNode = stringNode->next;
-          continue;
-        }
       }
-      while ((stringNode != NULL) && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL));
       if (stringNode != NULL)
       {
-        stringNode = StringList_remove(stringList,stringNode);
+        if (String_matchCString(stringNode->string,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
+        {
+          stringNode = StringList_remove(stringList,stringNode);
+        }
       }
 
       // delete following empty lines
@@ -6479,7 +6489,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
     String_delete(title);
     return;
   }
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"archiveType","*"),"*"))
+  if   (stringEquals(StringMap_getTextCString(argumentMap,"archiveType","*"),"*"))
   {
     archiveType = ARCHIVE_TYPE_NORMAL;
   }
@@ -6545,6 +6555,11 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
       Semaphore_unlock(&jobList.lock);
       deleteScheduleNode(scheduleNode);
+      String_delete(customText);
+      String_delete(time);
+      String_delete(weekDays);
+      String_delete(date);
+      String_delete(title);
       return;
     }
 
