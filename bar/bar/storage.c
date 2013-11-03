@@ -3055,13 +3055,15 @@ Errors Storage_init(StorageHandle                *storageHandle,
                     void                         *storageStatusInfoUserData
                    )
 {
-  Errors error;
+  AutoFreeList autoFreeList;
+  Errors       error;
 
   assert(storageHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(jobOptions != NULL);
 
   // initialize variables
+  AutoFree_init(&autoFreeList);
   storageHandle->mode                      = STORAGE_MODE_UNKNOWN;
   Storage_duplicateSpecifier(&storageHandle->storageSpecifier,storageSpecifier);
   storageHandle->jobOptions                = jobOptions;
@@ -3081,11 +3083,12 @@ Errors Storage_init(StorageHandle                *storageHandle,
   }
   storageHandle->storageStatusInfoFunction = storageStatusInfoFunction;
   storageHandle->storageStatusInfoUserData = storageStatusInfoUserData;
+  AUTOFREE_ADD(&autoFreeList,&storageHandle->storageSpecifier,{ Storage_doneSpecifier(&storageHandle->storageSpecifier); });
 
   // check parameters
   if (String_isEmpty(storageSpecifier->fileName))
   {
-    Storage_doneSpecifier(&storageHandle->storageSpecifier);
+    AutoFree_cleanup(&autoFreeList);
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
@@ -3124,6 +3127,7 @@ Errors Storage_init(StorageHandle                *storageHandle,
           {
             HALT_INSUFFICIENT_MEMORY();
           }
+          AUTOFREE_ADD(&autoFreeList,storageHandle->ftp.readAheadBuffer.data,{ free(storageHandle->ftp.readAheadBuffer.data); });
 
           // get FTP server settings
           storageHandle->ftp.server = getFTPServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
@@ -3131,16 +3135,17 @@ Errors Storage_init(StorageHandle                *storageHandle,
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageHandle->storageSpecifier.hostName))
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return ERROR_NO_HOST_NAME;
           }
 
           // allocate FTP server
           if (!allocateServer(storageHandle->ftp.server,serverConnectionPriority,60*1000L))
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return ERROR_TOO_MANY_CONNECTIONS;
           }
+          AUTOFREE_ADD(&autoFreeList,storageHandle->ftp.server,{ freeServer(storageHandle->ftp.server); });
 
           // check FTP login, get correct password
           error = ERROR_FTP_SESSION_FAIL;
@@ -3198,7 +3203,7 @@ Errors Storage_init(StorageHandle                *storageHandle,
           }
           if (error != ERROR_NONE)
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return error;
           }
         }
@@ -3221,6 +3226,7 @@ Errors Storage_init(StorageHandle                *storageHandle,
           {
             HALT_INSUFFICIENT_MEMORY();
           }
+          AUTOFREE_ADD(&autoFreeList,storageHandle->ftp.readAheadBuffer.data,{ free(storageHandle->ftp.readAheadBuffer.data); });
 
           // get FTP server settings
           getFTPServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
@@ -3228,16 +3234,17 @@ Errors Storage_init(StorageHandle                *storageHandle,
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageHandle->storageSpecifier.hostName))
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return ERROR_NO_HOST_NAME;
           }
 
-          // allocate FTP server connection
-          if (!allocateFTPServerConnection(storageHandle->storageSpecifier.hostName))
+          // allocate FTP server
+          if (!allocateServer(storageHandle->ftp.server,serverConnectionPriority,60*1000L))
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return ERROR_TOO_MANY_CONNECTIONS;
           }
+          AUTOFREE_ADD(&autoFreeList,storageHandle->ftp.server,{ freeServer(storageHandle->ftp.server); });
 
           // check FTP login, get correct password
           error = ERROR_FTP_SESSION_FAIL;
@@ -3295,19 +3302,19 @@ Errors Storage_init(StorageHandle                *storageHandle,
           }
           if (error != ERROR_NONE)
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return error;
           }
         }
       #else /* not HAVE_CURL || HAVE_FTP */
-        Storage_doneSpecifier(&storageHandle->storageSpecifier);
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       UNUSED_VARIABLE(maxBandWidthList);
 
-      Storage_doneSpecifier(&storageHandle->storageSpecifier);
+      AutoFree_cleanup(&autoFreeList);
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
@@ -3333,6 +3340,7 @@ Errors Storage_init(StorageHandle                *storageHandle,
           {
             HALT_INSUFFICIENT_MEMORY();
           }
+          AUTOFREE_ADD(&autoFreeList,storageHandle->scp.readAheadBuffer.data,{ free(storageHandle->scp.readAheadBuffer.data); });
 
           // get SSH server settings
           storageHandle->scp.server = getSSHServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&sshServer);
@@ -3343,16 +3351,17 @@ Errors Storage_init(StorageHandle                *storageHandle,
           storageHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
           if (String_isEmpty(storageHandle->storageSpecifier.hostName))
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return ERROR_NO_HOST_NAME;
           }
 
           // allocate SSH server
           if (!allocateServer(storageHandle->scp.server,serverConnectionPriority,60*1000L))
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return ERROR_TOO_MANY_CONNECTIONS;
           }
+          AUTOFREE_ADD(&autoFreeList,storageHandle->scp.server,{ freeServer(storageHandle->scp.server); });
 
           // check if SSH login is possible
           error = ERROR_UNKNOWN;
@@ -3399,7 +3408,7 @@ Errors Storage_init(StorageHandle                *storageHandle,
           assert(error != ERROR_UNKNOWN);
           if (error != ERROR_NONE)
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return error;
           }
 
@@ -3408,7 +3417,7 @@ Errors Storage_init(StorageHandle                *storageHandle,
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(maxBandWidthList);
 
-        Storage_doneSpecifier(&storageHandle->storageSpecifier);
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
@@ -3436,6 +3445,7 @@ Errors Storage_init(StorageHandle                *storageHandle,
           {
             HALT_INSUFFICIENT_MEMORY();
           }
+          AUTOFREE_ADD(&autoFreeList,storageHandle->sftp.readAheadBuffer.data,{ free(storageHandle->sftp.readAheadBuffer.data); });
 
           // get SSH server settings
           storageHandle->sftp.server = getSSHServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&sshServer);
@@ -3446,16 +3456,17 @@ Errors Storage_init(StorageHandle                *storageHandle,
           storageHandle->sftp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
           if (String_isEmpty(storageHandle->storageSpecifier.hostName))
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return ERROR_NO_HOST_NAME;
           }
 
           // allocate SSH server
           if (!allocateServer(storageHandle->sftp.server,serverConnectionPriority,60*1000L))
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return ERROR_TOO_MANY_CONNECTIONS;
           }
+          AUTOFREE_ADD(&autoFreeList,storageHandle->sftp.server,{ freeServer(storageHandle->sftp.server); });
 
           // check if SSH login is possible
           error = ERROR_UNKNOWN;
@@ -3500,7 +3511,7 @@ Errors Storage_init(StorageHandle                *storageHandle,
           assert(error != ERROR_UNKNOWN);
           if (error != ERROR_NONE)
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return error;
           }
 
@@ -3509,7 +3520,7 @@ Errors Storage_init(StorageHandle                *storageHandle,
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(maxBandWidthList);
 
-        Storage_doneSpecifier(&storageHandle->storageSpecifier);
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
@@ -3538,16 +3549,17 @@ Errors Storage_init(StorageHandle                *storageHandle,
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageHandle->storageSpecifier.hostName))
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return ERROR_NO_HOST_NAME;
           }
 
           // allocate WebDAV server
           if (!allocateServer(storageHandle->webdav.server,serverConnectionPriority,60*1000L))
           {
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return ERROR_TOO_MANY_CONNECTIONS;
           }
+          AUTOFREE_ADD(&autoFreeList,storageHandle->webdav.server,{ freeServer(storageHandle->webdav.server); });
 
           // check WebDAV login, get correct password
           error = ERROR_WEBDAV_SESSION_FAIL;
@@ -3602,12 +3614,12 @@ Errors Storage_init(StorageHandle                *storageHandle,
           if (error != ERROR_NONE)
           {
             freeServer(storageHandle->webdav.server);
-            Storage_doneSpecifier(&storageHandle->storageSpecifier);
+            AutoFree_cleanup(&autoFreeList);
             return error;
           }
         }
       #else /* not HAVE_CURL */
-        Storage_doneSpecifier(&storageHandle->storageSpecifier);
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_CURL */
       break;
@@ -3670,7 +3682,7 @@ Errors Storage_init(StorageHandle                *storageHandle,
         error = File_getFileSystemInfo(&fileSystemInfo,tmpDirectory);
         if (error != ERROR_NONE)
         {
-          Storage_doneSpecifier(&storageHandle->storageSpecifier);
+          AutoFree_cleanup(&autoFreeList);
           return error;
         }
         volumeSize    = 0LL;
@@ -3741,6 +3753,7 @@ Errors Storage_init(StorageHandle                *storageHandle,
           {
             HALT_INSUFFICIENT_MEMORY();
           }
+          AUTOFREE_ADD(&autoFreeList,storageHandle->opticalDisk.read.buffer.data,{ free(storageHandle->opticalDisk.read.buffer.data); });
         #endif /* HAVE_ISO9660 */
 
         storageHandle->opticalDisk.write.requestVolumeCommand   = opticalDisk.requestVolumeCommand;
@@ -3773,17 +3786,15 @@ Errors Storage_init(StorageHandle                *storageHandle,
         StringList_init(&storageHandle->opticalDisk.write.fileNameList);
         storageHandle->opticalDisk.write.fileName               = String_new();
         storageHandle->opticalDisk.write.totalSize              = 0LL;
+        AUTOFREE_ADD(&autoFreeList,storageHandle->opticalDisk.write.directory,{ String_delete(storageHandle->opticalDisk.write.directory); });
+        AUTOFREE_ADD(&autoFreeList,&storageHandle->opticalDisk.write.fileNameList,{ StringList_done(&storageHandle->opticalDisk.write.fileNameList); });
+        AUTOFREE_ADD(&autoFreeList,storageHandle->opticalDisk.write.fileName,{ String_delete(storageHandle->opticalDisk.write.fileName); });
 
         // create temporary directory for medium files
         error = File_getTmpDirectoryName(storageHandle->opticalDisk.write.directory,NULL,tmpDirectory);
         if (error != ERROR_NONE)
         {
-          #ifdef HAVE_ISO9660
-            free(storageHandle->opticalDisk.read.buffer.data);
-          #endif /* HAVE_ISO9660 */
-          String_delete(storageHandle->opticalDisk.write.fileName);
-          String_delete(storageHandle->opticalDisk.write.directory);
-          Storage_doneSpecifier(&storageHandle->storageSpecifier);
+          AutoFree_cleanup(&autoFreeList);
           return error;
         }
 
@@ -3818,7 +3829,7 @@ Errors Storage_init(StorageHandle                *storageHandle,
         error = File_getFileSystemInfo(&fileSystemInfo,tmpDirectory);
         if (error != ERROR_NONE)
         {
-          Storage_doneSpecifier(&storageHandle->storageSpecifier);
+          AutoFree_cleanup(&autoFreeList);
           return error;
         }
         if (fileSystemInfo.freeBytes < (device.volumeSize*2))
@@ -3858,14 +3869,15 @@ Errors Storage_init(StorageHandle                *storageHandle,
         StringList_init(&storageHandle->device.fileNameList);
         storageHandle->device.fileName               = String_new();
         storageHandle->device.totalSize              = 0LL;
+        AUTOFREE_ADD(&autoFreeList,storageHandle->device.directory,{ String_delete(storageHandle->device.directory); });
+        AUTOFREE_ADD(&autoFreeList,&storageHandle->device.fileNameList,{ StringList_done(&storageHandle->device.fileNameList); });
+        AUTOFREE_ADD(&autoFreeList,storageHandle->device.fileName,{ String_delete(storageHandle->device.directory); });
 
         // create temporary directory for device files
         error = File_getTmpDirectoryName(storageHandle->device.directory,NULL,tmpDirectory);
         if (error != ERROR_NONE)
         {
-          String_delete(storageHandle->device.fileName);
-          String_delete(storageHandle->device.directory);
-          Storage_doneSpecifier(&storageHandle->storageSpecifier);
+          AutoFree_cleanup(&autoFreeList);
           return error;
         }
 
@@ -3884,6 +3896,9 @@ Errors Storage_init(StorageHandle                *storageHandle,
 
   storageHandle->runningInfo.volumeNumber   = 0;
   storageHandle->runningInfo.volumeProgress = 0;
+
+  // free resources
+  AutoFree_done(&autoFreeList);
 
   DEBUG_ADD_RESOURCE_TRACE("storage file handle",storageHandle);
 
@@ -3909,38 +3924,38 @@ Errors Storage_done(StorageHandle *storageHandle)
       break;
     case STORAGE_TYPE_FTP:
       // free FTP server connection
-      freeServer(storageHandle->ftp.server);
       #if   defined(HAVE_CURL)
+        freeServer(storageHandle->ftp.server);
         free(storageHandle->ftp.readAheadBuffer.data);
       #elif defined(HAVE_FTP)
+        freeServer(storageHandle->ftp.server);
         free(storageHandle->ftp.readAheadBuffer.data);
       #else /* not HAVE_CURL || HAVE_FTP */
       #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       // free SSH server connection
-      freeServer(storageHandle->ssh.server);
       break;
     case STORAGE_TYPE_SCP:
       // free SSH server connection
-      freeServer(storageHandle->scp.server);
       #ifdef HAVE_SSH2
+        freeServer(storageHandle->scp.server);
         free(storageHandle->scp.readAheadBuffer.data);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SFTP:
       // free SSH server connection
-      freeServer(storageHandle->sftp.server);
       #ifdef HAVE_SSH2
+        freeServer(storageHandle->sftp.server);
         free(storageHandle->sftp.readAheadBuffer.data);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_WEBDAV:
       // free WebDAV server connection
-      freeServer(storageHandle->webdav.server);
       #if   defined(HAVE_CURL)
+        freeServer(storageHandle->webdav.server);
       #else /* not HAVE_CURL || HAVE_FTP */
       #endif /* HAVE_CURL || HAVE_FTP */
       break;
@@ -3972,6 +3987,7 @@ Errors Storage_done(StorageHandle *storageHandle)
           free(storageHandle->opticalDisk.read.buffer.data);
         #endif /* HAVE_ISO9660 */
         String_delete(storageHandle->opticalDisk.write.fileName);
+        StringList_done(&storageHandle->opticalDisk.write.fileNameList);
         String_delete(storageHandle->opticalDisk.write.directory);
       }
       break;
@@ -3998,6 +4014,7 @@ Errors Storage_done(StorageHandle *storageHandle)
 
         // free resources
         String_delete(storageHandle->device.fileName);
+        StringList_done(&storageHandle->device.fileNameList);
         String_delete(storageHandle->device.directory);
       }
       break;
