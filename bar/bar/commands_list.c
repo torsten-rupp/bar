@@ -1666,6 +1666,7 @@ remoteBarFlag=FALSE;
                        Errors_getText(error)
                       );
             if (failError == ERROR_NONE) failError = error;
+            (void)Storage_done(&storageHandle);
             continue;
           }
 
