@@ -198,6 +198,7 @@ Errors Command_compare(const StringList                *storageNameList,
                  Errors_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
+      (void)Storage_done(&storageHandle);
       continue;
     }
     DEBUG_TESTCODE("Command_compare2") { (void)Archive_close(&archiveInfo); failError = DEBUG_TESTCODE_ERROR(); break; }

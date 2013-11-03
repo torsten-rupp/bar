@@ -332,6 +332,7 @@ Errors Command_restore(const StringList                *storageNameList,
                  Errors_getText(error)
                 );
       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+      (void)Storage_done(&storageHandle);
       continue;
     }
     String_set(restoreInfo.statusInfo.storageName,printableStorageName);

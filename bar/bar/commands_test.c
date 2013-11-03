@@ -155,6 +155,7 @@ Errors Command_test(const StringList                *storageNameList,
                  Errors_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
+      (void)Storage_done(&storageHandle);
       continue;
     }
 
