@@ -150,7 +150,7 @@ Errors Command_test(const StringList                *storageNameList,
                         );
     if (error != ERROR_NONE)
     {
-      printError("Cannot open archive file '%s' (error: %s)!\n",
+      printError("Cannot open storage '%s' (error: %s)!\n",
                  String_cString(printableStorageName),
                  Errors_getText(error)
                 );
