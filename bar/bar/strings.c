@@ -233,7 +233,11 @@ LOCAL_INLINE struct __String* allocString(void)
 *          strings
 \***********************************************************************/
 
+#ifdef NDEBUG
 LOCAL_INLINE struct __String* allocTmpString(void)
+#else /* not NDEBUG */
+LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __lineNb__)
+#endif /* NDEBUG */
 {
   String tmpString;
   #ifndef NDEBUG
@@ -251,7 +255,7 @@ LOCAL_INLINE struct __String* allocTmpString(void)
       debugStringAllocList.allocatedMemory += sizeof(struct __String)+tmpString->maxLength;
 
       // allocate new debug node
-      debugStringNode = (DebugStringNode*)__List_newNode(__FILE__,__LINE__,sizeof(DebugStringNode));
+      debugStringNode = (DebugStringNode*)__List_newNode(__fileName__,__lineNb__,sizeof(DebugStringNode));
       if (debugStringNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
@@ -259,8 +263,8 @@ LOCAL_INLINE struct __String* allocTmpString(void)
       debugStringAllocList.allocatedMemory += sizeof(DebugStringNode);
 
       // init string node
-      debugStringNode->allocFileName  = NULL;
-      debugStringNode->allocLineNb    = 0L;
+      debugStringNode->allocFileName  = __fileName__;
+      debugStringNode->allocLineNb    = __lineNb__;
       #ifdef HAVE_BACKTRACE
         debugStringNode->stackTraceSize = backtrace((void*)debugStringNode->stackTrace,SIZE_OF_ARRAY(debugStringNode->stackTrace));
       #endif /* HAVE_BACKTRACE */
@@ -330,6 +334,7 @@ LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpS
       List_remove(&debugStringAllocList,debugStringNode);
       assert(debugStringAllocList.allocatedMemory >= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength);
       debugStringAllocList.allocatedMemory -= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength;
+      LIST_DELETE_NODE(debugStringNode);
     }
     pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
@@ -3921,7 +3926,11 @@ String String_escape(String string, const char *chars, char escapeChar)
   {
     assert(string->data != NULL);
 
-    s = allocTmpString();
+    #ifdef NDEBUG
+      s = allocTmpString();
+    #else /* not NDEBUG */
+      s = allocTmpString(__FILE__,__LINE__);
+    #endif /* NDEBUG */
     for (z = 0L; z < string->length; z++)
     {
       if ((string->data[z] == escapeChar) || ((chars != NULL) && (strchr(chars,string->data[z]) != NULL)))
@@ -3947,7 +3956,11 @@ String String_unescape(String string, char escapeChar)
   {
     assert(string->data != NULL);
 
-    s = allocTmpString();
+    #ifdef NDEBUG
+      s = allocTmpString();
+    #else /* not NDEBUG */
+      s = allocTmpString(__FILE__,__LINE__);
+    #endif /* NDEBUG */
     z = 0L;
     while (z < string->length)
     {
@@ -3982,7 +3995,11 @@ String String_quote(String string, char quoteChar)
   {
     assert(string->data != NULL);
 
-    s = allocTmpString();
+    #ifdef NDEBUG
+      s = allocTmpString();
+    #else /* not NDEBUG */
+      s = allocTmpString(__FILE__,__LINE__);
+    #endif /* NDEBUG */
     String_appendChar(s,quoteChar);
     for (z = 0; z < string->length; z++)
     {
@@ -4017,7 +4034,11 @@ String String_unquote(String string, const char *quoteChars)
       t1 = strchr(quoteChars,string->data[string->length-1]);
       if ((t0 != NULL) && (t1 != NULL) && ((*t0) == (*t1)))
       {
-        s = allocTmpString();
+        #ifdef NDEBUG
+          s = allocTmpString();
+        #else /* not NDEBUG */
+          s = allocTmpString(__FILE__,__LINE__);
+        #endif /* NDEBUG */
         z = 1;
         while (z < string->length-1)
         {
