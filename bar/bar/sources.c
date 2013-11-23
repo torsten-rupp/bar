@@ -987,7 +987,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
       // init variables
       FragmentList_initNode(&fragmentNode,name,size,NULL,0);
 
-      // restore from source list
+      // restore from local source list
       LIST_ITERATE(&sourceList,sourceNode)
       {
         if (sourceNode->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
@@ -1061,7 +1061,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
       // init variables
       FragmentList_initNode(&fragmentNode,name,size,NULL,0);
 
-      // restore from source list
+      // restore from remove source list
       LIST_ITERATE(&sourceList,sourceNode)
       {
         if (sourceNode->storageSpecifier.type != STORAGE_TYPE_FILESYSTEM)
