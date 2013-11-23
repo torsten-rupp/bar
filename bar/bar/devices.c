@@ -21,6 +21,9 @@
 #ifdef HAVE_SYS_IOCTL_H
   #include <sys/ioctl.h>
 #endif
+#ifdef HAVE_SYS_MOUNT_H
+  #include <sys/mount.h>
+#endif
 #include <mntent.h>
 #include <errno.h>
 #include <assert.h>
