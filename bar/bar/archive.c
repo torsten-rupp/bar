@@ -917,6 +917,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
           Semaphore_unlock(&archiveInfo->chunkIOLock);
           return error;
         }
+        DEBUG_TESTCODE("closeArchiveFile") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
       }
 
       // increment part number
@@ -1776,7 +1777,6 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
-  assert(Semaphore_isOwned(&archiveEntryInfo->archiveInfo->chunkIOLock));
 
   // get next byte-compressed data block (only 1 block, because of splitting)
   assert(archiveEntryInfo->image.byteBufferSize >= archiveEntryInfo->image.byteCompressInfo.blockLength);
@@ -3791,6 +3791,16 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveEntryInfo->image.deltaBuffer            = NULL;
   archiveEntryInfo->image.deltaBufferSize        = 0L;
 
+  // get temporary output file
+  error = File_getTmpFile(&archiveEntryInfo->image.tmpFileHandle,NULL,tmpDirectory);
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE("Archive_newImageEntry1") { (void)File_close(&archiveEntryInfo->image.tmpFileHandle); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.tmpFileHandle,{ (void)File_close(&archiveEntryInfo->image.tmpFileHandle); });
+
   // allocate buffers
   archiveEntryInfo->image.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
   archiveEntryInfo->image.byteBuffer = (byte*)malloc(archiveEntryInfo->image.byteBufferSize);
@@ -3842,8 +3852,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // init image chunk
   error = Chunk_init(&archiveEntryInfo->image.chunkImage.info,
                      NULL,  // parentChunkInfo
-                     archiveInfo->chunkIO,
-                     archiveInfo->chunkIOUserData,
+#warning todo remove
+//                     archiveInfo->chunkIO,
+//                     archiveInfo->chunkIOUserData,
+                     &CHUNK_IO_FILE,
+                     &archiveEntryInfo->image.tmpFileHandle,
                      CHUNK_ID_IMAGE,
                      CHUNK_DEFINITION_IMAGE,
                      0,  // alignment
@@ -3855,6 +3868,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("Archive_newImageEntry2") { Chunk_done(&archiveEntryInfo->file.chunkFile.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->image.chunkImage.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.byteCompressAlgorithm);
   archiveEntryInfo->image.chunkImage.cryptAlgorithm    = archiveInfo->jobOptions->cryptAlgorithm;
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImage.info,{ Chunk_done(&archiveEntryInfo->image.chunkImage.info); });
@@ -3869,6 +3883,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("Archive_newImageEntry3") { Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageEntry.cryptInfo,{ Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
@@ -3880,6 +3895,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("Archive_newImageEntry4") { Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageDelta.cryptInfo,{ Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
@@ -3891,6 +3907,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("Archive_newImageEntry5") { Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageData.cryptInfo,{ Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
@@ -3902,6 +3919,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("Archive_newImageEntry6") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.cryptInfo,{ Crypt_done(&archiveEntryInfo->image.cryptInfo); });
 
   // init sub-chunks
@@ -3920,6 +3938,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("Archive_newImageEntry7") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->image.chunkImageEntry.size      = deviceInfo->size;
   archiveEntryInfo->image.chunkImageEntry.blockSize = deviceInfo->blockSize;
   String_set(archiveEntryInfo->image.chunkImageEntry.name,deviceName);
@@ -3940,13 +3959,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("Archive_newImageEntry8") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
   {
     assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
 
     archiveEntryInfo->image.chunkImageDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->image.chunkImageDelta.name,Source_getName(&archiveEntryInfo->image.sourceHandle));
-    archiveEntryInfo->image.chunkImageDelta.size = Source_getSize(&archiveEntryInfo->file.sourceHandle);
+    archiveEntryInfo->image.chunkImageDelta.size = Source_getSize(&archiveEntryInfo->image.sourceHandle);
   }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageDelta.info,{ Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info); });
 
@@ -3965,6 +3985,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("Archive_newImageEntry9") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->image.chunkImageData.blockOffset = 0LL;
   archiveEntryInfo->image.chunkImageData.blockCount  = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageData.info,{ Chunk_done(&archiveEntryInfo->image.chunkImageData.info); });
@@ -3981,6 +4002,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("Archive_newImageEntry10") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->image.deltaCompressInfo); });
 
   error = Compress_init(&archiveEntryInfo->image.byteCompressInfo,
@@ -4000,17 +4022,17 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveEntryInfo->image.headerLength = Chunk_getSize(CHUNK_DEFINITION_IMAGE,      0,                            &archiveEntryInfo->image.chunkImage,     0)+
                                          Chunk_getSize(CHUNK_DEFINITION_IMAGE_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->image.chunkImageEntry,0)+
                                          Chunk_getSize(CHUNK_DEFINITION_IMAGE_DATA, archiveEntryInfo->blockLength,&archiveEntryInfo->image.chunkImageData, 0);
-  if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
+  if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
   {
     archiveEntryInfo->image.chunkImageDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->image.chunkImageDelta.name,Source_getName(&archiveEntryInfo->image.sourceHandle));
     archiveEntryInfo->image.chunkImageDelta.size           = Source_getSize(&archiveEntryInfo->image.sourceHandle);
 
-    archiveEntryInfo->file.headerLength += Chunk_getSize(CHUNK_DEFINITION_IMAGE_DELTA,
-                                                         archiveEntryInfo->blockLength,
-                                                         &archiveEntryInfo->image.chunkImageDelta,
-                                                         0
-                                                        );
+    archiveEntryInfo->image.headerLength += Chunk_getSize(CHUNK_DEFINITION_IMAGE_DELTA,
+                                                          archiveEntryInfo->blockLength,
+                                                          &archiveEntryInfo->image.chunkImageDelta,
+                                                          0
+                                                         );
   }
 
   // create new part
@@ -4824,7 +4846,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
     archiveEntryInfo->hardLink.chunkHardLinkDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->hardLink.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->hardLink.chunkHardLinkDelta.name,Source_getName(&archiveEntryInfo->hardLink.sourceHandle));
-    archiveEntryInfo->hardLink.chunkHardLinkDelta.size = Source_getSize(&archiveEntryInfo->file.sourceHandle);
+    archiveEntryInfo->hardLink.chunkHardLinkDelta.size = Source_getSize(&archiveEntryInfo->hardLink.sourceHandle);
   }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,{ Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info); });
 
