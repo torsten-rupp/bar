@@ -5812,6 +5812,7 @@ for ac_header in \
                  stdbool.h \
                  sys/xattr.h \
                  sys/ioctl.h \
+                 sys/mount.h \
                  sys/resource.h \
                  sys/select.h \
                  sys/socket.h \
@@ -6583,8 +6584,10 @@ esac
 tmpFile=`mktemp configure-XXXXXX`
 cwd=`pwd`
 mkdir packages 2>/dev/null
-(cd packages; rm -rf include; mkdir include 2>/dev/null)
-(cd packages; rm -rf lib; mkdir lib 2>/dev/null)
+if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+  (cd packages; rm -rf include; mkdir include 2>/dev/null)
+  (cd packages; rm -rf lib; mkdir lib 2>/dev/null)
+fi
 (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
 CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
 LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
@@ -10667,7 +10670,7 @@ else
 int
 main ()
 {
-printf("%d",S_IRUSR);
+int i = (int)S_IRUSR;
                                           return 0;
 
 
@@ -10704,7 +10707,7 @@ else
 int
 main ()
 {
-printf("%d",S_IWUSR);
+int i = (int)S_IWUSR;
                                           return 0;
 
 
@@ -10741,7 +10744,7 @@ else
 int
 main ()
 {
-printf("%d",S_IXUSR);
+int i = (int)S_IXUSR;
                                           return 0;
 
 
@@ -10778,7 +10781,7 @@ else
 int
 main ()
 {
-printf("%d",S_IRGRP);
+int i = (int)S_IRGRP;
                                           return 0;
 
 
@@ -10815,7 +10818,7 @@ else
 int
 main ()
 {
-printf("%d",S_IWGRP);
+int i = (int)S_IWGRP;
                                           return 0;
 
 
@@ -10852,7 +10855,7 @@ else
 int
 main ()
 {
-printf("%d",S_IXGRP);
+int i = (int)S_IXGRP;
                                           return 0;
 
 
@@ -10889,7 +10892,7 @@ else
 int
 main ()
 {
-printf("%d",S_IROTH);
+int i = (int)S_IROTH;
                                           return 0;
 
 
@@ -10926,7 +10929,7 @@ else
 int
 main ()
 {
-printf("%d",S_IWOTH);
+int i = (int)S_IWOTH;
                                           return 0;
 
 
@@ -10963,7 +10966,7 @@ else
 int
 main ()
 {
-printf("%d",S_IXOTH);
+int i = (int)S_IXOTH;
                                           return 0;
 
 
@@ -11000,7 +11003,7 @@ else
 int
 main ()
 {
-printf("%d",FS_IOC_GETFLAGS);
+int i = (int)FS_IOC_GETFLAGS;
                                           return 0;
 
 
@@ -11037,7 +11040,7 @@ else
 int
 main ()
 {
-printf("%d",FS_COMPR_FL);
+int i = (int)FS_COMPR_FL;
                                           return 0;
 
 
@@ -11074,7 +11077,7 @@ else
 int
 main ()
 {
-printf("%d",FS_NOCOMP_FL);
+int i = (int)FS_NOCOMP_FL;
                                           return 0;
 
 
@@ -11111,7 +11114,7 @@ else
 int
 main ()
 {
-printf("%d",FS_NODUMP_FL);
+int i = (int)FS_NODUMP_FL;
                                           return 0;
 
 
@@ -11144,11 +11147,11 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/ioctl.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+`echo sys/mount.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-printf("%d",BLKSSZGET);
+int i = (int)BLKSSZGET;
                                           return 0;
 
 
@@ -11181,11 +11184,11 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/ioctl.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+`echo sys/mount.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-printf("%d",BLKGETSIZE);
+int i = (int)BLKGETSIZE;
                                           return 0;
 
 
@@ -11223,7 +11226,7 @@ else
 int
 main ()
 {
-printf("%d",SIGPIPE);
+int i = (int)SIGPIPE;
                                           return 0;
 
 
@@ -11261,7 +11264,7 @@ else
 int
 main ()
 {
-printf("%d",_SC_GETPW_R_SIZE_MAX);
+int i = (int)_SC_GETPW_R_SIZE_MAX;
                                           return 0;
 
 
@@ -11298,7 +11301,7 @@ else
 int
 main ()
 {
-printf("%d",_SC_NPROCESSORS_CONF);
+int i = (int)_SC_NPROCESSORS_CONF;
                                           return 0;
 
 
@@ -11337,7 +11340,7 @@ else
 int
 main ()
 {
-printf("%d",CRYPTO_LOCK);
+int i = (int)CRYPTO_LOCK;
                                           return 0;
 
 

@@ -90,7 +90,7 @@ AC_DEFUN([AC_CHECK_CONSTANT],
     ac_cv_const_$1,
     [
       AC_COMPILE_IFELSE([AC_LANG_PROGRAM([`echo $4|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
-                                         [printf("%d",$1);
+                                         [int i = (int)$1;
                                           return 0;
                                          ]
                                         )
@@ -985,6 +985,7 @@ AC_CHECK_HEADERS(\
                  stdbool.h \
                  sys/xattr.h \
                  sys/ioctl.h \
+                 sys/mount.h \
                  sys/resource.h \
                  sys/select.h \
                  sys/socket.h \
@@ -1039,8 +1040,10 @@ dnl AC_MSG_ERROR([stop])
 tmpFile=`mktemp configure-XXXXXX`
 cwd=`pwd`
 mkdir packages 2>/dev/null
-(cd packages; rm -rf include; mkdir include 2>/dev/null)
-(cd packages; rm -rf lib; mkdir lib 2>/dev/null)
+if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+  (cd packages; rm -rf include; mkdir include 2>/dev/null)
+  (cd packages; rm -rf lib; mkdir lib 2>/dev/null)
+fi
 (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
 CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
 LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
@@ -2193,8 +2196,8 @@ AC_CHECK_CONSTANT(FS_IOC_GETFLAGS,AC_DEFINE(HAVE_FS_IOC_GETFLAGS,1,[FS_IOC_GETFL
 AC_CHECK_CONSTANT(FS_COMPR_FL,    AC_DEFINE(HAVE_FS_COMPR_FL,    1,[FS_COMPR_FL available]),    ,linux/fs.h)
 AC_CHECK_CONSTANT(FS_NOCOMP_FL,   AC_DEFINE(HAVE_FS_NOCOMP_FL,   1,[FS_NOCOMP_FL available]),   ,linux/fs.h)
 AC_CHECK_CONSTANT(FS_NODUMP_FL,   AC_DEFINE(HAVE_FS_NODUMP_FL,   1,[FS_NODUMP_FL available]),   ,linux/fs.h)
-AC_CHECK_CONSTANT(BLKSSZGET,      AC_DEFINE(HAVE_BLKSSZGET,      1,[BLKSSZGET available]),      ,sys/ioctl.h)
-AC_CHECK_CONSTANT(BLKGETSIZE,     AC_DEFINE(HAVE_BLKGETSIZE,     1,[BLKGETSIZE available]),     ,sys/ioctl.h)
+AC_CHECK_CONSTANT(BLKSSZGET,      AC_DEFINE(HAVE_BLKSSZGET,      1,[BLKSSZGET available]),      ,sys/mount.h)
+AC_CHECK_CONSTANT(BLKGETSIZE,     AC_DEFINE(HAVE_BLKGETSIZE,     1,[BLKGETSIZE available]),     ,sys/mount.h)
 
 AC_CHECK_CONSTANT(SIGPIPE,AC_DEFINE(HAVE_SIGPIPE,1,[SIGPIPE available]),,signal.h)
 
