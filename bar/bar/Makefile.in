@@ -863,6 +863,15 @@ test_parameters: \
 	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g -H -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) --config=test/test.cfg -l test/test*.bar $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 --dry-run $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -l cd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -t cd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -d cd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -l dvd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -t dvd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -d dvd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -l bd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -t bd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -d bd://test*.bar $(if $(QUIET),1>/dev/null))
 	#
 	# wrong options
 	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR) --not-existing-option  $(if $(QUIET),1>/dev/null))
