@@ -3602,6 +3602,14 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
               );
     return ERROR_INVALID_DEVICE_BLOCK_SIZE;
   }
+  if (deviceInfo.blockSize <= 0)
+  {
+    printInfo(1,"FAIL\n");
+    printError("Cannot get device block size for '%s'\n",
+               String_cString(deviceName)
+              );
+    return ERROR_INVALID_DEVICE_BLOCK_SIZE;
+  }
   assert(deviceInfo.blockSize > 0);
   maxBufferBlockCount = bufferSize/deviceInfo.blockSize;
 
