@@ -85,22 +85,22 @@ typedef enum
   FORMAT_LENGTH_TYPE_DOUBLE,
   FORMAT_LENGTH_TYPE_QUAD,
   FORMAT_LENGTH_TYPE_POINTER,
-} FormatLengthType;
+} FormatLengthTypes;
 
 typedef struct
 {
-  char             token[16];
-  unsigned int     length;
-  bool             alternateFlag;
-  bool             zeroPaddingFlag;
-  bool             leftAdjustedFlag;
-  bool             blankFlag;
-  bool             signFlag;
-  unsigned int     width;
-  unsigned int     precision;
-  FormatLengthType lengthType;
-  char             quoteChar;
-  char             conversionChar;
+  char              token[16];
+  unsigned int      length;
+  bool              alternateFlag;
+  bool              zeroPaddingFlag;
+  bool              leftAdjustedFlag;
+  bool              blankFlag;
+  bool              signFlag;
+  unsigned int      width;
+  unsigned int      precision;
+  FormatLengthTypes lengthType;
+  char              quoteChar;
+  char              conversionChar;
 } FormatToken;
 
 #ifndef NDEBUG
@@ -610,14 +610,23 @@ LOCAL void formatString(struct __String *string,
   {
     int                i;
     long               l;
-    long long          ll;
+    #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
+      long long          ll;
+    #endif
     unsigned int       ui;
     unsigned long      ul;
-    unsigned long long ull;
+    #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
+      unsigned long long ull;
+    #endif
     float              f;
     double             d;
     const char         *s;
     void               *p;
+    #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
+      unsigned long long bits;
+    #else
+      unsigned long      bits;
+    #endif
     struct __String    *string;
   } data;
   char          buffer[64];
@@ -970,36 +979,30 @@ LOCAL void formatString(struct __String *string,
             }
           }
           break;
-#if 0
-still not implemented
         case 'b':
           // binaray value
           switch (formatToken.lengthType)
           {
             case FORMAT_LENGTH_TYPE_INTEGER:
-              {
-                unsigned int bits;
-
-                bits = va_arg(arguments,unsigned int);
-              }
+              #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
+                data.bits = (unsigned long long)va_arg(arguments,unsigned int);
+              #else
+                data.bits = (unsigned long)va_arg(arguments,unsigned int);
+              #endif /* _LONG_LONG || HAVE_LONG_LONG */
               break;
             case FORMAT_LENGTH_TYPE_LONG:
-              {
-                unsigned long bits;
-
-                bits = va_arg(arguments,unsigned long);
-              }
+              #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
+                data.bits = (unsigned long long)va_arg(arguments,unsigned long);
+              #else
+                data.bits = (unsigned long)va_arg(arguments,unsigned long);
+              #endif /* _LONG_LONG || HAVE_LONG_LONG */
               break;
             case FORMAT_LENGTH_TYPE_LONGLONG:
-              {
-                #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
-                  unsigned long long bits;
-
-                  bits = va_arg(arguments,unsigned long long);
-                }
-                #else /* not _LONG_LONG || HAVE_LONG_LONG */
-                  HALT_INTERNAL_ERROR("long long not supported");
-                #endif /* _LONG_LONG || HAVE_LONG_LONG */
+              #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
+                data.bits = va_arg(arguments,unsigned long long);
+              #else /* not _LONG_LONG || HAVE_LONG_LONG */
+                HALT_INTERNAL_ERROR("long long not supported");
+              #endif /* _LONG_LONG || HAVE_LONG_LONG */
               break;
             #ifndef NDEBUG
               default:
@@ -1007,14 +1010,24 @@ still not implemented
                 break; /* not reached */
             #endif /* NDEBUG */
           }
-          bufferCount = 0;
-          FLUSH_OUTPUT();
-HALT_NOT_YET_IMPLEMENTED();
+
+          // get width
+          i = formatToken.width;
+          while ((1 << i) < data.bits)
+          {
+            i++;
+          }
+
+          // format bits
+          while (i > 0L)
+          {
+            String_appendChar(string,((data.bits & (1 << (i-1))) != 0) ? '1' : '0');
+            i--;
+          }
           break;
-#endif /* 0 */
         case 'y':
           data.i = va_arg(arguments,int);
-          String_appendChar(string,(data.i != 0) ? '1' : '0');
+          String_appendCString(string,(data.i != 0) ? "yes" : "no");
           break;
         case '%':
           String_appendChar(string,'%');
@@ -1592,8 +1605,8 @@ LOCAL bool parseString(const char    *string,
               }
             }
             break;
-  #if 0
-  still not implemented
+#if 0
+still not implemented
           case 'b':
             // binaray value
             switch (formatToken.lengthType)
@@ -1633,7 +1646,7 @@ LOCAL bool parseString(const char    *string,
             FLUSH_OUTPUT();
   HALT_NOT_YET_IMPLEMENTED();
             break;
-  #endif /* 0 */
+#endif /* 0 */
           case 'y':
             // get data
             z = 0L;
