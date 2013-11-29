@@ -974,7 +974,7 @@ Dprintf.dprintf("process line by line");
                   {
                     case FILE:
                       {
-                        String storageName     = resultMap.getString("name"           );
+                        String storageName     = resultMap.getString("storageName"    );
                         long   storageDateTime = resultMap.getLong  ("storageDateTime");
                         String fileName        = resultMap.getString("name"           );
                         long   size            = resultMap.getLong  ("size"           );
