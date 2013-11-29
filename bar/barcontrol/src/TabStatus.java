@@ -1047,6 +1047,9 @@ class TabStatus
     this.tabJobs = tabJobs;
   }
 
+  /** select job
+   * @param name job name
+   */
   void selectJob(String name)
   {
     synchronized(jobList)
