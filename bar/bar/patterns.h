@@ -54,9 +54,10 @@ typedef enum
 // match modes
 typedef enum
 {
-  PATTERN_MATCH_MODE_BEGIN,
-  PATTERN_MATCH_MODE_END,
-  PATTERN_MATCH_MODE_EXACT,
+  PATTERN_MATCH_MODE_BEGIN,             // match begin of string
+  PATTERN_MATCH_MODE_END,               // match end of string
+  PATTERN_MATCH_MODE_EXACT,             // match exact
+  PATTERN_MATCH_MODE_ANY                // match anywhere
 } PatternMatchModes;
 
 /***************************** Datatypes *******************************/
@@ -69,6 +70,7 @@ typedef struct
   regex_t      regexBegin;              // regular expression for matching begin
   regex_t      regexEnd;                // regular expression for matching end
   regex_t      regexExact;              // regular expression for matching exact
+  regex_t      regexAny;                // regular expression for matching anywhere
 } Pattern;
 
 /***************************** Variables *******************************/

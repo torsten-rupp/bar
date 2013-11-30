@@ -68,6 +68,7 @@ LOCAL const struct
 * Output : regexBegin - regular expression for matching begin
 *          regexEnd   - regular expression for matching end
 *          regexExact - regular expression for exact matching
+*          regexAny   - regular expression for matching anywhere
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -77,7 +78,8 @@ LOCAL Errors compilePattern(const char   *pattern,
                             uint         patternFlags,
                             regex_t      *regexBegin,
                             regex_t      *regexEnd,
-                            regex_t      *regexExact
+                            regex_t      *regexExact,
+                            regex_t      *regexAny
                            )
 {
   String matchString;
@@ -91,6 +93,7 @@ LOCAL Errors compilePattern(const char   *pattern,
   assert(regexBegin != NULL);
   assert(regexEnd != NULL);
   assert(regexExact != NULL);
+  assert(regexAny != NULL);
 
   matchString = String_new();
   regexString = String_new();
@@ -176,7 +179,7 @@ LOCAL Errors compilePattern(const char   *pattern,
   if (String_index(regexString,STRING_END) != '$') String_insertChar(regexString,STRING_BEGIN,'$');
   if (regcomp(regexEnd,String_cString(regexString),regexFlags) != 0)
   {
-    regerror(error,regexBegin,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
+    regerror(error,regexEnd,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
     regfree(regexBegin);
     String_delete(regexString);
     String_delete(matchString);
@@ -188,7 +191,19 @@ LOCAL Errors compilePattern(const char   *pattern,
   if (String_index(regexString,STRING_END) != '$') String_insertChar(regexString,STRING_END,'$');
   if (regcomp(regexExact,String_cString(regexString),regexFlags) != 0)
   {
-    regerror(error,regexBegin,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
+    regerror(error,regexExact,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
+    regfree(regexEnd);
+    regfree(regexBegin);
+    String_delete(regexString);
+    String_delete(matchString);
+    return ERRORX_(INVALID_PATTERN,0,buffer);
+  }
+
+  String_set(regexString,matchString);
+  if (regcomp(regexAny,String_cString(regexString),regexFlags) != 0)
+  {
+    regerror(error,regexAny,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
+    regfree(regexExact);
     regfree(regexEnd);
     regfree(regexBegin);
     String_delete(regexString);
@@ -283,7 +298,8 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
                          patternFlags,
                          &pattern->regexBegin,
                          &pattern->regexEnd,
-                         &pattern->regexExact
+                         &pattern->regexExact,
+                         &pattern->regexAny
                         );
   if (error != ERROR_NONE)
   {
@@ -297,6 +313,7 @@ void Pattern_done(Pattern *pattern)
 {
   assert(pattern != NULL);
 
+  regfree(&pattern->regexAny);
   regfree(&pattern->regexExact);
   regfree(&pattern->regexEnd);
   regfree(&pattern->regexBegin);
@@ -354,6 +371,9 @@ bool Pattern_match(const Pattern     *pattern,
       break;
     case PATTERN_MATCH_MODE_EXACT:
       matchFlag = (regexec(&pattern->regexExact,String_cString(string),0,NULL,0) == 0);
+      break;
+    case PATTERN_MATCH_MODE_ANY:
+      matchFlag = (regexec(&pattern->regexAny,String_cString(string),0,NULL,0) == 0);
       break;
     #ifndef NDEBUG
       default:
