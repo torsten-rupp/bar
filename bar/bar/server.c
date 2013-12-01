@@ -972,6 +972,8 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   return newJobNode;
 }
 
+#if 0
+// still not used
 /***********************************************************************\
 * Name   : deleteJob
 * Purpose: delete job
@@ -988,6 +990,7 @@ LOCAL void deleteJob(JobNode *jobNode)
   freeJobNode(jobNode,NULL);
   LIST_DELETE_NODE(jobNode);
 }
+#endif /* 0 */
 
 /***********************************************************************\
 * Name   : startJob
@@ -2136,8 +2139,6 @@ LOCAL void jobThreadCode(void)
       break;
     }
     assert(jobNode != NULL);
-#warning todo
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // start job
     startJob(jobNode);
@@ -2932,7 +2933,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void pauseIndexUpdate()
+LOCAL void pauseIndexUpdate(void)
 {
   while (pauseFlags.indexUpdate && !quitFlag)
   {
@@ -9955,6 +9956,8 @@ LOCAL AuthorizationFailNode *newAuthorizationFailNode(const String clientName)
   return authorizationFailNode;
 }
 
+#if 0
+// still not used
 /***********************************************************************\
 * Name   : deleteAuthorizationFailNode
 * Purpose: delete authorazation fail node
@@ -9971,6 +9974,7 @@ LOCAL void deleteAuthorizationFailNode(AuthorizationFailNode *authorizationFailN
   freeAuthorizationFailNode(authorizationFailNode,NULL);
   LIST_DELETE_NODE(authorizationFailNode);
 }
+#endif /* 0 */
 
 /***********************************************************************\
 * Name   : processCommand
