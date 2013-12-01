@@ -845,6 +845,9 @@ typedef void                void32;
   #define DEBUG_TESTCODE(name) \
     if (FALSE)
 
+  #define DEBUG_TESTCODE_ERROR() \
+    ERROR_NONE
+
 #endif /* NDEBUG */
 
 /***********************************************************************\
