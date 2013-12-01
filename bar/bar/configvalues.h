@@ -828,10 +828,11 @@ static inline uint ConfigValue_firstValue(const ConfigValue configValues[], uint
 
 static inline uint ConfigValue_endValue(const ConfigValue configValues[], uint configValueCount, uint index)
 {
-  UNUSED_VARIABLE(index);
-
   assert(configValues != NULL);
   assert(configValueCount > 0);
+
+  UNUSED_VARIABLE(configValues);
+  UNUSED_VARIABLE(index);
 
   return configValueCount;
 }
