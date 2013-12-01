@@ -3492,10 +3492,10 @@ LOCAL bool checkPassword(const ClientInfo *clientInfo, const String encryptType,
       okFlag = (Password_getChar(password,i) == (encodedBuffer[i]^clientInfo->sessionId[i]));
       i++;
     }
-  }
-  if (!okFlag)
-  {
-    return FALSE;
+    if (!okFlag)
+    {
+      return FALSE;
+    }
   }
 
   return TRUE;
@@ -3878,6 +3878,8 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, uint id, const StringMa
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"major=%d minor=%d",PROTOCOL_VERSION_MAJOR,PROTOCOL_VERSION_MINOR);
 }
@@ -8344,6 +8346,8 @@ LOCAL void freeIndexNode(IndexNode *indexNode, void *userData)
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
       break;
+    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+      break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -8401,6 +8405,8 @@ LOCAL IndexNode *newIndexEntryNode(IndexList *indexList, ArchiveEntryTypes archi
     case ARCHIVE_ENTRY_TYPE_HARDLINK:
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      break;
+    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
       break;
     #ifndef NDEBUG
       default:
@@ -9256,6 +9262,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                              indexNode->special.groupId,
                              indexNode->special.permission
                             );
+          break;
+        case ARCHIVE_ENTRY_TYPE_UNKNOWN:
           break;
         #ifndef NDEBUG
           default:
