@@ -3420,6 +3420,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
 
           if (isPrintInfo(2))
           {
+            percentageDone = 0;
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ)
             {
               percentageDone = (createInfo->statusInfo.entryTotalBytes > 0LL) ? (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes) : 100;
@@ -3692,9 +3693,10 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
     }
 
     // write device content to archive
-    block      = 0LL;
-    blockCount = deviceInfo.size/(uint64)deviceInfo.blockSize;
-    error      = ERROR_NONE;
+    block          = 0LL;
+    blockCount     = deviceInfo.size/(uint64)deviceInfo.blockSize;
+    error          = ERROR_NONE;
+    entryDoneBytes = 0LL;
     while (   (block < blockCount)
            && !isAborted(createInfo)
            && (createInfo->failError == ERROR_NONE)
@@ -3768,6 +3770,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
 
         if (isPrintInfo(2))
         {
+          percentageDone = 0;
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ)
           {
             percentageDone = (createInfo->statusInfo.entryTotalBytes > 0LL) ?  (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes) : 100;
@@ -4351,7 +4354,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // write hard link content to archive
-    error = ERROR_NONE;
+    error          = ERROR_NONE;
+    entryDoneBytes = 0LL;
     do
     {
       // pause
@@ -4392,6 +4396,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
           if (isPrintInfo(2))
           {
+            percentageDone = 0;
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ)
             {
               percentageDone = (createInfo->statusInfo.entryTotalBytes > 0LL) ? (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes) : 100;
