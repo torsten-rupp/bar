@@ -127,7 +127,11 @@ bool __AutoFree_add(const char       *__fileName__,
   pthread_mutex_lock(&autoFreeList->lock);
   {
     // allocate new node
-    autoFreeNode = LIST_NEW_NODEX(__fileName__,__lineNb__,AutoFreeNode);
+    #ifdef NDEBUG
+      autoFreeNode = LIST_NEW_NODE(AutoFreeNode);
+    #else /* not NDEBUG */
+      autoFreeNode = LIST_NEW_NODEX(__fileName__,__lineNb__,AutoFreeNode);
+    #endif /* NDEBUG */
     if (autoFreeNode == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
