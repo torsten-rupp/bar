@@ -3457,6 +3457,8 @@ Errors File_makeSpecial(const String     name,
           return ERRORX_(IO_ERROR,errno,String_cString(name));
         }
         break;
+      case FILE_SPECIAL_TYPE_OTHER:
+        break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
