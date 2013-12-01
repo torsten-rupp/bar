@@ -8271,8 +8271,7 @@ throw new Error("NYI");
         addDragAndDrop(composite,"%type","archive type: full,incremental,differential",9, 0);
         addDragAndDrop(composite,"%last","'-last' if last archive part",               10,0);
         addDragAndDrop(composite,"%uuid","universally unique identifier",              11,0);
-        addDragAndDrop(composite,"%title","schedule title",                            12,0);
-        addDragAndDrop(composite,"%text","schedule specific text",                     13,0);
+        addDragAndDrop(composite,"%text","schedule custom text",                       12,0);
 
         // column 2
         addDragAndDrop(composite,"%d","day 01..31",                                    0, 1);
@@ -8618,8 +8617,6 @@ throw new Error("NYI");
               buffer.append("-last");
             else if (storageNamePart.string.equals("%uuid"))
               buffer.append("9f4aebd5-40a5-4056-8cf1-8be316638685");
-            else if (storageNamePart.string.equals("%title"))
-              buffer.append("home");
             else if (storageNamePart.string.equals("%text"))
               buffer.append("foo");
             else if (storageNamePart.string.equals("%d"))
