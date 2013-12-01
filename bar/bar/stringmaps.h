@@ -180,7 +180,7 @@ StringMap __StringMap_new(const char *__fileName__,
 \***********************************************************************/
 
 #ifdef NDEBUG
-StringMap StringMap_duplicate(const StringMap *stringMap);
+StringMap StringMap_duplicate(const StringMap stringMap);
 #else /* not NDEBUG */
 StringMap __StringMap_duplicate(const char      *__fileName__,
                                 ulong           __lineNb__,
@@ -230,6 +230,17 @@ void __StringMap_delete(const char *__fileName__,
 StringMap StringMap_clear(StringMap stringMap);
 
 /***********************************************************************\
+* Name   : StringMap_count
+* Purpose: get number of elements in list
+* Input  : stringMap - string map
+* Output : -
+* Return : number of elements in string map
+* Notes  : -
+\***********************************************************************/
+
+uint StringMap_count(const StringMap stringMap);
+
+/***********************************************************************\
 * Name   : StringMap_isEmpty
 * Purpose: check if list is empty
 * Input  : stringMap - string map
@@ -249,18 +260,39 @@ INLINE bool StringMap_isEmpty(const StringMap stringMap)
 #endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
 
 /***********************************************************************\
-* Name   : StringMap_count
-* Purpose: get number of elements in list
+* Name   : StringMap_index
+* Purpose: get string map entry
 * Input  : stringMap - string map
+*          index     - index
 * Output : -
-* Return : number of elements in string map
+* Return : string map entry or NULL
 * Notes  : -
 \***********************************************************************/
 
-uint StringMap_count(const StringMap stringMap);
-
 const StringMapEntry *StringMap_index(const StringMap stringMap, uint index);
+
+/***********************************************************************\
+* Name   : StringMap_indexName
+* Purpose: get string map entry name
+* Input  : stringMap - string map
+*          index     - index
+* Output : -
+* Return : string map name or NULL
+* Notes  : -
+\***********************************************************************/
+
 const char *StringMap_indexName(const StringMap stringMap, uint index);
+
+/***********************************************************************\
+* Name   : StringMap_indexValue
+* Purpose: get string map value
+* Input  : stringMap - string map
+*          index     - index
+* Output : -
+* Return : string map value
+* Notes  : -
+\***********************************************************************/
+
 StringMapValue StringMap_indexValue(const StringMap stringMap, uint index);
 
 /***********************************************************************\

@@ -231,7 +231,7 @@ LOCAL StringMapEntry *findStringMapEntry(const struct __StringMap *stringMap, co
 /*---------------------------------------------------------------------*/
 
 #ifdef NDEBUG
-StringMap StringMap_new(uint size)
+StringMap StringMap_new(void)
 #else /* not NDEBUG */
 StringMap __StringMap_new(const char *__fileName__, ulong __lineNb__)
 #endif /* NDEBUG */
@@ -284,7 +284,7 @@ StringMap __StringMap_duplicate(const char *__fileName__, ulong __lineNb__, cons
   assert(stringMap != NULL);
 
   #ifdef NDEBUG
-    newStringMap = StringMap_new(stringMap->size);
+    newStringMap = StringMap_new();
   #else /* not NDEBUG */
     newStringMap = __StringMap_new(__fileName__,__lineNb__);
   #endif /* NDEBUG */
@@ -432,7 +432,7 @@ StringMapValue StringMap_indexValue(const StringMap stringMap, uint index)
 }
 
 #ifdef NDEBUG
-void __StringMap_putText(StringMap stringMap, const char *name, String text)
+void StringMap_putText(StringMap stringMap, const char *name, String text)
 #else /* not NDEBUG */
 void __StringMap_putText(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, String text)
 #endif /* NDEBUG */
