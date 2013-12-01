@@ -710,7 +710,6 @@ stringNode = stringNode->next;
       pid = fork();
       if      (pid == 0)
       {
-  #if 1
         // close stdin, stdout, and stderr and reassign them to the pipes
         close(STDERR_FILENO);
         close(STDOUT_FILENO);
@@ -727,7 +726,6 @@ stringNode = stringNode->next;
         close(pipeStderr[0]);
         close(pipeStdout[0]);
         close(pipeStdin[1]);
-  #endif /* 0 */
 
         // execute of external program
         n = 1+StringList_count(&argumentList)+1;
@@ -773,9 +771,9 @@ stringNode = stringNode->next;
       close(pipeStderr[1]);
       close(pipeStdout[1]);
       close(pipeStdin[0]);
-  #else /* 0 */
-  error = ERROR_NONE;
-  #endif /* 0 */
+#else /* 0 */
+error = ERROR_NONE;
+#endif /* 0 */
 
       // wait until process terminate and read stdout/stderr
       stdoutLine = String_new();
