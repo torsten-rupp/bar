@@ -1004,6 +1004,15 @@ LOCAL void formatString(struct __String *string,
                 HALT_INTERNAL_ERROR("long long not supported");
               #endif /* _LONG_LONG || HAVE_LONG_LONG */
               break;
+            case FORMAT_LENGTH_TYPE_DOUBLE:
+            case FORMAT_LENGTH_TYPE_QUAD:
+            case FORMAT_LENGTH_TYPE_POINTER:
+              #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
+                data.bits = (unsigned long long)va_arg(arguments,unsigned int);
+              #else
+                data.bits = (unsigned long)va_arg(arguments,unsigned int);
+              #endif /* _LONG_LONG || HAVE_LONG_LONG */
+              break;
             #ifndef NDEBUG
               default:
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1013,7 +1022,11 @@ LOCAL void formatString(struct __String *string,
 
           // get width
           i = formatToken.width;
-          while ((1 << i) < data.bits)
+          #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
+            while ((unsigned long long)(1 << i) < data.bits)
+          #else
+            while ((unsigned long)(1 << i) < data.bits)
+          #endif
           {
             i++;
           }
