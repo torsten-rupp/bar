@@ -139,6 +139,8 @@ typedef struct JobNode
   uint         id;                             // unique job id
   JobStates    state;                          // current state of job
   ArchiveTypes archiveType;                    // archive type to create
+  String       scheduleTitle;
+  String       scheduleCustomText;
   bool         requestedAbortFlag;             // request abort
   uint         requestedVolumeNumber;          // requested volume number
   uint         volumeNumber;                   // loaded volume number
@@ -650,13 +652,11 @@ LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
 LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 {
   assert(scheduleNode != NULL);
-  assert(scheduleNode->title != NULL);
   assert(scheduleNode->customText != NULL);
 
   UNUSED_VARIABLE(userData);
 
   String_delete(scheduleNode->customText);
-  String_delete(scheduleNode->title);
 }
 
 /***********************************************************************\
@@ -677,7 +677,6 @@ LOCAL ScheduleNode *newScheduleNode(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  scheduleNode->title       = String_new();
   scheduleNode->date.year   = -1;
   scheduleNode->date.month  = -1;
   scheduleNode->date.day    = -1;
@@ -715,7 +714,6 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  scheduleNode->title       = String_duplicate(fromScheduleNode->title);
   scheduleNode->date.year   = fromScheduleNode->date.year;
   scheduleNode->date.month  = fromScheduleNode->date.month;
   scheduleNode->date.day    = fromScheduleNode->date.day;
@@ -1118,7 +1116,7 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
 
   jobNode->lastExecutedDateTime = 0LL;
 
-  /* get filename*/
+  // get filename
   fileName = File_newFileName();
   File_splitFileName(jobNode->fileName,&pathName,&baseName);
   File_setFileName(fileName,pathName);
@@ -1303,7 +1301,6 @@ LOCAL bool readJob(JobNode *jobNode)
       ScheduleNode *scheduleNode;
 
       scheduleNode = newScheduleNode();
-      String_set(scheduleNode->title,title);
       while (   File_getLine(&fileHandle,line,&lineNb,"#")
              && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
              && !failFlag
@@ -1748,7 +1745,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
     LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
     {
       // insert new schedule sections
-      String_format(String_clear(line),"[schedule %'S]",scheduleNode->title);
+      String_format(String_clear(line),"[schedule]");
       StringList_insert(&jobLinesList,line,nextStringNode);
 
       CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"schedule",z)
@@ -2100,6 +2097,7 @@ LOCAL void jobThreadCode(void)
   PatternList      excludePatternList;
   PatternList      deltaSourcePatternList;
   PatternList      compressExcludePatternList;
+  String           scheduleTitle,scheduleCustomText;
   JobNode          *jobNode;
   JobOptions       jobOptions;
   ArchiveTypes     archiveType;
@@ -2113,6 +2111,8 @@ LOCAL void jobThreadCode(void)
   PatternList_init(&excludePatternList);
   PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
+  scheduleTitle        = String_new();
+  scheduleCustomText   = String_new();
 
   while (!quitFlag)
   {
@@ -2138,8 +2138,6 @@ LOCAL void jobThreadCode(void)
     assert(jobNode != NULL);
 #warning todo
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-String scheduleTitle = String_new();
-String scheduleCustomText = String_new();
 
     // start job
     startJob(jobNode);
@@ -2152,6 +2150,8 @@ String scheduleCustomText = String_new();
     PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,NULL,NULL);
     initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
     archiveType = jobNode->archiveType,
+    String_set(scheduleTitle,jobNode->scheduleTitle);
+    String_set(scheduleCustomText,jobNode->scheduleCustomText);
 
     // unlock (Note: job is now protected by running state)
     Semaphore_unlock(&jobList.lock);
@@ -2303,6 +2303,8 @@ String scheduleCustomText = String_new();
   PatternList_done(&deltaSourcePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
+  String_delete(scheduleCustomText);
+  String_delete(scheduleTitle);
   String_delete(printableStorageName);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
@@ -2410,6 +2412,7 @@ LOCAL void schedulerThreadCode(void)
           // set state
           jobNode->state              = JOB_STATE_WAITING;
           jobNode->archiveType        = executeScheduleNode->archiveType;
+          jobNode->scheduleCustomText = executeScheduleNode->customText;
           jobNode->requestedAbortFlag = FALSE;
           resetJobRunningInfo(jobNode);
         }
@@ -6223,9 +6226,6 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
     {
       String_clear(line);
 
-      String_format(line,"title=%'S",scheduleNode->title);
-      String_appendChar(line,' ');
-
       String_appendCString(line,"date=");
       if (scheduleNode->date.year != SCHEDULE_ANY)
       {
@@ -6488,7 +6488,6 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
     String_delete(title);
     return;
   }
-  String_set(scheduleNode->title,title);
   scheduleNode->archiveType = archiveType;
   String_set(scheduleNode->customText,customText);
   scheduleNode->enabledFlag = enabledFlag;
