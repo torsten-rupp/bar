@@ -565,7 +565,7 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   dictionary->dictionaryCompareUserData = dictionaryCompareUserData;
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX("dictionary",dictionary);
+    DEBUG_ADD_RESOURCE_TRACE("dictionary",dictionary);
   #else /* not NDEBUG */
     DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"dictionary",dictionary);
   #endif /* NDEBUG */
