@@ -456,7 +456,7 @@ void __StringMap_putText(const char *__fileName__, ulong __lineNb__, StringMap s
 }
 
 #ifdef NDEBUG
-void __StringMap_putTextCString(StringMap stringMap, const char *name, String text)
+void StringMap_putTextCString(StringMap stringMap, const char *name, const char *text)
 #else /* not NDEBUG */
 void __StringMap_putTextCString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, const char *text)
 #endif /* NDEBUG */
