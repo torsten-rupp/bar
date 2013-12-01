@@ -626,7 +626,7 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL INLINE bool isAborted(const CreateInfo *createInfo)
+LOCAL_INLINE bool isAborted(const CreateInfo *createInfo)
 {
   assert(createInfo != NULL);
 
