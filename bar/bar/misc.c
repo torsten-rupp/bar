@@ -425,7 +425,7 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
   file = fopen("/proc/sys/kernel/random/uuid","r");
   if (file != NULL)
   {
-    (void)fgets(buffer,bufferSize,file);
+    if (fgets(buffer,bufferSize,file) == NULL) { /* ignored */ };
     fclose(file);
   }
 
@@ -986,7 +986,7 @@ void Misc_waitEnter(void)
       tcsetattr(File_getDescriptor(stdin),TCSANOW,&termioSettings);
 
       // read line (and ignore)
-      (void)fgets(s,2,stdin);
+      if (fgets(s,2,stdin) != NULL) { /* ignored */ };
 
       // restore console settings
       tcsetattr(File_getDescriptor(stdin),TCSANOW,&oldTermioSettings);
