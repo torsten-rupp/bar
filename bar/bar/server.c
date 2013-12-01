@@ -4251,7 +4251,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const StringM
 *          Result:
 *            name=<name>
 *            size=<n [bytes]>
-*            mounted=yes|no
+*            mountedFlag=yes|no
 \***********************************************************************/
 
 LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -4304,7 +4304,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
     {
       sendClientResult(clientInfo,
                        id,FALSE,ERROR_NONE,
-                       "name=%'S size=%lld mounted=%b",
+                       "name=%'S size=%lld mountedFlag=%y",
                        deviceName,
                        deviceInfo.size,
                        deviceInfo.mountedFlag
