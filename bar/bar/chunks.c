@@ -888,6 +888,8 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
             crc = crc32(crc,p,2);
             length = ntohl(*((uint16*)p));
 
+            length = 0;
+            data   = NULL;
             switch (definition[i+0])
             {
               case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
@@ -937,7 +939,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
 
                   // allocate string array
                   strings = calloc((ulong)length,sizeof(String));
-                  if (data == NULL)
+                  if (strings == NULL)
                   {
                     snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)length*sizeof(String));
                     error = ERRORX_(CORRUPT_DATA,0,errorText);
@@ -1194,8 +1196,8 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
         case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
           {
-            uint16 length;
-            void   *data;
+            uint16     length;
+            const void *data;
 
             length = (*((uint* )((byte*)chunkData+definition[i+1])));
             data   = (*((void**)((byte*)chunkData+definition[i+2])));
@@ -1241,10 +1243,9 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
                 break;
               case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
                 {
-                  String     *strings;
-                  uint       z;
-                  uint16     length;
-                  const void *data;
+                  String *strings;
+                  uint   z;
+                  uint16 length;
 
                   // get array data
                   strings = (String*)data;
