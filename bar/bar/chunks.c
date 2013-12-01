@@ -1245,7 +1245,6 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
                 {
                   String *strings;
                   uint   z;
-                  uint16 length;
 
                   // get array data
                   strings = (String*)data;

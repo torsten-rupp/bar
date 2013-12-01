@@ -52,8 +52,6 @@
 // chunk i/o modes
 typedef enum
 {
-  CHUNK_MODE_NONE,
-
   CHUNK_MODE_READ,
   CHUNK_MODE_WRITE,
 
