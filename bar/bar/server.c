@@ -8517,10 +8517,10 @@ LOCAL IndexNode *findIndexEntryNode(IndexList         *indexList,
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <all=0|tagged storage archives=1>
-*            <max. count>
-*            <newestEntriesOnly 0|1>
-*            <name pattern>
+*            checkedStorageOnlyFlag=0|1
+*            entryMaxCount=<n>
+*            newestEntriesOnlyFlag=0|1
+*            entryPattern=<pattern>
 *          Result:
 *            entryType=FILE storageName=<name> storageDateTime=<time stamp> name=<name> size=<n [bytes]> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
