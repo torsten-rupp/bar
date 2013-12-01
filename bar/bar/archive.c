@@ -3014,6 +3014,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     DEBUG_REMOVE_RESOURCE_TRACE(archiveInfo);
   #endif /* NDEBUG */
 
+  // init variables
+  error = ERROR_UNKNOWN;
+
   // close file/storage
   switch (archiveInfo->ioType)
   {
@@ -5797,12 +5800,9 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             break;
           case CHUNK_ID_FILE_EXTENDED_ATTRIBUTE:
             {
-              ulong bytesRead;
-
               if (fileExtendedAttributeList != NULL)
               {
                 // read file extended attribute chunk
-                bytesRead = 0L;
                 error = Chunk_open(&archiveEntryInfo->file.chunkFileExtendedAttribute.info,
                                    &subChunkHeader,
                                    subChunkHeader.size
@@ -6720,12 +6720,9 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             break;
           case CHUNK_ID_DIRECTORY_EXTENDED_ATTRIBUTE:
             {
-              ulong bytesRead;
-
               if (fileExtendedAttributeList != NULL)
               {
                 // read file extended attribute chunk
-                bytesRead = 0L;
                 error = Chunk_open(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,
                                    &subChunkHeader,
                                    subChunkHeader.size
@@ -7099,12 +7096,9 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             break;
           case CHUNK_ID_LINK_EXTENDED_ATTRIBUTE:
             {
-              ulong bytesRead;
-
               if (fileExtendedAttributeList != NULL)
               {
                 // read file extended attribute chunk
-                bytesRead = 0L;
                 error = Chunk_open(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,
                                    &subChunkHeader,
                                    subChunkHeader.size
@@ -7642,12 +7636,9 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             break;
           case CHUNK_ID_HARDLINK_EXTENDED_ATTRIBUTE:
             {
-              ulong bytesRead;
-
               if (fileExtendedAttributeList != NULL)
               {
                 // read file extended attribute chunk
-                bytesRead = 0L;
                 error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,
                                    &subChunkHeader,
                                    subChunkHeader.size
@@ -8079,12 +8070,9 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             break;
           case CHUNK_ID_SPECIAL_EXTENDED_ATTRIBUTE:
             {
-              ulong bytesRead;
-
               if (fileExtendedAttributeList != NULL)
               {
                 // read file extended attribute chunk
-                bytesRead = 0L;
                 error = Chunk_open(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,
                                    &subChunkHeader,
                                    subChunkHeader.size
