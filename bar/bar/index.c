@@ -1176,52 +1176,52 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
       {
         case STORAGE_TYPE_FILESYSTEM:
           foundFlag =     ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_FILESYSTEM))
-                      && ((indexQueryHandle->storage.fileNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,storageSpecifier.fileName,PATTERN_MATCH_MODE_EXACT));
+                      && ((indexQueryHandle->storage.fileNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,storageSpecifier.fileName,PATTERN_MATCH_MODE_ANY));
           break;
         case STORAGE_TYPE_FTP:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_FTP))
-                      && ((indexQueryHandle->storage.hostNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName ,PATTERN_MATCH_MODE_EXACT))
-                      && ((indexQueryHandle->storage.loginNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,PATTERN_MATCH_MODE_EXACT))
-                      && ((indexQueryHandle->storage.fileNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.fileName ,PATTERN_MATCH_MODE_EXACT));
+                      && ((indexQueryHandle->storage.hostNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName ,PATTERN_MATCH_MODE_ANY))
+                      && ((indexQueryHandle->storage.loginNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,PATTERN_MATCH_MODE_ANY))
+                      && ((indexQueryHandle->storage.fileNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.fileName ,PATTERN_MATCH_MODE_ANY));
           break;
         case STORAGE_TYPE_SSH:
         case STORAGE_TYPE_SCP:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_SSH) || (indexQueryHandle->storage.type == STORAGE_TYPE_SCP))
-                      && ((indexQueryHandle->storage.hostNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName ,PATTERN_MATCH_MODE_EXACT))
-                      && ((indexQueryHandle->storage.loginNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,PATTERN_MATCH_MODE_EXACT))
-                      && ((indexQueryHandle->storage.fileNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.fileName ,PATTERN_MATCH_MODE_EXACT));
+                      && ((indexQueryHandle->storage.hostNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName ,PATTERN_MATCH_MODE_ANY))
+                      && ((indexQueryHandle->storage.loginNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,PATTERN_MATCH_MODE_ANY))
+                      && ((indexQueryHandle->storage.fileNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.fileName ,PATTERN_MATCH_MODE_ANY));
           break;
         case STORAGE_TYPE_SFTP:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_SFTP))
-                      && ((indexQueryHandle->storage.hostNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName ,PATTERN_MATCH_MODE_EXACT))
-                      && ((indexQueryHandle->storage.loginNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,PATTERN_MATCH_MODE_EXACT))
-                      && ((indexQueryHandle->storage.fileNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.fileName ,PATTERN_MATCH_MODE_EXACT));
+                      && ((indexQueryHandle->storage.hostNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName ,PATTERN_MATCH_MODE_ANY))
+                      && ((indexQueryHandle->storage.loginNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,PATTERN_MATCH_MODE_ANY))
+                      && ((indexQueryHandle->storage.fileNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.fileName ,PATTERN_MATCH_MODE_ANY));
           break;
         case STORAGE_TYPE_WEBDAV:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_WEBDAV))
-                      && ((indexQueryHandle->storage.hostNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName ,PATTERN_MATCH_MODE_EXACT))
-                      && ((indexQueryHandle->storage.loginNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,PATTERN_MATCH_MODE_EXACT))
-                      && ((indexQueryHandle->storage.fileNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.fileName ,PATTERN_MATCH_MODE_EXACT));
+                      && ((indexQueryHandle->storage.hostNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName ,PATTERN_MATCH_MODE_ANY))
+                      && ((indexQueryHandle->storage.loginNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,PATTERN_MATCH_MODE_ANY))
+                      && ((indexQueryHandle->storage.fileNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.fileName ,PATTERN_MATCH_MODE_ANY));
           break;
         case STORAGE_TYPE_CD:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_CD))
-                      && ((indexQueryHandle->storage.deviceNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName,PATTERN_MATCH_MODE_EXACT))
-                      && ((indexQueryHandle->storage.fileNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.fileName  ,PATTERN_MATCH_MODE_EXACT));
+                      && ((indexQueryHandle->storage.deviceNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName,PATTERN_MATCH_MODE_ANY))
+                      && ((indexQueryHandle->storage.fileNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.fileName  ,PATTERN_MATCH_MODE_ANY));
           break;
         case STORAGE_TYPE_DVD:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_DVD))
-                      && ((indexQueryHandle->storage.deviceNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName,PATTERN_MATCH_MODE_EXACT))
-                      && ((indexQueryHandle->storage.fileNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.fileName  ,PATTERN_MATCH_MODE_EXACT));
+                      && ((indexQueryHandle->storage.deviceNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName,PATTERN_MATCH_MODE_ANY))
+                      && ((indexQueryHandle->storage.fileNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.fileName  ,PATTERN_MATCH_MODE_ANY));
           break;
         case STORAGE_TYPE_BD:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_BD))
-                      && ((indexQueryHandle->storage.deviceNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName,PATTERN_MATCH_MODE_EXACT))
-                      && ((indexQueryHandle->storage.fileNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.fileName  ,PATTERN_MATCH_MODE_EXACT));
+                      && ((indexQueryHandle->storage.deviceNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName,PATTERN_MATCH_MODE_ANY))
+                      && ((indexQueryHandle->storage.fileNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.fileName  ,PATTERN_MATCH_MODE_ANY));
           break;
         case STORAGE_TYPE_DEVICE:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_DEVICE))
-                      && ((indexQueryHandle->storage.deviceNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName,PATTERN_MATCH_MODE_EXACT))
-                      && ((indexQueryHandle->storage.fileNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.fileName  ,PATTERN_MATCH_MODE_EXACT));
+                      && ((indexQueryHandle->storage.deviceNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName,PATTERN_MATCH_MODE_ANY))
+                      && ((indexQueryHandle->storage.fileNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.fileName  ,PATTERN_MATCH_MODE_ANY));
           break;
         default:
           #ifndef NDEBUG
