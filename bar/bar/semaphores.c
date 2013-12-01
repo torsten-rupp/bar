@@ -682,8 +682,10 @@ LOCAL bool lock(const char         *fileName,
           __SEMAPHORE_WAIT_TIMEOUT(DEBUG_FLAG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock,timeout,lockedFlag);
           if (!lockedFlag)
           {
-            assert(semaphore->lockedByCount > 0);
-            semaphore->lockedByCount--;
+            #ifndef NDEBUG
+              assert(semaphore->lockedByCount > 0);
+              semaphore->lockedByCount--;
+            #endif /* not NDEBUG */
             __SEMAPHORE_REQUEST_LOCK(semaphore);
             {
               assert(semaphore->readWriteRequestCount > 0);
