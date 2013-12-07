@@ -1458,7 +1458,7 @@ Errors File_read(FileHandle *fileHandle,
     // read as much data as possible
     n = fread(buffer,1,bufferLength,fileHandle->file);
 //fprintf(stderr,"%s, %d: much %x bufferLength=%lu n=%ld %d\n",__FILE__,__LINE__,fileHandle->file,bufferLength,n,ferror(fileHandle->file));
-    if ((n <= 0) && ferror(fileHandle->file))
+    if ((n <= 0) && (ferror(fileHandle->file) != 0))
     {
       return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
     }
@@ -1472,7 +1472,7 @@ Errors File_read(FileHandle *fileHandle,
     {
       n = fread(buffer,1,bufferLength,fileHandle->file);
 //fprintf(stderr,"%s, %d: all bufferLength=%lu n=%ld %d\n",__FILE__,__LINE__,bufferLength,n,ferror(fileHandle->file));
-      if ((n <= 0) && ferror(fileHandle->file))
+      if (n <= 0)
       {
         return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
       }
