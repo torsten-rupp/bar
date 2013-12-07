@@ -310,16 +310,16 @@ LOCAL void doneChunkBuffer(ChunkBuffer *chunkBuffer)
 
 /***********************************************************************\
 * Name   : getChunkBuffer
-* Purpose: get data from chunk buffer
+* Purpose: get chunk data pointer
 * Input  : chunkBuffer - chunk buffer handle
-*          p           - data pointer variable
+*          p           - address of pointer variable
 *          size        - size of data
-* Output : p - pointer to data
+* Output : p - pointer to chunk data
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, byte **p, ulong size)
+LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
 {
   ulong  n;
   Errors error;
@@ -726,7 +726,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
   ChunkBuffer chunkBuffer;
   uint32      crc;
   uint        i;
-  byte        *p;
+  void        *p;
   char        errorText[64];
 
   assert(chunkIO != NULL);
@@ -782,7 +782,6 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
             crc = crc32(crc,p,1);
             n = (*((uint8*)p));
 
-            // store 8bit value
             (*((uint8*)((byte*)chunkData+definition[i+1]))) = n;
 
             i += 2;
@@ -799,7 +798,6 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
             crc = crc32(crc,p,2);
             n = ntohs(*((uint16*)p));
 
-            // store 16bit value
             (*((uint16*)((byte*)chunkData+definition[i+1]))) = n;
 
             i += 2;
@@ -816,7 +814,6 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
             crc = crc32(crc,p,4);
             n = ntohl(*((uint32*)p));
 
-            // store 32bit value
             (*((uint32*)((byte*)chunkData+definition[i+1]))) = n;
 
             i += 2;
@@ -831,13 +828,11 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
             // get 64bit value
             error = getChunkBuffer(&chunkBuffer,&p,8L);
             if (error != ERROR_NONE) break;
-            crc = crc32(crc,(p+0),4);
-            h = ntohl(*((uint32*)(p+0)));
-            crc = crc32(crc,(p+4),4);
-            l = ntohl(*((uint32*)(p+4)));
+            crc = crc32(crc,p,8);
+            h = ntohl(*((uint32*)p+0));
+            l = ntohl(*((uint32*)p+1));
             n = (((uint64)h) << 32) | (((uint64)l << 0));
 
-            // store 64bit value
             (*((uint64*)((byte*)chunkData+definition[i+1]))) = n;
 
             i += 2;
@@ -845,24 +840,23 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
           break;
         case CHUNK_DATATYPE_STRING:
           {
-            uint16 length;
+            uint16 stringLength;
             String string;
 
             // get string length (16bit value)
             error = getChunkBuffer(&chunkBuffer,&p,2L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p,2);
-            length = ntohs(*((uint16*)p));
+            stringLength = ntohs(*((uint16*)p));
 
             // get string data
-            error = getChunkBuffer(&chunkBuffer,&p,(ulong)length);
+            error = getChunkBuffer(&chunkBuffer,&p,(ulong)stringLength);
             if (error != ERROR_NONE) break;
-            crc = crc32(crc,p,length);
+            crc = crc32(crc,p,stringLength);
 
-            // store string
             string = (*((String*)((byte*)chunkData+definition[i+1])));
             assert(string != NULL);
-            String_setBuffer(string,p,length);
+            String_setBuffer(string,p,stringLength);
 
             i += 2;
           }
@@ -879,17 +873,15 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
         case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
           {
-            uint16 length;
-            void   *data;
+            uint16 arrayLength;
+            void   *arrayData;
 
             // get array length (16bit value)
             error = getChunkBuffer(&chunkBuffer,&p,2L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p,2);
-            length = ntohl(*((uint16*)p));
+            arrayLength = ntohl(*((uint16*)p));
 
-            length = 0;
-            data   = NULL;
             switch (definition[i+0])
             {
               case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
@@ -917,18 +909,22 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
                     case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY : size = 8; break;
                   }
 
-                  // allocate and get array data
-                  error = getChunkBuffer(&chunkBuffer,&p,(ulong)length*size);
+                  // get array data
+                  error = getChunkBuffer(&chunkBuffer,&p,(ulong)arrayLength*size);
                   if (error != ERROR_NONE) break;
-                  data = malloc((ulong)length*size);
-                  if (data == NULL)
+                  crc = crc32(crc,p,(ulong)arrayLength*size);
+
+                  arrayData = malloc((ulong)arrayLength*size);
+                  if (arrayData == NULL)
                   {
-                    snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)length*size);
+                    snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)arrayLength*size);
                     error = ERRORX_(CORRUPT_DATA,0,errorText);
                     break;
                   }
-                  crc = crc32(crc,p,(ulong)length*size);
-                  memcpy(data,p,(ulong)length*size);
+                  memcpy(arrayData,p,(ulong)arrayLength*size);
+
+                  (*((uint* )((byte*)chunkData+definition[i+1]))) = (uint)arrayLength;
+                  (*((void**)((byte*)chunkData+definition[i+2]))) = arrayData;
                 }
                 break;
               case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
@@ -938,16 +934,16 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
                   uint16 stringLength;
 
                   // allocate string array
-                  strings = calloc((ulong)length,sizeof(String));
+                  strings = calloc((ulong)arrayLength,sizeof(String));
                   if (strings == NULL)
                   {
-                    snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)length*sizeof(String));
+                    snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)arrayLength*sizeof(String));
                     error = ERRORX_(CORRUPT_DATA,0,errorText);
                     break;
                   }
 
                   // get array data
-                  for (z = 0; z < length; z++)
+                  for (z = 0; z < arrayLength; z++)
                   {
                     // get string length (16bit value)
                     error = getChunkBuffer(&chunkBuffer,&p,2L);
@@ -959,19 +955,15 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
                     error = getChunkBuffer(&chunkBuffer,&p,(ulong)stringLength);
                     if (error != ERROR_NONE) break;
                     crc = crc32(crc,p,stringLength);
-
-                    // store string
                     strings[z] = String_newBuffer(p,stringLength);
                   }
 
-                  data = strings;
+                  (*((uint* )((byte*)chunkData+definition[i+1]))) = (uint)arrayLength;
+                  (*((void**)((byte*)chunkData+definition[i+2]))) = strings;
                 }
                 break;
             }
             if (error != ERROR_NONE) break;
-
-            (*((uint* )((byte*)chunkData+definition[i+1]))) = (uint)length;
-            (*((void**)((byte*)chunkData+definition[i+2]))) = data;
 
             i += 3;
           }
@@ -1151,8 +1143,8 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
             // put 64bit value
             h = (n & 0xFFFFffff00000000LL) >> 32;
             l = (n & 0x00000000FFFFffffLL) >>  0;
-            (*((uint32*)(p+0))) = htonl(h);
-            (*((uint32*)(p+4))) = htonl(l);
+            (*((uint32*)p+0)) = htonl(h);
+            (*((uint32*)p+1)) = htonl(l);
             error = putChunkBuffer(&chunkBuffer,p,8L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p,8);
@@ -1163,23 +1155,23 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
         case CHUNK_DATATYPE_STRING:
           {
             String     string;
-            const void *data;
-            uint16     length;
+            const void *stringData;
+            uint16     stringLength;
 
-            string = (*((String*)((byte*)chunkData+definition[i+1])));
-            data   = String_cString(string);
-            length = (uint16)String_length(string);
+            string       = (*((String*)((byte*)chunkData+definition[i+1])));
+            stringData   = String_cString(string);
+            stringLength = (uint16)String_length(string);
 
             // put string length (16bit value)
-            (*((uint16*)p)) = htons(length);
+            (*((uint16*)p)) = htons(stringLength);
             error = putChunkBuffer(&chunkBuffer,p,2L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p,2);
 
             // put string data
-            error = putChunkBuffer(&chunkBuffer,data,(ulong)length);
+            error = putChunkBuffer(&chunkBuffer,stringData,(ulong)stringLength);
             if (error != ERROR_NONE) break;
-            crc = crc32(crc,data,length);
+            crc = crc32(crc,stringData,stringLength);
 
             i += 2;
           }
@@ -1196,14 +1188,16 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
         case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
           {
-            uint16     length;
-            const void *data;
+            uint16     arrayLength;
+            const void *arrayData;
+            const void *stringData;
+            uint16     stringLength;
 
-            length = (*((uint* )((byte*)chunkData+definition[i+1])));
-            data   = (*((void**)((byte*)chunkData+definition[i+2])));
+            arrayLength = (*((uint* )((byte*)chunkData+definition[i+1])));
+            arrayData   = (*((void**)((byte*)chunkData+definition[i+2])));
 
             // put array length (16bit value)
-            (*((uint16*)p)) = htons(length);
+            (*((uint16*)p)) = htons(arrayLength);
             error = putChunkBuffer(&chunkBuffer,p,2L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p,2);
@@ -1236,9 +1230,9 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
                   }
 
                   // put array data
-                  error = putChunkBuffer(&chunkBuffer,data,(ulong)length*size);
+                  error = putChunkBuffer(&chunkBuffer,arrayData,(ulong)arrayLength*size);
                   if (error != ERROR_NONE) break;
-                  crc = crc32(crc,data,length*size);
+                  crc = crc32(crc,arrayData,arrayLength*size);
                 }
                 break;
               case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
@@ -1246,23 +1240,23 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
                   String *strings;
                   uint   z;
 
-                  // get array data
-                  strings = (String*)data;
-                  for (z = 0; z < length; z++)
+                  // put string data
+                  strings = (String*)arrayData;
+                  for (z = 0; z < arrayLength; z++)
                   {
-                    length = (uint16)String_length(strings[z]);
-                    data   = String_cString(strings[z]);
+                    stringLength = (uint16)String_length(strings[z]);
+                    stringData   = String_cString(strings[z]);
 
                     // put string length (16bit value)
-                    (*((uint16*)p)) = htons(length);
+                    (*((uint16*)p)) = htons(stringLength);
                     error = putChunkBuffer(&chunkBuffer,&p,2L);
                     if (error != ERROR_NONE) break;
                     crc = crc32(crc,p,2);
 
                     // put string data
-                    error = putChunkBuffer(&chunkBuffer,data,(ulong)length);
+                    error = putChunkBuffer(&chunkBuffer,stringData,(ulong)stringLength);
                     if (error != ERROR_NONE) break;
-                    crc = crc32(crc,data,length);
+                    crc = crc32(crc,stringData,stringLength);
                   }
                 }
                 break;
