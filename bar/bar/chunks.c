@@ -1343,8 +1343,6 @@ ulong Chunk_getSize(const int  *definition,
   int   z;
 
   assert(definition != NULL);
-#warning todo
-//assert(chunkData != NULL);
 
   size = 0;
   z    = 0;
@@ -1427,7 +1425,7 @@ ulong Chunk_getSize(const int  *definition,
           assert(chunkData != NULL);
 
           length = (*((uint*)((byte*)chunkData+definition[z+1])));
-          size += 2+length*4;
+          size += 2+ALIGN(length*4,4);
 
           z += 3;
         }
@@ -1440,7 +1438,7 @@ ulong Chunk_getSize(const int  *definition,
           assert(chunkData != NULL);
 
           length = (*((uint*)((byte*)chunkData+definition[z+1])));
-          size += 2+length*8;
+          size += 2+ALIGN(length*8,4);
 
           z += 3;
         }
