@@ -3855,9 +3855,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // init image chunk
   error = Chunk_init(&archiveEntryInfo->image.chunkImage.info,
                      NULL,  // parentChunkInfo
-#warning todo remove
-//                     archiveInfo->chunkIO,
-//                     archiveInfo->chunkIOUserData,
                      &CHUNK_IO_FILE,
                      &archiveEntryInfo->image.tmpFileHandle,
                      CHUNK_ID_IMAGE,
