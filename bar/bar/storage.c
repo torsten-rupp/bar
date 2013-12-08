@@ -5482,7 +5482,6 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_WEBDAV:
-#warning todo webdav
       #ifdef HAVE_CURL
         {
           String          baseURL;
@@ -5712,7 +5711,6 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             while (   (curlMCode == CURLM_CALL_MULTI_PERFORM)
                    && (runningHandles > 0)
                   );
-//fprintf(stderr,"%s, %d: storageHandle->webdav.runningHandles=%d\n",__FILE__,__LINE__,runningHandles);
             if (curlMCode != CURLM_OK)
             {
               String_delete(baseName);
@@ -5949,8 +5947,6 @@ Errors Storage_open(StorageHandle *storageHandle)
             (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
             return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageHandle->storageSpecifier.fileName));
           }
-#warning todo
-fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
 
           // get file size
           curlCode = curl_easy_getinfo(storageHandle->ftp.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD,&fileSize);
@@ -5966,7 +5962,6 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
             return ERROR_FTP_GET_SIZE;
           }
           storageHandle->ftp.size = (uint64)fileSize;
-//fprintf(stderr,"%s, %d: storageHandle->ftp.size=%llu\n",__FILE__,__LINE__,storageHandle->ftp.size);
 
           // init FTP download (Note: by default curl use passive FTP)
           (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOBODY,0L);
@@ -6003,7 +5998,6 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
           while (   (curlMCode == CURLM_CALL_MULTI_PERFORM)
                  && (runningHandles > 0)
                 );
-//fprintf(stderr,"%s, %d: storageHandle->ftp.runningHandles=%d\n",__FILE__,__LINE__,storageHandle->ftp.runningHandles);
           if (curlMCode != CURLM_OK)
           {
             String_delete(url);
@@ -6326,7 +6320,6 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_WEBDAV:
-#warning todo webdav
       #ifdef HAVE_CURL
         {
           String          baseURL;
@@ -6540,7 +6533,6 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
           while (   (curlMCode == CURLM_CALL_MULTI_PERFORM)
                  && (runningHandles > 0)
                 );
-//fprintf(stderr,"%s, %d: storageHandle->webdav.runningHandles=%d\n",__FILE__,__LINE__,runningHandles);
           if (curlMCode != CURLM_OK)
           {
             String_delete(baseName);
@@ -7938,7 +7930,6 @@ Errors Storage_read(StorageHandle *storageHandle,
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_WEBDAV:
-#warning todo webdav
       #ifdef HAVE_CURL
         {
           ulong     i;
@@ -9283,30 +9274,20 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 /*---------------------------------------------------------------------*/
 
 Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
-                                 const String               storageName,
+                                 const StorageSpecifier     *storageSpecifier,
                                  const JobOptions           *jobOptions,
                                  ServerConnectionPriorities serverConnectionPriority
                                 )
 {
-  Errors           error;
-  StorageSpecifier storageSpecifier;
+  Errors error;
 
   assert(storageDirectoryListHandle != NULL);
-  assert(storageName != NULL);
+  assert(storageSpecifier != NULL);
   assert(jobOptions != NULL);
-
-  // get storage specifier, file name, path name
-  Storage_initSpecifier(&storageSpecifier);
-  error = Storage_parseName(&storageSpecifier,storageName);
-  if (error != ERROR_NONE)
-  {
-    Storage_doneSpecifier(&storageSpecifier);
-    return error;
-  }
 
   // open directory listing
   error = ERROR_UNKNOWN;
-  switch (storageSpecifier.type)
+  switch (storageSpecifier->type)
   {
     case STORAGE_TYPE_NONE:
       break;
@@ -9318,7 +9299,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
       // open directory
       error = File_openDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,
-                                     storageSpecifier.fileName
+                                     storageSpecifier->fileName
                                     );
       break;
     case STORAGE_TYPE_FTP:
@@ -9338,10 +9319,10 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           storageDirectoryListHandle->ftp.fileName = String_new();
 
           // get FTP server settings
-          storageDirectoryListHandle->ftp.server = getFTPServerSettings(storageSpecifier.hostName,jobOptions,&ftpServer);
-          if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,ftpServer.loginName);
-          if (String_isEmpty(storageSpecifier.loginName)) String_setCString(storageSpecifier.loginName,getenv("LOGNAME"));
-          if (String_isEmpty(storageSpecifier.hostName))
+          storageDirectoryListHandle->ftp.server = getFTPServerSettings(storageSpecifier->hostName,jobOptions,&ftpServer);
+          if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,ftpServer.loginName);
+          if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageSpecifier->hostName))
           {
             error = ERROR_NO_HOST_NAME;
             String_delete(storageDirectoryListHandle->ftp.fileName);
@@ -9360,51 +9341,51 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
           // check FTP login, get correct password
           error = ERROR_UNKNOWN;
-          if ((error != ERROR_NONE) && !Password_isEmpty(storageSpecifier.loginPassword))
+          if ((error != ERROR_NONE) && !Password_isEmpty(storageSpecifier->loginPassword))
           {
-            error = checkFTPLogin(storageSpecifier.hostName,
-                                  storageSpecifier.hostPort,
-                                  storageSpecifier.loginName,
-                                  storageSpecifier.loginPassword
+            error = checkFTPLogin(storageSpecifier->hostName,
+                                  storageSpecifier->hostPort,
+                                  storageSpecifier->loginName,
+                                  storageSpecifier->loginPassword
                                  );
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(ftpServer.password))
           {
-            error = checkFTPLogin(storageSpecifier.hostName,
-                                  storageSpecifier.hostPort,
-                                  storageSpecifier.loginName,
+            error = checkFTPLogin(storageSpecifier->hostName,
+                                  storageSpecifier->hostPort,
+                                  storageSpecifier->loginName,
                                   ftpServer.password
                                  );
             if (error == ERROR_NONE)
             {
-              Password_set(storageSpecifier.loginPassword,ftpServer.password);
+              Password_set(storageSpecifier->loginPassword,ftpServer.password);
             }
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(defaultFTPPassword))
           {
-            error = checkFTPLogin(storageSpecifier.hostName,
-                                  storageSpecifier.hostPort,
-                                  storageSpecifier.loginName,
+            error = checkFTPLogin(storageSpecifier->hostName,
+                                  storageSpecifier->hostPort,
+                                  storageSpecifier->loginName,
                                   defaultFTPPassword
                                  );
             if (error == ERROR_NONE)
             {
-              Password_set(storageSpecifier.loginPassword,defaultFTPPassword);
+              Password_set(storageSpecifier->loginPassword,defaultFTPPassword);
             }
           }
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initFTPPassword(storageSpecifier.hostName,storageSpecifier.loginName,jobOptions))
+            if (initFTPPassword(storageSpecifier->hostName,storageSpecifier->loginName,jobOptions))
             {
-              error = checkFTPLogin(storageSpecifier.hostName,
-                                    storageSpecifier.hostPort,
-                                    storageSpecifier.loginName,
+              error = checkFTPLogin(storageSpecifier->hostName,
+                                    storageSpecifier->hostPort,
+                                    storageSpecifier->loginName,
                                     defaultFTPPassword
                                    );
               if (error == ERROR_NONE)
               {
-                Password_set(storageSpecifier.loginPassword,defaultFTPPassword);
+                Password_set(storageSpecifier->loginPassword,defaultFTPPassword);
               }
             }
             else
@@ -9445,9 +9426,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           // get URL
-          url = String_format(String_new(),"ftp://%S",storageSpecifier.hostName);
-          if (storageSpecifier.hostPort != 0) String_format(url,":d",storageSpecifier.hostPort);
-          File_initSplitFileName(&nameTokenizer,storageSpecifier.fileName);
+          url = String_format(String_new(),"ftp://%S",storageSpecifier->hostName);
+          if (storageSpecifier->hostPort != 0) String_format(url,":d",storageSpecifier->hostPort);
+          File_initSplitFileName(&nameTokenizer,storageSpecifier->fileName);
           while (File_getNextSplitFileName(&nameTokenizer,&name))
           {
             String_appendChar(url,'/');
@@ -9469,10 +9450,10 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           // set FTP login
-          (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageSpecifier.loginName));
-          plainLoginPassword = Password_deploy(storageSpecifier.loginPassword);
+          (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageSpecifier->loginName));
+          plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
           (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-          Password_undeploy(storageSpecifier.loginPassword);
+          Password_undeploy(storageSpecifier->loginPassword);
 
           // read directory
 #warning obsolete?
@@ -9533,9 +9514,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
           // get FTP server settings
           getFTPServerSettings(hostName,jobOptions,&ftpServer);
-          if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,ftpServer.loginName);
-          if (String_isEmpty(storageSpecifier.loginName)) String_setCString(storageSpecifier.loginName,getenv("LOGNAME"));
-          if (String_isEmpty(storageSpecifier.hostName))
+          if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,ftpServer.loginName);
+          if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageSpecifier->hostName))
           {
             error = ERROR_NO_HOST_NAME;
             break;
@@ -9545,17 +9526,17 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           error = ERROR_UNKNOWN;
           if ((error != ERROR_NONE) && !Password_isEmpty(loginPassword))
           {
-            error = checkFTPLogin(storageSpecifier.hostName,
-                                  storageSpecifier.hostPort,
-                                  storageSpecifier.loginName,
-                                  storageSpecifier.loginPassword
+            error = checkFTPLogin(storageSpecifier->hostName,
+                                  storageSpecifier->hostPort,
+                                  storageSpecifier->loginName,
+                                  storageSpecifier->loginPassword
                                  );
           }
           if ((error != ERROR_NONE) && (ftpServer.password != NULL))
           {
-            error = checkFTPLogin(storageSpecifier.hostName,
-                                  storageSpecifier.hostPort,
-                                  storageSpecifier.loginName,
+            error = checkFTPLogin(storageSpecifier->hostName,
+                                  storageSpecifier->hostPort,
+                                  storageSpecifier->loginName,
                                   ftpServer.password
                                  );
             if (error == ERROR_NONE)
@@ -9565,9 +9546,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(defaultFTPPassword))
           {
-            error = checkFTPLogin(storageSpecifier.hostName,
-                                  storageSpecifier.hostPort,
-                                  storageSpecifier.loginName,
+            error = checkFTPLogin(storageSpecifier->hostName,
+                                  storageSpecifier->hostPort,
+                                  storageSpecifier->loginName,
                                   defaultFTPPassword
                                  );
             if (error == ERROR_NONE)
@@ -9578,11 +9559,11 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initFTPPassword(storageSpecifier.hostName,storageSpecifier.loginName,jobOptions))
+            if (initFTPPassword(storageSpecifier->hostName,storageSpecifier->loginName,jobOptions))
             {
-              error = checkFTPLogin(storageSpecifier.hostName,
-                                    storageSpecifier.hostPort,
-                                    storageSpecifier.loginName,
+              error = checkFTPLogin(storageSpecifier->hostName,
+                                    storageSpecifier->hostPort,
+                                    storageSpecifier->loginName,
                                     defaultFTPPassword
                                    );
               if (error == ERROR_NONE)
@@ -9622,7 +9603,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           // FTP login
-          plainLoginPassword = Password_deploy(storageSpecifier.loginPassword);
+          plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
           if (FtpLogin(String_cString(storageSpecifierloginName),
                        plainLoginPassword,
                        control
@@ -9706,13 +9687,13 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           storageDirectoryListHandle->sftp.entryReadFlag = FALSE;
 
           // set pathname
-          String_set(storageDirectoryListHandle->sftp.pathName,storageSpecifier.fileName);
+          String_set(storageDirectoryListHandle->sftp.pathName,storageSpecifier->fileName);
 
           // get SSH server settings
-          getSSHServerSettings(storageSpecifier.hostName,jobOptions,&sshServer);
-          if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,sshServer.loginName);
-          if (String_isEmpty(storageSpecifier.loginName)) String_setCString(storageSpecifier.loginName,getenv("LOGNAME"));
-          if (String_isEmpty(storageSpecifier.hostName))
+          getSSHServerSettings(storageSpecifier->hostName,jobOptions,&sshServer);
+          if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,sshServer.loginName);
+          if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageSpecifier->hostName))
           {
             error = ERROR_NO_HOST_NAME;
             break;
@@ -9721,9 +9702,9 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           // open network connection
           error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
                                   SOCKET_TYPE_SSH,
-                                  storageSpecifier.hostName,
-                                  (storageSpecifier.hostPort != 0) ? storageSpecifier.hostPort : sshServer.port,
-                                  storageSpecifier.loginName,
+                                  storageSpecifier->hostName,
+                                  (storageSpecifier->hostPort != 0) ? storageSpecifier->hostPort : sshServer.port,
+                                  storageSpecifier->loginName,
                                   (sshServer.password != NULL) ? sshServer.password : defaultSSHPassword,
                                   sshServer.publicKeyFileName,
                                   sshServer.privateKeyFileName,
@@ -9771,7 +9752,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_WEBDAV:
-#warning todo webdav
       #ifdef HAVE_CURL
         {
           WebDAVServer      webDAVServer;
@@ -9791,10 +9771,10 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           storageDirectoryListHandle->webdav.currentNode = NULL;
 
           // get WebDAV server settings
-          storageDirectoryListHandle->webdav.server = getWebDAVServerSettings(storageSpecifier.hostName,jobOptions,&webDAVServer);
-          if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,webDAVServer.loginName);
-          if (String_isEmpty(storageSpecifier.loginName)) String_setCString(storageSpecifier.loginName,getenv("LOGNAME"));
-          if (String_isEmpty(storageSpecifier.hostName))
+          storageDirectoryListHandle->webdav.server = getWebDAVServerSettings(storageSpecifier->hostName,jobOptions,&webDAVServer);
+          if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,webDAVServer.loginName);
+          if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageSpecifier->hostName))
           {
             error = ERROR_NO_HOST_NAME;
             break;
@@ -9809,47 +9789,47 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 
           // check WebDAV login, get correct password
           error = ERROR_UNKNOWN;
-          if ((error != ERROR_NONE) && !Password_isEmpty(storageSpecifier.loginPassword))
+          if ((error != ERROR_NONE) && !Password_isEmpty(storageSpecifier->loginPassword))
           {
-            error = checkWebDAVLogin(storageSpecifier.hostName,
-                                     storageSpecifier.loginName,
-                                     storageSpecifier.loginPassword
+            error = checkWebDAVLogin(storageSpecifier->hostName,
+                                     storageSpecifier->loginName,
+                                     storageSpecifier->loginPassword
                                     );
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(webDAVServer.password))
           {
-            error = checkWebDAVLogin(storageSpecifier.hostName,
-                                     storageSpecifier.loginName,
+            error = checkWebDAVLogin(storageSpecifier->hostName,
+                                     storageSpecifier->loginName,
                                      webDAVServer.password
                                     );
             if (error == ERROR_NONE)
             {
-              Password_set(storageSpecifier.loginPassword,webDAVServer.password);
+              Password_set(storageSpecifier->loginPassword,webDAVServer.password);
             }
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(defaultWebDAVPassword))
           {
-            error = checkWebDAVLogin(storageSpecifier.hostName,
-                                     storageSpecifier.loginName,
+            error = checkWebDAVLogin(storageSpecifier->hostName,
+                                     storageSpecifier->loginName,
                                      defaultWebDAVPassword
                                     );
             if (error == ERROR_NONE)
             {
-              Password_set(storageSpecifier.loginPassword,defaultWebDAVPassword);
+              Password_set(storageSpecifier->loginPassword,defaultWebDAVPassword);
             }
           }
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initWebDAVPassword(storageSpecifier.hostName,storageSpecifier.loginName,jobOptions))
+            if (initWebDAVPassword(storageSpecifier->hostName,storageSpecifier->loginName,jobOptions))
             {
-              error = checkWebDAVLogin(storageSpecifier.hostName,
-                                       storageSpecifier.loginName,
+              error = checkWebDAVLogin(storageSpecifier->hostName,
+                                       storageSpecifier->loginName,
                                        defaultWebDAVPassword
                                       );
               if (error == ERROR_NONE)
               {
-                Password_set(storageSpecifier.loginPassword,defaultWebDAVPassword);
+                Password_set(storageSpecifier->loginPassword,defaultWebDAVPassword);
               }
             }
             else
@@ -9887,9 +9867,9 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           }
 
           // get URL
-          url = String_format(String_new(),"http://%S",storageSpecifier.hostName);
-          if (storageSpecifier.hostPort != 0) String_format(url,":d",storageSpecifier.hostPort);
-          File_initSplitFileName(&nameTokenizer,storageSpecifier.fileName);
+          url = String_format(String_new(),"http://%S",storageSpecifier->hostName);
+          if (storageSpecifier->hostPort != 0) String_format(url,":d",storageSpecifier->hostPort);
+          File_initSplitFileName(&nameTokenizer,storageSpecifier->fileName);
           while (File_getNextSplitFileName(&nameTokenizer,&name))
           {
             String_appendChar(url,'/');
@@ -9910,10 +9890,10 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           }
 
           // set login
-          (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageSpecifier.loginName));
-          plainLoginPassword = Password_deploy(storageSpecifier.loginPassword);
+          (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageSpecifier->loginName));
+          plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
           (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-          Password_undeploy(storageSpecifier.loginPassword);
+          Password_undeploy(storageSpecifier->loginPassword);
 
           // read directory data
           directoryData = String_new();
@@ -9982,7 +9962,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
       // init variables
-      switch (storageSpecifier.type)
+      switch (storageSpecifier->type)
       {
         case STORAGE_TYPE_CD : storageDirectoryListHandle->type = STORAGE_TYPE_CD;  break;
         case STORAGE_TYPE_DVD: storageDirectoryListHandle->type = STORAGE_TYPE_DVD; break;
@@ -9997,43 +9977,43 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #ifdef HAVE_ISO9660
         UNUSED_VARIABLE(jobOptions);
 
-        storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(storageSpecifier.fileName);
+        storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(storageSpecifier->fileName);
 
         // check if device exists
-        if (!File_exists(storageName))
+        if (!File_exists(storageSpecifier->deviceName))
         {
-          return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageName));
+          return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageSpecifier->deviceName));
         }
 
         // open optical disk/ISO 9660 file
-        storageDirectoryListHandle->opticalDisk.iso9660Handle = iso9660_open(String_cString(storageName));
+        storageDirectoryListHandle->opticalDisk.iso9660Handle = iso9660_open(String_cString(storageSpecifier->deviceName));
         if (storageDirectoryListHandle->opticalDisk.iso9660Handle == NULL)
         {
-          if (File_isFile(storageName))
+          if (File_isFile(storageSpecifier->deviceName))
           {
-            error = ERRORX_(OPEN_ISO9660_FILE,errno,String_cString(storageName));
+            error = ERRORX_(OPEN_ISO9660_FILE,errno,String_cString(storageSpecifier->deviceName));
           }
           else
           {
-            error = ERRORX_(OPEN_OPTICAL_DISK,errno,String_cString(storageName));
+            error = ERRORX_(OPEN_OPTICAL_DISK,errno,String_cString(storageSpecifier->deviceName));
           }
         }
 
         // open directory for reading
         storageDirectoryListHandle->opticalDisk.cdioList = iso9660_ifs_readdir(storageDirectoryListHandle->opticalDisk.iso9660Handle,
-                                                                               String_cString(storageSpecifier.fileName)
+                                                                               String_cString(storageSpecifier->fileName)
                                                                               );
         if (storageDirectoryListHandle->opticalDisk.cdioList == NULL)
         {
           iso9660_close(storageDirectoryListHandle->opticalDisk.iso9660Handle);
-          return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(storageSpecifier.fileName));
+          return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(storageSpecifier->fileName));
         }
 
         storageDirectoryListHandle->opticalDisk.cdioNextNode = _cdio_list_begin(storageDirectoryListHandle->opticalDisk.cdioList);
       #else /* not HAVE_ISO9660 */
         // open directory
         error = File_openDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle,
-                                       storageName
+                                       storageSpecifier->fileName
                                       );
       #endif /* HAVE_ISO9660 */
       break;
@@ -10049,9 +10029,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
   }
   assert(error != ERROR_UNKNOWN);
-
-  // free resources
-  Storage_doneSpecifier(&storageSpecifier);
 
   return error;
 }

@@ -81,8 +81,7 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
 {
   JobOptions                 jobOptions;
   StorageSpecifier           storageSpecifier;
-  String                     baseStorageName;
-  String                     basePath;
+  StorageSpecifier           storageDirectorySpecifier;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
@@ -90,27 +89,25 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
 
   // init variables
   initJobOptions(&jobOptions);
-  Storage_initSpecifier(&storageSpecifier);
-  baseStorageName = String_new();
-  basePath        = String_new();
 
-  // find base storage path
+  // parse storage name
+  Storage_initSpecifier(&storageSpecifier);
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
-    String_delete(basePath);
-    String_delete(baseStorageName);
     Storage_doneSpecifier(&storageSpecifier);
     doneJobOptions(&jobOptions);
     return;
   }
-  File_getFilePathName(basePath,storageSpecifier.fileName);
-  Storage_getName(baseStorageName,&storageSpecifier,basePath);
+
+  // get path storage specifier
+  Storage_duplicateSpecifier(&storageDirectorySpecifier,&storageSpecifier);
+  File_getFilePathName(storageDirectorySpecifier.fileName,storageSpecifier.fileName);
 
   // open directory list
   sourceNode = NULL;
   error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                    baseStorageName,
+                                    &storageDirectorySpecifier,
                                     &jobOptions,
                                     SERVER_CONNECTION_PRIORITY_LOW
                                    );
@@ -161,8 +158,7 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
   }
 
   // free resources
-  String_delete(basePath);
-  String_delete(baseStorageName);
+  Storage_doneSpecifier(&storageDirectorySpecifier);
   Storage_doneSpecifier(&storageSpecifier);
   doneJobOptions(&jobOptions);
 }
@@ -198,40 +194,26 @@ LOCAL void freeSourceNode(SourceNode *sourceNode, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createLocalStorageArchive(String           localFileName,
-                                       const String     storageName,
-                                       const JobOptions *jobOptions
+LOCAL Errors createLocalStorageArchive(String                 localFileName,
+                                       const StorageSpecifier *storageSpecifier,
+                                       const JobOptions       *jobOptions
                                       )
 {
-  StorageSpecifier storageSpecifier;
+//  StorageSpecifier storageSpecifier;
   Errors           error;
 
   assert(localFileName != NULL);
-  assert(storageName != NULL);
-
-  // parse storage name
-  Storage_initSpecifier(&storageSpecifier);
-  error = Storage_parseName(&storageSpecifier,storageName);
-  if (error != ERROR_NONE)
-  {
-    printError("Cannot initialize storage '%s' (error: %s)\n",
-               String_cString(storageName),
-               Errors_getText(error)
-              );
-    Storage_doneSpecifier(&storageSpecifier);
-    return error;
-  }
+  assert(storageSpecifier != NULL);
 
   // create temporary file
   error = File_getTmpFileName(localFileName,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
-    Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
 
   // copy storage to local file
-  error = Storage_copy(&storageSpecifier,
+  error = Storage_copy(storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        NULL,//StorageRequestVolumeFunction storageRequestVolumeFunction,
@@ -243,12 +225,8 @@ LOCAL Errors createLocalStorageArchive(String           localFileName,
   if (error != ERROR_NONE)
   {
     File_delete(localFileName,FALSE);
-    Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
-
-  // free resources
-  Storage_doneSpecifier(&storageSpecifier);
 
   return ERROR_NONE;
 }
@@ -933,12 +911,13 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
                         const JobOptions *jobOptions
                        )
 {
-  bool         restoredFlag;
-  FragmentNode fragmentNode;
-  SourceNode   *sourceNode;
-  Errors       error;
-  String       tmpFileName;
-  String       localStorageName;
+  bool             restoredFlag;
+  FragmentNode     fragmentNode;
+  SourceNode       *sourceNode;
+  Errors           error;
+  String           tmpFileName;
+  StorageSpecifier storageSpecifier;
+  String           localStorageName;
 
   assert(sourceHandle != NULL);
   assert(name != NULL);
@@ -1069,8 +1048,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
           // create local copy of storage file
           localStorageName = String_new();
           error = createLocalStorageArchive(localStorageName,
-#warning umbauen in storageSpecifier, storageFIlename?
-                                            sourceNode->storageName,
+                                            &sourceNode->storageSpecifier,
                                             jobOptions
                                           );
           if (error == ERROR_NONE)
@@ -1204,69 +1182,76 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
   {
     if (sourceStorageName != NULL)
     {
-      // create local copy of storage file
-      localStorageName = String_new();
-      error = createLocalStorageArchive(localStorageName,
-                                        sourceStorageName,
-                                        jobOptions
-                                       );
+      // parse storage name
+      Storage_initSpecifier(&storageSpecifier);
+      error = Storage_parseName(&storageSpecifier,sourceStorageName);
       if (error == ERROR_NONE)
       {
-        // create temporary restore file as delta source
-        tmpFileName = String_new();
-        error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
+        // create local copy of storage file
+        localStorageName = String_new();
+        error = createLocalStorageArchive(localStorageName,
+                                          &storageSpecifier,
+                                          jobOptions
+                                         );
         if (error == ERROR_NONE)
         {
-          // restore to temporary file
-          error = restoreFile(localStorageName,
-                              name,
-                              jobOptions,
-                              tmpFileName,
-                              NULL,  // fragmentNode
-                              inputCryptPassword,
-                              NULL,  // archiveGetCryptPasswordUserData
-                              NULL,  // pauseFlag
-                              NULL   // requestedAbortFlag
-                             );
+          // create temporary restore file as delta source
+          tmpFileName = String_new();
+          error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
           if (error == ERROR_NONE)
           {
-            // open temporary restored file
-            error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+            // restore to temporary file
+            error = restoreFile(localStorageName,
+                                name,
+                                jobOptions,
+                                tmpFileName,
+                                NULL,  // fragmentNode
+                                inputCryptPassword,
+                                NULL,  // archiveGetCryptPasswordUserData
+                                NULL,  // pauseFlag
+                                NULL   // requestedAbortFlag
+                               );
             if (error == ERROR_NONE)
             {
-              sourceHandle->name        = sourceStorageName;
-              sourceHandle->tmpFileName = tmpFileName;
-              restoredFlag = TRUE;
+              // open temporary restored file
+              error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+              if (error == ERROR_NONE)
+              {
+                sourceHandle->name        = sourceStorageName;
+                sourceHandle->tmpFileName = tmpFileName;
+                restoredFlag = TRUE;
+              }
+            }
+
+            // free resources
+            if (!restoredFlag)
+            {
+              File_delete(tmpFileName,FALSE);
+              String_delete(tmpFileName);
             }
           }
-
-          // free resources
-          if (!restoredFlag)
+          else
           {
-            File_delete(tmpFileName,FALSE);
             String_delete(tmpFileName);
           }
-        }
-        else
-        {
-          String_delete(tmpFileName);
-        }
 
-        // delete local storage file
-        File_delete(localStorageName,FALSE);
+          // delete local storage file
+          File_delete(localStorageName,FALSE);
+        }
+        String_delete(localStorageName);
       }
-
-      // free resources
-      String_delete(localStorageName);
+      Storage_doneSpecifier(&storageSpecifier);
     }
   }
 
-  if (!restoredFlag)
+  if (restoredFlag)
+  {
+    return ERROR_NONE;
+  }
+  else
   {
     return ERRORX_(DELTA_SOURCE_NOT_FOUND,0,String_cString(sourceStorageName));
   }
-
-  return ERROR_NONE;
 }
 
 void Source_closeEntry(SourceHandle *sourceHandle)

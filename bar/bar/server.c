@@ -3006,7 +3006,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
         {
           // list directory, update index checked/request create index
           error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                            storageDirectoryName,
+                                            &storageSpecifier,
                                             &jobOptions,
                                             SERVER_CONNECTION_PRIORITY_LOW
                                            );
@@ -4335,7 +4335,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            url=<directory>
+*            storageDirectory=<name>
 *          Result:
 *            type=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> backup=yes|no
 *            type=DIRECTORY name=<name> dateTime=<time stamp> backup=yes|no
@@ -4350,8 +4350,9 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
 
 LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String                     url;
+  String                     storageDirectory;
   Errors                     error;
+  StorageSpecifier           storageSpecifier;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     name;
   FileInfo                   fileInfo;
@@ -4359,23 +4360,36 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get path name
-  url = String_new();
-  if (!StringMap_getString(argumentMap,"url",url,NULL))
+  // get URL name
+  storageDirectory = String_new();
+  if (!StringMap_getString(argumentMap,"storageDirectory",storageDirectory,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected url=<path>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageName=<name>");
+    return;
+  }
+
+  // parse storage name
+  Storage_initSpecifier(&storageSpecifier);
+  error = Storage_parseName(&storageSpecifier,storageDirectory);
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"invalid storage directory");
+    Storage_doneSpecifier(&storageSpecifier);
+    String_delete(storageDirectory);
     return;
   }
 
   // open directory
   error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                    url,
+                                    &storageSpecifier,
                                     &clientInfo->jobOptions,
                                     SERVER_CONNECTION_PRIORITY_HIGH
                                    );
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,error,"open storage directory fail: %s",Errors_getText(error));
+    Storage_doneSpecifier(&storageSpecifier);
+    String_delete(storageDirectory);
     return;
   }
 
@@ -4482,7 +4496,8 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(url);
+  Storage_doneSpecifier(&storageSpecifier);
+  String_delete(storageDirectory);
 }
 
 /***********************************************************************\

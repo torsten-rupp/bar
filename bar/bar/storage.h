@@ -1075,7 +1075,7 @@ Errors Storage_seek(StorageHandle *storageHandle,
 \***********************************************************************/
 
 Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
-                                 const String               storageName,
+                                 const StorageSpecifier     *storageSpecifier,
                                  const JobOptions           *jobOptions,
                                  ServerConnectionPriorities serverConnectionPriority
                                 );

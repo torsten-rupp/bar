@@ -2703,7 +2703,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   ulong                      bufferLength;
   SemaphoreLock              semaphoreLock;
   String                     pattern;
-  String                     storagePath;
+  StorageSpecifier           storageDirectorySpecifier;
   IndexQueryHandle           indexQueryHandle;
   int64                      oldStorageId;
   StorageDirectoryListHandle storageDirectoryListHandle;
@@ -3165,9 +3165,10 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
       if (error == ERROR_NONE)
       {
         // open directory
-        storagePath = File_getFilePathName(String_new(),createInfo->storageSpecifier->fileName);
+        Storage_duplicateSpecifier(&storageDirectorySpecifier,createInfo->storageSpecifier);
+        File_getFilePathName(storageDirectorySpecifier.fileName,createInfo->storageSpecifier->fileName);
         error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                          storagePath,
+                                          &storageDirectorySpecifier,
                                           createInfo->jobOptions,
                                           SERVER_CONNECTION_PRIORITY_HIGH
                                          );
@@ -3193,7 +3194,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
           // close directory
           Storage_closeDirectoryList(&storageDirectoryListHandle);
         }
-        String_delete(storagePath);
+        Storage_doneSpecifier(&storageDirectorySpecifier);
       }
       String_delete(pattern);
     }
