@@ -45,10 +45,11 @@
   #include <cdio/cdio.h>
   #include <cdio/iso9660.h>
 #endif /* HAVE_ISO9660 */
+#ifdef HAVE_MXML
+  #include "mxml.h"
+#endif /* HAVE_MXML */
 #include <assert.h>
 
-#warning exists?
-#include "mxml.h"
 
 #include "global.h"
 #include "strings.h"
