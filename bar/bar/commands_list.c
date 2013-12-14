@@ -1579,14 +1579,20 @@ LOCAL Errors listArchiveContent(StorageHandle                   *storageHandle,
                                 void                            *archiveGetCryptPasswordUserData
                                )
 {
-  bool             printedInfoFlag;
-  ulong            fileCount;
-  Errors           error;
-  bool             retryFlag;
+  bool         printedInfoFlag;
+  ulong        fileCount;
+  Errors       error;
+  bool         retryFlag;
 bool         remoteBarFlag;
 //  SSHSocketList sshSocketList;
 //  SSHSocketNode *sshSocketNode;
   SocketHandle socketHandle;
+
+  assert(storageHandle != NULL);
+  assert(storageSpecifier != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
+  assert(jobOptions != NULL);
 
 // NYI ???
 remoteBarFlag=FALSE;
