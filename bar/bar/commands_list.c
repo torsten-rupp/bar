@@ -3007,6 +3007,8 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
     // format
     switch (fileInfo.type)
     {
+      case FILE_TYPE_NONE:
+        break;
       case FILE_TYPE_FILE:
       case FILE_TYPE_HARDLINK:
         TEXT_MACRO_N_CSTRING(textMacros[0],"%type","FILE");
@@ -3040,6 +3042,11 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
         TEXT_MACRO_N_CSTRING(textMacros[2],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
         TEXT_MACRO_N_CSTRING(textMacros[3],"%name",String_cString(fileName));
         break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break; /* not reached */
     }
     Misc_expandMacros(String_clear(line),DEFAULT_DIRECTORY_LIST_FORMAT,textMacros,SIZE_OF_ARRAY(textMacros));
 
