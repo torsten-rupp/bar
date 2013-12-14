@@ -2766,8 +2766,6 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
 
-  archiveInfo->printableName                   = String_new();
-
   archiveInfo->cryptType                       = (jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) ? jobOptions->cryptType : CRYPT_TYPE_NONE;
   archiveInfo->cryptPassword                   = NULL;
   archiveInfo->cryptPasswordReadFlag           = FALSE;
@@ -2777,6 +2775,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->ioType                          = ARCHIVE_IO_TYPE_FILE;
   archiveInfo->file.fileName                   = String_new();
   archiveInfo->file.openFlag                   = FALSE;
+  archiveInfo->printableName                   = NULL;
   archiveInfo->chunkIO                         = &CHUNK_IO_FILE;
   archiveInfo->chunkIOUserData                 = &archiveInfo->file.fileHandle;
   Semaphore_init(& archiveInfo->chunkIOLock);
@@ -2792,7 +2791,6 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->interrupt.openFlag              = FALSE;
   archiveInfo->interrupt.offset                = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->lock,{ Semaphore_done(&archiveInfo->lock); });
-  AUTOFREE_ADD(&autoFreeList,archiveInfo->printableName,{ String_delete(archiveInfo->printableName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileName,{ String_delete(archiveInfo->file.fileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
 
@@ -2920,8 +2918,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
 
-  archiveInfo->printableName                   = Storage_getPrintableName(String_new(),storageSpecifier,NULL);
-
   archiveInfo->cryptPassword                   = NULL;
   archiveInfo->cryptPasswordReadFlag           = FALSE;
   archiveInfo->cryptType                       = CRYPT_TYPE_NONE;
@@ -2931,6 +2927,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->ioType                          = ARCHIVE_IO_TYPE_STORAGE_FILE;
   Storage_duplicateSpecifier(&archiveInfo->storage.storageSpecifier,storageSpecifier);
   archiveInfo->storage.storageHandle           = storageHandle;
+  archiveInfo->printableName                   = String_duplicate(Storage_getPrintableName(storageSpecifier,NULL));
   archiveInfo->chunkIO                         = &CHUNK_IO_STORAGE_FILE;
   archiveInfo->chunkIOUserData                 = storageHandle;
   Semaphore_init(&archiveInfo->chunkIOLock);
@@ -10005,11 +10002,11 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   // get printable name (if possible)
   if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
   {
-    Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+//    Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
   }
   else
   {
-    String_set(printableStorageName,storageName);
+//    String_set(printableStorageName,storageName);
   }
 
   // open archive (Note optimization: try sftp for scp protocol, because sftp support seek()-operation)

@@ -219,7 +219,6 @@ Errors Command_restore(const StringList                *storageNameList,
   byte              *buffer;
   FragmentList      fragmentList;
   StorageSpecifier  storageSpecifier;
-  String            printableStorageName;
   StorageHandle     storageHandle;
   StringNode        *stringNode;
   String            storageName;
@@ -267,11 +266,9 @@ Errors Command_restore(const StringList                *storageNameList,
   }
   FragmentList_init(&fragmentList);
   Storage_initSpecifier(&storageSpecifier);
-  printableStorageName = String_new();
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
-  AUTOFREE_ADD(&autoFreeList,&fragmentList,{ FragmentList_done(&fragmentList); });
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
+  AUTOFREE_ADD(&autoFreeList,&fragmentList,{ FragmentList_done(&fragmentList); });
+  AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
   error     = ERROR_NONE;
   abortFlag = FALSE;
@@ -294,9 +291,8 @@ Errors Command_restore(const StringList                *storageNameList,
       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
       continue;
     }
-    Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
-    printInfo(0,"Restore from archive '%s':\n",String_cString(printableStorageName));
+    printInfo(0,"Restore from archive '%s':\n",Storage_getPrintableNameCString(&storageSpecifier,NULL));
 
     // init storage
     error = Storage_init(&storageHandle,
@@ -328,14 +324,14 @@ Errors Command_restore(const StringList                *storageNameList,
     if (error != ERROR_NONE)
     {
       printError("Cannot open storage '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
+                 Storage_getPrintableNameCString(&storageSpecifier,NULL),
                  Errors_getText(error)
                 );
       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
       (void)Storage_done(&storageHandle);
       continue;
     }
-    String_set(restoreInfo.statusInfo.storageName,printableStorageName);
+    String_set(restoreInfo.statusInfo.storageName,Storage_getPrintableName(&storageSpecifier,NULL));
     abortFlag = !updateStatusInfo(&restoreInfo);
 
     // read archive entries
@@ -358,7 +354,7 @@ Errors Command_restore(const StringList                *storageNameList,
       if (error != ERROR_NONE)
       {
         printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                   String_cString(printableStorageName),
+                   Storage_getPrintableNameCString(&storageSpecifier,NULL),
                    Errors_getText(error)
                   );
         if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -400,7 +396,7 @@ Errors Command_restore(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -586,7 +582,7 @@ Errors Command_restore(const StringList                *storageNameList,
                 {
                   printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
-                             String_cString(printableStorageName),
+                             Storage_getPrintableNameCString(&storageSpecifier,NULL),
                              Errors_getText(error)
                             );
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -785,7 +781,7 @@ Errors Command_restore(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
               String_delete(deviceName);
@@ -1031,7 +1027,7 @@ Errors Command_restore(const StringList                *storageNameList,
                 {
                   printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
-                             String_cString(printableStorageName),
+                             Storage_getPrintableNameCString(&storageSpecifier,NULL),
                              Errors_getText(error)
                             );
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -1222,7 +1218,7 @@ Errors Command_restore(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
               String_delete(directoryName);
@@ -1387,7 +1383,7 @@ Errors Command_restore(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
               File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -1633,7 +1629,7 @@ Errors Command_restore(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
               StringList_done(&fileNameList);
@@ -1823,7 +1819,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     {
                       printInfo(1,"FAIL!\n");
                       printError("Cannot read content of archive '%s' (error: %s)!\n",
-                                 String_cString(printableStorageName),
+                                 Storage_getPrintableNameCString(&storageSpecifier,NULL),
                                  Errors_getText(error)
                                 );
                       restoreInfo.failError = error;
@@ -2051,7 +2047,7 @@ Errors Command_restore(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -2332,7 +2328,6 @@ Errors Command_restore(const StringList                *storageNameList,
   }
 
   // free resources
-  String_delete(printableStorageName);
   Storage_doneSpecifier(&storageSpecifier);
   FragmentList_done(&fragmentList);
   free(buffer);

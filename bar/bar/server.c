@@ -2095,7 +2095,6 @@ LOCAL void jobThreadCode(void)
 {
   StorageSpecifier storageSpecifier;
   String           storageName;
-  String           printableStorageName;
   EntryList        includeEntryList;
   PatternList      excludePatternList;
   PatternList      deltaSourcePatternList;
@@ -2109,7 +2108,6 @@ LOCAL void jobThreadCode(void)
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
-  printableStorageName = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   PatternList_init(&deltaSourcePatternList);
@@ -2161,9 +2159,6 @@ LOCAL void jobThreadCode(void)
     jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
     if (jobNode->runningInfo.error == ERROR_NONE)
     {
-      // get printable name
-      Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
-
       // run job
       #ifdef SIMULATOR
       {
@@ -2201,7 +2196,11 @@ LOCAL void jobThreadCode(void)
         switch (jobNode->jobType)
         {
           case JOB_TYPE_CREATE:
-            logMessage(LOG_TYPE_ALWAYS,"Start job '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
+            logMessage(LOG_TYPE_ALWAYS,
+                       "Start job '%s': '%s'\n",
+                       String_cString(jobNode->name),
+                       Storage_getPrintableNameCString(&storageSpecifier,NULL)
+                      );
 
             // create archive
             jobNode->runningInfo.error = Command_create(storageName,
@@ -2222,15 +2221,27 @@ LOCAL void jobThreadCode(void)
 
             if (!jobNode->requestedAbortFlag)
             {
-              logMessage(LOG_TYPE_ALWAYS,"Done job '%s': '%s' (error: %s)\n",String_cString(jobNode->name),String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
+              logMessage(LOG_TYPE_ALWAYS,
+                         "Done job '%s': '%s' (error: %s)\n",
+                         String_cString(jobNode->name),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
+                         Errors_getText(jobNode->runningInfo.error)
+                        );
             }
             else
             {
-              logMessage(LOG_TYPE_ALWAYS,"Aborted job '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
+              logMessage(LOG_TYPE_ALWAYS,
+                         "Aborted job '%s': '%s'\n",
+                         String_cString(jobNode->name),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL)
+                        );
             }
             break;
           case JOB_TYPE_RESTORE:
-            logMessage(LOG_TYPE_ALWAYS,"Start restore archive '%s'\n",String_cString(printableStorageName));
+            logMessage(LOG_TYPE_ALWAYS,
+                       "Start restore archive '%s'\n",
+                       Storage_getPrintableNameCString(&storageSpecifier,NULL)
+                      );
 
             // restore archive
             StringList_init(&archiveFileNameList);
@@ -2248,7 +2259,11 @@ LOCAL void jobThreadCode(void)
                                                         );
             StringList_done(&archiveFileNameList);
 
-            logMessage(LOG_TYPE_ALWAYS,"Done restore archive '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
+            logMessage(LOG_TYPE_ALWAYS,
+                       "Done restore archive '%s' (error: %s)\n",
+                       Storage_getPrintableNameCString(&storageSpecifier,NULL),
+                       Errors_getText(jobNode->runningInfo.error)
+                      );
             break;
           #ifndef NDEBUG
             default:
@@ -2264,7 +2279,7 @@ LOCAL void jobThreadCode(void)
       logMessage(LOG_TYPE_ALWAYS,
                  "Aborted job '%s': invalid storage '%s' (error: %s)\n",
                  String_cString(jobNode->name),
-                 String_cString(printableStorageName),
+                 Storage_getPrintableNameCString(&storageSpecifier,NULL),
                  Errors_getText(jobNode->runningInfo.error)
                 );
     }
@@ -2306,7 +2321,6 @@ LOCAL void jobThreadCode(void)
   EntryList_done(&includeEntryList);
   String_delete(scheduleCustomText);
   String_delete(scheduleTitle);
-  String_delete(printableStorageName);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
 }
@@ -2575,11 +2589,10 @@ LOCAL void indexThreadCode(void)
   int64                  storageId;
   IndexQueryHandle       indexQueryHandle1,indexQueryHandle2;
   StorageSpecifier       storageSpecifier;
-  String                 storageName;
+  String                 storageName,printableStorageName;
   StorageHandle          storageHandle;
   int64                  duplicateStorageId;
   String                 duplicateStorageName;
-  String                 printableStorageName;
   IndexCryptPasswordList indexCryptPasswordList;
   SemaphoreLock          semaphoreLock;
   JobOptions             jobOptions;
@@ -2627,7 +2640,7 @@ LOCAL void indexThreadCode(void)
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error == ERROR_NONE)
     {
-      Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+      String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
     }
     else
     {
@@ -2705,7 +2718,7 @@ LOCAL void indexThreadCode(void)
             error = Storage_parseName(&storageSpecifier,storageName);
             if (error == ERROR_NONE)
             {
-              Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+              String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
             }
             else
             {
@@ -2783,7 +2796,7 @@ LOCAL void indexThreadCode(void)
       error = Storage_parseName(&storageSpecifier,storageName);
       if (error == ERROR_NONE)
       {
-        Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+        String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
       }
       else
       {
@@ -3030,10 +3043,6 @@ LOCAL void autoIndexUpdateThreadCode(void)
                 continue;
               }
 
-              // get storage names
-              Storage_getName(storageName,&storageSpecifier,fileName);
-              Storage_getPrintableName(printableStorageName,&storageSpecifier,fileName);
-
               // get index id, request index update
               if (Index_findByName(indexDatabaseHandle,
                                    storageSpecifier.type,
@@ -3118,7 +3127,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
         error = Storage_parseName(&storageSpecifier,storageName);
         if (error == ERROR_NONE)
         {
-          Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+          String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
         }
         else
         {
@@ -8002,7 +8011,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
       error = Storage_parseName(&storageSpecifier,storageName);
       if (error == ERROR_NONE)
       {
-        Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+        String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
       }
       else
       {

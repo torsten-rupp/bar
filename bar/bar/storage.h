@@ -161,6 +161,9 @@ typedef struct
   Password     *loginPassword;                             // login name
   String       deviceName;                                 // device name
   String       fileName;                                   // file name
+
+  String       storageName;                                // storage name (returned by Storage_getStorageName())
+  String       printableStorageName;                       // printable storage name without password (returned by Storage_getPrintableStorageName())
 } StorageSpecifier;
 
 // volume states
@@ -518,7 +521,7 @@ typedef struct
         CdioList_t              *cdioList;                 // ISO9660 entry list
         CdioListNode_t          *cdioNextNode;             // next entry in list
       #else /* not HAVE_ISO9660 */
-        DirectoryListHandle directoryListHandle;
+        DirectoryListHandle     directoryListHandle;
       #endif /* HAVE_ISO9660 */
     } opticalDisk;
   };
@@ -748,36 +751,38 @@ bool Storage_equalNames(const String storageName1,
                        );
 
 /***********************************************************************\
-* Name   : Storage_getName
+* Name   : Storage_getName, Storage_getNameCString
 * Purpose: get storage name
-* Input  : storageName            - storage name variable
-*          storageSpecifierString - storage specifier string
+* Input  : storageSpecifierString - storage specifier string
 *          fileName               - fileName (can be NULL)
-* Output : storageName - storage name
-* Return : storage name variable
+* Output : -
+* Return : storage name
 * Notes  : if fileName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
-String Storage_getName(String                 storageName,
-                       const StorageSpecifier *storageSpecifier,
-                       const String           fileName
-                      );
+const String Storage_getName(StorageSpecifier *storageSpecifier,
+                             const String     fileName
+                            );
+const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
+                                   const String     fileName
+                                  );
 
 /***********************************************************************\
-* Name   : Storage_getPrintableName
+* Name   : Storage_getPrintableName, Storage_getPrintableNameCString
 * Purpose: get printable storage name (without password)
-* Input  : storageName            - storage name variable
-*          storageSpecifierString - storage specifier string
+* Input  : storageSpecifierString - storage specifier string
 *          fileName               - fileName (can be NULL)
-* Output : storageName - storage name
-* Return : storage name variable
+* Output : -
+* Return : storage name
 * Notes  : if fileName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
-String Storage_getPrintableName(String                 storageName,
-                                const StorageSpecifier *storageSpecifier,
-                                const String           fileName
-                               );
+const String Storage_getPrintableName(StorageSpecifier *storageSpecifier,
+                                      const String     fileName
+                                     );
+const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
+                                            const String     fileName
+                                           );
 
 /***********************************************************************\
 * Name   : Storage_prepare

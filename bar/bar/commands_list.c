@@ -1298,7 +1298,7 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int compareArchiveContentNode(ArchiveContentNode *archiveContentNode1, ArchiveContentNode *archiveContentNode2, void *userData)
+LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode1, const ArchiveContentNode *archiveContentNode2, void *userData)
 {
   String name1,name2;
   uint64 modifiedTime1,modifiedTime2;
@@ -1553,11 +1553,1348 @@ LOCAL void printList(void)
   }
 }
 
+/***********************************************************************\
+* Name   : listArchiveContent
+* Purpose: list archive content
+* Input  : storageHandle                    - storage handle
+*          storageSpecifier                 - storage specifier
+*          includeEntryList                 - include entry list
+*          excludePatternList               - exclude pattern list
+*          jobOptions                       - job options
+*          storageName                      - storage name
+*          printableStorageName             - printable storage name
+*          archiveGetCryptPasswordFunction  - get password call back
+*          archiveGetCryptPasswordUserData  - user data for get password
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors listArchiveContent(StorageHandle                   *storageHandle,
+                                StorageSpecifier                *storageSpecifier,
+                                const EntryList                 *includeEntryList,
+                                const PatternList               *excludePatternList,
+                                JobOptions                      *jobOptions,
+                                ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                                void                            *archiveGetCryptPasswordUserData
+                               )
+{
+  bool             printedInfoFlag;
+  ulong            fileCount;
+  Errors           error;
+  bool             retryFlag;
+bool         remoteBarFlag;
+//  SSHSocketList sshSocketList;
+//  SSHSocketNode *sshSocketNode;
+  SocketHandle socketHandle;
+
+// NYI ???
+remoteBarFlag=FALSE;
+
+  printedInfoFlag = FALSE;
+  fileCount       = 0L;
+  switch (storageSpecifier->type)
+  {
+    case STORAGE_TYPE_FILESYSTEM:
+    case STORAGE_TYPE_FTP:
+    case STORAGE_TYPE_SFTP:
+    case STORAGE_TYPE_WEBDAV:
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      {
+        ArchiveInfo       archiveInfo;
+        ArchiveEntryInfo  archiveEntryInfo;
+        ArchiveEntryTypes archiveEntryType;
+
+        // open archive
+        error = Archive_open(&archiveInfo,
+                             storageHandle,
+                             storageSpecifier,
+                             jobOptions,
+                             archiveGetCryptPasswordFunction,
+                             archiveGetCryptPasswordUserData
+                            );
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot open storage '%s' (error: %s)!\n",
+                     Storage_getPrintableNameCString(storageSpecifier,NULL),
+                     Errors_getText(error)
+                    );
+          return error;
+        }
+
+        // list contents
+        while (   !Archive_eof(&archiveInfo,TRUE)
+               && (error == ERROR_NONE)
+              )
+        {
+          // get next archive entry type
+          error = Archive_getNextArchiveEntryType(&archiveInfo,
+                                                  &archiveEntryType,
+                                                  TRUE
+                                                 );
+          if (error != ERROR_NONE)
+          {
+            printError("Cannot read next entry from storage '%s' (error: %s)!\n",
+                       Storage_getPrintableNameCString(storageSpecifier,NULL),
+                       Errors_getText(error)
+                      );
+            break;
+          }
+
+          switch (archiveEntryType)
+          {
+            case ARCHIVE_ENTRY_TYPE_FILE:
+              {
+                ArchiveEntryInfo   archiveEntryInfo;
+                CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
+                CryptAlgorithms    cryptAlgorithm;
+                CryptTypes         cryptType;
+                String             fileName;
+                FileInfo           fileInfo;
+                String             deltaSourceName;
+                uint64             delteSourceSize;
+                uint64             fragmentOffset,fragmentSize;
+
+                // read archive file
+                fileName        = String_new();
+                deltaSourceName = String_new();
+                error = Archive_readFileEntry(&archiveEntryInfo,
+                                              &archiveInfo,
+                                              &deltaCompressAlgorithm,
+                                              &byteCompressAlgorithm,
+                                              &cryptAlgorithm,
+                                              &cryptType,
+                                              fileName,
+                                              &fileInfo,
+                                              NULL,  // fileExtendedAttributeList
+                                              deltaSourceName,
+                                              &delteSourceSize,
+                                              &fragmentOffset,
+                                              &fragmentSize
+                                             );
+                if (error != ERROR_NONE)
+                {
+                  printError("Cannot read 'file' content from storage '%s' (error: %s)!\n",
+                             Storage_getPrintableNameCString(storageSpecifier,NULL),
+                             Errors_getText(error)
+                            );
+                  String_delete(deltaSourceName);
+                  String_delete(fileName);
+                  break;
+                }
+
+                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                    && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                   )
+                {
+                  if (globalOptions.groupFlag)
+                  {
+                    // add file info to list
+                    addListFileInfo(Storage_getName(storageSpecifier,NULL),
+                                    fileName,
+                                    fileInfo.size,
+                                    fileInfo.timeModified,
+                                    archiveEntryInfo.file.chunkFileData.info.size,
+                                    deltaCompressAlgorithm,
+                                    byteCompressAlgorithm,
+                                    cryptAlgorithm,
+                                    cryptType,
+                                    deltaSourceName,
+                                    delteSourceSize,
+                                    fragmentOffset,
+                                    fragmentSize
+                                   );
+                  }
+                  else
+                  {
+                    // output file info
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printedInfoFlag = TRUE;
+                    }
+                    printFileInfo(NULL,
+                                  fileName,
+                                  fileInfo.size,
+                                  fileInfo.timeModified,
+                                  archiveEntryInfo.file.chunkFileData.info.size,
+                                  deltaCompressAlgorithm,
+                                  byteCompressAlgorithm,
+                                  cryptAlgorithm,
+                                  cryptType,
+                                  deltaSourceName,
+                                  delteSourceSize,
+                                  fragmentOffset,
+                                  fragmentSize
+                                 );
+                  }
+                  fileCount++;
+                }
+
+                // close archive file, free resources
+                error = Archive_closeEntry(&archiveEntryInfo);
+                if (error != ERROR_NONE)
+                {
+                  printWarning("close 'file' entry fail (error: %s)\n",Errors_getText(error));
+                }
+
+                // free resources
+                String_delete(deltaSourceName);
+                String_delete(fileName);
+              }
+              break;
+            case ARCHIVE_ENTRY_TYPE_IMAGE:
+              {
+                ArchiveEntryInfo   archiveEntryInfo;
+                CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
+                CryptAlgorithms    cryptAlgorithm;
+                CryptTypes         cryptType;
+                String             deviceName;
+                DeviceInfo         deviceInfo;
+                String             deltaSourceName;
+                uint64             delteSourceSize;
+                uint64             blockOffset,blockCount;
+
+                // read archive image
+                deviceName      = String_new();
+                deltaSourceName = String_new();
+                error = Archive_readImageEntry(&archiveEntryInfo,
+                                               &archiveInfo,
+                                               &deltaCompressAlgorithm,
+                                               &byteCompressAlgorithm,
+                                               &cryptAlgorithm,
+                                               &cryptType,
+                                               deviceName,
+                                               &deviceInfo,
+                                               deltaSourceName,
+                                               &delteSourceSize,
+                                               &blockOffset,
+                                               &blockCount
+                                              );
+                if (error != ERROR_NONE)
+                {
+                  printError("Cannot read 'image' content from storage '%s' (error: %s)!\n",
+                             Storage_getPrintableNameCString(storageSpecifier,NULL),
+                             Errors_getText(error)
+                            );
+                  String_delete(deltaSourceName);
+                  String_delete(deviceName);
+                  break;
+                }
+
+                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
+                    && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
+                   )
+                {
+                  if (globalOptions.groupFlag)
+                  {
+                    // add image info to list
+                    addListImageInfo(Storage_getName(storageSpecifier,NULL),
+                                     deviceName,
+                                     deviceInfo.size,
+                                     archiveEntryInfo.image.chunkImageData.info.size,
+                                     deltaCompressAlgorithm,
+                                     byteCompressAlgorithm,
+                                     cryptAlgorithm,
+                                     cryptType,
+                                     deltaSourceName,
+                                     delteSourceSize,
+                                     deviceInfo.blockSize,
+                                     blockOffset,
+                                     blockCount
+                                    );
+                  }
+                  else
+                  {
+                    // output file info
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printedInfoFlag = TRUE;
+                    }
+                    printImageInfo(NULL,
+                                   deviceName,
+                                   deviceInfo.size,
+                                   archiveEntryInfo.image.chunkImageData.info.size,
+                                   deltaCompressAlgorithm,
+                                   byteCompressAlgorithm,
+                                   cryptAlgorithm,
+                                   cryptType,
+                                   deltaSourceName,
+                                   delteSourceSize,
+                                   deviceInfo.blockSize,
+                                   blockOffset,
+                                   blockCount
+                                  );
+                  }
+                  fileCount++;
+                }
+
+                // close archive file, free resources
+                error = Archive_closeEntry(&archiveEntryInfo);
+                if (error != ERROR_NONE)
+                {
+                  printWarning("close 'image' entry fail (error: %s)\n",Errors_getText(error));
+                }
+
+                // free resources
+                String_delete(deltaSourceName);
+                String_delete(deviceName);
+              }
+              break;
+            case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+              {
+                String          directoryName;
+                CryptAlgorithms cryptAlgorithm;
+                CryptTypes      cryptType;
+                FileInfo        fileInfo;
+
+                // read archive directory entry
+                directoryName = String_new();
+                error = Archive_readDirectoryEntry(&archiveEntryInfo,
+                                                   &archiveInfo,
+                                                   &cryptAlgorithm,
+                                                   &cryptType,
+                                                   directoryName,
+                                                   &fileInfo,
+                                                   NULL   // fileExtendedAttributeList
+                                                  );
+                if (error != ERROR_NONE)
+                {
+                  printError("Cannot read 'directory' content from storage '%s' (error: %s)!\n",
+                             Storage_getPrintableNameCString(storageSpecifier,NULL),
+                             Errors_getText(error)
+                            );
+                  String_delete(directoryName);
+                  break;
+                }
+
+                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                    && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+                   )
+                {
+                  if (globalOptions.groupFlag)
+                  {
+                    // add directory info to list
+                    addListDirectoryInfo(Storage_getName(storageSpecifier,NULL),
+                                         directoryName,
+                                         fileInfo.timeModified,
+                                         cryptAlgorithm,
+                                         cryptType
+                                        );
+                  }
+                  else
+                  {
+                    // output file info
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printedInfoFlag = TRUE;
+                    }
+                    printDirectoryInfo(NULL,
+                                       directoryName,
+                                       fileInfo.timeModified,
+                                       cryptAlgorithm,
+                                       cryptType
+                                      );
+                  }
+                  fileCount++;
+                }
+
+                // close archive file, free resources
+                error = Archive_closeEntry(&archiveEntryInfo);
+                if (error != ERROR_NONE)
+                {
+                  printWarning("close 'directory' entry fail (error: %s)\n",Errors_getText(error));
+                }
+
+                // free resources
+                String_delete(directoryName);
+              }
+              break;
+            case ARCHIVE_ENTRY_TYPE_LINK:
+              {
+                CryptAlgorithms cryptAlgorithm;
+                CryptTypes      cryptType;
+                String          linkName;
+                String          fileName;
+                FileInfo        fileInfo;
+
+                // read archive link
+                linkName = String_new();
+                fileName = String_new();
+                error = Archive_readLinkEntry(&archiveEntryInfo,
+                                              &archiveInfo,
+                                              &cryptAlgorithm,
+                                              &cryptType,
+                                              linkName,
+                                              fileName,
+                                              &fileInfo,
+                                              NULL   // fileExtendedAttributeList
+                                             );
+                if (error != ERROR_NONE)
+                {
+                  printError("Cannot read 'link' content from storage '%s' (error: %s)!\n",
+                             Storage_getPrintableNameCString(storageSpecifier,NULL),
+                             Errors_getText(error)
+                            );
+                  String_delete(fileName);
+                  String_delete(linkName);
+                  break;
+                }
+
+                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
+                    && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+                   )
+                {
+                  if (globalOptions.groupFlag)
+                  {
+                    // add link info to list
+                    addListLinkInfo(Storage_getName(storageSpecifier,NULL),
+                                    linkName,
+                                    fileName,
+                                    cryptAlgorithm,
+                                    cryptType
+                                   );
+                  }
+                  else
+                  {
+                    // output file info
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printedInfoFlag = TRUE;
+                    }
+                    printLinkInfo(NULL,
+                                  linkName,
+                                  fileName,
+                                  cryptAlgorithm,
+                                  cryptType
+                                 );
+                  }
+                  fileCount++;
+                }
+
+                // close archive file, free resources
+                error = Archive_closeEntry(&archiveEntryInfo);
+                if (error != ERROR_NONE)
+                {
+                  printWarning("close 'link' entry fail (error: %s)\n",Errors_getText(error));
+                }
+
+                // free resources
+                String_delete(fileName);
+                String_delete(linkName);
+              }
+              break;
+            case ARCHIVE_ENTRY_TYPE_HARDLINK:
+              {
+                ArchiveEntryInfo   archiveEntryInfo;
+                CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
+                CryptAlgorithms    cryptAlgorithm;
+                CryptTypes         cryptType;
+                StringList         fileNameList;
+                FileInfo           fileInfo;
+                String             deltaSourceName;
+                uint64             deltaSourceSize;
+                uint64             fragmentOffset,fragmentSize;
+                StringNode         *stringNode;
+                String             fileName;
+
+                // read archive hard link
+                StringList_init(&fileNameList);
+                deltaSourceName = String_new();
+                error = Archive_readHardLinkEntry(&archiveEntryInfo,
+                                                  &archiveInfo,
+                                                  &deltaCompressAlgorithm,
+                                                  &byteCompressAlgorithm,
+                                                  &cryptAlgorithm,
+                                                  &cryptType,
+                                                  &fileNameList,
+                                                  &fileInfo,
+                                                  NULL,  // fileExtendedAttributeList
+                                                  deltaSourceName,
+                                                  &deltaSourceSize,
+                                                  &fragmentOffset,
+                                                  &fragmentSize
+                                                 );
+                if (error != ERROR_NONE)
+                {
+                  printError("Cannot read 'hard link' content from storage '%s' (error: %s)!\n",
+                             Storage_getPrintableNameCString(storageSpecifier,NULL),
+                             Errors_getText(error)
+                            );
+                  String_delete(deltaSourceName);
+                  StringList_done(&fileNameList);
+                  break;
+                }
+
+                STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
+                {
+                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                      && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                     )
+                  {
+                    if (globalOptions.groupFlag)
+                    {
+                      // add file info to list
+                      addListHardLinkInfo(Storage_getName(storageSpecifier,NULL),
+                                          fileName,
+                                          fileInfo.size,
+                                          fileInfo.timeModified,
+                                          archiveEntryInfo.hardLink.chunkHardLinkData.info.size,
+                                          deltaCompressAlgorithm,
+                                          byteCompressAlgorithm,
+                                          cryptAlgorithm,
+                                          cryptType,
+                                          deltaSourceName,
+                                          deltaSourceSize,
+                                          fragmentOffset,
+                                          fragmentSize
+                                         );
+                    }
+                    else
+                    {
+                      // output file info
+                      if (!printedInfoFlag)
+                      {
+                        printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                        printedInfoFlag = TRUE;
+                      }
+                      printHardLinkInfo(NULL,
+                                        fileName,
+                                        fileInfo.size,
+                                        fileInfo.timeModified,
+                                        archiveEntryInfo.hardLink.chunkHardLinkData.info.size,
+                                        deltaCompressAlgorithm,
+                                        byteCompressAlgorithm,
+                                        cryptAlgorithm,
+                                        cryptType,
+                                        deltaSourceName,
+                                        deltaSourceSize,
+                                        fragmentOffset,
+                                        fragmentSize
+                                       );
+                    }
+                    fileCount++;
+                  }
+                }
+
+                // close archive file, free resources
+                error = Archive_closeEntry(&archiveEntryInfo);
+                if (error != ERROR_NONE)
+                {
+                  printWarning("close 'hard link' entry fail (error: %s)\n",Errors_getText(error));
+                }
+
+                // free resources
+                String_delete(deltaSourceName);
+                StringList_done(&fileNameList);
+              }
+              break;
+            case ARCHIVE_ENTRY_TYPE_SPECIAL:
+              {
+                CryptAlgorithms cryptAlgorithm;
+                CryptTypes      cryptType;
+                String          fileName;
+                FileInfo        fileInfo;
+
+                // open archive lin
+                fileName = String_new();
+                error = Archive_readSpecialEntry(&archiveEntryInfo,
+                                                 &archiveInfo,
+                                                 &cryptAlgorithm,
+                                                 &cryptType,
+                                                 fileName,
+                                                 &fileInfo,
+                                                 NULL   // fileExtendedAttributeList
+                                                );
+                if (error != ERROR_NONE)
+                {
+                  printError("Cannot read 'special' content from storage '%s' (error: %s)!\n",
+                             Storage_getPrintableNameCString(storageSpecifier,NULL),
+                             Errors_getText(error)
+                            );
+                  String_delete(fileName);
+                  break;
+                }
+
+                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                    && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                   )
+                {
+                  if (globalOptions.groupFlag)
+                  {
+                    // add special info to list
+                    addListSpecialInfo(Storage_getName(storageSpecifier,NULL),
+                                       fileName,
+                                       cryptAlgorithm,
+                                       cryptType,
+                                       fileInfo.specialType,
+                                       fileInfo.major,
+                                       fileInfo.minor
+                                      );
+                  }
+                  else
+                  {
+                    // output file info
+                    if (!printedInfoFlag)
+                    {
+                      printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printedInfoFlag = TRUE;
+                    }
+                    printSpecialInfo(NULL,
+                                     fileName,
+                                     cryptAlgorithm,
+                                     cryptType,
+                                     fileInfo.specialType,
+                                     fileInfo.major,
+                                     fileInfo.minor
+                                    );
+                  }
+                  fileCount++;
+                }
+
+                // close archive file, free resources
+                error = Archive_closeEntry(&archiveEntryInfo);
+                if (error != ERROR_NONE)
+                {
+                  printWarning("close 'special' entry fail (error: %s)\n",Errors_getText(error));
+                }
+
+                // free resources
+                String_delete(fileName);
+              }
+              break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
+          }
+        }
+
+        // close archive
+        Archive_close(&archiveInfo);
+      }
+      break;
+    case STORAGE_TYPE_SSH:
+    case STORAGE_TYPE_SCP:
+      {
+        SSHServer            sshServer;
+        String               s;
+        Password             sshPassword;
+        NetworkExecuteHandle networkExecuteHandle;
+        String               line;
+        uint                 majorVersion,minorVersion;
+        Errors               error;
+        int                  id,errorCode;
+        bool                 completedFlag;
+        char                 type[32];
+        String               arguments;
+        int                  exitcode;
+
+        // start remote BAR via SSH (if not already started)
+        if (!remoteBarFlag)
+        {
+          // get SSH server settings
+          getSSHServerSettings(storageSpecifier->hostName,jobOptions,&sshServer);
+          if (storageSpecifier->hostPort == 0) storageSpecifier->hostPort = sshServer.port;
+          if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,sshServer.loginName);
+
+          // connect to SSH server
+          error = Network_connect(&socketHandle,
+                                  SOCKET_TYPE_SSH,
+                                  storageSpecifier->hostName,
+                                  storageSpecifier->hostPort,
+                                  storageSpecifier->loginName,
+                                  sshServer.password,
+                                  sshServer.publicKeyFileName,
+                                  sshServer.privateKeyFileName,
+                                  0
+                                 );
+          if (error != ERROR_NONE)
+          {
+            Password_init(&sshPassword);
+
+            s = String_newCString("SSH login password for ");
+            if (!String_isEmpty(storageSpecifier->loginName)) String_format(s,"%S@",storageSpecifier->loginName);
+            String_format(s,"%S",storageSpecifier->hostName);
+            Password_input(&sshPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
+            String_delete(s);
+
+            error = Network_connect(&socketHandle,
+                                    SOCKET_TYPE_SSH,
+                                    storageSpecifier->hostName,
+                                    storageSpecifier->hostPort,
+                                    storageSpecifier->loginName,
+                                    &sshPassword,
+                                    sshServer.publicKeyFileName,
+                                    sshServer.privateKeyFileName,
+                                    0
+                                   );
+
+            Password_done(&sshPassword);
+          }
+          if (error != ERROR_NONE)
+          {
+            printError("Cannot connect to '%s:%d' (error: %s)!\n",
+                       String_cString(storageSpecifier->hostName),
+                       storageSpecifier->hostPort,
+                       Errors_getText(error)
+                      );
+            break;
+          }
+
+          remoteBarFlag = TRUE;
+        }
+
+        // start remote BAR in batch mode
+        line = String_format(String_new(),"%s --batch",!String_isEmpty(globalOptions.remoteBARExecutable) ? String_cString(globalOptions.remoteBARExecutable) : "bar");
+        error = Network_execute(&networkExecuteHandle,
+                                &socketHandle,
+                                NETWORK_EXECUTE_IO_MASK_STDOUT|NETWORK_EXECUTE_IO_MASK_STDERR,
+                                String_cString(line)
+                               );
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot execute remote BAR program '%s' (error: %s)!\n",
+                     String_cString(line),
+                     Errors_getText(error)
+                    );
+          String_delete(line);
+          break;
+        }
+        if (Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,60*1000))
+        {
+          Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
+          exitcode = Network_terminate(&networkExecuteHandle);
+          printError("No response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
+          String_delete(line);
+          break;
+        }
+        Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,line,0);
+        if (!String_parse(line,STRING_BEGIN,"BAR VERSION %d %d",NULL,&majorVersion,&minorVersion))
+        {
+          Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
+          exitcode = Network_terminate(&networkExecuteHandle);
+          printError("Invalid response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
+          String_delete(line);
+          break;
+        }
+        String_delete(line);
+        UNUSED_VARIABLE(majorVersion);
+        UNUSED_VARIABLE(minorVersion);
+
+        // read archive content
+        arguments = String_new();
+        line            = String_new();
+        do
+        {
+          // send decrypt password
+          if (!Password_isEmpty(jobOptions->cryptPassword))
+          {
+            String_format(String_clear(line),"1 SET crypt-password %'s",jobOptions->cryptPassword);
+            Network_executeWriteLine(&networkExecuteHandle,line);
+          }
+
+          // send list archive command
+          String_format(String_clear(line),"2 ARCHIVE_LIST %S",storageSpecifier->fileName);
+          Network_executeWriteLine(&networkExecuteHandle,line);
+          Network_executeSendEOF(&networkExecuteHandle);
+
+          // list contents
+          while (!Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,60*1000))
+          {
+            // read line
+            Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,line,60*1000);
+//fprintf(stderr,"%s, %d: line=%s\n",__FILE__,__LINE__,String_cString(line));
+
+            // parse and output list
+            if      (String_parse(line,
+                                  STRING_BEGIN,
+                                  "%d %d %y %32s % S",
+                                  NULL,
+                                  &id,
+                                  &errorCode,
+                                  &completedFlag,
+                                  &type,
+                                  arguments
+                                 )
+                    )
+            {
+              if (   (errorCode == ERROR_NONE)
+                  && !completedFlag
+                 )
+              {
+                if      (strcmp(type,"FILE") == 0)
+                {
+                  String               fileName;
+                  uint64               fileSize;
+                  uint64               timeModified;
+                  uint64               archiveFileSize;
+                  CompressAlgorithms   deltaCompressAlgorithm;
+                  CompressAlgorithms   byteCompressAlgorithm;
+                  CryptAlgorithms      cryptAlgorithm;
+                  CryptTypes           cryptType;
+                  String               deltaSourceName;
+                  uint64               deltaSourceSize;
+                  uint64               fragmentOffset,fragmentLength;
+//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
+
+                  // initialize variables
+                  fileName        = String_new();
+                  deltaSourceName = String_new();
+
+                  // parse file entry
+                  if (String_parse(arguments,
+                                   STRING_BEGIN,
+                                   "%'S %llu %llu %d %d %d %d %d %'S %llu %llu %llu",
+                                   NULL,
+                                   fileName,
+                                   &fileSize,
+                                   &timeModified,
+                                   &archiveFileSize,
+                                   &deltaCompressAlgorithm,
+                                   &byteCompressAlgorithm,
+                                   &cryptAlgorithm,
+                                   &cryptType,
+                                   deltaSourceName,
+                                   &deltaSourceSize,
+                                   &fragmentOffset,
+                                   &fragmentLength
+                                  )
+                     )
+                  {
+                    if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                        && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                       )
+                    {
+                      if (globalOptions.groupFlag)
+                      {
+                        // add file info to list
+                        addListFileInfo(Storage_getName(storageSpecifier,NULL),
+                                        fileName,
+                                        fileSize,
+                                        timeModified,
+                                        archiveFileSize,
+                                        deltaCompressAlgorithm,
+                                        byteCompressAlgorithm,
+                                        cryptAlgorithm,
+                                        cryptType,
+                                        deltaSourceName,
+                                        deltaSourceSize,
+                                        fragmentOffset,
+                                        fragmentLength
+                                       );
+                      }
+                      else
+                      {
+                        if (!printedInfoFlag)
+                        {
+                          printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printedInfoFlag = TRUE;
+                        }
+
+                        // output file info
+                        printFileInfo(NULL,
+                                      fileName,
+                                      fileSize,
+                                      timeModified,
+                                      archiveFileSize,
+                                      deltaCompressAlgorithm,
+                                      byteCompressAlgorithm,
+                                      cryptAlgorithm,
+                                      cryptType,
+                                      deltaSourceName,
+                                      deltaSourceSize,
+                                      fragmentOffset,
+                                      fragmentLength
+                                     );
+                      }
+                      fileCount++;
+                    }
+                  }
+                  else
+                  {
+                    printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
+                  }
+
+                  // free resources
+                  String_delete(deltaSourceName);
+                  String_delete(fileName);
+                }
+                else if (strcmp(type,"IMAGE") == 0)
+                {
+                  String             imageName;
+                  uint64             imageSize;
+                  uint64             archiveFileSize;
+                  CompressAlgorithms deltaCompressAlgorithm;
+                  CompressAlgorithms byteCompressAlgorithm;
+                  CryptAlgorithms    cryptAlgorithm;
+                  CryptTypes         cryptType;
+                  String             deltaSourceName;
+                  uint64             deltaSourceSize;
+                  uint               blockSize;
+                  uint64             blockOffset,blockCount;
+//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
+
+                  // initialize variables
+                  imageName       = String_new();
+                  deltaSourceName = String_new();
+
+                  // parse image entry
+                  if (String_parse(arguments,
+                                   STRING_BEGIN,
+                                   "%'S %llu %llu %d %d %d %d %'S %llu %d %llu %llu",
+                                   NULL,
+                                   imageName,
+                                   &imageSize,
+                                   &archiveFileSize,
+                                   &deltaCompressAlgorithm,
+                                   &byteCompressAlgorithm,
+                                   &cryptAlgorithm,
+                                   &cryptType,
+                                   deltaSourceName,
+                                   &deltaSourceSize,
+                                   &blockSize,
+                                   &blockOffset,
+                                   &blockCount
+                                  )
+                     )
+                  {
+                    if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
+                        && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
+                       )
+                    {
+                      if (globalOptions.groupFlag)
+                      {
+                        // add file info to list
+                        addListImageInfo(Storage_getName(storageSpecifier,NULL),
+                                        imageName,
+                                        imageSize,
+                                        archiveFileSize,
+                                        deltaCompressAlgorithm,
+                                        byteCompressAlgorithm,
+                                        cryptAlgorithm,
+                                        cryptType,
+                                        deltaSourceName,
+                                        deltaSourceSize,
+                                        blockSize,
+                                        blockOffset,
+                                        blockCount
+                                       );
+                      }
+                      else
+                      {
+                        if (!printedInfoFlag)
+                        {
+                          printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printedInfoFlag = TRUE;
+                        }
+
+                        // output file info
+                        printImageInfo(NULL,
+                                       imageName,
+                                       imageSize,
+                                       archiveFileSize,
+                                       deltaCompressAlgorithm,
+                                       byteCompressAlgorithm,
+                                       cryptAlgorithm,
+                                       cryptType,
+                                       deltaSourceName,
+                                       deltaSourceSize,
+                                       blockSize,
+                                       blockOffset,
+                                       blockCount
+                                      );
+                      }
+                      fileCount++;
+                    }
+                  }
+                  else
+                  {
+                    printWarning("Parsing 'image' entry '%s' fail\n",String_cString(arguments));
+                  }
+
+                  // free resources
+                  String_delete(deltaSourceName);
+                  String_delete(imageName);
+                }
+                else if (strcmp(type,"DIRECTORY") == 0)
+                {
+                  String          directoryName;
+                  uint64          timeModified;
+                  CryptAlgorithms cryptAlgorithm;
+                  CryptTypes      cryptType;
+//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
+
+                  // initialize variables
+                  directoryName = String_new();
+
+                  // parse directory entry
+                  if (String_parse(arguments,
+                                   STRING_BEGIN,
+                                   "%'S %llu %d %d",
+                                   NULL,
+                                   directoryName,
+                                   &timeModified,
+                                   &cryptAlgorithm,
+                                   &cryptType
+                                  )
+                     )
+                  {
+                    if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                        && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+                       )
+                    {
+                      if (globalOptions.groupFlag)
+                      {
+                        // add directory info to list
+                        addListDirectoryInfo(Storage_getName(storageSpecifier,NULL),
+                                             directoryName,
+                                             timeModified,
+                                             cryptAlgorithm,
+                                             cryptType
+                                            );
+                      }
+                      else
+                      {
+                        if (!printedInfoFlag)
+                        {
+                          printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printedInfoFlag = TRUE;
+                        }
+
+                        // output file info
+                        printDirectoryInfo(NULL,
+                                           directoryName,
+                                           timeModified,
+                                           cryptAlgorithm,
+                                           cryptType
+                                          );
+                      }
+                      fileCount++;
+                    }
+                  }
+                  else
+                  {
+                    printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
+                  }
+
+                  // free resources
+                  String_delete(directoryName);
+                }
+                else if (strcmp(type,"LINK") == 0)
+                {
+                  String          linkName,fileName;
+                  CryptAlgorithms cryptAlgorithm;
+                  CryptTypes      cryptType;
+//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
+
+                  // initialize variables
+                  linkName = String_new();
+                  fileName = String_new();
+
+                  // parse symbolic link entry
+                  if (String_parse(arguments,
+                                   STRING_BEGIN,
+                                   "%'S %'S %d %d",
+                                   NULL,
+                                   linkName,
+                                   fileName,
+                                   &cryptAlgorithm,
+                                   &cryptType
+                                  )
+                     )
+                  {
+                    if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
+                        && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+                       )
+                    {
+                      if (globalOptions.groupFlag)
+                      {
+                        // add linkinfo to list
+                        addListLinkInfo(Storage_getName(storageSpecifier,NULL),
+                                        linkName,
+                                        fileName,
+                                        cryptAlgorithm,
+                                        cryptType
+                                       );
+                      }
+                      else
+                      {
+                        if (!printedInfoFlag)
+                        {
+                          printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printedInfoFlag = TRUE;
+                        }
+
+                        // output file info
+                        printLinkInfo(NULL,
+                                      linkName,
+                                      fileName,
+                                      cryptAlgorithm,
+                                      cryptType
+                                     );
+                      }
+                      fileCount++;
+                    }
+                  }
+                  else
+                  {
+                    printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
+                  }
+
+                  // free resources
+                  String_delete(fileName);
+                  String_delete(linkName);
+                }
+                else if (strcmp(type,"HARDLINK") == 0)
+                {
+                  String               fileName;
+                  uint64               fileSize;
+                  uint64               timeModified;
+                  uint64               archiveFileSize;
+                  CompressAlgorithms   deltaCompressAlgorithm;
+                  CompressAlgorithms   byteCompressAlgorithm;
+                  CryptAlgorithms      cryptAlgorithm;
+                  CryptTypes           cryptType;
+                  String               deltaSourceName;
+                  uint64               deltaSourceSize;
+                  uint64               fragmentOffset,fragmentLength;
+//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
+
+                  // initialize variables
+                  fileName        = String_new();
+                  deltaSourceName = String_new();
+
+                  // parse hard link entry
+                  if (String_parse(arguments,
+                                   STRING_BEGIN,
+                                   "%'S %llu %llu %d %d %d %d %d %'S %llu %llu %llu",
+                                   NULL,
+                                   fileName,
+                                   &fileSize,
+                                   &timeModified,
+                                   &archiveFileSize,
+                                   &deltaCompressAlgorithm,
+                                   &byteCompressAlgorithm,
+                                   &cryptAlgorithm,
+                                   &cryptType,
+                                   deltaSourceName,
+                                   &deltaSourceSize,
+                                   &fragmentOffset,
+                                   &fragmentLength
+                                  )
+                     )
+                  {
+                    if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                        && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                       )
+                    {
+                      if (globalOptions.groupFlag)
+                      {
+                        // add file info to list
+                        addListHardLinkInfo(Storage_getName(storageSpecifier,NULL),
+                                            fileName,
+                                            fileSize,
+                                            timeModified,
+                                            archiveFileSize,
+                                            deltaCompressAlgorithm,
+                                            byteCompressAlgorithm,
+                                            cryptAlgorithm,
+                                            cryptType,
+                                            deltaSourceName,
+                                            deltaSourceSize,
+                                            fragmentOffset,
+                                            fragmentLength
+                                           );
+                      }
+                      else
+                      {
+                        if (!printedInfoFlag)
+                        {
+                          printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printedInfoFlag = TRUE;
+                        }
+
+                        // output file info
+                        printHardLinkInfo(NULL,
+                                          fileName,
+                                          fileSize,
+                                          timeModified,
+                                          archiveFileSize,
+                                          deltaCompressAlgorithm,
+                                          byteCompressAlgorithm,
+                                          cryptAlgorithm,
+                                          cryptType,
+                                          deltaSourceName,
+                                          deltaSourceSize,
+                                          fragmentOffset,
+                                          fragmentLength
+                                         );
+                      }
+                      fileCount++;
+                    }
+                  }
+                  else
+                  {
+                    printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
+                  }
+
+                  // free resources
+                  String_delete(deltaSourceName);
+                  String_delete(fileName);
+                }
+                else if (strcmp(type,"SPECIAL") == 0)
+                {
+                  String           fileName;
+                  CryptAlgorithms  cryptAlgorithm;
+                  CryptTypes       cryptType;
+                  FileSpecialTypes fileSpecialType;
+                  ulong            major;
+                  ulong            minor;
+//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
+
+                  // initialize variables
+                  fileName = String_new();
+
+                  // parse special entry
+                  if (String_parse(arguments,
+                                   STRING_BEGIN,
+                                   "%'S %d %d %d %ld %ld",
+                                   NULL,
+                                   fileName,
+                                   &cryptAlgorithm,
+                                   &cryptType,
+                                   &fileSpecialType,
+                                   &major,
+                                   &minor
+                                  )
+                     )
+                  {
+                    if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                        && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                       )
+                    {
+                      if (globalOptions.groupFlag)
+                      {
+                        // add special info to list
+                        addListSpecialInfo(Storage_getName(storageSpecifier,NULL),
+                                           fileName,
+                                           cryptAlgorithm,
+                                           cryptType,
+                                           fileSpecialType,
+                                           major,
+                                           minor
+                                          );
+                      }
+                      else
+                      {
+                        if (!printedInfoFlag)
+                        {
+                          printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printedInfoFlag = TRUE;
+                        }
+
+                        // output file info
+                        printSpecialInfo(NULL,
+                                         fileName,
+                                         cryptAlgorithm,
+                                         cryptType,
+                                         fileSpecialType,
+                                         major,
+                                         minor
+                                        );
+                      }
+                      fileCount++;
+                    }
+                  }
+                  else
+                  {
+                    printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
+                  }
+
+                  // free resources
+                  String_delete(fileName);
+                }
+                else
+                {
+                  printWarning("Unknown entry '%s' fail\n",String_cString(line));
+                }
+              }
+            }
+            else
+            {
+              printWarning("Parsing entry '%s' fail\n",String_cString(line));
+            }
+          }
+          if (globalOptions.verboseLevel >= 4)
+          {
+            while (!Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,60*1000))
+            {
+              Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
+              if (String_length(line)>0) fprintf(stderr,"%s\n",String_cString(line));
+            }
+          }
+
+          retryFlag = FALSE;
+#if 0
+          if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
+          {
+            inputCryptPassword(&jobOptions->cryptPassword);
+            retryFlag         = TRUE;
+            inputPasswordFlag = TRUE;
+          }
+#endif /* 0 */
+        }
+        while ((error != ERROR_NONE) && retryFlag);
+        String_delete(arguments);
+        String_delete(line);
+
+        // close connection
+        exitcode = Network_terminate(&networkExecuteHandle);
+        if (exitcode != 0)
+        {
+          printError("Remote BAR program return exitcode %d!\n",exitcode);
+          error = ERROR_NETWORK_EXECUTE_FAIL;
+        }
+      }
+      break;
+    case STORAGE_TYPE_DEVICE:
+      printError("List archives on device is not supported!\n");
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+  if (printedInfoFlag)
+  {
+    printFooter(fileCount);
+  }
+
+  // output grouped list
+  if (globalOptions.groupFlag)
+  {
+    printHeader(NULL);
+    printList();
+    printFooter(List_count(&archiveContentList));
+  }
+
+  return ERROR_NONE;
+}
+
 /*---------------------------------------------------------------------*/
 
 Errors Command_list(StringList                      *storageNameList,
-                    EntryList                       *includeEntryList,
-                    PatternList                     *excludePatternList,
+                    const EntryList                 *includeEntryList,
+                    const PatternList               *excludePatternList,
                     JobOptions                      *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                     void                            *archiveGetCryptPasswordUserData
@@ -1566,36 +2903,23 @@ Errors Command_list(StringList                      *storageNameList,
   AutoFreeList     autoFreeList;
   String           storageName;
   StorageSpecifier storageSpecifier;
-  String           printableStorageName;
   StorageHandle    storageHandle;
-  bool             printedInfoFlag;
-  ulong            fileCount;
   Errors           failError;
   Errors           error;
-  bool             retryFlag;
-bool         remoteBarFlag;
-//  SSHSocketList sshSocketList;
-//  SSHSocketNode *sshSocketNode;
-  SocketHandle socketHandle;
 
   assert(storageNameList != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
 
-// NYI ???
-remoteBarFlag=FALSE;
-
   // init variables
   AutoFree_init(&autoFreeList);
   List_init(&archiveContentList);
   storageName          = String_new();
   Storage_initSpecifier(&storageSpecifier);
-  printableStorageName = String_new();
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
-  AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(storageName); });
   AUTOFREE_ADD(&autoFreeList,&archiveContentList,{ List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL); });
+  AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(storageName); });
+  AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
   // list archive content
   failError = ERROR_NONE;
@@ -1614,7 +2938,6 @@ remoteBarFlag=FALSE;
       if (failError == ERROR_NONE) failError = error;
       continue;
     }
-    Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
     // init storage
     error = Storage_init(&storageHandle,
@@ -1625,7 +2948,21 @@ remoteBarFlag=FALSE;
                          CALLBACK(NULL,NULL),
                          CALLBACK(NULL,NULL)
                         );
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
+    {
+      listArchiveContent(&storageHandle,
+                         &storageSpecifier,
+                         includeEntryList,
+                         excludePatternList,
+                         jobOptions,
+                         archiveGetCryptPasswordFunction,
+                         archiveGetCryptPasswordUserData
+                        );
+
+      // done storage
+      (void)Storage_done(&storageHandle);
+    }
+    else
     {
       printError("Cannot initialize storage '%s' (error: %s)!\n",
                  String_cString(storageName),
@@ -1634,1328 +2971,9 @@ remoteBarFlag=FALSE;
       if (failError == ERROR_NONE) failError = error;
       continue;
     }
-
-    printedInfoFlag = FALSE;
-    fileCount       = 0L;
-    switch (storageSpecifier.type)
-    {
-      case STORAGE_TYPE_FILESYSTEM:
-      case STORAGE_TYPE_FTP:
-      case STORAGE_TYPE_SFTP:
-      case STORAGE_TYPE_WEBDAV:
-      case STORAGE_TYPE_CD:
-      case STORAGE_TYPE_DVD:
-      case STORAGE_TYPE_BD:
-        {
-          ArchiveInfo       archiveInfo;
-          ArchiveEntryInfo  archiveEntryInfo;
-          ArchiveEntryTypes archiveEntryType;
-
-          // open archive
-          error = Archive_open(&archiveInfo,
-                               &storageHandle,
-                               &storageSpecifier,
-                               jobOptions,
-                               archiveGetCryptPasswordFunction,
-                               archiveGetCryptPasswordUserData
-                              );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot open storage '%s' (error: %s)!\n",
-                       String_cString(printableStorageName),
-                       Errors_getText(error)
-                      );
-            if (failError == ERROR_NONE) failError = error;
-            (void)Storage_done(&storageHandle);
-            continue;
-          }
-
-          // list contents
-          while (   !Archive_eof(&archiveInfo,TRUE)
-                 && (failError == ERROR_NONE)
-                )
-          {
-            // get next archive entry type
-            error = Archive_getNextArchiveEntryType(&archiveInfo,
-                                                    &archiveEntryType,
-                                                    TRUE
-                                                   );
-            if (error != ERROR_NONE)
-            {
-              printError("Cannot read next entry from storage '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
-                         Errors_getText(error)
-                        );
-              if (failError == ERROR_NONE) failError = error;
-              break;
-            }
-
-            switch (archiveEntryType)
-            {
-              case ARCHIVE_ENTRY_TYPE_FILE:
-                {
-                  ArchiveEntryInfo   archiveEntryInfo;
-                  CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-                  CryptAlgorithms    cryptAlgorithm;
-                  CryptTypes         cryptType;
-                  String             fileName;
-                  FileInfo           fileInfo;
-                  String             deltaSourceName;
-                  uint64             delteSourceSize;
-                  uint64             fragmentOffset,fragmentSize;
-
-                  // read archive file
-                  fileName        = String_new();
-                  deltaSourceName = String_new();
-                  error = Archive_readFileEntry(&archiveEntryInfo,
-                                                &archiveInfo,
-                                                &deltaCompressAlgorithm,
-                                                &byteCompressAlgorithm,
-                                                &cryptAlgorithm,
-                                                &cryptType,
-                                                fileName,
-                                                &fileInfo,
-                                                NULL,  // fileExtendedAttributeList
-                                                deltaSourceName,
-                                                &delteSourceSize,
-                                                &fragmentOffset,
-                                                &fragmentSize
-                                               );
-                  if (error != ERROR_NONE)
-                  {
-                    printError("Cannot read 'file' content from storage '%s' (error: %s)!\n",
-                               String_cString(printableStorageName),
-                               Errors_getText(error)
-                              );
-                    String_delete(deltaSourceName);
-                    String_delete(fileName);
-                    if (failError == ERROR_NONE) failError = error;
-                    break;
-                  }
-
-                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                      && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-                     )
-                  {
-                    if (globalOptions.groupFlag)
-                    {
-                      // add file info to list
-                      addListFileInfo(storageName,
-                                      fileName,
-                                      fileInfo.size,
-                                      fileInfo.timeModified,
-                                      archiveEntryInfo.file.chunkFileData.info.size,
-                                      deltaCompressAlgorithm,
-                                      byteCompressAlgorithm,
-                                      cryptAlgorithm,
-                                      cryptType,
-                                      deltaSourceName,
-                                      delteSourceSize,
-                                      fragmentOffset,
-                                      fragmentSize
-                                     );
-                    }
-                    else
-                    {
-                      if (!printedInfoFlag)
-                      {
-                        printHeader(printableStorageName);
-                        printedInfoFlag = TRUE;
-                      }
-
-                      // output file info
-                      printFileInfo(NULL,
-                                    fileName,
-                                    fileInfo.size,
-                                    fileInfo.timeModified,
-                                    archiveEntryInfo.file.chunkFileData.info.size,
-                                    deltaCompressAlgorithm,
-                                    byteCompressAlgorithm,
-                                    cryptAlgorithm,
-                                    cryptType,
-                                    deltaSourceName,
-                                    delteSourceSize,
-                                    fragmentOffset,
-                                    fragmentSize
-                                   );
-                    }
-                    fileCount++;
-                  }
-
-                  // close archive file, free resources
-                  error = Archive_closeEntry(&archiveEntryInfo);
-                  if (error != ERROR_NONE)
-                  {
-                    printWarning("close 'file' entry fail (error: %s)\n",Errors_getText(error));
-                  }
-
-                  // free resources
-                  String_delete(deltaSourceName);
-                  String_delete(fileName);
-                }
-                break;
-              case ARCHIVE_ENTRY_TYPE_IMAGE:
-                {
-                  ArchiveEntryInfo   archiveEntryInfo;
-                  CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-                  CryptAlgorithms    cryptAlgorithm;
-                  CryptTypes         cryptType;
-                  String             deviceName;
-                  DeviceInfo         deviceInfo;
-                  String             deltaSourceName;
-                  uint64             delteSourceSize;
-                  uint64             blockOffset,blockCount;
-
-                  // read archive image
-                  deviceName      = String_new();
-                  deltaSourceName = String_new();
-                  error = Archive_readImageEntry(&archiveEntryInfo,
-                                                 &archiveInfo,
-                                                 &deltaCompressAlgorithm,
-                                                 &byteCompressAlgorithm,
-                                                 &cryptAlgorithm,
-                                                 &cryptType,
-                                                 deviceName,
-                                                 &deviceInfo,
-                                                 deltaSourceName,
-                                                 &delteSourceSize,
-                                                 &blockOffset,
-                                                 &blockCount
-                                                );
-                  if (error != ERROR_NONE)
-                  {
-                    printError("Cannot read 'image' content from storage '%s' (error: %s)!\n",
-                               String_cString(printableStorageName),
-                               Errors_getText(error)
-                              );
-                    String_delete(deltaSourceName);
-                    String_delete(deviceName);
-                    if (failError == ERROR_NONE) failError = error;
-                    break;
-                  }
-
-                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
-                      && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
-                     )
-                  {
-                    if (globalOptions.groupFlag)
-                    {
-                      // add image info to list
-                      addListImageInfo(storageName,
-                                       deviceName,
-                                       deviceInfo.size,
-                                       archiveEntryInfo.image.chunkImageData.info.size,
-                                       deltaCompressAlgorithm,
-                                       byteCompressAlgorithm,
-                                       cryptAlgorithm,
-                                       cryptType,
-                                       deltaSourceName,
-                                       delteSourceSize,
-                                       deviceInfo.blockSize,
-                                       blockOffset,
-                                       blockCount
-                                      );
-                    }
-                    else
-                    {
-                      if (!printedInfoFlag)
-                      {
-                        printHeader(printableStorageName);
-                        printedInfoFlag = TRUE;
-                      }
-
-                      // output file info
-                      printImageInfo(NULL,
-                                     deviceName,
-                                     deviceInfo.size,
-                                     archiveEntryInfo.image.chunkImageData.info.size,
-                                     deltaCompressAlgorithm,
-                                     byteCompressAlgorithm,
-                                     cryptAlgorithm,
-                                     cryptType,
-                                     deltaSourceName,
-                                     delteSourceSize,
-                                     deviceInfo.blockSize,
-                                     blockOffset,
-                                     blockCount
-                                    );
-                    }
-                    fileCount++;
-                  }
-
-                  // close archive file, free resources
-                  error = Archive_closeEntry(&archiveEntryInfo);
-                  if (error != ERROR_NONE)
-                  {
-                    printWarning("close 'image' entry fail (error: %s)\n",Errors_getText(error));
-                  }
-
-                  // free resources
-                  String_delete(deltaSourceName);
-                  String_delete(deviceName);
-                }
-                break;
-              case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-                {
-                  String          directoryName;
-                  CryptAlgorithms cryptAlgorithm;
-                  CryptTypes      cryptType;
-                  FileInfo        fileInfo;
-
-                  // read archive directory entry
-                  directoryName = String_new();
-                  error = Archive_readDirectoryEntry(&archiveEntryInfo,
-                                                     &archiveInfo,
-                                                     &cryptAlgorithm,
-                                                     &cryptType,
-                                                     directoryName,
-                                                     &fileInfo,
-                                                     NULL   // fileExtendedAttributeList
-                                                    );
-                  if (error != ERROR_NONE)
-                  {
-                    printError("Cannot read 'directory' content from storage '%s' (error: %s)!\n",
-                               String_cString(printableStorageName),
-                               Errors_getText(error)
-                              );
-                    String_delete(directoryName);
-                    if (failError == ERROR_NONE) failError = error;
-                    break;
-                  }
-
-                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
-                      && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
-                     )
-                  {
-                    if (globalOptions.groupFlag)
-                    {
-                      // add directory info to list
-                      addListDirectoryInfo(storageName,
-                                           directoryName,
-                                           fileInfo.timeModified,
-                                           cryptAlgorithm,
-                                           cryptType
-                                          );
-                    }
-                    else
-                    {
-                      if (!printedInfoFlag)
-                      {
-                        printHeader(printableStorageName);
-                        printedInfoFlag = TRUE;
-                      }
-
-                      // output file info
-                      printDirectoryInfo(NULL,
-                                         directoryName,
-                                         fileInfo.timeModified,
-                                         cryptAlgorithm,
-                                         cryptType
-                                        );
-                    }
-                    fileCount++;
-                  }
-
-                  // close archive file, free resources
-                  error = Archive_closeEntry(&archiveEntryInfo);
-                  if (error != ERROR_NONE)
-                  {
-                    printWarning("close 'directory' entry fail (error: %s)\n",Errors_getText(error));
-                  }
-
-                  // free resources
-                  String_delete(directoryName);
-                }
-                break;
-              case ARCHIVE_ENTRY_TYPE_LINK:
-                {
-                  CryptAlgorithms cryptAlgorithm;
-                  CryptTypes      cryptType;
-                  String          linkName;
-                  String          fileName;
-                  FileInfo        fileInfo;
-
-                  // read archive link
-                  linkName = String_new();
-                  fileName = String_new();
-                  error = Archive_readLinkEntry(&archiveEntryInfo,
-                                                &archiveInfo,
-                                                &cryptAlgorithm,
-                                                &cryptType,
-                                                linkName,
-                                                fileName,
-                                                &fileInfo,
-                                                NULL   // fileExtendedAttributeList
-                                               );
-                  if (error != ERROR_NONE)
-                  {
-                    printError("Cannot read 'link' content from storage '%s' (error: %s)!\n",
-                               String_cString(printableStorageName),
-                               Errors_getText(error)
-                              );
-                    String_delete(fileName);
-                    String_delete(linkName);
-                    if (failError == ERROR_NONE) failError = error;
-                    break;
-                  }
-
-                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
-                      && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
-                     )
-                  {
-                    if (globalOptions.groupFlag)
-                    {
-                      // add link info to list
-                      addListLinkInfo(storageName,
-                                      linkName,
-                                      fileName,
-                                      cryptAlgorithm,
-                                      cryptType
-                                     );
-                    }
-                    else
-                    {
-                      if (!printedInfoFlag)
-                      {
-                        printHeader(printableStorageName);
-                        printedInfoFlag = TRUE;
-                      }
-
-                      // output file info
-                      printLinkInfo(NULL,
-                                    linkName,
-                                    fileName,
-                                    cryptAlgorithm,
-                                    cryptType
-                                   );
-                    }
-                    fileCount++;
-                  }
-
-                  // close archive file, free resources
-                  error = Archive_closeEntry(&archiveEntryInfo);
-                  if (error != ERROR_NONE)
-                  {
-                    printWarning("close 'link' entry fail (error: %s)\n",Errors_getText(error));
-                  }
-
-                  // free resources
-                  String_delete(fileName);
-                  String_delete(linkName);
-                }
-                break;
-              case ARCHIVE_ENTRY_TYPE_HARDLINK:
-                {
-                  ArchiveEntryInfo   archiveEntryInfo;
-                  CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-                  CryptAlgorithms    cryptAlgorithm;
-                  CryptTypes         cryptType;
-                  StringList         fileNameList;
-                  FileInfo           fileInfo;
-                  String             deltaSourceName;
-                  uint64             deltaSourceSize;
-                  uint64             fragmentOffset,fragmentSize;
-                  StringNode         *stringNode;
-                  String             fileName;
-
-                  // read archive hard link
-                  StringList_init(&fileNameList);
-                  deltaSourceName = String_new();
-                  error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                                    &archiveInfo,
-                                                    &deltaCompressAlgorithm,
-                                                    &byteCompressAlgorithm,
-                                                    &cryptAlgorithm,
-                                                    &cryptType,
-                                                    &fileNameList,
-                                                    &fileInfo,
-                                                    NULL,  // fileExtendedAttributeList
-                                                    deltaSourceName,
-                                                    &deltaSourceSize,
-                                                    &fragmentOffset,
-                                                    &fragmentSize
-                                                   );
-                  if (error != ERROR_NONE)
-                  {
-                    printError("Cannot read 'hard link' content from storage '%s' (error: %s)!\n",
-                               String_cString(printableStorageName),
-                               Errors_getText(error)
-                              );
-                    String_delete(deltaSourceName);
-                    StringList_done(&fileNameList);
-                    if (failError == ERROR_NONE) failError = error;
-                    break;
-                  }
-
-                  STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
-                  {
-                    if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                        && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-                       )
-                    {
-                      if (globalOptions.groupFlag)
-                      {
-                        // add file info to list
-                        addListHardLinkInfo(storageName,
-                                            fileName,
-                                            fileInfo.size,
-                                            fileInfo.timeModified,
-                                            archiveEntryInfo.hardLink.chunkHardLinkData.info.size,
-                                            deltaCompressAlgorithm,
-                                            byteCompressAlgorithm,
-                                            cryptAlgorithm,
-                                            cryptType,
-                                            deltaSourceName,
-                                            deltaSourceSize,
-                                            fragmentOffset,
-                                            fragmentSize
-                                           );
-                      }
-                      else
-                      {
-                        if (!printedInfoFlag)
-                        {
-                          printHeader(printableStorageName);
-                          printedInfoFlag = TRUE;
-                        }
-
-                        // output file info
-                        printHardLinkInfo(NULL,
-                                          fileName,
-                                          fileInfo.size,
-                                          fileInfo.timeModified,
-                                          archiveEntryInfo.hardLink.chunkHardLinkData.info.size,
-                                          deltaCompressAlgorithm,
-                                          byteCompressAlgorithm,
-                                          cryptAlgorithm,
-                                          cryptType,
-                                          deltaSourceName,
-                                          deltaSourceSize,
-                                          fragmentOffset,
-                                          fragmentSize
-                                         );
-                      }
-                      fileCount++;
-                    }
-                  }
-
-                  // close archive file, free resources
-                  error = Archive_closeEntry(&archiveEntryInfo);
-                  if (error != ERROR_NONE)
-                  {
-                    printWarning("close 'hard link' entry fail (error: %s)\n",Errors_getText(error));
-                  }
-
-                  // free resources
-                  String_delete(deltaSourceName);
-                  StringList_done(&fileNameList);
-                }
-                break;
-              case ARCHIVE_ENTRY_TYPE_SPECIAL:
-                {
-                  CryptAlgorithms cryptAlgorithm;
-                  CryptTypes      cryptType;
-                  String          fileName;
-                  FileInfo        fileInfo;
-
-                  // open archive lin
-                  fileName = String_new();
-                  error = Archive_readSpecialEntry(&archiveEntryInfo,
-                                                   &archiveInfo,
-                                                   &cryptAlgorithm,
-                                                   &cryptType,
-                                                   fileName,
-                                                   &fileInfo,
-                                                   NULL   // fileExtendedAttributeList
-                                                  );
-                  if (error != ERROR_NONE)
-                  {
-                    printError("Cannot read 'special' content from storage '%s' (error: %s)!\n",
-                               String_cString(printableStorageName),
-                               Errors_getText(error)
-                              );
-                    String_delete(fileName);
-                    if (failError == ERROR_NONE) failError = error;
-                    break;
-                  }
-
-                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                      && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-                     )
-                  {
-                    if (globalOptions.groupFlag)
-                    {
-                      // add special info to list
-                      addListSpecialInfo(storageName,
-                                         fileName,
-                                         cryptAlgorithm,
-                                         cryptType,
-                                         fileInfo.specialType,
-                                         fileInfo.major,
-                                         fileInfo.minor
-                                        );
-                    }
-                    else
-                    {
-                      if (!printedInfoFlag)
-                      {
-                        printHeader(printableStorageName);
-                        printedInfoFlag = TRUE;
-                      }
-
-                      // output file info
-                      printSpecialInfo(NULL,
-                                       fileName,
-                                       cryptAlgorithm,
-                                       cryptType,
-                                       fileInfo.specialType,
-                                       fileInfo.major,
-                                       fileInfo.minor
-                                      );
-                    }
-                    fileCount++;
-                  }
-
-                  // close archive file, free resources
-                  error = Archive_closeEntry(&archiveEntryInfo);
-                  if (error != ERROR_NONE)
-                  {
-                    printWarning("close 'special' entry fail (error: %s)\n",Errors_getText(error));
-                  }
-
-                  // free resources
-                  String_delete(fileName);
-                }
-                break;
-              default:
-                #ifndef NDEBUG
-                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                #endif /* NDEBUG */
-                break; /* not reached */
-            }
-          }
-
-          // close archive
-          Archive_close(&archiveInfo);
-        }
-        break;
-      case STORAGE_TYPE_SSH:
-      case STORAGE_TYPE_SCP:
-        {
-          SSHServer            sshServer;
-          String               s;
-          Password             sshPassword;
-          NetworkExecuteHandle networkExecuteHandle;
-          String               line;
-          uint                 majorVersion,minorVersion;
-          Errors               error;
-          int                  id,errorCode;
-          bool                 completedFlag;
-          char                 type[32];
-          String               arguments;
-          int                  exitcode;
-
-          // start remote BAR via SSH (if not already started)
-          if (!remoteBarFlag)
-          {
-            // get SSH server settings
-            getSSHServerSettings(storageSpecifier.hostName,jobOptions,&sshServer);
-            if (storageSpecifier.hostPort == 0) storageSpecifier.hostPort = sshServer.port;
-            if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,sshServer.loginName);
-
-            // connect to SSH server
-            error = Network_connect(&socketHandle,
-                                    SOCKET_TYPE_SSH,
-                                    storageSpecifier.hostName,
-                                    storageSpecifier.hostPort,
-                                    storageSpecifier.loginName,
-                                    sshServer.password,
-                                    sshServer.publicKeyFileName,
-                                    sshServer.privateKeyFileName,
-                                    0
-                                   );
-            if (error != ERROR_NONE)
-            {
-              Password_init(&sshPassword);
-
-              s = String_newCString("SSH login password for ");
-              if (!String_isEmpty(storageSpecifier.loginName)) String_format(s,"%S@",storageSpecifier.loginName);
-              String_format(s,"%S",storageSpecifier.hostName);
-              Password_input(&sshPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
-              String_delete(s);
-
-              error = Network_connect(&socketHandle,
-                                      SOCKET_TYPE_SSH,
-                                      storageSpecifier.hostName,
-                                      storageSpecifier.hostPort,
-                                      storageSpecifier.loginName,
-                                      &sshPassword,
-                                      sshServer.publicKeyFileName,
-                                      sshServer.privateKeyFileName,
-                                      0
-                                     );
-
-              Password_done(&sshPassword);
-            }
-            if (error != ERROR_NONE)
-            {
-              printError("Cannot connect to '%s:%d' (error: %s)!\n",
-                         String_cString(storageSpecifier.hostName),
-                         storageSpecifier.hostPort,
-                         Errors_getText(error)
-                        );
-              if (failError == ERROR_NONE) failError = error;
-              break;
-            }
-
-            remoteBarFlag = TRUE;
-          }
-
-          // start remote BAR in batch mode
-          line = String_format(String_new(),"%s --batch",!String_isEmpty(globalOptions.remoteBARExecutable) ? String_cString(globalOptions.remoteBARExecutable) : "bar");
-          error = Network_execute(&networkExecuteHandle,
-                                  &socketHandle,
-                                  NETWORK_EXECUTE_IO_MASK_STDOUT|NETWORK_EXECUTE_IO_MASK_STDERR,
-                                  String_cString(line)
-                                 );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot execute remote BAR program '%s' (error: %s)!\n",
-                       String_cString(line),
-                       Errors_getText(error)
-                      );
-            String_delete(line);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-          if (Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,60*1000))
-          {
-            Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
-            exitcode = Network_terminate(&networkExecuteHandle);
-            printError("No response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
-            String_delete(line);
-            if (failError == ERROR_NONE) failError = ERROR_NO_RESPONSE;
-            break;
-          }
-          Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,line,0);
-          if (!String_parse(line,STRING_BEGIN,"BAR VERSION %d %d",NULL,&majorVersion,&minorVersion))
-          {
-            Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
-            exitcode = Network_terminate(&networkExecuteHandle);
-            printError("Invalid response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
-            String_delete(line);
-            if (failError == ERROR_NONE) failError = ERROR_INVALID_RESPONSE;
-            break;
-          }
-          String_delete(line);
-          UNUSED_VARIABLE(majorVersion);
-          UNUSED_VARIABLE(minorVersion);
-
-          // read archive content
-          arguments = String_new();
-          line            = String_new();
-          do
-          {
-            // send decrypt password
-            if (!Password_isEmpty(jobOptions->cryptPassword))
-            {
-              String_format(String_clear(line),"1 SET crypt-password %'s",jobOptions->cryptPassword);
-              Network_executeWriteLine(&networkExecuteHandle,line);
-            }
-
-            // send list archive command
-            String_format(String_clear(line),"2 ARCHIVE_LIST %S",storageSpecifier.fileName);
-            Network_executeWriteLine(&networkExecuteHandle,line);
-            Network_executeSendEOF(&networkExecuteHandle);
-
-            // list contents
-            while (!Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,60*1000))
-            {
-              // read line
-              Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,line,60*1000);
-//fprintf(stderr,"%s, %d: line=%s\n",__FILE__,__LINE__,String_cString(line));
-
-              // parse and output list
-              if      (String_parse(line,
-                                    STRING_BEGIN,
-                                    "%d %d %y %32s % S",
-                                    NULL,
-                                    &id,
-                                    &errorCode,
-                                    &completedFlag,
-                                    &type,
-                                    arguments
-                                   )
-                      )
-              {
-                if (   (errorCode == ERROR_NONE)
-                    && !completedFlag
-                   )
-                {
-                  if      (strcmp(type,"FILE") == 0)
-                  {
-                    String               fileName;
-                    uint64               fileSize;
-                    uint64               timeModified;
-                    uint64               archiveFileSize;
-                    CompressAlgorithms   deltaCompressAlgorithm;
-                    CompressAlgorithms   byteCompressAlgorithm;
-                    CryptAlgorithms      cryptAlgorithm;
-                    CryptTypes           cryptType;
-                    String               deltaSourceName;
-                    uint64               deltaSourceSize;
-                    uint64               fragmentOffset,fragmentLength;
-//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
-
-                    // initialize variables
-                    fileName        = String_new();
-                    deltaSourceName = String_new();
-
-                    // parse file entry
-                    if (String_parse(arguments,
-                                     STRING_BEGIN,
-                                     "%'S %llu %llu %d %d %d %d %d %'S %llu %llu %llu",
-                                     NULL,
-                                     fileName,
-                                     &fileSize,
-                                     &timeModified,
-                                     &archiveFileSize,
-                                     &deltaCompressAlgorithm,
-                                     &byteCompressAlgorithm,
-                                     &cryptAlgorithm,
-                                     &cryptType,
-                                     deltaSourceName,
-                                     &deltaSourceSize,
-                                     &fragmentOffset,
-                                     &fragmentLength
-                                    )
-                       )
-                    {
-                      if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                          && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-                         )
-                      {
-                        if (globalOptions.groupFlag)
-                        {
-                          // add file info to list
-                          addListFileInfo(storageName,
-                                          fileName,
-                                          fileSize,
-                                          timeModified,
-                                          archiveFileSize,
-                                          deltaCompressAlgorithm,
-                                          byteCompressAlgorithm,
-                                          cryptAlgorithm,
-                                          cryptType,
-                                          deltaSourceName,
-                                          deltaSourceSize,
-                                          fragmentOffset,
-                                          fragmentLength
-                                         );
-                        }
-                        else
-                        {
-                          if (!printedInfoFlag)
-                          {
-                            printHeader(printableStorageName);
-                            printedInfoFlag = TRUE;
-                          }
-
-                          // output file info
-                          printFileInfo(NULL,
-                                        fileName,
-                                        fileSize,
-                                        timeModified,
-                                        archiveFileSize,
-                                        deltaCompressAlgorithm,
-                                        byteCompressAlgorithm,
-                                        cryptAlgorithm,
-                                        cryptType,
-                                        deltaSourceName,
-                                        deltaSourceSize,
-                                        fragmentOffset,
-                                        fragmentLength
-                                       );
-                        }
-                        fileCount++;
-                      }
-                    }
-                    else
-                    {
-                      printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
-                    }
-
-                    // free resources
-                    String_delete(deltaSourceName);
-                    String_delete(fileName);
-                  }
-                  else if (strcmp(type,"IMAGE") == 0)
-                  {
-                    String             imageName;
-                    uint64             imageSize;
-                    uint64             archiveFileSize;
-                    CompressAlgorithms deltaCompressAlgorithm;
-                    CompressAlgorithms byteCompressAlgorithm;
-                    CryptAlgorithms    cryptAlgorithm;
-                    CryptTypes         cryptType;
-                    String             deltaSourceName;
-                    uint64             deltaSourceSize;
-                    uint               blockSize;
-                    uint64             blockOffset,blockCount;
-//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
-
-                    // initialize variables
-                    imageName       = String_new();
-                    deltaSourceName = String_new();
-
-                    // parse image entry
-                    if (String_parse(arguments,
-                                     STRING_BEGIN,
-                                     "%'S %llu %llu %d %d %d %d %'S %llu %d %llu %llu",
-                                     NULL,
-                                     imageName,
-                                     &imageSize,
-                                     &archiveFileSize,
-                                     &deltaCompressAlgorithm,
-                                     &byteCompressAlgorithm,
-                                     &cryptAlgorithm,
-                                     &cryptType,
-                                     deltaSourceName,
-                                     &deltaSourceSize,
-                                     &blockSize,
-                                     &blockOffset,
-                                     &blockCount
-                                    )
-                       )
-                    {
-                      if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
-                          && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
-                         )
-                      {
-                        if (globalOptions.groupFlag)
-                        {
-                          // add file info to list
-                          addListImageInfo(storageName,
-                                          imageName,
-                                          imageSize,
-                                          archiveFileSize,
-                                          deltaCompressAlgorithm,
-                                          byteCompressAlgorithm,
-                                          cryptAlgorithm,
-                                          cryptType,
-                                          deltaSourceName,
-                                          deltaSourceSize,
-                                          blockSize,
-                                          blockOffset,
-                                          blockCount
-                                         );
-                        }
-                        else
-                        {
-                          if (!printedInfoFlag)
-                          {
-                            printHeader(printableStorageName);
-                            printedInfoFlag = TRUE;
-                          }
-
-                          // output file info
-                          printImageInfo(NULL,
-                                         imageName,
-                                         imageSize,
-                                         archiveFileSize,
-                                         deltaCompressAlgorithm,
-                                         byteCompressAlgorithm,
-                                         cryptAlgorithm,
-                                         cryptType,
-                                         deltaSourceName,
-                                         deltaSourceSize,
-                                         blockSize,
-                                         blockOffset,
-                                         blockCount
-                                        );
-                        }
-                        fileCount++;
-                      }
-                    }
-                    else
-                    {
-                      printWarning("Parsing 'image' entry '%s' fail\n",String_cString(arguments));
-                    }
-
-                    // free resources
-                    String_delete(deltaSourceName);
-                    String_delete(imageName);
-                  }
-                  else if (strcmp(type,"DIRECTORY") == 0)
-                  {
-                    String          directoryName;
-                    uint64          timeModified;
-                    CryptAlgorithms cryptAlgorithm;
-                    CryptTypes      cryptType;
-//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
-
-                    // initialize variables
-                    directoryName = String_new();
-
-                    // parse directory entry
-                    if (String_parse(arguments,
-                                     STRING_BEGIN,
-                                     "%'S %llu %d %d",
-                                     NULL,
-                                     directoryName,
-                                     &timeModified,
-                                     &cryptAlgorithm,
-                                     &cryptType
-                                    )
-                       )
-                    {
-                      if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
-                          && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
-                         )
-                      {
-                        if (globalOptions.groupFlag)
-                        {
-                          // add directory info to list
-                          addListDirectoryInfo(storageName,
-                                               directoryName,
-                                               timeModified,
-                                               cryptAlgorithm,
-                                               cryptType
-                                              );
-                        }
-                        else
-                        {
-                          if (!printedInfoFlag)
-                          {
-                            printHeader(printableStorageName);
-                            printedInfoFlag = TRUE;
-                          }
-
-                          // output file info
-                          printDirectoryInfo(NULL,
-                                             directoryName,
-                                             timeModified,
-                                             cryptAlgorithm,
-                                             cryptType
-                                            );
-                        }
-                        fileCount++;
-                      }
-                    }
-                    else
-                    {
-                      printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
-                    }
-
-                    // free resources
-                    String_delete(directoryName);
-                  }
-                  else if (strcmp(type,"LINK") == 0)
-                  {
-                    String          linkName,fileName;
-                    CryptAlgorithms cryptAlgorithm;
-                    CryptTypes      cryptType;
-//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
-
-                    // initialize variables
-                    linkName = String_new();
-                    fileName = String_new();
-
-                    // parse symbolic link entry
-                    if (String_parse(arguments,
-                                     STRING_BEGIN,
-                                     "%'S %'S %d %d",
-                                     NULL,
-                                     linkName,
-                                     fileName,
-                                     &cryptAlgorithm,
-                                     &cryptType
-                                    )
-                       )
-                    {
-                      if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
-                          && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
-                         )
-                      {
-                        if (globalOptions.groupFlag)
-                        {
-                          // add linkinfo to list
-                          addListLinkInfo(storageName,
-                                          linkName,
-                                          fileName,
-                                          cryptAlgorithm,
-                                          cryptType
-                                         );
-                        }
-                        else
-                        {
-                          if (!printedInfoFlag)
-                          {
-                            printHeader(printableStorageName);
-                            printedInfoFlag = TRUE;
-                          }
-
-                          // output file info
-                          printLinkInfo(NULL,
-                                        linkName,
-                                        fileName,
-                                        cryptAlgorithm,
-                                        cryptType
-                                       );
-                        }
-                        fileCount++;
-                      }
-                    }
-                    else
-                    {
-                      printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
-                    }
-
-                    // free resources
-                    String_delete(fileName);
-                    String_delete(linkName);
-                  }
-                  else if (strcmp(type,"HARDLINK") == 0)
-                  {
-                    String               fileName;
-                    uint64               fileSize;
-                    uint64               timeModified;
-                    uint64               archiveFileSize;
-                    CompressAlgorithms   deltaCompressAlgorithm;
-                    CompressAlgorithms   byteCompressAlgorithm;
-                    CryptAlgorithms      cryptAlgorithm;
-                    CryptTypes           cryptType;
-                    String               deltaSourceName;
-                    uint64               deltaSourceSize;
-                    uint64               fragmentOffset,fragmentLength;
-//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
-
-                    // initialize variables
-                    fileName        = String_new();
-                    deltaSourceName = String_new();
-
-                    // parse hard link entry
-                    if (String_parse(arguments,
-                                     STRING_BEGIN,
-                                     "%'S %llu %llu %d %d %d %d %d %'S %llu %llu %llu",
-                                     NULL,
-                                     fileName,
-                                     &fileSize,
-                                     &timeModified,
-                                     &archiveFileSize,
-                                     &deltaCompressAlgorithm,
-                                     &byteCompressAlgorithm,
-                                     &cryptAlgorithm,
-                                     &cryptType,
-                                     deltaSourceName,
-                                     &deltaSourceSize,
-                                     &fragmentOffset,
-                                     &fragmentLength
-                                    )
-                       )
-                    {
-                      if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                          && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-                         )
-                      {
-                        if (globalOptions.groupFlag)
-                        {
-                          // add file info to list
-                          addListHardLinkInfo(storageName,
-                                              fileName,
-                                              fileSize,
-                                              timeModified,
-                                              archiveFileSize,
-                                              deltaCompressAlgorithm,
-                                              byteCompressAlgorithm,
-                                              cryptAlgorithm,
-                                              cryptType,
-                                              deltaSourceName,
-                                              deltaSourceSize,
-                                              fragmentOffset,
-                                              fragmentLength
-                                             );
-                        }
-                        else
-                        {
-                          if (!printedInfoFlag)
-                          {
-                            printHeader(printableStorageName);
-                            printedInfoFlag = TRUE;
-                          }
-
-                          // output file info
-                          printHardLinkInfo(NULL,
-                                            fileName,
-                                            fileSize,
-                                            timeModified,
-                                            archiveFileSize,
-                                            deltaCompressAlgorithm,
-                                            byteCompressAlgorithm,
-                                            cryptAlgorithm,
-                                            cryptType,
-                                            deltaSourceName,
-                                            deltaSourceSize,
-                                            fragmentOffset,
-                                            fragmentLength
-                                           );
-                        }
-                        fileCount++;
-                      }
-                    }
-                    else
-                    {
-                      printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
-                    }
-
-                    // free resources
-                    String_delete(deltaSourceName);
-                    String_delete(fileName);
-                  }
-                  else if (strcmp(type,"SPECIAL") == 0)
-                  {
-                    String           fileName;
-                    CryptAlgorithms  cryptAlgorithm;
-                    CryptTypes       cryptType;
-                    FileSpecialTypes fileSpecialType;
-                    ulong            major;
-                    ulong            minor;
-//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
-
-                    // initialize variables
-                    fileName = String_new();
-
-                    // parse special entry
-                    if (String_parse(arguments,
-                                     STRING_BEGIN,
-                                     "%'S %d %d %d %ld %ld",
-                                     NULL,
-                                     fileName,
-                                     &cryptAlgorithm,
-                                     &cryptType,
-                                     &fileSpecialType,
-                                     &major,
-                                     &minor
-                                    )
-                       )
-                    {
-                      if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                          && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-                         )
-                      {
-                        if (globalOptions.groupFlag)
-                        {
-                          // add special info to list
-                          addListSpecialInfo(storageName,
-                                             fileName,
-                                             cryptAlgorithm,
-                                             cryptType,
-                                             fileSpecialType,
-                                             major,
-                                             minor
-                                            );
-                        }
-                        else
-                        {
-                          if (!printedInfoFlag)
-                          {
-                            printHeader(printableStorageName);
-                            printedInfoFlag = TRUE;
-                          }
-
-                          // output file info
-                          printSpecialInfo(NULL,
-                                           fileName,
-                                           cryptAlgorithm,
-                                           cryptType,
-                                           fileSpecialType,
-                                           major,
-                                           minor
-                                          );
-                        }
-                        fileCount++;
-                      }
-                    }
-                    else
-                    {
-                      printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
-                    }
-
-                    // free resources
-                    String_delete(fileName);
-                  }
-                  else
-                  {
-                    printWarning("Unknown entry '%s' fail\n",String_cString(line));
-                  }
-                }
-              }
-              else
-              {
-                printWarning("Parsing entry '%s' fail\n",String_cString(line));
-              }
-            }
-            if (globalOptions.verboseLevel >= 4)
-            {
-              while (!Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,60*1000))
-              {
-                Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
-                if (String_length(line)>0) fprintf(stderr,"%s\n",String_cString(line));
-              }
-            }
-
-            retryFlag = FALSE;
-#if 0
-            if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
-            {
-              inputCryptPassword(&jobOptions->cryptPassword);
-              retryFlag         = TRUE;
-              inputPasswordFlag = TRUE;
-            }
-#endif /* 0 */
-          }
-          while ((error != ERROR_NONE) && retryFlag);
-          String_delete(arguments);
-          String_delete(line);
-
-          // close connection
-          exitcode = Network_terminate(&networkExecuteHandle);
-          if (exitcode != 0)
-          {
-            printError("Remote BAR program return exitcode %d!\n",exitcode);
-            if (failError == ERROR_NONE) failError = ERROR_NETWORK_EXECUTE_FAIL;
-          }
-        }
-        break;
-      case STORAGE_TYPE_DEVICE:
-        printError("List archives on device is not supported!\n");
-        failError = ERROR_FUNCTION_NOT_SUPPORTED;
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break; /* not reached */
-    }
-    if (printedInfoFlag)
-    {
-      printFooter(fileCount);
-    }
-
-    // done storage
-    (void)Storage_done(&storageHandle);
-  }
-
-  // output grouped list
-  if (globalOptions.groupFlag)
-  {
-    printHeader(NULL);
-    printList();
-    printFooter(List_count(&archiveContentList));
   }
 
   // free resources
-  String_delete(printableStorageName);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(storageName);
   List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);

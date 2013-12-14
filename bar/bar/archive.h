@@ -119,8 +119,6 @@ typedef struct
   ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;     // call back to get crypt password
   void                            *archiveGetCryptPasswordUserData;    // user data for call back to get crypt password
 
-  String                          printableName;                       // printable file/storage name (without password)
-
   CryptTypes                      cryptType;                           // crypt type (symmetric/asymmetric; see CryptTypes)
   Password                        *cryptPassword;                      // cryption password for encryption/decryption
   bool                            cryptPasswordReadFlag;
@@ -146,6 +144,7 @@ typedef struct
       StorageHandle               *storageHandle;                      // storage handle
     } storage;
   };
+  String                          printableName;                       // printable file/storage name (without password) or NULL
   const ChunkIO                   *chunkIO;                            // chunk i/o functions
   void                            *chunkIOUserData;                    // chunk i/o functions data
   Semaphore                       chunkIOLock;                         // chunk i/o functions lock

@@ -105,7 +105,6 @@ Errors Command_compare(const StringList                *storageNameList,
   byte              *archiveBuffer,*buffer;
   FragmentList      fragmentList;
   StorageSpecifier  storageSpecifier;
-  String            printableStorageName;
   StorageHandle     storageHandle;
   StringNode        *stringNode;
   String            storageName;
@@ -138,8 +137,6 @@ Errors Command_compare(const StringList                *storageNameList,
   }
   FragmentList_init(&fragmentList);
   Storage_initSpecifier(&storageSpecifier);
-  printableStorageName = String_new();
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
   AUTOFREE_ADD(&autoFreeList,&fragmentList,{ FragmentList_done(&fragmentList); });
   AUTOFREE_ADD(&autoFreeList,archiveBuffer,{ free(archiveBuffer); });
@@ -160,9 +157,8 @@ Errors Command_compare(const StringList                *storageNameList,
       continue;
     }
     DEBUG_TESTCODE("Command_compare1") { failError = DEBUG_TESTCODE_ERROR(); break; }
-    Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
-    printInfo(1,"Comparing archive '%s':\n",String_cString(printableStorageName));
+    printInfo(1,"Comparing archive '%s':\n",Storage_getPrintableNameCString(&storageSpecifier,NULL));
 
     // init storage
     error = Storage_init(&storageHandle,
@@ -194,7 +190,7 @@ Errors Command_compare(const StringList                *storageNameList,
     if (error != ERROR_NONE)
     {
       printError("Cannot open storage '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
+                 Storage_getPrintableNameCString(&storageSpecifier,NULL),
                  Errors_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
@@ -216,7 +212,7 @@ Errors Command_compare(const StringList                *storageNameList,
       if (error != ERROR_NONE)
       {
         printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                   String_cString(printableStorageName),
+                   Storage_getPrintableNameCString(&storageSpecifier,NULL),
                    Errors_getText(error)
                   );
         if (failError == ERROR_NONE) failError = error;
@@ -259,7 +255,7 @@ Errors Command_compare(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -375,7 +371,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 {
                   printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
-                             String_cString(printableStorageName),
+                             Storage_getPrintableNameCString(&storageSpecifier,NULL),
                              Errors_getText(error)
                             );
                   if (failError == ERROR_NONE) failError = error;
@@ -518,7 +514,7 @@ Errors Command_compare(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
               String_delete(deviceName);
@@ -684,7 +680,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 {
                   printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
-                             String_cString(printableStorageName),
+                             Storage_getPrintableNameCString(&storageSpecifier,NULL),
                              Errors_getText(error)
                             );
                   if (failError == ERROR_NONE) failError = error;
@@ -839,7 +835,7 @@ Errors Command_compare(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
               String_delete(directoryName);
@@ -944,7 +940,7 @@ Errors Command_compare(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -1103,7 +1099,7 @@ Errors Command_compare(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
               StringList_done(&fileNameList);
@@ -1250,7 +1246,7 @@ Errors Command_compare(const StringList                *storageNameList,
                     {
                       printInfo(1,"FAIL!\n");
                       printError("Cannot read content of archive '%s' (error: %s)!\n",
-                                 String_cString(printableStorageName),
+                                 Storage_getPrintableNameCString(&storageSpecifier,NULL),
                                  Errors_getText(error)
                                 );
                       if (failError == ERROR_NONE) failError = error;
@@ -1382,7 +1378,7 @@ Errors Command_compare(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
+                         Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -1541,7 +1537,6 @@ Errors Command_compare(const StringList                *storageNameList,
   }
 
   // free resources
-  String_delete(printableStorageName);
   Storage_doneSpecifier(&storageSpecifier);
   FragmentList_done(&fragmentList);
   free(archiveBuffer);

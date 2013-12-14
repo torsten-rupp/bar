@@ -12,7 +12,7 @@
 #define __COMMANDS_LIST__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -59,8 +59,8 @@
 \***********************************************************************/
 
 Errors Command_list(StringList                      *storageNameList,
-                    EntryList                       *includeEntryList,
-                    PatternList                     *excludePatternList,
+                    const EntryList                 *includeEntryList,
+                    const PatternList               *excludePatternList,
                     JobOptions                      *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                     void                            *archiveGetCryptPasswordUserData

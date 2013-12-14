@@ -2059,12 +2059,14 @@ void Storage_doneAll(void)
 {
   assert(storageSpecifier != NULL);
 
-  storageSpecifier->hostName      = String_new();
-  storageSpecifier->hostPort      = 0;
-  storageSpecifier->loginName     = String_new();
-  storageSpecifier->loginPassword = Password_new();
-  storageSpecifier->deviceName    = String_new();
-  storageSpecifier->fileName      = String_new();
+  storageSpecifier->hostName             = String_new();
+  storageSpecifier->hostPort             = 0;
+  storageSpecifier->loginName            = String_new();
+  storageSpecifier->loginPassword        = Password_new();
+  storageSpecifier->deviceName           = String_new();
+  storageSpecifier->fileName             = String_new();
+  storageSpecifier->storageName          = String_new();
+  storageSpecifier->printableStorageName = String_new();
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE("storage specifier",storageSpecifier);
@@ -2088,13 +2090,15 @@ void Storage_doneAll(void)
   assert(destinationStorageSpecifier != NULL);
   assert(sourceStorageSpecifier != NULL);
 
-  destinationStorageSpecifier->type          = sourceStorageSpecifier->type;
-  destinationStorageSpecifier->hostName      = String_duplicate(sourceStorageSpecifier->hostName);
-  destinationStorageSpecifier->hostPort      = sourceStorageSpecifier->hostPort;
-  destinationStorageSpecifier->loginName     = String_duplicate(sourceStorageSpecifier->loginName);
-  destinationStorageSpecifier->loginPassword = Password_duplicate(sourceStorageSpecifier->loginPassword);
-  destinationStorageSpecifier->deviceName    = String_duplicate(sourceStorageSpecifier->deviceName);
-  destinationStorageSpecifier->fileName      = String_duplicate(sourceStorageSpecifier->fileName);
+  destinationStorageSpecifier->type                 = sourceStorageSpecifier->type;
+  destinationStorageSpecifier->hostName             = String_duplicate(sourceStorageSpecifier->hostName);
+  destinationStorageSpecifier->hostPort             = sourceStorageSpecifier->hostPort;
+  destinationStorageSpecifier->loginName            = String_duplicate(sourceStorageSpecifier->loginName);
+  destinationStorageSpecifier->loginPassword        = Password_duplicate(sourceStorageSpecifier->loginPassword);
+  destinationStorageSpecifier->deviceName           = String_duplicate(sourceStorageSpecifier->deviceName);
+  destinationStorageSpecifier->fileName             = String_duplicate(sourceStorageSpecifier->fileName);
+  destinationStorageSpecifier->storageName          = String_new();
+  destinationStorageSpecifier->printableStorageName = String_new();
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE("duplicated storage specifier",destinationStorageSpecifier);
@@ -2120,6 +2124,8 @@ void Storage_doneAll(void)
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageSpecifier);
   #endif /* NDEBUG */
 
+  String_delete(storageSpecifier->printableStorageName);
+  String_delete(storageSpecifier->storageName);
   String_delete(storageSpecifier->fileName);
   String_delete(storageSpecifier->deviceName);
   Password_delete(storageSpecifier->loginPassword);
@@ -2704,21 +2710,19 @@ bool Storage_equalNames(const String storageName1,
   return result;
 }
 
-String Storage_getName(String                 storageName,
-                       const StorageSpecifier *storageSpecifier,
-                       const String           fileName
-                      )
+const String Storage_getName(StorageSpecifier *storageSpecifier,
+                             const String     fileName
+                            )
 {
   String     storageFileName;
   const char *plainLoginPassword;
 
-  assert(storageName != NULL);
   assert(storageSpecifier != NULL);
 
   // get file to use
   storageFileName = (fileName != NULL) ? fileName : storageSpecifier->fileName;
 
-  String_clear(storageName);
+  String_clear(storageSpecifier->storageName);
   switch (storageSpecifier->type)
   {
     case STORAGE_TYPE_NONE:
@@ -2726,153 +2730,153 @@ String Storage_getName(String                 storageName,
     case STORAGE_TYPE_FILESYSTEM:
       if (!String_isEmpty(storageFileName))
       {
-        String_append(storageName,storageFileName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_FTP:
-      String_appendCString(storageName,"ftp://");
+      String_appendCString(storageSpecifier->storageName,"ftp://");
       if (!String_isEmpty(storageSpecifier->loginName))
       {
-        String_append(storageName,storageSpecifier->loginName);
+        String_append(storageSpecifier->storageName,storageSpecifier->loginName);
         if (!Password_isEmpty(storageSpecifier->loginPassword))
         {
-          String_appendChar(storageName,':');
+          String_appendChar(storageSpecifier->storageName,':');
           plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
-          String_appendCString(storageName,plainLoginPassword);
+          String_appendCString(storageSpecifier->storageName,plainLoginPassword);
           Password_undeploy(storageSpecifier->loginPassword);
         }
-        String_appendChar(storageName,'@');
+        String_appendChar(storageSpecifier->storageName,'@');
       }
-      String_append(storageName,storageSpecifier->hostName);
+      String_append(storageSpecifier->storageName,storageSpecifier->hostName);
       if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 21))
       {
-        String_format(storageName,":%d",storageSpecifier->hostPort);
+        String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SSH:
       if (!String_isEmpty(storageFileName))
       {
-        String_append(storageName,storageFileName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SCP:
-      String_appendCString(storageName,"scp://");
+      String_appendCString(storageSpecifier->storageName,"scp://");
       if (!String_isEmpty(storageSpecifier->loginName))
       {
-        String_append(storageName,storageSpecifier->loginName);
+        String_append(storageSpecifier->storageName,storageSpecifier->loginName);
         if (!Password_isEmpty(storageSpecifier->loginPassword))
         {
-          String_appendChar(storageName,':');
+          String_appendChar(storageSpecifier->storageName,':');
           plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
-          String_appendCString(storageName,plainLoginPassword);
+          String_appendCString(storageSpecifier->storageName,plainLoginPassword);
           Password_undeploy(storageSpecifier->loginPassword);
         }
-        String_appendChar(storageName,'@');
+        String_appendChar(storageSpecifier->storageName,'@');
       }
-      String_append(storageName,storageSpecifier->hostName);
+      String_append(storageSpecifier->storageName,storageSpecifier->hostName);
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SFTP:
-      String_appendCString(storageName,"sftp://");
+      String_appendCString(storageSpecifier->storageName,"sftp://");
       if (!String_isEmpty(storageSpecifier->loginName))
       {
-        String_append(storageName,storageSpecifier->loginName);
+        String_append(storageSpecifier->storageName,storageSpecifier->loginName);
         if (!Password_isEmpty(storageSpecifier->loginPassword))
         {
-          String_appendChar(storageName,':');
+          String_appendChar(storageSpecifier->storageName,':');
           plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
-          String_appendCString(storageName,plainLoginPassword);
+          String_appendCString(storageSpecifier->storageName,plainLoginPassword);
           Password_undeploy(storageSpecifier->loginPassword);
         }
-        String_appendChar(storageName,'@');
+        String_appendChar(storageSpecifier->storageName,'@');
       }
-      String_append(storageName,storageSpecifier->hostName);
+      String_append(storageSpecifier->storageName,storageSpecifier->hostName);
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_WEBDAV:
-      String_appendCString(storageName,"webdav://");
+      String_appendCString(storageSpecifier->storageName,"webdav://");
       if (!String_isEmpty(storageSpecifier->loginName))
       {
-        String_append(storageName,storageSpecifier->loginName);
+        String_append(storageSpecifier->storageName,storageSpecifier->loginName);
         if (!Password_isEmpty(storageSpecifier->loginPassword))
         {
-          String_appendChar(storageName,':');
+          String_appendChar(storageSpecifier->storageName,':');
           plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
-          String_appendCString(storageName,plainLoginPassword);
+          String_appendCString(storageSpecifier->storageName,plainLoginPassword);
           Password_undeploy(storageSpecifier->loginPassword);
         }
-        String_appendChar(storageName,'@');
+        String_appendChar(storageSpecifier->storageName,'@');
       }
-      String_append(storageName,storageSpecifier->hostName);
+      String_append(storageSpecifier->storageName,storageSpecifier->hostName);
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_CD:
-      String_appendCString(storageName,"cd://");
+      String_appendCString(storageSpecifier->storageName,"cd://");
       if (!String_isEmpty(storageSpecifier->deviceName))
       {
-        String_append(storageName,storageSpecifier->deviceName);
-        String_appendChar(storageName,':');
+        String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
+        String_appendChar(storageSpecifier->storageName,':');
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_DVD:
-      String_appendCString(storageName,"dvd://");
+      String_appendCString(storageSpecifier->storageName,"dvd://");
       if (!String_isEmpty(storageSpecifier->deviceName))
       {
-        String_append(storageName,storageSpecifier->deviceName);
-        String_appendChar(storageName,':');
+        String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
+        String_appendChar(storageSpecifier->storageName,':');
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_BD:
-      String_appendCString(storageName,"bd://");
+      String_appendCString(storageSpecifier->storageName,"bd://");
       if (!String_isEmpty(storageSpecifier->deviceName))
       {
-        String_append(storageName,storageSpecifier->deviceName);
-        String_appendChar(storageName,':');
+        String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
+        String_appendChar(storageSpecifier->storageName,':');
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_DEVICE:
-      String_appendCString(storageName,"device://");
+      String_appendCString(storageSpecifier->storageName,"device://");
       if (!String_isEmpty(storageSpecifier->deviceName))
       {
-        String_append(storageName,storageSpecifier->deviceName);
-        String_appendChar(storageName,':');
+        String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
+        String_appendChar(storageSpecifier->storageName,':');
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     default:
@@ -2882,23 +2886,28 @@ String Storage_getName(String                 storageName,
       break;
   }
 
-  return storageName;
+  return storageSpecifier->storageName;
 }
 
-String Storage_getPrintableName(String                 storageName,
-                                const StorageSpecifier *storageSpecifier,
-                                const String           fileName
-                               )
+const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
+                                   const String     fileName
+                                  )
+{
+  return String_cString(Storage_getName(storageSpecifier,fileName));
+}
+
+const String Storage_getPrintableName(StorageSpecifier *storageSpecifier,
+                                      const String     fileName
+                                     )
 {
   String storageFileName;
 
-  assert(storageName != NULL);
   assert(storageSpecifier != NULL);
 
   // get file to use
   storageFileName = (fileName != NULL) ? fileName : storageSpecifier->fileName;
 
-  String_clear(storageName);
+  String_clear(storageSpecifier->storageName);
   switch (storageSpecifier->type)
   {
     case STORAGE_TYPE_NONE:
@@ -2906,123 +2915,123 @@ String Storage_getPrintableName(String                 storageName,
     case STORAGE_TYPE_FILESYSTEM:
       if (!String_isEmpty(storageFileName))
       {
-        String_append(storageName,storageFileName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_FTP:
-      String_appendCString(storageName,"ftp://");
+      String_appendCString(storageSpecifier->storageName,"ftp://");
       if (!String_isEmpty(storageSpecifier->loginName))
       {
-        String_append(storageName,storageSpecifier->loginName);
-        String_appendChar(storageName,'@');
+        String_append(storageSpecifier->storageName,storageSpecifier->loginName);
+        String_appendChar(storageSpecifier->storageName,'@');
       }
-      String_append(storageName,storageSpecifier->hostName);
+      String_append(storageSpecifier->storageName,storageSpecifier->hostName);
       if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 21))
       {
-        String_format(storageName,":%d",storageSpecifier->hostPort);
+        String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SSH:
       if (!String_isEmpty(storageFileName))
       {
-        String_append(storageName,storageFileName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SCP:
-      String_appendCString(storageName,"scp://");
-      String_append(storageName,storageSpecifier->hostName);
+      String_appendCString(storageSpecifier->storageName,"scp://");
+      String_append(storageSpecifier->storageName,storageSpecifier->hostName);
       if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 22))
       {
-        String_format(storageName,":%d",storageSpecifier->hostPort);
+        String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SFTP:
-      String_appendCString(storageName,"sftp://");
-      String_append(storageName,storageSpecifier->hostName);
+      String_appendCString(storageSpecifier->storageName,"sftp://");
+      String_append(storageSpecifier->storageName,storageSpecifier->hostName);
       if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 22))
       {
-        String_format(storageName,":%d",storageSpecifier->hostPort);
+        String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_WEBDAV:
-      String_appendCString(storageName,"webdav://");
+      String_appendCString(storageSpecifier->storageName,"webdav://");
       if (!String_isEmpty(storageSpecifier->loginName))
       {
-        String_append(storageName,storageSpecifier->loginName);
-        String_appendChar(storageName,'@');
+        String_append(storageSpecifier->storageName,storageSpecifier->loginName);
+        String_appendChar(storageSpecifier->storageName,'@');
       }
-      String_append(storageName,storageSpecifier->hostName);
+      String_append(storageSpecifier->storageName,storageSpecifier->hostName);
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_CD:
-      String_appendCString(storageName,"cd://");
+      String_appendCString(storageSpecifier->storageName,"cd://");
       if (!String_isEmpty(storageSpecifier->deviceName))
       {
-        String_append(storageName,storageSpecifier->deviceName);
-        String_appendChar(storageName,':');
+        String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
+        String_appendChar(storageSpecifier->storageName,':');
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_DVD:
-      String_appendCString(storageName,"dvd://");
+      String_appendCString(storageSpecifier->storageName,"dvd://");
       if (!String_isEmpty(storageSpecifier->deviceName))
       {
-        String_append(storageName,storageSpecifier->deviceName);
-        String_appendChar(storageName,':');
+        String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
+        String_appendChar(storageSpecifier->storageName,':');
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_BD:
-      String_appendCString(storageName,"bd://");
+      String_appendCString(storageSpecifier->storageName,"bd://");
       if (!String_isEmpty(storageSpecifier->deviceName))
       {
-        String_append(storageName,storageSpecifier->deviceName);
-        String_appendChar(storageName,':');
+        String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
+        String_appendChar(storageSpecifier->storageName,':');
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_DEVICE:
-      String_appendCString(storageName,"device://");
+      String_appendCString(storageSpecifier->storageName,"device://");
       if (!String_isEmpty(storageSpecifier->deviceName))
       {
-        String_append(storageName,storageSpecifier->deviceName);
-        String_appendChar(storageName,':');
+        String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
+        String_appendChar(storageSpecifier->storageName,':');
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(storageName,'/');
-        String_append(storageName,storageFileName);
+        String_appendChar(storageSpecifier->storageName,'/');
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     default:
@@ -3032,7 +3041,14 @@ String Storage_getPrintableName(String                 storageName,
       break;
   }
 
-  return storageName;
+  return storageSpecifier->storageName;
+}
+
+const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
+                                            const String     fileName
+                                           )
+{
+  return String_cString(Storage_getPrintableName(storageSpecifier,fileName));
 }
 
 Errors Storage_init(StorageHandle                *storageHandle,
