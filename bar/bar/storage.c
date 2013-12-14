@@ -2089,6 +2089,7 @@ void Storage_doneAll(void)
 {
   assert(destinationStorageSpecifier != NULL);
   assert(sourceStorageSpecifier != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(sourceStorageSpecifier);
 
   destinationStorageSpecifier->type                 = sourceStorageSpecifier->type;
   destinationStorageSpecifier->hostName             = String_duplicate(sourceStorageSpecifier->hostName);
@@ -2117,6 +2118,7 @@ void Storage_doneAll(void)
 #endif /* NDEBUG */
 {
   assert(storageSpecifier != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
 
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(storageSpecifier);
@@ -3051,16 +3053,31 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   return String_cString(Storage_getPrintableName(storageSpecifier,fileName));
 }
 
-Errors Storage_init(StorageHandle                *storageHandle,
-                    const StorageSpecifier       *storageSpecifier,
-                    const JobOptions             *jobOptions,
-                    BandWidthList                *maxBandWidthList,
-                    ServerConnectionPriorities   serverConnectionPriority,
-                    StorageRequestVolumeFunction storageRequestVolumeFunction,
-                    void                         *storageRequestVolumeUserData,
-                    StorageStatusInfoFunction    storageStatusInfoFunction,
-                    void                         *storageStatusInfoUserData
-                   )
+#ifdef NDEBUG
+  Errors Storage_init(StorageHandle                *storageHandle,
+                      const StorageSpecifier       *storageSpecifier,
+                      const JobOptions             *jobOptions,
+                      BandWidthList                *maxBandWidthList,
+                      ServerConnectionPriorities   serverConnectionPriority,
+                      StorageRequestVolumeFunction storageRequestVolumeFunction,
+                      void                         *storageRequestVolumeUserData,
+                      StorageStatusInfoFunction    storageStatusInfoFunction,
+                      void                         *storageStatusInfoUserData
+                     )
+#else /* not NDEBUG */
+  Errors __Storage_init(const char                   *__fileName__,
+                        ulong                        __lineNb__,
+                        StorageHandle                *storageHandle,
+                        const StorageSpecifier       *storageSpecifier,
+                        const JobOptions             *jobOptions,
+                        BandWidthList                *maxBandWidthList,
+                        ServerConnectionPriorities   serverConnectionPriority,
+                        StorageRequestVolumeFunction storageRequestVolumeFunction,
+                        void                         *storageRequestVolumeUserData,
+                        StorageStatusInfoFunction    storageStatusInfoFunction,
+                        void                         *storageStatusInfoUserData
+                       )
+#endif /* NDEBUG */
 {
   AutoFreeList autoFreeList;
   Errors       error;
@@ -3907,19 +3924,34 @@ Errors Storage_init(StorageHandle                *storageHandle,
   // free resources
   AutoFree_done(&autoFreeList);
 
-  DEBUG_ADD_RESOURCE_TRACE("storage file handle",storageHandle);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE("storage handle",storageHandle);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"storage handle",storageHandle);
+  #endif /* NDEBUG */
 
   return ERROR_NONE;
 }
 
-Errors Storage_done(StorageHandle *storageHandle)
+#ifdef NDEBUG
+  Errors Storage_done(StorageHandle *storageHandle)
+#else /* not NDEBUG */
+  Errors __Storage_done(const char    *__fileName__,
+                        ulong         __lineNb__,
+                        StorageHandle *storageHandle
+                       )
+#endif /* NDEBUG */
 {
   Errors error;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(storageHandle);
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(storageHandle);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageHandle);
+  #endif /* NDEBUG */
 
   error = ERROR_NONE;
 
@@ -9944,6 +9976,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             freeServer(storageDirectoryListHandle->webdav.server);
             break;
           }
+#warning todo
 //fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(directoryData));
 
           // parse directory entries
@@ -9961,6 +9994,15 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             break;
           }
           storageDirectoryListHandle->webdav.lastNode = storageDirectoryListHandle->webdav.rootNode;
+
+          // discard first entry: directory
+          storageDirectoryListHandle->webdav.lastNode = mxmlFindElement(storageDirectoryListHandle->webdav.lastNode,
+                                                                        storageDirectoryListHandle->webdav.rootNode,
+                                                                        "D:href",
+                                                                        NULL,
+                                                                        NULL,
+                                                                        MXML_DESCEND
+                                                                       );
 
           // free resources
           String_delete(directoryData);
@@ -10541,13 +10583,14 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                                                                             );
           }
 
-          if (storageDirectoryListHandle->webdav.currentNode != NULL)
+          if (   (storageDirectoryListHandle->webdav.currentNode != NULL)
+              && (storageDirectoryListHandle->webdav.currentNode->type == MXML_ELEMENT)
+              && (storageDirectoryListHandle->webdav.currentNode->child != NULL)
+              && (storageDirectoryListHandle->webdav.currentNode->child->type == MXML_OPAQUE)
+              && (storageDirectoryListHandle->webdav.currentNode->child->value.opaque != NULL)
+             )
           {
             // get file name
-            assert(storageDirectoryListHandle->webdav.currentNode->type == MXML_ELEMENT);
-            assert(storageDirectoryListHandle->webdav.currentNode->child != NULL);
-            assert(storageDirectoryListHandle->webdav.currentNode->child->type == MXML_OPAQUE);
-            assert(storageDirectoryListHandle->webdav.currentNode->child->value.opaque != NULL);
             String_setCString(fileName,storageDirectoryListHandle->webdav.currentNode->child->value.opaque);
 
             // get file info
@@ -10566,18 +10609,34 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
               node = mxmlFindElement(storageDirectoryListHandle->webdav.currentNode,
                                      storageDirectoryListHandle->webdav.rootNode,
+                                     "lp1:getcontentlength",
+                                     NULL,
+                                     NULL,
+                                     MXML_DESCEND
+                                    );
+              if (   (node != NULL)
+                  && (node->type == MXML_ELEMENT)
+                  && (node->child != NULL)
+                  && (node->child->type == MXML_OPAQUE)
+                  && (node->child->value.opaque != NULL)
+                 )
+              {
+                fileInfo->size = strtol(node->child->value.opaque,NULL,10);
+              }
+              node = mxmlFindElement(storageDirectoryListHandle->webdav.currentNode,
+                                     storageDirectoryListHandle->webdav.rootNode,
                                      "lp1:getlastmodified",
                                      NULL,
                                      NULL,
                                      MXML_DESCEND
                                     );
-              if (node != NULL)
+              if (   (node != NULL)
+                  && (node->type == MXML_ELEMENT)
+                  && (node->child != NULL)
+                  && (node->child->type == MXML_OPAQUE)
+                  && (node->child->value.opaque != NULL)
+                 )
               {
-                assert(node->type == MXML_ELEMENT);
-                assert(node->child != NULL);
-                assert(node->child->type == MXML_OPAQUE);
-                assert(node->child->value.opaque != NULL);
-
                 fileInfo->timeModified = Misc_parseDateTime(node->child->value.opaque);
               }
             }
@@ -10585,7 +10644,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             // next file
             storageDirectoryListHandle->webdav.lastNode    = storageDirectoryListHandle->webdav.currentNode;
             storageDirectoryListHandle->webdav.currentNode = NULL;
-//fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(fileName));
 
             error = ERROR_NONE;
           }

@@ -535,6 +535,8 @@ typedef struct
   #define Storage_initSpecifier(...)      __Storage_initSpecifier(__FILE__,__LINE__,__VA_ARGS__)
   #define Storage_duplicateSpecifier(...) __Storage_duplicateSpecifier(__FILE__,__LINE__,__VA_ARGS__)
   #define Storage_doneSpecifier(...)      __Storage_doneSpecifier(__FILE__,__LINE__,__VA_ARGS__)
+  #define Storage_init(...)               __Storage_init(__FILE__,__LINE__,__VA_ARGS__)
+  #define Storage_done(...)               __Storage_done(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -818,16 +820,31 @@ Errors Storage_prepare(const String     storageName,
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_init(StorageHandle                *storageHandle,
-                    const StorageSpecifier       *storageSpecifier,
-                    const JobOptions             *jobOptions,
-                    BandWidthList                *maxBandWidthList,
-                    ServerConnectionPriorities   serverConnectionPriority,
-                    StorageRequestVolumeFunction storageRequestVolumeFunction,
-                    void                         *storageRequestVolumeUserData,
-                    StorageStatusInfoFunction    storageStatusInfoFunction,
-                    void                         *storageStatusInfoUserData
-                   );
+#ifdef NDEBUG
+  Errors Storage_init(StorageHandle                *storageHandle,
+                      const StorageSpecifier       *storageSpecifier,
+                      const JobOptions             *jobOptions,
+                      BandWidthList                *maxBandWidthList,
+                      ServerConnectionPriorities   serverConnectionPriority,
+                      StorageRequestVolumeFunction storageRequestVolumeFunction,
+                      void                         *storageRequestVolumeUserData,
+                      StorageStatusInfoFunction    storageStatusInfoFunction,
+                      void                         *storageStatusInfoUserData
+                     );
+#else /* not NDEBUG */
+  Errors __Storage_init(const char                   *__fileName__,
+                        ulong                        __lineNb__,
+                        StorageHandle                *storageHandle,
+                        const StorageSpecifier       *storageSpecifier,
+                        const JobOptions             *jobOptions,
+                        BandWidthList                *maxBandWidthList,
+                        ServerConnectionPriorities   serverConnectionPriority,
+                        StorageRequestVolumeFunction storageRequestVolumeFunction,
+                        void                         *storageRequestVolumeUserData,
+                        StorageStatusInfoFunction    storageStatusInfoFunction,
+                        void                         *storageStatusInfoUserData
+                       );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Storage_done
@@ -838,7 +855,14 @@ Errors Storage_init(StorageHandle                *storageHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_done(StorageHandle *storageHandle);
+#ifdef NDEBUG
+  Errors Storage_done(StorageHandle *storageHandle);
+#else /* not NDEBUG */
+  Errors __Storage_done(const char    *__fileName__,
+                        ulong         __lineNb__,
+                        StorageHandle *storageHandle
+                       );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Storage_isServerAllocationPending
