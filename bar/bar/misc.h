@@ -345,6 +345,60 @@ void Misc_waitEnter(void);
 
 bool Misc_getYesNo(const char *message);
 
+/***********************************************************************\
+* Name   : Misc_getConsoleSize
+* Purpose: get size of console window
+* Input  : -
+* Output : rows    - number of rows (can be NULL)
+*          columns - number of columns (can be NULL)
+* Return : -
+* Notes  : default is 25x80
+\***********************************************************************/
+
+void Misc_getConsoleSize(uint *rows, uint *columns);
+
+/***********************************************************************\
+* Name   : Misc_getConsoleRows
+* Purpose: get number of rows of console window
+* Input  : -
+* Output : -
+* Return : number of rows
+* Notes  : default is 25
+\***********************************************************************/
+
+INLINE uint Misc_getConsoleRows(void);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENATION__)
+INLINE uint Misc_getConsoleRows(void)
+{
+  uint n;
+
+  Misc_getConsoleSize(&n,NULL);
+
+  return n;
+}
+#endif /* NDEBUG || __MISC_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : Misc_getConsoleColumns
+* Purpose: get number of columns of console window
+* Input  : -
+* Output : -
+* Return : number of columns
+* Notes  : default is 80
+\***********************************************************************/
+
+INLINE uint Misc_getConsoleColumns(void);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENATION__)
+INLINE uint Misc_getConsoleColumns(void)
+{
+  uint n;
+
+  Misc_getConsoleSize(NULL,&n);
+
+  return n;
+}
+#endif /* NDEBUG || __MISC_IMPLEMENATION__ */
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\

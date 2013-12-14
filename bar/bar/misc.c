@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __MISC_IMPLEMENATION__
+
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -1044,6 +1046,20 @@ bool Misc_getYesNo(const char *message)
 
     return FALSE;
   #endif /* PLATFORM_... */
+}
+
+void Misc_getConsoleSize(uint *rows, uint *columns)
+{
+  struct winsize size;
+
+  if (rows    != NULL) (*rows   ) = 25;
+  if (columns != NULL) (*columns) = 80;
+
+  if (ioctl(STDOUT_FILENO,TIOCGWINSZ,&size) == 0)
+  {
+    if (rows    != NULL) (*rows   ) = size.ws_row;
+    if (columns != NULL) (*columns) = size.ws_col;
+  }
 }
 
 /*---------------------------------------------------------------------*/
