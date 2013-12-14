@@ -58,9 +58,9 @@
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL            "%type:-8s %size:-10s %date:-25s %name:s"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP             "%archiveName:-20s %type:-8s %size:-10s %date:-25s %name:s"
 
-#define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE           "%size:-10s %date:-25s %name:s"
+#define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE           "%type:-8s %size:-10s %date:-25s %name:s"
 
-#define DEFAULT_DIRECTORY_LIST_FORMAT                 "%size:10s %date:-25s %name:s"
+#define DEFAULT_DIRECTORY_LIST_FORMAT                 "%type:-8s %size:10s %date:-25s %name:s"
 
 /***************************** Datatypes *******************************/
 
@@ -2902,7 +2902,8 @@ LOCAL void printDirectoryListHeader(const String storageName)
 {
   const TextMacro MACROS[] =
   {
-    TEXT_MACRO_CSTRING("%size","Size"     ),
+    TEXT_MACRO_CSTRING("%type","Type"),
+    TEXT_MACRO_CSTRING("%size","Size"),
     TEXT_MACRO_CSTRING("%date","Date/Time"),
     TEXT_MACRO_CSTRING("%name","Name"     ),
   };
@@ -2976,13 +2977,13 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
                                   const PatternList          *excludePatternList
                                  )
 {
-  String    fileName,dateTime;
-  ulong     fileCount;
-  String    line;
-  TextMacro textMacros[3];
-  Errors    error;
-  FileInfo  fileInfo;
-  char      buffer[16];
+  String     fileName,dateTime;
+  ulong      fileCount;
+  String     line;
+  TextMacro  textMacros[4];
+  Errors     error;
+  FileInfo   fileInfo;
+  char       buffer[16];
 
   printDirectoryListHeader(Storage_getPrintableName(storageSpecifier,NULL));
 
@@ -3004,17 +3005,42 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
     fileCount++;
 
     // format
-    if (globalOptions.humanFormatFlag)
+    switch (fileInfo.type)
     {
-      getHumanSizeString(buffer,sizeof(buffer),fileInfo.size);
+      case FILE_TYPE_FILE:
+      case FILE_TYPE_HARDLINK:
+        TEXT_MACRO_N_CSTRING(textMacros[0],"%type","FILE");
+        if (globalOptions.humanFormatFlag)
+        {
+          getHumanSizeString(buffer,sizeof(buffer),fileInfo.size);
+        }
+        else
+        {
+          snprintf(buffer,sizeof(buffer),"%llu",fileInfo.size);
+        }
+        TEXT_MACRO_N_CSTRING(textMacros[1],"%size",buffer);
+        TEXT_MACRO_N_CSTRING(textMacros[2],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
+        TEXT_MACRO_N_CSTRING(textMacros[3],"%name",String_cString(fileName));
+        break;
+      case FILE_TYPE_DIRECTORY:
+        TEXT_MACRO_N_CSTRING(textMacros[0],"%type","DIR");
+        TEXT_MACRO_N_CSTRING(textMacros[1],"%size","");
+        TEXT_MACRO_N_CSTRING(textMacros[2],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
+        TEXT_MACRO_N_CSTRING(textMacros[3],"%name",String_cString(fileName));
+        break;
+      case FILE_TYPE_LINK:
+        TEXT_MACRO_N_CSTRING(textMacros[0],"%type","LINK");
+        TEXT_MACRO_N_CSTRING(textMacros[1],"%size","");
+        TEXT_MACRO_N_CSTRING(textMacros[2],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
+        TEXT_MACRO_N_CSTRING(textMacros[3],"%name",String_cString(fileName));
+        break;
+      case FILE_TYPE_SPECIAL:
+        TEXT_MACRO_N_CSTRING(textMacros[0],"%type","SEPCIAL");
+        TEXT_MACRO_N_CSTRING(textMacros[1],"%size","");
+        TEXT_MACRO_N_CSTRING(textMacros[2],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
+        TEXT_MACRO_N_CSTRING(textMacros[3],"%name",String_cString(fileName));
+        break;
     }
-    else
-    {
-      snprintf(buffer,sizeof(buffer),"%llu",fileInfo.size);
-    }
-    TEXT_MACRO_N_CSTRING(textMacros[0],"%size",buffer);
-    TEXT_MACRO_N_CSTRING(textMacros[1],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
-    TEXT_MACRO_N_CSTRING(textMacros[2],"%name",String_cString(fileName));
     Misc_expandMacros(String_clear(line),DEFAULT_DIRECTORY_LIST_FORMAT,textMacros,SIZE_OF_ARRAY(textMacros));
 
     // print
