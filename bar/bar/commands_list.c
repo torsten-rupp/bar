@@ -48,15 +48,19 @@
 
 /***************************** Constants *******************************/
 
-#define DEFAULT_FORMAT_TITLE_NORMAL_LONG "%type:-8s %size:-10s %date:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_FORMAT_TITLE_GROUP_LONG  "%archiveName:-20s %type:-8s %size:-10s %date:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_FORMAT_TITLE_NORMAL      "%type:-8s %size:-10s %date:-25s %name:s"
-#define DEFAULT_FORMAT_TITLE_GROUP       "%archiveName:-20s %type:-8s %size:-10s %date:-25s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG "%type:-8s %size:-10s %date:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_LONG  "%archiveName:-20s %type:-8s %size:-10s %date:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL      "%type:-8s %size:-10s %date:-25s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP       "%archiveName:-20s %type:-8s %size:-10s %date:-25s %name:s"
 
-#define DEFAULT_FORMAT_NORMAL_LONG       "%type:-8s %size:-10s %date:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_FORMAT_GROUP_LONG        "%archiveName:-20s %type:-8s %size:-10s %date:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_FORMAT_NORMAL            "%type:-8s %size:-10s %date:-25s %name:s"
-#define DEFAULT_FORMAT_GROUP             "%archiveName:-20s %type:-8s %size:-10s %date:-25s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LONG       "%type:-8s %size:-10s %date:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_LONG        "%archiveName:-20s %type:-8s %size:-10s %date:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL            "%type:-8s %size:-10s %date:-25s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP             "%archiveName:-20s %type:-8s %size:-10s %date:-25s %name:s"
+
+#define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE           "%size:-10s %date:-25s %name:s"
+
+#define DEFAULT_DIRECTORY_LIST_FORMAT                 "%size:10s %date:-25s %name:s"
 
 /***************************** Datatypes *******************************/
 
@@ -212,8 +216,8 @@ LOCAL const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
 }
 
 /***********************************************************************\
-* Name   : printHeader
-* Purpose: print list header
+* Name   : printArchiveListHeader
+* Purpose: print archive list header
 * Input  : storageName - storage file name or NULL if archive should not
 *                        be printed
 * Output : -
@@ -221,7 +225,7 @@ LOCAL const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printHeader(const String storageName)
+LOCAL void printArchiveListHeader(const String storageName)
 {
 // ??? use macro templates for all output?
   const TextMacro MACROS[] =
@@ -238,13 +242,13 @@ LOCAL void printHeader(const String storageName)
     TEXT_MACRO_CSTRING("%type",       "Type"     ),
   };
 
-  String     string;
+  String     line;
   const char *template;
-
-  string = String_new();
 
   if (!globalOptions.noHeaderFooterFlag)
   {
+    line = String_new();
+
     // header
     if (storageName != NULL)
     {
@@ -255,50 +259,44 @@ LOCAL void printHeader(const String storageName)
     // title line
     if (globalOptions.longFormatFlag)
     {
-      template = (storageName != NULL) ? DEFAULT_FORMAT_TITLE_NORMAL_LONG : DEFAULT_FORMAT_TITLE_GROUP_LONG;
+      template = (storageName != NULL) ? DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_LONG;
     }
     else
     {
-      template = (storageName != NULL) ? DEFAULT_FORMAT_TITLE_NORMAL : DEFAULT_FORMAT_TITLE_GROUP;
+      template = (storageName != NULL) ? DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL : DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP;
     }
-    Misc_expandMacros(String_clear(string),template,MACROS,SIZE_OF_ARRAY(MACROS));
-    printInfo(0,"%s\n",String_cString(string));
-    if (globalOptions.longFormatFlag)
-    {
-      printInfo(0,"------------------------------------------------------------------------------------------------------------------------------------------------------\n");
-    }
-    else
-    {
-      printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
-    }
-  }
+    Misc_expandMacros(String_clear(line),template,MACROS,SIZE_OF_ARRAY(MACROS));
+    printInfo(0,"%s\n",String_cString(line));
+    String_fillChar(line,Misc_getConsoleColumns(),'-');
+    printInfo(0,"%s\n",String_cString(line));
 
-  String_delete(string);
+    String_delete(line);
+  }
 }
 
 /***********************************************************************\
-* Name   : printFooter
-* Purpose: print list footer
+* Name   : printArchiveListFooter
+* Purpose: print archive list footer
 * Input  : fileCount - number of files listed
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printFooter(ulong fileCount)
+LOCAL void printArchiveListFooter(ulong fileCount)
 {
+  String line;
+
   if (!globalOptions.noHeaderFooterFlag)
   {
-    if (globalOptions.longFormatFlag)
-    {
-      printInfo(0,"------------------------------------------------------------------------------------------------------------------------------------------------------\n");
-    }
-    else
-    {
-      printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
-    }
+    line = String_new();
+
+    String_fillChar(line,Misc_getConsoleColumns(),'-');
+    printInfo(0,"%s\n",String_cString(line));
     printInfo(0,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
     printInfo(0,"\n");
+
+    String_delete(line);
   }
 }
 
@@ -1390,15 +1388,15 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
 }
 
 /***********************************************************************\
-* Name   : printList
-* Purpose: sort, group and print list with entries
+* Name   : printrchiveList
+* Purpose: sort, group and print list with archive entries
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printList(void)
+LOCAL void printArchiveList(void)
 {
   ArchiveContentNode *archiveContentNode;
   ArchiveEntryTypes  prevArchiveEntryType;
@@ -1623,10 +1621,6 @@ remoteBarFlag=FALSE;
                             );
         if (error != ERROR_NONE)
         {
-          printError("Cannot open storage '%s' (error: %s)!\n",
-                     Storage_getPrintableNameCString(storageSpecifier,NULL),
-                     Errors_getText(error)
-                    );
           return error;
         }
 
@@ -1718,7 +1712,7 @@ remoteBarFlag=FALSE;
                     // output file info
                     if (!printedInfoFlag)
                     {
-                      printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
                       printedInfoFlag = TRUE;
                     }
                     printFileInfo(NULL,
@@ -1817,7 +1811,7 @@ remoteBarFlag=FALSE;
                     // output file info
                     if (!printedInfoFlag)
                     {
-                      printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
                       printedInfoFlag = TRUE;
                     }
                     printImageInfo(NULL,
@@ -1896,7 +1890,7 @@ remoteBarFlag=FALSE;
                     // output file info
                     if (!printedInfoFlag)
                     {
-                      printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
                       printedInfoFlag = TRUE;
                     }
                     printDirectoryInfo(NULL,
@@ -1970,7 +1964,7 @@ remoteBarFlag=FALSE;
                     // output file info
                     if (!printedInfoFlag)
                     {
-                      printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
                       printedInfoFlag = TRUE;
                     }
                     printLinkInfo(NULL,
@@ -2066,7 +2060,7 @@ remoteBarFlag=FALSE;
                       // output file info
                       if (!printedInfoFlag)
                       {
-                        printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                        printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
                         printedInfoFlag = TRUE;
                       }
                       printHardLinkInfo(NULL,
@@ -2148,7 +2142,7 @@ remoteBarFlag=FALSE;
                     // output file info
                     if (!printedInfoFlag)
                     {
-                      printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
                       printedInfoFlag = TRUE;
                     }
                     printSpecialInfo(NULL,
@@ -2400,7 +2394,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
                           printedInfoFlag = TRUE;
                         }
 
@@ -2497,7 +2491,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
                           printedInfoFlag = TRUE;
                         }
 
@@ -2570,7 +2564,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
                           printedInfoFlag = TRUE;
                         }
 
@@ -2634,7 +2628,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
                           printedInfoFlag = TRUE;
                         }
 
@@ -2723,7 +2717,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
                           printedInfoFlag = TRUE;
                         }
 
@@ -2802,7 +2796,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
                           printedInfoFlag = TRUE;
                         }
 
@@ -2865,7 +2859,6 @@ remoteBarFlag=FALSE;
         exitcode = Network_terminate(&networkExecuteHandle);
         if (exitcode != 0)
         {
-          printError("Remote BAR program return exitcode %d!\n",exitcode);
           error = ERROR_NETWORK_EXECUTE_FAIL;
         }
       }
@@ -2882,16 +2875,156 @@ remoteBarFlag=FALSE;
   }
   if (printedInfoFlag)
   {
-    printFooter(fileCount);
+    printArchiveListFooter(fileCount);
   }
 
   // output grouped list
   if (globalOptions.groupFlag)
   {
-    printHeader(NULL);
-    printList();
-    printFooter(List_count(&archiveContentList));
+    printArchiveListHeader(NULL);
+    printArchiveList();
+    printArchiveListFooter(List_count(&archiveContentList));
   }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : printDirectoryListHeader
+* Purpose: print directory list header
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printDirectoryListHeader(const String storageName)
+{
+  const TextMacro MACROS[] =
+  {
+    TEXT_MACRO_CSTRING("%size","Size"     ),
+    TEXT_MACRO_CSTRING("%date","Date/Time"),
+    TEXT_MACRO_CSTRING("%name","Name"     ),
+  };
+
+  String line;
+
+  if (!globalOptions.noHeaderFooterFlag)
+  {
+    line = String_new();
+
+    // header
+    if (storageName != NULL)
+    {
+      printInfo(0,"List directory '%s':\n",String_cString(storageName));
+      printInfo(0,"\n");
+    }
+
+    // format title line
+    Misc_expandMacros(String_clear(line),DEFAULT_DIRECTORY_LIST_FORMAT_TITLE,MACROS,SIZE_OF_ARRAY(MACROS));
+
+    // print title line
+    printInfo(0,"%s\n",String_cString(line));
+    String_fillChar(line,Misc_getConsoleColumns(),'-');
+    printInfo(0,"%s\n",String_cString(line));
+
+    String_delete(line);
+  }
+}
+
+/***********************************************************************\
+* Name   : printDirectoryListFooter
+* Purpose: print directory list footer
+* Input  : fileCount - number of files listed
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printDirectoryListFooter(ulong fileCount)
+{
+  String line;
+
+  if (!globalOptions.noHeaderFooterFlag)
+  {
+    line = String_new();
+
+    String_fillChar(line,Misc_getConsoleColumns(),'-');
+    printInfo(0,"%s\n",String_cString(line));
+    printInfo(0,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
+    printInfo(0,"\n");
+
+    String_delete(line);
+  }
+}
+
+/***********************************************************************\
+* Name   : listDirectoryContent
+* Purpose: list directory content
+* Input  : storageDirectoryListHandle - storage directory list handle
+*          storageSpecifier           - storage specifier
+*          includeEntryList           - include entry list
+*          excludePatternList         - exclude pattern list
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryListHandle,
+                                  StorageSpecifier           *storageSpecifier,
+                                  const EntryList            *includeEntryList,
+                                  const PatternList          *excludePatternList
+                                 )
+{
+  String    fileName,dateTime;
+  ulong     fileCount;
+  String    line;
+  TextMacro textMacros[3];
+  Errors    error;
+  FileInfo  fileInfo;
+  char      buffer[16];
+
+  printDirectoryListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+
+  fileName  = String_new();
+  dateTime  = String_new();
+  fileCount = 0;
+  line      = String_new();
+  while (!Storage_endOfDirectoryList(storageDirectoryListHandle))
+  {
+    // read next directory entry
+    error = Storage_readDirectoryList(storageDirectoryListHandle,fileName,&fileInfo);
+    if (error != ERROR_NONE)
+    {
+      String_delete(line);
+      String_delete(dateTime);
+      String_delete(fileName);
+      return error;
+    }
+    fileCount++;
+
+    // format
+    if (globalOptions.humanFormatFlag)
+    {
+      getHumanSizeString(buffer,sizeof(buffer),fileInfo.size);
+    }
+    else
+    {
+      snprintf(buffer,sizeof(buffer),"%llu",fileInfo.size);
+    }
+    TEXT_MACRO_N_CSTRING(textMacros[0],"%size",buffer);
+    TEXT_MACRO_N_CSTRING(textMacros[1],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
+    TEXT_MACRO_N_CSTRING(textMacros[2],"%name",String_cString(fileName));
+    Misc_expandMacros(String_clear(line),DEFAULT_DIRECTORY_LIST_FORMAT,textMacros,SIZE_OF_ARRAY(textMacros));
+
+    // print
+    printInfo(0,"%s\n",String_cString(line));
+  }
+  String_delete(line);
+  String_delete(dateTime);
+  String_delete(fileName);
+
+  printDirectoryListFooter(fileCount);
 
   return ERROR_NONE;
 }
@@ -2906,12 +3039,13 @@ Errors Command_list(StringList                      *storageNameList,
                     void                            *archiveGetCryptPasswordUserData
                    )
 {
-  AutoFreeList     autoFreeList;
-  String           storageName;
-  StorageSpecifier storageSpecifier;
-  StorageHandle    storageHandle;
-  Errors           failError;
-  Errors           error;
+  AutoFreeList               autoFreeList;
+  String                     storageName;
+  StorageSpecifier           storageSpecifier;
+  Errors                     failError;
+  Errors                     error;
+  StorageHandle              storageHandle;
+  StorageDirectoryListHandle storageDirectoryListHandle;
 
   assert(storageNameList != NULL);
   assert(includeEntryList != NULL);
@@ -2945,30 +3079,61 @@ Errors Command_list(StringList                      *storageNameList,
       continue;
     }
 
-    // init storage
-    error = Storage_init(&storageHandle,
-                         &storageSpecifier,
-                         jobOptions,
-                         &globalOptions.maxBandWidthList,
-                         SERVER_CONNECTION_PRIORITY_HIGH,
-                         CALLBACK(NULL,NULL),
-                         CALLBACK(NULL,NULL)
-                        );
-    if (error == ERROR_NONE)
-    {
-      listArchiveContent(&storageHandle,
-                         &storageSpecifier,
-                         includeEntryList,
-                         excludePatternList,
-                         jobOptions,
-                         archiveGetCryptPasswordFunction,
-                         archiveGetCryptPasswordUserData
-                        );
+    error = ERROR_UNKNOWN;
 
-      // done storage
-      (void)Storage_done(&storageHandle);
+    // try archive content list
+    if (error != ERROR_NONE)
+    {
+      // init storage
+      error = Storage_init(&storageHandle,
+                           &storageSpecifier,
+                           jobOptions,
+                           &globalOptions.maxBandWidthList,
+                           SERVER_CONNECTION_PRIORITY_HIGH,
+                           CALLBACK(NULL,NULL),
+                           CALLBACK(NULL,NULL)
+                          );
+      if (error == ERROR_NONE)
+      {
+        // list archive content
+        error = listArchiveContent(&storageHandle,
+                                   &storageSpecifier,
+                                   includeEntryList,
+                                   excludePatternList,
+                                   jobOptions,
+                                   archiveGetCryptPasswordFunction,
+                                   archiveGetCryptPasswordUserData
+                                  );
+
+        // done storage
+        (void)Storage_done(&storageHandle);
+      }
     }
-    else
+
+    // try directory list
+    if (error != ERROR_NONE)
+    {
+      // open directory list
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_HIGH
+                                       );
+      if (error == ERROR_NONE)
+      {
+        // list directory
+        error = listDirectoryContent(&storageDirectoryListHandle,
+                                     &storageSpecifier,
+                                     includeEntryList,
+                                     excludePatternList
+                                    );
+
+        // done list directory
+        Storage_closeDirectoryList(&storageDirectoryListHandle);
+      }
+    }
+
+    if (error != ERROR_NONE)
     {
       printError("Cannot initialize storage '%s' (error: %s)!\n",
                  String_cString(storageName),
