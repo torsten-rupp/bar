@@ -762,9 +762,9 @@ bool Storage_equalNames(const String storageName1,
 * Notes  : if fileName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
-const String Storage_getName(StorageSpecifier *storageSpecifier,
-                             const String     fileName
-                            );
+String Storage_getName(StorageSpecifier *storageSpecifier,
+                       const String     fileName
+                      );
 const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
                                    const String     fileName
                                   );
@@ -779,9 +779,9 @@ const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
 * Notes  : if fileName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
-const String Storage_getPrintableName(StorageSpecifier *storageSpecifier,
-                                      const String     fileName
-                                     );
+String Storage_getPrintableName(StorageSpecifier *storageSpecifier,
+                                const String     fileName
+                               );
 const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
                                             const String     fileName
                                            );

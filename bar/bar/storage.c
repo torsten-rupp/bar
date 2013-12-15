@@ -2712,9 +2712,9 @@ bool Storage_equalNames(const String storageName1,
   return result;
 }
 
-const String Storage_getName(StorageSpecifier *storageSpecifier,
-                             const String     fileName
-                            )
+String Storage_getName(StorageSpecifier *storageSpecifier,
+                       const String     fileName
+                      )
 {
   String     storageFileName;
   const char *plainLoginPassword;
@@ -2898,9 +2898,9 @@ const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
   return String_cString(Storage_getName(storageSpecifier,fileName));
 }
 
-const String Storage_getPrintableName(StorageSpecifier *storageSpecifier,
-                                      const String     fileName
-                                     )
+String Storage_getPrintableName(StorageSpecifier *storageSpecifier,
+                                const String     fileName
+                               )
 {
   String storageFileName;
 
