@@ -3208,8 +3208,8 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
     }
     Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL);
 
-    TEXT_MACRO_N_CSTRING(textMacros[2],"%dateTime",dateTime);
-    TEXT_MACRO_N_CSTRING(textMacros[3],"%name",    fileName);
+    TEXT_MACRO_N_STRING(textMacros[2],"%dateTime",dateTime);
+    TEXT_MACRO_N_STRING(textMacros[3],"%name",    fileName);
 
     // print
     printInfo(0,"%s\n",
