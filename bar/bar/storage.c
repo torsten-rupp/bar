@@ -10338,7 +10338,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       {
         if (fileInfo != NULL)
         {
-          error = File_getFileInfo(fileInfo,fileName);
+          (void)File_getFileInfo(fileInfo,fileName);
         }
       }
       break;
