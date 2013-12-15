@@ -48,19 +48,40 @@
 
 /***************************** Constants *******************************/
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG "%type:-8s %size:-10s %date:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_LONG  "%archiveName:-20s %type:-8s %size:-10s %date:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL      "%type:-8s %size:-10s %date:-25s %name:s"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP       "%archiveName:-20s %type:-8s %size:-10s %date:-25s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG          "%type:-8s %size:-10s %dateTime:-25s %part:-22s %compress:-15s %ratio:-7s%% %crypt:-10s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_LONG           "%archiveName:-20s %type:-8s %size:-10s %dateTime:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL               "%type:-8s %size:-10s %dateTime:-25s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP                "%archiveName:-20s %type:-8s %size:-10s %dateTime:-25s %name:s"
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LONG       "%type:-8s %size:-10s %date:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_LONG        "%archiveName:-20s %type:-8s %size:-10s %date:-25s %part:-22s %compress:-15s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL            "%type:-8s %size:-10s %date:-25s %name:s"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP             "%archiveName:-20s %type:-8s %size:-10s %date:-25s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG           "%type:-8s %size:10s %dateTime:-25S %partFrom:10llu..%partTo:10llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG          "%type:-8s %size:10s %        :-25s %partFrom:10llu..%partTo:10llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG            "%type:-8s %    :10s %dateTime:-25S %                         :22s %        :-15s %       :7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG           "%type:-8s %    :10s %        :-25s %                         :22s %        :-15s %       :7s  %crypt:-10S %name:S -> %destinationName:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG       "%type:-8s %size:10s %dateTime:-25S %partFrom:10llu..%partTo:10llu %compress:-15S %ratio:7.1f  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG   "%type:-8s %    :10s %        :-25s %                         :22s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG  "%type:-8s %    :10s %        :-25s %                         :22s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG   "%type:-8s %    :10s %        :-25s %                         :22s %        :-15s %       :7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG "%type:-8s %    :10s %        :-25s %                         :22s %        :-15s %       :7s  %crypt:-10S %name:S"
 
-#define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE           "%type:-8s %size:-10s %date:-25s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_LONG                 "%archiveName:-20s %type:-8s %size:10s %dateTime:-25s %partFrom:%10llu..%partTo:%10llu %compress:-15s %ratio:6.1f %crypt:-10s %name:s"
 
-#define DEFAULT_DIRECTORY_LIST_FORMAT                 "%type:-8s %size:10s %date:-25s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE                     "                                                                     source: %deltaSource:S, %deltaSourceSize:s"
+
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE                "%type:-8s %size:10s %dateTime:-25S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE               "%type:-8s %size:10s %dateTime:-25S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR                 "%type:-8s %    :10s %dateTime:-25S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK                "%type:-8s %    :10s %        :-25s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK            "%type:-8s %size:10s %dateTime:-25S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR        "%type:-8s %    :10s %        :-25s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK       "%type:-8s %    :10s %        :-25s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO        "%type:-8s %    :10s %        :-25s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET      "%type:-8s %    :10s %        :-25s %name:S"
+
+#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP                      "%archiveName:-20s %type:-8s %size:10s %dateTime:-25s %name:s"
+
+#define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE                    "%type:-8s %size:-10s %dateTime:-25s %name:s"
+
+#define DEFAULT_DIRECTORY_LIST_FORMAT                          "%type:-8s %size:10s %dateTime:-25S %name:S"
 
 /***************************** Datatypes *******************************/
 
@@ -227,16 +248,15 @@ LOCAL const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
 
 LOCAL void printArchiveListHeader(const String storageName)
 {
-// ??? use macro templates for all output?
   const TextMacro MACROS[] =
   {
     TEXT_MACRO_CSTRING("%archiveName","Archive"  ),
     TEXT_MACRO_CSTRING("%type",       "Type"     ),
     TEXT_MACRO_CSTRING("%size",       "Size"     ),
-    TEXT_MACRO_CSTRING("%date",       "Date/Time"),
+    TEXT_MACRO_CSTRING("%dateTime",   "Date/Time"),
     TEXT_MACRO_CSTRING("%part",       "Part"     ),
     TEXT_MACRO_CSTRING("%compress",   "Compress" ),
-    TEXT_MACRO_CSTRING("%ratio",      "Ratio %"  ),
+    TEXT_MACRO_CSTRING("%ratio",      "Ratio"    ),
     TEXT_MACRO_CSTRING("%crypt",      "Crypt"    ),
     TEXT_MACRO_CSTRING("%name",       "Name"     ),
     TEXT_MACRO_CSTRING("%type",       "Type"     ),
@@ -337,15 +357,79 @@ LOCAL void printFileInfo(const String       storageName,
                          uint64             fragmentSize
                         )
 {
-  String dateTime;
-  double ratio;
-  char   buffer[16];
-  String compressString;
-  String cryptString;
+  String     dateTimeString;
+  String     compressString;
+  String     cryptString;
+  String     line;
+  double     ratio;
+  char       sizeString[16];
+  char       deltaSourceSizeString[16];
+  const char *template;
+  TextMacro  textMacros[11];
 
   assert(fileName != NULL);
 
-  dateTime = Misc_formatDateTime(String_new(),timeModified,NULL);
+//  UNUSED_VARIABLE(storageName);
+
+  // init variables
+  dateTimeString = String_new();
+  compressString = String_new();
+  cryptString    = String_new();
+  line           = String_new();
+
+  // format
+  Misc_formatDateTime(dateTimeString,timeModified,NULL);
+
+  if (globalOptions.humanFormatFlag)
+  {
+    getHumanSizeString(sizeString,sizeof(sizeString),size);
+    getHumanSizeString(deltaSourceSizeString,sizeof(deltaSourceSizeString),deltaSourceSize);
+  }
+  else
+  {
+    snprintf(sizeString,sizeof(sizeString),"%llu",size);
+    snprintf(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
+  }
+
+  if (globalOptions.longFormatFlag)
+  {
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG;
+    if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
+    {
+      String_format(compressString,
+                    "%s+%s",
+                    Compress_getAlgorithmName(deltaCompressAlgorithm),
+                    Compress_getAlgorithmName(byteCompressAlgorithm)
+                   );
+    }
+    else if (Compress_isCompressed(deltaCompressAlgorithm))
+    {
+      String_format(compressString,
+                    "%s",
+                    Compress_getAlgorithmName(deltaCompressAlgorithm)
+                   );
+    }
+    else if (Compress_isCompressed(byteCompressAlgorithm))
+    {
+      String_format(compressString,
+                    "%s",
+                    Compress_getAlgorithmName(byteCompressAlgorithm)
+                   );
+    }
+    else
+    {
+      String_format(compressString,
+                    "%s",
+                    Compress_getAlgorithmName(deltaCompressAlgorithm)
+                   );
+    }
+
+    String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
+  }
+  else
+  {
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE;
+  }
 
   if (   (   Compress_isCompressed(deltaCompressAlgorithm)
           || Compress_isCompressed(byteCompressAlgorithm)
@@ -360,78 +444,42 @@ LOCAL void printFileInfo(const String       storageName,
     ratio = 0.0;
   }
 
-  if (storageName != NULL)
-  {
-    printf("%-20s ",String_cString(storageName));
-  }
-  printf("FILE     ");
-  if (globalOptions.humanFormatFlag)
-  {
-    printf("%10s",getHumanSizeString(buffer,sizeof(buffer),size));
-  }
-  else
-  {
-    printf("%10llu",size);
-  }
-  if (globalOptions.longFormatFlag)
-  {
-    if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
-    {
-      compressString = String_format(String_new(),
-                                     "%s+%s",
-                                     Compress_getAlgorithmName(deltaCompressAlgorithm),
-                                     Compress_getAlgorithmName(byteCompressAlgorithm)
-                                    );
-    }
-    else if (Compress_isCompressed(deltaCompressAlgorithm))
-    {
-      compressString = String_format(String_new(),
-                                     "%s",
-                                     Compress_getAlgorithmName(deltaCompressAlgorithm)
-                                    );
-    }
-    else if (Compress_isCompressed(byteCompressAlgorithm))
-    {
-      compressString = String_format(String_new(),
-                                     "%s",
-                                     Compress_getAlgorithmName(byteCompressAlgorithm)
-                                    );
-    }
-    else
-    {
-      compressString = String_format(String_new(),
-                                     "%s",
-                                     Compress_getAlgorithmName(deltaCompressAlgorithm)
-                                    );
-    }
-    cryptString = String_format(String_new(),"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
-    printf(" %-25s %10llu..%10llu %-15s %6.1f%% %-10s %s\n",
-           String_cString(dateTime),
-           fragmentOffset,
-           (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,
-           String_cString(compressString),
-           ratio,
-           String_cString(cryptString),
-           String_cString(fileName)
-          );
+  TEXT_MACRO_N_CSTRING  (textMacros[ 0],"%type",           "FILE");
+  TEXT_MACRO_N_CSTRING  (textMacros[ 1],"%size",           sizeString);
+  TEXT_MACRO_N_STRING   (textMacros[ 2],"%dateTime",       dateTimeString);
+  TEXT_MACRO_N_INTEGER64(textMacros[ 3],"%partFrom",       fragmentOffset);
+  TEXT_MACRO_N_INTEGER64(textMacros[ 4],"%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset);
+  TEXT_MACRO_N_STRING   (textMacros[ 5],"%compress",       compressString);
+  TEXT_MACRO_N_DOUBLE   (textMacros[ 6],"%ratio",          ratio);
+  TEXT_MACRO_N_STRING   (textMacros[ 7],"%crypt",          cryptString);
+  TEXT_MACRO_N_STRING   (textMacros[ 8],"%name",           fileName);
+  TEXT_MACRO_N_STRING   (textMacros[ 9],"%deltaSourceName",deltaSourceName);
+  TEXT_MACRO_N_CSTRING  (textMacros[10],"%deltaSourceSize",deltaSourceSizeString);
 
-    String_delete(cryptString);
-    String_delete(compressString);
-
-    if (Compress_isCompressed(deltaCompressAlgorithm) && (globalOptions.verboseLevel > 1))
-    {
-      printf("                                                                     source: %s, %llu bytes\n",String_cString(deltaSourceName),deltaSourceSize);
-    }
-  }
-  else
+  // print
+  printInfo(0,"%s\n",
+            String_cString(Misc_expandMacros(String_clear(line),
+                                             template,
+                                             textMacros,SIZE_OF_ARRAY(textMacros)
+                                            )
+                          )
+           );
+  if (Compress_isCompressed(deltaCompressAlgorithm) && (globalOptions.verboseLevel > 1))
   {
-    printf(" %-25s %s\n",
-           String_cString(dateTime),
-           String_cString(fileName)
-          );
+    printInfo(0,"%s\n",
+              String_cString(Misc_expandMacros(String_clear(line),
+                                               DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
+                                               textMacros,SIZE_OF_ARRAY(textMacros)
+                                              )
+                            )
+             );
   }
 
-  String_delete(dateTime);
+  // free resources
+  String_delete(line);
+  String_delete(cryptString);
+  String_delete(compressString);
+  String_delete(dateTimeString);
 }
 
 /***********************************************************************\
@@ -471,12 +519,73 @@ LOCAL void printImageInfo(const String       storageName,
                           uint64             blockCount
                          )
 {
-  double ratio;
-  char   buffer[16];
-  String compressString;
-  String cryptString;
+  String     compressString;
+  String     cryptString;
+  String     line;
+  double     ratio;
+  char       sizeString[16];
+  char       deltaSourceSizeString[16];
+  const char *template;
+  TextMacro  textMacros[10];
 
   assert(imageName != NULL);
+
+  // init variables
+  compressString = String_new();
+  cryptString    = String_new();
+  line           = String_new();
+
+  // format
+  if (globalOptions.humanFormatFlag)
+  {
+    getHumanSizeString(sizeString,sizeof(sizeString),size);
+    getHumanSizeString(deltaSourceSizeString,sizeof(deltaSourceSizeString),deltaSourceSize);
+  }
+  else
+  {
+    snprintf(sizeString,sizeof(sizeString),"%llu",size);
+    snprintf(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
+  }
+
+  if (globalOptions.longFormatFlag)
+  {
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG;
+    if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
+    {
+      String_format(compressString,
+                    "%s+%s",
+                    Compress_getAlgorithmName(deltaCompressAlgorithm),
+                    Compress_getAlgorithmName(byteCompressAlgorithm)
+                   );
+    }
+    else if (Compress_isCompressed(deltaCompressAlgorithm))
+    {
+      String_format(compressString,
+                    "%s",
+                    Compress_getAlgorithmName(deltaCompressAlgorithm)
+                   );
+    }
+    else if (Compress_isCompressed(byteCompressAlgorithm))
+    {
+      String_format(compressString,
+                    "%s",
+                    Compress_getAlgorithmName(byteCompressAlgorithm)
+                   );
+    }
+    else
+    {
+      String_format(compressString,
+                    "%s",
+                    Compress_getAlgorithmName(deltaCompressAlgorithm)
+                   );
+    }
+
+    String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
+  }
+  else
+  {
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE;
+  }
 
   if (   (   Compress_isCompressed(deltaCompressAlgorithm)
           || Compress_isCompressed(byteCompressAlgorithm)
@@ -491,73 +600,40 @@ LOCAL void printImageInfo(const String       storageName,
     ratio = 0.0;
   }
 
-  if (storageName != NULL)
-  {
-    printf("%-20s ",String_cString(storageName));
-  }
-  printf("IMAGE    ");
-  if (globalOptions.humanFormatFlag)
-  {
-    printf("%10s",getHumanSizeString(buffer,sizeof(buffer),size));
-  }
-  else
-  {
-    printf("%10llu",size);
-  }
-  if (globalOptions.longFormatFlag)
-  {
-    if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
-    {
-      compressString = String_format(String_new(),
-                                     "%s+%s",
-                                     Compress_getAlgorithmName(deltaCompressAlgorithm),
-                                     Compress_getAlgorithmName(byteCompressAlgorithm)
-                                    );
-    }
-    else if (Compress_isCompressed(deltaCompressAlgorithm))
-    {
-      compressString = String_format(String_new(),
-                                     "%s",
-                                     Compress_getAlgorithmName(deltaCompressAlgorithm)
-                                    );
-    }
-    else if (Compress_isCompressed(byteCompressAlgorithm))
-    {
-      compressString = String_format(String_new(),
-                                     "%s",
-                                     Compress_getAlgorithmName(byteCompressAlgorithm)
-                                    );
-    }
-    else
-    {
-      compressString = String_format(String_new(),
-                                     "%s",
-                                     Compress_getAlgorithmName(deltaCompressAlgorithm)
-                                    );
-    }
-    cryptString = String_format(String_new(),"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
-    printf("                           %10llu..%10llu %-15s %6.1f%% %-10s %s\n",
-           blockOffset*(uint64)blockSize,
-           (blockOffset+blockCount)*(uint64)blockSize-((blockCount > 0) ? 1 : 0),
-           String_cString(compressString),
-           ratio,
-           String_cString(cryptString),
-           String_cString(imageName)
-          );
-    String_delete(cryptString);
-    String_delete(compressString);
+  TEXT_MACRO_N_CSTRING  (textMacros[0],"%type",           "IMAGE");
+  TEXT_MACRO_N_CSTRING  (textMacros[1],"%size",           sizeString);
+  TEXT_MACRO_N_INTEGER64(textMacros[2],"%partFrom",       blockOffset*(uint64)blockSize);
+  TEXT_MACRO_N_INTEGER64(textMacros[3],"%partTo",         (blockOffset+blockCount)*(uint64)blockSize-((blockCount > 0) ? 1 : 0));
+  TEXT_MACRO_N_STRING   (textMacros[4],"%compress",       compressString);
+  TEXT_MACRO_N_DOUBLE   (textMacros[5],"%ratio",          ratio);
+  TEXT_MACRO_N_STRING   (textMacros[6],"%crypt",          cryptString);
+  TEXT_MACRO_N_STRING   (textMacros[7],"%name",           imageName);
+  TEXT_MACRO_N_STRING   (textMacros[8],"%deltaSourceName",deltaSourceName);
+  TEXT_MACRO_N_STRING   (textMacros[9],"%deltaSourceSize",deltaSourceSizeString);
 
-    if (Compress_isCompressed(deltaCompressAlgorithm) && (globalOptions.verboseLevel > 1))
-    {
-      printf("                                                                     source: %s, %llu bytes\n",String_cString(deltaSourceName),deltaSourceSize);
-    }
-  }
-  else
+  // print
+  printInfo(0,"%s\n",
+            String_cString(Misc_expandMacros(String_clear(line),
+                                             template,
+                                             textMacros,SIZE_OF_ARRAY(textMacros)
+                                            )
+                          )
+           );
+  if (Compress_isCompressed(deltaCompressAlgorithm) && (globalOptions.verboseLevel > 1))
   {
-    printf("                           %s\n",
-           String_cString(imageName)
-          );
+    printInfo(0,"%s\n",
+              String_cString(Misc_expandMacros(String_clear(line),
+                                               DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
+                                               textMacros,SIZE_OF_ARRAY(textMacros)
+                                              )
+                            )
+             );
   }
+
+  // free resources
+  String_delete(line);
+  String_delete(cryptString);
+  String_delete(compressString);
 }
 
 /***********************************************************************\
@@ -581,36 +657,51 @@ LOCAL void printDirectoryInfo(const String    storageName,
                               CryptTypes      cryptType
                              )
 {
-  String dateTime;
-  String cryptString;
+  String     dateTimeString;
+  String     cryptString;
+  String     line;
+  const char *template;
+  TextMacro  textMacros[4];
 
   assert(directoryName != NULL);
 
-  dateTime = Misc_formatDateTime(String_new(),timeModified,NULL);
+//  UNUSED_VARIABLE(storageName);
 
-  if (storageName != NULL)
-  {
-    printf("%-20s ",String_cString(storageName));
-  }
+  // init variables
+  dateTimeString = String_new();
+  cryptString    = String_new();
+  line           = String_new();
+
+  // format
+  Misc_formatDateTime(dateTimeString,timeModified,NULL);
   if (globalOptions.longFormatFlag)
   {
-    cryptString = String_format(String_new(),"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
-    printf("DIR                 %-25s                                                %-10s %s\n",
-           String_cString(dateTime),
-           String_cString(cryptString),
-           String_cString(directoryName)
-          );
-    String_delete(cryptString);
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG;
+    String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
   }
   else
   {
-    printf("DIR                 %-25s %s\n",
-           String_cString(dateTime),
-           String_cString(directoryName)
-          );
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR;
   }
 
-  String_delete(dateTime);
+  TEXT_MACRO_N_CSTRING(textMacros[0],"%type",    "DIR");
+  TEXT_MACRO_N_STRING (textMacros[1],"%dateTime",dateTimeString);
+  TEXT_MACRO_N_STRING (textMacros[2],"%crypt",   cryptString);
+  TEXT_MACRO_N_STRING (textMacros[3],"%name",    directoryName);
+
+  // print
+  printInfo(0,"%s\n",
+            String_cString(Misc_expandMacros(String_clear(line),
+                                             template,
+                                             textMacros,SIZE_OF_ARRAY(textMacros)
+                                            )
+                          )
+           );
+
+  // free resources
+  String_delete(line);
+  String_delete(cryptString);
+  String_delete(dateTimeString);
 }
 
 /***********************************************************************\
@@ -634,32 +725,48 @@ LOCAL void printLinkInfo(const String    storageName,
                          CryptTypes      cryptType
                         )
 {
-  String cryptString;
+  String     cryptString;
+  String     line;
+  const char *template;
+  TextMacro  textMacros[4];
 
   assert(linkName != NULL);
   assert(destinationName != NULL);
 
-  if (storageName != NULL)
-  {
-    printf("%-20s ",String_cString(storageName));
-  }
+//  UNUSED_VARIABLE(storageName);
+
+  // init variables
+  cryptString = String_new();
+  line        = String_new();
+
+  // format
   if (globalOptions.longFormatFlag)
   {
-    cryptString = String_format(String_new(),"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
-    printf("LINK                                                                                         %-10s %s -> %s\n",
-           String_cString(cryptString),
-           String_cString(linkName),
-           String_cString(destinationName)
-          );
-    String_delete(cryptString);
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG;
+    String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
   }
   else
   {
-    printf("LINK                                          %s -> %s\n",
-           String_cString(linkName),
-           String_cString(destinationName)
-          );
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK;
   }
+
+  TEXT_MACRO_N_CSTRING(textMacros[0],"%type",           "LINK");
+  TEXT_MACRO_N_STRING (textMacros[1],"%crypt",          cryptString);
+  TEXT_MACRO_N_STRING (textMacros[2],"%name",           linkName);
+  TEXT_MACRO_N_STRING (textMacros[3],"%destinationName",destinationName);
+
+  // print
+  printInfo(0,"%s\n",
+            String_cString(Misc_expandMacros(String_clear(line),
+                                             template,
+                                             textMacros,SIZE_OF_ARRAY(textMacros)
+                                            )
+                          )
+           );
+
+  // free resources
+  String_delete(line);
+  String_delete(cryptString);
 }
 
 /***********************************************************************\
@@ -699,15 +806,79 @@ LOCAL void printHardLinkInfo(const String       storageName,
                              uint64             fragmentSize
                             )
 {
-  String dateTime;
-  double ratio;
-  char   buffer[16];
-  String compressString;
-  String cryptString;
+  String     dateTimeString;
+  String     compressString;
+  String     cryptString;
+  String     line;
+  double     ratio;
+  char       sizeString[16];
+  char       deltaSourceSizeString[16];
+  const char *template;
+  TextMacro  textMacros[11];
 
   assert(fileName != NULL);
 
-  dateTime = Misc_formatDateTime(String_new(),timeModified,NULL);
+//  UNUSED_VARIABLE(storageName);
+
+  // init variables
+  dateTimeString = String_new();
+  compressString = String_new();
+  cryptString    = String_new();
+  line           = String_new();
+
+  // format
+  Misc_formatDateTime(dateTimeString,timeModified,NULL);
+
+  if (globalOptions.humanFormatFlag)
+  {
+    getHumanSizeString(sizeString,sizeof(sizeString),size);
+    getHumanSizeString(deltaSourceSizeString,sizeof(deltaSourceSizeString),deltaSourceSize);
+  }
+  else
+  {
+    snprintf(sizeString,sizeof(sizeString),"%llu",size);
+    snprintf(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
+  }
+
+  if (globalOptions.longFormatFlag)
+  {
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG;
+    if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
+    {
+      String_format(compressString,
+                    "%s+%s",
+                    Compress_getAlgorithmName(deltaCompressAlgorithm),
+                    Compress_getAlgorithmName(byteCompressAlgorithm)
+                   );
+    }
+    else if (Compress_isCompressed(deltaCompressAlgorithm))
+    {
+      String_format(compressString,
+                    "%s",
+                    Compress_getAlgorithmName(deltaCompressAlgorithm)
+                   );
+    }
+    else if (Compress_isCompressed(byteCompressAlgorithm))
+    {
+      String_format(compressString,
+                    "%s",
+                    Compress_getAlgorithmName(byteCompressAlgorithm)
+                   );
+    }
+    else
+    {
+      String_format(compressString,
+                    "%s",
+                    Compress_getAlgorithmName(deltaCompressAlgorithm)
+                   );
+    }
+
+    String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
+  }
+  else
+  {
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK;
+  }
 
   if (   (   Compress_isCompressed(deltaCompressAlgorithm)
           || Compress_isCompressed(byteCompressAlgorithm)
@@ -722,77 +893,42 @@ LOCAL void printHardLinkInfo(const String       storageName,
     ratio = 0.0;
   }
 
-  if (storageName != NULL)
-  {
-    printf("%-20s ",String_cString(storageName));
-  }
-  printf("HARDLINK ");
-  if (globalOptions.humanFormatFlag)
-  {
-    printf("%10s",getHumanSizeString(buffer,sizeof(buffer),size));
-  }
-  else
-  {
-    printf("%10llu",size);
-  }
-  if (globalOptions.longFormatFlag)
-  {
-    if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
-    {
-      compressString = String_format(String_new(),
-                                     "%s+%s",
-                                     Compress_getAlgorithmName(deltaCompressAlgorithm),
-                                     Compress_getAlgorithmName(byteCompressAlgorithm)
-                                    );
-    }
-    else if (Compress_isCompressed(deltaCompressAlgorithm))
-    {
-      compressString = String_format(String_new(),
-                                     "%s",
-                                     Compress_getAlgorithmName(deltaCompressAlgorithm)
-                                    );
-    }
-    else if (Compress_isCompressed(byteCompressAlgorithm))
-    {
-      compressString = String_format(String_new(),
-                                     "%s",
-                                     Compress_getAlgorithmName(byteCompressAlgorithm)
-                                    );
-    }
-    else
-    {
-      compressString = String_format(String_new(),
-                                     "%s",
-                                     Compress_getAlgorithmName(deltaCompressAlgorithm)
-                                    );
-    }
-    cryptString = String_format(String_new(),"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
-    printf(" %-25s %10llu..%10llu %-15s %6.1f%% %-10s %s\n",
-           String_cString(dateTime),
-           fragmentOffset,
-           (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,
-           String_cString(compressString),
-           ratio,
-           String_cString(cryptString),
-           String_cString(fileName)
-          );
-    String_delete(cryptString);
-    String_delete(compressString);
+  TEXT_MACRO_N_CSTRING  (textMacros[ 0],"%type",           "HARDLINK");
+  TEXT_MACRO_N_CSTRING  (textMacros[ 1],"%size",           sizeString);
+  TEXT_MACRO_N_STRING   (textMacros[ 2],"%dateTime",       dateTimeString);
+  TEXT_MACRO_N_INTEGER64(textMacros[ 3],"%partFrom",       fragmentOffset);
+  TEXT_MACRO_N_INTEGER64(textMacros[ 4],"%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset);
+  TEXT_MACRO_N_STRING   (textMacros[ 5],"%compress",       compressString);
+  TEXT_MACRO_N_DOUBLE   (textMacros[ 6],"%ratio",          ratio);
+  TEXT_MACRO_N_STRING   (textMacros[ 7],"%crypt",          cryptString);
+  TEXT_MACRO_N_STRING   (textMacros[ 8],"%name",           fileName);
+  TEXT_MACRO_N_STRING   (textMacros[ 9],"%deltaSourceName",deltaSourceName);
+  TEXT_MACRO_N_CSTRING  (textMacros[10],"%deltaSourceSize",deltaSourceSizeString);
 
-    if (Compress_isCompressed(deltaCompressAlgorithm) && (globalOptions.verboseLevel > 1))
-    {
-      printf("                                                                     source: %s, %llu bytes\n",String_cString(deltaSourceName),deltaSourceSize);
-    }
-  }
-  else
+  // print
+  printInfo(0,"%s\n",
+            String_cString(Misc_expandMacros(String_clear(line),
+                                             template,
+                                             textMacros,SIZE_OF_ARRAY(textMacros)
+                                            )
+                          )
+           );
+  if (Compress_isCompressed(deltaCompressAlgorithm) && (globalOptions.verboseLevel > 1))
   {
-    printf(" %-25s %s\n",
-           String_cString(dateTime),
-           String_cString(fileName)
-          );
+    printInfo(0,"%s\n",
+              String_cString(Misc_expandMacros(String_clear(line),
+                                               DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
+                                               textMacros,SIZE_OF_ARRAY(textMacros)
+                                              )
+                            )
+             );
   }
 
-  String_delete(dateTime);
+  // free resources
+  String_delete(line);
+  String_delete(cryptString);
+  String_delete(compressString);
+  String_delete(dateTimeString);
 }
 
 /***********************************************************************\
@@ -819,87 +955,68 @@ LOCAL void printSpecialInfo(const String     storageName,
                             ulong            minor
                            )
 {
-  String cryptString;
+  String     cryptString;
+  String     line;
+  const char *type;
+  const char *template;
+  TextMacro  textMacros[5];
 
   assert(fileName != NULL);
 
-  if (storageName != NULL)
-  {
-    printf("%-20s ",String_cString(storageName));
-  }
+  // init variables
+  cryptString = String_new();
+  line        = String_new();
+
+  // format
   switch (fileSpecialType)
   {
     case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
       if (globalOptions.longFormatFlag)
       {
-        cryptString = String_format(String_new(),"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
-        printf("CHAR                                                                                         %-10s %s, %lu %lu\n",
-               String_cString(cryptString),
-               String_cString(fileName),
-               major,
-               minor
-              );
-        String_delete(cryptString);
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG;
+        String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
       {
-        printf("CHAR                                          %s\n",
-               String_cString(fileName)
-              );
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR;
       }
+      type = "CHAR";
       break;
     case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
       if (globalOptions.longFormatFlag)
       {
-        cryptString = String_format(String_new(),"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
-        printf("BLOCK                                                                                       %-10s %s, %lu %lu\n",
-               String_cString(cryptString),
-               String_cString(fileName),
-               major,
-               minor
-              );
-        String_delete(cryptString);
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG;
+        String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
       {
-        printf("BLOCK                                         %s\n",
-               String_cString(fileName)
-              );
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK;
       }
+      type = "BLOCK";
       break;
     case FILE_SPECIAL_TYPE_FIFO:
       if (globalOptions.longFormatFlag)
       {
-        cryptString = String_format(String_new(),"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
-        printf("FIFO                                                                                         %-10s %s\n",
-               String_cString(cryptString),
-               String_cString(fileName)
-              );
-        String_delete(cryptString);
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG;
+        String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
       {
-        printf("FIFO                                          %s\n",
-               String_cString(fileName)
-              );
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO;
       }
+      type = "FIFO";
       break;
     case FILE_SPECIAL_TYPE_SOCKET:
       if (globalOptions.longFormatFlag)
       {
-        cryptString = String_format(String_new(),"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
-        printf("SOCKET                                                                                      %-10s %s\n",
-               String_cString(cryptString),
-               String_cString(fileName)
-              );
-        String_delete(cryptString);
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG;
+        String_format(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
       {
-        printf("SOCKET                                        %s\n",
-               String_cString(fileName)
-              );
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET;
       }
+      type = "SOCKET";
       break;
     default:
       #ifndef NDEBUG
@@ -907,6 +1024,25 @@ LOCAL void printSpecialInfo(const String     storageName,
       #endif /* NDEBUG */
       break; /* not reached */
   }
+
+  TEXT_MACRO_N_CSTRING(textMacros[ 0],"%type", type);
+  TEXT_MACRO_N_STRING (textMacros[ 1],"%crypt",cryptString);
+  TEXT_MACRO_N_STRING (textMacros[ 2],"%name", fileName);
+  TEXT_MACRO_N_INTEGER(textMacros[ 3],"%major",major);
+  TEXT_MACRO_N_INTEGER(textMacros[ 4],"%minor",minor);
+
+  // print
+  printInfo(0,"%s\n",
+            String_cString(Misc_expandMacros(String_clear(line),
+                                             template,
+                                             textMacros,SIZE_OF_ARRAY(textMacros)
+                                            )
+                          )
+           );
+
+  // free resources
+  String_delete(line);
+  String_delete(cryptString);
 }
 
 /***********************************************************************\
@@ -3021,26 +3157,18 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
           snprintf(buffer,sizeof(buffer),"%llu",fileInfo.size);
         }
         TEXT_MACRO_N_CSTRING(textMacros[1],"%size",buffer);
-        TEXT_MACRO_N_CSTRING(textMacros[2],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
-        TEXT_MACRO_N_CSTRING(textMacros[3],"%name",String_cString(fileName));
         break;
       case FILE_TYPE_DIRECTORY:
         TEXT_MACRO_N_CSTRING(textMacros[0],"%type","DIR");
         TEXT_MACRO_N_CSTRING(textMacros[1],"%size","");
-        TEXT_MACRO_N_CSTRING(textMacros[2],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
-        TEXT_MACRO_N_CSTRING(textMacros[3],"%name",String_cString(fileName));
         break;
       case FILE_TYPE_LINK:
         TEXT_MACRO_N_CSTRING(textMacros[0],"%type","LINK");
         TEXT_MACRO_N_CSTRING(textMacros[1],"%size","");
-        TEXT_MACRO_N_CSTRING(textMacros[2],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
-        TEXT_MACRO_N_CSTRING(textMacros[3],"%name",String_cString(fileName));
         break;
       case FILE_TYPE_SPECIAL:
         TEXT_MACRO_N_CSTRING(textMacros[0],"%type","SEPCIAL");
         TEXT_MACRO_N_CSTRING(textMacros[1],"%size","");
-        TEXT_MACRO_N_CSTRING(textMacros[2],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
-        TEXT_MACRO_N_CSTRING(textMacros[3],"%name",String_cString(fileName));
         break;
       default:
         #ifndef NDEBUG
@@ -3048,6 +3176,8 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
         #endif /* NDEBUG */
         break; /* not reached */
     }
+    TEXT_MACRO_N_CSTRING(textMacros[2],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
+    TEXT_MACRO_N_CSTRING(textMacros[3],"%name",String_cString(fileName));
     Misc_expandMacros(String_clear(line),DEFAULT_DIRECTORY_LIST_FORMAT,textMacros,SIZE_OF_ARRAY(textMacros));
 
     // print
