@@ -455,132 +455,214 @@ String Misc_expandMacros(String          string,
                          uint            macroCount
                         )
 {
-  long       macroTemplateLength;
-  long       i0,i1;
-  int        index;
-  long       i;
-  const char *s;
-  uint       z;
-  char       format[128];
+  #define APPEND_CHAR(string,index,ch) \
+    do \
+    { \
+      if ((index) < sizeof(string)-1) \
+      { \
+        (string)[index] = ch; \
+        (index)++; \
+      } \
+    } \
+    while (0)
+
+  #define SKIP_SPACES(string,i) \
+    do \
+    { \
+      while (   ((string)[i] != '\0') \
+             && isspace((string)[i]) \
+            ) \
+      { \
+        (i)++; \
+      } \
+    } \
+    while (0)
+
+  bool  macroFlag;
+  ulong i;
+  uint  j;
+  char  name[128];
+  char  format[128];
 
   assert(macroTemplate != NULL);
   assert((macroCount == 0) || (macros != NULL));
 
-  macroTemplateLength = strlen(macroTemplate);
-
   String_clear(string);
-  i0 = 0;
+  i = 0;
   do
   {
-    // find next macro
-    i1    = -1;
-    index = -1;
-    for (z = 0; z < macroCount; z++)
+    // add prefix string
+    macroFlag = FALSE;
+    while ((macroTemplate[i] != '\0') && !macroFlag)
     {
-      s = strstr(&macroTemplate[i0],macros[z].name);
-      if (s != NULL)
+      if (macroTemplate[i] == '%')
       {
-        i = (long)(s-macroTemplate);
-        if ((i1 < 0) || (i < i1))
+        if ((macroTemplate[i+1] == '%'))
         {
-          i1    = i;
-          index = z;
+          String_appendChar(string,'%');
+          i+=2;
         }
-      }
-    }
-
-    // expand macro
-    if (index >= 0)
-    {
-      // add prefix string
-      String_appendBuffer(string,&macroTemplate[i0],i1-i0);
-      i0 = i1+strlen(macros[index].name);
-
-      // find format string (if any)
-      if ((i0 < macroTemplateLength) && (macroTemplate[i0] == ':'))
-      {
-        // skip ':'
-        i0++;
-
-        // get format string
-        i = 0;
-        format[i] = '%'; i++;
-        while (   (i0 < macroTemplateLength)
-               && (   isdigit(macroTemplate[i0])
-                   || (macroTemplate[i0] == '-')
-                   || (macroTemplate[i0] == '.')
-                  )
-              )
+        else
         {
-          if (i < (long)sizeof(format)-1)
-          {
-            format[i] = macroTemplate[i0]; i++;
-          }
-          i0++;
+          macroFlag = TRUE;
+          i++;
         }
-        if (i0 < macroTemplateLength)
-        {
-          if (i < (long)sizeof(format)-1)
-          {
-            format[i] = macroTemplate[i0]; i++;
-          }
-          i0++;
-        }
-        format[i] = '\0';
       }
       else
       {
-        // predefined format string
-        switch (macros[index].type)
+        String_appendChar(string,macroTemplate[i]);
+        i++;
+      }
+    }
+
+    if (macroFlag)
+    {
+      // skip spaces
+      SKIP_SPACES(macroTemplate,i);
+
+      // get macro name
+      j = 0;
+      if (   (macroTemplate[i] != '\0')
+          && isalpha(macroTemplate[i])
+         )
+      {
+        APPEND_CHAR(name,j,'%');
+        do
         {
-          case TEXT_MACRO_TYPE_INTEGER:
-            strcpy(format,"%d");
-            break;
-          case TEXT_MACRO_TYPE_INTEGER64:
-            strcpy(format,"%lld");
-            break;
-          case TEXT_MACRO_TYPE_CSTRING:
-            strcpy(format,"%s");
-            break;
-          case TEXT_MACRO_TYPE_STRING:
-            strcpy(format,"%S");
-            break;
-          #ifndef NDEBUG
-            default:
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; /* not reached */
-          #endif /* NDEBUG */
+          APPEND_CHAR(name,j,macroTemplate[i]);
+          i++;
+        }
+        while (   (macroTemplate[i] != '\0')
+               && isalnum(macroTemplate[i])
+              );
+      }
+      name[j] = '\0';
+
+      // get format data (if any)
+      j = 0;
+      if (macroTemplate[i] == ':')
+      {
+        // skip ':'
+        i++;
+
+        // skip spaces
+        SKIP_SPACES(macroTemplate,i);
+
+        // get format string
+        APPEND_CHAR(format,j,'%');
+        while (   (macroTemplate[i] != '\0')
+               && (   isdigit(macroTemplate[i])
+                   || (macroTemplate[i] == '-')
+                   || (macroTemplate[i] == '.')
+                  )
+              )
+        {
+          APPEND_CHAR(format,j,macroTemplate[i]);
+          i++;
+        }
+        while (   (macroTemplate[i] != '\0')
+               && (strchr("l",macroTemplate[i]) != NULL)
+              )
+        {
+          APPEND_CHAR(format,j,macroTemplate[i]);
+          i++;
+        }
+        if (   (macroTemplate[i] != '\0')
+            && (strchr("duxfsS",macroTemplate[i]) != NULL)
+           )
+        {
+          APPEND_CHAR(format,j,macroTemplate[i]);
+          i++;
         }
       }
+      format[j] = '\0';
 
-      switch (macros[index].type)
+      // find macro
+      if (strlen(name) > 0)
       {
-        case TEXT_MACRO_TYPE_INTEGER:
-          String_format(string,format,macros[index].value.i);
-          break;
-        case TEXT_MACRO_TYPE_INTEGER64:
-          String_format(string,format,macros[index].value.l);
-          break;
-        case TEXT_MACRO_TYPE_CSTRING:
-          String_format(string,format,macros[index].value.s);
-          break;
-        case TEXT_MACRO_TYPE_STRING:
-          String_format(string,format,macros[index].value.string);
-          break;
-        #ifndef NDEBUG
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; /* not reached */
-        #endif /* NDEBUG */
+        // find macro
+        j = 0;
+        while (   (j < macroCount)
+               && (strcmp(name,macros[j].name) != 0)
+              )
+        {
+          j++;
+        }
+
+        if (j < macroCount)
+        {
+          // get default format if no format given
+          if (strlen(format) == 0)
+          {
+            switch (macros[j].type)
+            {
+              case TEXT_MACRO_TYPE_INTEGER:
+                strcpy(format,"%d");
+                break;
+              case TEXT_MACRO_TYPE_INTEGER64:
+                strcpy(format,"%lld");
+                break;
+              case TEXT_MACRO_TYPE_DOUBLE:
+                strcpy(format,"%lf");
+                break;
+              case TEXT_MACRO_TYPE_CSTRING:
+                strcpy(format,"%s");
+                break;
+              case TEXT_MACRO_TYPE_STRING:
+                strcpy(format,"%S");
+                break;
+              #ifndef NDEBUG
+                default:
+                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                  break; /* not reached */
+              #endif /* NDEBUG */
+            }
+          }
+
+          // expand macro
+          switch (macros[j].type)
+          {
+            case TEXT_MACRO_TYPE_INTEGER:
+              String_format(string,format,macros[j].value.i);
+              break;
+            case TEXT_MACRO_TYPE_INTEGER64:
+              String_format(string,format,macros[j].value.l);
+              break;
+            case TEXT_MACRO_TYPE_DOUBLE:
+              String_format(string,format,macros[j].value.d);
+              break;
+            case TEXT_MACRO_TYPE_CSTRING:
+              String_format(string,format,macros[j].value.s);
+              break;
+            case TEXT_MACRO_TYPE_STRING:
+              String_format(string,format,macros[j].value.string);
+              break;
+            #ifndef NDEBUG
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break; /* not reached */
+            #endif /* NDEBUG */
+          }
+        }
+        else
+        {
+          // unknown macro
+          String_format(string,"?%s?",name);
+        }
+      }
+      else
+      {
+        // empty macro
+        String_format(string,format,"");
       }
     }
   }
-  while (index >= 0);
-
-  // add postfix string
-  String_appendBuffer(string,&macroTemplate[i0],macroTemplateLength-i0);
+  while (macroFlag);
 
   return string;
+
+  #undef SKIP_SPACES
+  #undef APPEND_CHAR
 }
 
 /*---------------------------------------------------------------------*/

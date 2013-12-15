@@ -64,6 +64,7 @@ typedef enum
 {
   TEXT_MACRO_TYPE_INTEGER,
   TEXT_MACRO_TYPE_INTEGER64,
+  TEXT_MACRO_TYPE_DOUBLE,
   TEXT_MACRO_TYPE_CSTRING,
   TEXT_MACRO_TYPE_STRING,
 } TextMacroTypes;
@@ -76,6 +77,7 @@ typedef struct
   {
     int            i;
     int64          l;
+    double         d;
     const char     *s;
     String         string;
   } value;
@@ -109,25 +111,31 @@ typedef struct
   { \
     TEXT_MACRO_TYPE_INTEGER, \
     name, \
-    {value,0LL,NULL,NULL} \
+    {value,0LL,0.0,NULL,NULL} \
   }
 #define TEXT_MACRO_INTEGER64(name,value) \
   { \
     TEXT_MACRO_TYPE_INTEGER64, \
     name, \
-    {0,value,NULL,NULL} \
+    {0,value,0.0,NULL,NULL} \
+  }
+#define TEXT_MACRO_DOUBLE(name,value) \
+  { \
+    TEXT_MACRO_TYPE_DOUBLE, \
+    name, \
+    {0,0LL,value,NULL,NULL} \
   }
 #define TEXT_MACRO_CSTRING(name,value) \
   { \
     TEXT_MACRO_TYPE_CSTRING, \
     name, \
-    {0,0LL,value,NULL} \
+    {0,0LL,0.0,value,NULL} \
   }
 #define TEXT_MACRO_STRING(name,value) \
   { \
     TEXT_MACRO_TYPE_STRING, \
     name, \
-    {0,0LL,NULL,value} \
+    {0,0LL,0.0,NULL,value} \
   }
 
 #define TEXT_MACRO_N_INTEGER(macro,_name,_value) \
@@ -142,6 +150,12 @@ typedef struct
     macro.name    = _name; \
     macro.value.l = _value; \
   } while (0)
+#define TEXT_MACRO_N_DOUBLE(macro,_name,_value) \
+  do { \
+    macro.type    = TEXT_MACRO_TYPE_DOUBLE; \
+    macro.name    = _name; \
+    macro.value.d = _value; \
+  } while (0)
 #define TEXT_MACRO_N_CSTRING(macro,_name,_value) \
   do { \
     macro.type    = TEXT_MACRO_TYPE_CSTRING; \
@@ -152,7 +166,7 @@ typedef struct
   do { \
     macro.type         = TEXT_MACRO_TYPE_STRING; \
     macro.name         = _name; \
-    macro.value.string = _value; \
+    macro.value.string = (String)_value; \
   } while (0)
 
 /***************************** Forwards ********************************/
