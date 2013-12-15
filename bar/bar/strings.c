@@ -420,6 +420,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   formatToken->precision        = 0;
   formatToken->lengthType       = FORMAT_LENGTH_TYPE_INTEGER;
   formatToken->quoteChar        = '\0';
+  formatToken->conversionChar   = '\0';
 
   // format start character
   assert((*format) == '%');
