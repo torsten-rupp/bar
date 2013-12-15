@@ -470,7 +470,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 #ifdef NDEBUG
   Errors Archive_open(ArchiveInfo                     *archiveInfo,
                       StorageHandle                   *storageHandle,
-                      const StorageSpecifier          *storageSpecifier,
+                      StorageSpecifier                *storageSpecifier,
                       const JobOptions                *jobOptions,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData
@@ -480,7 +480,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                         ulong                           __lineNb__,
                         ArchiveInfo                     *archiveInfo,
                         StorageHandle                   *storageHandle,
-                        const StorageSpecifier          *storageSpecifier,
+                        StorageSpecifier                *storageSpecifier,
                         const JobOptions                *jobOptions,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData

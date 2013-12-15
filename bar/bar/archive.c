@@ -2880,7 +2880,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #ifdef NDEBUG
   Errors Archive_open(ArchiveInfo                     *archiveInfo,
                       StorageHandle                   *storageHandle,
-                      const StorageSpecifier          *storageSpecifier,
+                      StorageSpecifier                *storageSpecifier,
                       const JobOptions                *jobOptions,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData
@@ -2890,7 +2890,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                         ulong                           __lineNb__,
                         ArchiveInfo                     *archiveInfo,
                         StorageHandle                   *storageHandle,
-                        const StorageSpecifier          *storageSpecifier,
+                        StorageSpecifier                *storageSpecifier,
                         const JobOptions                *jobOptions,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData
@@ -2943,8 +2943,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->interrupt.openFlag              = FALSE;
   archiveInfo->interrupt.offset                = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->lock,{ Semaphore_done(&archiveInfo->lock); });
-  AUTOFREE_ADD(&autoFreeList,archiveInfo->printableName,{ String_delete(archiveInfo->printableName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->storage.storageSpecifier,{ Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier); });
+  AUTOFREE_ADD(&autoFreeList,archiveInfo->printableName,{ String_delete(archiveInfo->printableName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
 
   error = Storage_open(archiveInfo->storage.storageHandle);
@@ -2954,7 +2954,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     return error;
   }
   DEBUG_TESTCODE("Archive_open2") { Storage_close(archiveInfo->storage.storageHandle); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storageHandle,{ Storage_close(archiveInfo->storage.storageHandle); Storage_done(archiveInfo->storage.storageHandle); });
+  AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storageHandle,{ Storage_close(archiveInfo->storage.storageHandle); });
 
   // check if BAR archive file
   error = getNextChunkHeader(archiveInfo,&chunkHeader);
@@ -5911,7 +5911,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
   } // while
-  AUTOFREE_ADD(&autoFreeList2,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
+  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -6402,7 +6402,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
   } // while
-  AUTOFREE_ADD(&autoFreeList2,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
+  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -6791,7 +6791,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
   } // while
-  AUTOFREE_ADD(&autoFreeList2,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
+  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -7167,7 +7167,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
   } // while
-  AUTOFREE_ADD(&autoFreeList2,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
+  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -7746,7 +7746,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
   } // while
-  AUTOFREE_ADD(&autoFreeList2,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
+  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -8141,7 +8141,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
   } // while
-  AUTOFREE_ADD(&autoFreeList2,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
+  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
