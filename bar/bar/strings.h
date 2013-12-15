@@ -37,6 +37,8 @@ extern const char STRING_ESCAPE_MAP[];
 
 #define STRING_NO_ASSIGN (void*)(-1)
 
+extern const struct __String* STRING_EMPTY;
+
 /***************************** Datatypes *******************************/
 
 // string

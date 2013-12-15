@@ -52,11 +52,22 @@
 #endif /* not NDEBUG */
 
 /***************************** Constants *******************************/
-#define STRING_START_LENGTH 64   // string start length
-#define STRING_DELTA_LENGTH 32   // string delta increasing/decreasing
-
 const char STRING_ESCAPE_CHARACTERS[] = {'\0','\007','\b','\t','\n','\v','\f','\r','\033'};
 const char STRING_ESCAPE_MAP[]        = {'0', 'a',   'b', 't', 'n', 'v', 'f', 'r', 'e'   };
+
+struct __String __STRING_EMPTY =
+{
+  0,
+  0,
+  "",
+  #ifndef NDEBUG
+    0
+  #endif /* not NDEBUG */
+};
+const struct __String* STRING_EMPTY = &__STRING_EMPTY;
+
+#define STRING_START_LENGTH 64   // string start length
+#define STRING_DELTA_LENGTH 32   // string delta increasing/decreasing
 
 LOCAL const char *DEFAULT_TRUE_STRINGS[] =
 {
@@ -4710,7 +4721,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, const St
 {
   DebugStringNode *debugStringNode;
 
-  if (string != NULL)
+  if ((string != NULL) && (string != STRING_EMPTY))
   {
     ulong checkSum;
 
