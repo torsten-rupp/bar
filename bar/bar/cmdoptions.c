@@ -1479,15 +1479,15 @@ void CmdOption_printHelp(FILE                    *outputHandle,
         case CMD_OPTION_TYPE_INTEGER64:
           if (commandLineOptions[i].integer64Option.rangeFlag)
           {
-            if      ((commandLineOptions[i].integer64Option.min > INT_MIN) && (commandLineOptions[i].integer64Option.max < INT_MAX))
+            if      ((commandLineOptions[i].integer64Option.min > INT64_MIN) && (commandLineOptions[i].integer64Option.max < INT64_MAX))
             {
               fprintf(outputHandle," (%lld..%lld",commandLineOptions[i].integer64Option.min,commandLineOptions[i].integer64Option.max);
             }
-            else if (commandLineOptions[i].integer64Option.min > INT_MIN)
+            else if (commandLineOptions[i].integer64Option.min > INT64_MIN)
             {
               fprintf(outputHandle," (>= %lld",commandLineOptions[i].integer64Option.min);
             }
-            else if (commandLineOptions[i].integer64Option.max < INT_MAX)
+            else if (commandLineOptions[i].integer64Option.max < INT64_MAX)
             {
               fprintf(outputHandle," (<= %lld",commandLineOptions[i].integer64Option.max);
             }
