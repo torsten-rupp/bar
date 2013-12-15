@@ -3068,10 +3068,10 @@ LOCAL void printDirectoryListHeader(const String storageName)
 {
   const TextMacro MACROS[] =
   {
-    TEXT_MACRO_CSTRING("%type","Type"),
-    TEXT_MACRO_CSTRING("%size","Size"),
-    TEXT_MACRO_CSTRING("%date","Date/Time"),
-    TEXT_MACRO_CSTRING("%name","Name"     ),
+    TEXT_MACRO_CSTRING("%type",    "Type"),
+    TEXT_MACRO_CSTRING("%size",    "Size"),
+    TEXT_MACRO_CSTRING("%dateTime","Date/Time"),
+    TEXT_MACRO_CSTRING("%name",    "Name"),
   };
 
   String line;
@@ -3206,12 +3206,19 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
         #endif /* NDEBUG */
         break; /* not reached */
     }
-    TEXT_MACRO_N_CSTRING(textMacros[2],"%date",String_cString(Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL)));
-    TEXT_MACRO_N_CSTRING(textMacros[3],"%name",String_cString(fileName));
-    Misc_expandMacros(String_clear(line),DEFAULT_DIRECTORY_LIST_FORMAT,textMacros,SIZE_OF_ARRAY(textMacros));
+    Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL);
+
+    TEXT_MACRO_N_CSTRING(textMacros[2],"%dateTime",dateTime);
+    TEXT_MACRO_N_CSTRING(textMacros[3],"%name",    fileName);
 
     // print
-    printInfo(0,"%s\n",String_cString(line));
+    printInfo(0,"%s\n",
+              String_cString(Misc_expandMacros(String_clear(line),
+                                               DEFAULT_DIRECTORY_LIST_FORMAT,
+                                               textMacros,SIZE_OF_ARRAY(textMacros)
+                                              )
+                            )
+             );
   }
   String_delete(line);
   String_delete(dateTime);
