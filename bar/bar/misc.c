@@ -646,13 +646,13 @@ String Misc_expandMacros(String          string,
         }
         else
         {
-          // unknown macro
-          String_format(string,"?%s?",name);
+          // keep unknown macro
+          String_appendCString(string,name);
         }
       }
       else
       {
-        // empty macro
+        // empty macro: add empty string
         String_format(string,format,"");
       }
     }
