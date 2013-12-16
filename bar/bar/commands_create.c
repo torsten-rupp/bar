@@ -1146,6 +1146,7 @@ LOCAL Errors formatArchiveFileName(String       fileName,
         break; /* not reached */
       #endif /* NDEBUG */
   }
+  Misc_expandMacros(fileName,String_cString(templateFileName),textMacros,SIZE_OF_ARRAY(textMacros));
 
   // expand time macros, part number
   #ifdef HAVE_LOCALTIME_R
