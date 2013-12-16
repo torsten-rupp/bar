@@ -2709,11 +2709,7 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
     fileInfo->size = fileStat.st_size;
 
     // get file attributes
-    error = getAttributes(fileName,&fileInfo->attributes);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    (void)getAttributes(fileName,&fileInfo->attributes);
   }
   else if (S_ISDIR(fileStat.st_mode))
   {
@@ -2721,11 +2717,7 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
     fileInfo->size = 0LL;
 
     // get file attributes
-    error = getAttributes(fileName,&fileInfo->attributes);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    (void)getAttributes(fileName,&fileInfo->attributes);
   }
   #ifdef S_ISLNK
   else if (S_ISLNK(fileStat.st_mode))
