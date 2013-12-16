@@ -2582,7 +2582,7 @@ class TabJobs
           button.setToolTipText("Limit size of storage files to specified value.");
 
           widgetArchivePartSize = Widgets.newCombo(composite);
-          widgetArchivePartSize.setItems(new String[]{"32M","64M","128M","140M","256M","280M","512M","600M","1G","2G"});
+          widgetArchivePartSize.setItems(new String[]{"32M","64M","128M","140M","256M","280M","512M","600M","1G","2G","4G","8G","10G","20G"});
           widgetArchivePartSize.setData("showedErrorDialog",false);
           Widgets.layout(widgetArchivePartSize,0,2,TableLayoutData.W);
           Widgets.addModifyListener(new WidgetModifyListener(widgetArchivePartSize,archivePartSizeFlag)
@@ -2951,7 +2951,9 @@ class TabJobs
                   "*.mpeg",
                   "*.avi",
                   "*.wma",
+                  "*.wmv",
                   "*.flv",
+                  "*.3gp",
                 };
 
                 MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -6471,7 +6473,7 @@ throw new Error("NYI");
 
     String[]            resultErrorMessage = new String[1];
     ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("FILE_LIST url=%S",
+    int error = BARServer.executeCommand(StringParser.format("FILE_LIST storageDirectory=%S",
                                                              "file://"+fileTreeData.name
                                                             ),
                                                             new TypeMap("fileType",FileTypes.class,
@@ -7215,7 +7217,7 @@ throw new Error("NYI");
     BARServer.executeCommand(StringParser.format("INCLUDE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
     for (EntryData entryData : includeHashMap.values())
     {
-      BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobId=%d entryType=%d patternType=%s pattern=%'S",
+      BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobId=%d entryType=%s patternType=%s pattern=%'S",
                                                    selectedJobId,
                                                    entryData.entryType.toString(),
                                                    "GLOB",
