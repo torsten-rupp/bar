@@ -7003,7 +7003,11 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       if (!pattern.equals(""))
       {
          compressExcludeHashSet.add(pattern);
-         Widgets.addListEntry(widgetCompressExcludeList,findListIndex(widgetCompressExcludeList,pattern),pattern);
+         Widgets.insertListEntry(widgetCompressExcludeList,
+                                 findListIndex(widgetCompressExcludeList,pattern),
+                                 pattern,
+                                 pattern
+                                );
       }
     }
   }
@@ -7517,7 +7521,11 @@ throw new Error("NYI");
     Widgets.removeAllListEntries(widgetExcludeList);
     for (String pattern : excludeHashSet)
     {
-      Widgets.addListEntry(widgetExcludeList,findListIndex(widgetExcludeList,pattern),pattern);
+      Widgets.insertListEntry(widgetExcludeList,
+                              findListIndex(widgetExcludeList,pattern),
+                              pattern,
+                              pattern
+                             );
     }
 
     // update file tree/device images
@@ -7738,7 +7746,12 @@ throw new Error("NYI");
       }
 
       compressExcludeHashSet.add(pattern);
-      Widgets.addListEntry(widgetCompressExcludeList,findListIndex(widgetCompressExcludeList,pattern),pattern);
+Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
+      Widgets.insertListEntry(widgetCompressExcludeList,
+                              findListIndex(widgetCompressExcludeList,pattern),
+                              pattern,
+                              pattern
+                             );
     }
 
     // update file tree/device images
@@ -7772,7 +7785,11 @@ throw new Error("NYI");
         }
 
         compressExcludeHashSet.add(pattern);
-        Widgets.addListEntry(widgetCompressExcludeList,findListIndex(widgetCompressExcludeList,pattern),pattern);
+        Widgets.insertListEntry(widgetCompressExcludeList,
+                                findListIndex(widgetCompressExcludeList,pattern),
+                                pattern,
+                                pattern
+                               );
       }
     }
 
@@ -7847,7 +7864,11 @@ throw new Error("NYI");
                                                   ),
                                resultErrorMessage
                               );
-      Widgets.addListEntry(widgetCompressExcludeList,findListIndex(widgetCompressExcludeList,pattern),pattern);
+      Widgets.insertListEntry(widgetCompressExcludeList,
+                              findListIndex(widgetCompressExcludeList,pattern),
+                              pattern,
+                              pattern
+                             );
     }
 
     // update file tree/device images
