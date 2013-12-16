@@ -826,6 +826,9 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->runningInfo.storageName);
   String_delete(jobNode->runningInfo.name);
 
+  String_delete(jobNode->scheduleCustomText);
+  String_delete(jobNode->scheduleTitle);
+
   if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
   if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
   if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
@@ -887,6 +890,8 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
   jobNode->id                             = getNewJobId();
   jobNode->state                          = JOB_STATE_NONE;
   jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
+  jobNode->scheduleTitle                  = String_new();
+  jobNode->scheduleCustomText             = String_new();
   jobNode->requestedAbortFlag             = FALSE;
   jobNode->requestedVolumeNumber          = 0;
   jobNode->volumeNumber                   = 0;
@@ -954,6 +959,8 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->id                             = getNewJobId();
   newJobNode->state                          = JOB_STATE_NONE;
   newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
+  newJobNode->scheduleTitle                  = String_new();
+  newJobNode->scheduleCustomText             = String_new();
   newJobNode->requestedAbortFlag             = FALSE;
   newJobNode->requestedVolumeNumber          = 0;
   newJobNode->volumeNumber                   = 0;
@@ -2107,13 +2114,13 @@ LOCAL void jobThreadCode(void)
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
-  storageName          = String_new();
+  storageName        = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
-  scheduleTitle        = String_new();
-  scheduleCustomText   = String_new();
+  scheduleTitle      = String_new();
+  scheduleCustomText = String_new();
 
   while (!quitFlag)
   {
@@ -4373,7 +4380,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
   storageDirectory = String_new();
   if (!StringMap_getString(argumentMap,"storageDirectory",storageDirectory,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageName=<name>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageDirectory=<name>");
     return;
   }
 
@@ -5192,7 +5199,7 @@ LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const StringMa
 LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   uint          jobId;
-  String        name;
+  String        newName;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   String        fileName;
@@ -5207,22 +5214,22 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
     return;
   }
-  name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  newName = String_new();
+  if (!StringMap_getString(argumentMap,"newName",newName,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
-    String_delete(name);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newName=<name>");
+    String_delete(newName);
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // check if job already exists
-    if (findJobByName(name) != NULL)
+    if (findJobByName(newName) != NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(newName));
       Semaphore_unlock(&jobList.lock);
-      String_delete(name);
+      String_delete(newName);
       return;
     }
 
@@ -5232,19 +5239,19 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
       Semaphore_unlock(&jobList.lock);
-      String_delete(name);
+      String_delete(newName);
       return;
     }
 
     // rename job
-    fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
+    fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),newName);
     error = File_rename(jobNode->fileName,fileName);
     if (error != ERROR_NONE)
     {
       File_deleteFileName(fileName);
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error renaming job #%d: %s",jobId,Errors_getText(error));
       Semaphore_unlock(&jobList.lock);
-      String_delete(name);
+      String_delete(newName);
       return;
     }
 
@@ -5252,14 +5259,14 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
     File_deleteFileName(fileName);
 
     // store new file name
-    File_appendFileName(File_setFileNameCString(jobNode->fileName,serverJobsDirectory),name);
-    String_set(jobNode->name,name);
+    File_appendFileName(File_setFileNameCString(jobNode->fileName,serverJobsDirectory),newName);
+    String_set(jobNode->name,newName);
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(name);
+  String_delete(newName);
 }
 
 /***********************************************************************\
