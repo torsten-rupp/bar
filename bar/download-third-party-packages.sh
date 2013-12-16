@@ -396,17 +396,11 @@ if test $cleanFlag -eq 0; then
      else
        cd $tmpDirectory
      fi
-     if test ! -f ftplib-3.1-src.tar.gz; then
-       $WGET $WGET_OPTIONS 'http://www.nbpfaus.net/~pfau/ftplib/ftplib-3.1-src.tar.gz'
-     fi
-     if test ! -f ftplib-3.1-1.patch; then
-       $WGET $WGET_OPTIONS 'http://nbpfaus.net/~pfau/ftplib/ftplib-3.1-1.patch'
+     if test ! -f ftplib-4.0.tar.gz; then
+       $WGET $WGET_OPTIONS 'http://nbpfaus.net/~pfau/ftplib/ftplib-4.0.tar.gz'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf ftplib-3.1-src.tar.gz
-
-       # FTPLib patch version 3.1 (from author)
-       (cd ftplib-3.1; $PATCH --batch -N -p3 < ../ftplib-3.1-1.patch) 1>/dev/null 2>/dev/null
+       $TAR xzf ftplib-4.0-src.tar.gz
 
        # patch to disable output via perror():
        #   diff -u ftplib-3.1.org/linux/Makefile ftplib-3.1/linux/Makefile > ftplib-3.1-without-perror.patch
