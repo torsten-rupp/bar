@@ -400,24 +400,24 @@ if test $cleanFlag -eq 0; then
        $WGET $WGET_OPTIONS 'http://nbpfaus.net/~pfau/ftplib/ftplib-4.0.tar.gz'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf ftplib-4.0-src.tar.gz
+       $TAR xzf ftplib-4.0.tar.gz
 
        # patch to disable output via perror():
        #   diff -u ftplib-3.1.org/linux/Makefile ftplib-3.1/linux/Makefile > ftplib-3.1-without-perror.patch
-       (cd ftplib-3.1; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-without-perror.patch   ) 1>/dev/null 2>/dev/null
+       (cd ftplib-4.0; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-without-perror.patch   ) 1>/dev/null 2>/dev/null
        # patch to fix bug in FTPAccess:
        #   diff -u ftplib-3.1.org/inux/ftplib.c ftplib-3.1/inux/ftplib.c > ftplib-3.1-ftpaccess.patch
-       (cd ftplib-3.1; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-ftpaccess.patch        ) 1>/dev/null 2>/dev/null
+       (cd ftplib-4.0; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-ftpaccess.patch        ) 1>/dev/null 2>/dev/null
        # patch to support timeout in receive:
        #   diff -u ftplib-3.1.org/linux/ftplib.c ftplib-3.1/linux/ftplib.c > ftplib-3.1-receive-timeout.patch
-       (cd ftplib-3.1; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-receive-timeout.patch  ) 1>/dev/null 2>/dev/null
+       (cd ftplib-4.0; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-receive-timeout.patch  ) 1>/dev/null 2>/dev/null
        # patch to fix not closed file in FtpXfer:
        #   diff -u ftplib-3.1.org/linux/ftplib.c ftplib-3.1/linux/ftplib.c > ftplib-3.1-ftpdir-file-close.patch
-       (cd ftplib-3.1; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-ftpdir-file-close.patch) 1>/dev/null 2>/dev/null
+       (cd ftplib-4.0; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-ftpdir-file-close.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/ftplib-3.1 ftplib
+      $LN -f -s $tmpDirectory/ftplib-4.0 ftplib
     fi
   fi
 
@@ -629,19 +629,19 @@ if test $cleanFlag -eq 0; then
      else
        cd $tmpDirectory
      fi
-     if test ! -f epm-4.1-source.tar.bz2; then
+     if test ! -f epm-4.2-source.tar.bz2; then
        $WGET $WGET_OPTIONS 'http://www.msweet.org/files/project2/epm-4.2-source.tar.bz2'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xjf epm-4.1-source.tar.bz2
+       $TAR xjf epm-4.2-source.tar.bz2
 
        # patch to support creating RPM packages on different machines:
        #   diff -u epm-4.1.org/rpm.c epm-4.1/rpm.c > epm-4.1-rpm.patch
-       (cd epm-4.1; $PATCH --batch -N -p1 < ../../misc/epm-4.1-rpm.patch) 1>/dev/null 2>/dev/null
+       (cd epm-4.2; $PATCH --batch -N -p1 < ../../misc/epm-4.1-rpm.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/epm-4.1 epm
+      $LN -f -s $tmpDirectory/epm-4.2 epm
     fi
   fi
 else
