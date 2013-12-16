@@ -474,7 +474,7 @@ if test $cleanFlag -eq 0; then
        cd $tmpDirectory
      fi
      if test ! -f mxml-2.7.tar.gz; then
-       $WGET $WGET_OPTIONS 'http://ftp.easysw.com/pub/mxml/2.7/mxml-2.7.tar.gz'
+       $WGET $WGET_OPTIONS 'http://www.msweet.org/files/project3/mxml-2.7.tar.gz'
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf mxml-2.7.tar.gz
@@ -636,7 +636,7 @@ if test $cleanFlag -eq 0; then
        cd $tmpDirectory
      fi
      if test ! -f epm-4.1-source.tar.bz2; then
-       $WGET $WGET_OPTIONS 'http://ftp.easysw.com/pub/epm/4.1/epm-4.1-source.tar.bz2'
+       $WGET $WGET_OPTIONS 'http://www.msweet.org/files/project2/epm-4.2-source.tar.bz2'
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xjf epm-4.1-source.tar.bz2
