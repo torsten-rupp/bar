@@ -434,7 +434,7 @@ class Command
       if (result.size() > 0)
       {
         String line = result.removeFirst();
-        if (!line.isEmpty())
+        if ((valueMap != null) && !line.isEmpty())
         {
           valueMap.clear();
           if (!StringParser.parse(line,typeMap,valueMap,unknownValueMap))
