@@ -12,10 +12,12 @@
 // base
 import java.io.File;
 import java.io.InputStream;
+import java.lang.reflect.Array;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -47,6 +49,7 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Canvas;
@@ -320,7 +323,7 @@ class WidgetModifyListener
   private WidgetVariable[] variables;
 
   // cached text for widget
-  private String cachedText = null;
+  private String cachedText = "";
 
   /** create widget listener
    */
@@ -440,9 +443,12 @@ class WidgetModifyListener
       }
       if ((text != null) && !text.equals(cachedText))
       {
+        // Fix layout: save current bounds and restore after pack()
+        Rectangle bounds = widgetLabel.getBounds();
         widgetLabel.setText(text);
-// label layout does not work as expected: width of first label is expanded, rest reduced?
-//        widgetLabel.getParent().layout();
+        widgetLabel.pack();
+        widgetLabel.setBounds(bounds);
+
         cachedText = text;
       }
     }
@@ -464,8 +470,12 @@ class WidgetModifyListener
         }
         if ((text != null) && !text.equals(cachedText))
         {
+          // Fix layout: save current bounds and restore after pack()
+          Rectangle bounds = widgetButton.getBounds();
           widgetButton.setText(text);
-          widgetButton.getParent().layout();
+          widgetButton.pack();
+          widgetButton.setBounds(bounds);
+
           cachedText = text;
         }
       }
@@ -510,8 +520,12 @@ class WidgetModifyListener
       }
       if ((text != null) && !text.equals(cachedText))
       {
+        // Fix layout: save current bounds and restore after pack()
+        Rectangle bounds = widgetCombo.getBounds();
         widgetCombo.setText(text);
-        widgetCombo.getParent().layout();
+        widgetCombo.pack();
+        widgetCombo.setBounds(bounds);
+
         cachedText = text;
       }
     }
@@ -531,9 +545,12 @@ class WidgetModifyListener
       }
       if ((text != null) && !text.equals(cachedText))
       {
+        // Fix layout: save current bounds and restore after pack()
+        Rectangle bounds = widgetText.getBounds();
         widgetText.setText(text);
-// text layout does not work as expected: width of first label is expanded, rest reduced?
-//        widgetText.getParent().layout();
+        widgetText.pack();
+        widgetText.setBounds(bounds);
+
         cachedText = text;
       }
     }
@@ -553,8 +570,12 @@ class WidgetModifyListener
       }
       if ((text != null) && !text.equals(cachedText))
       {
+        // Fix layout: save current bounds and restore after pack()
+        Rectangle bounds = widgetStyledText.getBounds();
         widgetStyledText.setText(text);
-        widgetStyledText.getParent().layout();
+        widgetStyledText.pack();
+        widgetStyledText.setBounds(bounds);
+
         cachedText = text;
       }
     }
@@ -1702,18 +1723,7 @@ class Widgets
       else if (control instanceof Combo)
       {
         Combo widget = (Combo)control;
-
-/* do not work correct?
-        // no setSelection(n,m)-method, thus send key "end" event
-        Event event   = new Event();
-        event.type    = SWT.KeyDown;
-        event.widget  = widget;
-        event.keyCode = SWT.END;
-        Display display = widget.getDisplay();
-        display.post(event);
-        display.update();
-*/
-widget.setSelection(new Point(0,1));
+        widget.setSelection(new Point(0,65536));
       }
       else if (control instanceof Spinner)
       {
@@ -1807,17 +1817,13 @@ widget.setSelection(new Point(0,1));
     }
 
     // set tab traversal
-    LinkedList<Control> controlList = new LinkedList<Control>();
-    for (Control control : controls)
-    {
-      controlList.add(control);
-    }
+    LinkedList<Control> controlList = new LinkedList(Arrays.asList(controls));
     while (controlList.size() > 1)
     {
       int n = controlList.size();
 //Dprintf.dprintf("controls %d:",controlList.size()); for (Control control : controlList) { Dprintf.dprintf("  %s",control); } Dprintf.dprintf("");
 
-      // find most left and deepest control
+      // find most left and deepest control in widget tree
       int i        = 0;
       int maxLevel = 0;
       for (int j = 0; j < controlList.size(); j++)
@@ -3079,7 +3085,6 @@ e composite widget
   }
 
   /** sort list by text
-
    * @param list list
    */
   public static void sortList(List list)
@@ -3465,6 +3470,18 @@ e composite widget
     return array;
   }
 
+  /** get list entries
+   * @param list list
+   * @param clazz class of array elements
+   * @return entries array
+   */
+  public static <T> T[] getListEntries(List list, Class clazz)
+  {
+    ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
+
+    return getListEntries(list,(T[])Array.newInstance(clazz,listItems.size()));
+  }
+
   //-----------------------------------------------------------------------
 
   /** new combo widget
@@ -3828,13 +3845,22 @@ e composite widget
    * @param composite composite widget
    * @return new combo widget
    */
-  public static Combo newOptionMenu(Composite composite)
+  public static Combo newOptionMenu(Composite composite, int style)
   {
     Combo combo;
 
-    combo = new Combo(composite,SWT.RIGHT|SWT.READ_ONLY);
+    combo = new Combo(composite,style|SWT.READ_ONLY);
 
     return combo;
+  }
+
+  /** create new option menu
+   * @param composite composite widget
+   * @return new combo widget
+   */
+  public static Combo newOptionMenu(Composite composite)
+  {
+    return newOptionMenu(composite,SWT.NONE);
   }
 
   //-----------------------------------------------------------------------
@@ -4336,15 +4362,16 @@ e composite widget
     {
       TableItem[] tableItems = table.getItems();
 
-      // get sort column index
+      // get sort column index (default: first column)
       int sortColumnIndex = 0;
-      for (TableColumn tableColumn : table.getColumns())
+      TableColumn[] tableColumns = table.getColumns();
+      for (int i = 0; i < tableColumns.length; i++)
       {
-        if (table.getSortColumn() == tableColumn)
+        if (table.getSortColumn() == tableColumns[i])
         {
+          sortColumnIndex = i;
           break;
         }
-        sortColumnIndex++;
       }
 
       // get sorting direction
@@ -6371,6 +6398,25 @@ private static void printTree(Tree tree)
     }
   }
 
+  /** signal modified
+   * @param control control
+   * @param type event type to generate
+   * @param widget widget of event
+   * @param text text of event
+   * @param item item of event
+   */
+  public static void notify(Control control, int type, Widget widget, String text, Widget item)
+  {
+    if (!control.isDisposed() && control.isEnabled())
+    {
+      Event event = new Event();
+      event.widget = widget;
+      event.text   = text;
+      event.item   = item;
+      control.notifyListeners(type,event);
+    }
+  }
+
   /** event notification
    * @param control control
    * @param type event type to generate
@@ -6380,6 +6426,17 @@ private static void printTree(Tree tree)
   public static void notify(Control control, int type, int index, Widget widget)
   {
     notify(control,type,widget,index,null);
+  }
+
+  /** event notification
+   * @param control control
+   * @param type event type to generate
+   * @param text text of event
+   * @param widget widget of event
+   */
+  public static void notify(Control control, int type, String text, Widget widget)
+  {
+    notify(control,type,widget,text,null);
   }
 
   /** event notification
@@ -6411,6 +6468,16 @@ private static void printTree(Tree tree)
   public static void notify(Control control, int type, int index)
   {
     notify(control,type,control,index,null);
+  }
+
+  /** event notification
+   * @param control control
+   * @param type event type to generate
+   * @param text text of event
+   */
+  public static void notify(Control control, int type, String text)
+  {
+    notify(control,type,control,text,null);
   }
 
   /** event notification
