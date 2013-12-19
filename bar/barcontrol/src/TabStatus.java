@@ -346,6 +346,7 @@ class TabStatus
   private WidgetVariable volumeProgress        = new WidgetVariable(0.0);
   private WidgetVariable totalEntriesProgress  = new WidgetVariable(0.0);
   private WidgetVariable totalBytesProgress    = new WidgetVariable(0.0);
+  private WidgetVariable collectTotalSumDone   = new WidgetVariable(false);
   private WidgetVariable requestedVolumeNumber = new WidgetVariable(0);
   private WidgetVariable message               = new WidgetVariable("");
 
@@ -789,11 +790,27 @@ class TabStatus
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,4,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,totalEntries));
+      Widgets.addModifyListener(new WidgetModifyListener(label,collectTotalSumDone)
+      {
+        public void modified(Control control, WidgetVariable widgetVariable)
+        {
+          final Color COLOR_IN_PROGRESS = display.getSystemColor(SWT.COLOR_DARK_GRAY);
+          control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
+        }
+      });
       label = Widgets.newLabel(widgetSelectedJob,"files");
       Widgets.layout(label,4,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,4,3,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,totalBytes));
+      Widgets.addModifyListener(new WidgetModifyListener(label,collectTotalSumDone)
+      {
+        public void modified(Control control, WidgetVariable widgetVariable)
+        {
+          final Color COLOR_IN_PROGRESS = display.getSystemColor(SWT.COLOR_DARK_GRAY);
+          control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
+        }
+      });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,4,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
@@ -805,6 +822,14 @@ class TabStatus
         public String getString(WidgetVariable variable)
         {
           return Units.getByteSize(variable.getLong());
+        }
+      });
+      Widgets.addModifyListener(new WidgetModifyListener(label,collectTotalSumDone)
+      {
+        public void modified(Control control, WidgetVariable widgetVariable)
+        {
+          final Color COLOR_IN_PROGRESS = display.getSystemColor(SWT.COLOR_DARK_GRAY);
+          control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
         }
       });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
@@ -1308,6 +1333,7 @@ class TabStatus
                                                        "doneBytes",            long.class,
                                                        "totalEntries",         long.class,
                                                        "totalBytes",           long.class,
+                                                       "collectTotalSumDone",  boolean.class,
                                                        "skippedEntries",       long.class,
                                                        "skippedBytes",         long.class,
                                                        "errorEntries",         long.class,
@@ -1350,7 +1376,7 @@ class TabStatus
           errorBytes.set           (resultMap.getLong("errorBytes"             ));
           totalEntries.set         (resultMap.getLong("totalEntries"           ));
           totalBytes.set           (resultMap.getLong("totalBytes"             ));
-
+          collectTotalSumDone.set  (resultMap.getBoolean("collectTotalSumDone" ));
           filesPerSecond.set       (resultMap.getDouble("entriesPerSecond"     ));
           bytesPerSecond.set       (resultMap.getDouble("bytesPerSecond"       ));
           storageBytesPerSecond.set(resultMap.getDouble("storageBytesPerSecond"));
