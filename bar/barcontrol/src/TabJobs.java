@@ -1526,7 +1526,7 @@ class TabJobs
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // file tree
-        widgetFileTree = Widgets.newTree(tab,SWT.NONE);
+        widgetFileTree = Widgets.newTree(tab,SWT.MULTI);
         Widgets.layout(widgetFileTree,0,0,TableLayoutData.NSWE);
         SelectionListener fileTreeColumnSelectionListener = new SelectionListener()
         {
@@ -1939,7 +1939,7 @@ class TabJobs
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // image tree
-        widgetDeviceTree = Widgets.newTree(tab);
+        widgetDeviceTree = Widgets.newTree(tab,SWT.MULTI);
         Widgets.layout(widgetDeviceTree,0,0,TableLayoutData.NSWE);
         SelectionListener deviceTreeColumnSelectionListener = new SelectionListener()
         {
@@ -7890,14 +7890,13 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
   {
     assert selectedJobId != 0;
 
-    int index = widgetCompressExcludeList.getSelectionIndex();
-    if (index >= 0)
-    {
-      String pattern = widgetCompressExcludeList.getItem(index);
 
-      if (Dialogs.confirm(shell,"Remove compress exclude pattern '"+pattern+"'?"))
+    String[] patterns = widgetCompressExcludeList.getSelection();
+    if (patterns.length > 0)
+    {
+      if (Dialogs.confirm(shell,"Remove "+patterns.length+" selected compress exclude patterns?"))
       {
-        compressExcludeListRemove(pattern);
+        compressExcludeListRemove(patterns);
       }
     }
   }
@@ -9272,34 +9271,36 @@ throw new Error("NYI");
   {
     assert selectedJobId != 0;
 
-    int index = widgetScheduleList.getSelectionIndex();
-    if (index >= 0)
+    TableItem[] tableItems = widgetScheduleList.getSelection();
+    if (tableItems.length > 0)
     {
-      if (Dialogs.confirm(shell,"Delete schedule?"))
+      if (Dialogs.confirm(shell,"Delete "+tableItems.length+" selected schedule entries?"))
       {
-        TableItem    tableItem    = widgetScheduleList.getItem(index);
-        ScheduleData scheduleData = (ScheduleData)tableItem.getData();
+        for (TableItem tableItem : tableItems)
+        {
+          ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
-        scheduleList.remove(scheduleData);
+          scheduleList.remove(scheduleData);
 
-        tableItem.dispose();
+          tableItem.dispose();
 
 // TODO result?
-        String[] resultErrorMessage = new String[1];
-        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
-        for (ScheduleData scheduleData_ : scheduleList)
-        {
-          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S enabledFlag=%y",
-                                                       selectedJobId,
-                                                       scheduleData_.getDate(),
-                                                       scheduleData_.getWeekDays(),
-                                                       scheduleData_.getTime(),
-                                                       scheduleData_.archiveType,
-                                                       scheduleData_.customText,
-                                                       scheduleData_.enabled
-                                                      ),
-                                   resultErrorMessage
-                                  );
+          String[] resultErrorMessage = new String[1];
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
+          for (ScheduleData scheduleData_ : scheduleList)
+          {
+            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S enabledFlag=%y",
+                                                         selectedJobId,
+                                                         scheduleData_.getDate(),
+                                                         scheduleData_.getWeekDays(),
+                                                         scheduleData_.getTime(),
+                                                         scheduleData_.archiveType,
+                                                         scheduleData_.customText,
+                                                         scheduleData_.enabled
+                                                        ),
+                                     resultErrorMessage
+                                    );
+          }
         }
       }
     }
