@@ -11,7 +11,7 @@ ToDo
 - Windows port
 - re-read configuration when modified
 - configure band-width on run-time
-- ACL
+- ACL, EAs
 - send job from server to other server
 - send-only ssh-login (possible?)
 - clear internal performance arrays before next job is started
@@ -63,3 +63,16 @@ ToDo
 - support Windows Volume Shadow Copy Service
 - rsync protocol
 - split storage.c
+- copy job does not copy all values
+- track deleted files and delete them on restore, too
+- add --depth like find
+- option to follow links
+- optimize: use counters for files/skipped/error etc. for each thread
+  separated; accumulate in server client thread to avoid locking
+- check if exclude compressed files work
+- multiple jobs in parallel
+- clients executing jobs from command server
+- barcontrol: edit schedule ESC key?
+- support create image with multicore: create parts in parallel
+- support bar dvd://*.bar
+- restore image to file instead of a device
