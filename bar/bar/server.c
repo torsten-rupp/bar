@@ -155,6 +155,7 @@ typedef struct JobNode
     uint64            doneBytes;               // sum of processed bytes
     ulong             totalEntries;            // number of total entries
     uint64            totalBytes;              // sum of total bytes
+    bool              collectTotalSumDone;     // TRUE if sum of total entries are collected
     ulong             skippedEntries;          // number of skipped entries
     uint64            skippedBytes;            // sum of skippped bytes
     ulong             errorEntries;            // number of entries with errors
@@ -774,24 +775,25 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  jobNode->runningInfo.error              = ERROR_NONE;
-  jobNode->runningInfo.estimatedRestTime  = 0;
-  jobNode->runningInfo.doneEntries        = 0L;
-  jobNode->runningInfo.doneBytes          = 0LL;
-  jobNode->runningInfo.totalEntries       = 0L;
-  jobNode->runningInfo.totalBytes         = 0LL;
-  jobNode->runningInfo.skippedEntries     = 0L;
-  jobNode->runningInfo.skippedBytes       = 0LL;
-  jobNode->runningInfo.errorEntries       = 0L;
-  jobNode->runningInfo.errorBytes         = 0LL;
-  jobNode->runningInfo.archiveBytes       = 0LL;
-  jobNode->runningInfo.compressionRatio   = 0.0;
-  jobNode->runningInfo.entryDoneBytes     = 0LL;
-  jobNode->runningInfo.entryTotalBytes    = 0LL;
-  jobNode->runningInfo.storageDoneBytes   = 0LL;
-  jobNode->runningInfo.storageTotalBytes  = 0LL;
-  jobNode->runningInfo.volumeNumber       = 0;
-  jobNode->runningInfo.volumeProgress     = 0.0;
+  jobNode->runningInfo.error               = ERROR_NONE;
+  jobNode->runningInfo.estimatedRestTime   = 0;
+  jobNode->runningInfo.doneEntries         = 0L;
+  jobNode->runningInfo.doneBytes           = 0LL;
+  jobNode->runningInfo.totalEntries        = 0L;
+  jobNode->runningInfo.totalBytes          = 0LL;
+  jobNode->runningInfo.collectTotalSumDone = FALSE;
+  jobNode->runningInfo.skippedEntries      = 0L;
+  jobNode->runningInfo.skippedBytes        = 0LL;
+  jobNode->runningInfo.errorEntries        = 0L;
+  jobNode->runningInfo.errorBytes          = 0LL;
+  jobNode->runningInfo.archiveBytes        = 0LL;
+  jobNode->runningInfo.compressionRatio    = 0.0;
+  jobNode->runningInfo.entryDoneBytes      = 0LL;
+  jobNode->runningInfo.entryTotalBytes     = 0LL;
+  jobNode->runningInfo.storageDoneBytes    = 0LL;
+  jobNode->runningInfo.storageTotalBytes   = 0LL;
+  jobNode->runningInfo.volumeNumber        = 0;
+  jobNode->runningInfo.volumeProgress      = 0.0;
 
   String_clear(jobNode->runningInfo.name       );
   String_clear(jobNode->runningInfo.storageName);
@@ -1946,6 +1948,7 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
     jobNode->runningInfo.doneBytes             = createStatusInfo->doneBytes;
     jobNode->runningInfo.totalEntries          = createStatusInfo->totalEntries;
     jobNode->runningInfo.totalBytes            = createStatusInfo->totalBytes;
+    jobNode->runningInfo.collectTotalSumDone   = createStatusInfo->collectTotalSumDone;
     jobNode->runningInfo.skippedEntries        = createStatusInfo->skippedEntries;
     jobNode->runningInfo.skippedBytes          = createStatusInfo->skippedBytes;
     jobNode->runningInfo.errorEntries          = createStatusInfo->errorEntries;
@@ -2799,6 +2802,12 @@ LOCAL void indexThreadCode(void)
            && !quitFlag
           )
     {
+      // pause
+      while (pauseFlags.indexUpdate && !quitFlag)
+      {
+        Misc_udelay(500L*1000L);
+      }
+
       // parse storage name
       error = Storage_parseName(&storageSpecifier,storageName);
       if (error == ERROR_NONE)
@@ -2856,6 +2865,16 @@ LOCAL void indexThreadCode(void)
 
         // done storage
         (void)Storage_done(&storageHandle);
+      }
+      else
+      {
+        Index_setState(indexDatabaseHandle,
+                       storageId,
+                       INDEX_STATE_ERROR,
+                       0LL,
+                       "Cannot initialise storage (error: %s)",
+                       Error_getText(error)
+                      );
       }
       doneJobOptions(&jobOptions);
 
@@ -4953,13 +4972,14 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMa
 
     // format and send result
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                     "state=%'s message=%'S doneEntries=%lu doneBytes=%llu totalEntries=%lu totalBytes=%llu skippedEntries=%lu skippedBytes=%llu errorEntries=%lu errorBytes=%llu entriesPerSecond=%f bytesPerSecond=%f storageBytesPerSecond=%f archiveBytes=%llu compressionRatio=%f entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu volumeNumber=%d volumeProgress=%f requestedVolumeNumber=%d",
+                     "state=%'s message=%'S doneEntries=%lu doneBytes=%llu totalEntries=%lu totalBytes=%llu collectTotalSumDone=%y skippedEntries=%lu skippedBytes=%llu errorEntries=%lu errorBytes=%llu entriesPerSecond=%f bytesPerSecond=%f storageBytesPerSecond=%f archiveBytes=%llu compressionRatio=%f entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu volumeNumber=%d volumeProgress=%f requestedVolumeNumber=%d",
                      getJobStateText(&jobNode->jobOptions,jobNode->state),
                      jobNode->runningInfo.message,
                      jobNode->runningInfo.doneEntries,
                      jobNode->runningInfo.doneBytes,
                      jobNode->runningInfo.totalEntries,
                      jobNode->runningInfo.totalBytes,
+                     jobNode->runningInfo.collectTotalSumDone,
                      jobNode->runningInfo.skippedEntries,
                      jobNode->runningInfo.skippedBytes,
                      jobNode->runningInfo.errorEntries,

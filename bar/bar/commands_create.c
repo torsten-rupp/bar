@@ -247,44 +247,45 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   assert(createInfo != NULL);
 
   // init variables
-  createInfo->storageSpecifier             = storageSpecifier;
-  createInfo->includeEntryList             = includeEntryList;
-  createInfo->excludePatternList           = excludePatternList;
-  createInfo->compressExcludePatternList   = compressExcludePatternList;
-  createInfo->jobOptions                   = jobOptions;
-  createInfo->scheduleTitle                = scheduleTitle;
-  createInfo->scheduleCustomText           = scheduleCustomText;
-  createInfo->pauseCreateFlag              = pauseCreateFlag;
-  createInfo->pauseStorageFlag             = pauseStorageFlag;
-  createInfo->requestedAbortFlag           = requestedAbortFlag;
-  createInfo->storeIncrementalFileInfoFlag = FALSE;
-  createInfo->startTime                    = time(NULL);
-  createInfo->collectorSumThreadExitedFlag = FALSE;
-  createInfo->storageInfo.count            = 0;
-  createInfo->storageInfo.bytes            = 0LL;
-  createInfo->storageThreadExitFlag        = FALSE;
+  createInfo->storageSpecifier               = storageSpecifier;
+  createInfo->includeEntryList               = includeEntryList;
+  createInfo->excludePatternList             = excludePatternList;
+  createInfo->compressExcludePatternList     = compressExcludePatternList;
+  createInfo->jobOptions                     = jobOptions;
+  createInfo->scheduleTitle                  = scheduleTitle;
+  createInfo->scheduleCustomText             = scheduleCustomText;
+  createInfo->pauseCreateFlag                = pauseCreateFlag;
+  createInfo->pauseStorageFlag               = pauseStorageFlag;
+  createInfo->requestedAbortFlag             = requestedAbortFlag;
+  createInfo->storeIncrementalFileInfoFlag   = FALSE;
+  createInfo->startTime                      = time(NULL);
+  createInfo->collectorSumThreadExitedFlag   = FALSE;
+  createInfo->storageInfo.count              = 0;
+  createInfo->storageInfo.bytes              = 0LL;
+  createInfo->storageThreadExitFlag          = FALSE;
   StringList_init(&createInfo->storageFileList);
-  createInfo->failError                    = ERROR_NONE;
-  createInfo->statusInfoFunction           = createStatusInfoFunction;
-  createInfo->statusInfoUserData           = createStatusInfoUserData;
-  createInfo->statusInfo.doneEntries       = 0L;
-  createInfo->statusInfo.doneBytes         = 0LL;
-  createInfo->statusInfo.totalEntries      = 0L;
-  createInfo->statusInfo.totalBytes        = 0LL;
-  createInfo->statusInfo.skippedEntries    = 0L;
-  createInfo->statusInfo.skippedBytes      = 0LL;
-  createInfo->statusInfo.errorEntries      = 0L;
-  createInfo->statusInfo.errorBytes        = 0LL;
-  createInfo->statusInfo.archiveBytes      = 0LL;
-  createInfo->statusInfo.compressionRatio  = 0.0;
-  createInfo->statusInfo.name              = String_new();
-  createInfo->statusInfo.entryDoneBytes    = 0LL;
-  createInfo->statusInfo.entryTotalBytes   = 0LL;
-  createInfo->statusInfo.storageName       = String_new();
-  createInfo->statusInfo.storageDoneBytes  = 0LL;
-  createInfo->statusInfo.storageTotalBytes = 0LL;
-  createInfo->statusInfo.volumeNumber      = 0;
-  createInfo->statusInfo.volumeProgress    = 0.0;
+  createInfo->failError                      = ERROR_NONE;
+  createInfo->statusInfoFunction             = createStatusInfoFunction;
+  createInfo->statusInfoUserData             = createStatusInfoUserData;
+  createInfo->statusInfo.doneEntries         = 0L;
+  createInfo->statusInfo.doneBytes           = 0LL;
+  createInfo->statusInfo.totalEntries        = 0L;
+  createInfo->statusInfo.totalBytes          = 0LL;
+  createInfo->statusInfo.collectTotalSumDone = FALSE;
+  createInfo->statusInfo.skippedEntries      = 0L;
+  createInfo->statusInfo.skippedBytes        = 0LL;
+  createInfo->statusInfo.errorEntries        = 0L;
+  createInfo->statusInfo.errorBytes          = 0LL;
+  createInfo->statusInfo.archiveBytes        = 0LL;
+  createInfo->statusInfo.compressionRatio    = 0.0;
+  createInfo->statusInfo.name                = String_new();
+  createInfo->statusInfo.entryDoneBytes      = 0LL;
+  createInfo->statusInfo.entryTotalBytes     = 0LL;
+  createInfo->statusInfo.storageName         = String_new();
+  createInfo->statusInfo.storageDoneBytes    = 0LL;
+  createInfo->statusInfo.storageTotalBytes   = 0LL;
+  createInfo->statusInfo.volumeNumber        = 0;
+  createInfo->statusInfo.volumeProgress      = 0.0;
 
   if (   (archiveType == ARCHIVE_TYPE_FULL)
       || (archiveType == ARCHIVE_TYPE_INCREMENTAL)
@@ -302,7 +303,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
                               || (jobOptions->archiveType == ARCHIVE_TYPE_DIFFERENTIAL);
   }
 
-  // init file name queue, storage queue
+  // init entry name queue, storage queue
   if (!MsgQueue_init(&createInfo->entryMsgQueue,MAX_FILE_MSG_QUEUE_ENTRIES))
   {
     HALT_FATAL_ERROR("Cannot initialize file message queue!");
@@ -1834,6 +1835,13 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     includeEntryNode = includeEntryNode->next;
   }
 
+  // done
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    createInfo->statusInfo.collectTotalSumDone = TRUE;
+    updateStatusInfo(createInfo);
+  }
+
   // free resoures
   String_delete(name);
   String_delete(basePath);
@@ -2494,6 +2502,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   }
   Dictionary_doneIterator(&dictionaryIterator);
 
+  // done
   MsgQueue_setEndOfMsg(&createInfo->entryMsgQueue);
 
   // free resoures
@@ -2694,6 +2703,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   AutoFreeList               autoFreeList;
   byte                       *buffer;
+  String                     storageName;
   void                       *autoFreeSavePoint;
   StorageMsg                 storageMsg;
   Errors                     error;
@@ -2706,7 +2716,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   StorageSpecifier           storageDirectorySpecifier;
   IndexQueryHandle           indexQueryHandle;
   int64                      oldStorageId;
-  String                     storageName;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
 
@@ -2743,6 +2752,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   }
 
   // store data
+  storageName       = String_new();
   autoFreeSavePoint = AutoFree_save(&autoFreeList);
   while (   (createInfo->failError == ERROR_NONE)
          && !isAborted(createInfo)
@@ -2778,6 +2788,9 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     }
     DEBUG_TESTCODE("storageThreadCode1") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 
+    // get storage name
+    String_set(storageName,Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.destinationFileName));
+
     // get file info
     error = File_getFileInfo(&fileInfo,storageMsg.fileName);
     if (error != ERROR_NONE)
@@ -2798,13 +2811,13 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     {
       error = Index_update(indexDatabaseHandle,
                            storageMsg.storageId,
-                           Storage_getName(createInfo->storageSpecifier,NULL),
+                           storageName,
                            0LL  // size
                           );
       if (error != ERROR_NONE)
       {
         printError("Cannot update index for storage '%s' (error: %s)!\n",
-                   Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL),
+                   String_cString(storageName),
                    Errors_getText(error)
                   );
         createInfo->failError = error;
@@ -2823,7 +2836,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
       if (error != ERROR_NONE)
       {
         printError("Cannot update index for storage '%s' (error: %s)!\n",
-                   Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL),
+                   String_cString(storageName),
                    Errors_getText(error)
                   );
         createInfo->failError = error;
@@ -2831,15 +2844,13 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
         continue;
       }
-
-      logMessage(LOG_TYPE_STORAGE,"stored '%s'\n",Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL));
     }
 
     // open file to store
     #ifndef NDEBUG
-      printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL));
+      printInfo(1,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(storageName));
     #else /* not NDEBUG */
-      printInfo(0,"Store archive '%s'...",Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL));
+      printInfo(1,"Store archive '%s'...",String_cString(storageName));
     #endif /* NDEBUG */
     error = File_open(&fileHandle,storageMsg.fileName,FILE_OPEN_READ);
     if (error != ERROR_NONE)
@@ -2886,7 +2897,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
         {
           printInfo(0,"FAIL!\n");
           printError("Cannot store file '%s' (error: %s)\n",
-                     Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL),
+                     String_cString(storageName),
                      Errors_getText(error)
                     );
           break;
@@ -2897,7 +2908,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
       // update status info, check for abort
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        String_setCString(createInfo->statusInfo.storageName,Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL));
+        String_set(createInfo->statusInfo.storageName,storageName);
         updateStatusInfo(createInfo);
       }
 
@@ -2914,7 +2925,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
         {
           printInfo(0,"FAIL!\n");
           printError("Cannot read file '%s' (error: %s)!\n",
-                     Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL),
+                     String_cString(storageName),
                      Errors_getText(error)
                     );
           break;
@@ -2934,7 +2945,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
           {
             printInfo(0,"FAIL!\n");
             printError("Cannot write file '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL),
+                       String_cString(storageName),
                        Errors_getText(error)
                       );
             break;
@@ -2975,7 +2986,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     if (!isAborted(createInfo))
     {
       printInfo(0,"ok\n");
-      logMessage(LOG_TYPE_STORAGE,"Stored '%s'\n",Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL));
+      logMessage(LOG_TYPE_STORAGE,"Stored '%s'\n",String_cString(storageName));
     }
     else
     {
@@ -3014,7 +3025,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
           if (error != ERROR_NONE)
           {
             printError("Cannot delete old index for storage '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL),
+                       String_cString(storageName),
                        Errors_getText(error)
                       );
             createInfo->failError = error;
@@ -3040,7 +3051,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
       if (error != ERROR_NONE)
       {
         printError("Cannot update index for storage '%s' (error: %s)!\n",
-                   Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL),
+                   String_cString(storageName),
                    Errors_getText(error)
                   );
         createInfo->failError = error;
@@ -3060,7 +3071,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
       if (error != ERROR_NONE)
       {
         printError("Cannot update index for storage '%s' (error: %s)!\n",
-                   Storage_getPrintableNameCString(createInfo->storageSpecifier,NULL),
+                   String_cString(storageName),
                    Errors_getText(error)
                   );
         createInfo->failError = error;
@@ -3076,7 +3087,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process storage file '%s' (error: %s)!\n",
-                 String_cString(storageMsg.fileName),
+                 String_cString(storageName),
                  Errors_getText(error)
                 );
       createInfo->failError = error;
@@ -3113,6 +3124,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     freeStorageMsg(&storageMsg,NULL);
     AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
   }
+  String_delete(storageName);
 
   // final post-processing
   if (   !isAborted(createInfo)
@@ -5108,7 +5120,7 @@ createThreadCode(&createInfo);
   // output statics
   if (createInfo.failError == ERROR_NONE)
   {
-    printInfo(0,"%lu file/image(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneEntries,createInfo.statusInfo.doneBytes);
+    printInfo(1,"%lu file/image(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneEntries,createInfo.statusInfo.doneBytes);
     printInfo(2,"%lu file/image(s) skipped\n",createInfo.statusInfo.skippedEntries);
     printInfo(2,"%lu file/image(s) with errors\n",createInfo.statusInfo.errorEntries);
   }

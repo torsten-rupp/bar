@@ -39,6 +39,7 @@ typedef struct
   uint64 doneBytes;                        // number of bytes processed
   ulong  totalEntries;                     // total number of entries
   uint64 totalBytes;                       // total bytes
+  bool   collectTotalSumDone;              // TRUE iff all file sums are collected
   ulong  skippedEntries;                   // number of skipped enttries
   uint64 skippedBytes;                     // sum of skipped bytes
   ulong  errorEntries;                     // number of enttries with errors
