@@ -942,6 +942,7 @@ class TabRestore
               String[]            resultErrorMessage  = new String[1];
               ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
 
+//TODO
 Dprintf.dprintf("process line by line");
 
               if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S checkedStorageOnlyFlag=%y entryMaxCount=%d newestEntriesOnlyFlag=%y",
@@ -2807,7 +2808,7 @@ Dprintf.dprintf("process line by line");
                 final ArchiveNameParts archiveNameParts = new ArchiveNameParts(storageData.name);
 
                 // update busy dialog
-                busyDialog.updateText(archiveNameParts.getPrintableName());
+                busyDialog.updateText("%d: '%s'",storageData.id,archiveNameParts.getPrintableName());
 
                 // remove entry
                 final String[] resultErrorMessage = new String[1];
@@ -2924,7 +2925,7 @@ Dprintf.dprintf("process line by line");
                   String name      = resultMap.getString("name"     );
 
                   // update busy dialog
-                  busyDialog.updateText("'"+name+"'");
+                  busyDialog.updateText("%d: '%s'",storageId,name);
 
                   // remove storage index
                   errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=%s jobId=%d",
