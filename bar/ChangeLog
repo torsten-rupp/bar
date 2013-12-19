@@ -38,6 +38,8 @@
     anymore.
   * added custom text to schedule entries
   * avoid console input in non-interactive mode
+  * added options --[ftp|ssh|webdav]-max-connections
+  * support listing remote directory content
 
 2013-05-05 0.17b
   * fixed parsing of storage specifier (ftp, scp/sftp,
