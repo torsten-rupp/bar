@@ -118,7 +118,7 @@ typedef struct ChunkInfo
   ulong            chunkSize;         // size of fixed chunk data (without chunk header+data elements)
   uint64           size;              // total size of chunk (without chunk header)
   uint64           offset;            // start of chunk in file (offset of header)
-  uint64           index;             // current position in chunk (from begin=end of header)
+  uint64           index;             // current position inside chunk 0..size
 
   void             *data;             // chunk data
 } ChunkInfo;
@@ -379,8 +379,8 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunk_skipSub(ChunkInfo   *chunkInfo,
-                     ChunkHeader *chunkHeader
+Errors Chunk_skipSub(ChunkInfo         *chunkInfo,
+                     const ChunkHeader *chunkHeader
                     );
 
 /***********************************************************************\

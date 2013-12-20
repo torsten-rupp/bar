@@ -1947,8 +1947,8 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
   chunkHeader->id   = chunk.id;
   chunkHeader->size = chunk.size;
 
-  // validate chunk
-  if (chunk.size > (chunkInfo->size-chunkInfo->index))
+  // validate chunk size
+  if ((chunkInfo->index+chunk.size) > chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size)
   {
     return ERROR_END_OF_DATA;
   }
@@ -1956,8 +1956,8 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
   return ERROR_NONE;
 }
 
-Errors Chunk_skipSub(ChunkInfo   *chunkInfo,
-                     ChunkHeader *chunkHeader
+Errors Chunk_skipSub(ChunkInfo         *chunkInfo,
+                     const ChunkHeader *chunkHeader
                     )
 {
   uint64 size;
@@ -1988,7 +1988,7 @@ Errors Chunk_skipSub(ChunkInfo   *chunkInfo,
     return error;
   }
 
-  chunkInfo->index = offset;
+  chunkInfo->index += chunkHeader->size;
 
   return ERROR_NONE;
 }
