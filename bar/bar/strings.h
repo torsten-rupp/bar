@@ -511,7 +511,7 @@ INLINE const char *String_cString(const String string)
 {
   STRING_CHECK_VALID(string);
 
-  return (string != NULL)?&string->data[0]:NULL;
+  return (string != NULL) ? &string->data[0] : NULL;
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENATION__ */
 
