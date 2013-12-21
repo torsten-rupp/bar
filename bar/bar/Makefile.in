@@ -56,6 +56,7 @@ LD_DYNAMIC_PREFIX   = -Wl,-Bdynamic
 
 #---------------------------------- commands----------------------------------
 
+ATTR          = @ATTR@
 CAT           = cat
 CD            = cd
 CHATTR        = chattr
@@ -504,7 +505,11 @@ TEST_FILES = \
   test/data/data\'.dat \
   test/data/data\".dat \
   test/data/delta1/test.dat \
-  test/data/delta2/test.dat \
+  test/data/delta2/test.dat
+ifneq ($(ATTR),)
+TEST_FILES += \
+  test/data/extended_attribute.dat
+endif
 
 # temporary test files
 TEST_FILES_CLEAN = \
@@ -975,6 +980,11 @@ test/data/file666.dat:
 test/data/nodump.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 440 $@; $(CHATTR) +d $@
+ifneq ($(ATTR),)
+test/data/extended_attribute.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(ATTR) -s foo1 -V test $@; $(ATTR) -s foo2 -V "Hello World" $@
+endif
 test/data/fifo:
 	$(INSTALL) -d $(@D)
 	($(CD) test/data; $(MKFIFO) fifo)
