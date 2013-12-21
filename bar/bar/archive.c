@@ -90,13 +90,13 @@ typedef struct
 // password handle
 typedef struct
 {
-  String                          fileName;                          // name of archive for which password is needed
+  ArchiveInfo                     *archiveInfo;
   PasswordModes                   passwordMode;                      // password input mode
   const Password                  *cryptPassword;                    // crypt password
-  const PasswordNode              *passwordNode;
-  ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;
+  const PasswordNode              *passwordNode;                     // next password node to use
+  ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;   // password input callback
   void                            *archiveGetCryptPasswordUserData;
-  bool                            inputFlag;                         // TRUE if input dialog was called
+  bool                            inputFlag;                         // TRUE if input callback was called
 } PasswordHandle;
 
 /***************************** Variables *******************************/
@@ -144,7 +144,7 @@ LOCAL void freePasswordNode(PasswordNode *passwordNode, void *userData)
 /***********************************************************************\
 * Name   : getCryptPassword
 * Purpose: get crypt password if password not set
-* Input  : fileName                        - file name
+* Input  : archiveInfo                     - archive info
 *          jobOptions                      - job options
 *          passwordMode                    - password mode
 *          archiveGetCryptPasswordFunction - get password call back (can
@@ -156,113 +156,138 @@ LOCAL void freePasswordNode(PasswordNode *passwordNode, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Password *getCryptPassword(const String                    fileName,
+LOCAL Password *getCryptPassword(ArchiveInfo                     *archiveInfo,
                                  const JobOptions                *jobOptions,
-                                 PasswordModes                   passwordMode,
                                  ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                                  void                            *archiveGetCryptPasswordUserData
                                 )
 {
+  bool     semaphoreLock;
   Password *password;
+  Password *newPassword;
   Errors   error;
 
   assert(fileName != NULL);
   assert(jobOptions != NULL);
 
   password = NULL;
-  switch ((passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode)
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    case PASSWORD_MODE_DEFAULT:
-      if (globalOptions.cryptPassword != NULL)
-      {
-        password = Password_duplicate(globalOptions.cryptPassword);
-      }
-      else
-      {
-        if (archiveGetCryptPasswordFunction != NULL)
+    switch (jobOptions->cryptPasswordMode)
+    {
+      case PASSWORD_MODE_DEFAULT:
+        if (globalOptions.cryptPassword != NULL)
         {
-          password = Password_new();
-          if (password == NULL)
-          {
-            return NULL;
-          }
-          error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,password,fileName,TRUE,TRUE);
-          if (error != ERROR_NONE)
-          {
-            Password_delete(password);
-            return NULL;
-          }
+          password = Password_duplicate(globalOptions.cryptPassword);
         }
         else
         {
-          return NULL;
+          if (!archiveInfo->cryptPasswordReadFlag && (archiveGetCryptPasswordFunction != NULL))
+          {
+            newPassword = Password_new();
+            if (newPassword != NULL)
+            {
+              error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,
+                                                      newPassword,
+                                                      (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                                        ? Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL)
+                                                        : NULL,
+                                                      TRUE,
+                                                      TRUE
+                                                     );
+              if (error == ERROR_NONE)
+              {
+                password = newPassword;
+              }
+              else
+              {
+                Password_delete(newPassword);
+              }
+            }
+
+            archiveInfo->cryptPasswordReadFlag = TRUE;
+          }
         }
-      }
-      break;
-    case PASSWORD_MODE_ASK:
-      if (globalOptions.cryptPassword != NULL)
-      {
-        password = Password_duplicate(globalOptions.cryptPassword);
-      }
-      else
-      {
-        if (archiveGetCryptPasswordFunction != NULL)
+        break;
+      case PASSWORD_MODE_ASK:
+        if (globalOptions.cryptPassword != NULL)
         {
-          password = Password_new();
-          if (password == NULL)
-          {
-            return NULL;
-          }
-          error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,password,fileName,TRUE,TRUE);
-          if (error != ERROR_NONE)
-          {
-            Password_delete(password);
-            return NULL;
-          }
+          password = Password_duplicate(globalOptions.cryptPassword);
         }
         else
         {
-          return NULL;
+          if (!archiveInfo->cryptPasswordReadFlag && (archiveGetCryptPasswordFunction != NULL))
+          {
+            newPassword = Password_new();
+            if (newPassword != NULL)
+            {
+              error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,
+                                                      newPassword,
+                                                      (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                                        ? Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL)
+                                                        : NULL,
+                                                      TRUE,
+                                                      TRUE
+                                                     );
+              if (error == ERROR_NONE)
+              {
+                password = newPassword;
+              }
+              else
+              {
+                Password_delete(newPassword);
+              }
+            }
+
+            archiveInfo->cryptPasswordReadFlag = TRUE;
+          }
         }
-      }
-      break;
-    case PASSWORD_MODE_CONFIG:
-      if      (jobOptions->cryptPassword != NULL)
-      {
-        password = Password_duplicate(jobOptions->cryptPassword);
-      }
-      else if (globalOptions.cryptPassword != NULL)
-      {
-        password = Password_duplicate(globalOptions.cryptPassword);
-      }
-      else
-      {
-        if (archiveGetCryptPasswordFunction != NULL)
+        break;
+      case PASSWORD_MODE_CONFIG:
+        if      (jobOptions->cryptPassword != NULL)
         {
-          password = Password_new();
-          if (password == NULL)
-          {
-            return NULL;
-          }
-          error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,password,fileName,TRUE,TRUE);
-          if (error != ERROR_NONE)
-          {
-            Password_delete(password);
-            return NULL;
-          }
+          password = Password_duplicate(jobOptions->cryptPassword);
+        }
+        else if (globalOptions.cryptPassword != NULL)
+        {
+          password = Password_duplicate(globalOptions.cryptPassword);
         }
         else
         {
-          return NULL;
+          if (!archiveInfo->cryptPasswordReadFlag && (archiveGetCryptPasswordFunction != NULL))
+          {
+            newPassword = Password_new();
+            if (newPassword != NULL)
+            {
+              error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,
+                                                      newPassword,
+                                                      (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                                        ? Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL)
+                                                        : NULL,
+                                                      TRUE,
+                                                      TRUE
+                                                     );
+              if (error == ERROR_NONE)
+              {
+                password = newPassword;
+              }
+              else
+              {
+                Password_delete(newPassword);
+              }
+            }
+
+            archiveInfo->cryptPasswordReadFlag = TRUE;
+          }
         }
-      }
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        return NULL; /* not reached */
-        break; /* not reached */
-    #endif /* NDEBUG */
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
+    }
   }
 
   return password;
@@ -283,84 +308,90 @@ LOCAL Password *getCryptPassword(const String                    fileName,
 
 LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 {
+  bool           semaphoreLock;
   const Password *password;
   Password       newPassword;
   Errors         error;
 
   assert(passwordHandle != NULL);
 
-  if      (passwordHandle->passwordNode != NULL)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&passwordHandle->archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    // get next password from list
-    password = passwordHandle->passwordNode->password;
-    passwordHandle->passwordNode = passwordHandle->passwordNode->next;
-  }
-  else if (passwordHandle->passwordMode == PASSWORD_MODE_CONFIG)
-  {
-    if (passwordHandle->cryptPassword != NULL)
+    if      (passwordHandle->passwordNode != NULL)
     {
-      // get password
-      password = (Password*)passwordHandle->cryptPassword;
+      // get next password from list
+      password = passwordHandle->passwordNode->password;
+      passwordHandle->passwordNode = passwordHandle->passwordNode->next;
     }
-    else
+    else if (passwordHandle->passwordMode == PASSWORD_MODE_CONFIG)
     {
-      password = NULL;
-    }
-
-    // next password mode is: default
-    passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
-  }
-  else if (passwordHandle->passwordMode == PASSWORD_MODE_DEFAULT)
-  {
-    if (globalOptions.cryptPassword != NULL)
-    {
-      // get password
-      password = globalOptions.cryptPassword;
-    }
-    else
-    {
-      password = NULL;
-    }
-
-    // next password mode is: ask
-    passwordHandle->passwordMode = PASSWORD_MODE_ASK;
-  }
-  else if (   (passwordHandle->passwordMode == PASSWORD_MODE_ASK)
-           && !passwordHandle->inputFlag
-          )
-  {
-    if (passwordHandle->archiveGetCryptPasswordFunction != NULL)
-    {
-      // input password
-      Password_init(&newPassword);
-      error = passwordHandle->archiveGetCryptPasswordFunction(passwordHandle->archiveGetCryptPasswordUserData,
-                                                              &newPassword,
-                                                              passwordHandle->fileName,
-                                                              FALSE,
-                                                              FALSE
-                                                             );
-      if (error != ERROR_NONE)
+      if (passwordHandle->cryptPassword != NULL)
       {
-        return NULL;
+        // get password
+        password = (Password*)passwordHandle->cryptPassword;
+      }
+      else
+      {
+        password = NULL;
       }
 
-      // add to password list
-      password = Archive_appendDecryptPassword(&newPassword);
+      // next password mode is: default
+      passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
+    }
+    else if (passwordHandle->passwordMode == PASSWORD_MODE_DEFAULT)
+    {
+      if (globalOptions.cryptPassword != NULL)
+      {
+        // get password
+        password = globalOptions.cryptPassword;
+      }
+      else
+      {
+        password = NULL;
+      }
 
-      // free resources
-      Password_done(&newPassword);
+      // next password mode is: ask
+      passwordHandle->passwordMode = PASSWORD_MODE_ASK;
+    }
+    else if (   (passwordHandle->passwordMode == PASSWORD_MODE_ASK)
+             && !passwordHandle->inputFlag
+            )
+    {
+      if (passwordHandle->archiveGetCryptPasswordFunction != NULL)
+      {
+        // input password
+        Password_init(&newPassword);
+        error = passwordHandle->archiveGetCryptPasswordFunction(passwordHandle->archiveGetCryptPasswordUserData,
+                                                                &newPassword,
+                                                                (passwordHandle->archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                                                  ? Storage_getPrintableName(&passwordHandle->archiveInfo->storage.storageSpecifier,NULL)
+                                                                  : NULL,
+                                                                FALSE,
+                                                                FALSE
+                                                               );
+        if (error != ERROR_NONE)
+        {
+          return NULL;
+        }
 
-      // next password mode is: none
-      passwordHandle->inputFlag = TRUE;
+        // add to password list
+        password = Archive_appendDecryptPassword(&newPassword);
+
+        // free resources
+        Password_done(&newPassword);
+
+        // next password mode is: none
+        passwordHandle->inputFlag = TRUE;
+      }
+      else
+      {
+        password = NULL;
+      }
     }
     else
     {
       password = NULL;
     }
-  }
-  else
-  {
-    password = NULL;
   }
 
   return password;
@@ -369,7 +400,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 /***********************************************************************\
 * Name   : getFirstDecryptPassword
 * Purpose: get first decrypt password
-* Input  : fileName                        - file name
+* Input  : archiveInfo                     - archive info
 *          jobOptions                      - job options
 *          passwordMode                    - password mode
 *          archiveGetCryptPasswordFunction - get password call back
@@ -381,7 +412,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 \***********************************************************************/
 
 LOCAL const Password *getFirstDecryptPassword(PasswordHandle                  *passwordHandle,
-                                              const String                    fileName,
+                                              ArchiveInfo                     *archiveInfo,
                                               const JobOptions                *jobOptions,
                                               PasswordModes                   passwordMode,
                                               ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
@@ -390,8 +421,8 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle                  *p
 {
   assert(passwordHandle != NULL);
 
-  passwordHandle->fileName                        = fileName;
-  passwordHandle->passwordMode                    = (passwordMode != PASSWORD_MODE_DEFAULT)?passwordMode:jobOptions->cryptPasswordMode;
+  passwordHandle->archiveInfo                     = archiveInfo;
+  passwordHandle->passwordMode                    = (passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode;
   passwordHandle->cryptPassword                   = jobOptions->cryptPassword;
   passwordHandle->passwordNode                    = decryptPasswordList.head;
   passwordHandle->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
@@ -3248,7 +3279,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
           decryptedFlag = TRUE;
         }
         password = getFirstDecryptPassword(&passwordHandle,
-                                           archiveInfo->printableName,
+                                           archiveInfo,
                                            archiveInfo->jobOptions,
                                            archiveInfo->jobOptions->cryptPasswordMode,
                                            archiveInfo->archiveGetCryptPasswordFunction,
@@ -3393,19 +3424,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // init crypt password
   if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-    {
-      if (!archiveInfo->cryptPasswordReadFlag)
-      {
-        archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
-                                                      archiveInfo->jobOptions,
-                                                      archiveInfo->jobOptions->cryptPasswordMode,
-                                                      archiveInfo->archiveGetCryptPasswordFunction,
-                                                      archiveInfo->archiveGetCryptPasswordUserData
-                                                     );
-        archiveInfo->cryptPasswordReadFlag = TRUE;
-      }
-    }
+    archiveInfo->cryptPassword = getCryptPassword(archiveInfo,
+                                                  archiveInfo->jobOptions,
+                                                  archiveInfo->archiveGetCryptPasswordFunction,
+                                                  archiveInfo->archiveGetCryptPasswordUserData
+                                                 );
     if (archiveInfo->cryptPassword == NULL)
     {
       AutoFree_cleanup(&autoFreeList);
@@ -3773,19 +3796,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // init crypt password
   if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-    {
-      if (!archiveInfo->cryptPasswordReadFlag)
-      {
-        archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
-                                                      archiveInfo->jobOptions,
-                                                      archiveInfo->jobOptions->cryptPasswordMode,
-                                                      archiveInfo->archiveGetCryptPasswordFunction,
-                                                      archiveInfo->archiveGetCryptPasswordUserData
-                                                     );
-        archiveInfo->cryptPasswordReadFlag = TRUE;
-      }
-    }
+    archiveInfo->cryptPassword = getCryptPassword(archiveInfo,
+                                                  archiveInfo->jobOptions,
+                                                  archiveInfo->archiveGetCryptPasswordFunction,
+                                                  archiveInfo->archiveGetCryptPasswordUserData
+                                                 );
     if (archiveInfo->cryptPassword == NULL)
     {
       AutoFree_cleanup(&autoFreeList);
@@ -4108,19 +4123,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // init crypt password
   if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-    {
-      if (!archiveInfo->cryptPasswordReadFlag)
-      {
-        archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
-                                                      archiveInfo->jobOptions,
-                                                      archiveInfo->jobOptions->cryptPasswordMode,
-                                                      archiveInfo->archiveGetCryptPasswordFunction,
-                                                      archiveInfo->archiveGetCryptPasswordUserData
-                                                     );
-        archiveInfo->cryptPasswordReadFlag = TRUE;
-      }
-    }
+    archiveInfo->cryptPassword = getCryptPassword(archiveInfo,
+                                                  archiveInfo->jobOptions,
+                                                  archiveInfo->archiveGetCryptPasswordFunction,
+                                                  archiveInfo->archiveGetCryptPasswordUserData
+                                                 );
     if (archiveInfo->cryptPassword == NULL)
     {
       AutoFree_cleanup(&autoFreeList);
@@ -4352,19 +4359,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // init crypt password
   if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-    {
-      if (!archiveInfo->cryptPasswordReadFlag)
-      {
-        archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
-                                                      archiveInfo->jobOptions,
-                                                      archiveInfo->jobOptions->cryptPasswordMode,
-                                                      archiveInfo->archiveGetCryptPasswordFunction,
-                                                      archiveInfo->archiveGetCryptPasswordUserData
-                                                     );
-        archiveInfo->cryptPasswordReadFlag = TRUE;
-      }
-    }
+    archiveInfo->cryptPassword = getCryptPassword(archiveInfo,
+                                                  archiveInfo->jobOptions,
+                                                  archiveInfo->archiveGetCryptPasswordFunction,
+                                                  archiveInfo->archiveGetCryptPasswordUserData
+                                                 );
     if (archiveInfo->cryptPassword == NULL)
     {
       AutoFree_cleanup(&autoFreeList);
@@ -4600,19 +4599,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // init crypt password
   if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-    {
-      if (!archiveInfo->cryptPasswordReadFlag)
-      {
-        archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
-                                                      archiveInfo->jobOptions,
-                                                      archiveInfo->jobOptions->cryptPasswordMode,
-                                                      archiveInfo->archiveGetCryptPasswordFunction,
-                                                      archiveInfo->archiveGetCryptPasswordUserData
-                                                     );
-        archiveInfo->cryptPasswordReadFlag = TRUE;
-      }
-    }
+    archiveInfo->cryptPassword = getCryptPassword(archiveInfo,
+                                                  archiveInfo->jobOptions,
+                                                  archiveInfo->archiveGetCryptPasswordFunction,
+                                                  archiveInfo->archiveGetCryptPasswordUserData
+                                                 );
     if (archiveInfo->cryptPassword == NULL)
     {
       AutoFree_cleanup(&autoFreeList);
@@ -5006,19 +4997,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // init crypt password
   if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-    {
-      if (!archiveInfo->cryptPasswordReadFlag)
-      {
-        archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
-                                                      archiveInfo->jobOptions,
-                                                      archiveInfo->jobOptions->cryptPasswordMode,
-                                                      archiveInfo->archiveGetCryptPasswordFunction,
-                                                      archiveInfo->archiveGetCryptPasswordUserData
-                                                     );
-        archiveInfo->cryptPasswordReadFlag = TRUE;
-      }
-    }
+    archiveInfo->cryptPassword = getCryptPassword(archiveInfo,
+                                                  archiveInfo->jobOptions,
+                                                  archiveInfo->archiveGetCryptPasswordFunction,
+                                                  archiveInfo->archiveGetCryptPasswordUserData
+                                                 );
     if (archiveInfo->cryptPassword == NULL)
     {
       AutoFree_cleanup(&autoFreeList);
@@ -5282,7 +5265,7 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
           decryptedFlag = TRUE;
         }
         password = getFirstDecryptPassword(&passwordHandle,
-                                           archiveInfo->printableName,
+                                           archiveInfo,
                                            archiveInfo->jobOptions,
                                            archiveInfo->jobOptions->cryptPasswordMode,
                                            archiveInfo->archiveGetCryptPasswordFunction,
@@ -5621,7 +5604,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     else
     {
       password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveInfo->printableName,
+                                         archiveInfo,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          archiveInfo->archiveGetCryptPasswordFunction,
@@ -6175,7 +6158,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     else
     {
       password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveInfo->printableName,
+                                         archiveInfo,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          archiveInfo->archiveGetCryptPasswordFunction,
@@ -6607,7 +6590,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     else
     {
       password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveInfo->printableName,
+                                         archiveInfo,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          archiveInfo->archiveGetCryptPasswordFunction,
@@ -6978,7 +6961,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     else
     {
       password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveInfo->printableName,
+                                         archiveInfo,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          archiveInfo->archiveGetCryptPasswordFunction,
@@ -7407,7 +7390,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     else
     {
       password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveInfo->printableName,
+                                         archiveInfo,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          archiveInfo->archiveGetCryptPasswordFunction,
@@ -7946,7 +7929,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     else
     {
       password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveInfo->printableName,
+                                         archiveInfo,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          archiveInfo->archiveGetCryptPasswordFunction,

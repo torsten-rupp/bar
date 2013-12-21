@@ -123,7 +123,7 @@ typedef struct
   Semaphore                       passwordLock;                        // input password lock
   CryptTypes                      cryptType;                           // crypt type (symmetric/asymmetric; see CryptTypes)
   Password                        *cryptPassword;                      // cryption password for encryption/decryption
-  bool                            cryptPasswordReadFlag;
+  bool                            cryptPasswordReadFlag;               // TRUE iff input callback for crypt password called
   CryptKey                        cryptKey;                            // public/private key for encryption/decryption of random key used for asymmetric encryptio
   void                            *cryptKeyData;                       // encrypted random key used for asymmetric encryption
   uint                            cryptKeyDataLength;                  // length of encrypted random key
