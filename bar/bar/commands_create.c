@@ -2716,6 +2716,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   StorageSpecifier           storageDirectorySpecifier;
   IndexQueryHandle           indexQueryHandle;
   int64                      oldStorageId;
+  String                     oldStorageName;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
 
@@ -2768,7 +2769,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                  }
                 );
 #warning todo
-fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cString(storageMsg.fileName));
+fprintf(stderr,"%s, %d: storageMsg.fileName=%s %llu bytes\n",__FILE__,__LINE__,String_cString(storageMsg.fileName),storageMsg.fileSize);
 
     // pause
     pauseStorage(createInfo);
@@ -2997,7 +2998,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     if (storageMsg.storageId != DATABASE_ID_NONE)
     {
       // delete old indizes for same storage file
-      storageName = String_new();
+      oldStorageName = String_new();
       error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
                                     STORAGE_TYPE_ANY,
@@ -3009,7 +3010,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
                                    );
       while (Index_getNextStorage(&indexQueryHandle,
                                   &oldStorageId,
-                                  storageName,
+                                  oldStorageName,
                                   NULL, // createdDateTime
                                   NULL, // size
                                   NULL, // indexState,
@@ -3025,7 +3026,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
           if (error != ERROR_NONE)
           {
             printError("Cannot delete old index for storage '%s' (error: %s)!\n",
-                       String_cString(storageName),
+                       String_cString(oldStorageName),
                        Errors_getText(error)
                       );
             createInfo->failError = error;
@@ -3035,7 +3036,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
         }
       }
       Index_doneList(&indexQueryHandle);
-      String_delete(storageName);
+      String_delete(oldStorageName);
       if (createInfo->failError != ERROR_NONE)
       {
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
@@ -4856,6 +4857,16 @@ Errors Command_create(const String                    storageName,
   useIncrementalFileInfoFlag   = FALSE;
   incrementalFileInfoExistFlag = FALSE;
 
+  // check if storage name given
+  if (String_isEmpty(storageName))
+  {
+    printError("No storage name given\n",
+               Errors_getText(error)
+              );
+    AutoFree_cleanup(&autoFreeList);
+    return ERROR_NO_STORAGE_NAME;
+  }
+
   // parse storage name
   Storage_initSpecifier(&storageSpecifier);
   error = Storage_parseName(&storageSpecifier,storageName);
@@ -5083,9 +5094,18 @@ createThreadCode(&createInfo);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
 
   // wait for threads
-  Thread_join(&storageThread);
-  Thread_join(&collectorThread);
-  Thread_join(&collectorSumThread);
+  if (!Thread_join(&storageThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop storage thread!");
+  }
+  if (!Thread_join(&collectorThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop collector thread!");
+  }
+  if (!Thread_join(&collectorSumThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop collector sum thread!");
+  }
 
   // final update of status info
   (void)updateStatusInfo(&createInfo);
