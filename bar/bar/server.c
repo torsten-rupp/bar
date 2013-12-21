@@ -776,7 +776,7 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
   assert(jobNode != NULL);
 
   jobNode->runningInfo.error               = ERROR_NONE;
-  jobNode->runningInfo.estimatedRestTime   = 0;
+  jobNode->runningInfo.estimatedRestTime   = 0L;
   jobNode->runningInfo.doneEntries         = 0L;
   jobNode->runningInfo.doneBytes           = 0LL;
   jobNode->runningInfo.totalEntries        = 0L;
@@ -1929,10 +1929,10 @@ LOCAL void updateCreateJobStatus(JobNode                *jobNode,
     restFiles        = (createStatusInfo->totalEntries      > createStatusInfo->doneEntries     ) ? createStatusInfo->totalEntries     -createStatusInfo->doneEntries      : 0L;
     restBytes        = (createStatusInfo->totalBytes        > createStatusInfo->doneBytes       ) ? createStatusInfo->totalBytes       -createStatusInfo->doneBytes        : 0LL;
     restStorageBytes = (createStatusInfo->storageTotalBytes > createStatusInfo->storageDoneBytes) ? createStatusInfo->storageTotalBytes-createStatusInfo->storageDoneBytes : 0LL;
-    estimatedRestTime = 0;
-    if (entriesPerSecond      > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles/entriesPerSecond            )); }
-    if (bytesPerSecond        > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes/bytesPerSecond              )); }
-    if (storageBytesPerSecond > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restStorageBytes/storageBytesPerSecond)); }
+    estimatedRestTime = 0L;
+    if (entriesPerSecond      > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles       /entriesPerSecond     )); }
+    if (bytesPerSecond        > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes       /bytesPerSecond       )); }
+    if (storageBytesPerSecond > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restStorageBytes/storageBytesPerSecond)); }
 
 /*
 fprintf(stderr,"%s,%d: createStatusInfo->doneEntries=%lu createStatusInfo->doneBytes=%llu jobNode->runningInfo.totalEntries=%lu jobNode->runningInfo.totalBytes %llu -- entriesPerSecond=%f bytesPerSecond=%f estimatedRestTime=%lus\n",__FILE__,__LINE__,
@@ -3228,9 +3228,12 @@ LOCAL void sendClient(ClientInfo *clientInfo, String data)
       (void)File_flush(&clientInfo->file.fileHandle);
       break;
     case CLIENT_TYPE_NETWORK:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      if (!clientInfo->network.quitFlag)
       {
-        (void)Network_send(&clientInfo->network.socketHandle,String_cString(data),String_length(data));
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        {
+          (void)Network_send(&clientInfo->network.socketHandle,String_cString(data),String_length(data));
+        }
       }
       break;
     default:
@@ -3264,7 +3267,6 @@ LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, 
 
   String_format(result,"%d %d %d ",id,completeFlag ? 1 : 0,Errors_getCode(errorCode));
   va_start(arguments,format);
-//  String_vformat(result,format,arguments);
   String_vformat(result,format,arguments);
   va_end(arguments);
   String_appendChar(result,'\n');
@@ -7106,10 +7108,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialize storage '%s' (error: %s)\n",
-               String_cString(storageName),
-               Errors_getText(error)
-              );
     sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
     String_delete(storageName);
     return;
@@ -7126,10 +7124,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                       );
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialize storage '%s' (error: %s)!\n",
-               String_cString(storageName),
-               Errors_getText(error)
-              );
     sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
     String_delete(storageName);
     return;
@@ -9858,7 +9852,10 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       MsgQueue_setEndOfMsg(&clientInfo->network.commandMsgQueue);
       for (z = MAX_NETWORK_CLIENT_THREADS-1; z >= 0; z--)
       {
-        Thread_join(&clientInfo->network.threads[z]);
+        if (!Thread_join(&clientInfo->network.threads[z]))
+        {
+          HALT_INTERNAL_ERROR("Cannot stop client thread!");
+        }
       }
 
       // free resources
@@ -10504,7 +10501,6 @@ Errors Server_run(uint             port,
 
           // free resources
           deleteClient(disconnectClientNode);
-
         }
       }
       else
