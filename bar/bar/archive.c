@@ -167,7 +167,7 @@ LOCAL Password *getCryptPassword(ArchiveInfo                     *archiveInfo,
   Password *newPassword;
   Errors   error;
 
-  assert(fileName != NULL);
+  assert(archiveInfo != NULL);
   assert(jobOptions != NULL);
 
   password = NULL;
