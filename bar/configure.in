@@ -191,7 +191,7 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
       ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-      dnl test static linkage    
+      dnl test static linkage
       CFLAGS="$CFLAGS -static"
       for ac_library in $2 ""; do
         if test -z "$ac_library"; then
@@ -570,14 +570,15 @@ AC_SUBST(KEYTOOL)                           dnl Java keytool
 AC_SUBST(UNOCONV)                           dnl OO conversion tool
 AC_SUBST(TXT2MAN)                           dnl text-to-man page tool
 
+AC_SUBST(ATTR)                              dnl attr command
+AC_SUBST(TIME)                              dnl time command
+
 AC_SUBST(MKFS_EXT2)                         dnl mksfs.ext2 command
 AC_SUBST(MKFS_EXT3)                         dnl mksfs.ext3 command
 AC_SUBST(MKFS_EXT4)                         dnl mksfs.ext4 command
 AC_SUBST(MKFS_MSDOS)                        dnl mksfs.msdos command
 AC_SUBST(MKFS_REISERFS)                     dnl mksfs.reiserfs command
 AC_SUBST(MKFS_REISER4)                      dnl mksfs.reiser4 command
-
-AC_SUBST(TIME)                              dnl time command
 
 AC_SUBST(EPM)                               dnl EPM tool
 AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
@@ -613,7 +614,7 @@ ENABLE_PCRE="yes"
 ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
 ENABLE_GUI="yes"
-ENABLE_PACKAGE_COMPILE="yes"   
+ENABLE_PACKAGE_COMPILE="yes"
 
 dnl ---------------------------- check system --------------------------
 
@@ -795,7 +796,7 @@ if test -d epm -o -d "`readlink epm`"; then
     result=1
     if test $result -eq 1; then
       (cd epm; ./configure --prefix=$cwd/packages) 1>/dev/null 2>$tmpFile
-      if test $? -ne 0; then 
+      if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure)])
         cat $tmpFile
         result=0
@@ -803,7 +804,7 @@ if test -d epm -o -d "`readlink epm`"; then
     fi
     if test $result -eq 1; then
       (cd epm; make clean; make) 1>/dev/null 2>$tmpFile
-      if test $? -ne 0; then 
+      if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         cat $tmpFile
         result=0
@@ -811,7 +812,7 @@ if test -d epm -o -d "`readlink epm`"; then
     fi
     if test $result -eq 1; then
       (cd epm; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
-      if test $? -ne 0; then 
+      if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         cat $tmpFile
         result=0
@@ -941,14 +942,15 @@ if test -z "$TXT2MAN"; then
   AC_MSG_WARN([No 'txt2man' tool found. Cannot create man page. Please check PATH.])
 fi
 
+AC_PATH_PROGS(ATTR,attr,,/usr/bin)
+AC_PATH_PROGS(TIME,time,,/usr/bin)
+
 AC_PATH_PROGS(MKFS_EXT2,    mkfs.ext2,    ,/sbin)
 AC_PATH_PROGS(MKFS_EXT3,    mkfs.ext3,    ,/sbin)
 AC_PATH_PROGS(MKFS_EXT4,    mkfs.ext4,    ,/sbin)
 AC_PATH_PROGS(MKFS_MSDOS,   mkfs.msdos,   ,/sbin)
 AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
 AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
-
-AC_PATH_PROGS(TIME,time,,/usr/bin)
 
 dnl -------------- headers/functions/definitions/libraries -------------
 
@@ -1056,7 +1058,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
     result=1
     if test $result -eq 1; then
       (cd zlib; ./configure --prefix=$cwd/packages --static) 1>/dev/null 2>$tmpFile
-      if test $? -ne 0; then 
+      if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure)])
         cat $tmpFile
         result=0
@@ -1064,7 +1066,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
     fi
     if test $result -eq 1; then
       (cd zlib; make clean; make) 1>/dev/null 2>$tmpFile
-      if test $? -ne 0; then 
+      if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         cat $tmpFile
         result=0
@@ -1072,7 +1074,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
     fi
     if test $result -eq 1; then
       (cd zlib; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
-      if test $? -ne 0; then 
+      if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         cat $tmpFile
         result=0
@@ -1113,7 +1115,7 @@ if test $ENABLE_BZIP2 = "yes"; then
       result=1
       if test $result -eq 1; then
         (cd bzip2; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result=0
@@ -1121,7 +1123,7 @@ if test $ENABLE_BZIP2 = "yes"; then
       fi
       if test $result -eq 1; then
         (cd bzip2; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result=0
@@ -1179,7 +1181,7 @@ if test $ENABLE_LZMA = "yes"; then
       fi
       if test $result -eq 1; then
         (cd xz; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
           result=0
@@ -1187,7 +1189,7 @@ if test $ENABLE_LZMA = "yes"; then
       fi
       if test $result -eq 1; then
         (cd xz; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result=0
@@ -1195,7 +1197,7 @@ if test $ENABLE_LZMA = "yes"; then
       fi
       if test $result -eq 1; then
         (cd xz; make install) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result=0
@@ -1247,7 +1249,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       result1=1
       if test $result1 -eq 1; then
         (cd libgpg-error; ./configure --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
           result1=0
@@ -1255,7 +1257,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       fi
       if test $result1 -eq 1; then
         (cd libgpg-error; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result1=0
@@ -1263,7 +1265,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       fi
       if test $result1 -eq 1; then
         (cd libgpg-error; make install) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result1=0
@@ -1295,7 +1297,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       fi
       if test $result2 -eq 1; then
         (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-gpg-error-prefix=$cwd/packages --enable-maintainer-mode --disable-shared --enable-static `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi`) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
           result2=0
@@ -1303,7 +1305,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       fi
       if test $result2 -eq 1; then
         (cd libgcrypt; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result2=0
@@ -1311,7 +1313,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       fi
       if test $result2 -eq 1; then
         (cd libgcrypt; make install) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result2=0
@@ -1383,7 +1385,7 @@ if test $ENABLE_FTP = "yes"; then
       AC_MSG_COMPILE([ftplib])
       if test $result -eq 1; then
         (cd ftplib/linux; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result=0
@@ -1391,7 +1393,7 @@ if test $ENABLE_FTP = "yes"; then
       fi
       if test $result -eq 1; then
         (cd ftplib/linux; cp ftplib.h $cwd/packages/include && cp libftp.a $cwd/packages/lib) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result=0
@@ -1451,7 +1453,7 @@ if test $ENABLE_CURL = "yes"; then
       fi
       if test $result -eq 1; then
         (cd c-ares; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi`) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
           result1=0
@@ -1459,7 +1461,7 @@ if test $ENABLE_CURL = "yes"; then
       fi
       if test $result -eq 1; then
         (cd c-ares; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result=0
@@ -1467,7 +1469,7 @@ if test $ENABLE_CURL = "yes"; then
       fi
       if test $result -eq 1; then
         (cd c-ares; make install) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result=0
@@ -1507,7 +1509,7 @@ if test $ENABLE_CURL = "yes"; then
       fi
       if test $result -eq 1; then
         (cd curl; LDFLAGS=-ldl ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static --disable-ldap --enable-ares=$cwd/packages `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi`) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
           result1=0
@@ -1515,7 +1517,7 @@ if test $ENABLE_CURL = "yes"; then
       fi
       if test $result -eq 1; then
         (cd curl; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result=0
@@ -1523,7 +1525,7 @@ if test $ENABLE_CURL = "yes"; then
       fi
       if test $result -eq 1; then
         (cd curl; make install) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result=0
@@ -1563,7 +1565,7 @@ if test $ENABLE_CURL = "yes"; then
       fi
       if test $result -eq 1; then
         (cd mxml; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
           result1=0
@@ -1571,7 +1573,7 @@ if test $ENABLE_CURL = "yes"; then
       fi
       if test $result -eq 1; then
         (cd mxml; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result=0
@@ -1579,7 +1581,7 @@ if test $ENABLE_CURL = "yes"; then
       fi
       if test $result -eq 1; then
         (cd mxml; make install) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result=0
@@ -1600,6 +1602,7 @@ if test $ENABLE_CURL = "yes"; then
     fi
 
     if test $result -eq 1; then
+      HAVE_FTP=1
       HAVE_CURL=1
       HAVE_MXML=1
       CC_DEFINES="$CC_DEFINES CURL_STATICLIB"
@@ -1640,14 +1643,14 @@ if test $ENABLE_SSH = "yes"; then
           linux-*)
             if test -n "`uname -m|grep x86_64`"; then
               (cd openssl; ./Configure --prefix=$cwd/packages linux-x86_64 -Wa,--noexecstack) 1>/dev/null 2>$tmpFile
-              if test $? -ne 0; then 
+              if test $? -ne 0; then
                 AC_MSG_RESULT([fail (configure)])
                 cat $tmpFile
                 result=0
               fi
             else
               (cd openssl; ./Configure --prefix=$cwd/packages linux-generic32 -Wa,--noexecstack) 1>/dev/null 2>$tmpFile
-              if test $? -ne 0; then 
+              if test $? -ne 0; then
                 AC_MSG_RESULT([fail (configure)])
                 cat $tmpFile
                 result=0
@@ -1656,7 +1659,7 @@ if test $ENABLE_SSH = "yes"; then
             ;;
           mingw*)
             (cd openssl; ./Configure --prefix=$cwd/packages mingw) 1>/dev/null 2>$tmpFile
-            if test $? -ne 0; then 
+            if test $? -ne 0; then
               AC_MSG_RESULT([fail (configure)])
               cat $tmpFile
               result=0
@@ -1669,7 +1672,7 @@ if test $ENABLE_SSH = "yes"; then
       fi
       if test $result -eq 1; then
         (cd openssl; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result=0
@@ -1677,7 +1680,7 @@ if test $ENABLE_SSH = "yes"; then
       fi
       if test $result -eq 1; then
         (cd openssl; make install) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result=0
@@ -1722,7 +1725,7 @@ if test $ENABLE_SSH = "yes"; then
       if test $result -eq 1; then
 #        (cd libssh2; LIBS=-ldl ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libssl-prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --disable-shared --enable-static --enable-debug) 1>/dev/null 2>$tmpFile
         (cd libssh2; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libssl-prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --disable-shared --enable-static --enable-debug) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
           result=0
@@ -1730,7 +1733,7 @@ if test $ENABLE_SSH = "yes"; then
       fi
       if test $result -eq 1; then
         (cd libssh2; make clean; make -C src) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result=0
@@ -1738,7 +1741,7 @@ if test $ENABLE_SSH = "yes"; then
       fi
       if test $result -eq 1; then
         (cd libssh2; make install-exec install-data) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result=0
@@ -1798,7 +1801,7 @@ if test $ENABLE_TLS = "yes"; then
       result=1
       if test $result -eq 1; then
         (cd gnutls; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --with-included-libtasn1 --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
           result=0
@@ -1806,7 +1809,7 @@ if test $ENABLE_TLS = "yes"; then
       fi
       if test $result -eq 1; then
         (cd gnutls; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result=0
@@ -1814,7 +1817,7 @@ if test $ENABLE_TLS = "yes"; then
       fi
       if test $result -eq 1; then
         (cd gnutls; make install) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result=0
@@ -1864,7 +1867,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       result1=1
       if test $result1 -eq 1; then
         (cd libiconv; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
           result1=0
@@ -1872,7 +1875,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       fi
       if test $result1 -eq 1; then
         (cd libiconv; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result1=0
@@ -1880,7 +1883,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       fi
       if test $result1 -eq 1; then
         (cd libiconv; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result1=0
@@ -1906,7 +1909,7 @@ if test $ENABLE_ISO9660 = "yes"; then
         else
           (cd libcdio; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>$tmpFile
         fi
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
           result2=0
@@ -1914,7 +1917,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       fi
       if test $result2 -eq 1; then
         (cd libcdio; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result2=0
@@ -1922,7 +1925,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       fi
       if test $result2 -eq 1; then
         (cd libcdio; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result2=0
@@ -1983,7 +1986,7 @@ if test $ENABLE_PCRE = "yes"; then
       fi
       if test $result -eq 1; then
         (cd pcre; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static --enable-utf8) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
           result=0
@@ -1991,7 +1994,7 @@ if test $ENABLE_PCRE = "yes"; then
       fi
       if test $result -eq 1; then
         (cd pcre; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result=0
@@ -1999,7 +2002,7 @@ if test $ENABLE_PCRE = "yes"; then
       fi
       if test $result -eq 1; then
         (cd pcre; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result=0
@@ -2056,7 +2059,7 @@ case "$host_os" in
             else
               (cd pthreads-w32; make clean; make CC="$CC" AS="$AS" AR="$AR" RANLIB="$RANLIB" RC="$RC" GC-static) 1>/dev/null 2>$tmpFile
             fi
-            if test $? -ne 0; then 
+            if test $? -ne 0; then
               AC_MSG_RESULT([fail (make)])
               cat $tmpFile
               result=0
@@ -2099,7 +2102,7 @@ if test $ENABLE_BREAKPAD = "yes"; then
         else
           (cd breakpad; ./configure --prefix=$cwd/packages) 1>/dev/null 2>$tmpFile
         fi
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
           result=0
@@ -2107,7 +2110,7 @@ if test $ENABLE_BREAKPAD = "yes"; then
       fi
       if test $result -eq 1; then
         (cd breakpad; make clean; make) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result=0
@@ -2115,7 +2118,7 @@ if test $ENABLE_BREAKPAD = "yes"; then
       fi
       if test $result -eq 1; then
         (cd breakpad; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
-        if test $? -ne 0; then 
+        if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result=0
@@ -2133,7 +2136,7 @@ if test $ENABLE_BREAKPAD = "yes"; then
       STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
       AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed (local)])
 
-      AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/packages/breakpad/src/tools/linux)    
+      AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/packages/breakpad/src/tools/linux)
     fi
   else
     dnl search for installed breakpad library
@@ -2148,7 +2151,7 @@ if test $ENABLE_BREAKPAD = "yes"; then
       fi
     fi
 
-    AC_PATH_PROGS(DUMP_SYMS,dump_syms)    
+    AC_PATH_PROGS(DUMP_SYMS,dump_syms)
   fi
 fi
 
@@ -2415,6 +2418,3 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
 AC_OUTPUT
 
 dnl --- end of file ---
-
-
-
