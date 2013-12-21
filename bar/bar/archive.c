@@ -496,13 +496,14 @@ LOCAL bool isNewPartNeeded(ArchiveInfo *archiveInfo,
 {
   SemaphoreLock semaphoreLock;
   bool          newPartFlag;
-  uint64        fileSize;
+  uint64        archiveFileSize;
 
   assert(archiveInfo != NULL);
   assert(archiveInfo->chunkIO != NULL);
   assert(archiveInfo->chunkIO->getSize != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
+  assert(Semaphore_isOwned(&archiveInfo->chunkIOLock));
 
   newPartFlag = FALSE;
   if (archiveInfo->jobOptions->archivePartSize > 0LL)
@@ -512,22 +513,24 @@ LOCAL bool isNewPartNeeded(ArchiveInfo *archiveInfo,
       // get file size
       if (archiveInfo->file.openFlag)
       {
-        fileSize = archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData);
+        archiveFileSize = archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData);
       }
       else
       {
-        fileSize = 0LL;
+        archiveFileSize = 0LL;
       }
 
       if      (   !headerWrittenFlag
-               && (fileSize+headerLength >= archiveInfo->jobOptions->archivePartSize)
+               && (archiveFileSize+headerLength >= archiveInfo->jobOptions->archivePartSize)
               )
       {
+//fprintf(stderr,"%s, %d: archiveFileSize=%lld minBytes=%lld\n",__FILE__,__LINE__,archiveFileSize,minBytes);
         // file header cannot be written without fragmentation -> new part
         newPartFlag = TRUE;
       }
-      else if ((fileSize+minBytes) >= archiveInfo->jobOptions->archivePartSize)
+      else if ((archiveFileSize+minBytes) >= archiveInfo->jobOptions->archivePartSize)
       {
+//fprintf(stderr,"%s, %d: archiveFileSize=%lld minBytes=%lld\n",__FILE__,__LINE__,archiveFileSize,minBytes);
         // less than min. number of bytes left in part -> create new part
         newPartFlag = TRUE;
       }
@@ -934,7 +937,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : ensureArchiveSpace
 * Purpose: ensure space is available in archive for not fragmented
-*          writting
+*          writing
 * Input  : archiveInfo  - archive info data
 *          minBytes     - minimal number of bytes
 * Output : -
@@ -1300,6 +1303,9 @@ close(h);
                   : 0L
                );
 
+  // lock
+  Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+
   // check if split is allowed and necessary
   newPartFlag =    allowNewPartFlag
                 && isNewPartNeeded(archiveEntryInfo->archiveInfo,
@@ -1476,9 +1482,15 @@ close(h);
     Compress_reset(&archiveEntryInfo->file.deltaCompressInfo);
     Compress_reset(&archiveEntryInfo->file.byteCompressInfo);
     Crypt_reset(&archiveEntryInfo->file.cryptInfo,0);
+
+    // unlock
+    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
   }
   else
   {
+    // unlock
+    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+
     if (byteLength > 0L)
     {
       // create new part (if not already created)
@@ -1497,7 +1509,7 @@ close(h);
         return error;
       }
 
-      // write block
+      // write block to temporary file
       error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
                               archiveEntryInfo->file.byteBuffer,
                               archiveEntryInfo->blockLength
@@ -1793,6 +1805,9 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
                   : 0L
                );
 
+  // lock
+  Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+
   // check if split is allowed and necessary
   newPartFlag =    allowNewPartFlag
                 && isNewPartNeeded(archiveEntryInfo->archiveInfo,
@@ -1970,9 +1985,15 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     Compress_reset(&archiveEntryInfo->image.deltaCompressInfo);
     Compress_reset(&archiveEntryInfo->image.byteCompressInfo);
     Crypt_reset(&archiveEntryInfo->image.cryptInfo,0);
+
+    // unlock
+    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
   }
   else
   {
+    // unlock
+    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+
     if (byteLength > 0L)
     {
       // create new part (if not already created)
@@ -2766,7 +2787,8 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
 
-  archiveInfo->cryptType                       = (jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) ? jobOptions->cryptType : CRYPT_TYPE_NONE;
+  Semaphore_init(&archiveInfo->passwordLock);
+  archiveInfo->cryptType                       = Crypt_isEncrypted(jobOptions->cryptAlgorithm) ? jobOptions->cryptType : CRYPT_TYPE_NONE;
   archiveInfo->cryptPassword                   = NULL;
   archiveInfo->cryptPasswordReadFlag           = FALSE;
   archiveInfo->cryptKeyData                    = NULL;
@@ -2776,9 +2798,9 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->file.fileName                   = String_new();
   archiveInfo->file.openFlag                   = FALSE;
   archiveInfo->printableName                   = NULL;
+  Semaphore_init(& archiveInfo->chunkIOLock);
   archiveInfo->chunkIO                         = &CHUNK_IO_FILE;
   archiveInfo->chunkIOUserData                 = &archiveInfo->file.fileHandle;
-  Semaphore_init(& archiveInfo->chunkIOLock);
 
   archiveInfo->databaseHandle                  = databaseHandle;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
@@ -2791,6 +2813,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->interrupt.openFlag              = FALSE;
   archiveInfo->interrupt.offset                = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->lock,{ Semaphore_done(&archiveInfo->lock); });
+  AUTOFREE_ADD(&autoFreeList,&archiveInfo->passwordLock,{ Semaphore_done(&archiveInfo->passwordLock); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileName,{ String_delete(archiveInfo->file.fileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
 
@@ -2918,6 +2941,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
 
+  Semaphore_init(&archiveInfo->passwordLock);
   archiveInfo->cryptPassword                   = NULL;
   archiveInfo->cryptPasswordReadFlag           = FALSE;
   archiveInfo->cryptType                       = CRYPT_TYPE_NONE;
@@ -2928,9 +2952,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   Storage_duplicateSpecifier(&archiveInfo->storage.storageSpecifier,storageSpecifier);
   archiveInfo->storage.storageHandle           = storageHandle;
   archiveInfo->printableName                   = String_duplicate(Storage_getPrintableName(storageSpecifier,NULL));
+  Semaphore_init(&archiveInfo->chunkIOLock);
   archiveInfo->chunkIO                         = &CHUNK_IO_STORAGE_FILE;
   archiveInfo->chunkIOUserData                 = storageHandle;
-  Semaphore_init(&archiveInfo->chunkIOLock);
 
   archiveInfo->databaseHandle                  = NULL;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
@@ -2943,6 +2967,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->interrupt.openFlag              = FALSE;
   archiveInfo->interrupt.offset                = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->lock,{ Semaphore_done(&archiveInfo->lock); });
+  AUTOFREE_ADD(&autoFreeList,&archiveInfo->passwordLock,{ Semaphore_done(&archiveInfo->passwordLock); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->storage.storageSpecifier,{ Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier); });
   AUTOFREE_ADD(&autoFreeList,archiveInfo->printableName,{ String_delete(archiveInfo->printableName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
@@ -3056,6 +3081,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
         break; /* not reached */
     #endif /* NDEBUG */
   }
+  Semaphore_done(&archiveInfo->passwordLock);
   Semaphore_done(&archiveInfo->lock);
 
   return error;
@@ -3365,9 +3391,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AutoFree_init(&autoFreeList);
 
   // init crypt password
-  if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
+  if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       if (!archiveInfo->cryptPasswordReadFlag)
       {
@@ -3745,9 +3771,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AutoFree_init(&autoFreeList);
 
   // init crypt password
-  if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
+  if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       if (!archiveInfo->cryptPasswordReadFlag)
       {
@@ -4080,9 +4106,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AutoFree_init(&autoFreeList);
 
   // init crypt password
-  if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
+  if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       if (!archiveInfo->cryptPasswordReadFlag)
       {
@@ -4324,9 +4350,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AutoFree_init(&autoFreeList);
 
   // init crypt password
-  if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
+  if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       if (!archiveInfo->cryptPasswordReadFlag)
       {
@@ -4572,9 +4598,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AutoFree_init(&autoFreeList);
 
   // init crypt password
-  if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
+  if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       if (!archiveInfo->cryptPasswordReadFlag)
       {
@@ -4978,9 +5004,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AutoFree_init(&autoFreeList);
 
   // init crypt password
-  if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
+  if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       if (!archiveInfo->cryptPasswordReadFlag)
       {
@@ -5585,7 +5611,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // try to read file entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->file.chunkFile.info,&index);
-  if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm))
   {
     if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
@@ -5891,9 +5917,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
     if (error == ERROR_INVALID_CRYPT_PASSWORD)
     {
-      if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
-          && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
-         )
+      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
         password = getNextDecryptPassword(&passwordHandle);
@@ -5924,11 +5948,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE) return error;
-    else if (!passwordFlag)       return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)      return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundFileEntryFlag) return ERROR_NO_FILE_ENTRY;
-    else if (!foundFileDataFlag)  return ERROR_NO_FILE_DATA;
+    if      (error != ERROR_NONE)                                                  return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundFileEntryFlag)                                                  return ERROR_NO_FILE_ENTRY;
+    else if (!foundFileDataFlag)                                                   return ERRORX_(NO_FILE_DATA,0,String_cString(fileName));
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
@@ -6141,7 +6165,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // try to read image entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->image.chunkImage.info,&index);
-  if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm))
   {
     if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
@@ -6382,9 +6406,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
     if (error == ERROR_INVALID_CRYPT_PASSWORD)
     {
-      if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
-          && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
-         )
+      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
         password = getNextDecryptPassword(&passwordHandle);
@@ -6414,11 +6436,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE)  return error;
-    else if (!passwordFlag)        return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)       return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundImageEntryFlag) return ERROR_NO_IMAGE_ENTRY;
-    else if (!foundImageDataFlag)  return ERROR_NO_IMAGE_DATA;
+    if      (error != ERROR_NONE)                                                  return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundImageEntryFlag)                                                 return ERROR_NO_IMAGE_ENTRY;
+    else if (!foundImageDataFlag)                                                  return ERROR_NO_IMAGE_DATA;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
@@ -6575,7 +6597,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // try to read directory entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->directory.chunkDirectory.info,&index);
-  if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm))
   {
     if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
@@ -6771,9 +6793,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
     if (error == ERROR_INVALID_CRYPT_PASSWORD)
     {
-      if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
-          && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
-         )
+      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
         password = getNextDecryptPassword(&passwordHandle);
@@ -6803,10 +6823,10 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE)      return error;
-    else if (!passwordFlag)            return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)           return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundDirectoryEntryFlag) return ERROR_NO_DIRECTORY_ENTRY;
+    if      (error != ERROR_NONE)                                                  return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundDirectoryEntryFlag)                                             return ERROR_NO_DIRECTORY_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
@@ -6948,7 +6968,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // try to read link entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->link.chunkLink.info,&index);
-  if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm))
   {
     if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
@@ -7147,9 +7167,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
     if (error == ERROR_INVALID_CRYPT_PASSWORD)
     {
-      if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
-          && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
-         )
+      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
         password = getNextDecryptPassword(&passwordHandle);
@@ -7179,10 +7197,10 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE)     return error;
-    else if (!passwordFlag)           return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)          return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundLinkEntryFlag) return ERROR_NO_LINK_ENTRY;
+    if      (error != ERROR_NONE)                                                  return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundLinkEntryFlag)                                                  return ERROR_NO_LINK_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
@@ -7379,7 +7397,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // try to read hard link entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->hardLink.chunkHardLink.info,&index);
-  if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm))
   {
     if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
@@ -7726,9 +7744,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
     if (error == ERROR_INVALID_CRYPT_PASSWORD)
     {
-      if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
-          && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
-         )
+      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
         password = getNextDecryptPassword(&passwordHandle);
@@ -7758,11 +7774,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE)     return error;
-    else if (!passwordFlag)           return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)          return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundHardLinkEntryFlag) return ERROR_NO_FILE_ENTRY;
-    else if (!foundHardLinkDataFlag)  return ERROR_NO_FILE_DATA;
+    if      (error != ERROR_NONE)                                                  return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundHardLinkEntryFlag)                                              return ERROR_NO_FILE_ENTRY;
+    else if (!foundHardLinkDataFlag)                                               return ERRORX_(NO_FILE_DATA,0,String_cString(StringList_first(fileNameList,NULL)));
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
@@ -7920,7 +7936,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // try to read special entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->special.chunkSpecial.info,&index);
-  if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm))
   {
     if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
@@ -8121,9 +8137,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
     if (error == ERROR_INVALID_CRYPT_PASSWORD)
     {
-      if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
-          && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
-         )
+      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
         password = getNextDecryptPassword(&passwordHandle);
@@ -8153,10 +8167,10 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE)    return error;
-    else if (!passwordFlag)          return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)         return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundSpecialEntryFlag) return ERROR_NO_SPECIAL_ENTRY;
+    if      (error != ERROR_NONE)                                                  return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundSpecialEntryFlag)                                               return ERROR_NO_SPECIAL_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 

@@ -112,13 +112,15 @@ typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
 // archive info
 typedef struct
 {
-  Semaphore                       lock;
+#warning TODO: lock used?
+  Semaphore                       lock;                                // general archive lock
   const JobOptions                *jobOptions;
   ArchiveCreatedFunction          archiveCreatedFunction;              // call back for new archive file
   void                            *archiveNewFileUserData;             // user data for call back for new archive file
   ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;     // call back to get crypt password
   void                            *archiveGetCryptPasswordUserData;    // user data for call back to get crypt password
 
+  Semaphore                       passwordLock;                        // input password lock
   CryptTypes                      cryptType;                           // crypt type (symmetric/asymmetric; see CryptTypes)
   Password                        *cryptPassword;                      // cryption password for encryption/decryption
   bool                            cryptPasswordReadFlag;
@@ -145,9 +147,9 @@ typedef struct
     } storage;
   };
   String                          printableName;                       // printable file/storage name (without password) or NULL
+  Semaphore                       chunkIOLock;                         // chunk i/o functions lock
   const ChunkIO                   *chunkIO;                            // chunk i/o functions
   void                            *chunkIOUserData;                    // chunk i/o functions data
-  Semaphore                       chunkIOLock;                         // chunk i/o functions lock
 
   DatabaseHandle                  *databaseHandle;                     // database handle
   int64                           storageId;                           // index storage id in database
