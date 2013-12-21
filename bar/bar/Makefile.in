@@ -983,7 +983,7 @@ test/data/nodump.dat:
 ifneq ($(ATTR),)
 test/data/extended_attribute.dat:
 	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(ATTR) -s foo1 -V test $@; $(ATTR) -s foo2 -V "Hello World" $@
+	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(ATTR) -s foo1 -V test $@ 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" $@ 1>/dev/null
 endif
 test/data/fifo:
 	$(INSTALL) -d $(@D)
