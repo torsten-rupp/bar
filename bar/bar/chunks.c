@@ -880,7 +880,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
             error = getChunkBuffer(&chunkBuffer,&p,2L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p,2);
-            arrayLength = ntohl(*((uint16*)p));
+            arrayLength = ntohs(*((uint16*)p));
 
             switch (definition[i+0])
             {
