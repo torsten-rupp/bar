@@ -225,6 +225,7 @@ Errors Command_restore(const StringList                *storageNameList,
   bool              abortFlag;
   Errors            error;
   ArchiveInfo       archiveInfo;
+  void              *autoFreeSavePoint;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
   FragmentNode      *fragmentNode;
@@ -376,6 +377,8 @@ Errors Command_restore(const StringList                *storageNameList,
             uint64                    length;
             ulong                     n;
 
+            autoFreeSavePoint = AutoFree_save(&autoFreeList);
+
             // read file
             fileName = String_new();
             File_initExtendedAttributes(&fileExtendedAttributeList);
@@ -399,10 +402,15 @@ Errors Command_restore(const StringList                *storageNameList,
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
                          Errors_getText(error)
                         );
+              File_doneExtendedAttributes(&fileExtendedAttributeList);
               String_delete(fileName);
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
               continue;
             }
+            AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
+            AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
+            AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo,{ Archive_closeEntry(&archiveEntryInfo); });
 
             if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
@@ -419,6 +427,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                                            jobOptions->destination,
                                                            jobOptions->directoryStripCount
                                                           );
+              AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
               // check if file fragment already exists, file already exists
               if (!jobOptions->noFragmentsCheckFlag)
@@ -435,9 +444,7 @@ Errors Command_restore(const StringList                *storageNameList,
                               fragmentOffset,
                               (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
                              );
-                    String_delete(destinationFileName);
-                    Archive_closeEntry(&archiveEntryInfo);
-                    String_delete(fileName);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                     continue;
                   }
                 }
@@ -446,10 +453,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
                   {
                     printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
-                    String_delete(destinationFileName);
-                    Archive_closeEntry(&archiveEntryInfo);
-                    File_doneExtendedAttributes(&fileExtendedAttributeList);
-                    String_delete(fileName);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                     continue;
                   }
                   fragmentNode = FragmentList_add(&fragmentList,destinationFileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
@@ -483,11 +487,8 @@ Errors Command_restore(const StringList                *storageNameList,
                                Errors_getText(error)
                               );
                     String_delete(parentDirectoryName);
-                    String_delete(destinationFileName);
-                    Archive_closeEntry(&archiveEntryInfo);
-                    File_doneExtendedAttributes(&fileExtendedAttributeList);
-                    String_delete(fileName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                     continue;
                   }
 
@@ -506,11 +507,8 @@ Errors Command_restore(const StringList                *storageNameList,
                                  Errors_getText(error)
                                 );
                       String_delete(parentDirectoryName);
-                      String_delete(destinationFileName);
-                      Archive_closeEntry(&archiveEntryInfo);
-                      File_doneExtendedAttributes(&fileExtendedAttributeList);
-                      String_delete(fileName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                       continue;
                     }
                     else
@@ -536,13 +534,11 @@ Errors Command_restore(const StringList                *storageNameList,
                              String_cString(destinationFileName),
                              Errors_getText(error)
                             );
-                  String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveEntryInfo);
-                  File_doneExtendedAttributes(&fileExtendedAttributeList);
-                  String_delete(fileName);
                   if (jobOptions->stopOnErrorFlag) restoreInfo.failError = error;
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                   continue;
                 }
+                AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
 
                 // seek to fragment position
                 error = File_seek(&fileHandle,fragmentOffset);
@@ -553,12 +549,8 @@ Errors Command_restore(const StringList                *storageNameList,
                              String_cString(destinationFileName),
                              Errors_getText(error)
                             );
-                  File_close(&fileHandle);
-                  String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveEntryInfo);
-                  File_doneExtendedAttributes(&fileExtendedAttributeList);
-                  String_delete(fileName);
                   if (jobOptions->stopOnErrorFlag) restoreInfo.failError = error;
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                   continue;
                 }
               }
@@ -611,27 +603,13 @@ Errors Command_restore(const StringList                *storageNameList,
               }
               if      (restoreInfo.failError != ERROR_NONE)
               {
-                if (!jobOptions->dryRunFlag)
-                {
-                  File_close(&fileHandle);
-                }
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveEntryInfo);
-                File_doneExtendedAttributes(&fileExtendedAttributeList);
-                String_delete(fileName);
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                 continue;
               }
               else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
               {
                 printInfo(1,"ABORTED\n");
-                if (!jobOptions->dryRunFlag)
-                {
-                  File_close(&fileHandle);
-                }
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveEntryInfo);
-                File_doneExtendedAttributes(&fileExtendedAttributeList);
-                String_delete(fileName);
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                 continue;
               }
               printInfo(2,"    \b\b\b\b");
@@ -648,7 +626,8 @@ Errors Command_restore(const StringList                *storageNameList,
               // close file
               if (!jobOptions->dryRunFlag)
               {
-                File_close(&fileHandle);
+                (void)File_close(&fileHandle);
+                AutoFree_remove(&autoFreeList,&fileHandle);
               }
 
               if (fragmentNode != NULL)
@@ -675,11 +654,8 @@ Errors Command_restore(const StringList                *storageNameList,
                                  String_cString(destinationFileName),
                                  Errors_getText(error)
                                 );
-                      String_delete(destinationFileName);
-                      Archive_closeEntry(&archiveEntryInfo);
-                      File_doneExtendedAttributes(&fileExtendedAttributeList);
-                      String_delete(fileName);
                       restoreInfo.failError = error;
+                      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                       continue;
                     }
                     else
@@ -743,6 +719,7 @@ Errors Command_restore(const StringList                *storageNameList,
             // free resources
             File_doneExtendedAttributes(&fileExtendedAttributeList);
             String_delete(fileName);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
@@ -762,6 +739,8 @@ Errors Command_restore(const StringList                *storageNameList,
             FileHandle   fileHandle;
             uint64       block;
             ulong        bufferBlockCount;
+
+            autoFreeSavePoint = AutoFree_save(&autoFreeList);
 
             // read image
             deviceName = String_new();
@@ -785,6 +764,7 @@ Errors Command_restore(const StringList                *storageNameList,
                          Errors_getText(error)
                         );
               String_delete(deviceName);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
               break;
             }
@@ -796,10 +776,13 @@ Errors Command_restore(const StringList                *storageNameList,
                          BUFFER_SIZE
                         );
               String_delete(deviceName);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
               break;
             }
             assert(deviceInfo.blockSize > 0);
+            AUTOFREE_ADD(&autoFreeList,deviceName,{ String_delete(deviceName); });
+            AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo,{ (void)Archive_closeEntry(&archiveEntryInfo); });
 
             if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
                 && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT))
@@ -815,6 +798,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                                                deviceName,
                                                                jobOptions->destination
                                                               );
+              AUTOFREE_ADD(&autoFreeList,destinationDeviceName,{ String_delete(destinationDeviceName); });
 
 
               if (!jobOptions->noFragmentsCheckFlag)
@@ -831,9 +815,7 @@ Errors Command_restore(const StringList                *storageNameList,
                               blockOffset*(uint64)deviceInfo.blockSize,
                               ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
                              );
-                    String_delete(destinationDeviceName);
-                    Archive_closeEntry(&archiveEntryInfo);
-                    String_delete(deviceName);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                     continue;
                   }
                 }
@@ -870,10 +852,8 @@ Errors Command_restore(const StringList                *storageNameList,
                                Errors_getText(error)
                               );
                     String_delete(parentDirectoryName);
-                    String_delete(destinationDeviceName);
-                    Archive_closeEntry(&archiveEntryInfo);
-                    String_delete(deviceName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                     continue;
                   }
 
@@ -891,12 +871,10 @@ Errors Command_restore(const StringList                *storageNameList,
                                  String_cString(parentDirectoryName),
                                  Errors_getText(error)
                                 );
-                    String_delete(parentDirectoryName);
-                    String_delete(destinationDeviceName);
-                    Archive_closeEntry(&archiveEntryInfo);
-                    String_delete(deviceName);
-                    if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                    continue;
+                      String_delete(parentDirectoryName);
+                      if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                      continue;
                     }
                     else
                     {
@@ -926,6 +904,7 @@ Errors Command_restore(const StringList                *storageNameList,
                               );
                   }
                   type = DEVICE;
+                  AUTOFREE_ADD(&autoFreeList,&deviceHandle,{ (void)Device_close(&deviceHandle); });
                 }
                 else
                 {
@@ -940,16 +919,15 @@ Errors Command_restore(const StringList                *storageNameList,
                               );
                   }
                   type = FILE;
+                  AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
                 }
                 if (error != ERROR_NONE)
                 {
-                  String_delete(destinationDeviceName);
-                  Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(deviceName);
                   if (jobOptions->stopOnErrorFlag)
                   {
                     restoreInfo.failError = error;
                   }
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                   continue;
                 }
 
@@ -986,23 +964,11 @@ Errors Command_restore(const StringList                *storageNameList,
                 }
                 if (error != ERROR_NONE)
                 {
-                  switch (type)
-                  {
-                    case DEVICE: Device_close(&deviceHandle); break;
-                    case FILE:   File_close(&fileHandle); break;
-                    default:
-                      #ifndef NDEBUG
-                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                      #endif /* NDEBUG */
-                      break;
-                  }
-                  String_delete(destinationDeviceName);
-                  Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(deviceName);
                   if (jobOptions->stopOnErrorFlag)
                   {
                     restoreInfo.failError = error;
                   }
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                   continue;
                 }
               }
@@ -1085,43 +1051,13 @@ Errors Command_restore(const StringList                *storageNameList,
               }
               if      (restoreInfo.failError != ERROR_NONE)
               {
-                if (!jobOptions->dryRunFlag)
-                {
-                  switch (type)
-                  {
-                    case DEVICE: Device_close(&deviceHandle); break;
-                    case FILE:   File_close(&fileHandle); break;
-                    default:
-                      #ifndef NDEBUG
-                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                      #endif /* NDEBUG */
-                      break;
-                  }
-                }
-                String_delete(destinationDeviceName);
-                Archive_closeEntry(&archiveEntryInfo);
-                String_delete(deviceName);
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                 continue;
               }
               else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
               {
                 printInfo(1,"ABORTED\n");
-                if (!jobOptions->dryRunFlag)
-                {
-                  switch (type)
-                  {
-                    case DEVICE: Device_close(&deviceHandle); break;
-                    case FILE:   File_close(&fileHandle); break;
-                    default:
-                      #ifndef NDEBUG
-                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                      #endif /* NDEBUG */
-                      break;
-                  }
-                }
-                String_delete(destinationDeviceName);
-                Archive_closeEntry(&archiveEntryInfo);
-                String_delete(deviceName);
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                 continue;
               }
               printInfo(2,"    \b\b\b\b");
@@ -1131,8 +1067,14 @@ Errors Command_restore(const StringList                *storageNameList,
               {
                 switch (type)
                 {
-                  case DEVICE: Device_close(&deviceHandle); break;
-                  case FILE:   File_close(&fileHandle); break;
+                  case DEVICE:
+                    (void)Device_close(&deviceHandle);
+                    AutoFree_remove(&autoFreeList,&deviceHandle);
+                    break;
+                  case FILE:
+                    (void)File_close(&fileHandle);
+                    AutoFree_remove(&autoFreeList,&fileHandle);
+                    break;
                   default:
                     #ifndef NDEBUG
                       HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1194,6 +1136,7 @@ Errors Command_restore(const StringList                *storageNameList,
 
             // free resources
             String_delete(deviceName);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
@@ -1203,6 +1146,8 @@ Errors Command_restore(const StringList                *storageNameList,
             FileInfo                  fileInfo;
             String                    destinationFileName;
 //            FileInfo localFileInfo;
+
+            autoFreeSavePoint = AutoFree_save(&autoFreeList);
 
             // read directory
             directoryName = String_new();
@@ -1225,6 +1170,9 @@ Errors Command_restore(const StringList                *storageNameList,
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
               break;
             }
+            AUTOFREE_ADD(&autoFreeList,directoryName,{ String_delete(directoryName); });
+            AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
+            AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo,{ (void)Archive_closeEntry(&archiveEntryInfo); });
 
             if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                 && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
@@ -1241,6 +1189,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                                            jobOptions->destination,
                                                            jobOptions->directoryStripCount
                                                           );
+              AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
 
               // check if directory already exists
@@ -1250,10 +1199,7 @@ Errors Command_restore(const StringList                *storageNameList,
                           "  Restore directory '%s'...skipped (file exists)\n",
                           String_cString(destinationFileName)
                          );
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveEntryInfo);
-                File_doneExtendedAttributes(&fileExtendedAttributeList);
-                String_delete(directoryName);
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                 continue;
               }
 
@@ -1274,14 +1220,11 @@ Errors Command_restore(const StringList                *storageNameList,
                              String_cString(destinationFileName),
                              Errors_getText(error)
                             );
-                  String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveEntryInfo);
-                  File_doneExtendedAttributes(&fileExtendedAttributeList);
-                  String_delete(directoryName);
                   if (jobOptions->stopOnErrorFlag)
                   {
                     restoreInfo.failError = error;
                   }
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                   continue;
                 }
               }
@@ -1301,14 +1244,11 @@ Errors Command_restore(const StringList                *storageNameList,
                                String_cString(destinationFileName),
                                Errors_getText(error)
                               );
-                    String_delete(destinationFileName);
-                    Archive_closeEntry(&archiveEntryInfo);
-                    File_doneExtendedAttributes(&fileExtendedAttributeList);
-                    String_delete(directoryName);
                     if (jobOptions->stopOnErrorFlag)
                     {
                       restoreInfo.failError = error;
                     }
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                     continue;
                   }
                   else
@@ -1355,6 +1295,7 @@ Errors Command_restore(const StringList                *storageNameList,
             // free resources
             File_doneExtendedAttributes(&fileExtendedAttributeList);
             String_delete(directoryName);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
@@ -1366,6 +1307,8 @@ Errors Command_restore(const StringList                *storageNameList,
             String                    destinationFileName;
             String                    parentDirectoryName;
 //            FileInfo localFileInfo;
+
+            autoFreeSavePoint = AutoFree_save(&autoFreeList);
 
             // read link
             linkName = String_new();
@@ -1392,6 +1335,10 @@ Errors Command_restore(const StringList                *storageNameList,
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
               break;
             }
+            AUTOFREE_ADD(&autoFreeList,linkName,{ String_delete(linkName); });
+            AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
+            AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
+            AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo,{ Archive_closeEntry(&archiveEntryInfo); });
 
             if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                 && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
@@ -1408,6 +1355,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                                            jobOptions->destination,
                                                            jobOptions->directoryStripCount
                                                           );
+              AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
               // create parent directories if not existing
               if (!jobOptions->dryRunFlag)
@@ -1429,12 +1377,8 @@ Errors Command_restore(const StringList                *storageNameList,
                                Errors_getText(error)
                               );
                     String_delete(parentDirectoryName);
-                    String_delete(destinationFileName);
-                    Archive_closeEntry(&archiveEntryInfo);
-                    File_doneExtendedAttributes(&fileExtendedAttributeList);
-                    String_delete(fileName);
-                    String_delete(linkName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                     continue;
                   }
 
@@ -1453,12 +1397,8 @@ Errors Command_restore(const StringList                *storageNameList,
                                  Errors_getText(error)
                                 );
                       String_delete(parentDirectoryName);
-                      String_delete(destinationFileName);
-                      Archive_closeEntry(&archiveEntryInfo);
-                      File_doneExtendedAttributes(&fileExtendedAttributeList);
-                      String_delete(fileName);
-                      String_delete(linkName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                       continue;
                     }
                     else
@@ -1480,15 +1420,11 @@ Errors Command_restore(const StringList                *storageNameList,
                           "  Restore link '%s'...skipped (file exists)\n",
                           String_cString(destinationFileName)
                          );
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveEntryInfo);
-                File_doneExtendedAttributes(&fileExtendedAttributeList);
-                String_delete(fileName);
-                String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.failError = ERRORX_(FILE_EXISTS_,0,String_cString(destinationFileName));
                 }
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                 continue;
               }
 
@@ -1506,15 +1442,11 @@ Errors Command_restore(const StringList                *storageNameList,
                              String_cString(fileName),
                              Errors_getText(error)
                             );
-                  String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveEntryInfo);
-                  File_doneExtendedAttributes(&fileExtendedAttributeList);
-                  String_delete(fileName);
-                  String_delete(linkName);
                   if (jobOptions->stopOnErrorFlag)
                   {
                     restoreInfo.failError = error;
                   }
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                   continue;
                 }
               }
@@ -1534,15 +1466,11 @@ Errors Command_restore(const StringList                *storageNameList,
                                String_cString(destinationFileName),
                                Errors_getText(error)
                               );
-                    String_delete(destinationFileName);
-                    Archive_closeEntry(&archiveEntryInfo);
-                    File_doneExtendedAttributes(&fileExtendedAttributeList);
-                    String_delete(fileName);
-                    String_delete(linkName);
                     if (jobOptions->stopOnErrorFlag)
                     {
                       restoreInfo.failError = error;
                     }
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                     continue;
                   }
                   else
@@ -1590,6 +1518,7 @@ Errors Command_restore(const StringList                *storageNameList,
             File_doneExtendedAttributes(&fileExtendedAttributeList);
             String_delete(fileName);
             String_delete(linkName);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
@@ -1608,6 +1537,8 @@ Errors Command_restore(const StringList                *storageNameList,
             FileHandle                fileHandle;
             uint64                    length;
             ulong                     n;
+
+            autoFreeSavePoint = AutoFree_save(&autoFreeList);
 
             // read hard link
             StringList_init(&fileNameList);
@@ -1634,12 +1565,18 @@ Errors Command_restore(const StringList                *storageNameList,
                         );
               StringList_done(&fileNameList);
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
               continue;
             }
+            AUTOFREE_ADD(&autoFreeList,&fileNameList,{ StringList_done(&fileNameList); });
+            AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
+            AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo,{ Archive_closeEntry(&archiveEntryInfo); });
 
             hardLinkFileName    = String_new();
             destinationFileName = String_new();
             restoredDataFlag    = FALSE;
+            AUTOFREE_ADD(&autoFreeList,hardLinkFileName,{ String_delete(hardLinkFileName); });
+            AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
             STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
             {
               if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
@@ -1687,6 +1624,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       }
                       else
                       {
+                        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                         continue;
                       }
                     }
@@ -1736,6 +1674,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                   fragmentOffset,
                                   (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
                                  );
+                        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                         continue;
                       }
                     }
@@ -1744,6 +1683,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
                       {
                         printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
+                        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                         continue;
                       }
                       fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
@@ -1773,9 +1713,11 @@ Errors Command_restore(const StringList                *storageNameList,
                       }
                       else
                       {
+                        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                         continue;
                       }
                     }
+                    AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
 
                     // seek to fragment position
                     error = File_seek(&fileHandle,fragmentOffset);
@@ -1794,6 +1736,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       }
                       else
                       {
+                        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                         continue;
                       }
                     }
@@ -1853,7 +1796,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   {
                     if (!jobOptions->dryRunFlag)
                     {
-                      File_close(&fileHandle);
+                      (void)File_close(&fileHandle);
                     }
                     break;
                   }
@@ -1862,7 +1805,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     printInfo(1,"ABORTED\n");
                     if (!jobOptions->dryRunFlag)
                     {
-                      File_close(&fileHandle);
+                      (void)File_close(&fileHandle);
                     }
                     break;
                   }
@@ -1880,7 +1823,8 @@ Errors Command_restore(const StringList                *storageNameList,
                   // close file
                   if (!jobOptions->dryRunFlag)
                   {
-                    File_close(&fileHandle);
+                    (void)File_close(&fileHandle);
+                    AutoFree_remove(&autoFreeList,&fileHandle);
                   }
 
                   if (fragmentNode != NULL)
@@ -1947,6 +1891,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
                   {
                     printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                     continue;
                   }
 
@@ -1968,6 +1913,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       }
                       else
                       {
+                        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                         continue;
                       }
                     }
@@ -2004,11 +1950,11 @@ Errors Command_restore(const StringList                *storageNameList,
             }
             String_delete(destinationFileName);
             String_delete(hardLinkFileName);
+            AutoFree_remove(&autoFreeList,destinationFileName);
+            AutoFree_remove(&autoFreeList,hardLinkFileName);
             if (restoreInfo.failError != ERROR_NONE)
             {
-              Archive_closeEntry(&archiveEntryInfo);
-              File_doneExtendedAttributes(&fileExtendedAttributeList);
-              StringList_done(&fileNameList);
+              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
               continue;
             }
 
@@ -2022,6 +1968,7 @@ Errors Command_restore(const StringList                *storageNameList,
             // free resources
             File_doneExtendedAttributes(&fileExtendedAttributeList);
             StringList_done(&fileNameList);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
@@ -2032,6 +1979,8 @@ Errors Command_restore(const StringList                *storageNameList,
             String                    destinationFileName;
             String                    parentDirectoryName;
 //            FileInfo localFileInfo;
+
+            autoFreeSavePoint = AutoFree_save(&autoFreeList);
 
             // read special device
             fileName = String_new();
@@ -2054,6 +2003,9 @@ Errors Command_restore(const StringList                *storageNameList,
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
               break;
             }
+            AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
+            AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
+            AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo,{ Archive_closeEntry(&archiveEntryInfo); });
 
             if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
@@ -2070,6 +2022,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                                            jobOptions->destination,
                                                            jobOptions->directoryStripCount
                                                           );
+              AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
               // create parent directories if not existing
               if (!jobOptions->dryRunFlag)
@@ -2091,11 +2044,8 @@ Errors Command_restore(const StringList                *storageNameList,
                                Errors_getText(error)
                               );
                     String_delete(parentDirectoryName);
-                    String_delete(destinationFileName);
-                    Archive_closeEntry(&archiveEntryInfo);
-                    File_doneExtendedAttributes(&fileExtendedAttributeList);
-                    String_delete(fileName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                     continue;
                   }
 
@@ -2114,11 +2064,8 @@ Errors Command_restore(const StringList                *storageNameList,
                                  Errors_getText(error)
                                 );
                       String_delete(parentDirectoryName);
-                      String_delete(destinationFileName);
-                      Archive_closeEntry(&archiveEntryInfo);
-                      File_doneExtendedAttributes(&fileExtendedAttributeList);
-                      String_delete(fileName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                       continue;
                     }
                     else
@@ -2140,14 +2087,11 @@ Errors Command_restore(const StringList                *storageNameList,
                           "  Restore special device '%s'...skipped (file exists)\n",
                           String_cString(destinationFileName)
                          );
-                String_delete(destinationFileName);
-                Archive_closeEntry(&archiveEntryInfo);
-                File_doneExtendedAttributes(&fileExtendedAttributeList);
-                String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
                   restoreInfo.failError = ERRORX_(FILE_EXISTS_,0,String_cString(destinationFileName));
                 }
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                 continue;
               }
 
@@ -2168,14 +2112,11 @@ Errors Command_restore(const StringList                *storageNameList,
                              String_cString(fileName),
                              Errors_getText(error)
                             );
-                  String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveEntryInfo);
-                  File_doneExtendedAttributes(&fileExtendedAttributeList);
-                  String_delete(fileName);
                   if (jobOptions->stopOnErrorFlag)
                   {
                     restoreInfo.failError = error;
                   }
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                   continue;
                 }
               }
@@ -2195,14 +2136,11 @@ Errors Command_restore(const StringList                *storageNameList,
                                String_cString(destinationFileName),
                                Errors_getText(error)
                               );
-                    String_delete(destinationFileName);
-                    Archive_closeEntry(&archiveEntryInfo);
-                    File_doneExtendedAttributes(&fileExtendedAttributeList);
-                    String_delete(fileName);
                     if (jobOptions->stopOnErrorFlag)
                     {
                       restoreInfo.failError = error;
                     }
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
                     continue;
                   }
                   else
@@ -2249,6 +2187,7 @@ Errors Command_restore(const StringList                *storageNameList,
             // free resources
             File_doneExtendedAttributes(&fileExtendedAttributeList);
             String_delete(fileName);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
           }
           break;
         default:
