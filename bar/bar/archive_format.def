@@ -80,13 +80,13 @@
 #   crc32  32bit CRC of the previous data types
 #
 # Notes:
-#   - all data types except 'data' are stored in big-endian format.
-#   - encrypted data is padded with 0-bytes to a multiple-size of
-#     encryption block size
+#   - all data types except 'data' are stored in big-endian format,
+#   - encrypted data is padded with 0-bytes to a multiple of the
+#     size of the encryption block size.
 #
 # Current version notes:
 #   - encrypted meta data is read/written with cipher block chaining
-#     mode enabled.
+#     mode enabled,
 #   - encrypted meta data (all except "data") is read/written with
 #     cipher text stealing (CTS) mode enabled. Encrypted data is
 #     read/written _without_ cipher text stealing mode enabled!
@@ -242,7 +242,6 @@ CHUNK FILE_DATA "FDAT" FileData
   uint64 fragmentSize
   crc32  crc
   data   data
-
 
 # new???:
 ## CHUNK FILE "FIL1" File
