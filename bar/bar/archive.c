@@ -1138,14 +1138,6 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
     {
       return error;
     }
-    error = Chunk_writeData(&archiveEntryInfo->file.chunkFileExtendedAttribute.info,
-                            fileExtendedAttributeNode->data,
-                            fileExtendedAttributeNode->dataLength
-                           );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
     error = Chunk_close(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
     if (error != ERROR_NONE)
     {
@@ -2209,14 +2201,6 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
     {
       return error;
     }
-    error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,
-                            fileExtendedAttributeNode->data,
-                            fileExtendedAttributeNode->dataLength
-                           );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
     error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
     if (error != ERROR_NONE)
     {
@@ -2384,6 +2368,9 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
                   ? archiveEntryInfo->archiveInfo->blockLength
                   : 0L
                );
+
+  // lock
+  Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 
   // check if split is allowed and necessary
   newPartFlag =    allowNewPartFlag
@@ -2561,9 +2548,15 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     Compress_reset(&archiveEntryInfo->hardLink.deltaCompressInfo);
     Compress_reset(&archiveEntryInfo->hardLink.byteCompressInfo);
     Crypt_reset(&archiveEntryInfo->hardLink.cryptInfo,0);
+
+    // unlock
+    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
   }
   else
   {
+    // unlock
+    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+
     if (byteLength > 0L)
     {
       // create new part (if not already created)
@@ -4288,14 +4281,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       {
         break;
       }
-      error = Chunk_writeData(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,
-                              fileExtendedAttributeNode->data,
-                              fileExtendedAttributeNode->dataLength
-                             );
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
       error = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
       if (error != ERROR_NONE)
       {
@@ -4521,14 +4506,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       archiveEntryInfo->link.chunkLinkExtendedAttribute.value.length = fileExtendedAttributeNode->dataLength;
 
       error = Chunk_create(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-      error = Chunk_writeData(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,
-                              fileExtendedAttributeNode->data,
-                              fileExtendedAttributeNode->dataLength
-                             );
       if (error != ERROR_NONE)
       {
         break;
@@ -5161,14 +5138,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       archiveEntryInfo->special.chunkSpecialExtendedAttribute.value.length = fileExtendedAttributeNode->dataLength;
 
       error = Chunk_create(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-      error = Chunk_writeData(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,
-                              fileExtendedAttributeNode->data,
-                              fileExtendedAttributeNode->dataLength
-                             );
       if (error != ERROR_NONE)
       {
         break;
