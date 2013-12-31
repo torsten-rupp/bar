@@ -33,21 +33,24 @@
 #define CHUNK_ID_NONE 0
 
 // chunk data types
-#define CHUNK_DATATYPE_NONE     0
-#define CHUNK_DATATYPE_BYTE     1
-#define CHUNK_DATATYPE_UINT8    2
-#define CHUNK_DATATYPE_UINT16   3
-#define CHUNK_DATATYPE_UINT32   4
-#define CHUNK_DATATYPE_UINT64   5
-#define CHUNK_DATATYPE_INT8     6
-#define CHUNK_DATATYPE_INT16    7
-#define CHUNK_DATATYPE_INT32    8
-#define CHUNK_DATATYPE_INT64    9
-#define CHUNK_DATATYPE_STRING  10
-#define CHUNK_DATATYPE_DATA    11
-#define CHUNK_DATATYPE_CRC32   12
+#define CHUNK_DATATYPE_NONE      0
+#define CHUNK_DATATYPE_BYTE      1
+#define CHUNK_DATATYPE_UINT8     2
+#define CHUNK_DATATYPE_UINT16    3
+#define CHUNK_DATATYPE_UINT32    4
+#define CHUNK_DATATYPE_UINT64    5
+#define CHUNK_DATATYPE_INT8      6
+#define CHUNK_DATATYPE_INT16     7
+#define CHUNK_DATATYPE_INT32     8
+#define CHUNK_DATATYPE_INT64     9
+#define CHUNK_DATATYPE_STRING   10
+#define CHUNK_DATATYPE_DATA     11
+#define CHUNK_DATATYPE_CRC32    12
 
 #define CHUNK_DATATYPE_ARRAY   0x80
+
+// chunk alignment
+#define CHUNK_ALIGN            127
 
 // chunk i/o modes
 typedef enum

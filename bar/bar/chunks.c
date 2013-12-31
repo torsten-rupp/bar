@@ -64,6 +64,7 @@ typedef struct
 // chunk read/write buffer
 typedef struct
 {
+  ChunkModes    chunkMode;
   const ChunkIO *chunkIO;
   void          *chunkIOUserData;
   union
@@ -130,6 +131,7 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
   assert(chunkIO->read != NULL);
   assert(definition != NULL);
 
+  chunkBuffer->chunkMode       = chunkMode;
   chunkBuffer->chunkIO         = chunkIO;
   chunkBuffer->chunkIOUserData = chunkIOUserData;
   chunkBuffer->bytesRead       = 0L;
@@ -383,7 +385,7 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
   }
 
   // get data
-  (*p) = &chunkBuffer->buffer[chunkBuffer->bufferIndex];
+  if (p != NULL) (*p) = &chunkBuffer->buffer[chunkBuffer->bufferIndex];
   chunkBuffer->bufferIndex += size;
 
   return ERROR_NONE;
@@ -423,6 +425,51 @@ LOCAL Errors putChunkBuffer(ChunkBuffer *chunkBuffer, const void *p, ulong size)
   chunkBuffer->bufferLength += size;
 
   return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : alignChunkBuffer
+* Purpose: align chunk data
+* Input  : chunkBuffer - chunk buffer handle
+*          alignment   - alignment
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors alignChunkBuffer(ChunkBuffer *chunkBuffer, uint alignment)
+{
+  // max. padding is 16-1 = 15 bytes
+  const byte PADDING[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+  uint   size;
+  Errors error;
+
+  assert(chunkBuffer != NULL);
+
+  switch (chunkBuffer->chunkMode)
+  {
+    case CHUNK_MODE_READ:
+      error = getChunkBuffer(chunkBuffer,
+                             NULL,
+                             ALIGN(chunkBuffer->bufferIndex,alignment)-chunkBuffer->bufferIndex
+                            );
+      break;
+    case CHUNK_MODE_WRITE:
+      assert(ALIGN(chunkBuffer->bufferLength,alignment)-chunkBuffer->bufferLength < sizeof(PADDING));
+      error = putChunkBuffer(chunkBuffer,
+                             PADDING,
+                             ALIGN(chunkBuffer->bufferLength,alignment)-chunkBuffer->bufferLength
+                            );
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+
+  return error;
 }
 
 /***********************************************************************\
@@ -596,6 +643,10 @@ LOCAL void initDefinition(const int *definition,
           i += 2;
           break;
 
+        case CHUNK_ALIGN:
+          i += 2;
+          break;
+
         #ifndef NDEBUG
           default:
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -684,6 +735,11 @@ LOCAL Errors doneDefinition(const int  *definition,
         case CHUNK_DATATYPE_DATA:
           i += 2;
           break;
+
+        case CHUNK_ALIGN:
+          i += 2;
+          break;
+
         #ifndef NDEBUG
           default:
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -997,6 +1053,15 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
           i += 2;
           break;
 
+        case CHUNK_ALIGN:
+          {
+            error = alignChunkBuffer(&chunkBuffer,definition[i+1]);
+            if (error != ERROR_NONE) break;
+
+            i += 2;
+          }
+          break;
+
         #ifndef NDEBUG
           default:
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1284,6 +1349,15 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
           i += 2;
           break;
 
+        case CHUNK_ALIGN:
+          {
+            error = alignChunkBuffer(&chunkBuffer,definition[i+1]);
+            if (error != ERROR_NONE) break;
+
+            i += 2;
+          }
+          break;
+
         #ifndef NDEBUG
           default:
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1340,40 +1414,40 @@ ulong Chunk_getSize(const int  *definition,
                    )
 {
   ulong size;
-  int   z;
+  int   i;
 
   assert(definition != NULL);
 
   size = 0;
-  z    = 0;
-  while (definition[z+0] != CHUNK_DATATYPE_NONE)
+  i    = 0;
+  while (definition[i+0] != CHUNK_DATATYPE_NONE)
   {
-    switch (definition[z+0])
+    switch (definition[i+0])
     {
       case CHUNK_DATATYPE_BYTE:
       case CHUNK_DATATYPE_UINT8:
       case CHUNK_DATATYPE_INT8:
         size += 1;
 
-        z += 2;
+        i += 2;
         break;
       case CHUNK_DATATYPE_UINT16:
       case CHUNK_DATATYPE_INT16:
         size += 2;
 
-        z += 2;
+        i += 2;
         break;
       case CHUNK_DATATYPE_UINT32:
       case CHUNK_DATATYPE_INT32:
         size += 4;
 
-        z += 2;
+        i += 2;
         break;
       case CHUNK_DATATYPE_UINT64:
       case CHUNK_DATATYPE_INT64:
         size += 8;
 
-        z += 2;
+        i += 2;
         break;
       case CHUNK_DATATYPE_STRING:
         {
@@ -1381,12 +1455,12 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          s = (*((String*)((byte*)chunkData+definition[z+1])));
+          s = (*((String*)((byte*)chunkData+definition[i+1])));
           assert(s != NULL);
 #warning alignment string?
           size += 2+String_length(s);
 
-          z += 2;
+          i += 2;
         }
         break;
 
@@ -1398,10 +1472,10 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          length = (*((uint*)((byte*)chunkData+definition[z+1])));
+          length = (*((uint*)((byte*)chunkData+definition[i+1])));
           size += 2+ALIGN(length*1,4);
 
-          z += 3;
+          i += 3;
         }
         break;
       case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
@@ -1411,10 +1485,10 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          length = (*((uint*)((byte*)chunkData+definition[z+1])));
+          length = (*((uint*)((byte*)chunkData+definition[i+1])));
           size += 2+ALIGN(length*2,4);
 
-          z += 3;
+          i += 3;
         }
         break;
       case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
@@ -1424,10 +1498,10 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          length = (*((uint*)((byte*)chunkData+definition[z+1])));
+          length = (*((uint*)((byte*)chunkData+definition[i+1])));
           size += 2+ALIGN(length*4,4);
 
-          z += 3;
+          i += 3;
         }
         break;
       case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
@@ -1437,10 +1511,10 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          length = (*((uint*)((byte*)chunkData+definition[z+1])));
+          length = (*((uint*)((byte*)chunkData+definition[i+1])));
           size += 2+ALIGN(length*8,4);
 
-          z += 3;
+          i += 3;
         }
         break;
       case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
@@ -1450,29 +1524,42 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          length = (*((uint*)((byte*)chunkData+definition[z+1])));
+          length = (*((uint*)((byte*)chunkData+definition[i+1])));
           while (length > 0)
           {
-            s = (*((String*)((byte*)chunkData+definition[z+1])));
+            s = (*((String*)((byte*)chunkData+definition[i+1])));
             assert(s != NULL);
 #warning alignment string?
             size += 2+String_length(s);
           }
 
-          z += 3;
+          i += 3;
         }
         break;
 
       case CHUNK_DATATYPE_CRC32:
         size += 4;
 
-        z += 2;
+        i += 2;
         break;
 
       case CHUNK_DATATYPE_DATA:
         size += dataLength;
 
-        z += 2;
+        i += 2;
+        break;
+
+      case CHUNK_ALIGN:
+        {
+          uint   alignment;
+
+          assert(chunkData != NULL);
+
+          alignment = (*((uint*)((byte*)chunkData+definition[i+1])));
+          size = ALIGN(size, alignment);
+
+          i += 2;
+        }
         break;
 
       #ifndef NDEBUG
