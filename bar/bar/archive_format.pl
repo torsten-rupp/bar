@@ -99,17 +99,20 @@ if ($hFileName ne "")
   open(HFILE_HANDLE,"> $hFileName");
   print HFILE_HANDLE "#ifndef __ARCHIVE_FORMAT__\n";
   print HFILE_HANDLE "#define __ARCHIVE_FORMAT__\n";
+  print HFILE_HANDLE "\n";
 
   print HFILE_HANDLE "#include \"lists.h\"\n";
   print HFILE_HANDLE "#include \"chunks.h\"\n";
   print HFILE_HANDLE "#include \"crypt.h\"\n";
   print HFILE_HANDLE "#include \"compress.h\"\n";
+  print HFILE_HANDLE "\n";
 }
 if ($constFileName ne "")
 {
   open(CONSTFILE_HANDLE,"> $constFileName");
   print CONSTFILE_HANDLE "#ifndef __ARCHIVE_FORMAT_CONST__\n";
   print CONSTFILE_HANDLE "#define __ARCHIVE_FORMAT_CONST__\n";
+  print CONSTFILE_HANDLE "\n";
 }
 
 writeCFile("#include \"chunks.h\"\n");
@@ -164,6 +167,22 @@ while ($line=<STDIN>)
       elsif ($line =~ /^\s*COMPRESS\s*$/)
       {
         writeHFile("  CompressInfo compressInfo;\n");
+      }
+      elsif ($line =~ /^\s*ALIGN\s+(\w+)$/)
+      {
+        if ($1 == 0)
+        {
+        }
+        elsif (($1 == 2) || ($1 == 4) || ($1 == 8) || ($1 == 16))
+        {
+          push(@parseDefinitions,"CHUNK_ALIGN");
+          push(@parseDefinitions,$1);
+        }
+        else
+        {
+          print STDERR "Invalid alignment '$1' in line $lineNb\n";
+          exit 1;
+        }
       }
       elsif ($line =~ /^\s*(byte|uint8|int8)\s+(\w+)/)
       {
@@ -231,7 +250,9 @@ while ($line=<STDIN>)
 
     push(@parseDefinitions,"CHUNK_DATATYPE_NONE");
     writeHFile("extern const int $PREFIX_CHUNK_DEFINITION$idName\[\];\n");
+    writeHFile("\n");
     writeCFile("const int $PREFIX_CHUNK_DEFINITION$idName\[\] = {".join(",",@parseDefinitions)."};\n");
+    writeCFile("\n");
   }
   elsif ($line =~ /^CONST\s+(\w+)\s*=\s*(\S*)\s*/)
   {
