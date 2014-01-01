@@ -442,7 +442,6 @@ LOCAL Errors alignChunkBuffer(ChunkBuffer *chunkBuffer, uint alignment)
   // max. padding is 16-1 = 15 bytes
   const byte PADDING[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-  uint   size;
   Errors error;
 
   assert(chunkBuffer != NULL);
@@ -1457,7 +1456,6 @@ ulong Chunk_getSize(const int  *definition,
 
           s = (*((String*)((byte*)chunkData+definition[i+1])));
           assert(s != NULL);
-#warning alignment string?
           size += 2+String_length(s);
 
           i += 2;
@@ -1529,7 +1527,6 @@ ulong Chunk_getSize(const int  *definition,
           {
             s = (*((String*)((byte*)chunkData+definition[i+1])));
             assert(s != NULL);
-#warning alignment string?
             size += 2+String_length(s);
           }
 
