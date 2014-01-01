@@ -112,8 +112,6 @@ typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
 // archive info
 typedef struct
 {
-#warning TODO: lock used?
-  Semaphore                       lock;                                // general archive lock
   const JobOptions                *jobOptions;
   ArchiveCreatedFunction          archiveCreatedFunction;              // call back for new archive file
   void                            *archiveNewFileUserData;             // user data for call back for new archive file

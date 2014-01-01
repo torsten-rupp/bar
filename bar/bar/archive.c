@@ -2804,7 +2804,6 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   }
 
   // init archive info
-  Semaphore_init(&archiveInfo->lock);
   archiveInfo->jobOptions                      = jobOptions;
   archiveInfo->archiveCreatedFunction          = archiveCreatedFunction;
   archiveInfo->archiveNewFileUserData          = archiveNewFileUserData;
@@ -2836,7 +2835,6 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 
   archiveInfo->interrupt.openFlag              = FALSE;
   archiveInfo->interrupt.offset                = 0LL;
-  AUTOFREE_ADD(&autoFreeList,&archiveInfo->lock,{ Semaphore_done(&archiveInfo->lock); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->passwordLock,{ Semaphore_done(&archiveInfo->passwordLock); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileName,{ String_delete(archiveInfo->file.fileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
@@ -2958,7 +2956,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
 
   // initstorageSpecifier
-  Semaphore_init(&archiveInfo->lock);
   archiveInfo->jobOptions                      = jobOptions;
   archiveInfo->archiveCreatedFunction          = NULL;
   archiveInfo->archiveNewFileUserData          = NULL;
@@ -2990,7 +2987,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   archiveInfo->interrupt.openFlag              = FALSE;
   archiveInfo->interrupt.offset                = 0LL;
-  AUTOFREE_ADD(&autoFreeList,&archiveInfo->lock,{ Semaphore_done(&archiveInfo->lock); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->passwordLock,{ Semaphore_done(&archiveInfo->passwordLock); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->storage.storageSpecifier,{ Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier); });
   AUTOFREE_ADD(&autoFreeList,archiveInfo->printableName,{ String_delete(archiveInfo->printableName); });
@@ -3106,7 +3102,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     #endif /* NDEBUG */
   }
   Semaphore_done(&archiveInfo->passwordLock);
-  Semaphore_done(&archiveInfo->lock);
 
   return error;
 }
