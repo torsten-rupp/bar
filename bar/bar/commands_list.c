@@ -3143,6 +3143,11 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
   FileInfo   fileInfo;
   char       buffer[16];
 
+  assert(storageDirectoryListHandle != NULL);
+  assert(storageSpecifier != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
+
   printDirectoryListHeader(Storage_getPrintableName(storageSpecifier,NULL));
 
   fileName  = String_new();
