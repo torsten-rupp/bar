@@ -3397,7 +3397,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #endif /* NDEBUG */
 {
   AutoFreeList                    autoFreeList;
-  SemaphoreLock                   semaphoreLock;
   Errors                          error;
   const FileExtendedAttributeNode *fileExtendedAttributeNode;
 
@@ -3769,7 +3768,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #endif /* NDEBUG */
 {
   AutoFreeList  autoFreeList;
-  SemaphoreLock semaphoreLock;
   Errors        error;
 
   assert(archiveEntryInfo != NULL);
@@ -4095,7 +4093,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #endif /* NDEBUG */
 {
   AutoFreeList                    autoFreeList;
-  SemaphoreLock                   semaphoreLock;
   Errors                          error;
   ulong                           headerLength;
   const FileExtendedAttributeNode *fileExtendedAttributeNode;
@@ -4323,7 +4320,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #endif /* NDEBUG */
 {
   AutoFreeList                    autoFreeList;
-  SemaphoreLock                   semaphoreLock;
   Errors                          error;
   ulong                           headerLength;
   const FileExtendedAttributeNode *fileExtendedAttributeNode;
@@ -4554,7 +4550,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #endif /* NDEBUG */
 {
   AutoFreeList                    autoFreeList;
-  SemaphoreLock                   semaphoreLock;
   Errors                          error;
   const FileExtendedAttributeNode *fileExtendedAttributeNode;
   const StringNode                *stringNode;
@@ -4953,7 +4948,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #endif /* NDEBUG */
 {
   AutoFreeList                    autoFreeList;
-  SemaphoreLock                   semaphoreLock;
   Errors                          error;
   ulong                           headerLength;
   const FileExtendedAttributeNode *fileExtendedAttributeNode;
