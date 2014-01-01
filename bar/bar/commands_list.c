@@ -3008,14 +3008,6 @@ remoteBarFlag=FALSE;
           }
 
           retryFlag = FALSE;
-#if 0
-          if ((error == ERROR_CORRUPT_DATA) && !inputPasswordFlag)
-          {
-            inputCryptPassword(&jobOptions->cryptPassword);
-            retryFlag         = TRUE;
-            inputPasswordFlag = TRUE;
-          }
-#endif /* 0 */
         }
         while ((error != ERROR_NONE) && retryFlag);
         String_delete(arguments);
