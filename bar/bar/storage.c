@@ -9504,17 +9504,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           Password_undeploy(storageSpecifier->loginPassword);
 
           // read directory
-#warning obsolete?
-          if (curlCode != CURLE_OK)
-          {
-            error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
-            String_delete(url);
-            (void)curl_easy_cleanup(curlHandle);
-            freeServer(storageDirectoryListHandle->ftp.server);
-            String_delete(storageDirectoryListHandle->ftp.fileName);
-            StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            break;
-          }
           curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlFTPParseDirectoryListCallback);
           if (curlCode == CURLE_OK)
           {
@@ -9946,7 +9935,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           // read directory data
           directoryData = String_new();
           curlSList = curl_slist_append(NULL,"Depth: 1");
-#warning webdav
           curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
           if (curlCode == CURLE_OK)
           {
@@ -9976,8 +9964,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             freeServer(storageDirectoryListHandle->webdav.server);
             break;
           }
-#warning todo
-//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(directoryData));
 
           // parse directory entries
           storageDirectoryListHandle->webdav.rootNode = mxmlLoadString(NULL,
@@ -10278,7 +10264,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_WEBDAV:
-#warning todo webdav
       #ifdef HAVE_CURL
         {
           if (storageDirectoryListHandle->webdav.currentNode == NULL)
