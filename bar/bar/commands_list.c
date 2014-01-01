@@ -3165,57 +3165,64 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
       String_delete(fileName);
       return error;
     }
-    fileCount++;
 
-    // format
-    switch (fileInfo.type)
+    if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+        && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+       )
     {
-      case FILE_TYPE_NONE:
-        break;
-      case FILE_TYPE_FILE:
-      case FILE_TYPE_HARDLINK:
-        TEXT_MACRO_N_CSTRING(textMacros[0],"%type","FILE");
-        if (globalOptions.humanFormatFlag)
-        {
-          getHumanSizeString(buffer,sizeof(buffer),fileInfo.size);
-        }
-        else
-        {
-          snprintf(buffer,sizeof(buffer),"%llu",fileInfo.size);
-        }
-        TEXT_MACRO_N_CSTRING(textMacros[1],"%size",buffer);
-        break;
-      case FILE_TYPE_DIRECTORY:
-        TEXT_MACRO_N_CSTRING(textMacros[0],"%type","DIR");
-        TEXT_MACRO_N_CSTRING(textMacros[1],"%size","");
-        break;
-      case FILE_TYPE_LINK:
-        TEXT_MACRO_N_CSTRING(textMacros[0],"%type","LINK");
-        TEXT_MACRO_N_CSTRING(textMacros[1],"%size","");
-        break;
-      case FILE_TYPE_SPECIAL:
-        TEXT_MACRO_N_CSTRING(textMacros[0],"%type","SEPCIAL");
-        TEXT_MACRO_N_CSTRING(textMacros[1],"%size","");
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break; /* not reached */
+      // format
+      switch (fileInfo.type)
+      {
+        case FILE_TYPE_NONE:
+          break;
+        case FILE_TYPE_FILE:
+        case FILE_TYPE_HARDLINK:
+          TEXT_MACRO_N_CSTRING(textMacros[0],"%type","FILE");
+          if (globalOptions.humanFormatFlag)
+          {
+            getHumanSizeString(buffer,sizeof(buffer),fileInfo.size);
+          }
+          else
+          {
+            snprintf(buffer,sizeof(buffer),"%llu",fileInfo.size);
+          }
+          TEXT_MACRO_N_CSTRING(textMacros[1],"%size",buffer);
+          break;
+        case FILE_TYPE_DIRECTORY:
+          TEXT_MACRO_N_CSTRING(textMacros[0],"%type","DIR");
+          TEXT_MACRO_N_CSTRING(textMacros[1],"%size","");
+          break;
+        case FILE_TYPE_LINK:
+          TEXT_MACRO_N_CSTRING(textMacros[0],"%type","LINK");
+          TEXT_MACRO_N_CSTRING(textMacros[1],"%size","");
+          break;
+        case FILE_TYPE_SPECIAL:
+          TEXT_MACRO_N_CSTRING(textMacros[0],"%type","SEPCIAL");
+          TEXT_MACRO_N_CSTRING(textMacros[1],"%size","");
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break; /* not reached */
+      }
+      Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL);
+
+      TEXT_MACRO_N_STRING(textMacros[2],"%dateTime",dateTime);
+      TEXT_MACRO_N_STRING(textMacros[3],"%name",    fileName);
+
+      // print
+      printInfo(0,"%s\n",
+                String_cString(Misc_expandMacros(String_clear(line),
+                                                 DEFAULT_DIRECTORY_LIST_FORMAT,
+                                                 textMacros,SIZE_OF_ARRAY(textMacros)
+                                                )
+                              )
+               );
+
+      // next
+      fileCount++;
     }
-    Misc_formatDateTime(dateTime,fileInfo.timeModified,NULL);
-
-    TEXT_MACRO_N_STRING(textMacros[2],"%dateTime",dateTime);
-    TEXT_MACRO_N_STRING(textMacros[3],"%name",    fileName);
-
-    // print
-    printInfo(0,"%s\n",
-              String_cString(Misc_expandMacros(String_clear(line),
-                                               DEFAULT_DIRECTORY_LIST_FORMAT,
-                                               textMacros,SIZE_OF_ARRAY(textMacros)
-                                              )
-                            )
-             );
   }
   String_delete(line);
   String_delete(dateTime);
