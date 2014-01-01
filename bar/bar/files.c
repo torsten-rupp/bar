@@ -2669,7 +2669,6 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
     time_t d0;
     time_t d1;
   } cast;
-  Errors     error;
 
   assert(fileName != NULL);
   assert(fileInfo != NULL);
@@ -2766,15 +2765,6 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
     fileInfo->size        = 0LL;
     fileInfo->attributes  = 0LL;
   }
-
-#if 0
-  // get extended attributes
-  error = File_getExtendedAttributes(&fileInfo->extendedAttributeList,fileName);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  #endif
 
   return ERROR_NONE;
 }
