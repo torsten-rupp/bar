@@ -52,6 +52,7 @@ typedef struct SourceNode
 typedef struct
 {
   LIST_HEADER(SourceNode);
+  Semaphore passwordLock;
 } SourceList;
 
 /***************************** Variables *******************************/
@@ -838,12 +839,14 @@ LOCAL Errors restoreFile(const String                    storageName,
 Errors Source_initAll(void)
 {
   List_init(&sourceList);
+  Semaphore_init(&sourceList.passwordLock);
 
   return ERROR_NONE;
 }
 
 void Source_doneAll(void)
 {
+  Semaphore_done(&sourceList.passwordLock);
   List_done(&sourceList,(ListNodeFreeFunction)freeSourceNode,NULL);
 }
 
@@ -913,6 +916,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
 {
   bool             restoredFlag;
   FragmentNode     fragmentNode;
+  bool             semaphoreLock;
   SourceNode       *sourceNode;
   Errors           error;
   String           tmpFileName;
@@ -966,37 +970,40 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
       // init variables
       FragmentList_initNode(&fragmentNode,name,size,NULL,0);
 
-      // restore from local source list
-      LIST_ITERATE(&sourceList,sourceNode)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&sourceList.passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        if (sourceNode->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
+        // restore from local source list
+        LIST_ITERATE(&sourceList,sourceNode)
         {
-          if (Archive_isArchiveFile(sourceNode->storageSpecifier.fileName))
+          if (sourceNode->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
           {
-            // restore to temporary file (ignore error)
-            error = restoreFile(sourceNode->storageSpecifier.fileName,
-                                name,
-                                jobOptions,
-                                tmpFileName,
-                                &fragmentNode,
-                                inputCryptPassword,
-                                NULL,  // archiveGetCryptPasswordUserData
-                                NULL,  // pauseFlag
-                                NULL   // requestedAbortFlag
-                               );
-            if (error == ERROR_NONE)
+            if (Archive_isArchiveFile(sourceNode->storageSpecifier.fileName))
             {
-              sourceHandle->name = sourceNode->storageName;
+              // restore to temporary file (ignore error)
+              error = restoreFile(sourceNode->storageSpecifier.fileName,
+                                  name,
+                                  jobOptions,
+                                  tmpFileName,
+                                  &fragmentNode,
+                                  inputCryptPassword,
+                                  NULL,  // archiveGetCryptPasswordUserData
+                                  NULL,  // pauseFlag
+                                  NULL   // requestedAbortFlag
+                                 );
+              if (error == ERROR_NONE)
+              {
+                sourceHandle->name = sourceNode->storageName;
+              }
             }
           }
-        }
 
-        // stop if complete
-        if (   (size != SOURCE_SIZE_UNKNOWN)
-            && FragmentList_isEntryComplete(&fragmentNode)
-           )
-        {
-          break;
+          // stop if complete
+          if (   (size != SOURCE_SIZE_UNKNOWN)
+              && FragmentList_isEntryComplete(&fragmentNode)
+             )
+          {
+            break;
+          }
         }
       }
 
@@ -1040,49 +1047,52 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
       // init variables
       FragmentList_initNode(&fragmentNode,name,size,NULL,0);
 
-      // restore from remove source list
-      LIST_ITERATE(&sourceList,sourceNode)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&sourceList.passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        if (sourceNode->storageSpecifier.type != STORAGE_TYPE_FILESYSTEM)
+        // restore from remove source list
+        LIST_ITERATE(&sourceList,sourceNode)
         {
-          // create local copy of storage file
-          localStorageName = String_new();
-          error = createLocalStorageArchive(localStorageName,
-                                            &sourceNode->storageSpecifier,
-                                            jobOptions
-                                          );
-          if (error == ERROR_NONE)
+          if (sourceNode->storageSpecifier.type != STORAGE_TYPE_FILESYSTEM)
           {
-            // restore to temporary file (ignore error)
-            error = restoreFile(localStorageName,
-                                name,
-                                jobOptions,
-                                tmpFileName,
-                                &fragmentNode,
-                                inputCryptPassword,
-                                NULL,  // archiveGetCryptPasswordUserData
-                                NULL,  // pauseFlag
-                                NULL   // requestedAbortFlag
-                               );
+            // create local copy of storage file
+            localStorageName = String_new();
+            error = createLocalStorageArchive(localStorageName,
+                                              &sourceNode->storageSpecifier,
+                                              jobOptions
+                                            );
             if (error == ERROR_NONE)
             {
-              sourceHandle->name = sourceNode->storageName;
+              // restore to temporary file (ignore error)
+              error = restoreFile(localStorageName,
+                                  name,
+                                  jobOptions,
+                                  tmpFileName,
+                                  &fragmentNode,
+                                  inputCryptPassword,
+                                  NULL,  // archiveGetCryptPasswordUserData
+                                  NULL,  // pauseFlag
+                                  NULL   // requestedAbortFlag
+                                 );
+              if (error == ERROR_NONE)
+              {
+                sourceHandle->name = sourceNode->storageName;
+              }
+
+              // delete local storage file
+              File_delete(localStorageName,FALSE);
             }
 
-            // delete local storage file
-            File_delete(localStorageName,FALSE);
+            // free resources
+            String_delete(localStorageName);
           }
 
-          // free resources
-          String_delete(localStorageName);
-        }
-
-        // stop if complete
-        if (   (size != SOURCE_SIZE_UNKNOWN)
-            && FragmentList_isEntryComplete(&fragmentNode)
-           )
-        {
-          break;
+          // stop if complete
+          if (   (size != SOURCE_SIZE_UNKNOWN)
+              && FragmentList_isEntryComplete(&fragmentNode)
+             )
+          {
+            break;
+          }
         }
       }
 
@@ -1129,26 +1139,29 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
         error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
         if (error == ERROR_NONE)
         {
-          // restore to temporary file
-          error = restoreFile(sourceStorageName,
-                              name,
-                              jobOptions,
-                              tmpFileName,
-                              NULL,  // fragmentNode
-                              inputCryptPassword,
-                              NULL,  // archiveGetCryptPasswordUserData
-                              NULL,  // pauseFlag
-                              NULL   // requestedAbortFlag
-                             );
-          if (error == ERROR_NONE)
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&sourceList.passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
-            // open temporary restored file
-            error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+            // restore to temporary file
+            error = restoreFile(sourceStorageName,
+                                name,
+                                jobOptions,
+                                tmpFileName,
+                                NULL,  // fragmentNode
+                                inputCryptPassword,
+                                NULL,  // archiveGetCryptPasswordUserData
+                                NULL,  // pauseFlag
+                                NULL   // requestedAbortFlag
+                               );
             if (error == ERROR_NONE)
             {
-              sourceHandle->name        = sourceStorageName;
-              sourceHandle->tmpFileName = tmpFileName;
-              restoredFlag = TRUE;
+              // open temporary restored file
+              error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+              if (error == ERROR_NONE)
+              {
+                sourceHandle->name        = sourceStorageName;
+                sourceHandle->tmpFileName = tmpFileName;
+                restoredFlag = TRUE;
+              }
             }
           }
 
@@ -1200,26 +1213,29 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
           error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
           if (error == ERROR_NONE)
           {
-            // restore to temporary file
-            error = restoreFile(localStorageName,
-                                name,
-                                jobOptions,
-                                tmpFileName,
-                                NULL,  // fragmentNode
-                                inputCryptPassword,
-                                NULL,  // archiveGetCryptPasswordUserData
-                                NULL,  // pauseFlag
-                                NULL   // requestedAbortFlag
-                               );
-            if (error == ERROR_NONE)
+            SEMAPHORE_LOCKED_DO(semaphoreLock,&sourceList.passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
             {
-              // open temporary restored file
-              error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+              // restore to temporary file
+              error = restoreFile(localStorageName,
+                                  name,
+                                  jobOptions,
+                                  tmpFileName,
+                                  NULL,  // fragmentNode
+                                  inputCryptPassword,
+                                  NULL,  // archiveGetCryptPasswordUserData
+                                  NULL,  // pauseFlag
+                                  NULL   // requestedAbortFlag
+                                 );
               if (error == ERROR_NONE)
               {
-                sourceHandle->name        = sourceStorageName;
-                sourceHandle->tmpFileName = tmpFileName;
-                restoredFlag = TRUE;
+                // open temporary restored file
+                error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+                if (error == ERROR_NONE)
+                {
+                  sourceHandle->name        = sourceStorageName;
+                  sourceHandle->tmpFileName = tmpFileName;
+                  restoredFlag = TRUE;
+                }
               }
             }
 
