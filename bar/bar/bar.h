@@ -132,14 +132,14 @@ typedef struct BandWidthNode
 {
   LIST_NODE_HEADER(struct BandWidthNode);
 
-  int    year;
-  int    month;
-  int    day;
-  int    hour;
-  int    minute;
-  long   weekDays;
-  ulong  n;
-  String fileName;
+  int    year;                                           // valid year or SCHEDULE_ANY
+  int    month;                                          // valid month or SCHEDULE_ANY
+  int    day;                                            // valid day or SCHEDULE_ANY
+  int    hour;                                           // valid hour or SCHEDULE_ANY
+  int    minute;                                         // valid minute or SCHEDULE_ANY
+  long   weekDays;                                       // valid weekdays or SCHEDULE_ANY_DAY
+  ulong  n;                                              // band with limit [bits/s]
+  String fileName;                                       // file to read band width from
 } BandWidthNode;
 
 typedef struct
@@ -154,8 +154,7 @@ typedef enum
 {
   PASSWORD_MODE_DEFAULT,                                 // use global password
   PASSWORD_MODE_ASK,                                     // ask for password
-  PASSWORD_MODE_CONFIG,                                  // use password from config
-  PASSWORD_MODE_UNKNOWN,
+  PASSWORD_MODE_CONFIG                                   // use password from config
 } PasswordModes;
 
 // FTP server settings
@@ -389,7 +388,6 @@ typedef struct ScheduleNode
 {
   LIST_NODE_HEADER(struct ScheduleNode);
 
-  String           title;                                // title text
   ScheduleDate     date;
   ScheduleWeekDays weekDays;
   ScheduleTime     time;

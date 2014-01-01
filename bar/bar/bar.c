@@ -95,6 +95,11 @@
 #define DEFAULT_BD_DEVICE_NAME                "/dev/bd"
 #define DEFAULT_DEVICE_NAME                   "/dev/raw"
 
+#define DEFAULT_CD_VOLUME_SIZE                MAX_INT64
+#define DEFAULT_DVD_VOLUME_SIZE               MAX_INT64
+#define DEFAULT_BD_VOLUME_SIZE                MAX_INT64
+#define DEFAULT_DEVICE_VOLUME_SIZE            MAX_INT64
+
 #define DEFAULT_DATABASE_INDEX_FILE           "/var/lib/bar/index.db"
 
 #define CD_UNLOAD_VOLUME_COMMAND              "eject -r %device"
@@ -108,15 +113,22 @@
 #define DVD_LOAD_VOLUME_COMMAND               "eject -t %device"
 #define DVD_IMAGE_COMMAND                     "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define DVD_ECC_COMMAND                       "nice dvdisaster -mRS02 -n dvd -c -i %image -v"
+#warning todo remove -dry-run
 #define DVD_WRITE_COMMAND                     "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory"
+//#define DVD_WRITE_COMMAND                     "nice growisofs -Z %device -A BAR -V Backup -volset %number -dry-run -r %directory"
+#warning todo remove -dry-run
 #define DVD_WRITE_IMAGE_COMMAND               "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload"
+//#define DVD_WRITE_IMAGE_COMMAND               "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -dry-run"
 
 #define BD_UNLOAD_VOLUME_COMMAND              "eject -r %device"
 #define BD_LOAD_VOLUME_COMMAND                "eject -t %device"
 #define BD_IMAGE_COMMAND                      "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define BD_ECC_COMMAND                        "nice dvdisaster -mRS02 -n bd -c -i %image -v"
+#warning todo remove -dry-run
 #define BD_WRITE_COMMAND                      "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory"
+//#define BD_WRITE_COMMAND                      "nice growisofs -Z %device -A BAR -V Backup -volset %number -dry-run -r %directory"
 #define BD_WRITE_IMAGE_COMMAND                "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload"
+//#define BD_WRITE_IMAGE_COMMAND                "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload  -dry-run"
 
 #define MIN_PASSWORD_QUALITY_LEVEL            0.6
 
@@ -525,7 +537,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("ftp-login-name",               0,  0,1,defaultFTPServer.ftpServer.loginName,                                                                   "ftp login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,1,&defaultFTPServer.ftpServer.password,            cmdOptionParsePassword,NULL,                           "ftp password (use with care!)","password"                                 ),
   CMD_OPTION_INTEGER      ("ftp-max-connections",          0,  0,1,defaultFTPServer.maxConnectionCount,             0,MAX_INT,NULL,                                        "max. number of concurrent ftp connections","unlimited"                    ),
-  CMD_OPTION_INTEGER64    ("ftp-max-storage-size",         0,  0,1,defaultFTPServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on ftp server","unlimited"                  ),
+//TODO
+//  CMD_OPTION_INTEGER64    ("ftp-max-storage-size",         0,  0,1,defaultFTPServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on ftp server","unlimited"                  ),
 
   CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,1,defaultSSHServer.sshServer.port,                 0,65535,NULL,                                          "ssh port",NULL                                                            ),
   CMD_OPTION_STRING       ("ssh-login-name",               0,  0,1,defaultSSHServer.sshServer.loginName,                                                                   "ssh login name","name"                                                    ),
@@ -533,13 +546,15 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("ssh-public-key",               0,  1,1,defaultSSHServer.sshServer.publicKeyFileName,                                                           "ssh public key file name","file name"                                     ),
   CMD_OPTION_STRING       ("ssh-private-key",              0,  1,1,defaultSSHServer.sshServer.privateKeyFileName,                                                          "ssh private key file name","file name"                                    ),
   CMD_OPTION_INTEGER      ("ssh-max-connections",          0,  0,1,defaultSSHServer.maxConnectionCount,             0,MAX_INT,NULL,                                        "max. number of concurrent ssh connections","unlimited"                    ),
-  CMD_OPTION_INTEGER64    ("ssh-max-storage-size",         0,  0,1,defaultSSHServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on ssh server","unlimited"                  ),
+//TODO
+//  CMD_OPTION_INTEGER64    ("ssh-max-storage-size",         0,  0,1,defaultSSHServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on ssh server","unlimited"                  ),
 
 //  CMD_OPTION_INTEGER      ("webdav-port",                  0,  0,1,defaultWebDAVServer.webDAVServer.port,          0,65535,NULL,                                          "WebDAV port",NULL                                                         ),
   CMD_OPTION_STRING       ("webdav-login-name",            0,  0,1,defaultWebDAVServer.webDAVServer.loginName,                                                             "WebDAV login name","name"                                                 ),
   CMD_OPTION_SPECIAL      ("webdav-password",              0,  0,1,&defaultWebDAVServer.webDAVServer.password,      cmdOptionParsePassword,NULL,                           "WebDAV password (use with care!)","password"                              ),
   CMD_OPTION_INTEGER      ("webdav-max-connections",       0,  0,1,defaultWebDAVServer.maxConnectionCount,          0,MAX_INT,NULL,                                        "max. number of concurrent WebDAV connections","unlimited"                 ),
-  CMD_OPTION_INTEGER64    ("webdav-max-storage-size",      0,  0,1,defaultWebDAVServer.maxStorageSize,              0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on WebDAV server","unlimited"               ),
+//TODO
+//  CMD_OPTION_INTEGER64    ("webdav-max-storage-size",      0,  0,1,defaultWebDAVServer.maxStorageSize,              0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on WebDAV server","unlimited"               ),
 
   CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                                                                             "run in daemon mode"                                                       ),
   CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                                                                           "do not detach in daemon mode"                                             ),
@@ -874,7 +889,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_STRING   ("ftp-login-name",               &currentFTPServer,offsetof(Server,ftpServer.loginName)                ),
   CONFIG_VALUE_SPECIAL  ("ftp-password",                 &currentFTPServer,offsetof(Server,ftpServer.password),                configValueParsePassword,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_INTEGER  ("ftp-max-connections",          &currentFTPServer,offsetof(Server,maxConnectionCount),      0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER64("ftp-max-storage-size",         &currentFTPServer,offsetof(Server,maxStorageSize),          0LL,MAX_INT64,NULL),
+//TODO
+//  CONFIG_VALUE_INTEGER64("ftp-max-storage-size",         &currentFTPServer,offsetof(Server,maxStorageSize),          0LL,MAX_INT64,NULL),
 
   CONFIG_VALUE_INTEGER  ("ssh-port",                     &currentSSHServer,offsetof(Server,sshServer.port),                    0,65535,NULL),
   CONFIG_VALUE_STRING   ("ssh-login-name",               &currentSSHServer,offsetof(Server,sshServer.loginName)                ),
@@ -882,13 +898,15 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_STRING   ("ssh-public-key",               &currentSSHServer,offsetof(Server,sshServer.publicKeyFileName)        ),
   CONFIG_VALUE_STRING   ("ssh-private-key",              &currentSSHServer,offsetof(Server,sshServer.privateKeyFileName)       ),
   CONFIG_VALUE_INTEGER  ("ssh-max-connections",          &currentSSHServer,offsetof(Server,maxConnectionCount),      0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER64("ssh-max-storage-size",         &currentSSHServer,offsetof(Server,maxStorageSize),          0LL,MAX_INT64,NULL),
+//TODO
+//  CONFIG_VALUE_INTEGER64("ssh-max-storage-size",         &currentSSHServer,offsetof(Server,maxStorageSize),          0LL,MAX_INT64,NULL),
 
 //  CONFIG_VALUE_INTEGER  ("webdav-port",                  &currentWebDAVServer,offsetof(Server,port),              0,65535,NULL),
   CONFIG_VALUE_STRING   ("webdav-login-name",            &currentWebDAVServer,offsetof(Server,webDAVServer.loginName)          ),
   CONFIG_VALUE_SPECIAL  ("webdav-password",              &currentWebDAVServer,offsetof(Server,webDAVServer.password),          configValueParsePassword,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_INTEGER  ("webdav-max-connections",       &currentWebDAVServer,offsetof(Server,maxConnectionCount),0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER64("webdav-max-storage-size",      &currentWebDAVServer,offsetof(Server,maxStorageSize),    0LL,MAX_INT64,NULL),
+//TODO
+//  CONFIG_VALUE_INTEGER64("webdav-max-storage-size",      &currentWebDAVServer,offsetof(Server,maxStorageSize),    0LL,MAX_INT64,NULL),
 
   CONFIG_VALUE_SPECIAL  ("include-file",                 &includeEntryList,-1,                                          configValueParseFileEntry,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_SPECIAL  ("include-image",                &includeEntryList,-1,                                          configValueParseImageEntry,NULL,NULL,NULL,&jobOptions.patternType),
@@ -912,7 +930,6 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   // ignored job settings (server only)
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
-  CONFIG_VALUE_STRING   ("title",                        NULL,offsetof(ScheduleNode,title)                              ),
   CONFIG_VALUE_SPECIAL  ("date",                         NULL,offsetof(ScheduleNode,date),                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
   CONFIG_VALUE_SPECIAL  ("weekdays",                     NULL,offsetof(ScheduleNode,weekDays),                          configValueParseScheduleWeekDays,configValueFormatInitScheduleWeekDays,configValueFormatDoneScheduleWeekDays,configValueFormatScheduleWeekDays,NULL),
   CONFIG_VALUE_SPECIAL  ("time",                         NULL,offsetof(ScheduleNode,time),                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
@@ -1559,7 +1576,6 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   if ((*(String*)variable) != NULL)
   {
@@ -1592,7 +1608,6 @@ LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   StringList_appendCString(&configFileNameList,value);
 
@@ -1673,15 +1688,14 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
 LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   PatternTypes patternType;
+  Errors       error;
 
   assert(variable != NULL);
   assert(value != NULL);
 
   UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   // detect pattern type, get pattern
   if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
@@ -1690,9 +1704,10 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
-  if (PatternList_appendCString((PatternList*)variable,value,patternType) != ERROR_NONE)
+  error = PatternList_appendCString((PatternList*)variable,value,patternType);
+  if (error != ERROR_NONE)
   {
-    fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
+    strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
     return FALSE;
   }
 
@@ -2003,15 +2018,13 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   // parse band width node
   s = String_newCString(value);
   bandWidthNode = parseBandWidth(s);
   if (bandWidthNode == NULL)
   {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse bandwidth value '%s'",value);
     String_delete(s);
     return FALSE;
   }
@@ -2043,9 +2056,6 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   // parse
   if      (String_scanCString(value,"%256s:%256s",userName,groupName))
@@ -2070,6 +2080,7 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
   }
   else
   {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse owner ship value '%s'",value);
     return FALSE;
   }
 
@@ -2099,7 +2110,6 @@ LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *na
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   if ((*(Password**)variable) == NULL)
   {
@@ -2132,9 +2142,6 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
   compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
@@ -2163,7 +2170,11 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
         break;
       }
     }
-    if (!foundFlag) return FALSE;
+    if (!foundFlag)
+    {
+      snprintf(errorMessage,errorMessageSize,"Cannot parse compress algorithm value '%s'",algorithm1);
+      return FALSE;
+    }
 
     foundFlag = FALSE;
     for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
@@ -2184,7 +2195,11 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
         break;
       }
     }
-    if (!foundFlag) return FALSE;
+    if (!foundFlag)
+    {
+      snprintf(errorMessage,errorMessageSize,"Cannot parse compress algorithm value '%s'",algorithm2);
+      return FALSE;
+    }
   }
   else
   {
@@ -2207,7 +2222,11 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
         break;
       }
     }
-    if (!foundFlag) return FALSE;
+    if (!foundFlag)
+    {
+      snprintf(errorMessage,errorMessageSize,"Cannot parse compress algorithm value '%s'",value);
+      return FALSE;
+    }
   }
 
   // store compress algorithm values
@@ -2235,7 +2254,6 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   StringList_appendCString(&configFileNameList,value);
 
@@ -2340,7 +2358,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.cd.requestVolumeCommand                         = NULL;
   globalOptions.cd.unloadVolumeCommand                          = String_newCString(CD_UNLOAD_VOLUME_COMMAND);
   globalOptions.cd.loadVolumeCommand                            = String_newCString(CD_LOAD_VOLUME_COMMAND);
-  globalOptions.cd.volumeSize                                   = 0LL;
+  globalOptions.cd.volumeSize                                   = DEFAULT_CD_VOLUME_SIZE;
   globalOptions.cd.imagePreProcessCommand                       = NULL;
   globalOptions.cd.imagePostProcessCommand                      = NULL;
   globalOptions.cd.imageCommand                                 = String_newCString(CD_IMAGE_COMMAND);
@@ -2356,7 +2374,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.dvd.requestVolumeCommand                        = NULL;
   globalOptions.dvd.unloadVolumeCommand                         = String_newCString(DVD_UNLOAD_VOLUME_COMMAND);
   globalOptions.dvd.loadVolumeCommand                           = String_newCString(DVD_LOAD_VOLUME_COMMAND);
-  globalOptions.dvd.volumeSize                                  = 0LL;
+  globalOptions.dvd.volumeSize                                  = DEFAULT_DVD_VOLUME_SIZE;
   globalOptions.dvd.imagePreProcessCommand                      = NULL;
   globalOptions.dvd.imagePostProcessCommand                     = NULL;
   globalOptions.dvd.imageCommand                                = String_newCString(DVD_IMAGE_COMMAND);
@@ -2372,7 +2390,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.bd.requestVolumeCommand                         = NULL;
   globalOptions.bd.unloadVolumeCommand                          = String_newCString(BD_UNLOAD_VOLUME_COMMAND);
   globalOptions.bd.loadVolumeCommand                            = String_newCString(BD_LOAD_VOLUME_COMMAND);
-  globalOptions.bd.volumeSize                                   = 0LL;
+  globalOptions.bd.volumeSize                                   = DEFAULT_BD_VOLUME_SIZE;
   globalOptions.bd.imagePreProcessCommand                       = NULL;
   globalOptions.bd.imagePostProcessCommand                      = NULL;
   globalOptions.bd.imageCommand                                 = String_newCString(BD_IMAGE_COMMAND);
@@ -3050,6 +3068,8 @@ void logPostProcess(void)
   // log post command for temporary log file
   if (logPostCommand != NULL)
   {
+    printInfo(2,"Log post process '%s'...",logPostCommand);
+
     TEXT_MACRO_N_STRING(textMacros[0],"%file",tmpLogFileName);
 
     StringList_init(&stderrList);
@@ -3096,13 +3116,6 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->cryptPasswordMode               = PASSWORD_MODE_DEFAULT;
   jobOptions->cryptPublicKeyFileName          = NULL;
   jobOptions->cryptPrivateKeyFileName         = NULL;
-#warning todo
-//  jobOptions->ftpServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
-//  jobOptions->ftpServer.maxStorageSize        = MAX_STORAGE_SIZE_UNLIMITED;
-//  jobOptions->sshServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
-//  jobOptions->sshServer.maxStorageSize        = MAX_STORAGE_SIZE_UNLIMITED;
-//  jobOptions->webDAVServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
-//  jobOptions->webDAVServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
   jobOptions->volumeSize                      = 0LL;
   jobOptions->skipUnreadableFlag              = TRUE;
   jobOptions->forceDeltaCompressionFlag       = FALSE;
@@ -3405,11 +3418,11 @@ bool allocateServer(Server *server, ServerConnectionPriorities priority, long ti
         case SERVER_TYPE_WEBDAV:
           maxConnectionCount = defaultWebDAVServer.maxConnectionCount;
           break;
-        #ifndef NDEBUG
-          default:
+        default:
+          #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break;
-        #endif /* NDEBUG */
+          #endif /* NDEBUG */
+          break;
       }
     }
 
@@ -3710,9 +3723,7 @@ Errors inputCryptPassword(void         *userData,
                           bool         weakCheckFlag
                          )
 {
-  Errors        error;
-#warning remove semaphoreLock
-  SemaphoreLock semaphoreLock;
+  Errors error;
 
   assert(password != NULL);
   assert(fileName != NULL);
@@ -3721,84 +3732,81 @@ Errors inputCryptPassword(void         *userData,
 
   error = ERROR_UNKNOWN;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  switch (globalOptions.runMode)
   {
-    switch (globalOptions.runMode)
-    {
-      case RUN_MODE_INTERACTIVE:
-        {
-          String title;
+    case RUN_MODE_INTERACTIVE:
+      {
+        String title;
 
-          lockConsole();
+        lockConsole();
+        {
+          // input password
+          title = String_new();
+          if (!String_isEmpty(fileName))
           {
-            // input password
-            title = String_new();
+            String_format(title,"Crypt password for '%S'",fileName);
+          }
+          else
+          {
+            String_setCString(title,"Crypt password");
+          }
+          if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
+          {
+            String_delete(title);
+            unlockConsole();
+            error = ERROR_NO_CRYPT_PASSWORD;
+            break;
+          }
+          if (validateFlag)
+          {
+            // verify input password
             if (!String_isEmpty(fileName))
             {
-              String_format(title,"Crypt password for '%S'",fileName);
+              String_format(String_clear(title),"Verify password for '%S'",fileName);
             }
             else
             {
-              String_setCString(title,"Crypt password");
+              String_setCString(title,"Verify password");
             }
-            if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
+            if (!Password_inputVerify(password,String_cString(title),PASSWORD_INPUT_MODE_ANY))
             {
+              printError("Crypt passwords are not equal!\n");
               String_delete(title);
               unlockConsole();
-              error = ERROR_NO_CRYPT_PASSWORD;
+              error = ERROR_CRYPT_PASSWORDS_MISMATCH;
               break;
             }
-            if (validateFlag)
-            {
-              // verify input password
-              if (!String_isEmpty(fileName))
-              {
-                String_format(String_clear(title),"Verify password for '%S'",fileName);
-              }
-              else
-              {
-                String_setCString(title,"Verify password");
-              }
-              if (!Password_inputVerify(password,String_cString(title),PASSWORD_INPUT_MODE_ANY))
-              {
-                printError("Crypt passwords are not equal!\n");
-                String_delete(title);
-                unlockConsole();
-                error = ERROR_CRYPT_PASSWORDS_MISMATCH;
-                break;
-              }
-            }
-            String_delete(title);
+          }
+          String_delete(title);
 
-            if (weakCheckFlag)
+          if (weakCheckFlag)
+          {
+            // check password quality
+            if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
             {
-              // check password quality
-              if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
-              {
-                printWarning("Low password quality!\n");
-              }
+              printWarning("Low password quality!\n");
             }
           }
-          unlockConsole();
+        }
+        unlockConsole();
 
-          error = ERROR_NONE;
-        }
-        break;
-      case RUN_MODE_BATCH:
-        printf("PASSWORD\n"); fflush(stdout);
-        if (Password_input(password,NULL,PASSWORD_INPUT_MODE_CONSOLE) || (Password_length(password) <= 0))
-        {
-          error = ERROR_NONE;
-        }
-        else
-        {
-          error = ERROR_NO_CRYPT_PASSWORD;
-        }
-        break;
-      case RUN_MODE_SERVER:
+        error = ERROR_NONE;
+      }
+      break;
+    case RUN_MODE_BATCH:
+      printf("PASSWORD\n"); fflush(stdout);
+      if (Password_input(password,NULL,PASSWORD_INPUT_MODE_CONSOLE) || (Password_length(password) <= 0))
+      {
+        error = ERROR_NONE;
+      }
+      else
+      {
         error = ERROR_NO_CRYPT_PASSWORD;
-        break;
-    }
+      }
+      break;
+    case RUN_MODE_SERVER:
+      error = ERROR_NO_CRYPT_PASSWORD;
+      break;
   }
   assert(error != ERROR_UNKNOWN);
 
@@ -3815,15 +3823,13 @@ bool configValueParseBandWidth(void *userData, void *variable, const char *name,
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   // parse band width node
   s = String_newCString(value);
   bandWidthNode = parseBandWidth(s);
   if (bandWidthNode == NULL)
   {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse bandwidth value '%s'",value);
     String_delete(s);
     return FALSE;
   }
@@ -3881,9 +3887,6 @@ bool configValueParseOwner(void *userData, void *variable, const char *name, con
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   // parse
   if      (String_scanCString(value,"%256s:%256s",userName,groupName))
@@ -3908,6 +3911,7 @@ bool configValueParseOwner(void *userData, void *variable, const char *name, con
   }
   else
   {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse owner ship value '%s'",value);
     return FALSE;
   }
 
@@ -3974,9 +3978,6 @@ LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *var
   UNUSED_VARIABLE(userData);
 //??? userData = default patterType?
   UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   // detect pattern type, get pattern
   if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
@@ -3985,11 +3986,12 @@ LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *var
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
+#warning TODO String_mapCString needed?
   pattern = String_mapCString(String_newCString(value),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
   error = EntryList_append((EntryList*)variable,entryType,pattern,patternType);
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",String_cString(pattern),name);
+    strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
     String_delete(pattern);
     return FALSE;
   }
@@ -4118,15 +4120,13 @@ bool configValueFormatImageEntry(void **formatUserData, void *userData, String l
 bool configValueParsePattern(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   PatternTypes patternType;
+  Errors       error;
 
   assert(variable != NULL);
   assert(value != NULL);
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   // detect pattern type, get pattern
   if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
@@ -4135,9 +4135,10 @@ bool configValueParsePattern(void *userData, void *variable, const char *name, c
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
-  if (PatternList_appendCString((PatternList*)variable,value,patternType) != ERROR_NONE)
+  error = PatternList_appendCString((PatternList*)variable,value,patternType);
+  if (error != ERROR_NONE)
   {
-    fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
+    strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
     return FALSE;
   }
 
@@ -4207,7 +4208,6 @@ bool configValueParseString(void *userData, void *variable, const char *name, co
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   if ((*(String*)variable) != NULL)
   {
@@ -4230,7 +4230,6 @@ bool configValueParsePassword(void *userData, void *variable, const char *name, 
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   if ((*(Password**)variable) == NULL)
   {
@@ -4295,9 +4294,6 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
   compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
@@ -4326,7 +4322,11 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
         break;
       }
     }
-    if (!foundFlag) return FALSE;
+    if (!foundFlag)
+    {
+      snprintf(errorMessage,errorMessageSize,"Cannot parse compress algorithm value '%s'",algorithm1);
+      return FALSE;
+    }
 
     foundFlag = FALSE;
     for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
@@ -4347,7 +4347,11 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
         break;
       }
     }
-    if (!foundFlag) return FALSE;
+    if (!foundFlag)
+    {
+      snprintf(errorMessage,errorMessageSize,"Cannot parse compress algorithm value '%s'",algorithm2);
+      return FALSE;
+    }
   }
   else
   {
@@ -4370,7 +4374,11 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
         break;
       }
     }
-    if (!foundFlag) return FALSE;
+    if (!foundFlag)
+    {
+      snprintf(errorMessage,errorMessageSize,"Cannot parse compress algorithm value '%s'",value);
+      return FALSE;
+    }
   }
 
   // store compress algorithm values
@@ -4441,7 +4449,6 @@ LOCAL ScheduleNode *newScheduleNode(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  scheduleNode->title       = String_new();
   scheduleNode->date.year   = SCHEDULE_ANY;
   scheduleNode->date.month  = SCHEDULE_ANY;
   scheduleNode->date.day    = SCHEDULE_ANY;
@@ -4634,12 +4641,9 @@ bool configValueParseScheduleDate(void *userData, void *variable, const char *na
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
+  // parse
   errorFlag = FALSE;
-
   s0 = String_new();
   s1 = String_new();
   s2 = String_new();
@@ -4656,11 +4660,16 @@ bool configValueParseScheduleDate(void *userData, void *variable, const char *na
   String_delete(s2);
   String_delete(s1);
   String_delete(s0);
+  if (errorFlag)
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule date '%s'",value);
+    return FALSE;
+  }
 
   // store values
   (*(ScheduleDate*)variable) = date;
 
-  return !errorFlag;
+  return TRUE;
 }
 
 void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable)
@@ -4730,7 +4739,6 @@ bool configValueFormatScheduleDate(void **formatUserData, void *userData, String
 
 bool configValueParseScheduleWeekDays(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  bool             errorFlag;
   ScheduleWeekDays weekDays;
 
   assert(variable != NULL);
@@ -4738,18 +4746,18 @@ bool configValueParseScheduleWeekDays(void *userData, void *variable, const char
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
-  errorFlag = FALSE;
-
-  if (!parseDateWeekDays(value,&weekDays)) errorFlag = TRUE;
+  // parse
+  if (!parseDateWeekDays(value,&weekDays))
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule weekday '%s'",value);
+    return FALSE;
+  }
 
   // store value
   (*(ScheduleWeekDays*)variable) = weekDays;
 
-  return !errorFlag;
+  return TRUE;
 }
 
 void configValueFormatInitScheduleWeekDays(void **formatUserData, void *userData, void *variable)
@@ -4820,12 +4828,9 @@ bool configValueParseScheduleTime(void *userData, void *variable, const char *na
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
+  // parse
   errorFlag = FALSE;
-
   s0 = String_new();
   s1 = String_new();
   if (String_parseCString(value,"%S:%S",NULL,s0,s1))
@@ -4835,11 +4840,16 @@ bool configValueParseScheduleTime(void *userData, void *variable, const char *na
   }
   String_delete(s1);
   String_delete(s0);
+  if (errorFlag)
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule time '%s'",value);
+    return FALSE;
+  }
 
   // store values
   (*(ScheduleTime*)variable) = time;
 
-  return !errorFlag;
+  return TRUE;
 }
 
 void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable)
@@ -4909,15 +4919,13 @@ bool configValueParseSchedule(void *userData, void *variable, const char *name, 
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-#warning use errorMessage?
 
   // parse schedule node
   s = String_newCString(value);
   scheduleNode = parseSchedule(s);
   if (scheduleNode == NULL)
   {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule '%s'",value);
     String_delete(s);
     return FALSE;
   }
@@ -4928,135 +4936,6 @@ bool configValueParseSchedule(void *userData, void *variable, const char *name, 
 
   return TRUE;
 }
-
-#if 0
-void configValueFormatInitSchedule(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = ((ScheduleList*)variable)->head;
-}
-
-void configValueFormatDoneSchedule(void **formatUserData, void *userData)
-{
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(formatUserData);
-}
-
-bool configValueFormatSchedule(void **formatUserData, void *userData, String line)
-{
-  const ScheduleNode *scheduleNode;
-  String             names;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  scheduleNode = (const ScheduleNode*)(*formatUserData);
-  if (scheduleNode != NULL)
-  {
-    if (scheduleNode->date.year != SCHEDULE_ANY)
-    {
-      String_format(line,"%d",scheduleNode->date.year);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,'-');
-    if (scheduleNode->date.month != SCHEDULE_ANY)
-    {
-      String_format(line,"%d",scheduleNode->date.month);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,'-');
-    if (scheduleNode->date.day != SCHEDULE_ANY)
-    {
-      String_format(line,"%d",scheduleNode->date.day);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,' ');
-
-    if (scheduleNode->weekDays != SCHEDULE_ANY_DAY)
-    {
-      names = String_new();
-
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
-      if (IN_SET(scheduleNode->weekDays,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
-
-      String_append(line,names);
-      String_appendChar(line,' ');
-
-      String_delete(names);
-    }
-
-    if (scheduleNode->time.hour != SCHEDULE_ANY)
-    {
-      String_format(line,"%d",scheduleNode->time.hour);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,':');
-    if (scheduleNode->time.minute != SCHEDULE_ANY)
-    {
-      String_format(line,"%d",scheduleNode->time.minute);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,' ');
-    String_format(line,"%y",scheduleNode->enabledFlag);
-    String_appendChar(line,' ');
-    switch (scheduleNode->archiveType)
-    {
-      case ARCHIVE_TYPE_NORMAL:
-        String_appendCString(line,"*");
-        break;
-      case ARCHIVE_TYPE_FULL:
-        String_appendCString(line,"FULL");
-        break;
-      case ARCHIVE_TYPE_INCREMENTAL:
-        String_appendCString(line,"INCREMENTAL");
-        break;
-      case ARCHIVE_TYPE_DIFFERENTIAL:
-        String_appendCString(line,"DIFFERENTIAL");
-        break;
-      case ARCHIVE_TYPE_UNKNOWN:
-        return FALSE;
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
-
-    (*formatUserData) = scheduleNode->next;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-#endif
 
 const char *archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue)
 {
@@ -5145,7 +5024,6 @@ LOCAL bool readFromJob(const String fileName)
   line     = String_new();
   lineNb   = 0;
   title    = String_new();
-const char *sectionName = NULL;
   name     = String_new();
   value    = String_new();
   while (File_getLine(&fileHandle,line,&lineNb,"#") && !failFlag)
@@ -5173,7 +5051,7 @@ const char *sectionName = NULL;
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
                              CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
-                             sectionName,
+                             NULL, // sectionName,
                              NULL, // errorOutputHandle,
                              NULL, // errorPrefix,
                              NULL  // variable
@@ -5291,16 +5169,6 @@ LOCAL int errorToExitcode(Errors error)
       return EXITCODE_FAIL;
       break;
   }
-}
-
-/*---------------------------------------------------------------------*/
-
-LOCAL void signalAlarmHandler(int signalNumber)
-{
-  UNUSED_VARIABLE(signalNumber);
-
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-exit(12);
 }
 
 /*---------------------------------------------------------------------*/
@@ -5550,9 +5418,6 @@ exit(1);
     #endif /* not NDEBUG */
     return errorToExitcode(error);
   }
-
-#warning todo install sigalrm handler to avoid crashes?
-signal(SIGALRM,signalAlarmHandler);
 
   error = ERROR_NONE;
   if      (daemonFlag)
@@ -5923,8 +5788,7 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
   }
 
   // delete temporary directory
-#warning remove
-//  File_delete(tmpDirectory,TRUE);
+  File_delete(tmpDirectory,TRUE);
 
   // free resources
   doneAll();
