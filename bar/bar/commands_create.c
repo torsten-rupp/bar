@@ -2768,8 +2768,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                    freeStorageMsg(&storageMsg,NULL);
                  }
                 );
-#warning todo
-fprintf(stderr,"%s, %d: storageMsg.fileName=%s %llu bytes\n",__FILE__,__LINE__,String_cString(storageMsg.fileName),storageMsg.fileSize);
 
     // pause
     pauseStorage(createInfo);
@@ -4860,9 +4858,7 @@ Errors Command_create(const String                    storageName,
   // check if storage name given
   if (String_isEmpty(storageName))
   {
-    printError("No storage name given\n",
-               Errors_getText(error)
-              );
+    printError("No storage name given\n");
     AutoFree_cleanup(&autoFreeList);
     return ERROR_NO_STORAGE_NAME;
   }
