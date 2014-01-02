@@ -39,7 +39,10 @@
 /***************************** Constants *******************************/
 
 // size of buffer for processing data
-#define MAX_BUFFER_SIZE (4*1024)
+#define MAX_BUFFER_SIZE (64*1024)
+
+// default alignment
+#define DEFAULT_ALIGNMENT 4
 
 // i/o via file functions
 const ChunkIO CHUNK_IO_FILE =
@@ -611,14 +614,14 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
   // read key chunk
   error = Chunk_open(&chunkInfoKey,
                      chunkHeader,
-                     Chunk_getSize(CHUNK_DEFINITION_KEY,0,NULL,0)
+                     Chunk_getSize(&chunkInfoKey,NULL,0)
                     );
   if (error != ERROR_NONE)
   {
     Chunk_done(&chunkInfoKey);
     return error;
   }
-  archiveInfo->cryptKeyDataLength = chunkHeader->size-Chunk_getSize(CHUNK_DEFINITION_KEY,0,NULL,0);
+  archiveInfo->cryptKeyDataLength = chunkHeader->size-Chunk_getSize(&chunkInfoKey,NULL,0);
   if (archiveInfo->cryptKeyData != NULL) free(archiveInfo->cryptKeyData);
   archiveInfo->cryptKeyData = malloc(archiveInfo->cryptKeyDataLength);
   if (archiveInfo->cryptKeyData == NULL)
@@ -3706,15 +3709,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.byteCompressInfo,{ Compress_done(&archiveEntryInfo->file.byteCompressInfo); });
 
   // calculate header size
-  archiveEntryInfo->file.headerLength = Chunk_getSize(CHUNK_DEFINITION_FILE,      0,                            &archiveEntryInfo->file.chunkFile,     0)+
-                                        Chunk_getSize(CHUNK_DEFINITION_FILE_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->file.chunkFileEntry,0)+
-                                        Chunk_getSize(CHUNK_DEFINITION_FILE_DATA, archiveEntryInfo->blockLength,&archiveEntryInfo->file.chunkFileData, 0);
+  archiveEntryInfo->file.headerLength = Chunk_getSize(&archiveEntryInfo->file.chunkFile.info,     &archiveEntryInfo->file.chunkFile,     0)+
+                                        Chunk_getSize(&archiveEntryInfo->file.chunkFileEntry.info,&archiveEntryInfo->file.chunkFileEntry,0)+
+                                        Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info, &archiveEntryInfo->file.chunkFileData, 0);
   LIST_ITERATE(archiveEntryInfo->file.fileExtendedAttributeList,fileExtendedAttributeNode)
   {
     String_set(archiveEntryInfo->file.chunkFileExtendedAttribute.name,fileExtendedAttributeNode->name);
 
-    archiveEntryInfo->file.headerLength += Chunk_getSize(CHUNK_DEFINITION_FILE_EXTENDED_ATTRIBUTE,
-                                                         archiveEntryInfo->blockLength,
+    archiveEntryInfo->file.headerLength += Chunk_getSize(&archiveEntryInfo->file.chunkFileExtendedAttribute.info,
                                                          &archiveEntryInfo->file.chunkFileExtendedAttribute,
                                                          fileExtendedAttributeNode->dataLength
                                                         );
@@ -3725,8 +3727,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     String_set(archiveEntryInfo->file.chunkFileDelta.name,Source_getName(&archiveEntryInfo->file.sourceHandle));
     archiveEntryInfo->file.chunkFileDelta.size           = Source_getSize(&archiveEntryInfo->file.sourceHandle);
 
-    archiveEntryInfo->file.headerLength += Chunk_getSize(CHUNK_DEFINITION_FILE_DELTA,
-                                                         archiveEntryInfo->blockLength,
+    archiveEntryInfo->file.headerLength += Chunk_getSize(&archiveEntryInfo->file.chunkFileDelta.info,
                                                          &archiveEntryInfo->file.chunkFileDelta,
                                                          0
                                                         );
@@ -4043,17 +4044,16 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->image.deltaCompressInfo); });
 
   // calculate header size
-  archiveEntryInfo->image.headerLength = Chunk_getSize(CHUNK_DEFINITION_IMAGE,      0,                            &archiveEntryInfo->image.chunkImage,     0)+
-                                         Chunk_getSize(CHUNK_DEFINITION_IMAGE_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->image.chunkImageEntry,0)+
-                                         Chunk_getSize(CHUNK_DEFINITION_IMAGE_DATA, archiveEntryInfo->blockLength,&archiveEntryInfo->image.chunkImageData, 0);
+  archiveEntryInfo->image.headerLength = Chunk_getSize(&archiveEntryInfo->image.chunkImage.info,     &archiveEntryInfo->image.chunkImage,     0)+
+                                         Chunk_getSize(&archiveEntryInfo->image.chunkImageEntry.info,&archiveEntryInfo->image.chunkImageEntry,0)+
+                                         Chunk_getSize(&archiveEntryInfo->image.chunkImageData.info, &archiveEntryInfo->image.chunkImageData, 0);
   if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
   {
     archiveEntryInfo->image.chunkImageDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->image.chunkImageDelta.name,Source_getName(&archiveEntryInfo->image.sourceHandle));
     archiveEntryInfo->image.chunkImageDelta.size           = Source_getSize(&archiveEntryInfo->image.sourceHandle);
 
-    archiveEntryInfo->image.headerLength += Chunk_getSize(CHUNK_DEFINITION_IMAGE_DELTA,
-                                                          archiveEntryInfo->blockLength,
+    archiveEntryInfo->image.headerLength += Chunk_getSize(&archiveEntryInfo->image.chunkImageDelta.info,
                                                           &archiveEntryInfo->image.chunkImageDelta,
                                                           0
                                                          );
@@ -4178,7 +4178,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                      CHUNK_USE_PARENT,
                      CHUNK_ID_DIRECTORY_ENTRY,
                      CHUNK_DEFINITION_DIRECTORY_ENTRY,
-                     archiveEntryInfo->blockLength,
+                     MAX(archiveEntryInfo->blockLength,DEFAULT_ALIGNMENT),
                      &archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
                      &archiveEntryInfo->directory.chunkDirectoryEntry
                     );
@@ -4202,7 +4202,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                      CHUNK_USE_PARENT,
                      CHUNK_ID_DIRECTORY_EXTENDED_ATTRIBUTE,
                      CHUNK_DEFINITION_DIRECTORY_EXTENDED_ATTRIBUTE,
-                     archiveEntryInfo->blockLength,
+                     MAX(archiveEntryInfo->blockLength,DEFAULT_ALIGNMENT),
                      &archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
                      &archiveEntryInfo->directory.chunkDirectoryExtendedAttribute
                     );
@@ -4214,14 +4214,13 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,{ Chunk_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info); });
 
   // calculate header size
-  headerLength = Chunk_getSize(CHUNK_DEFINITION_DIRECTORY,      0,                            &archiveEntryInfo->directory.chunkDirectory,     0)+
-                 Chunk_getSize(CHUNK_DEFINITION_DIRECTORY_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->directory.chunkDirectoryEntry,0);
+  headerLength = Chunk_getSize(&archiveEntryInfo->directory.chunkDirectory.info,     &archiveEntryInfo->directory.chunkDirectory,     0)+
+                 Chunk_getSize(&archiveEntryInfo->directory.chunkDirectoryEntry.info,&archiveEntryInfo->directory.chunkDirectoryEntry,0);
   LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
   {
     String_set(archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.name,fileExtendedAttributeNode->name);
 
-    headerLength += Chunk_getSize(CHUNK_DEFINITION_FILE_EXTENDED_ATTRIBUTE,
-                                  archiveEntryInfo->blockLength,
+    headerLength += Chunk_getSize(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,
                                   &archiveEntryInfo->directory.chunkDirectoryExtendedAttribute,
                                   fileExtendedAttributeNode->dataLength
                                  );
@@ -4442,14 +4441,13 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,{ Chunk_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info); });
 
   // calculate header length
-  headerLength = Chunk_getSize(CHUNK_DEFINITION_LINK,      0,                            &archiveEntryInfo->link.chunkLink,     0)+
-                 Chunk_getSize(CHUNK_DEFINITION_LINK_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->link.chunkLinkEntry,0);
+  headerLength = Chunk_getSize(&archiveEntryInfo->link.chunkLink.info,     &archiveEntryInfo->link.chunkLink,     0)+
+                 Chunk_getSize(&archiveEntryInfo->link.chunkLinkEntry.info,&archiveEntryInfo->link.chunkLinkEntry,0);
   LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
   {
     String_set(archiveEntryInfo->link.chunkLinkExtendedAttribute.name,fileExtendedAttributeNode->name);
 
-    headerLength += Chunk_getSize(CHUNK_DEFINITION_FILE_EXTENDED_ATTRIBUTE,
-                                  archiveEntryInfo->blockLength,
+    headerLength += Chunk_getSize(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,
                                   &archiveEntryInfo->link.chunkLinkExtendedAttribute,
                                   fileExtendedAttributeNode->dataLength
                                  );
@@ -4878,15 +4876,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.byteCompressInfo,{ Compress_done(&archiveEntryInfo->hardLink.byteCompressInfo); });
 
   // calculate header size
-  archiveEntryInfo->hardLink.headerLength = Chunk_getSize(CHUNK_DEFINITION_HARDLINK,      0,                            &archiveEntryInfo->hardLink.chunkHardLink,     0)+
-                                            Chunk_getSize(CHUNK_DEFINITION_HARDLINK_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->hardLink.chunkHardLinkEntry,0)+
-                                            Chunk_getSize(CHUNK_DEFINITION_HARDLINK_DATA, archiveEntryInfo->blockLength,&archiveEntryInfo->hardLink.chunkHardLinkData, 0);
+  archiveEntryInfo->hardLink.headerLength = Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLink.info,     &archiveEntryInfo->hardLink.chunkHardLink,     0)+
+                                            Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,&archiveEntryInfo->hardLink.chunkHardLinkEntry,0)+
+                                            Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkData.info, &archiveEntryInfo->hardLink.chunkHardLinkData, 0);
   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
   {
     String_set(archiveEntryInfo->hardLink.chunkHardLinkName.name,fileName);
 
-    archiveEntryInfo->hardLink.headerLength += Chunk_getSize(CHUNK_DEFINITION_HARDLINK_NAME,
-                                                             archiveEntryInfo->blockLength,
+    archiveEntryInfo->hardLink.headerLength += Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkName.info,
                                                              &archiveEntryInfo->hardLink.chunkHardLinkName,
                                                              0
                                                             );
@@ -4895,8 +4892,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   {
     String_set(archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.name,fileExtendedAttributeNode->name);
 
-    archiveEntryInfo->hardLink.headerLength += Chunk_getSize(CHUNK_DEFINITION_FILE_EXTENDED_ATTRIBUTE,
-                                                             archiveEntryInfo->blockLength,
+    archiveEntryInfo->hardLink.headerLength += Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,
                                                              &archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute,
                                                              fileExtendedAttributeNode->dataLength
                                                             );
@@ -4907,8 +4903,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     String_set(archiveEntryInfo->hardLink.chunkHardLinkDelta.name,Source_getName(&archiveEntryInfo->hardLink.sourceHandle));
     archiveEntryInfo->hardLink.chunkHardLinkDelta.size           = Source_getSize(&archiveEntryInfo->hardLink.sourceHandle);
 
-    archiveEntryInfo->hardLink.headerLength += Chunk_getSize(CHUNK_DEFINITION_FILE_DELTA,
-                                                             archiveEntryInfo->blockLength,
+    archiveEntryInfo->hardLink.headerLength += Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,
                                                              &archiveEntryInfo->hardLink.chunkHardLinkDelta,
                                                              0
                                                             );
@@ -5072,14 +5067,13 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,{ Chunk_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info); });
 
   // calculate header length
-  headerLength = Chunk_getSize(CHUNK_DEFINITION_SPECIAL,      0,                            &archiveEntryInfo->special.chunkSpecial,     0)+
-                 Chunk_getSize(CHUNK_DEFINITION_SPECIAL_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->special.chunkSpecialEntry,0);
+  headerLength = Chunk_getSize(&archiveEntryInfo->special.chunkSpecial.info,     &archiveEntryInfo->special.chunkSpecial,     0)+
+                 Chunk_getSize(&archiveEntryInfo->special.chunkSpecialEntry.info,&archiveEntryInfo->special.chunkSpecialEntry,0);
   LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
   {
     String_set(archiveEntryInfo->special.chunkSpecialExtendedAttribute.name,fileExtendedAttributeNode->name);
 
-    headerLength += Chunk_getSize(CHUNK_DEFINITION_FILE_EXTENDED_ATTRIBUTE,
-                                  archiveEntryInfo->blockLength,
+    headerLength += Chunk_getSize(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,
                                   &archiveEntryInfo->special.chunkSpecialExtendedAttribute,
                                   fileExtendedAttributeNode->dataLength
                                  );
@@ -5490,7 +5484,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // read file chunk
   error = Chunk_open(&archiveEntryInfo->file.chunkFile.info,
                      &chunkHeader,
-                     Chunk_getSize(CHUNK_DEFINITION_FILE,0,NULL,0)
+                     Chunk_getSize(&archiveEntryInfo->file.chunkFile.info,NULL,0)
                     );
   if (error != ERROR_NONE)
   {
@@ -5818,7 +5812,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             // read file data chunk
             error = Chunk_open(&archiveEntryInfo->file.chunkFileData.info,
                                &subChunkHeader,
-                               Chunk_getSize(CHUNK_DEFINITION_FILE_DATA,archiveEntryInfo->blockLength,NULL,0)
+                               Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0)
                               );
             if (error != ERROR_NONE)
             {
@@ -6044,7 +6038,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // read image chunk
   error = Chunk_open(&archiveEntryInfo->image.chunkImage.info,
                      &chunkHeader,
-                     Chunk_getSize(CHUNK_DEFINITION_IMAGE,0,NULL,0)
+                     Chunk_getSize(&archiveEntryInfo->image.chunkImage.info,NULL,0)
                     );
   if (error != ERROR_NONE)
   {
@@ -6308,7 +6302,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             // read image data chunk
             error = Chunk_open(&archiveEntryInfo->image.chunkImageData.info,
                                &subChunkHeader,
-                               Chunk_getSize(CHUNK_DEFINITION_FILE_DATA,archiveEntryInfo->blockLength,NULL,0)
+                               Chunk_getSize(&archiveEntryInfo->image.chunkImageData.info,NULL,0)
                               );
             if (error != ERROR_NONE)
             {
@@ -6515,7 +6509,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // read directory chunk
   error = Chunk_open(&archiveEntryInfo->directory.chunkDirectory.info,
                      &chunkHeader,
-                     Chunk_getSize(CHUNK_DEFINITION_DIRECTORY,0,NULL,0)
+                     Chunk_getSize(&archiveEntryInfo->directory.chunkDirectory.info,NULL,0)
                     );
   if (error != ERROR_NONE)
   {
@@ -6886,7 +6880,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // read link chunk
   error = Chunk_open(&archiveEntryInfo->link.chunkLink.info,
                      &chunkHeader,
-                     Chunk_getSize(CHUNK_DEFINITION_LINK,0,NULL,0)
+                     Chunk_getSize(&archiveEntryInfo->link.chunkLink.info,NULL,0)
                     );
   if (error != ERROR_NONE)
   {
@@ -7277,7 +7271,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // read hard link chunk
   error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLink.info,
                      &chunkHeader,
-                     Chunk_getSize(CHUNK_DEFINITION_HARDLINK,0,NULL,0)
+                     Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLink.info,NULL,0)
                     );
   if (error != ERROR_NONE)
   {
@@ -7645,7 +7639,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             // read hard link data chunk
             error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                                &subChunkHeader,
-                               Chunk_getSize(CHUNK_DEFINITION_HARDLINK_DATA,archiveEntryInfo->blockLength,NULL,0)
+                               Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkData.info,NULL,0)
                               );
             if (error != ERROR_NONE)
             {
@@ -7854,7 +7848,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // read special chunk
   error = Chunk_open(&archiveEntryInfo->special.chunkSpecial.info,
                      &chunkHeader,
-                     Chunk_getSize(CHUNK_DEFINITION_SPECIAL,0,NULL,0)
+                     Chunk_getSize(&archiveEntryInfo->special.chunkSpecial.info,NULL,0)
                     );
   if (error != ERROR_NONE)
   {
@@ -8975,7 +8969,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
             // do compress (delta+byte)
             do
             {
-              // check if compressed data is available
+              // check if there is space for byte-compressed data
               error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.byteCompressInfo,
                                                             COMPRESS_BLOCK_TYPE_FULL,
                                                             &blockCount
@@ -8987,7 +8981,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
 
               if (blockCount <= 0)
               {
-                // delta-compress data
+                // space for byte-compress data available => do delta-compress data
                 error = Compress_deflate(&archiveEntryInfo->file.deltaCompressInfo,
                                          p+writtenBlockBytes,
                                          blockLength-writtenBlockBytes,
@@ -9007,7 +9001,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
                                           );
                 if (deltaLength > 0)
                 {
-                  // byte-compress data
+                  // do byte-compress data
                   error = Compress_deflate(&archiveEntryInfo->file.byteCompressInfo,
                                            archiveEntryInfo->file.deltaBuffer,
                                            deltaLength,

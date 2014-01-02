@@ -1408,8 +1408,7 @@ const char *Chunk_idToString(ChunkId chunkId)
   return s;
 }
 
-ulong Chunk_getSize(const int  *definition,
-                    ulong      alignment,
+ulong Chunk_getSize(const ChunkInfo     *chunkInfo,
                     const void *chunkData,
                     ulong      dataLength
                    )
@@ -1417,13 +1416,13 @@ ulong Chunk_getSize(const int  *definition,
   ulong size;
   int   i;
 
-  assert(definition != NULL);
+  assert(chunkInfo != NULL);
 
   size = 0;
   i    = 0;
-  while (definition[i+0] != CHUNK_DATATYPE_NONE)
+  while (chunkInfo->definition[i+0] != CHUNK_DATATYPE_NONE)
   {
-    switch (definition[i+0])
+    switch (chunkInfo->definition[i+0])
     {
       case CHUNK_DATATYPE_BYTE:
       case CHUNK_DATATYPE_UINT8:
@@ -1456,7 +1455,7 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          s = (*((String*)((byte*)chunkData+definition[i+1])));
+          s = (*((String*)((byte*)chunkData+chunkInfo->definition[i+1])));
           assert(s != NULL);
           size += 2+String_length(s);
 
@@ -1472,7 +1471,7 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          length = (*((uint*)((byte*)chunkData+definition[i+1])));
+          length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
           size += 2+ALIGN(length*1,4);
 
           i += 3;
@@ -1485,7 +1484,7 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          length = (*((uint*)((byte*)chunkData+definition[i+1])));
+          length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
           size += 2+ALIGN(length*2,4);
 
           i += 3;
@@ -1498,7 +1497,7 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          length = (*((uint*)((byte*)chunkData+definition[i+1])));
+          length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
           size += 2+ALIGN(length*4,4);
 
           i += 3;
@@ -1511,7 +1510,7 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          length = (*((uint*)((byte*)chunkData+definition[i+1])));
+          length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
           size += 2+ALIGN(length*8,4);
 
           i += 3;
@@ -1524,10 +1523,10 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          length = (*((uint*)((byte*)chunkData+definition[i+1])));
+          length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
           while (length > 0)
           {
-            s = (*((String*)((byte*)chunkData+definition[i+1])));
+            s = (*((String*)((byte*)chunkData+chunkInfo->definition[i+1])));
             assert(s != NULL);
             size += 2+String_length(s);
           }
@@ -1554,8 +1553,8 @@ ulong Chunk_getSize(const int  *definition,
 
           assert(chunkData != NULL);
 
-          alignment = (*((uint*)((byte*)chunkData+definition[i+1])));
-          size = ALIGN(size, alignment);
+          alignment = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
+          size = ALIGN(size,alignment);
 
           i += 2;
         }
@@ -1570,7 +1569,7 @@ ulong Chunk_getSize(const int  *definition,
   }
 
   // align size
-  size = ALIGN(size,alignment);
+  size = ALIGN(size,chunkInfo->alignment);
 
   return size;
 }
@@ -1837,7 +1836,7 @@ Errors Chunk_create(ChunkInfo *chunkInfo)
   chunkInfo->index  = 0LL;
 
   // get size of chunk (without data elements)
-  chunkInfo->chunkSize = Chunk_getSize(chunkInfo->definition,chunkInfo->alignment,chunkInfo->data,0);
+  chunkInfo->chunkSize = Chunk_getSize(chunkInfo,chunkInfo->data,0);
 
   // get current offset
   error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);

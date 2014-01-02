@@ -179,8 +179,7 @@ const char *Chunk_idToString(ChunkId chunkId);
 /***********************************************************************\
 * Name   : Chunk_getSize
 * Purpose: get size of chunk in bytes (without header and data elements)
-* Input  : definition - chunk definition
-*          alignment  - alignment to use
+* Input  : chunkInfo  - chunk info block
 *          chunkData  - chunk data
 *          dataLength - length of data
 * Output : -
@@ -188,10 +187,9 @@ const char *Chunk_idToString(ChunkId chunkId);
 * Notes  : -
 \***********************************************************************/
 
-ulong Chunk_getSize(const int  *definition,
-                    ulong      alignment,
-                    const void *chunkData,
-                    ulong      dataLength
+ulong Chunk_getSize(const ChunkInfo *chunkInfo,
+                    const void      *chunkData,
+                    ulong           dataLength
                    );
 
 /***********************************************************************\
