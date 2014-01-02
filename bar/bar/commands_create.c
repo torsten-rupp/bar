@@ -2984,12 +2984,12 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
     if (!isAborted(createInfo))
     {
-      printInfo(0,"ok\n");
+      printInfo(1,"ok\n");
       logMessage(LOG_TYPE_STORAGE,"Stored '%s'\n",String_cString(storageName));
     }
     else
     {
-      printInfo(0,"ABORTED\n");
+      printInfo(1,"ABORTED\n");
     }
 
     // update index database and set state
