@@ -1408,9 +1408,9 @@ const char *Chunk_idToString(ChunkId chunkId)
   return s;
 }
 
-ulong Chunk_getSize(const ChunkInfo     *chunkInfo,
-                    const void *chunkData,
-                    ulong      dataLength
+ulong Chunk_getSize(const ChunkInfo *chunkInfo,
+                    const void      *chunkData,
+                    ulong           dataLength
                    )
 {
   ulong size;
@@ -2094,7 +2094,7 @@ Errors Chunk_update(ChunkInfo *chunkInfo)
   assert(chunkInfo->io->tell != NULL);
   assert(chunkInfo->io->seek != NULL);
   assert(chunkInfo->data != NULL);
-  assert(chunkInfo->chunkSize == Chunk_getSize(chunkInfo->definition,chunkInfo->alignment,chunkInfo->data,0));
+  assert(chunkInfo->chunkSize == Chunk_getSize(chunkInfo,chunkInfo->data,0));
 
   // get current offset
   error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
