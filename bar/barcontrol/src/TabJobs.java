@@ -1440,7 +1440,7 @@ class TabJobs
       });
       button.setToolTipText("Create new job entry.");
 
-      button = Widgets.newButton(composite,"Copy\u2026");
+      button = Widgets.newButton(composite,"Clone\u2026");
       button.setEnabled(false);
       Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
       Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
@@ -1459,11 +1459,11 @@ class TabJobs
         {
           if (selectedJobId > 0)
           {
-            jobCopy();
+            jobClone();
           }
         }
       });
-      button.setToolTipText("Copy an existing job entry and create a new one.");
+      button.setToolTipText("Clone an existing job entry.");
 
       button = Widgets.newButton(composite,"Rename\u2026");
       button.setEnabled(false);
@@ -6104,7 +6104,7 @@ throw new Error("NYI");
 
   /** clone job
    */
-  private void jobCopy()
+  private void jobClone()
   {
     Composite composite;
     Label     label;
@@ -6179,25 +6179,25 @@ throw new Error("NYI");
           try
           {
             String[] errorMessage = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("JOB_COPY jobId=%d newName=%S",
+            int error = BARServer.executeCommand(StringParser.format("JOB_CLONE jobId=%d name=%S",
                                                                      selectedJobId,
                                                                      jobName
                                                                     ),
                                                  errorMessage
                                                 );
-            if (error != Errors.NONE)
+            if (error == Errors.NONE)
             {
               updateJobList();
               selectJob(jobName);
             }
             else
             {
-              Dialogs.error(shell,"Cannot copy job:\n\n"+errorMessage[0]);
+              Dialogs.error(shell,"Cannot clone job:\n\n"+errorMessage[0]);
             }
           }
           catch (CommunicationError error)
           {
-            Dialogs.error(shell,"Cannot copy job:\n\n"+error.getMessage());
+            Dialogs.error(shell,"Cannot clone job:\n\n"+error.getMessage());
           }
         }
         widget.getShell().close();
