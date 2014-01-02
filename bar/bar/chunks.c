@@ -272,8 +272,10 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
 //fprintf(stderr,"%s, %d: read decrypted:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
       break;
     case CHUNK_MODE_WRITE:
+      n = ALIGN(1024,alignment);
+
       // allocate initial buffer size
-      chunkBuffer->bufferSize = 1024;
+      chunkBuffer->bufferSize = ALIGN(n,1024);
       chunkBuffer->buffer = malloc(chunkBuffer->bufferSize);
       if (chunkBuffer->buffer == NULL)
       {
