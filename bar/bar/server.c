@@ -5098,7 +5098,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
 }
 
 /***********************************************************************\
-* Name   : serverCommand_jobCopy
+* Name   : serverCommand_jobClone
 * Purpose: copy job
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -5113,7 +5113,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
 *            jobId=<new job id>
 \***********************************************************************/
 
-LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   uint          jobId;
   String        name;
@@ -9455,7 +9455,7 @@ SERVER_COMMANDS[] =
   { "JOB_LIST",                   serverCommand_jobList,                 AUTHORIZATION_STATE_OK      },
   { "JOB_INFO",                   serverCommand_jobInfo,                 AUTHORIZATION_STATE_OK      },
   { "JOB_NEW",                    serverCommand_jobNew,                  AUTHORIZATION_STATE_OK      },
-  { "JOB_COPY",                   serverCommand_jobCopy,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_CLONE",                  serverCommand_jobClone,                AUTHORIZATION_STATE_OK      },
   { "JOB_RENAME",                 serverCommand_jobRename,               AUTHORIZATION_STATE_OK      },
   { "JOB_DELETE",                 serverCommand_jobDelete,               AUTHORIZATION_STATE_OK      },
   { "JOB_START",                  serverCommand_jobStart,                AUTHORIZATION_STATE_OK      },
