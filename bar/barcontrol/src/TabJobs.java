@@ -2323,7 +2323,6 @@ class TabJobs
             }
           }
         });
-        widgetExcludeList.setToolTipText("List with exclude patterns, right-click for context menu.");
 
         menu = Widgets.newPopupMenu(shell);
         {
@@ -2342,7 +2341,6 @@ class TabJobs
               }
             }
           });
-
           menuItem = Widgets.addMenuItem(menu,"Edit\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
@@ -2392,6 +2390,7 @@ class TabJobs
           });
         }
         widgetExcludeList.setMenu(menu);
+        widgetExcludeList.setToolTipText("List with exclude patterns, right-click for context menu.");
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -6964,7 +6963,11 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       if (!pattern.equals(""))
       {
         excludeHashSet.add(pattern);
-        widgetExcludeList.add(pattern,findListIndex(widgetExcludeList,pattern));
+        Widgets.insertListEntry(widgetExcludeList,
+                                findListIndex(widgetExcludeList,pattern),
+                                pattern,
+                                pattern
+                               );
       }
     }
   }
@@ -7473,8 +7476,7 @@ throw new Error("NYI");
     // update hash map
     excludeHashSet.add(pattern);
 
-// TODO
-//.    widgetExcludeList.add(pattern,findListIndex(widgetExcludeList,pattern));
+    // update list
     Widgets.insertListEntry(widgetExcludeList,
                             findListIndex(widgetExcludeList,pattern),
                             pattern,
