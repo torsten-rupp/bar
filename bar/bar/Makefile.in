@@ -35,11 +35,15 @@ CXX                 = @CXX@
 CXX_FLAGS           = @CXX_FLAGS@ -g
 CXX_WARN_FLAGS      = @CXX_WARN_FLAGS@
 CC_OPTIMIZE         = @CC_OPTIMIZE@
+CC_OPTIMIZE_RELEASE = @CC_OPTIMIZE_RELEASE@
+CC_OPTIMIZE_DEBUG   = @CC_OPTIMIZE_DEBUG@
 CC_ADDITIONAL =
 ifndef NDEBUG
   CC_ADDITIONAL += -finstrument-functions
 endif
 CC_DEFINES          = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG
+CC_DEFINES_RELEASE  = @CC_DEFINES_RELEASE@
+CC_DEFINES_DEBUG    = @CC_DEFINES_DEBUG@
 # -D_LONG_LONG
 CC_INCLUDES         = @CC_INCLUDES@
 ifdef WERROR
@@ -149,14 +153,33 @@ vpath %.cpp $(SOURCE_DIR)
 
 # compile C source
 %.o: $(SOURCE_DIR)/%.c
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+
+release/%.o: $(SOURCE_DIR)/%.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
+
+debug/%.o: $(SOURCE_DIR)/%.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
 
 # compile C++ source
 %.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $*.o
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $*.o
+
+release/%.o: %.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o release/$*.o
+
+debug/%.o: %.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o debug/$*.o
 
 # link object files
-%@EXEEXT@: %.o
+%@EXEEXT@: release/%.o
+	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
+
+%-debug@EXEEXT@: debug/%.o
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
@@ -208,9 +231,13 @@ BAR_SOURCES          = bar.c \
                        bitmaps.c \
                        database.c
 
-BAR_OBJECTS          = $(foreach z,$(BAR_SOURCES),$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
-                       errors.o \
-                       archive_format.o
+BAR_OBJECTS_RELEASE  = $(foreach z,$(BAR_SOURCES),release/$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
+                       release/errors.o \
+                       release/archive_format.o
+
+BAR_OBJECTS_DEBUG    = $(foreach z,$(BAR_SOURCES),debug/$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
+                       debug/errors.o \
+                       debug/archive_format.o
 
 EXTERN_SOURCES       = sqlite3.c
 
@@ -247,7 +274,8 @@ INTERMEDIATE         = errors.c \
                        index_definition.h \
 
 TARGETS              = bar@EXEEXT@ \
-                       $(if @HAVE_BREAKPAD@,bar.symbols) \
+                       bar-debug@EXEEXT@ \
+                       $(if @HAVE_BREAKPAD@,bar.symbols bar-debug.symbols) \
                        bar-keygen \
                        destroyer@EXEEXT@ \
 
@@ -260,7 +288,8 @@ all: $(TARGETS)
 # clean
 clean: \
   testcode_clean
-	$(RMF) $(BAR_OBJECTS)
+	$(RMF) $(BAR_OBJECTS_RELEASE)
+	$(RMF) $(BAR_OBJECTS_DEBUG)
 	$(RMF) $(EXTERN_OBJECTS)
 	$(RMF) $(DESTROYER_OBJECTS)
 	$(RMF) $(INTERMEDIATE)
@@ -336,12 +365,23 @@ Makefile.depend: $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(INTERME
 # ----------------------------------------------------------------------------
 
 # create BAR
-bar@EXEEXT@: $(BAR_OBJECTS) $(EXTERN_OBJECTS)
+bar@EXEEXT@: \
+  $(BAR_OBJECTS_RELEASE) \
+  $(EXTERN_OBJECTS)
 
-# create BAR symbol file
+bar-debug@EXEEXT@: \
+  $(BAR_OBJECTS_DEBUG) \
+  $(EXTERN_OBJECTS)
+
+# create BAR symbol files
 ifeq (@HAVE_BREAKPAD@,1)
 bar.symbols: bar@EXEEXT@
 	$(DUMP_SYMS) bar@EXEEXT@ > $@
+endif
+
+ifeq (@HAVE_BREAKPAD@,1)
+bar-debug.symbols: bar-debug@EXEEXT@
+	$(DUMP_SYMS) bar-debug@EXEEXT@ > $@
 endif
 
 # compile SQLite, xdelta C source without warning and debug flags
