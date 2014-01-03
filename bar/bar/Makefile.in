@@ -562,16 +562,21 @@ TEST_FILES_CLEAN = \
   test/index.db
 
 # test bar exeuctable
-TEST_BAR = ./bar@EXEEXT@
+TEST_BAR ?= ./bar@EXEEXT@
+TEST_BAR_DEBUG = ./bar-debug@EXEEXT@
 TEST_DESTROYER = ./destroyer@EXEEXT@
 
 # test keys
 TEST_KEYS = test/key.public \
             test/key.private
 
-.PHONY: test test_win clean_test show_debug_test_code run_debug_test_code
-.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test_combined
+.PHONY: test test_win
+.PHONY: test-debug test_win-debug
+.PHONY: test1 test2 test3 test4 test5 test6 test7 test8
+.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_storage test_dvd test_combined test_parameters
+.PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_parameters-debug
+.PHONY: clean_test show_debug_test_code run_debug_test_code
 test:
 	@$(MAKE) QUIET=1 --no-print-directory -s \
           test_basic \
@@ -583,9 +588,15 @@ test:
           test_combined \
           test_parameters
 
+test-debug:
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test
+
 test_win: $(TEST_BAR)
 	$(TEST_BAR) -o -c c:\\tmp\\x.bar -# c:\\users\\torsten
 	$(TEST_BAR) -L c:\\tmp\\x.bar 
+
+test-win-debug:
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test-win
 
 clean_test:
 	$(RMRF) $(TEST_FILES_CLEAN)
@@ -625,6 +636,9 @@ test1 test_basic: $(TEST_BAR)
           test_file_operations
 	@$(ECHO) "ok"
 
+test1-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test1
+
 test2 test_compress: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 2: compress..."
 	for compress in $(COMPRESS_NAMES); do \
@@ -650,6 +664,9 @@ test2 test_compress: $(TEST_BAR)
           fi; \
         done
 	@$(ECHO) "ok"
+
+test2-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test2
 
 test_delta_compress: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 2: delta compress..."
@@ -677,6 +694,9 @@ test_delta_compress: $(TEST_BAR)
         done
 	@$(ECHO) "ok"
 
+test_delta_compress-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test_delta_compress
+
 test3 test_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 3: crypt..."
 	for crypt in $(CRYPT_NAMES); do \
@@ -702,6 +722,9 @@ test3 test_crypt: $(TEST_BAR)
           fi; \
         done
 	@$(ECHO) "ok"
+
+test3-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test3
 
 test4 test_asymmetric_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
@@ -730,6 +753,9 @@ test4 test_asymmetric_crypt: $(TEST_BAR)
         done
 	@$(ECHO) "ok"
 
+test4-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test4
+
 test5 test_split: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 5: split..."
 	$(MAKE) \
@@ -743,6 +769,9 @@ test5 test_split: $(TEST_BAR)
           BAR_OPTIONS="--archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none" \
           test_file_operations
 	@$(ECHO) "ok"
+
+test5-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test5
 
 test6 test_image: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 6: image..."
@@ -769,6 +798,9 @@ test6 test_image: $(TEST_BAR)
           fi; \
         done
 	@$(ECHO) "ok"
+
+test6-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test6
 
 test7 test_storage: $(TEST_BAR)
 	@$(call functionVerifyParameter,PASSWORD)
@@ -846,6 +878,9 @@ test7 test_storage: $(TEST_BAR)
           ;
 	@$(ECHO) "ok"
 
+test7-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test7
+
 test8 test_dvd: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 8: dvd..."
 	$(MAKE) \
@@ -855,6 +890,9 @@ test8 test_dvd: $(TEST_BAR)
           test_dvd_operations \
           ;
 	@$(ECHO) "ok"
+
+test8-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test8
 
 test_combined: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test combined..."
@@ -892,6 +930,9 @@ test_combined: $(TEST_BAR)
           exit $$rc; \
         fi
 	@$(ECHO) "ok"
+
+test_combined-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test_combined
 
 test_parameters: \
   $(TEST_BAR) \
@@ -944,6 +985,9 @@ endif
 	#
 	@$(RMF) test/test.cfg
 	@$(ECHO) "ok"
+
+test_parameters-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test_parameters
 
 .PHONY: test_file_operations
 test_file_operations: \
