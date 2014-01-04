@@ -41,6 +41,11 @@
 // size of buffer for processing data
 #define MAX_BUFFER_SIZE (64*1024)
 
+/* size of data block to write without splitting
+   Note: a single part of a splitted archive may be larger around this size
+*/
+#define DATA_BLOCK_SIZE (16*1024)
+
 // default alignment
 #define DEFAULT_ALIGNMENT 4
 
@@ -931,7 +936,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
       // mark archive file "closed"
       archiveInfo->file.openFlag = FALSE;
 
-      // call back new archive created
+      // call back to create new archive
       if (archiveInfo->archiveCreatedFunction != NULL)
       {
         error = archiveInfo->archiveCreatedFunction(archiveInfo->archiveNewFileUserData,
@@ -1204,7 +1209,6 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
 
-  // flush data
   do
   {
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.byteCompressInfo,
@@ -1280,21 +1284,20 @@ close(h);
 }
 
 /***********************************************************************\
-* Name   : writeFileDataBlock
-* Purpose: encrypt and split file, write file data chunk
-* Input  : archiveEntryInfo  - archive file entry info data
-*          blockMode         - block write mode; see BlockModes
+* Name   : writeFileDataBlocks
+* Purpose: encrypt and write file blocks, split archive
+* Input  : archiveEntryInfo - archive file entry info data
 *          allowNewPartFlag - TRUE iff new archive part can be created
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeFileDataBlock(ArchiveEntryInfo *archiveEntryInfo,
-                                BlockModes       blockMode,
-                                bool             allowNewPartFlag
-                               )
+LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
+                                 bool             allowNewPartFlag
+                                )
 {
+  uint          blockCount;
   ulong         byteLength;
   ulong         minBytes;
   bool          newPartFlag;
@@ -1307,13 +1310,28 @@ LOCAL Errors writeFileDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
-  // get next byte-compressed data block (only 1 block, because of splitting)
-  assert(archiveEntryInfo->file.byteBufferSize >= archiveEntryInfo->file.byteCompressInfo.blockLength);
-  Compress_getCompressedData(&archiveEntryInfo->file.byteCompressInfo,
-                             archiveEntryInfo->file.byteBuffer,
-                             archiveEntryInfo->file.byteCompressInfo.blockLength,
-                             &byteLength
-                            );
+  do
+  {
+    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.byteCompressInfo,
+                                                  COMPRESS_BLOCK_TYPE_FULL,
+                                                  &blockCount
+                                                );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    if (blockCount > 0)
+    {
+      // get byte-compressed data blocks
+      assert(archiveEntryInfo->file.byteBufferSize >= (blockCount*archiveEntryInfo->file.byteCompressInfo.blockLength));
+      Compress_getCompressedData(&archiveEntryInfo->file.byteCompressInfo,
+                                 archiveEntryInfo->file.byteBuffer,
+//                                 archiveEntryInfo->file.byteBufferSize,
+                                 blockCount*archiveEntryInfo->file.byteCompressInfo.blockLength,
+//                                 archiveEntryInfo->file.byteCompressInfo.blockLength,
+                                 &byteLength
+                                 );
 #ifdef DEBUG_XDELTA_ENCODED_DATA
 {
 int h = open("encoded.testdata",O_CREAT|O_WRONLY|O_APPEND,0664);
@@ -1322,230 +1340,229 @@ close(h);
 }
 #endif /* DEBUG_XDELTA_ENCODED_DATA */
 
-  // calculate min. bytes to write to archive
-  minBytes =   (ulong)File_getSize(&archiveEntryInfo->file.tmpFileHandle)
-             + (((byteLength > 0L) || (blockMode == BLOCK_MODE_WRITE))
-                  ? archiveEntryInfo->archiveInfo->blockLength
-                  : 0L
-               );
+      // calculate min. bytes to write to archive
+      minBytes = (ulong)File_getSize(&archiveEntryInfo->file.tmpFileHandle)+byteLength;
 
-  // lock
-  Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+      // lock
+      Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 
-  // check if split is allowed and necessary
-  newPartFlag =    allowNewPartFlag
-                && isNewPartNeeded(archiveEntryInfo->archiveInfo,
-                                   archiveEntryInfo->file.headerLength,
-                                   archiveEntryInfo->file.headerWrittenFlag,
-                                   minBytes
-                                  );
+      // check if split is allowed and necessary
+      newPartFlag =    allowNewPartFlag
+                    && isNewPartNeeded(archiveEntryInfo->archiveInfo,
+                                       archiveEntryInfo->file.headerLength,
+                                       archiveEntryInfo->file.headerWrittenFlag,
+                                       minBytes
+                                      );
 
-  // split
-  if (newPartFlag)
-  {
-    // write last compressed block (if any)
-    if (byteLength > 0L)
-    {
-      // create new part (if not already created)
-      if (!archiveEntryInfo->file.headerWrittenFlag)
+      // split
+      if (newPartFlag)
       {
-        writeFileChunks(archiveEntryInfo);
-      }
+        // write last compressed block (if any)
+        if (byteLength > 0L)
+        {
+          // create new part (if not already created)
+          if (!archiveEntryInfo->file.headerWrittenFlag)
+          {
+            writeFileChunks(archiveEntryInfo);
+          }
 
-      // encrypt block
-      error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
-                                 archiveEntryInfo->file.byteBuffer,
-                                 byteLength
+          // encrypt block
+          error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
+                                     archiveEntryInfo->file.byteBuffer,
+                                     byteLength
+                                    );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+
+          // store block into chunk
+          error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
+                                  archiveEntryInfo->file.byteBuffer,
+                                  byteLength
                                 );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
 
-      // store block into chunk
-      error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
-                              archiveEntryInfo->file.byteBuffer,
-                              byteLength
-                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-    }
-
-    // flush delta compress
-    error = Compress_flush(&archiveEntryInfo->file.deltaCompressInfo);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    eofDelta = FALSE;
-    do
-    {
-      // flush compressed full data blocks
-      error = flushFileDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_FULL);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // get next delta-compressed data
-      Compress_getCompressedData(&archiveEntryInfo->file.deltaCompressInfo,
-                                 archiveEntryInfo->file.deltaBuffer,
-                                 archiveEntryInfo->file.deltaBufferSize,
-                                 &deltaLength
-                                );
-      if (deltaLength > 0)
-      {
-        // byte-compress data
-        error = Compress_deflate(&archiveEntryInfo->file.byteCompressInfo,
-                                 archiveEntryInfo->file.deltaBuffer,
-                                 deltaLength,
-                                 NULL
-                                );
+        // flush delta compress
+        error = Compress_flush(&archiveEntryInfo->file.deltaCompressInfo);
         if (error != ERROR_NONE)
         {
           return error;
         }
+        eofDelta = FALSE;
+        do
+        {
+          // flush compressed full data blocks
+          error = flushFileDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_FULL);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+
+          // get next delta-compressed data
+          Compress_getCompressedData(&archiveEntryInfo->file.deltaCompressInfo,
+                                     archiveEntryInfo->file.deltaBuffer,
+                                     archiveEntryInfo->file.deltaBufferSize,
+                                     &deltaLength
+                                    );
+          if (deltaLength > 0)
+          {
+            // byte-compress data
+            error = Compress_deflate(&archiveEntryInfo->file.byteCompressInfo,
+                                     archiveEntryInfo->file.deltaBuffer,
+                                     deltaLength,
+                                     NULL
+                                    );
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
+          }
+          else
+          {
+            eofDelta = TRUE;
+          }
+        }
+        while (!eofDelta);
+
+        // flush byte compress
+        error = Compress_flush(&archiveEntryInfo->file.byteCompressInfo);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = flushFileDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_ANY);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // update part size
+        archiveEntryInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->file.deltaCompressInfo);
+        error = Chunk_update(&archiveEntryInfo->file.chunkFileData.info);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // close chunks
+        error = Chunk_close(&archiveEntryInfo->file.chunkFileData.info);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = Chunk_close(&archiveEntryInfo->file.chunkFileEntry.info);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = Chunk_close(&archiveEntryInfo->file.chunkFile.info);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // transfer temporary data and close archive file
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        {
+          assert(archiveEntryInfo->file.headerWrittenFlag);
+
+          // create archive file if needed
+          if (!archiveEntryInfo->archiveInfo->file.openFlag)
+          {
+            error = createArchiveFile(archiveEntryInfo->archiveInfo);
+            if (error != ERROR_NONE)
+            {
+              Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+              return error;
+            }
+          }
+
+          // transfer temporary data into archive
+          error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
+                                          &archiveEntryInfo->file.tmpFileHandle
+                                         );
+          if (error != ERROR_NONE)
+          {
+            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+            return error;
+          }
+
+          // mark header "not written"
+          archiveEntryInfo->file.headerWrittenFlag = FALSE;
+
+          // close archive
+          error = closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
+          if (error != ERROR_NONE)
+          {
+            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+            return error;
+          }
+        }
+
+        // store fragment offset, count for next fragment
+        archiveEntryInfo->file.chunkFileData.fragmentOffset += archiveEntryInfo->file.chunkFileData.fragmentSize;
+        archiveEntryInfo->file.chunkFileData.fragmentSize   =  0LL;
+
+        // set new delta base-offset
+        if (archiveEntryInfo->image.sourceHandleInitFlag)
+        {
+          Source_setBaseOffset(&archiveEntryInfo->file.sourceHandle,
+                               archiveEntryInfo->file.chunkFileData.fragmentSize
+                              );
+        }
+
+        /* reset compress, encrypt (do it here because data if buffered and can be
+          processed before a new file is opened)
+        */
+        Compress_reset(&archiveEntryInfo->file.deltaCompressInfo);
+        Compress_reset(&archiveEntryInfo->file.byteCompressInfo);
+        Crypt_reset(&archiveEntryInfo->file.cryptInfo,0);
+
+        // unlock
+        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
       }
       else
       {
-        eofDelta = TRUE;
-      }
-    }
-    while (!eofDelta);
+        // unlock
+        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
-    // flush byte compress
-    error = Compress_flush(&archiveEntryInfo->file.byteCompressInfo);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    error = flushFileDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_ANY);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // update part size
-    archiveEntryInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->file.deltaCompressInfo);
-    error = Chunk_update(&archiveEntryInfo->file.chunkFileData.info);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // close chunks
-    error = Chunk_close(&archiveEntryInfo->file.chunkFileData.info);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    error = Chunk_close(&archiveEntryInfo->file.chunkFileEntry.info);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    error = Chunk_close(&archiveEntryInfo->file.chunkFile.info);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // transfer temporary data and close archive file
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-    {
-      assert(archiveEntryInfo->file.headerWrittenFlag);
-
-      // create archive file if needed
-      if (!archiveEntryInfo->archiveInfo->file.openFlag)
-      {
-        error = createArchiveFile(archiveEntryInfo->archiveInfo);
-        if (error != ERROR_NONE)
+        if (byteLength > 0L)
         {
-          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-          return error;
+          // create new part (if not already created)
+          if (!archiveEntryInfo->file.headerWrittenFlag)
+          {
+            writeFileChunks(archiveEntryInfo);
+          }
+
+          // encrypt block
+          error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
+                                     archiveEntryInfo->file.byteBuffer,
+                                     byteLength
+                                    );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+
+          // write block to temporary file
+          error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
+                                  archiveEntryInfo->file.byteBuffer,
+                                  byteLength
+                                 );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
         }
       }
-
-      // transfer temporary data into archive
-      error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
-                                      &archiveEntryInfo->file.tmpFileHandle
-                                     );
-      if (error != ERROR_NONE)
-      {
-        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-        return error;
-      }
-
-      // mark header "not written"
-      archiveEntryInfo->file.headerWrittenFlag = FALSE;
-
-      // close archive
-      error = closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
-      if (error != ERROR_NONE)
-      {
-        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-        return error;
-      }
-    }
-
-    // store fragment offset, count for next fragment
-    archiveEntryInfo->file.chunkFileData.fragmentOffset += archiveEntryInfo->file.chunkFileData.fragmentSize;
-    archiveEntryInfo->file.chunkFileData.fragmentSize   =  0LL;
-
-    // set new delta base-offset
-    if (archiveEntryInfo->image.sourceHandleInitFlag)
-    {
-      Source_setBaseOffset(&archiveEntryInfo->file.sourceHandle,
-                           archiveEntryInfo->file.chunkFileData.fragmentSize
-                          );
-    }
-
-    /* reset compress, encrypt (do it here because data if buffered and can be
-       processed before a new file is opened)
-    */
-    Compress_reset(&archiveEntryInfo->file.deltaCompressInfo);
-    Compress_reset(&archiveEntryInfo->file.byteCompressInfo);
-    Crypt_reset(&archiveEntryInfo->file.cryptInfo,0);
-
-    // unlock
-    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-  }
-  else
-  {
-    // unlock
-    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-
-    if (byteLength > 0L)
-    {
-      // create new part (if not already created)
-      if (!archiveEntryInfo->file.headerWrittenFlag)
-      {
-        writeFileChunks(archiveEntryInfo);
-      }
-
-      // encrypt block
-      error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
-                                 archiveEntryInfo->file.byteBuffer,
-                                 archiveEntryInfo->blockLength
-                                );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // write block to temporary file
-      error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
-                              archiveEntryInfo->file.byteBuffer,
-                              archiveEntryInfo->blockLength
-                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
     }
   }
+  while (blockCount > 0);
 
   return ERROR_NONE;
 }
@@ -1722,7 +1739,6 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(Semaphore_isOwned(&archiveEntryInfo->archiveInfo->chunkIOLock));
 
-  // flush data
   do
   {
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.byteCompressInfo,
@@ -1789,21 +1805,20 @@ close(h);
 }
 
 /***********************************************************************\
-* Name   : writeImageDataBlock
-* Purpose: write image data block, encrypt and split file
+* Name   : writeImageDataBlocks
+* Purpose: encrpyt and write image data blocks, split archive
 * Input  : archiveEntryInfo  - archive image entry info data
-*          blockMode         - block write mode; see BlockModes
 *          allowNewPartFlag  - TRUE iff new archive part can be created
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
-                                 BlockModes       blockMode,
-                                 bool             allowNewPartFlag
-                                )
+LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
+                                  bool             allowNewPartFlag
+                                 )
 {
+  uint          blockCount;
   ulong         byteLength;
   ulong         minBytes;
   bool          newPartFlag;
@@ -1816,239 +1831,253 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
-  // get next byte-compressed data block (only 1 block, because of splitting)
-  assert(archiveEntryInfo->image.byteBufferSize >= archiveEntryInfo->image.byteCompressInfo.blockLength);
-  Compress_getCompressedData(&archiveEntryInfo->image.byteCompressInfo,
-                             archiveEntryInfo->image.byteBuffer,
-                             archiveEntryInfo->image.byteCompressInfo.blockLength,
-                             &byteLength
-                            );
-
-  // calculate min. bytes to write to archive
-  minBytes =   (ulong)File_getSize(&archiveEntryInfo->image.tmpFileHandle)
-             + (((byteLength > 0L) || (blockMode == BLOCK_MODE_WRITE))
-                  ? archiveEntryInfo->archiveInfo->blockLength
-                  : 0L
-               );
-
-  // lock
-  Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-
-  // check if split is allowed and necessary
-  newPartFlag =    allowNewPartFlag
-                && isNewPartNeeded(archiveEntryInfo->archiveInfo,
-                                   archiveEntryInfo->image.headerLength,
-                                   archiveEntryInfo->image.headerWrittenFlag,
-                                   minBytes
-                                  );
-
-  // split
-  if (newPartFlag)
+  do
   {
-    // write last compressed block (if any)
-    if (byteLength > 0L)
-    {
-      // create new part (if not already created)
-      if (!archiveEntryInfo->image.headerWrittenFlag)
-      {
-        writeImageChunks(archiveEntryInfo);
-      }
-
-      // encrypt block
-      error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
-                                 archiveEntryInfo->image.byteBuffer,
-                                 archiveEntryInfo->blockLength
-                                );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // store block into chunk
-      error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
-                              archiveEntryInfo->image.byteBuffer,
-                              archiveEntryInfo->blockLength
-                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-    }
-
-    // flush delta compress
-    error = Compress_flush(&archiveEntryInfo->image.deltaCompressInfo);
+    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.byteCompressInfo,
+                                                  COMPRESS_BLOCK_TYPE_FULL,
+                                                  &blockCount
+                                                );
     if (error != ERROR_NONE)
     {
       return error;
     }
-    eofDelta = FALSE;
-    do
-    {
-      // flush compressed full data blocks
-      error = flushImageDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_FULL);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
 
-      // get next delta-compressed data
-      Compress_getCompressedData(&archiveEntryInfo->image.deltaCompressInfo,
-                                 archiveEntryInfo->image.deltaBuffer,
-                                 archiveEntryInfo->image.deltaBufferSize,
-                                 &deltaLength
+    if (blockCount > 0)
+    {
+      // get next byte-compressed data block (only 1 block, because of splitting)
+      assert(archiveEntryInfo->image.byteBufferSize >= (blockCount*archiveEntryInfo->image.byteCompressInfo.blockLength));
+      Compress_getCompressedData(&archiveEntryInfo->image.byteCompressInfo,
+                                 archiveEntryInfo->image.byteBuffer,
+//                                 archiveEntryInfo->image.byteBufferSize,
+                                 blockCount*archiveEntryInfo->image.byteCompressInfo.blockLength,
+//                                 archiveEntryInfo->image.byteCompressInfo.blockLength,
+                                 &byteLength
                                 );
-      if (deltaLength > 0)
+
+      // calculate min. bytes to write to archive
+      minBytes = (ulong)File_getSize(&archiveEntryInfo->image.tmpFileHandle)+byteLength;
+
+      // lock
+      Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+
+      // check if split is allowed and necessary
+      newPartFlag =    allowNewPartFlag
+                    && isNewPartNeeded(archiveEntryInfo->archiveInfo,
+                                       archiveEntryInfo->image.headerLength,
+                                       archiveEntryInfo->image.headerWrittenFlag,
+                                       minBytes
+                                      );
+
+      // split
+      if (newPartFlag)
       {
-        // byte-compress data
-        error = Compress_deflate(&archiveEntryInfo->image.byteCompressInfo,
-                                 archiveEntryInfo->image.deltaBuffer,
-                                 deltaLength,
-                                 NULL
+        // write last compressed block (if any)
+        if (byteLength > 0L)
+        {
+          // create new part (if not already created)
+          if (!archiveEntryInfo->image.headerWrittenFlag)
+          {
+            writeImageChunks(archiveEntryInfo);
+          }
+
+          // encrypt block
+          error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
+                                     archiveEntryInfo->image.byteBuffer,
+                                     byteLength
+                                    );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+
+          // store block into chunk
+          error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
+                                  archiveEntryInfo->image.byteBuffer,
+                                  byteLength
                                 );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+
+        // flush delta compress
+        error = Compress_flush(&archiveEntryInfo->image.deltaCompressInfo);
         if (error != ERROR_NONE)
         {
           return error;
         }
+        eofDelta = FALSE;
+        do
+        {
+          // flush compressed full data blocks
+          error = flushImageDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_FULL);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+
+          // get next delta-compressed data
+          Compress_getCompressedData(&archiveEntryInfo->image.deltaCompressInfo,
+                                     archiveEntryInfo->image.deltaBuffer,
+                                     archiveEntryInfo->image.deltaBufferSize,
+                                     &deltaLength
+                                    );
+          if (deltaLength > 0)
+          {
+            // byte-compress data
+            error = Compress_deflate(&archiveEntryInfo->image.byteCompressInfo,
+                                     archiveEntryInfo->image.deltaBuffer,
+                                     deltaLength,
+                                     NULL
+                                    );
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
+          }
+          else
+          {
+            eofDelta = TRUE;
+          }
+        }
+        while (!eofDelta);
+
+        // flush byte compress
+        error = Compress_flush(&archiveEntryInfo->image.byteCompressInfo);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = flushImageDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_ANY);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // update part size
+        assert(archiveEntryInfo->image.blockSize > 0);
+        archiveEntryInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveEntryInfo->image.deltaCompressInfo)/archiveEntryInfo->image.blockSize;
+        error = Chunk_update(&archiveEntryInfo->image.chunkImageData.info);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // close chunks
+        error = Chunk_close(&archiveEntryInfo->image.chunkImageData.info);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = Chunk_close(&archiveEntryInfo->image.chunkImageEntry.info);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = Chunk_close(&archiveEntryInfo->image.chunkImage.info);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // transfer temporary data and close archive file
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        {
+          assert(archiveEntryInfo->image.headerWrittenFlag);
+
+          // create archive file if needed
+          if (!archiveEntryInfo->archiveInfo->file.openFlag)
+          {
+            error = createArchiveFile(archiveEntryInfo->archiveInfo);
+            if (error != ERROR_NONE)
+            {
+              Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+              return error;
+            }
+          }
+
+          // transfer temporary data into archive
+          error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
+                                          &archiveEntryInfo->image.tmpFileHandle
+                                         );
+          if (error != ERROR_NONE)
+          {
+            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+            return error;
+          }
+
+          // mark header "not written"
+          archiveEntryInfo->image.headerWrittenFlag = FALSE;
+
+          // close archive
+          error = closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
+          if (error != ERROR_NONE)
+          {
+            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+            return error;
+          }
+        }
+
+        // store block offset, count for next fragment
+        archiveEntryInfo->image.chunkImageData.blockOffset += archiveEntryInfo->image.chunkImageData.blockCount;
+        archiveEntryInfo->image.chunkImageData.blockCount  =  0;
+
+        // set new delta base-offset
+        if (archiveEntryInfo->image.sourceHandleInitFlag)
+        {
+          Source_setBaseOffset(&archiveEntryInfo->image.sourceHandle,
+                               archiveEntryInfo->image.chunkImageData.blockCount*(uint64)archiveEntryInfo->image.blockSize
+                              );
+        }
+
+        /* reset compress, encrypt (do it here because data if buffered and can be
+          processed before a new file is opened)
+        */
+        Compress_reset(&archiveEntryInfo->image.deltaCompressInfo);
+        Compress_reset(&archiveEntryInfo->image.byteCompressInfo);
+        Crypt_reset(&archiveEntryInfo->image.cryptInfo,0);
+
+        // unlock
+        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
       }
       else
       {
-        eofDelta = TRUE;
-      }
-    }
-    while (!eofDelta);
+        // unlock
+        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
-    // flush byte compress
-    error = Compress_flush(&archiveEntryInfo->image.byteCompressInfo);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    error = flushImageDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_ANY);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // update part size
-    assert(archiveEntryInfo->image.blockSize > 0);
-    archiveEntryInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveEntryInfo->image.deltaCompressInfo)/archiveEntryInfo->image.blockSize;
-    error = Chunk_update(&archiveEntryInfo->image.chunkImageData.info);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // close chunks
-    error = Chunk_close(&archiveEntryInfo->image.chunkImageData.info);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    error = Chunk_close(&archiveEntryInfo->image.chunkImageEntry.info);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    error = Chunk_close(&archiveEntryInfo->image.chunkImage.info);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // transfer temporary data and close archive file
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-    {
-      assert(archiveEntryInfo->image.headerWrittenFlag);
-
-      // create archive file if needed
-      if (!archiveEntryInfo->archiveInfo->file.openFlag)
-      {
-        error = createArchiveFile(archiveEntryInfo->archiveInfo);
-        if (error != ERROR_NONE)
+        if (byteLength > 0L)
         {
-          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-          return error;
+          // create new part (if not already created)
+          if (!archiveEntryInfo->image.headerWrittenFlag)
+          {
+            writeImageChunks(archiveEntryInfo);
+          }
+
+          // encrypt block
+          error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
+                                     archiveEntryInfo->image.byteBuffer,
+                                     byteLength
+                                    );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+
+          // store block into chunk
+          error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
+                                  archiveEntryInfo->image.byteBuffer,
+                                  byteLength
+                                );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
         }
       }
-
-      // transfer temporary data into archive
-      error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
-                                      &archiveEntryInfo->image.tmpFileHandle
-                                     );
-      if (error != ERROR_NONE)
-      {
-        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-        return error;
-      }
-
-      // mark header "not written"
-      archiveEntryInfo->image.headerWrittenFlag = FALSE;
-
-      // close archive
-      error = closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
-      if (error != ERROR_NONE)
-      {
-        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-        return error;
-      }
-    }
-
-    // store block offset, count for next fragment
-    archiveEntryInfo->image.chunkImageData.blockOffset += archiveEntryInfo->image.chunkImageData.blockCount;
-    archiveEntryInfo->image.chunkImageData.blockCount  =  0;
-
-    // set new delta base-offset
-    if (archiveEntryInfo->image.sourceHandleInitFlag)
-    {
-      Source_setBaseOffset(&archiveEntryInfo->image.sourceHandle,
-                           archiveEntryInfo->image.chunkImageData.blockCount*(uint64)archiveEntryInfo->image.blockSize
-                          );
-    }
-
-    /* reset compress, encrypt (do it here because data if buffered and can be
-       processed before a new file is opened)
-    */
-    Compress_reset(&archiveEntryInfo->image.deltaCompressInfo);
-    Compress_reset(&archiveEntryInfo->image.byteCompressInfo);
-    Crypt_reset(&archiveEntryInfo->image.cryptInfo,0);
-
-    // unlock
-    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-  }
-  else
-  {
-    // unlock
-    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-
-    if (byteLength > 0L)
-    {
-      // create new part (if not already created)
-      if (!archiveEntryInfo->image.headerWrittenFlag)
-      {
-        writeImageChunks(archiveEntryInfo);
-      }
-
-      // encrypt block
-      error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
-                                 archiveEntryInfo->image.byteBuffer,
-                                 archiveEntryInfo->blockLength
-                                );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // store block into chunk
-      error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
-                              archiveEntryInfo->image.byteBuffer,
-                              archiveEntryInfo->blockLength
-                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
     }
   }
+  while (blockCount > 0);
 
   return ERROR_NONE;
 }
@@ -2330,21 +2359,20 @@ close(h);
 }
 
 /***********************************************************************\
-* Name   : writeHardLinkDataBlock
-* Purpose: write hard link data block, encrypt and split file
-* Input  : archiveEntryInfo  - archive entry info
-*          blockMode         - block write mode; see BlockModes
-*          allowNewPartFlag  - TRUE iff new archive part can be created
+* Name   : writeHardLinkDataBlocks
+* Purpose: encrypt and write hard link block, split archive
+* Input  : archiveEntryInfo - archive entry info
+*          allowNewPartFlag - TRUE iff new archive part can be created
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
-                                    BlockModes       blockMode,
-                                    bool             allowNewPartFlag
-                                   )
+LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
+                                     bool             allowNewPartFlag
+                                    )
 {
+  uint          blockCount;
   ulong         byteLength;
   ulong         minBytes;
   bool          newPartFlag;
@@ -2357,238 +2385,252 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
-  // get next byte-compressed data block (only 1 block, because of splitting)
-  assert(archiveEntryInfo->hardLink.byteBufferSize >= archiveEntryInfo->hardLink.byteCompressInfo.blockLength);
-  Compress_getCompressedData(&archiveEntryInfo->hardLink.byteCompressInfo,
-                             archiveEntryInfo->hardLink.byteBuffer,
-                             archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
-                             &byteLength
-                            );
-
-  // calculate min. bytes to write to archive
-  minBytes =   (ulong)File_getSize(&archiveEntryInfo->hardLink.tmpFileHandle)
-             + (((byteLength > 0L) || (blockMode == BLOCK_MODE_WRITE))
-                  ? archiveEntryInfo->archiveInfo->blockLength
-                  : 0L
-               );
-
-  // lock
-  Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-
-  // check if split is allowed and necessary
-  newPartFlag =    allowNewPartFlag
-                && isNewPartNeeded(archiveEntryInfo->archiveInfo,
-                                   archiveEntryInfo->hardLink.headerLength,
-                                   archiveEntryInfo->hardLink.headerWrittenFlag,
-                                   minBytes
-                                  );
-
-  // split
-  if (newPartFlag)
+  do
   {
-    // write last compressed block (if any)
-    if (byteLength > 0L)
-    {
-      // create new part (if not already created)
-      if (!archiveEntryInfo->hardLink.headerWrittenFlag)
-      {
-        writeHardLinkChunks(archiveEntryInfo);
-      }
-
-      // encrypt block
-      error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
-                                 archiveEntryInfo->hardLink.byteBuffer,
-                                 archiveEntryInfo->blockLength
-                                );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // store block into chunk
-      error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
-                              archiveEntryInfo->hardLink.byteBuffer,
-                              archiveEntryInfo->blockLength
-                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-    }
-
-    // flush delta compress
-    error = Compress_flush(&archiveEntryInfo->hardLink.deltaCompressInfo);
+    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.byteCompressInfo,
+                                                  COMPRESS_BLOCK_TYPE_FULL,
+                                                  &blockCount
+                                                );
     if (error != ERROR_NONE)
     {
       return error;
     }
-    eofDelta = FALSE;
-    do
-    {
-      // flush compressed full data blocks
-      error = flushHardLinkDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_FULL);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
 
-      // get next delta-compressed byte
-      Compress_getCompressedData(&archiveEntryInfo->hardLink.deltaCompressInfo,
-                                 archiveEntryInfo->hardLink.deltaBuffer,
-                                 archiveEntryInfo->hardLink.deltaBufferSize,
-                                 &deltaLength
+    if (blockCount > 0)
+    {
+      // get byte-compressed data blocks
+      assert(archiveEntryInfo->hardLink.byteBufferSize >= (blockCount*archiveEntryInfo->hardLink.byteCompressInfo.blockLength));
+      Compress_getCompressedData(&archiveEntryInfo->hardLink.byteCompressInfo,
+                                 archiveEntryInfo->hardLink.byteBuffer,
+//                                 archiveEntryInfo->hardLink.byteBufferSize,
+                                 blockCount*archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
+//                                 archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
+                                 &byteLength
                                 );
-      if (deltaLength > 0)
+
+      // calculate min. bytes to write to archive
+      minBytes = (ulong)File_getSize(&archiveEntryInfo->hardLink.tmpFileHandle)+byteLength;
+
+      // lock
+      Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+
+      // check if split is allowed and necessary
+      newPartFlag =    allowNewPartFlag
+                    && isNewPartNeeded(archiveEntryInfo->archiveInfo,
+                                       archiveEntryInfo->hardLink.headerLength,
+                                       archiveEntryInfo->hardLink.headerWrittenFlag,
+                                       minBytes
+                                      );
+
+      // split
+      if (newPartFlag)
       {
-        // byte-compress data
-        error = Compress_deflate(&archiveEntryInfo->hardLink.byteCompressInfo,
-                                 archiveEntryInfo->hardLink.deltaBuffer,
-                                 deltaLength,
-                                 NULL
-                                );
+        // write last compressed block (if any)
+        if (byteLength > 0L)
+        {
+          // create new part (if not already created)
+          if (!archiveEntryInfo->hardLink.headerWrittenFlag)
+          {
+            writeHardLinkChunks(archiveEntryInfo);
+          }
+
+          // encrypt block
+          error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
+                                     archiveEntryInfo->hardLink.byteBuffer,
+                                     byteLength
+                                    );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+
+          // store block into chunk
+          error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
+                                  archiveEntryInfo->hardLink.byteBuffer,
+                                  byteLength
+                                 );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+
+        // flush delta compress
+        error = Compress_flush(&archiveEntryInfo->hardLink.deltaCompressInfo);
         if (error != ERROR_NONE)
         {
           return error;
         }
+        eofDelta = FALSE;
+        do
+        {
+          // flush compressed full data blocks
+          error = flushHardLinkDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_FULL);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+
+          // get next delta-compressed byte
+          Compress_getCompressedData(&archiveEntryInfo->hardLink.deltaCompressInfo,
+                                     archiveEntryInfo->hardLink.deltaBuffer,
+                                     archiveEntryInfo->hardLink.deltaBufferSize,
+                                     &deltaLength
+                                    );
+          if (deltaLength > 0)
+          {
+            // byte-compress data
+            error = Compress_deflate(&archiveEntryInfo->hardLink.byteCompressInfo,
+                                    archiveEntryInfo->hardLink.deltaBuffer,
+                                    deltaLength,
+                                    NULL
+                                    );
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
+          }
+          else
+          {
+            eofDelta = TRUE;
+          }
+        }
+        while (!eofDelta);
+
+        // flush byte compress
+        error = Compress_flush(&archiveEntryInfo->hardLink.byteCompressInfo);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = flushHardLinkDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_ANY);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // update part size
+        archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->hardLink.deltaCompressInfo);
+        error = Chunk_update(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // close chunks
+        error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLink.info);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // close archive file
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        {
+          assert(archiveEntryInfo->hardLink.headerWrittenFlag);
+
+          // create archive file if needed
+          if (!archiveEntryInfo->archiveInfo->file.openFlag)
+          {
+            error = createArchiveFile(archiveEntryInfo->archiveInfo);
+            if (error != ERROR_NONE)
+            {
+              Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+              return error;
+            }
+          }
+
+          // transfer temporary data into archive
+          error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
+                                          &archiveEntryInfo->hardLink.tmpFileHandle
+                                         );
+          if (error != ERROR_NONE)
+          {
+            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+            return error;
+          }
+
+          // mark header "not written"
+          archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
+
+          // close archive
+          error = closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
+          if (error != ERROR_NONE)
+          {
+            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+            return error;
+          }
+        }
+
+        // store fragment offset, count for next fragment
+        archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset += archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
+        archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   =  0LL;
+
+        // set new delta base-offset
+        if (archiveEntryInfo->image.sourceHandleInitFlag)
+        {
+          Source_setBaseOffset(&archiveEntryInfo->hardLink.sourceHandle,
+                               archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset
+                              );
+        }
+
+        /* reset compress, encrypt (do it here because data if buffered and can be
+          processed before a new file is opened)
+        */
+        Compress_reset(&archiveEntryInfo->hardLink.deltaCompressInfo);
+        Compress_reset(&archiveEntryInfo->hardLink.byteCompressInfo);
+        Crypt_reset(&archiveEntryInfo->hardLink.cryptInfo,0);
+
+        // unlock
+        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
       }
       else
       {
-        eofDelta = TRUE;
-      }
-    }
-    while (!eofDelta);
+        // unlock
+        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
-    // flush byte compress
-    error = Compress_flush(&archiveEntryInfo->hardLink.byteCompressInfo);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    error = flushHardLinkDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_ANY);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // update part size
-    archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->hardLink.deltaCompressInfo);
-    error = Chunk_update(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // close chunks
-    error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLink.info);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // close archive file
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-    {
-      assert(archiveEntryInfo->hardLink.headerWrittenFlag);
-
-      // create archive file if needed
-      if (!archiveEntryInfo->archiveInfo->file.openFlag)
-      {
-        error = createArchiveFile(archiveEntryInfo->archiveInfo);
-        if (error != ERROR_NONE)
+        if (byteLength > 0L)
         {
-          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-          return error;
+          // create new part (if not already created)
+          if (!archiveEntryInfo->hardLink.headerWrittenFlag)
+          {
+            writeHardLinkChunks(archiveEntryInfo);
+          }
+
+          // encrypt block
+          error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
+                                     archiveEntryInfo->hardLink.byteBuffer,
+                                     byteLength
+                                    );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+
+          // write block
+          error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
+                                  archiveEntryInfo->hardLink.byteBuffer,
+                                  byteLength
+                                 );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
         }
       }
-
-      // transfer temporary data into archive
-      error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
-                                      &archiveEntryInfo->hardLink.tmpFileHandle
-                                     );
-      if (error != ERROR_NONE)
-      {
-        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-        return error;
-      }
-
-      // mark header "not written"
-      archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
-
-      // close archive
-      error = closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
-      if (error != ERROR_NONE)
-      {
-        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-        return error;
-      }
-    }
-
-    // store fragment offset, count for next fragment
-    archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset += archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
-    archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   =  0LL;
-
-    // set new delta base-offset
-    if (archiveEntryInfo->image.sourceHandleInitFlag)
-    {
-      Source_setBaseOffset(&archiveEntryInfo->hardLink.sourceHandle,
-                           archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset
-                          );
-    }
-
-    /* reset compress, encrypt (do it here because data if buffered and can be
-       processed before a new file is opened)
-    */
-    Compress_reset(&archiveEntryInfo->hardLink.deltaCompressInfo);
-    Compress_reset(&archiveEntryInfo->hardLink.byteCompressInfo);
-    Crypt_reset(&archiveEntryInfo->hardLink.cryptInfo,0);
-
-    // unlock
-    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-  }
-  else
-  {
-    // unlock
-    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-
-    if (byteLength > 0L)
-    {
-      // create new part (if not already created)
-      if (!archiveEntryInfo->hardLink.headerWrittenFlag)
-      {
-        writeHardLinkChunks(archiveEntryInfo);
-      }
-
-      // encrypt block
-      error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
-                                 archiveEntryInfo->hardLink.byteBuffer,
-                                 archiveEntryInfo->blockLength
-                                );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // write block
-      error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
-                              archiveEntryInfo->hardLink.byteBuffer,
-                              archiveEntryInfo->blockLength
-                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
     }
   }
+  while (blockCount > 0);
 
   return ERROR_NONE;
 }
@@ -3070,6 +3112,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
       Storage_close(archiveInfo->storage.storageHandle);
+      error = ERROR_NONE;
       break;
     #ifndef NDEBUG
       default:
@@ -8924,14 +8967,14 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
                         )
 {
   const byte *p;
-  ulong      writtenBytes;
+  ulong      writtenLength;
   Errors     error;
-  ulong      blockLength;
-  ulong      writtenBlockBytes;
+  ulong      dataBlockLength;
+  ulong      writtenDataBlockLength;
+  ulong      freeSpace;
   ulong      deflatedBytes;
   ulong      deltaLength;
   bool       allowNewPartFlag;
-  uint       blockCount;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
@@ -8941,273 +8984,204 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
     p            = (const byte*)buffer;
-    writtenBytes = 0L;
-    while (writtenBytes < length)
+    writtenLength = 0L;
+    while (writtenLength < length)
     {
       /* get size of data block which must be written without splitting
-         (make sure written data is aligned at element size boundaries)
+         (make sure written data size is aligned at element size boundaries)
       */
-      if ((elementSize > 1) && (length > elementSize))
-      {
-        blockLength = elementSize;
-      }
-      else
-      {
-        blockLength = 1;
-      }
-      assert(blockLength > 0L);
+      dataBlockLength = ALIGN(MIN(length-writtenLength,DATA_BLOCK_SIZE-(elementSize-1)),elementSize);
+      assert(dataBlockLength > 0L);
+      assert(dataBlockLength < MAX_BUFFER_SIZE);
 
       // write data block
-      writtenBlockBytes = 0L;
+      writtenDataBlockLength = 0L;
       switch (archiveEntryInfo->archiveEntryType)
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           assert((archiveEntryInfo->file.byteBufferSize%archiveEntryInfo->blockLength) == 0);
 
-          while (writtenBlockBytes < blockLength)
+          while (writtenDataBlockLength < dataBlockLength)
           {
             // do compress (delta+byte)
             do
             {
-              // check if there is space for byte-compressed data
-              error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.byteCompressInfo,
-                                                            COMPRESS_BLOCK_TYPE_FULL,
-                                                            &blockCount
-                                                           );
-              if (error != ERROR_NONE)
+              // check if there is space for delta-compressed data
+              if (Compress_isFreeDataSpace(&archiveEntryInfo->file.deltaCompressInfo))
               {
-                return error;
-              }
-
-              if (blockCount <= 0)
-              {
-                // space for byte-compress data available => do delta-compress data
+                // do delta-compress data
                 error = Compress_deflate(&archiveEntryInfo->file.deltaCompressInfo,
-                                         p+writtenBlockBytes,
-                                         blockLength-writtenBlockBytes,
+                                         p+writtenDataBlockLength,
+                                         dataBlockLength-writtenDataBlockLength,
                                          &deflatedBytes
                                         );
                 if (error != ERROR_NONE)
                 {
                   return error;
                 }
-                writtenBlockBytes += deflatedBytes;
+                writtenDataBlockLength += deflatedBytes;
+              }
 
-                // get next delta-compressed data
+              // check if there is space for byte-compressed data
+              freeSpace = Compress_getFreeDataSpace(&archiveEntryInfo->file.byteCompressInfo);
+              if (freeSpace > 0L)
+              {
+                // get delta-compressed data
                 Compress_getCompressedData(&archiveEntryInfo->file.deltaCompressInfo,
                                            archiveEntryInfo->file.deltaBuffer,
-                                           archiveEntryInfo->file.deltaBufferSize,
+                                           MIN(freeSpace,archiveEntryInfo->file.deltaBufferSize),
                                            &deltaLength
                                           );
-                if (deltaLength > 0)
-                {
-                  // do byte-compress data
-                  error = Compress_deflate(&archiveEntryInfo->file.byteCompressInfo,
-                                           archiveEntryInfo->file.deltaBuffer,
-                                           deltaLength,
-                                           NULL
-                                          );
-                  if (error != ERROR_NONE)
-                  {
-                    return error;
-                  }
-                }
-              }
-            }
-            while (   (writtenBlockBytes < blockLength)
-                   && (blockCount <= 0)
-                  );
 
-            // check if new part is allowed: only when block is completed
-            allowNewPartFlag = (writtenBlockBytes >= blockLength);
-
-            // write compressed data
-            do
-            {
-              error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.byteCompressInfo,
-                                                            COMPRESS_BLOCK_TYPE_FULL,
-                                                            &blockCount
-                                                           );
-              if (error != ERROR_NONE)
-              {
-                return error;
-              }
-              if (blockCount > 0)
-              {
-                error = writeFileDataBlock(archiveEntryInfo,BLOCK_MODE_WRITE,allowNewPartFlag);
+                // do byte-compress data
+                error = Compress_deflate(&archiveEntryInfo->file.byteCompressInfo,
+                                         archiveEntryInfo->file.deltaBuffer,
+                                         deltaLength,
+                                         NULL
+                                        );
                 if (error != ERROR_NONE)
                 {
                   return error;
                 }
               }
             }
-            while (blockCount > 0);
+            while (   (writtenDataBlockLength < dataBlockLength)
+                   && (freeSpace > 0L)
+                  );
+
+            // check if new part is allowed: only when data block is completed
+            allowNewPartFlag = (writtenDataBlockLength >= dataBlockLength);
+
+            // write compressed data
+            error = writeFileDataBlocks(archiveEntryInfo,allowNewPartFlag);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
           }
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           assert((archiveEntryInfo->image.byteBufferSize%archiveEntryInfo->blockLength) == 0);
 
-          while (writtenBlockBytes < blockLength)
+          while (writtenDataBlockLength < dataBlockLength)
           {
             // do compress (delta+byte)
             do
             {
-              // check if compressed data is available
-              error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.byteCompressInfo,
-                                                            COMPRESS_BLOCK_TYPE_FULL,
-                                                            &blockCount
-                                                           );
-              if (error != ERROR_NONE)
+              // check if there is space for delta-compressed data
+              if (Compress_isFreeDataSpace(&archiveEntryInfo->image.deltaCompressInfo))
               {
-                return error;
-              }
-
-              if (blockCount <= 0)
-              {
-                // delta-compress data
+                // do delta-compress data
                 error = Compress_deflate(&archiveEntryInfo->image.deltaCompressInfo,
-                                         p+writtenBlockBytes,
-                                         blockLength-writtenBlockBytes,
+                                         p+writtenDataBlockLength,
+                                         dataBlockLength-writtenDataBlockLength,
                                          &deflatedBytes
                                         );
                 if (error != ERROR_NONE)
                 {
                   return error;
                 }
-                writtenBlockBytes += deflatedBytes;
+                writtenDataBlockLength += deflatedBytes;
+              }
 
-                // get next delta-compressed data
+              // check if there is space for byte-compressed data
+              freeSpace = Compress_getFreeDataSpace(&archiveEntryInfo->image.byteCompressInfo);
+              if (freeSpace > 0L)
+              {
+                // get delta-compressed data
                 Compress_getCompressedData(&archiveEntryInfo->image.deltaCompressInfo,
                                            archiveEntryInfo->image.deltaBuffer,
-                                           archiveEntryInfo->image.deltaBufferSize,
+                                           MIN(freeSpace,archiveEntryInfo->image.deltaBufferSize),
                                            &deltaLength
                                           );
-                if (deltaLength > 0)
-                {
-                  // byte-compress data
-                  error = Compress_deflate(&archiveEntryInfo->image.byteCompressInfo,
-                                           archiveEntryInfo->image.deltaBuffer,
-                                           deltaLength,
-                                           NULL
-                                          );
-                  if (error != ERROR_NONE)
-                  {
-                    return error;
-                  }
-                }
-              }
-            }
-            while (   (writtenBlockBytes < blockLength)
-                   && (blockCount <= 0)
-                  );
 
-            // check if compressed data blocks are available and can be encrypted and written to file
-            allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
-
-            // write compressed data
-            do
-            {
-              error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.byteCompressInfo,
-                                                            COMPRESS_BLOCK_TYPE_FULL,
-                                                            &blockCount
-                                                           );
-              if (error != ERROR_NONE)
-              {
-                return error;
-              }
-              if (blockCount > 0)
-              {
-                error = writeImageDataBlock(archiveEntryInfo,BLOCK_MODE_WRITE,allowNewPartFlag);
+                // do byte-compress data
+                error = Compress_deflate(&archiveEntryInfo->image.byteCompressInfo,
+                                         archiveEntryInfo->image.deltaBuffer,
+                                         deltaLength,
+                                         NULL
+                                        );
                 if (error != ERROR_NONE)
                 {
                   return error;
                 }
               }
             }
-            while (blockCount > 0);
+            while (   (writtenDataBlockLength < dataBlockLength)
+                   && (freeSpace > 0L)
+                  );
+
+            // check if compressed data blocks are available and can be encrypted and written to file
+            allowNewPartFlag = ((elementSize <= 1) || (writtenDataBlockLength >= dataBlockLength));
+
+            // write compressed data
+            error = writeImageDataBlocks(archiveEntryInfo,allowNewPartFlag);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
           }
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
           assert((archiveEntryInfo->hardLink.byteBufferSize%archiveEntryInfo->blockLength) == 0);
 
-          while (writtenBlockBytes < blockLength)
+          while (writtenDataBlockLength < dataBlockLength)
           {
             // do compress (delta+byte)
             do
             {
-              // check if compressed data is available
-              error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.byteCompressInfo,
-                                                            COMPRESS_BLOCK_TYPE_FULL,
-                                                            &blockCount
-                                                           );
-              if (error != ERROR_NONE)
+              // check if there is space for delta-compressed data
+              if (Compress_isFreeDataSpace(&archiveEntryInfo->hardLink.deltaCompressInfo))
               {
-                return error;
-              }
-
-              if (blockCount <= 0)
-              {
-                // delta-compress data
+                // do delta-compress data
                 error = Compress_deflate(&archiveEntryInfo->hardLink.deltaCompressInfo,
-                                         p+writtenBlockBytes,
-                                         blockLength-writtenBlockBytes,
+                                         p+writtenDataBlockLength,
+                                         dataBlockLength-writtenDataBlockLength,
                                          &deflatedBytes
                                         );
                 if (error != ERROR_NONE)
                 {
                   return error;
                 }
-                writtenBlockBytes += deflatedBytes;
+                writtenDataBlockLength += deflatedBytes;
+              }
 
-                // get next delta-compressed data
+              // check if there is space for byte-compressed data
+              freeSpace = Compress_getFreeDataSpace(&archiveEntryInfo->hardLink.byteCompressInfo);
+              if (freeSpace > 0L)
+              {
+                // get delta-compressed data
                 Compress_getCompressedData(&archiveEntryInfo->hardLink.deltaCompressInfo,
                                            archiveEntryInfo->hardLink.deltaBuffer,
-                                           archiveEntryInfo->hardLink.deltaBufferSize,
+                                           MIN(freeSpace,archiveEntryInfo->hardLink.deltaBufferSize),
                                            &deltaLength
                                           );
-                if (deltaLength > 0)
-                {
-                  // byte-compress data
-                  error = Compress_deflate(&archiveEntryInfo->hardLink.byteCompressInfo,
-                                           archiveEntryInfo->hardLink.deltaBuffer,
-                                           deltaLength,
-                                           NULL
-                                          );
-                  if (error != ERROR_NONE)
-                  {
-                    return error;
-                  }
-                }
-              }
-            }
-            while (   (writtenBlockBytes < blockLength)
-                   && (blockCount <= 0)
-                  );
 
-            // check if compressed data blocks are available and can be encrypted and written to file
-            allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
-
-            // write compressed data
-            do
-            {
-              error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.byteCompressInfo,
-                                                            COMPRESS_BLOCK_TYPE_FULL,
-                                                            &blockCount
-                                                           );
-              if (error != ERROR_NONE)
-              {
-                return error;
-              }
-              if (blockCount > 0)
-              {
-                error = writeHardLinkDataBlock(archiveEntryInfo,BLOCK_MODE_WRITE,allowNewPartFlag);
+                // do byte-compress data
+                error = Compress_deflate(&archiveEntryInfo->hardLink.byteCompressInfo,
+                                         archiveEntryInfo->hardLink.deltaBuffer,
+                                         deltaLength,
+                                         NULL
+                                        );
                 if (error != ERROR_NONE)
                 {
                   return error;
                 }
               }
             }
-            while (blockCount > 0);
+            while (   (writtenDataBlockLength < dataBlockLength)
+                   && (freeSpace > 0L)
+                  );
+
+            // check if compressed data blocks are available and can be encrypted and written to file
+            allowNewPartFlag = ((elementSize <= 1) || (writtenDataBlockLength >= dataBlockLength));
+
+            // write compressed data
+            error = writeHardLinkDataBlocks(archiveEntryInfo,allowNewPartFlag);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
           }
           break;
         default:
@@ -9216,8 +9190,8 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
       }
 
       // next data
-      p            += blockLength;
-      writtenBytes += blockLength;
+      p             += dataBlockLength;
+      writtenLength += dataBlockLength;
     }
   }
 
@@ -9272,6 +9246,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
       while (length > 0L)
       {
         // check if delta-decompressor is empty
+#warning todo use getFreeDecompressSpace
         error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->file.deltaCompressInfo,
                                                        &availableBytes
                                                       );
