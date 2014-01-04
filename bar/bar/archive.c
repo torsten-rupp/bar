@@ -8424,6 +8424,33 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               }
 
+              // append to archive
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+              {
+                // create archive file if needed
+                if (!archiveEntryInfo->archiveInfo->file.openFlag)
+                {
+                  tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
+                  if (tmpError != ERROR_NONE)
+                  {
+                    if (error == ERROR_NONE) error = tmpError;
+                    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+                    break;
+                  }
+                }
+
+                // transfer temporary data
+                tmpError = transferArchiveFileData(archiveEntryInfo->archiveInfo,
+                                                   &archiveEntryInfo->image.tmpFileHandle
+                                                  );
+                if (tmpError != ERROR_NONE)
+                {
+                  if (error == ERROR_NONE) error = tmpError;
+                  Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+                  break;
+                }
+              }
+
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
                   && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
