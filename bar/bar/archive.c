@@ -10108,14 +10108,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                                  );
             if (error != ERROR_NONE)
             {
-              Archive_closeEntry(&archiveEntryInfo);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               break;
             }
             pprintInfo(4,"INDEX: ","Added file '%s', %lubytes to index for '%s'\n",String_cString(fileName),fileInfo.size,String_cString(printableStorageName));
 
             // close archive file, free resources
-            Archive_closeEntry(&archiveEntryInfo);
+            (void)Archive_closeEntry(&archiveEntryInfo);
             String_delete(fileName);
           }
           break;
@@ -10158,14 +10158,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                                   );
             if (error != ERROR_NONE)
             {
-              Archive_closeEntry(&archiveEntryInfo);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(imageName);
               break;
             }
             pprintInfo(4,"INDEX: ","Added image '%s', %lubytes to index for '%s'\n",String_cString(imageName),deviceInfo.size,String_cString(printableStorageName));
 
             // close archive file, free resources
-            Archive_closeEntry(&archiveEntryInfo);
+            (void)Archive_closeEntry(&archiveEntryInfo);
             String_delete(imageName);
           }
           break;
@@ -10203,14 +10203,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                                       );
             if (error != ERROR_NONE)
             {
-              Archive_closeEntry(&archiveEntryInfo);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(directoryName);
               break;
             }
             pprintInfo(4,"INDEX: ","Added directory '%s' to index for '%s'\n",String_cString(directoryName),String_cString(printableStorageName));
 
             // close archive file, free resources
-            Archive_closeEntry(&archiveEntryInfo);
+            (void)Archive_closeEntry(&archiveEntryInfo);
             String_delete(directoryName);
           }
           break;
@@ -10253,7 +10253,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                                  );
             if (error != ERROR_NONE)
             {
-              Archive_closeEntry(&archiveEntryInfo);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(destinationName);
               String_delete(linkName);
               break;
@@ -10261,7 +10261,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             pprintInfo(4,"INDEX: ","Added link '%s' to index for '%s'\n",String_cString(linkName),String_cString(printableStorageName));
 
             // close archive file, free resources
-            Archive_closeEntry(&archiveEntryInfo);
+            (void)Archive_closeEntry(&archiveEntryInfo);
             String_delete(destinationName);
             String_delete(linkName);
           }
@@ -10320,14 +10320,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             }
             if (error != ERROR_NONE)
             {
-              Archive_closeEntry(&archiveEntryInfo);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               StringList_done(&fileNameList);
               break;
             }
             pprintInfo(4,"INDEX: ","Added hardlink '%s', %lubytes to index for '%s'\n",String_cString(StringList_first(&fileNameList,NULL)),fileInfo.size,String_cString(printableStorageName));
 
             // close archive file, free resources
-            Archive_closeEntry(&archiveEntryInfo);
+            (void)Archive_closeEntry(&archiveEntryInfo);
             StringList_done(&fileNameList);
           }
           break;
@@ -10368,14 +10368,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                                     );
             if (error != ERROR_NONE)
             {
-              Archive_closeEntry(&archiveEntryInfo);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               break;
             }
             pprintInfo(4,"INDEX: ","Added special '%s' to index for '%s'\n",String_cString(fileName),String_cString(printableStorageName));
 
             // close archive file, free resources
-            Archive_closeEntry(&archiveEntryInfo);
+            (void)Archive_closeEntry(&archiveEntryInfo);
             String_delete(fileName);
           }
           break;
@@ -10618,7 +10618,7 @@ Errors Archive_copy(const String                    storageName,
                         (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
                        );
               String_delete(destinationFileName);
-              Archive_closeEntry(&archiveEntryInfo);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               continue;
             }
@@ -10641,7 +10641,7 @@ Errors Archive_copy(const String                    storageName,
                         );
               File_close(&fileHandle);
               String_delete(destinationFileName);
-              Archive_closeEntry(&archiveEntryInfo);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               if (jobOptions->stopOnErrorFlag)
               {
@@ -10704,7 +10704,7 @@ Errors Archive_copy(const String                    storageName,
               File_close(&fileHandle);
             }
             String_delete(destinationFileName);
-            Archive_closeEntry(&archiveEntryInfo);
+            (void)Archive_closeEntry(&archiveEntryInfo);
             String_delete(fileName);
             continue;
           }
@@ -10717,7 +10717,7 @@ Errors Archive_copy(const String                    storageName,
               File_close(&fileHandle);
             }
             String_delete(destinationFileName);
-            Archive_closeEntry(&archiveEntryInfo);
+            (void)Archive_closeEntry(&archiveEntryInfo);
             String_delete(fileName);
             continue;
           }
@@ -10734,7 +10734,7 @@ Errors Archive_copy(const String                    storageName,
           }
 
           // close source archive file, free resources
-          Archive_closeEntry(&sourceArchiveEntryInfo);
+          (void)Archive_closeEntry(&sourceArchiveEntryInfo);
 
           // free resources
           String_delete(fileName);
@@ -10802,7 +10802,7 @@ Errors Archive_copy(const String                    storageName,
                           ((blockCount > 0)?blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
                          );
                 String_delete(destinationDeviceName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(imageName);
                 continue;
               }
@@ -10826,7 +10826,7 @@ Errors Archive_copy(const String                    storageName,
                            Errors_getText(error)
                           );
                 String_delete(destinationDeviceName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(imageName);
                 if (jobOptions->stopOnErrorFlag)
                 {
@@ -10844,7 +10844,7 @@ Errors Archive_copy(const String                    storageName,
                           );
                 Device_close(&deviceHandle);
                 String_delete(destinationDeviceName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(imageName);
                 if (jobOptions->stopOnErrorFlag)
                 {
@@ -10909,7 +10909,7 @@ Errors Archive_copy(const String                    storageName,
               {
                 printInfo(2,"ABORTED\n");
                 String_delete(destinationDeviceName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(imageName);
                 continue;
               }
@@ -11017,7 +11017,7 @@ Errors Archive_copy(const String                    storageName,
                         String_cString(destinationFileName)
                        );
               String_delete(destinationFileName);
-              Archive_closeEntry(&archiveEntryInfo);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(directoryName);
               continue;
             }
@@ -11040,7 +11040,7 @@ Errors Archive_copy(const String                    storageName,
                            Errors_getText(error)
                           );
                 String_delete(destinationFileName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(directoryName);
                 if (jobOptions->stopOnErrorFlag)
                 {
@@ -11066,7 +11066,7 @@ Errors Archive_copy(const String                    storageName,
                              Errors_getText(error)
                             );
                   String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveEntryInfo);
+                  (void)Archive_closeEntry(&archiveEntryInfo);
                   String_delete(directoryName);
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -11188,7 +11188,7 @@ Errors Archive_copy(const String                    storageName,
                             );
                   String_delete(parentDirectoryName);
                   String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveEntryInfo);
+                  (void)Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
                   String_delete(linkName);
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -11211,7 +11211,7 @@ Errors Archive_copy(const String                    storageName,
                               );
                     String_delete(parentDirectoryName);
                     String_delete(destinationFileName);
-                    Archive_closeEntry(&archiveEntryInfo);
+                    (void)Archive_closeEntry(&archiveEntryInfo);
                     String_delete(fileName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                     continue;
@@ -11236,7 +11236,7 @@ Errors Archive_copy(const String                    storageName,
                         String_cString(destinationFileName)
                        );
               String_delete(destinationFileName);
-              Archive_closeEntry(&archiveEntryInfo);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               String_delete(linkName);
               if (jobOptions->stopOnErrorFlag)
@@ -11261,7 +11261,7 @@ Errors Archive_copy(const String                    storageName,
                            Errors_getText(error)
                           );
                 String_delete(destinationFileName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag)
@@ -11288,7 +11288,7 @@ Errors Archive_copy(const String                    storageName,
                              Errors_getText(error)
                             );
                   String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveEntryInfo);
+                  (void)Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
                   String_delete(linkName);
                   if (jobOptions->stopOnErrorFlag)
@@ -11728,7 +11728,7 @@ Errors Archive_copy(const String                    storageName,
           String_delete(hardLinkFileName);
           if (restoreInfo.failError != ERROR_NONE)
           {
-            Archive_closeEntry(&archiveEntryInfo);
+            (void)Archive_closeEntry(&archiveEntryInfo);
             StringList_done(&fileNameList);
             continue;
           }
@@ -11809,7 +11809,7 @@ Errors Archive_copy(const String                    storageName,
                             );
                   String_delete(parentDirectoryName);
                   String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveEntryInfo);
+                  (void)Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                   continue;
@@ -11831,7 +11831,7 @@ Errors Archive_copy(const String                    storageName,
                               );
                     String_delete(parentDirectoryName);
                     String_delete(destinationFileName);
-                    Archive_closeEntry(&archiveEntryInfo);
+                    (void)Archive_closeEntry(&archiveEntryInfo);
                     String_delete(fileName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                     continue;
@@ -11856,7 +11856,7 @@ Errors Archive_copy(const String                    storageName,
                         String_cString(destinationFileName)
                        );
               String_delete(destinationFileName);
-              Archive_closeEntry(&archiveEntryInfo);
+              (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               if (jobOptions->stopOnErrorFlag)
               {
@@ -11883,7 +11883,7 @@ Errors Archive_copy(const String                    storageName,
                            Errors_getText(error)
                           );
                 String_delete(destinationFileName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
@@ -11909,7 +11909,7 @@ Errors Archive_copy(const String                    storageName,
                              Errors_getText(error)
                             );
                   String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveEntryInfo);
+                  (void)Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
                   if (jobOptions->stopOnErrorFlag)
                   {
