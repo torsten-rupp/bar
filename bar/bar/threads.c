@@ -132,7 +132,7 @@ bool Thread_init(Thread     *thread,
   startInfo.entryFunction = entryFunction;
   startInfo.userData      = userData;
 
-  // start thread
+  // init thread attributes
   pthread_attr_init(&threadAttributes);
   #ifdef HAVE_PTHREAD_ATTR_SETNAME
     if (name != NULL)
