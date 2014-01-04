@@ -40,6 +40,9 @@
 /* bzip2 installed */
 #undef HAVE_BZ2
 
+/* c-ares installed */
+#undef HAVE_CARES
+
 /* chmod() available */
 #undef HAVE_CHMOD
 
