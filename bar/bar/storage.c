@@ -22,6 +22,9 @@
 #ifdef HAVE_CURL
   #include <curl/curl.h>
 #endif /* HAVE_CURL */
+#ifdef HAVE_MXML
+  #include <mxml.h>
+#endif /* HAVE_MXML */
 #ifdef HAVE_SSH2
   #include <libssh2.h>
   #include <libssh2_sftp.h>
@@ -33,8 +36,6 @@
 #include <signal.h>
 #include <errno.h>
 #include <assert.h>
-
-#include "mxml.h"
 
 #include "global.h"
 #include "autofree.h"
@@ -9789,7 +9790,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_WEBDAV:
-      #ifdef HAVE_CURL
+      #if defined(HAVE_CURL) && defined(HAVE_MXML)
         {
           WebDAVServer      webDAVServer;
           CURL              *curlHandle;
