@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <errno.h>
+#include <unistd.h>
 #if defined(HAVE_PCRE)
   #include <pcreposix.h>
 #elif defined(HAVE_REGEX_H)
@@ -22,6 +22,7 @@
 #else
   #error No regular expression library available!
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
+#include <errno.h>
 #include <assert.h>
 
 #include "global.h"
@@ -388,6 +389,17 @@ LOCAL int executeCallback(void *userData,
           : 1;
 }
 
+#warning TODO remove
+LOCAL int busyHandler(void *userData, int n)
+{
+  UNUSED_VARIABLE(userData);
+
+  fprintf(stderr,"Warning: database busy handler called (%d)\n",n);
+  sleep(1);
+
+  return 1;
+}
+
 /*---------------------------------------------------------------------*/
 
 #ifdef NDEBUG
@@ -447,6 +459,10 @@ LOCAL int executeCallback(void *userData,
     error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     return error;
   }
+
+#warning TODO remove
+// set busy timeout
+sqlite3_busy_handler(databaseHandle->handle,busyHandler,NULL);
 
   // register REGEXP functions
   sqlite3_create_function(databaseHandle->handle,
@@ -662,7 +678,6 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
             sqlite3_mutex_enter(sqlite3_db_mutex(databaseQueryHandle->databaseHandle->handle)),
             sqlite3_mutex_leave(sqlite3_db_mutex(databaseQueryHandle->databaseHandle->handle)),
   {
-
     if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
     {
       // get data
