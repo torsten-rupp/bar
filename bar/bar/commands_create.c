@@ -86,7 +86,6 @@ typedef struct
 typedef struct
 {
   StorageSpecifier            *storageSpecifier;                  // storage specifier structure
-  String                      storageFileName;                    // storage file name
   const EntryList             *includeEntryList;                  // list of included entries
   const PatternList           *excludePatternList;                // list of exclude patterns
   const PatternList           *compressExcludePatternList;        // exclude compression pattern list
@@ -1326,14 +1325,14 @@ LOCAL Errors formatArchiveFileName(String       fileName,
 * Name   : formatIncrementalFileName
 * Purpose: format incremental file name
 * Input  : fileName         - file name variable
-*          templateFileName - template file name
+*          storageSpecifier - storage specifier
 * Output : -
 * Return : file name
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String formatIncrementalFileName(String       fileName,
-                                       const String templateFileName
+LOCAL String formatIncrementalFileName(String                 fileName,
+                                       const StorageSpecifier *storageSpecifier
                                       )
 {
   #define SEPARATOR_CHARS "-_"
@@ -1344,19 +1343,19 @@ LOCAL String formatIncrementalFileName(String       fileName,
   // remove all macros and leading and tailing separator characters
   String_clear(fileName);
   i = 0L;
-  while (i < String_length(templateFileName))
+  while (i < String_length(storageSpecifier->fileName))
   {
-    ch = String_index(templateFileName,i);
+    ch = String_index(storageSpecifier->fileName,i);
     switch (ch)
     {
       case '%':
         i += 1L;
-        if (i < String_length(templateFileName))
+        if (i < String_length(storageSpecifier->fileName))
         {
           // removed previous separator characters
           String_trimRight(fileName,SEPARATOR_CHARS);
 
-          ch = String_index(templateFileName,i);
+          ch = String_index(storageSpecifier->fileName,i);
           switch (ch)
           {
             case '%':
@@ -1373,24 +1372,24 @@ LOCAL String formatIncrementalFileName(String       fileName,
               // discard %xyz
               if (isalpha(ch))
               {
-                while (   (i < String_length(templateFileName))
+                while (   (i < String_length(storageSpecifier->fileName))
                        && isalpha(ch)
                       )
                 {
                   i += 1L;
-                  ch = String_index(templateFileName,i);
+                  ch = String_index(storageSpecifier->fileName,i);
                 }
               }
 
               // discard following separator characters
               if (strchr(SEPARATOR_CHARS,ch) != NULL)
               {
-                while (   (i < String_length(templateFileName))
+                while (   (i < String_length(storageSpecifier->fileName))
                        && (strchr(SEPARATOR_CHARS,ch) != NULL)
                       )
                 {
                   i += 1L;
-                  ch = String_index(templateFileName,i);
+                  ch = String_index(storageSpecifier->fileName,i);
                 }
               }
               break;
@@ -3402,7 +3401,9 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
             {
               doneBytes        = createInfo->statusInfo.doneBytes+(uint64)bufferLength;
               archiveBytes     = createInfo->statusInfo.storageTotalBytes+archiveSize;
-              compressionRatio = (doneBytes > 0) ? 100.0-(archiveBytes*100.0)/doneBytes : 0.0;
+              compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneBytes > 0))
+                                   ? 100.0-(archiveBytes*100.0)/doneBytes
+                                   : 0.0;
 
               if (nameSemaphoreLocked)
               {
@@ -3477,7 +3478,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
     // close file
     (void)File_close(&fileHandle);
 
-    // get compression ratio
+    // get final compression ratio
     if (archiveEntryInfo.file.chunkFileData.fragmentSize > 0LL)
     {
       compressionRatio = 100.0-archiveEntryInfo.file.chunkFileData.info.size*100.0/archiveEntryInfo.file.chunkFileData.fragmentSize;
@@ -3751,7 +3752,9 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
           {
             doneBytes        = createInfo->statusInfo.doneBytes+(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             archiveBytes     = createInfo->statusInfo.storageTotalBytes+archiveSize;
-            compressionRatio = (doneBytes > 0) ? 100.0-(archiveBytes*100.0)/doneBytes : 0.0;
+            compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneBytes > 0))
+                                 ? 100.0-(archiveBytes*100.0)/doneBytes
+                                 : 0.0;
 
             createInfo->statusInfo.doneBytes += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             if (nameSemaphoreLocked)
@@ -3824,7 +3827,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
       FileSystem_done(&fileSystemHandle);
     }
 
-    // get compression ratio
+    // get final compression ratio
     if (archiveEntryInfo.image.chunkImageData.blockCount > 0)
     {
       compressionRatio = 100.0-archiveEntryInfo.image.chunkImageData.info.size*100.0/(archiveEntryInfo.image.chunkImageData.blockCount*(uint64)deviceInfo.blockSize);
@@ -4377,7 +4380,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
             {
               doneBytes        = createInfo->statusInfo.doneBytes+(uint64)bufferLength;
               archiveBytes     = createInfo->statusInfo.storageTotalBytes+archiveSize;
-              compressionRatio = (doneBytes > 0) ? 100.0-(archiveBytes*100.0)/doneBytes : 0.0;
+              compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneBytes > 0))
+                                   ? 100.0-(archiveBytes*100.0)/doneBytes
+                                   : 0.0;
 
               createInfo->statusInfo.doneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
               if (nameSemaphoreLocked)
@@ -4452,7 +4457,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     // close file
     (void)File_close(&fileHandle);
 
-    // get compression ratio
+    // get final compression ratio
     if (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL)
     {
       compressionRatio = 100.0-archiveEntryInfo.hardLink.chunkHardLinkData.info.size*100.0/archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize;
@@ -4939,7 +4944,7 @@ Errors Command_create(const String                    storageName,
     else
     {
       formatIncrementalFileName(incrementalListFileName,
-                                createInfo.storageFileName
+                                createInfo.storageSpecifier
                                );
     }
     Dictionary_init(&createInfo.namesDictionary,NULL,NULL);
