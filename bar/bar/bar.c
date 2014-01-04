@@ -3407,6 +3407,7 @@ bool allocateServer(Server *server, ServerConnectionPriorities priority, long ti
     }
     else
     {
+      maxConnectionCount = 0;
       switch (server->type)
       {
         case SERVER_TYPE_FTP:
