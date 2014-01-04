@@ -1193,6 +1193,7 @@ void Crypt_initKey(CryptKey          *cryptKey,
     cryptKey->cryptPaddingType = cryptPaddingType;
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptKey);
+    UNUSED_VARIABLE(cryptPaddingType);
   #endif /* HAVE_GCRYPT */
 }
 
@@ -1325,88 +1326,104 @@ p++;
 
 String Crypt_getKeyModulus(CryptKey *cryptKey)
 {
-  gcry_sexp_t sexpToken;
-  gcry_sexp_t rsaToken;
-  gcry_sexp_t nToken;
-  gcry_mpi_t  n;
-  char        *s;
-  String      string;
+  #ifdef HAVE_GCRYPT
+    gcry_sexp_t sexpToken;
+    gcry_sexp_t rsaToken;
+    gcry_sexp_t nToken;
+    gcry_mpi_t  n;
+    char        *s;
+    String      string;
+  #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
 
-  // find key token
-  sexpToken = NULL;
-  if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
-  if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
-  if (sexpToken == NULL)
-  {
+  #ifdef HAVE_GCRYPT
+    // find key token
+    sexpToken = NULL;
+    if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
+    if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
+    if (sexpToken == NULL)
+    {
+      return NULL;
+    }
+
+    // get RSA, modulus token
+    rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
+    assert(rsaToken != NULL);
+    nToken   = gcry_sexp_find_token(rsaToken,"n",0);
+    assert(nToken != NULL);
+
+    // get modulus number
+    n = gcry_sexp_nth_mpi(nToken,1,GCRYMPI_FMT_USG);
+
+    // format string
+    gcry_mpi_aprint(GCRYMPI_FMT_HEX,(unsigned char**)&s,NULL,n);
+    string = String_newCString(s);
+    free(s);
+
+    // free resources
+    gcry_mpi_release(n);
+    gcry_sexp_release(nToken);
+    gcry_sexp_release(rsaToken);
+    gcry_sexp_release(sexpToken);
+
+    return string;
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptKey);
+
     return NULL;
-  }
-
-  // get RSA, modulus token
-  rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
-  assert(rsaToken != NULL);
-  nToken   = gcry_sexp_find_token(rsaToken,"n",0);
-  assert(nToken != NULL);
-
-  // get modulus number
-  n = gcry_sexp_nth_mpi(nToken,1,GCRYMPI_FMT_USG);
-
-  // format string
-  gcry_mpi_aprint(GCRYMPI_FMT_HEX,(unsigned char**)&s,NULL,n);
-  string = String_newCString(s);
-  free(s);
-
-  // free resources
-  gcry_mpi_release(n);
-  gcry_sexp_release(nToken);
-  gcry_sexp_release(rsaToken);
-  gcry_sexp_release(sexpToken);
-
-  return string;
+  #endif /* HAVE_GCRYPT */
 }
 
 String Crypt_getKeyExponent(CryptKey *cryptKey)
 {
-  gcry_sexp_t sexpToken;
-  gcry_sexp_t rsaToken;
-  gcry_sexp_t eToken;
-  gcry_mpi_t  e;
-  char        *s;
-  String      string;
+  #ifdef HAVE_GCRYPT
+    gcry_sexp_t sexpToken;
+    gcry_sexp_t rsaToken;
+    gcry_sexp_t eToken;
+    gcry_mpi_t  e;
+    char        *s;
+    String      string;
+  #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
 
-  // find key token
-  sexpToken = NULL;
-  if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
-  if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
-  if (sexpToken == NULL)
-  {
+  #ifdef HAVE_GCRYPT
+    // find key token
+    sexpToken = NULL;
+    if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
+    if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
+    if (sexpToken == NULL)
+    {
+      return NULL;
+    }
+
+    // get RSA, modulus token
+    rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
+    assert(rsaToken != NULL);
+    eToken   = gcry_sexp_find_token(rsaToken,"e",0);
+    assert(eToken != NULL);
+
+    // get modulus number
+    e = gcry_sexp_nth_mpi(eToken,1,GCRYMPI_FMT_USG);
+
+    // format string
+    gcry_mpi_aprint(GCRYMPI_FMT_HEX,(unsigned char**)&s,NULL,e);
+    string = String_newCString(s);
+    free(s);
+
+    // free resources
+    gcry_mpi_release(e);
+    gcry_sexp_release(eToken);
+    gcry_sexp_release(rsaToken);
+    gcry_sexp_release(sexpToken);
+
+    return string;
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptKey);
+
     return NULL;
-  }
-
-  // get RSA, modulus token
-  rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
-  assert(rsaToken != NULL);
-  eToken   = gcry_sexp_find_token(rsaToken,"e",0);
-  assert(eToken != NULL);
-
-  // get modulus number
-  e = gcry_sexp_nth_mpi(eToken,1,GCRYMPI_FMT_USG);
-
-  // format string
-  gcry_mpi_aprint(GCRYMPI_FMT_HEX,(unsigned char**)&s,NULL,e);
-  string = String_newCString(s);
-  free(s);
-
-  // free resources
-  gcry_mpi_release(e);
-  gcry_sexp_release(eToken);
-  gcry_sexp_release(rsaToken);
-  gcry_sexp_release(sexpToken);
-
-  return string;
+  #endif /* HAVE_GCRYPT */
 }
 
 Errors Crypt_setKeyData(CryptKey       *cryptKey,
@@ -1679,6 +1696,7 @@ Errors Crypt_createKeys(CryptKey          *publicCryptKey,
     UNUSED_VARIABLE(publicCryptKey);
     UNUSED_VARIABLE(privateCryptKey);
     UNUSED_VARIABLE(bits);
+    UNUSED_VARIABLE(cryptPaddingType);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
