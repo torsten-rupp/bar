@@ -76,3 +76,15 @@ ToDo
 - support create image with multicore: create parts in parallel
 - support bar dvd://*.bar
 - restore image to file instead of a device
+- compression lrzip
+- compression lz4
+  http://stackoverflow.com/questions/16190231/lz4-compression-c-example
+  https://github.com/exalead/fastlzlib
+- compression miniz
+- compression lzo
+  http://content.gpwiki.org/index.php/LZO
+- include .nobackup files into archive
+- database lock timeout?
+  http://beets.radbox.org/blog/sqlite-nightmare.html
+- higher thread priority for collector thread?
+- UUID for jobs, max. number of jobs to keep
