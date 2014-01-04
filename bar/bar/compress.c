@@ -2462,6 +2462,7 @@ bool Compress_isBufferFull(CompressInfo       *compressInfo,
   (void)compressData(compressInfo);
 
   // check if a least one block is free in buffer => not full
+  fullFlag = TRUE;
   switch (blockType)
   {
     case COMPRESS_BLOCK_TYPE_ANY:
