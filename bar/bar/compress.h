@@ -517,6 +517,25 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo);
 uint64 Compress_getOutputLength(CompressInfo *compressInfo);
 
 /***********************************************************************\
+* Name   : Compress_getFreeDataSpace
+* Purpose: get free space in data buffer
+* Input  : compressInfo - compress info block
+* Output : -
+* Return : number of bytes free in data buffer
+* Notes  : -
+\***********************************************************************/
+
+INLINE ulong Compress_getFreeDataSpace(const CompressInfo *compressInfo);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE ulong Compress_getFreeDataSpace(const CompressInfo *compressInfo)
+{
+  assert(compressInfo != NULL);
+
+  return RingBuffer_getFree(&compressInfo->dataRingBuffer);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+
+/***********************************************************************\
 * Name   : Compress_getFreeCompressSpace
 * Purpose: get free space in compress buffer
 * Input  : compressInfo - compress info block
@@ -532,6 +551,44 @@ INLINE ulong Compress_getFreeCompressSpace(const CompressInfo *compressInfo)
   assert(compressInfo != NULL);
 
   return RingBuffer_getFree(&compressInfo->compressRingBuffer);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : Compress_isFreeDataSpace
+* Purpose: check if there is free space in data buffer
+* Input  : compressInfo - compress info block
+* Output : -
+* Return : TRUE iff free space in data buffer
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isFreeDataSpace(const CompressInfo *compressInfo);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Compress_isFreeDataSpace(const CompressInfo *compressInfo)
+{
+  assert(compressInfo != NULL);
+
+  return !RingBuffer_isFull(&compressInfo->dataRingBuffer);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : Compress_isFreeCompressSpace
+* Purpose: check if there is free space in compress buffer
+* Input  : compressInfo - compress info block
+* Output : -
+* Return : TRUE iff free space in compress buffer
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isFreeCompressSpace(const CompressInfo *compressInfo);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Compress_isFreeCompressSpace(const CompressInfo *compressInfo)
+{
+  assert(compressInfo != NULL);
+
+  return !RingBuffer_isFull(&compressInfo->compressRingBuffer);
 }
 #endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
 

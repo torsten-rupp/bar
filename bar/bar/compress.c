@@ -101,7 +101,7 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
 #endif /* HAVE_XDELTA3 */
 
 // size of compress buffers
-#define MAX_BUFFER_SIZE (4*1024)
+#define MAX_BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
 
@@ -2449,6 +2449,39 @@ Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
   return ERROR_NONE;
 }
 
+bool Compress_isBufferFull(CompressInfo       *compressInfo,
+                           CompressBlockTypes blockType
+                          )
+{
+  bool fullFlag;
+
+  assert(compressInfo != NULL);
+  assert(compressInfo->compressMode == COMPRESS_MODE_DEFLATE);
+
+  // compress data (ignore error here)
+  (void)compressData(compressInfo);
+
+  // check if a least one block is free in buffer => not full
+  switch (blockType)
+  {
+    case COMPRESS_BLOCK_TYPE_ANY:
+      // block buffer is full iff buffer is full
+      fullFlag = RingBuffer_isFull(&compressInfo->compressRingBuffer);
+      break;
+    case COMPRESS_BLOCK_TYPE_FULL:
+      // block buffer is full iff free space in buffer is < blockLength
+      fullFlag = (RingBuffer_getFree(&compressInfo->compressRingBuffer) < compressInfo->blockLength);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  return fullFlag;
+}
+
 void Compress_getCompressedData(CompressInfo *compressInfo,
                                 byte         *buffer,
                                 ulong        bufferSize,
@@ -2464,7 +2497,7 @@ void Compress_getCompressedData(CompressInfo *compressInfo,
   assert(bufferLength != NULL);
 
   // compress data (ignore error here)
-  compressData(compressInfo);
+  (void)compressData(compressInfo);
 
   // copy compressed data into buffer
   n = MIN(RingBuffer_getAvailable(&compressInfo->compressRingBuffer),FLOOR(bufferSize,compressInfo->blockLength));
@@ -2492,7 +2525,7 @@ void Compress_putCompressedData(CompressInfo *compressInfo,
   assert(buffer != NULL);
 
   // decompress data (ignore error here)
-  decompressData(compressInfo);
+  (void)decompressData(compressInfo);
 
   // copy data into compressed buffer
   assert(RingBuffer_getFree(&compressInfo->compressRingBuffer) >= bufferLength);
