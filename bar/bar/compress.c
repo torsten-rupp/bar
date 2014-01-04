@@ -2449,40 +2449,6 @@ Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
   return ERROR_NONE;
 }
 
-bool Compress_isBufferFull(CompressInfo       *compressInfo,
-                           CompressBlockTypes blockType
-                          )
-{
-  bool fullFlag;
-
-  assert(compressInfo != NULL);
-  assert(compressInfo->compressMode == COMPRESS_MODE_DEFLATE);
-
-  // compress data (ignore error here)
-  (void)compressData(compressInfo);
-
-  // check if a least one block is free in buffer => not full
-  fullFlag = TRUE;
-  switch (blockType)
-  {
-    case COMPRESS_BLOCK_TYPE_ANY:
-      // block buffer is full iff buffer is full
-      fullFlag = RingBuffer_isFull(&compressInfo->compressRingBuffer);
-      break;
-    case COMPRESS_BLOCK_TYPE_FULL:
-      // block buffer is full iff free space in buffer is < blockLength
-      fullFlag = (RingBuffer_getFree(&compressInfo->compressRingBuffer) < compressInfo->blockLength);
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
-  }
-
-  return fullFlag;
-}
-
 void Compress_getCompressedData(CompressInfo *compressInfo,
                                 byte         *buffer,
                                 ulong        bufferSize,
