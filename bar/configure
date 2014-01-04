@@ -4486,14 +4486,7 @@ CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"
 
 CC_OPTIMIZE_DEBUG="$CC_OPTIMIZE_DEBUG -O0"
 CC_DEFINES_DEBUG="$CC_DEFINES_DEBUG"
-#if test "$ENABLE_DEBUG" = "yes"; then
-#  CC_OPTIMIZE="$CC_OPTIMIZE -O0"
-#else
-#  dnl Check: bug in gcc with -fschedule-insns2? If -O2 is used and -fno-schedule-insns2 is
-#  dnl        not given, the program either crashes or parsing a string with %y seems to fail.
-#  CC_OPTIMIZE="$CC_OPTIMIZE -O2 -fno-schedule-insns2"
-#  CC_DEFINES="$CC_DEFINES NDEBUG"
-#fi
+
 CC_INCLUDES="$CC_INCLUDES"
 case "$host_os" in
   linux-*)
@@ -8353,10 +8346,14 @@ $as_echo "done" >&6; }
 
     if test $result -eq 1; then
       HAVE_FTP=1
+      HAVE_CARES=1
       HAVE_CURL=1
       HAVE_MXML=1
       CC_DEFINES="$CC_DEFINES CURL_STATICLIB"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES curl cares mxml"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES cares curl mxml"
+
+$as_echo "#define HAVE_CARES 1" >>confdefs.h
+
 
 $as_echo "#define HAVE_CURL 1" >>confdefs.h
 
@@ -8366,6 +8363,66 @@ $as_echo "#define HAVE_MXML 1" >>confdefs.h
     fi
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing ares_library_init" >&5
+$as_echo_n "checking for library containing ares_library_init... " >&6; }
+if ${ac_cv_search_libraries_ares_library_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in cares ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void ares_library_init();"; fi`
+                                         return (int)ares_library_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_ares_library_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_ares_library_init+:} false; then :
+
+else
+  ac_cv_search_libraries_ares_library_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_ares_library_init" >&5
+$as_echo "$ac_cv_search_libraries_ares_library_init" >&6; }
+  ac_result=$ac_cv_search_libraries_ares_library_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";
+$as_echo "#define HAVE_CARES 1" >>confdefs.h
+
+fi
+
 
 
     ac_result=""
@@ -8487,6 +8544,132 @@ $as_echo "#define HAVE_MXML 1" >>confdefs.h
 fi
 
     else
+      if test -z "$HAVE_CARES"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing ares_library_init" >&5
+$as_echo_n "checking for static library containing ares_library_init... " >&6; }
+if ${ac_cv_search_static_ares_library_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS -static"
+      for ac_library in cares ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void ares_library_init();"; fi`
+                                         return (int)ares_library_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_ares_library_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_ares_library_init+:} false; then :
+
+else
+  ac_cv_search_static_ares_library_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_ares_library_init" >&5
+$as_echo "$ac_cv_search_static_ares_library_init" >&6; }
+  ac_result=$ac_cv_search_static_ares_library_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";
+$as_echo "#define HAVE_CURL 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_CARES"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing ares_library_init" >&5
+$as_echo_n "checking for library containing ares_library_init... " >&6; }
+if ${ac_cv_search_libraries_ares_library_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in cares ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void ares_library_init();"; fi`
+                                         return (int)ares_library_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_ares_library_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_ares_library_init+:} false; then :
+
+else
+  ac_cv_search_libraries_ares_library_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_ares_library_init" >&5
+$as_echo "$ac_cv_search_libraries_ares_library_init" >&6; }
+  ac_result=$ac_cv_search_libraries_ares_library_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";
+$as_echo "#define HAVE_CURL 1" >>confdefs.h
+
+fi
+
+      fi
       if test -z "$HAVE_CURL"; then
 
 
