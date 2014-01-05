@@ -863,7 +863,8 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
       {
         // create index
         error = Index_create(archiveInfo->databaseHandle,
-                             NULL,
+                             NULL, // storageName
+                             NULL, // uuid
                              INDEX_STATE_CREATE,
                              INDEX_MODE_MANUAL,
                              &archiveInfo->storageId
@@ -9882,6 +9883,7 @@ Errors Archive_addToIndex(DatabaseHandle   *databaseHandle,
   // create new index
   error = Index_create(databaseHandle,
                        storageName,
+                       NULL, // uuid
                        INDEX_STATE_UPDATE,
                        indexMode,
                        &storageId
@@ -10401,7 +10403,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
       // update temporary size (ignore error)
       Index_update(databaseHandle,
                    storageId,
-                   NULL,
+                   NULL, // storageName
+                   NULL, // uuid
                    Archive_tell(&archiveInfo)
                   );
     }
@@ -10419,8 +10422,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
       Index_setState(databaseHandle,
                      storageId,
                      INDEX_STATE_UPDATE_REQUESTED,
-                     0LL,
-                     NULL
+                     0LL, // lastCheckedTimestamp
+                     NULL // erorMessage
                     );
     }
     else
@@ -10428,7 +10431,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
       Index_setState(databaseHandle,
                      storageId,
                      INDEX_STATE_ERROR,
-                     0LL,
+                     0LL, // lastCheckedTimestamp
                      "%s (error code: %d)",
                      Errors_getText(error),
                      Errors_getCode(error)
@@ -10477,6 +10480,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     error = Index_update(databaseHandle,
                          storageId,
                          storageName,
+                         NULL, // uuid
                          Archive_getSize(&archiveInfo)
                         );
     if (error != ERROR_NONE)
@@ -10484,7 +10488,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
       Index_setState(databaseHandle,
                      storageId,
                      INDEX_STATE_ERROR,
-                     0LL,
+                     0LL, // lastCheckedTimestamp
                      "%s (error code: %d)",
                      Errors_getText(error),
                      Errors_getCode(error)

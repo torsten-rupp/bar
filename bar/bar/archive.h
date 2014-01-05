@@ -145,6 +145,7 @@ typedef struct
     } storage;
   };
   String                          printableName;                       // printable file/storage name (without password) or NULL
+  String                          uuid;                                // unique id to store
   Semaphore                       chunkIOLock;                         // chunk i/o functions lock
   const ChunkIO                   *chunkIO;                            // chunk i/o functions
   void                            *chunkIOUserData;                    // chunk i/o functions data
