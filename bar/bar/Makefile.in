@@ -445,42 +445,20 @@ showchunks@EXEEXT@: showchunks.o
 .PHONY: rundev rundev_ssl runserver runserver_ssl
 run runserver: bar
 	$(INSTALL) -d jobs
-	nice ./bar \
-          --daemon -D \
-          --index-database=bar-index.db \
-          --server-jobs-directory=jobs
+	nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs
 
 run_ssl runserver_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
-	nice ./bar \
-          --daemon -D \
-          --index-database=bar-index.db \
-          --server-jobs-directory=jobs \
-          --server-ca-file=../bar-ca.pem \
-          --server-cert-file=../bar-server-cert.pem \
-          --server-key-file=../bar-server-key.pem
+	nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem
 
 .PHONY: rundev rundev_ssl runserver runserver_ssl
 rundev: bar
 	$(INSTALL) -d jobs
-	nice ./bar \
-          --daemon -D \
-          --index-database=bar-index.db \
-          --server-jobs-directory=jobs \
-          --server-port=39909 \
-          --server-tls-port=39910
+	nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910
 
 rundev_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
-	nice ./bar \
-          --daemon -D \
-          --index-database=bar-index.db \
-          --server-jobs-directory=jobs \
-          --server-ca-file=../bar-ca.pem \
-          --server-cert-file=../bar-server-cert.pem \
-          --server-key-file=../bar-server-key.pem \
-          --server-port=39909 \
-          --server-tls-port=39910
+	nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 --server-tls-port=39910
 
 ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem:
 	$(MAKE) -C .. keys
