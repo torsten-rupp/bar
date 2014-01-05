@@ -323,6 +323,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 
   assert(passwordHandle != NULL);
 
+  password = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&passwordHandle->archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     if      (passwordHandle->passwordNode != NULL)
@@ -338,10 +339,6 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
         // get password
         password = (Password*)passwordHandle->cryptPassword;
       }
-      else
-      {
-        password = NULL;
-      }
 
       // next password mode is: default
       passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
@@ -352,10 +349,6 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
       {
         // get password
         password = globalOptions.cryptPassword;
-      }
-      else
-      {
-        password = NULL;
       }
 
       // next password mode is: ask
@@ -391,14 +384,6 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
         // next password mode is: none
         passwordHandle->inputFlag = TRUE;
       }
-      else
-      {
-        password = NULL;
-      }
-    }
-    else
-    {
-      password = NULL;
     }
   }
 
