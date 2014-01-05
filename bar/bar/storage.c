@@ -4084,19 +4084,39 @@ bool Storage_isServerAllocationPending(StorageHandle *storageHandle)
     case STORAGE_TYPE_FILESYSTEM:
       break;
     case STORAGE_TYPE_FTP:
-      serverAllocationPending = isServerAllocationPending(storageHandle->ftp.server);
+      #if defined(HAVE_CURL) || defined(HAVE_FTP)
+        serverAllocationPending = isServerAllocationPending(storageHandle->ftp.server);
+      #else /* not HAVE_CURL || HAVE_FTP */
+        serverAllocationPending = FALSE;
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
-      serverAllocationPending = isServerAllocationPending(storageHandle->ssh.server);
+      #if defined(HAVE_SSH2)
+        serverAllocationPending = isServerAllocationPending(storageHandle->ssh.server);
+      #else /* not HAVE_SSH2 */
+        serverAllocationPending = FALSE;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-      serverAllocationPending = isServerAllocationPending(storageHandle->scp.server);
+      #if defined(HAVE_SSH2)
+        serverAllocationPending = isServerAllocationPending(storageHandle->scp.server);
+      #else /* not HAVE_SSH2 */
+        serverAllocationPending = FALSE;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SFTP:
-      serverAllocationPending = isServerAllocationPending(storageHandle->sftp.server);
+      #if defined(HAVE_SSH2)
+        serverAllocationPending = isServerAllocationPending(storageHandle->sftp.server);
+      #else /* not HAVE_SSH2 */
+        serverAllocationPending = FALSE;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_WEBDAV:
-      return isServerAllocationPending(storageHandle->webdav.server);
+      #if defined(HAVE_CURL)
+        serverAllocationPending = isServerAllocationPending(storageHandle->webdav.server);
+      #else /* not HAVE_CURL */
+        serverAllocationPending = FALSE;
+      #endif /* HAVE_CURL */
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
@@ -9333,6 +9353,10 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   assert(storageSpecifier != NULL);
   assert(jobOptions != NULL);
 
+  #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && (!defined(HAVE_CURL) || !defined(HAVE_MXML))
+    UNUSED_VARIABLE(serverConnectionPriority);
+  #endif
+
   // open directory listing
   error = ERROR_UNKNOWN;
   switch (storageSpecifier->type)
@@ -10436,7 +10460,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
         }
       #else /* not HAVE_CURL || HAVE_FTP */
-        error = FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
@@ -10638,7 +10662,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           }
         }
       #else /* not HAVE_CURL */
-        error = FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_CURL */
       break;
     case STORAGE_TYPE_CD:
