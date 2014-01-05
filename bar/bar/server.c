@@ -2692,13 +2692,14 @@ LOCAL void indexThreadCode(void)
   {
     while (Index_getNextStorage(&indexQueryHandle1,
                                 &storageId,
+                                NULL, // uuid
                                 storageName,
-                                NULL,
-                                NULL,
-                                NULL,
-                                NULL,
-                                NULL,
-                                NULL
+                                NULL, // createdDateTime
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
                                )
           )
     {
@@ -2715,13 +2716,14 @@ LOCAL void indexThreadCode(void)
       {
         while (Index_getNextStorage(&indexQueryHandle2,
                                     &duplicateStorageId,
+                                    NULL, // uuid
                                     duplicateStorageName,
-                                    NULL,
-                                    NULL,
-                                    NULL,
-                                    NULL,
-                                    NULL,
-                                    NULL
+                                    NULL, // createdDateTime
+                                    NULL, // size
+                                    NULL, // indexState
+                                    NULL, // indexMode
+                                    NULL, // lastCheckedDateTime
+                                    NULL  // errorMessage
                                    )
               )
         {
@@ -3144,13 +3146,14 @@ LOCAL void autoIndexUpdateThreadCode(void)
       dateTime = String_new();
       while (Index_getNextStorage(&indexQueryHandle,
                                   &storageId,
+                                  NULL, // uuid
                                   storageName,
                                   &createdDateTime,
-                                  NULL,
+                                  NULL, // size
                                   &indexState,
                                   &indexMode,
                                   &lastCheckedDateTime,
-                                  NULL
+                                  NULL  // errorMessage
                                  )
             )
       {
@@ -8023,6 +8026,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     while (   ((maxCount == 0) || (n < maxCount))
            && Index_getNextStorage(&indexQueryHandle,
                                    &storageId,
+                                   NULL, // uuid
                                    storageName,
                                    &storageDateTime,
                                    &size,
@@ -8160,7 +8164,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
   DatabaseId       storageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
-  IndexStates      storageState;
+  IndexStates      indexState;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8217,17 +8221,18 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
       }
       while (Index_getNextStorage(&indexQueryHandle,
                                   &storageId,
-                                  NULL,
-                                  NULL,
-                                  NULL,
-                                  &storageState,
-                                  NULL,
-                                  NULL,
-                                  NULL
+                                  NULL, // uuid
+                                  NULL, // storageName
+                                  NULL, // createdDateTime
+                                  NULL, // size
+                                  &indexState,
+                                  NULL, // indexMode
+                                  NULL, // lastCheckedDateTime
+                                  NULL  // errorMessage
                                  )
             )
       {
-        if (stateAny || (state == storageState))
+        if (stateAny || (state == indexState))
         {
           // delete index
           error = Index_delete(indexDatabaseHandle,
@@ -8275,7 +8280,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
   int64            storageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
-  IndexStates      storageState;
+  IndexStates      indexState;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8330,17 +8335,18 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
       }
       while (Index_getNextStorage(&indexQueryHandle,
                                   &storageId,
-                                  NULL,
-                                  NULL,
-                                  NULL,
-                                  &storageState,
-                                  NULL,
-                                  NULL,
-                                  NULL
+                                  NULL, // uuid
+                                  NULL, // storageName
+                                  NULL, // createdDateTime
+                                  NULL, // size
+                                  &indexState,
+                                  NULL, // indexMode
+                                  NULL, // lastCheckedDateTime
+                                  NULL  // errorMessage
                                  )
             )
       {
-        if (stateAny || (state == storageState))
+        if (stateAny || (state == indexState))
         {
           // set state
           Index_setState(indexDatabaseHandle,

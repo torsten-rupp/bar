@@ -665,7 +665,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
     double *d;
     char   *ch;
     char   *s;
-    String *string;
+    String string;
   }       value;
 
   assert(databaseQueryHandle != NULL);
@@ -851,10 +851,10 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
               // string
               format++;
 
-              value.string = va_arg(arguments,String*);
+              value.string = va_arg(arguments,String);
               if (value.string != NULL)
               {
-                String_setCString(*value.string,(const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
+                String_setCString(value.string,(const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
               }
               break;
             default:

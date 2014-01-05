@@ -56,7 +56,7 @@ LOCAL const struct
 };
 
 // current index database version
-#define CURRENT_INDEX_VERSION 2
+#define CURRENT_INDEX_VERSION 3
 
 /***************************** Datatypes *******************************/
 
@@ -448,8 +448,6 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
     switch (indexVersion)
     {
       case 1:
-        // upgrade version 1 -> 2
-
         // add table hardlinks
         error = Database_execute(indexDatabaseHandle,
                                  NULL,
@@ -466,13 +464,14 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
           return error;
         }
 
-        // set version
-        error = Database_setInteger64(indexDatabaseHandle,
-                                      2,
-                                      "meta",
-                                      "value",
-                                      "WHERE name='version'"
-                                     );
+        indexVersion = 2;
+      case 2:
+        // add UUID to storage
+        error = Database_execute(indexDatabaseHandle,
+                                 NULL,
+                                 NULL,
+                                 "ALTER TABLE storage ADD COLUMN uuid TEXT"
+                                );
         if (error != ERROR_NONE)
         {
           #ifdef NDEBUG
@@ -483,15 +482,30 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
           return error;
         }
 
-        indexVersion = 2;
-      case 2:
-        // OK!
+        indexVersion = 3;
         break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           break;
       #endif
+    }
+
+    // update version
+    error = Database_setInteger64(indexDatabaseHandle,
+                                  indexVersion,
+                                  "meta",
+                                  "value",
+                                  "WHERE name='version'"
+                                 );
+    if (error != ERROR_NONE)
+    {
+      #ifdef NDEBUG
+        Database_close(indexDatabaseHandle);
+      #else /* not NDEBUG */
+        __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+      #endif /* NDEBUG */
+      return error;
     }
   }
 
@@ -546,7 +560,7 @@ bool Index_findById(DatabaseHandle *databaseHandle,
   }
   result = Database_getNextRow(&databaseQueryHandle,
                                "%S %d %llu",
-                               &name,
+                               name,
                                indexState,
                                lastCheckedTimestamp
                               );
@@ -597,7 +611,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
   while (   Database_getNextRow(&databaseQueryHandle,
                                 "%lld %S %d %llu",
                                  storageId,
-                                 &storageName,
+                                 storageName,
                                  indexState,
                                  lastCheckedTimestamp
                                 )
@@ -714,7 +728,7 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
   result = Database_getNextRow(&databaseQueryHandle,
                                "%lld %S %llu",
                                storageId,
-                               &name,
+                               name,
                                lastCheckedTimestamp
                               );
   Database_finalize(&databaseQueryHandle);
@@ -1120,6 +1134,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
                            "SELECT id, \
+                                   uuid, \
                                    name, \
                                    STRFTIME('%%s',created), \
                                    size, \
@@ -1140,6 +1155,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           DatabaseId       *databaseId,
+                          String           uuid,
                           String           storageName,
                           uint64           *createDateTime,
                           uint64           *size,
@@ -1158,15 +1174,16 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   foundFlag = FALSE;
   while (   !foundFlag
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                                "%lld %S %llu %llu %d %d %llu %S",
+                                "%lld %S %S %llu %llu %d %d %llu %S",
                                 databaseId,
-                                &storageName,
+                                uuid,
+                                storageName,
                                 createDateTime,
                                 size,
                                 indexState,
                                 indexMode,
                                 lastCheckedDateTime,
-                                &errorMessage
+                                errorMessage
                                )
         )
   {
@@ -1316,9 +1333,9 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %llu %d %d %d %llu %llu",
                              databaseId,
-                             &storageName,
+                             storageName,
                              storageDateTime,
-                             &fileName,
+                             fileName,
                              size,
                              timeModified,
                              userId,
@@ -1401,9 +1418,9 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %llu %llu",
                              databaseId,
-                             &storageName,
+                             storageName,
                              storageDateTime,
-                             &imageName,
+                             imageName,
                              size,
                              blockOffset,
                              blockCount
@@ -1484,9 +1501,9 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %d %d %d",
                              databaseId,
-                             &storageName,
+                             storageName,
                              storageDateTime,
-                             &directoryName,
+                             directoryName,
                              timeModified,
                              userId,
                              groupId,
@@ -1570,10 +1587,10 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %S %llu %d %d %d",
                              databaseId,
-                             &storageName,
+                             storageName,
                              storageDateTime,
-                             &linkName,
-                             &destinationName,
+                             linkName,
+                             destinationName,
                              timeModified,
                              userId,
                              groupId,
@@ -1661,9 +1678,9 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %llu %d %d %d %llu %llu",
                              databaseId,
-                             &storageName,
+                             storageName,
                              storageDateTime,
-                             &fileName,
+                             fileName,
                              size,
                              timeModified,
                              userId,
@@ -1748,9 +1765,9 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %d %d %d",
                              databaseId,
-                             &storageName,
+                             storageName,
                              storageDateTime,
-                             &name,
+                             name,
                              timeModified,
                              userId,
                              groupId,

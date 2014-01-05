@@ -8,12 +8,13 @@ CREATE TABLE meta(
   name  TEXT,
   value TEXT
 );
-INSERT INTO meta (name,value) VALUES ('version',2);
+INSERT INTO meta (name,value) VALUES ('version',3);
 INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
 CREATE TABLE storage(
   id              INTEGER PRIMARY KEY,
   name            TEXT,
+  uuid            TEXT,
   created         INTEGER,
   size            INTEGER,
   state           INTEGER,
@@ -102,4 +103,3 @@ CREATE TABLE special(
   major           INTEGER,
   minor           INTEGER
 );
-

@@ -424,7 +424,8 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 * Purpose: get next index storage entry
 * Input  : IndexQueryHandle    - index query handle
 * Output : databaseId          - database id of entry
-*          storageName         - storage name
+*          uuid                - unique id (can be NULL)
+*          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s]
 *          size                - size [bytes]
 *          indexState          - index state (can be NULL)
@@ -437,6 +438,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           DatabaseId       *databaseId,
+                          String           uuid,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
