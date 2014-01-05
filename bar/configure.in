@@ -962,94 +962,10 @@ AC_PATH_PROGS(MKFS_MSDOS,   mkfs.msdos,   ,/sbin)
 AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
 AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
 
-dnl -------------- headers/functions/definitions/libraries -------------
+dnl ------------------------ optional packages -------------------------
 
-# set variables for tests
-CFLAGS="$CC_FLAGS"
-CXXFLAGS="$CXX_FLAGS"
-for z in $CC_DEFINES ""; do
-  if test -n "$z"; then
-    CFLAGS="$CFLAGS -D$z"
-  fi
-done
-for z in $CC_INCLUDES ""; do
-  if test -n "$z"; then
-    CFLAGS="$CFLAGS -I$z"
-  fi
-done
-LDFLAGS="$LD_FLAGS"
-for z in $LIBRARY_PATHS ""; do
-  if test -n "$z"; then
-    LDFLAGS="$LDFLAGS -L$z"
-  fi
-done
-
-# headers
-AC_CHECK_HEADERS(\
-                 arpa/inet.h \
-                 grp.h \
-                 linux/fs.h \
-                 linux/tcp.h \
-                 netdb.h \
-                 netinet/in.h \
-                 pwd.h \
-                 regex.h \
-                 stdbool.h \
-                 sys/xattr.h \
-                 sys/ioctl.h \
-                 sys/mount.h \
-                 sys/resource.h \
-                 sys/select.h \
-                 sys/socket.h \
-                 sys/statvfs.h \
-                 sys/wait.h \
-                 termios.h \
-                )
-
-# defines, constants, types, variables
-AC_CHECK_TYPE(uint,AC_DEFINE(HAVE_UINT,1,[defined if uint is available]))
-AC_CHECK_TYPE(ulong,AC_DEFINE(HAVE_ULONG,1,[defined if ulong is available]))
-AC_CHECK_TYPE(long long int,AC_DEFINE(HAVE_LONG_LONG,1,[defined if ulong is available]))
-dnl AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR(long long data type not available))
-AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MIN;],AC_DEFINE(HAVE_LLONG_MIN,1,[defined if LLONG_MIN is available]))
-AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MAX;],AC_DEFINE(HAVE_LLONG_MAX,1,[defined if LLONG_MAX is available]))
-AC_TRY_COMPILE([#include <limits.h>],[unsigned long long int x=ULLONG_MAX;],AC_DEFINE(HAVE_ULLONG_MAX,1,[defined if ULLONG_MAX is available]))
-AC_CHECK_VARIABLE_ATTRIBUTE(__thread,AC_DEFINE(HAVE___THREAD,1,[defined if __thread is available]))
-dnl AC_SYS_LARGEFILE
-dnl echo ---
-dnl echo "ac_cv_sys_file_offset_bits=$ac_cv_sys_file_offset_bits"
-dnl echo "ac_cv_sys_large_files~$ac_cv_sys_large_files"
-dnl echo "ac_cv_sys_largefile_CC=$ac_cv_sys_largefile_CC"
-dnl echo -----------
-AC_CHECK_LARGEFILE_DEFINES
-AC_CHECK_SIZEOF(void *)
-
-case $host_os in
-  linux*)
-    AC_SEARCH_LIBRARIES(round,m,,AC_ERROR([m library not found]))
-    AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
-    AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
-    AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
-    ;;
-  mingw*)
-    AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
-    AC_SEARCH_STATIC_LIBRARIES(WSAStartup,wsock32,[STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"],,winsock2.h)
-    ;;
-  *)
-    AC_ERROR([Unsupported operating system '$host_os'])
-    ;;
-esac
-dnl for debug/test only
-dnl AC_CHECK_FUNCTION(gethostbyname,AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]),,winsock2.h)
-dnl AC_CHECK_FUNCTION(gethostbyname,AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]),,winsock2.h)
-dnl AC_CHECK_FUNCTION(gethostbynamex,AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]),,winsock2.h)
-dnl AC_CHECK_FUNCTION(gethostbyname,  AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available])  ,,winsock2.h)
-dnl AC_CHECK_FUNCTION(gethostbyname_r,AC_DEFINE(HAVE_GETHOSTBYNAME_R,1,[gethostbyname_r() available]),,winsock2.h)
-dnl AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
-dnl AC_MSG_ERROR([stop])
-
-# optional packages
 tmpFile=`mktemp configure-XXXXXX`
+
 cwd=`pwd`
 mkdir packages 2>/dev/null
 if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -2176,6 +2092,94 @@ fi
 
 rm -f $tmpFile
 
+dnl -------------- headers/functions/definitions/libraries -------------
+
+# set variables for tests
+CFLAGS="$CC_FLAGS"
+CXXFLAGS="$CXX_FLAGS"
+for z in $CC_DEFINES ""; do
+  if test -n "$z"; then
+    CFLAGS="$CFLAGS -D$z"
+  fi
+done
+for z in $CC_INCLUDES ""; do
+  if test -n "$z"; then
+    CFLAGS="$CFLAGS -I$z"
+  fi
+done
+LDFLAGS="$LD_FLAGS"
+for z in $LIBRARY_PATHS ""; do
+  if test -n "$z"; then
+    LDFLAGS="$LDFLAGS -L$z"
+  fi
+done
+
+# headers
+AC_CHECK_HEADERS(\
+                 arpa/inet.h \
+                 grp.h \
+                 linux/fs.h \
+                 linux/tcp.h \
+                 netdb.h \
+                 netinet/in.h \
+                 pwd.h \
+                 regex.h \
+                 stdbool.h \
+                 sys/xattr.h \
+                 sys/ioctl.h \
+                 sys/mount.h \
+                 sys/resource.h \
+                 sys/select.h \
+                 sys/socket.h \
+                 sys/statvfs.h \
+                 sys/wait.h \
+                 termios.h \
+                )
+
+# defines, constants, types, variables
+AC_CHECK_TYPE(uint,AC_DEFINE(HAVE_UINT,1,[defined if uint is available]))
+AC_CHECK_TYPE(ulong,AC_DEFINE(HAVE_ULONG,1,[defined if ulong is available]))
+AC_CHECK_TYPE(long long int,AC_DEFINE(HAVE_LONG_LONG,1,[defined if ulong is available]))
+dnl AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR(long long data type not available))
+AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MIN;],AC_DEFINE(HAVE_LLONG_MIN,1,[defined if LLONG_MIN is available]))
+AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MAX;],AC_DEFINE(HAVE_LLONG_MAX,1,[defined if LLONG_MAX is available]))
+AC_TRY_COMPILE([#include <limits.h>],[unsigned long long int x=ULLONG_MAX;],AC_DEFINE(HAVE_ULLONG_MAX,1,[defined if ULLONG_MAX is available]))
+AC_CHECK_VARIABLE_ATTRIBUTE(__thread,AC_DEFINE(HAVE___THREAD,1,[defined if __thread is available]))
+dnl AC_SYS_LARGEFILE
+dnl echo ---
+dnl echo "ac_cv_sys_file_offset_bits=$ac_cv_sys_file_offset_bits"
+dnl echo "ac_cv_sys_large_files~$ac_cv_sys_large_files"
+dnl echo "ac_cv_sys_largefile_CC=$ac_cv_sys_largefile_CC"
+dnl echo -----------
+AC_CHECK_LARGEFILE_DEFINES
+AC_CHECK_SIZEOF(void *)
+
+case $host_os in
+  linux*)
+    AC_SEARCH_LIBRARIES(round,m,,AC_ERROR([m library not found]))
+    AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
+    AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
+    AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
+    AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid)
+    ;;
+  mingw*)
+    AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
+    AC_SEARCH_STATIC_LIBRARIES(WSAStartup,wsock32,[STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"],,winsock2.h)
+    AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid)
+    ;;
+  *)
+    AC_ERROR([Unsupported operating system '$host_os'])
+    ;;
+esac
+dnl for debug/test only
+dnl AC_CHECK_FUNCTION(gethostbyname,AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]),,winsock2.h)
+dnl AC_CHECK_FUNCTION(gethostbyname,AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]),,winsock2.h)
+dnl AC_CHECK_FUNCTION(gethostbynamex,AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]),,winsock2.h)
+dnl AC_CHECK_FUNCTION(gethostbyname,  AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available])  ,,winsock2.h)
+dnl AC_CHECK_FUNCTION(gethostbyname_r,AC_DEFINE(HAVE_GETHOSTBYNAME_R,1,[gethostbyname_r() available]),,winsock2.h)
+dnl AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
+dnl AC_MSG_ERROR([stop])
+
 # set variables for tests
 CFLAGS="$CC_FLAGS"
 CXXFLAGS="$CXX_FLAGS"
@@ -2303,6 +2307,8 @@ AC_CHECK_FUNCTION(iso9660_open,              AC_DEFINE(HAVE_ISO9660_OPEN,       
 AC_CHECK_FUNCTION(iso9660_close,             AC_DEFINE(HAVE_ISO9660_CLOSE,             1,[iso9660_close() available]))
 AC_CHECK_FUNCTION(iso9660_ifs_stat_translate,AC_DEFINE(HAVE_ISO9660_IFS_STAT_TRANSLATE,1,[iso9660_ifs_stat_translate() available]))
 AC_CHECK_FUNCTION(iso9660_iso_seek_read,     AC_DEFINE(HAVE_ISO9660_ISO_SEEK_READ,     1,[iso9660_iso_seek_read() available]))
+
+AC_CHECK_FUNCTION(uuid_generate,AC_DEFINE(HAVE_UUID_GENERATE,1,[uuid_generate() available]))
 
 AC_CHECK_FUNCTION(sysconf,  AC_DEFINE(HAVE_SYSCONF,  1,[sysconf() available]))
 AC_CHECK_FUNCTION(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]))
