@@ -117,6 +117,7 @@ typedef struct JobNode
   // job config
   JobTypes     jobType;                        // job type: backup, restore
   String       name;                           // name of job
+  String       uuid;                           // unique id
   String       archiveName;                    // archive name
   EntryList    includeEntryList;               // included entries
   PatternList  excludePatternList;             // excluded entry patterns
@@ -515,6 +516,7 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[] =
 
 LOCAL const ConfigValue CONFIG_VALUES[] =
 {
+  CONFIG_STRUCT_VALUE_STRING   ("UUID",                    JobNode,uuid                                    ),
   CONFIG_STRUCT_VALUE_STRING   ("archive-name",            JobNode,archiveName                             ),
   CONFIG_STRUCT_VALUE_SELECT   ("archive-type",            JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
 
@@ -842,6 +844,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   PatternList_done(&jobNode->excludePatternList);
   EntryList_done(&jobNode->includeEntryList);
   String_delete(jobNode->archiveName);
+  String_delete(jobNode->uuid);
   String_delete(jobNode->name);
   String_delete(jobNode->fileName);
 }
@@ -873,6 +876,7 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
   jobNode->timeModified                   = 0LL;
 
   jobNode->name                           = File_getFileBaseName(File_newFileName(),fileName);
+  jobNode->uuid                           = Misc_getUUID(String_new());
   jobNode->archiveName                    = String_new();
   EntryList_init(&jobNode->includeEntryList);
   PatternList_init(&jobNode->excludePatternList);
@@ -942,6 +946,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
 
   newJobNode->jobType                        = jobNode->jobType;
   newJobNode->name                           = File_getFileBaseName(File_newFileName(),fileName);
+  newJobNode->uuid                           = Misc_getUUID(String_new());
   newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
   EntryList_initDuplicate(&newJobNode->includeEntryList,&jobNode->includeEntryList,NULL,NULL);
   PatternList_initDuplicate(&newJobNode->excludePatternList,&jobNode->excludePatternList,NULL,NULL);
@@ -1219,295 +1224,6 @@ LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 
   // close file
   File_close(&fileHandle);
-
-  // free resources
-  File_deleteFileName(fileName);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : readJob
-* Purpose: read job from file
-* Input  : fileName - file name
-* Output : -
-* Return : TRUE iff job read, FALSE otherwise (error)
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool readJob(JobNode *jobNode)
-{
-  Errors     error;
-  FileHandle fileHandle;
-  bool       failFlag;
-  uint       lineNb;
-  String     line;
-  String     title;
-  String     name,value;
-  long       nextIndex;
-
-  assert(jobNode != NULL);
-  assert(jobNode->fileName != NULL);
-
-  // reset job values
-  String_clear(jobNode->archiveName);
-  EntryList_clear(&jobNode->includeEntryList);
-  PatternList_clear(&jobNode->excludePatternList);
-  PatternList_clear(&jobNode->deltaSourcePatternList);
-  PatternList_clear(&jobNode->compressExcludePatternList);
-  List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  jobNode->jobOptions.archiveType                  = ARCHIVE_TYPE_NORMAL;
-  jobNode->jobOptions.archivePartSize              = 0LL;
-  jobNode->jobOptions.incrementalListFileName      = NULL;
-  jobNode->jobOptions.directoryStripCount          = 0;
-  jobNode->jobOptions.destination                  = NULL;
-  jobNode->jobOptions.patternType                  = PATTERN_TYPE_GLOB;
-  jobNode->jobOptions.compressAlgorithm.delta      = COMPRESS_ALGORITHM_NONE;
-  jobNode->jobOptions.compressAlgorithm.byte       = COMPRESS_ALGORITHM_NONE;
-  jobNode->jobOptions.cryptAlgorithm               = CRYPT_ALGORITHM_NONE;
-  #ifdef HAVE_GCRYPT
-    jobNode->jobOptions.cryptType                  = CRYPT_TYPE_SYMMETRIC;
-  #else /* not HAVE_GCRYPT */
-    jobNode->jobOptions.cryptType                  = CRYPT_TYPE_NONE;
-  #endif /* HAVE_GCRYPT */
-  jobNode->jobOptions.cryptPasswordMode            = PASSWORD_MODE_DEFAULT;
-  String_clear(jobNode->jobOptions.cryptPublicKeyFileName);
-  String_clear(jobNode->jobOptions.ftpServer.loginName);
-  if (jobNode->jobOptions.ftpServer.password != NULL) Password_clear(jobNode->jobOptions.ftpServer.password);
-  jobNode->jobOptions.sshServer.port               = 0;
-  String_clear(jobNode->jobOptions.sshServer.loginName);
-  if (jobNode->jobOptions.sshServer.password != NULL) Password_clear(jobNode->jobOptions.sshServer.password);
-  String_clear(jobNode->jobOptions.sshServer.publicKeyFileName);
-  String_clear(jobNode->jobOptions.sshServer.privateKeyFileName);
-  jobNode->jobOptions.device.volumeSize            = 0LL;
-  jobNode->jobOptions.waitFirstVolumeFlag          = FALSE;
-  jobNode->jobOptions.errorCorrectionCodesFlag     = FALSE;
-  jobNode->jobOptions.skipUnreadableFlag           = FALSE;
-  jobNode->jobOptions.rawImagesFlag                = FALSE;
-  jobNode->jobOptions.overwriteArchiveFilesFlag    = FALSE;
-  jobNode->jobOptions.overwriteFilesFlag           = FALSE;
-
-  // open file
-  error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    printError("Cannot open job file '%s' (error: %s)!\n",
-               String_cString(jobNode->fileName),
-               Error_getText(error)
-              );
-    return FALSE;
-  }
-
-  // parse file
-  failFlag    = FALSE;
-  line        = String_new();
-  lineNb      = 0;
-  title       = String_new();
-  name        = String_new();
-  value       = String_new();
-  while (File_getLine(&fileHandle,line,&lineNb,"#") && !failFlag)
-  {
-    // parse line
-    if      (String_parse(line,STRING_BEGIN,"[schedule %S]",NULL,title))
-    {
-      ScheduleNode *scheduleNode;
-
-      scheduleNode = newScheduleNode();
-      while (   File_getLine(&fileHandle,line,&lineNb,"#")
-             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-             && !failFlag
-            )
-      {
-        if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-        {
-          String_unquote(value,STRING_QUOTES);
-          if (!ConfigValue_parse(String_cString(name),
-                                 String_cString(value),
-                                 CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
-                                 "schedule",
-                                 NULL, // errorOutputHandle,
-                                 NULL, // errorPrefix,
-                                 scheduleNode
-                                )
-             )
-          {
-            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
-                       String_cString(name),
-                       "schedule",
-                       String_cString(jobNode->fileName),
-                       lineNb
-                      );
-          }
-        }
-        else
-        {
-          printError("Syntax error in %s, line %ld: '%s' - skipped\n",
-                     String_cString(jobNode->fileName),
-                     lineNb,
-                     String_cString(line)
-                    );
-        }
-      }
-      File_ungetLine(&fileHandle,line,&lineNb);
-
-      List_append(&jobNode->scheduleList,scheduleNode);
-    }
-    else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
-    {
-      // nothing to do
-    }
-    else if (String_parse(line,STRING_BEGIN,"[end]",NULL))
-    {
-      // nothing to do
-    }
-    else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-    {
-      String_unquote(value,STRING_QUOTES);
-      if (!ConfigValue_parse(String_cString(name),
-                             String_cString(value),
-                             CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
-                             NULL,
-                             NULL, // errorOutputHandle,
-                             NULL, // errorPrefix,
-                             jobNode
-                            )
-         )
-      {
-        printError("Unknown or invalid config value '%s' in %s, line %ld - skipped\n",
-                   String_cString(name),
-                   String_cString(jobNode->fileName),
-                   lineNb
-                  );
-      }
-    }
-    else
-    {
-      printError("Syntax error in %s, line %ld: '%s' - skipped\n",
-                 String_cString(jobNode->fileName),
-                 lineNb,
-                 String_cString(line)
-                );
-    }
-  }
-  String_delete(value);
-  String_delete(name);
-  String_delete(title);
-  String_delete(line);
-  if (failFlag)
-  {
-    (void)File_close(&fileHandle);
-    return FALSE;
-  }
-
-  // close file
-  (void)File_close(&fileHandle);
-
-  // save time modified
-  jobNode->timeModified = File_getFileTimeModified(jobNode->fileName);
-
-  // read schedule info
-  (void)readJobScheduleInfo(jobNode);
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : rereadAllJobs
-* Purpose: re-read all job files
-* Input  : jobsDirectory - directory with job files
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : update jobList
-\***********************************************************************/
-
-LOCAL Errors rereadAllJobs(const char *jobsDirectory)
-{
-  Errors              error;
-  DirectoryListHandle directoryListHandle;
-  String              fileName;
-  String              baseName;
-  SemaphoreLock       semaphoreLock;
-  JobNode             *jobNode;
-
-  assert(jobsDirectory != NULL);
-
-  // init variables
-  fileName = File_newFileName();
-
-  // add new/update jobs
-  File_setFileNameCString(fileName,jobsDirectory);
-  error = File_openDirectoryList(&directoryListHandle,fileName);
-  if (error != ERROR_NONE)
-  {
-    File_deleteFileName(fileName);
-    return error;
-  }
-  baseName = File_newFileName();
-  while (!File_endOfDirectoryList(&directoryListHandle))
-  {
-    // read directory entry
-    File_readDirectoryList(&directoryListHandle,fileName);
-
-    // get base name
-    File_getFileBaseName(baseName,fileName);
-
-    // check if readable file and not ".*"
-    if (File_isFile(fileName) && File_isReadable(fileName) && !String_startsWithChar(baseName,'.'))
-    {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-      {
-        // find/create job
-        jobNode = jobList.head;
-        while ((jobNode != NULL) && !String_equals(jobNode->name,baseName))
-        {
-          jobNode = jobNode->next;
-        }
-        if (jobNode == NULL)
-        {
-          jobNode = newJob(JOB_TYPE_CREATE,fileName);
-          List_append(&jobList,jobNode);
-        }
-
-        if (   !CHECK_JOB_IS_ACTIVE(jobNode)
-            && (jobNode->timeModified < File_getFileTimeModified(fileName))
-           )
-        {
-          // read job
-          readJob(jobNode);
-        }
-      }
-    }
-  }
-  File_deleteFileName(baseName);
-  File_closeDirectoryList(&directoryListHandle);
-
-  // remove not existing jobs
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
-    jobNode = jobList.head;
-    while (jobNode != NULL)
-    {
-      if (jobNode->state == JOB_STATE_NONE)
-      {
-        File_setFileNameCString(fileName,jobsDirectory);
-        File_appendFileName(fileName,jobNode->name);
-        if (File_isFile(fileName) && File_isReadable(fileName))
-        {
-          // exists => ok
-          jobNode = jobNode->next;
-        }
-        else
-        {
-          // do not exists => delete job node
-          jobNode = List_removeAndFree(&jobList,jobNode,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
-        }
-      }
-      else
-      {
-        jobNode = jobNode->next;
-      }
-    }
-  }
 
   // free resources
   File_deleteFileName(fileName);
@@ -1847,6 +1563,295 @@ LOCAL void updateAllJobs(void)
       }
     }
   }
+}
+
+/***********************************************************************\
+* Name   : readJob
+* Purpose: read job from file
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE iff job read, FALSE otherwise (error)
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool readJob(JobNode *jobNode)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  bool       failFlag;
+  uint       lineNb;
+  String     line;
+  String     title;
+  String     name,value;
+  long       nextIndex;
+
+  assert(jobNode != NULL);
+  assert(jobNode->fileName != NULL);
+
+  // reset job values
+  String_clear(jobNode->archiveName);
+  EntryList_clear(&jobNode->includeEntryList);
+  PatternList_clear(&jobNode->excludePatternList);
+  PatternList_clear(&jobNode->deltaSourcePatternList);
+  PatternList_clear(&jobNode->compressExcludePatternList);
+  List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+  jobNode->jobOptions.archiveType                  = ARCHIVE_TYPE_NORMAL;
+  jobNode->jobOptions.archivePartSize              = 0LL;
+  jobNode->jobOptions.incrementalListFileName      = NULL;
+  jobNode->jobOptions.directoryStripCount          = 0;
+  jobNode->jobOptions.destination                  = NULL;
+  jobNode->jobOptions.patternType                  = PATTERN_TYPE_GLOB;
+  jobNode->jobOptions.compressAlgorithm.delta      = COMPRESS_ALGORITHM_NONE;
+  jobNode->jobOptions.compressAlgorithm.byte       = COMPRESS_ALGORITHM_NONE;
+  jobNode->jobOptions.cryptAlgorithm               = CRYPT_ALGORITHM_NONE;
+  #ifdef HAVE_GCRYPT
+    jobNode->jobOptions.cryptType                  = CRYPT_TYPE_SYMMETRIC;
+  #else /* not HAVE_GCRYPT */
+    jobNode->jobOptions.cryptType                  = CRYPT_TYPE_NONE;
+  #endif /* HAVE_GCRYPT */
+  jobNode->jobOptions.cryptPasswordMode            = PASSWORD_MODE_DEFAULT;
+  String_clear(jobNode->jobOptions.cryptPublicKeyFileName);
+  String_clear(jobNode->jobOptions.ftpServer.loginName);
+  if (jobNode->jobOptions.ftpServer.password != NULL) Password_clear(jobNode->jobOptions.ftpServer.password);
+  jobNode->jobOptions.sshServer.port               = 0;
+  String_clear(jobNode->jobOptions.sshServer.loginName);
+  if (jobNode->jobOptions.sshServer.password != NULL) Password_clear(jobNode->jobOptions.sshServer.password);
+  String_clear(jobNode->jobOptions.sshServer.publicKeyFileName);
+  String_clear(jobNode->jobOptions.sshServer.privateKeyFileName);
+  jobNode->jobOptions.device.volumeSize            = 0LL;
+  jobNode->jobOptions.waitFirstVolumeFlag          = FALSE;
+  jobNode->jobOptions.errorCorrectionCodesFlag     = FALSE;
+  jobNode->jobOptions.skipUnreadableFlag           = FALSE;
+  jobNode->jobOptions.rawImagesFlag                = FALSE;
+  jobNode->jobOptions.overwriteArchiveFilesFlag    = FALSE;
+  jobNode->jobOptions.overwriteFilesFlag           = FALSE;
+
+  // open file
+  error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot open job file '%s' (error: %s)!\n",
+               String_cString(jobNode->fileName),
+               Error_getText(error)
+              );
+    return FALSE;
+  }
+
+  // parse file
+  failFlag    = FALSE;
+  line        = String_new();
+  lineNb      = 0;
+  title       = String_new();
+  name        = String_new();
+  value       = String_new();
+  while (File_getLine(&fileHandle,line,&lineNb,"#") && !failFlag)
+  {
+    // parse line
+    if      (String_parse(line,STRING_BEGIN,"[schedule %S]",NULL,title))
+    {
+      ScheduleNode *scheduleNode;
+
+      scheduleNode = newScheduleNode();
+      while (   File_getLine(&fileHandle,line,&lineNb,"#")
+             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+             && !failFlag
+            )
+      {
+        if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+        {
+          String_unquote(value,STRING_QUOTES);
+          if (!ConfigValue_parse(String_cString(name),
+                                 String_cString(value),
+                                 CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                                 "schedule",
+                                 NULL, // errorOutputHandle,
+                                 NULL, // errorPrefix,
+                                 scheduleNode
+                                )
+             )
+          {
+            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
+                       String_cString(name),
+                       "schedule",
+                       String_cString(jobNode->fileName),
+                       lineNb
+                      );
+          }
+        }
+        else
+        {
+          printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+                     String_cString(jobNode->fileName),
+                     lineNb,
+                     String_cString(line)
+                    );
+        }
+      }
+      File_ungetLine(&fileHandle,line,&lineNb);
+
+      List_append(&jobNode->scheduleList,scheduleNode);
+    }
+    else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
+    {
+      // nothing to do
+    }
+    else if (String_parse(line,STRING_BEGIN,"[end]",NULL))
+    {
+      // nothing to do
+    }
+    else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+    {
+      String_unquote(value,STRING_QUOTES);
+      if (!ConfigValue_parse(String_cString(name),
+                             String_cString(value),
+                             CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                             NULL,
+                             NULL, // errorOutputHandle,
+                             NULL, // errorPrefix,
+                             jobNode
+                            )
+         )
+      {
+        printError("Unknown or invalid config value '%s' in %s, line %ld - skipped\n",
+                   String_cString(name),
+                   String_cString(jobNode->fileName),
+                   lineNb
+                  );
+      }
+    }
+    else
+    {
+      printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+                 String_cString(jobNode->fileName),
+                 lineNb,
+                 String_cString(line)
+                );
+    }
+  }
+  String_delete(value);
+  String_delete(name);
+  String_delete(title);
+  String_delete(line);
+  if (failFlag)
+  {
+    (void)File_close(&fileHandle);
+    return FALSE;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  // save time modified
+  jobNode->timeModified = File_getFileTimeModified(jobNode->fileName);
+
+  // read schedule info
+  (void)readJobScheduleInfo(jobNode);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : rereadAllJobs
+* Purpose: re-read all job files
+* Input  : jobsDirectory - directory with job files
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : update jobList
+\***********************************************************************/
+
+LOCAL Errors rereadAllJobs(const char *jobsDirectory)
+{
+  Errors              error;
+  DirectoryListHandle directoryListHandle;
+  String              fileName;
+  String              baseName;
+  SemaphoreLock       semaphoreLock;
+  JobNode             *jobNode;
+
+  assert(jobsDirectory != NULL);
+
+  // init variables
+  fileName = File_newFileName();
+
+  // add new/update jobs
+  File_setFileNameCString(fileName,jobsDirectory);
+  error = File_openDirectoryList(&directoryListHandle,fileName);
+  if (error != ERROR_NONE)
+  {
+    File_deleteFileName(fileName);
+    return error;
+  }
+  baseName = File_newFileName();
+  while (!File_endOfDirectoryList(&directoryListHandle))
+  {
+    // read directory entry
+    File_readDirectoryList(&directoryListHandle,fileName);
+
+    // get base name
+    File_getFileBaseName(baseName,fileName);
+
+    // check if readable file and not ".*"
+    if (File_isFile(fileName) && File_isReadable(fileName) && !String_startsWithChar(baseName,'.'))
+    {
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      {
+        // find/create job
+        jobNode = jobList.head;
+        while ((jobNode != NULL) && !String_equals(jobNode->name,baseName))
+        {
+          jobNode = jobNode->next;
+        }
+        if (jobNode == NULL)
+        {
+          jobNode = newJob(JOB_TYPE_CREATE,fileName);
+          List_append(&jobList,jobNode);
+        }
+
+        if (   !CHECK_JOB_IS_ACTIVE(jobNode)
+            && (jobNode->timeModified < File_getFileTimeModified(fileName))
+           )
+        {
+          // read job
+          readJob(jobNode);
+        }
+      }
+    }
+  }
+  File_deleteFileName(baseName);
+  File_closeDirectoryList(&directoryListHandle);
+
+  // remove not existing jobs
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    jobNode = jobList.head;
+    while (jobNode != NULL)
+    {
+      if (jobNode->state == JOB_STATE_NONE)
+      {
+        File_setFileNameCString(fileName,jobsDirectory);
+        File_appendFileName(fileName,jobNode->name);
+        if (File_isFile(fileName) && File_isReadable(fileName))
+        {
+          // exists => ok
+          jobNode = jobNode->next;
+        }
+        else
+        {
+          // do not exists => delete job node
+          jobNode = List_removeAndFree(&jobList,jobNode,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
+        }
+      }
+      else
+      {
+        jobNode = jobNode->next;
+      }
+    }
+  }
+
+  // free resources
+  File_deleteFileName(fileName);
+
+  return ERROR_NONE;
 }
 
 /*---------------------------------------------------------------------*/
