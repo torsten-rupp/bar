@@ -474,7 +474,7 @@ bool Password_equals(const Password *password0, const Password *password1)
     #ifdef HAVE_GCRYPT
       return memcmp(password0->data,password1->data,password0->length) == 0;
     #else /* not HAVE_GCRYPT */
-      for (z = 0; z < password->length; z++)
+      for (z = 0; z < password0->length; z++)
       {
         if ((password0->data[z]^obfuscator[z]) != (password1->data[z]^obfuscator[z])) return FALSE;
       }
