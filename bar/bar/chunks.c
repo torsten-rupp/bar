@@ -448,6 +448,7 @@ LOCAL Errors alignChunkBuffer(ChunkBuffer *chunkBuffer, uint alignment)
 
   assert(chunkBuffer != NULL);
 
+  error = ERROR_UNKNOWN;
   switch (chunkBuffer->chunkMode)
   {
     case CHUNK_MODE_READ:
