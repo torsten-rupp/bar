@@ -2110,6 +2110,7 @@ LOCAL void jobThreadCode(void)
 {
   StorageSpecifier storageSpecifier;
   String           storageName;
+  String           uuid;
   EntryList        includeEntryList;
   PatternList      excludePatternList;
   PatternList      deltaSourcePatternList;
@@ -2123,6 +2124,7 @@ LOCAL void jobThreadCode(void)
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
   storageName        = String_new();
+  uuid               = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   PatternList_init(&deltaSourcePatternList);
@@ -2158,6 +2160,7 @@ LOCAL void jobThreadCode(void)
 
     // get copy of mandatory job data
     String_set(storageName,jobNode->archiveName);
+    String_set(uuid,jobNode->uuid);
     EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList,NULL,NULL);
     PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList,NULL,NULL);
     PatternList_clear(&deltaSourcePatternList); PatternList_copy(&jobNode->deltaSourcePatternList,&deltaSourcePatternList,NULL,NULL);
@@ -2219,6 +2222,7 @@ LOCAL void jobThreadCode(void)
 
             // create archive
             jobNode->runningInfo.error = Command_create(storageName,
+                                                        uuid,
                                                         &includeEntryList,
                                                         &excludePatternList,
                                                         &compressExcludePatternList,
@@ -2336,6 +2340,7 @@ LOCAL void jobThreadCode(void)
   EntryList_done(&includeEntryList);
   String_delete(scheduleCustomText);
   String_delete(scheduleTitle);
+  String_delete(uuid);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
 }
@@ -2629,8 +2634,9 @@ LOCAL void indexThreadCode(void)
   while (Index_findByState(indexDatabaseHandle,
                            INDEX_STATE_SET(INDEX_STATE_UPDATE),
                            &storageId,
-                           NULL,
-                           NULL
+                           NULL, // storageName
+                           NULL, // uuid
+                           NULL  // lastCheckedTimestamp
                           )
          && (error == ERROR_NONE)
         )
@@ -2646,7 +2652,8 @@ LOCAL void indexThreadCode(void)
                            INDEX_STATE_SET(INDEX_STATE_CREATE),
                            &storageId,
                            storageName,
-                           NULL
+                           NULL, // uuid
+                           NULL  // lastCheckedTimestamp
                           )
          && (error == ERROR_NONE)
         )
@@ -2760,8 +2767,9 @@ LOCAL void indexThreadCode(void)
     while (Index_findByState(indexDatabaseHandle,
                              INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                              &storageId,
-                             NULL,
-                             NULL
+                             NULL, // storageName
+                             NULL, // uuid
+                             NULL  // lastCheckedTimestamp
                             )
            && (error == ERROR_NONE)
           )
@@ -2804,7 +2812,8 @@ LOCAL void indexThreadCode(void)
                                 INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                                 &storageId,
                                 storageName,
-                                NULL
+                                NULL, // uuid
+                                NULL  // lastCheckedTimestamp
                                )
            && !quitFlag
           )
@@ -3084,6 +3093,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                    storageSpecifier.deviceName,
                                    fileName,
                                    &storageId,
+                                   NULL, // uuid
                                    &indexState,
                                    NULL
                                   )
@@ -3109,6 +3119,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                 // add index
                 error = Index_create(indexDatabaseHandle,
                                      storageName,
+                                     NULL,
                                      INDEX_STATE_UPDATE_REQUESTED,
                                      INDEX_MODE_AUTO,
                                      &storageId
@@ -8118,6 +8129,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
     // create index
     error = Index_create(indexDatabaseHandle,
                          storageName,
+                         NULL, // uuid
                          INDEX_STATE_UPDATE_REQUESTED,
                          INDEX_MODE_MANUAL,
                          &storageId
