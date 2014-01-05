@@ -373,6 +373,12 @@
 /* uuid_generate() available */
 #undef HAVE_UUID_GENERATE
 
+/* uuid_unparse_lower() available */
+#undef HAVE_UUID_UNPARSE_LOWER
+
+/* Define to 1 if you have the <uuid/uuid.h> header file. */
+#undef HAVE_UUID_UUID_H
+
 /* waitpid() available */
 #undef HAVE_WAITPID
 
