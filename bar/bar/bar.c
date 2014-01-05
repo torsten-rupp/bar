@@ -5532,19 +5532,20 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
     // create archive
     error = Command_create(storageName,
+                           NULL, // uuid
                            &includeEntryList,
                            &excludePatternList,
                            &compressExcludePatternList,
                            &jobOptions,
                            ARCHIVE_TYPE_NORMAL,
-                           NULL,
-                           NULL,
+                           NULL, // scheduleTitle
+                           NULL, // scheduleCustomText
                            CALLBACK(inputCryptPassword,NULL),
-                           CALLBACK(NULL,NULL),
-                           CALLBACK(NULL,NULL),
-                           NULL,
-                           NULL,
-                           NULL
+                           CALLBACK(NULL,NULL), // createStatusInfoFunction
+                           CALLBACK(NULL,NULL), // storageRequestVolumeFunction
+                           NULL, // pauseCreateFlag
+                           NULL, // pauseStorageFlag
+                           NULL  // requestedAbortFlag
                           );
   }
   else
@@ -5584,19 +5585,20 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
           // create archive
           error = Command_create(storageName,
+                                 NULL, // uuid
                                  &includeEntryList,
                                  &excludePatternList,
                                  &compressExcludePatternList,
                                  &jobOptions,
                                  ARCHIVE_TYPE_NORMAL,
-                                 NULL,
-                                 NULL,
+                                 NULL, // scheduleTitle
+                                 NULL, // scheduleCustomText
                                  CALLBACK(inputCryptPassword,NULL),
-                                 CALLBACK(NULL,NULL),
-                                 CALLBACK(NULL,NULL),
-                                 NULL,
-                                 NULL,
-                                 NULL
+                                 CALLBACK(NULL,NULL), // createStatusInfoFunction
+                                 CALLBACK(NULL,NULL), // storageRequestVolumeFunction
+                                 NULL, // pauseCreateFlag
+                                 NULL, // pauseStorageFlag
+                                 NULL  // requestedAbortFlag
                                 );
 
           // free resources
