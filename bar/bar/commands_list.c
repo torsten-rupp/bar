@@ -978,8 +978,8 @@ LOCAL void printSpecialInfo(const String     storageName,
 {
   String     cryptString;
   String     line;
-  const char *type;
   const char *template;
+  const char *type;
   TextMacro  textMacros[6];
 
   assert(fileName != NULL);
@@ -989,6 +989,8 @@ LOCAL void printSpecialInfo(const String     storageName,
   line        = String_new();
 
   // format
+  template = NULL;
+  type     = NULL;
   switch (fileSpecialType)
   {
     case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
