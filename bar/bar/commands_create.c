@@ -86,6 +86,7 @@ typedef struct
 typedef struct
 {
   StorageSpecifier            *storageSpecifier;                  // storage specifier structure
+  String                      uuid;                               // unique id to store or NULL
   const EntryList             *includeEntryList;                  // list of included entries
   const PatternList           *excludePatternList;                // list of exclude patterns
   const PatternList           *compressExcludePatternList;        // exclude compression pattern list
@@ -207,6 +208,7 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 * Purpose: initialize create info
 * Input  : createInfo                 - create info variable
 *          storageSpecifier           - storage specifier structure
+*          uuid                       - unique id to store or NULL
 *          includeEntryList           - include entry list
 *          excludePatternList         - exclude pattern list
 *          compressExcludePatternList - exclude compression pattern list
@@ -229,6 +231,7 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 
 LOCAL void initCreateInfo(CreateInfo               *createInfo,
                           StorageSpecifier         *storageSpecifier,
+                          const String             uuid,
                           const EntryList          *includeEntryList,
                           const PatternList        *excludePatternList,
                           const PatternList        *compressExcludePatternList,
@@ -247,6 +250,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
 
   // init variables
   createInfo->storageSpecifier               = storageSpecifier;
+  createInfo->uuid                           = uuid;
   createInfo->includeEntryList               = includeEntryList;
   createInfo->excludePatternList             = excludePatternList;
   createInfo->compressExcludePatternList     = compressExcludePatternList;
@@ -2603,7 +2607,7 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 LOCAL Errors storeArchiveFile(void           *userData,
                               DatabaseHandle *databaseHandle,
                               int64          storageId,
-                              String         fileName,
+                              String         tmpFileName,
                               int            partNumber,
                               bool           lastPartFlag
                              )
@@ -2612,24 +2616,27 @@ LOCAL Errors storeArchiveFile(void           *userData,
   Errors        error;
   FileInfo      fileInfo;
   String        destinationFileName;
+  String        storageName;
+  String        printableStorageName;
   StorageMsg    storageMsg;
   SemaphoreLock semaphoreLock;
 
   assert(createInfo != NULL);
   assert(createInfo->storageSpecifier != NULL);
-  assert(fileName != NULL);
-  assert(!String_isEmpty(fileName));
+  assert(tmpFileName != NULL);
+  assert(!String_isEmpty(tmpFileName));
 
   // get file info
 // TODO replace by getFileSize()
-  error = File_getFileInfo(&fileInfo,fileName);
+  error = File_getFileInfo(&fileInfo,tmpFileName);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
-  // get destination file name
-  destinationFileName = String_new();
+  // get destination file name, storage name, printable storage name
+  destinationFileName  = String_new();
+  storageName          = String_new();
   error = formatArchiveFileName(destinationFileName,
                                 FORMAT_MODE_ARCHIVE_FILE_NAME,
                                 createInfo->storageSpecifier->fileName,
@@ -2642,23 +2649,49 @@ LOCAL Errors storeArchiveFile(void           *userData,
                                );
   if (error != ERROR_NONE)
   {
+    String_delete(storageName);
     String_delete(destinationFileName);
     return error;
+  }
+  String_set(storageName,Storage_getName(createInfo->storageSpecifier,destinationFileName));
+  DEBUG_TESTCODE("storeArchiveFile1") { String_delete(storageName); String_delete(destinationFileName); return DEBUG_TESTCODE_ERROR(); }
+
+  // set database storage name and uuid
+  if (storageMsg.storageId != DATABASE_ID_NONE)
+  {
+    printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,destinationFileName);
+    error = Index_update(indexDatabaseHandle,
+                         storageId,
+                         printableStorageName,
+                         createInfo->uuid,
+                         0LL   // size
+                        );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot update index for storage '%s' (error: %s)!\n",
+                 String_cString(printableStorageName),
+                 Errors_getText(error)
+                );
+      return error;
+    }
+    DEBUG_TESTCODE("storeArchiveFile2") { String_delete(storageName); String_delete(destinationFileName); return DEBUG_TESTCODE_ERROR(); }
   }
 
   // send to storage controller
   storageMsg.databaseHandle      = databaseHandle;
   storageMsg.storageId           = storageId;
-  storageMsg.fileName            = String_duplicate(fileName);
+  storageMsg.fileName            = String_duplicate(tmpFileName);
   storageMsg.fileSize            = fileInfo.size;
   storageMsg.destinationFileName = destinationFileName;
   storageInfoIncrement(createInfo,fileInfo.size);
   if (!MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
   {
     freeStorageMsg(&storageMsg,NULL);
+    String_delete(storageName);
     String_delete(destinationFileName);
     return ERROR_NONE;
   }
+  DEBUG_TESTCODE("storeArchiveFile3") { freeStorageMsg(&storageMsg,NULL); String_delete(destinationFileName); return DEBUG_TESTCODE_ERROR(); }
 
   // update status info
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -2683,6 +2716,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
   }
 
   // free resources
+  String_delete(storageName);
 
   return ERROR_NONE;
 }
@@ -2786,7 +2820,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     }
     DEBUG_TESTCODE("storageThreadCode1") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 
-    // get storage name
+    // get printable storage name
     String_set(storageName,Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.destinationFileName));
 
     // get file info
@@ -2803,46 +2837,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       continue;
     }
     DEBUG_TESTCODE("storageThreadCode2") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
-
-    // set database storage name and state
-    if (storageMsg.storageId != DATABASE_ID_NONE)
-    {
-      error = Index_update(indexDatabaseHandle,
-                           storageMsg.storageId,
-                           storageName,
-                           0LL  // size
-                          );
-      if (error != ERROR_NONE)
-      {
-        printError("Cannot update index for storage '%s' (error: %s)!\n",
-                   String_cString(storageName),
-                   Errors_getText(error)
-                  );
-        createInfo->failError = error;
-
-        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-        continue;
-      }
-      DEBUG_TESTCODE("storageThreadCode3") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
-
-      error = Index_setState(indexDatabaseHandle,
-                             storageMsg.storageId,
-                             INDEX_STATE_OK,
-                             Misc_getCurrentDateTime(),
-                             NULL
-                            );
-      if (error != ERROR_NONE)
-      {
-        printError("Cannot update index for storage '%s' (error: %s)!\n",
-                   String_cString(storageName),
-                   Errors_getText(error)
-                  );
-        createInfo->failError = error;
-
-        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-        continue;
-      }
-    }
 
     // open file to store
     #ifndef NDEBUG
@@ -3008,6 +3002,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       while (Index_getNextStorage(&indexQueryHandle,
                                   &oldStorageId,
                                   oldStorageName,
+                                  NULL, // uuid
                                   NULL, // createdDateTime
                                   NULL, // size
                                   NULL, // indexState,
@@ -3043,7 +3038,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // set database storage size
       error = Index_update(indexDatabaseHandle,
                            storageMsg.storageId,
-                           NULL,  // name
+                           NULL, // storageName
+                           NULL, // uuid
                            fileInfo.size
                           );
       if (error != ERROR_NONE)
@@ -3059,12 +3055,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
       DEBUG_TESTCODE("storageThreadCode9") { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
 
-      // set database state
+      // set database state and time stamp
       error = Index_setState(indexDatabaseHandle,
                              storageMsg.storageId,
-                             INDEX_STATE_OK,
+                             ((createInfo->failError == ERROR_NONE) && !isAborted(createInfo))
+                               ? INDEX_STATE_OK
+                               : INDEX_STATE_ERROR,
                              Misc_getCurrentDateTime(),
-                             NULL
+                             NULL // errorMessage
                             );
       if (error != ERROR_NONE)
       {
@@ -4818,6 +4816,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 /*---------------------------------------------------------------------*/
 
 Errors Command_create(const String                    storageName,
+                      const String                    uuid,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
                       const PatternList               *compressExcludePatternList,
@@ -4887,6 +4886,7 @@ Errors Command_create(const String                    storageName,
   // init threads
   initCreateInfo(&createInfo,
                  &storageSpecifier,
+                 uuid,
                  includeEntryList,
                  excludePatternList,
                  compressExcludePatternList,
