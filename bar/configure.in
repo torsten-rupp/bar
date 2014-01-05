@@ -2134,6 +2134,7 @@ AC_CHECK_HEADERS(\
                  sys/statvfs.h \
                  sys/wait.h \
                  termios.h \
+                 uuid/uuid.h
                 )
 
 # defines, constants, types, variables
@@ -2160,12 +2161,12 @@ case $host_os in
     AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
-    AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid)
+    AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"],,uuid/uuid.h)
     ;;
   mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
     AC_SEARCH_STATIC_LIBRARIES(WSAStartup,wsock32,[STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"],,winsock2.h)
-    AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid)
+    AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"],,uuid/uuid.h)
     ;;
   *)
     AC_ERROR([Unsupported operating system '$host_os'])
@@ -2308,7 +2309,8 @@ AC_CHECK_FUNCTION(iso9660_close,             AC_DEFINE(HAVE_ISO9660_CLOSE,      
 AC_CHECK_FUNCTION(iso9660_ifs_stat_translate,AC_DEFINE(HAVE_ISO9660_IFS_STAT_TRANSLATE,1,[iso9660_ifs_stat_translate() available]))
 AC_CHECK_FUNCTION(iso9660_iso_seek_read,     AC_DEFINE(HAVE_ISO9660_ISO_SEEK_READ,     1,[iso9660_iso_seek_read() available]))
 
-AC_CHECK_FUNCTION(uuid_generate,AC_DEFINE(HAVE_UUID_GENERATE,1,[uuid_generate() available]))
+AC_CHECK_FUNCTION(uuid_generate,     AC_DEFINE(HAVE_UUID_GENERATE,     1,[uuid_generate() available]))
+AC_CHECK_FUNCTION(uuid_unparse_lower,AC_DEFINE(HAVE_UUID_UNPARSE_LOWER,1,[uuid_unparse_lower() available]))
 
 AC_CHECK_FUNCTION(sysconf,  AC_DEFINE(HAVE_SYSCONF,  1,[sysconf() available]))
 AC_CHECK_FUNCTION(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]))

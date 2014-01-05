@@ -10091,6 +10091,7 @@ for ac_header in \
                  sys/statvfs.h \
                  sys/wait.h \
                  termios.h \
+                 uuid/uuid.h
 
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
@@ -10746,11 +10747,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+`echo uuid/uuid.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-`if test -z ""; then echo "extern void uuid_generate();"; fi`
+`if test -z "uuid/uuid.h"; then echo "extern void uuid_generate();"; fi`
                                          return (int)uuid_generate;
 
 
@@ -10781,7 +10782,7 @@ fi
 $as_echo "$ac_cv_search_static_uuid_generate" >&6; }
   ac_result=$ac_cv_search_static_uuid_generate
   if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"
 fi
 
     ;;
@@ -10928,11 +10929,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+`echo uuid/uuid.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-`if test -z ""; then echo "extern void uuid_generate();"; fi`
+`if test -z "uuid/uuid.h"; then echo "extern void uuid_generate();"; fi`
                                          return (int)uuid_generate;
 
 
@@ -10963,7 +10964,7 @@ fi
 $as_echo "$ac_cv_search_static_uuid_generate" >&6; }
   ac_result=$ac_cv_search_static_uuid_generate
   if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"
 fi
 
     ;;
@@ -14717,6 +14718,57 @@ $as_echo "$ac_cv_func_uuid_generate" >&6; }
   if test "$ac_cv_func_uuid_generate" != no; then :
 
 $as_echo "#define HAVE_UUID_GENERATE 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for uuid_unparse_lower" >&5
+$as_echo_n "checking for uuid_unparse_lower... " >&6; }
+if ${ac_cv_func_uuid_unparse_lower+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_uuid_unparse_lower="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void uuid_unparse_lower();"; fi`
+                                         #ifdef uuid_unparse_lower
+                                         #else
+                                           return (int)uuid_unparse_lower;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_uuid_unparse_lower=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_uuid_unparse_lower" >&5
+$as_echo "$ac_cv_func_uuid_unparse_lower" >&6; }
+  if test "$ac_cv_func_uuid_unparse_lower" != no; then :
+
+$as_echo "#define HAVE_UUID_UNPARSE_LOWER 1" >>confdefs.h
 
 elif :; then :
 
