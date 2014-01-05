@@ -208,7 +208,7 @@ bool Index_parseMode(const char *name, IndexModes *indexMode);
 * Purpose: find index by id
 * Input  : databaseHandle - database handle
 *          storageId   - database id of index
-* Output : name                 - name
+* Output : storageName          - storage name
 *          indexState           - index state (can be NULL)
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be NULL)
@@ -218,7 +218,7 @@ bool Index_parseMode(const char *name, IndexModes *indexMode);
 
 bool Index_findById(DatabaseHandle *databaseHandle,
                     int64          storageId,
-                    String         name,
+                    String         storageName,
                     IndexStates    *indexState,
                     uint64         *lastCheckedTimestamp
                    );
@@ -233,6 +233,7 @@ bool Index_findById(DatabaseHandle *databaseHandle,
 *          findDeviceName  - device name to find or NULL
 *          findFileName    - file name to find or NULL
 * Output : storageId            - database id of index
+*          uuid                 - unique id (can be NULL)
 *          indexState           - index state (can be NULL)
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be NULL)
@@ -247,6 +248,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                       const String   findDeviceName,
                       const String   findFileName,
                       int64          *storageId,
+                      String         uuid,
                       IndexStates    *indexState,
                       uint64         *lastCheckedTimestamp
                      );
@@ -257,7 +259,8 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 * Input  : databaseHandle - database handle
 *          indexState     - index state
 * Output : storageId            - database id of index
-*          name                 - index name (can be NULL)
+*          storageName          - storage name (can be NULL)
+*          uuid                 - unique id (can be NULL)
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be NULL)
 * Return : TRUE if index found, FALSE otherwise
@@ -267,7 +270,8 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 bool Index_findByState(DatabaseHandle *databaseHandle,
                        IndexStateSet  indexStateSet,
                        int64          *storageId,
-                       String         name,
+                       String         storageName,
+                       String         uuid,
                        uint64         *lastCheckedTimestamp
                       );
 
@@ -275,7 +279,8 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
 * Name   : Index_create
 * Purpose: create new index
 * Input  : databaseHandle - database handle
-*          name           - storage name
+*          storageName    - storage name
+*          uuid           - unique id
 *          indexState     - index state
 *          indexMode      - index mode
 * Output : storageId - database id of index
@@ -284,7 +289,8 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_create(DatabaseHandle *databaseHandle,
-                    const String   name,
+                    const String   storageName,
+                    const String   uuid,
                     IndexStates    indexState,
                     IndexModes     indexMode,
                     int64          *storageId
@@ -323,7 +329,8 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
 * Purpose: update index name/size
 * Input  : databaseHandle - database handle
 *          storageId      - database id of index
-*          name           - name (can be NULL)
+*          storageName    - storage name (can be NULL)
+*          uuid           - uuid (can be NULL)
 *          size           - size [bytes]
 * Output : -
 * Return : ERROR_NONE or error code
@@ -332,7 +339,8 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
 
 Errors Index_update(DatabaseHandle *databaseHandle,
                     int64          storageId,
-                    String         name,
+                    String         storageName,
+                    String         uuid,
                     uint64         size
                    );
 
@@ -399,7 +407,7 @@ long Index_countState(DatabaseHandle *databaseHandle,
 * Input  : IndexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
-*          hostName         - host naem pattern or NULL
+*          hostName         - host name pattern or NULL
 *          loginName        - login name pattern or NULL
 *          deviceName       - device name pattern or NULL
 *          fileName         - file name pattern or NULL
@@ -424,8 +432,8 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 * Purpose: get next index storage entry
 * Input  : IndexQueryHandle    - index query handle
 * Output : databaseId          - database id of entry
-*          uuid                - unique id (can be NULL)
 *          storageName         - storage name (can be NULL)
+*          uuid                - unique id (can be NULL)
 *          createdDateTime     - date/time stamp [s]
 *          size                - size [bytes]
 *          indexState          - index state (can be NULL)
@@ -438,8 +446,8 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           DatabaseId       *databaseId,
-                          String           uuid,
                           String           storageName,
+                          String           uuid,
                           uint64           *createdDateTime,
                           uint64           *size,
                           IndexStates      *indexState,
@@ -461,7 +469,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            DatabaseHandle   *databaseHandle,
-                           const DatabaseId *storageIds,
+                           const DatabaseId storageIds[],
                            uint             storageIdCount,
                            String           pattern
                           );
@@ -471,7 +479,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 * Purpose: get next file entry
 * Input  : indexQueryHandle - index query handle
 * Output : databaseId     - database id of entry
-*          storageName    - storage name
+*          storageName    - storage name (can be NULL)
 *          fileName       - name
 *          size           - size [bytes]
 *          timeModified   - modified date/time stamp [s]

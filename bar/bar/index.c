@@ -532,7 +532,7 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
 
 bool Index_findById(DatabaseHandle *databaseHandle,
                     int64          storageId,
-                    String         name,
+                    String         storageName,
                     IndexStates    *indexState,
                     uint64         *lastCheckedTimestamp
                    )
@@ -560,7 +560,7 @@ bool Index_findById(DatabaseHandle *databaseHandle,
   }
   result = Database_getNextRow(&databaseQueryHandle,
                                "%S %d %llu",
-                               name,
+                               storageName,
                                indexState,
                                lastCheckedTimestamp
                               );
@@ -576,6 +576,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                       const String   deviceName,
                       const String   fileName,
                       int64          *storageId,
+                      String         uuid,
                       IndexStates    *indexState,
                       uint64         *lastCheckedTimestamp
                      )
@@ -595,6 +596,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                            databaseHandle,
                            "SELECT id, \
                                    name, \
+                                   uuid, \
                                    state, \
                                    STRFTIME('%%s',lastChecked) \
                             FROM storage \
@@ -609,9 +611,10 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
   Storage_initSpecifier(&storageSpecifier);
   foundFlag   = FALSE;
   while (   Database_getNextRow(&databaseQueryHandle,
-                                "%lld %S %d %llu",
+                                "%lld %S %S %d %llu",
                                  storageId,
                                  storageName,
+                                 uuid,
                                  indexState,
                                  lastCheckedTimestamp
                                 )
@@ -690,7 +693,8 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 bool Index_findByState(DatabaseHandle *databaseHandle,
                        IndexStateSet  indexStateSet,
                        int64          *storageId,
-                       String         name,
+                       String         storageName,
+                       String         uuid,
                        uint64         *lastCheckedTimestamp
                       )
 {
@@ -703,7 +707,7 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
   assert(databaseHandle != NULL);
 
   (*storageId) = DATABASE_ID_NONE;
-  if (name != NULL) String_clear(name);
+  if (storageName != NULL) String_clear(storageName);
   if (lastCheckedTimestamp != NULL) (*lastCheckedTimestamp) = 0LL;
 
   indexStateSetString = String_new();
@@ -711,13 +715,12 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
                            databaseHandle,
                            "SELECT id, \
                                    name, \
+                                   uuid, \
                                    STRFTIME('%%s',lastChecked) \
                             FROM storage \
                             WHERE state IN (%S) \
                            ",
-//                            WHERE state=%d
                            getIndexStateSetString(indexStateSetString,indexStateSet)
-//                           indexState
                           );
   if (error != ERROR_NONE)
   {
@@ -726,9 +729,10 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
   }
   String_delete(indexStateSetString);
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%lld %S %llu",
+                               "%lld %S %S %llu",
                                storageId,
-                               name,
+                               storageName,
+                               uuid,
                                lastCheckedTimestamp
                               );
   Database_finalize(&databaseQueryHandle);
@@ -737,7 +741,8 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_create(DatabaseHandle *databaseHandle,
-                    const String   name,
+                    const String   storageName,
+                    String         uuid,
                     IndexStates    indexState,
                     IndexModes     indexMode,
                     int64          *storageId
@@ -754,6 +759,7 @@ Errors Index_create(DatabaseHandle *databaseHandle,
                            "INSERT INTO storage \
                               (\
                                name,\
+                               uuid,\
                                created,\
                                size,\
                                state,\
@@ -763,6 +769,7 @@ Errors Index_create(DatabaseHandle *databaseHandle,
                             VALUES \
                              (\
                               %'S,\
+                              %'S,\
                               DATETIME('now'),\
                               0,\
                               %d,\
@@ -770,7 +777,8 @@ Errors Index_create(DatabaseHandle *databaseHandle,
                               DATETIME('now')\
                              ); \
                            ",
-                           name,
+                           storageName,
+                           uuid,
                            indexState,
                            indexMode
                           );
@@ -905,7 +913,8 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
 
 Errors Index_update(DatabaseHandle *databaseHandle,
                     int64          storageId,
-                    String         name,
+                    String         storageName,
+                    String         uuid,
                     uint64         size
                    )
 {
@@ -913,34 +922,50 @@ Errors Index_update(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
 
-  if (name != NULL)
+  if (storageName != NULL)
   {
     error = Database_execute(databaseHandle,
                              NULL,
                              NULL,
                              "UPDATE storage \
-                              SET name=%'S,\
-                                  size=%ld \
+                              SET name=%'S \
                               WHERE id=%ld;\
                              ",
-                             name,
-                             size,
+                             storageName,
                              storageId
                             );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
-  else
+  if (uuid != NULL)
   {
     error = Database_execute(databaseHandle,
                              NULL,
                              NULL,
                              "UPDATE storage \
-                              SET size=%ld \
+                              SET uuid=%'S \
                               WHERE id=%ld;\
                              ",
-                             size,
+                             uuid,
                              storageId
                             );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
+  error = Database_execute(databaseHandle,
+                           NULL,
+                           NULL,
+                           "UPDATE storage \
+                            SET size=%ld \
+                            WHERE id=%ld;\
+                           ",
+                           size,
+                           storageId
+                          );
   if (error != ERROR_NONE)
   {
     return error;
@@ -1255,7 +1280,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            DatabaseHandle   *databaseHandle,
-                           const DatabaseId *storageIds,
+                           const DatabaseId storageIds[],
                            uint             storageIdCount,
                            String           pattern
                           )
