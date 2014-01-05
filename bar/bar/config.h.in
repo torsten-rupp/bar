@@ -370,6 +370,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* uuid_generate() available */
+#undef HAVE_UUID_GENERATE
+
 /* waitpid() available */
 #undef HAVE_WAITPID
 
