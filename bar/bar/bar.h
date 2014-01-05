@@ -186,13 +186,9 @@ typedef struct
 // server types
 typedef enum
 {
-  SERVER_TYPE_NONE,
-
   SERVER_TYPE_FTP,
   SERVER_TYPE_SSH,
-  SERVER_TYPE_WEBDAV,
-
-  SERVER_TYPE_UNKNOWN
+  SERVER_TYPE_WEBDAV
 } ServerTypes;
 
 // server connection priority
