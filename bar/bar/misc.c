@@ -29,6 +29,9 @@
 #ifdef HAVE_TERMIOS_H
   #include <termios.h>
 #endif /* HAVE_TERMIOS */
+#ifdef HAVE_UUID_UUID_H
+  #include <uuid/uuid.h>
+#endif /* HAVE_UUID_UUID_H */
 #include <errno.h>
 #include <assert.h>
 
@@ -415,34 +418,53 @@ String Misc_getUUID(String string)
 
 const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
 {
-  FILE *file;
-  char *s;
+  #if HAVE_UUID_GENERATE
+    uuid_t uuid;
+    char   *s;
+  #else /* not HAVE_UUID_GENERATE */
+    FILE *file;
+    char *s;
+  #endif /* HAVE_UUID_GENERATE */
 
   assert(buffer != NULL);
   assert(bufferSize > 0);
 
   buffer[0] = '\0';
 
-  // read kernel uuid device
-  file = fopen("/proc/sys/kernel/random/uuid","r");
-  if (file != NULL)
-  {
-    if (fgets(buffer,bufferSize,file) == NULL) { /* ignored */ };
-    fclose(file);
-  }
+  #if HAVE_UUID_GENERATE
+    uuid_generate(uuid);
 
-  // remove trailing white spaces
-  s = buffer;
-  while ((*s) != '\0')
-  {
-    s++;
-  }
-  do
-  {
-    (*s) = '\0';
-    s--;
-  }
-  while ((s >= buffer) && isspace(*s));
+    s = (char*)malloc(36+1);
+    if (s != NULL)
+    {
+      uuid_unparse_lower(uuid,s);
+      strncpy(buffer,s,bufferSize-1);
+      buffer[bufferSize-1] = '\0';
+      free(s);
+    }
+  #else /* not HAVE_UUID_GENERATE */
+
+    file = fopen("/proc/sys/kernel/random/uuid","r");
+    if (file != NULL)
+    {
+      // read kernel uuid device
+      if (fgets(buffer,bufferSize,file) == NULL) { /* ignored */ };
+      fclose(file);
+
+      // remove trailing white spaces
+      s = buffer;
+      while ((*s) != '\0')
+      {
+        s++;
+      }
+      do
+      {
+        (*s) = '\0';
+        s--;
+      }
+      while ((s >= buffer) && isspace(*s));
+    }
+  #endif /* HAVE_UUID_GENERATE */
 
   return buffer;
 }
