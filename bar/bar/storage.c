@@ -8721,7 +8721,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_WEBDAV:
-#warning todo webdav
       #ifdef HAVE_CURL
         if (!storageHandle->jobOptions->dryRunFlag)
         {
