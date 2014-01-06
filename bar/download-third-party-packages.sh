@@ -237,7 +237,7 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [ftplib] [curl] [mxml] [openssl] [libssh2] [gnutls] [libcdio] [breakpad] [pcre] [epm]"
+  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [curl] [mxml] [openssl] [libssh2] [gnutls] [libcdio] [breakpad] [pcre] [epm]"
   $ECHO ""
   $ECHO "Download additional third party packages."
   exit 0
@@ -388,7 +388,8 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  if test $allFlag -eq 1 -o $ftplibFlag -eq 1; then
+  # obsolete
+  if test $ftplibFlag -eq 1; then
     # ftplib 3.1
     (
      if test -n "$destination"; then
