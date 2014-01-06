@@ -1,4 +1,4 @@
-2013-??-?? 0.18
+2014-01-05 0.18
   * added multi-core compression/encryption support!
   * added automatic delete of duplicate index entries when
     server is started
