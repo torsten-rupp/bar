@@ -5737,7 +5737,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->file.chunkFile.info)
-             && (!foundFileEntryFlag || !foundFileDataFlag)
+             && !foundFileDataFlag
              && (error == ERROR_NONE)
             )
       {
@@ -6265,7 +6265,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->image.chunkImage.info)
-             && (!foundImageEntryFlag || !foundImageDataFlag)
+             && !foundImageDataFlag
              && (error == ERROR_NONE)
             )
       {
@@ -6654,7 +6654,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->directory.chunkDirectory.info)
-             && !foundDirectoryEntryFlag
              && (error == ERROR_NONE)
             )
       {
@@ -7027,7 +7026,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->link.chunkLink.info)
-             && !foundLinkEntryFlag
              && (error == ERROR_NONE)
             )
       {
@@ -7553,7 +7551,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->hardLink.chunkHardLink.info)
-             && (!foundHardLinkEntryFlag || !foundHardLinkDataFlag)
+             && !foundHardLinkDataFlag
              && (error == ERROR_NONE)
             )
       {
@@ -7996,7 +7994,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->special.chunkSpecial.info)
-             && !foundSpecialEntryFlag
              && (error == ERROR_NONE)
             )
       {
