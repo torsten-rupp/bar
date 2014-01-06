@@ -1,3 +1,67 @@
+bar (0.18) stable; urgency=low
+  * added multi-core compression/encryption support!
+  * added automatic delete of duplicate index entries when
+    server is started
+  * store and restore extended file attributes (EAs)
+  * fixed create index: do not delete index which is currently
+    updated
+  * added support for crash dump tool Breakpad
+  * upgrade gpg-error 1.10, gcrypt 1.5.0
+  * support cross-compilation Linux -> Windows
+  * replaced FTPLib by curl+c-areas
+  * added support for WebDAV protocol
+  * integrated a scan-node which will scan partiallly broken
+    archives for still readable parts
+  * fix output in verbose/quiet mode
+  * fixed restore: list files when "only newest" is disabled
+  * fixed duplicate archive entries when multiple include options
+    are specified (thanks to Stefan A.)
+  * fixed writing .bid file when no directory is given
+  * barcontrol: fixed duplicate job
+  * barcontrol: added insert/edit/delete keyboard shortcuts
+  * server protocol changes: replaced list of values by value map
+    for easier extension of protocol. Note: you _must_ update
+    both server and clients with this change.
+  * barcontrol: passwords sent to the bar daemon are now RSA
+    encrypted! This makes it much harder to steal plain text
+    passwords even when no TLS encrypted network connection is
+    used.
+  * improved tests: added special testcode to execute error
+    handling code in tests
+  * using gcc to compile is now mandatory (required because of
+    improved error-handlingn with using closure like code)
+  * improved defense against denial-of-service-attack: force
+    delay for clients with multiple authorazation failure
+  * added macros %uuid, %text to storage name template
+  * changed schedule entry in job configuration: use a section.
+    Entries in the old format are still read, but not created
+    anymore.
+  * added custom text to schedule entries
+  * avoid console input in non-interactive mode
+  * added options --[ftp|ssh|webdav]-max-connections
+  * support listing remote directory content
+  * dramatic speed-up when creating archives!
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 05 Jan 2014 00:00:00 +0100
+
+bar (0.17b) stable; urgency=low
+  * fixed parsing of storage specifier (ftp, scp/sftp,
+    cd/dvd/bd): user name
+  * fixed dialog text when password is requested
+  * improved checking host name for ftp/scp/sftp login
+  * fixed lost string resource
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 05 May 2013 00:00:00 +0200
+
+bar (0.17b) stable; urgency=low
+  * fixed parsing of storage specifier (ftp, scp/sftp,
+    cd/dvd/bd): user name
+  * fixed dialog text when password is requested
+  * improved checking host name for ftp/scp/sftp login
+  * fixed lost string resource
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 05 May 2013 00:00:00 +0200
+
 bar (0.17a) stable; urgency=low
   * fixed writing CD/DVD/BD: do not write an empty last medium
   * improved database index

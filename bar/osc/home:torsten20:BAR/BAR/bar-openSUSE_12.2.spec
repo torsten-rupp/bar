@@ -1,7 +1,7 @@
 # norootforbuild
 
 Name:          bar
-Version:       0.17a
+Version:       0.18
 Release:       17.1
 Summary:       Backup ARchiver
 Source:        http://www.kigen.de/projects/bar/bar-%{version}.tar.bz2
@@ -13,9 +13,9 @@ BuildRoot:     %{_tmppath}/build-%{name}-%{version}
 BuildRequires: gcc gcc-c++ glibc-devel make
 BuildRequires: jre >= 1.6.0
 BuildRequires: java-devel >= 1.6.0
-BuildRequires: gnutls
-BuildRequires: openssl
-BuildRequires: openssl-devel
+#BuildRequires: gnutls
+#BuildRequires: openssl
+#BuildRequires: openssl-devel
 BuildRequires: tar
 BuildRequires: unzip
 BuildRequires: patch
@@ -44,9 +44,9 @@ mkdir packages
   ln -s packages/bzip2-1.0.5 bzip2
 )
 (
-  cp %{_sourcedir}/xz-5.0.4.tar.gz packages
-  (cd packages; tar xzf xz-5.0.4.tar.gz)
-  ln -s packages/xz-5.0.4 xz
+  cp %{_sourcedir}/xz-5.0.5.tar.gz packages
+  (cd packages; tar xzf xz-5.0.5.tar.gz)
+  ln -s packages/xz-5.0.5 xz
 )
 (
   cp %{_sourcedir}/xdelta3.0.0.tar.gz packages
@@ -54,18 +54,17 @@ mkdir packages
   ln -s packages/xdelta3.0.0 xdelta3
 )
 (
-  cp %{_sourcedir}/libgpg-error-1.7.tar.bz2 packages
-  cp %{_sourcedir}/libgcrypt-1.4.4.tar.bz2 packages
-  (cd packages; tar xjf libgpg-error-1.7.tar.bz2)
-  (cd packages; tar xjf libgcrypt-1.4.4.tar.bz2)
-  ln -s packages/libgpg-error-1.7 libgpg-error
-  ln -s packages/libgcrypt-1.4.4 libgcrypt
+  cp %{_sourcedir}/libgpg-error-1.10.tar.bz2 packages
+  cp %{_sourcedir}/libgcrypt-1.5.0.tar.bz2 packages
+  (cd packages; tar xjf libgpg-error-1.10.tar.bz2)
+  (cd packages; tar xjf libgcrypt-1.5.0.tar.bz2)
+  ln -s packages/libgpg-error-1.10 libgpg-error
+  ln -s packages/libgcrypt-1.5.0 libgcrypt
 )
 (
-  cp %{_sourcedir}/ftplib-3.1-src.tar.gz packages
-  (cd packages; tar xzf ftplib-3.1-src.tar.gz)
-  (cd packages/ftplib-3.1; patch -p3 < %{_sourcedir}/ftplib-3.1-1.patch)
-  ln -s packages/ftplib-3.1 ftplib
+  cp %{_sourcedir}/openssl-1.0.1c.tar.gz packages
+  (cd packages; tar xzf openssl-1.0.1c.tar.gz)
+  ln -s packages/openssl-1.0.1c openssl
 )
 (
   cp %{_sourcedir}/libssh2-1.4.2.tar.gz packages
