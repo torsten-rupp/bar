@@ -5297,8 +5297,6 @@ Errors Storage_create(StorageHandle *storageHandle,
           storageHandle->ftp.size                   = fileSize;
           storageHandle->ftp.readAheadBuffer.offset = 0LL;
           storageHandle->ftp.readAheadBuffer.length = 0L;
-          storageHandle->ftp.length                 = 0L;
-          storageHandle->ftp.transferedBytes        = 0L;
 
           // connect
           if (!Network_hostExists(storageHandle->storageSpecifier.hostName))
@@ -6100,7 +6098,7 @@ Errors Storage_open(StorageHandle *storageHandle)
           storageHandle->ftp.readAheadBuffer.length = 0L;
 
           // FTP connect
-          if (!Network_hostExists(storageHandle->storageHandle->storageSpecifier.hostName))
+          if (!Network_hostExists(storageHandle->storageSpecifier.hostName))
           {
             return ERROR_HOST_NOT_FOUND;
           }
@@ -6132,15 +6130,15 @@ Errors Storage_open(StorageHandle *storageHandle)
             return error;
           }
           FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,storageHandle->ftp.control);
-          if (FtpDir(String_cString(tmpFileName),String_cString(storageHandle->storageSpecifier->fileName),storageHandle->ftp.control) != 1)
+          if (FtpDir(String_cString(tmpFileName),String_cString(storageHandle->storageSpecifier.fileName),storageHandle->ftp.control) != 1)
           {
             FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,storageHandle->ftp.control);
-            if (FtpDir(String_cString(tmpFileName),String_cString(storageHandle->storageSpecifier->fileName),storageHandle->ftp.control) != 1)
+            if (FtpDir(String_cString(tmpFileName),String_cString(storageHandle->storageSpecifier.fileName),storageHandle->ftp.control) != 1)
             {
               File_delete(tmpFileName,FALSE);
               File_deleteFileName(tmpFileName);
               FtpClose(storageHandle->ftp.control);
-              return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageHandle->storageSpecifier->fileName));
+              return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageHandle->storageSpecifier.fileName));
             }
           }
           error = File_open(&fileHandle,tmpFileName,FILE_OPEN_READ);
@@ -6193,11 +6191,11 @@ Errors Storage_open(StorageHandle *storageHandle)
           if (!foundFlag)
           {
             FtpClose(storageHandle->ftp.control);
-            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageHandle->storageSpecifier->fileName));
+            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageHandle->storageSpecifier.fileName));
           }
 
           // get file size
-          if (FtpSize(String_cString(storageHandle->storageSpecifier->fileName),
+          if (FtpSize(String_cString(storageHandle->storageSpecifier.fileName),
                       &size,
                       FTPLIB_IMAGE,
                       storageHandle->ftp.control
@@ -6211,7 +6209,7 @@ Errors Storage_open(StorageHandle *storageHandle)
 
           // init FTP download: first try non-passive, then passive mode
           FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,storageHandle->ftp.control);
-          if (FtpAccess(String_cString(storageHandle->storageSpecifier->fileName),
+          if (FtpAccess(String_cString(storageHandle->storageSpecifier.fileName),
                         FTPLIB_FILE_READ,
                         FTPLIB_IMAGE,
                         storageHandle->ftp.control,
@@ -6220,7 +6218,7 @@ Errors Storage_open(StorageHandle *storageHandle)
              )
           {
             FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,storageHandle->ftp.control);
-            if (FtpAccess(String_cString(storageHandle->storageSpecifier->fileName),
+            if (FtpAccess(String_cString(storageHandle->storageSpecifier.fileName),
                           FTPLIB_FILE_READ,
                           FTPLIB_IMAGE,
                           storageHandle->ftp.control,
@@ -7704,7 +7702,7 @@ Errors Storage_read(StorageHandle *storageHandle,
                 }
                 if (readBytes <= 0)
                 {
-                  error = ERROR(IO_ERROR,errno);
+                  error = ERROR_(IO_ERROR,errno);
                   break;
                 }
                 n = (ulong)readBytes;
@@ -9574,7 +9572,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           // get FTP server settings
-          getFTPServerSettings(hostName,jobOptions,&ftpServer);
+          getFTPServerSettings(storageSpecifier->hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,ftpServer.loginName);
           if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageSpecifier->hostName))
@@ -9585,7 +9583,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
           // check FTP login, get correct password
           error = ERROR_UNKNOWN;
-          if ((error != ERROR_NONE) && !Password_isEmpty(loginPassword))
+          if ((error != ERROR_NONE) && !Password_isEmpty(storageSpecifier->loginPassword))
           {
             error = checkFTPLogin(storageSpecifier->hostName,
                                   storageSpecifier->hostPort,
@@ -9602,7 +9600,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
                                  );
             if (error == ERROR_NONE)
             {
-              Password_set(loginPassword,ftpServer.password);
+              Password_set(storageSpecifier->loginPassword,ftpServer.password);
             }
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(defaultFTPPassword))
@@ -9629,7 +9627,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
                                    );
               if (error == ERROR_NONE)
               {
-                Password_set(loginPassword,defaultFTPPassword);
+                Password_set(storageSpecifier->loginPassword,defaultFTPPassword);
               }
             }
             else
@@ -9646,7 +9644,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           // FTP connect
-          if (!Network_hostExists(hostName))
+          if (!Network_hostExists(storageSpecifier->hostName))
           {
             error = ERRORX_(HOST_NOT_FOUND,0,String_cString(hostName));
             File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
@@ -9665,7 +9663,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
           // FTP login
           plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
-          if (FtpLogin(String_cString(storageSpecifierloginName),
+          if (FtpLogin(String_cString(storageSpecifier->loginName),
                        plainLoginPassword,
                        control
                       ) != 1
@@ -9683,12 +9681,12 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
           // read directory: first try non-passive, then passive mode
           FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,control);
-          if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(pathName),control) != 1)
+          if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(storageSpecifier->fileName),control) != 1)
           {
             FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,control);
-            if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(pathName),control) != 1)
+            if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(storageSpecifier->fileName),control) != 1)
             {
-              error = ERRORX_(OPEN_DIRECTORY,0,String_cString(pathName));
+              error = ERRORX_(OPEN_DIRECTORY,0,String_cString(storageSpecifier->fileName));
               FtpClose(control);
               File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
               String_delete(storageDirectoryListHandle->ftp.line);
@@ -10214,28 +10212,26 @@ bool Storage_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryList
       #elif defined(HAVE_FTP)
         {
           String line;
+          Errors error;
 
+          // read line
           line = String_new();
-          while (!storageDirectoryListHandle->ftp.entryReadFlag && !StringList_isEmpty(&storageDirectoryListHandle->ftp.lineList))
+          error = File_readLine(&storageDirectoryListHandle->ftp.fileHandle,line);
+          if (error != ERROR_NONE)
           {
-            // read line
-            error = File_readLine(&storageDirectoryListHandle->ftp.fileHandle,line);
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            // parse
-            storageDirectoryListHandle->ftp.entryReadFlag = parseFTPDirectoryLine(line,
-                                                                                  storageDirectoryListHandle->ftp.fileName,
-                                                                                  &storageDirectoryListHandle->ftp.type,
-                                                                                  &storageDirectoryListHandle->ftp.size,
-                                                                                  &storageDirectoryListHandle->ftp.timeModified,
-                                                                                  &storageDirectoryListHandle->ftp.userId,
-                                                                                  &storageDirectoryListHandle->ftp.groupId,
-                                                                                  &storageDirectoryListHandle->ftp.permission
-                                                                                 );
+            break;
           }
+
+          // parse
+          storageDirectoryListHandle->ftp.entryReadFlag = parseFTPDirectoryLine(line,
+                                                                                storageDirectoryListHandle->ftp.fileName,
+                                                                                &storageDirectoryListHandle->ftp.type,
+                                                                                &storageDirectoryListHandle->ftp.size,
+                                                                                &storageDirectoryListHandle->ftp.timeModified,
+                                                                                &storageDirectoryListHandle->ftp.userId,
+                                                                                &storageDirectoryListHandle->ftp.groupId,
+                                                                                &storageDirectoryListHandle->ftp.permission
+                                                                               );
           String_delete(line);
 
           endOfDirectoryFlag = !storageDirectoryListHandle->ftp.entryReadFlag;
@@ -10410,27 +10406,24 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
           if (!storageDirectoryListHandle->ftp.entryReadFlag)
           {
+            // read line
             line = String_new();
-            while (!storageDirectoryListHandle->ftp.entryReadFlag && !StringList_isEmpty(&storageDirectoryListHandle->ftp.lineList))
+            error = File_readLine(&storageDirectoryListHandle->ftp.fileHandle,line);
+            if (error != ERROR_NONE)
             {
-              // read line
-              error = File_readLine(&storageDirectoryListHandle->ftp.fileHandle,line);
-              if (error != ERROR_NONE)
-              {
-                break;
-              }
-
-              // parse
-              storageDirectoryListHandle->ftp.entryReadFlag = parseFTPDirectoryLine(line,
-                                                                                    fileName,
-                                                                                    &storageDirectoryListHandle->ftp.type,
-                                                                                    &storageDirectoryListHandle->ftp.size,
-                                                                                    &storageDirectoryListHandle->ftp.timeModified,
-                                                                                    &storageDirectoryListHandle->ftp.userId,
-                                                                                    &storageDirectoryListHandle->ftp.groupId,
-                                                                                    &storageDirectoryListHandle->ftp.permission
-                                                                                   );
+              break;
             }
+
+            // parse
+            storageDirectoryListHandle->ftp.entryReadFlag = parseFTPDirectoryLine(line,
+                                                                                  fileName,
+                                                                                  &storageDirectoryListHandle->ftp.type,
+                                                                                  &storageDirectoryListHandle->ftp.size,
+                                                                                  &storageDirectoryListHandle->ftp.timeModified,
+                                                                                  &storageDirectoryListHandle->ftp.userId,
+                                                                                  &storageDirectoryListHandle->ftp.groupId,
+                                                                                  &storageDirectoryListHandle->ftp.permission
+                                                                                 );
             String_delete(line);
           }
 

@@ -484,6 +484,7 @@ typedef struct
         String                  pathName;                  // directory name
 
         String                  fileListFileName;
+        String                  line;
         FileHandle              fileHandle;
 
         String                  fileName;                  // last parsed entry
