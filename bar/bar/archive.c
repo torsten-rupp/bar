@@ -927,13 +927,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
       {
         error = archiveInfo->archiveCreatedFunction(archiveInfo->archiveNewFileUserData,
                                                     archiveInfo->databaseHandle,
-                                                    (   (archiveInfo->databaseHandle != NULL)
-                                                     && !archiveInfo->jobOptions->noIndexDatabaseFlag
-                                                     && !archiveInfo->jobOptions->dryRunFlag
-                                                     && !archiveInfo->jobOptions->noStorageFlag
-                                                    )
-                                                      ? archiveInfo->storageId
-                                                      : DATABASE_ID_NONE,
+                                                    archiveInfo->storageId,
                                                     archiveInfo->file.fileName,
                                                     (archiveInfo->jobOptions->archivePartSize > 0LL)
                                                       ? (int)archiveInfo->partNumber
@@ -7468,7 +7462,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
 
-    // init sub-chunks
+    // init hardlink entry/extended attributes/delta/data chunks
     if (error == ERROR_NONE)
     {
       error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,
@@ -7641,6 +7635,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 }
               }
             }
+            break;
           case CHUNK_ID_HARDLINK_DELTA:
             // read hard link delta chunk
             error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,
