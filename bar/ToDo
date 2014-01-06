@@ -88,3 +88,7 @@ ToDo
   http://beets.radbox.org/blog/sqlite-nightmare.html
 - higher thread priority for collector thread?
 - UUID for jobs, max. number of jobs to keep
+- ReedSolomon codes
+- pre/post-process filter for single entries
+- read/write tar-format at stdin/stdout for pipeling
+- signal handler to show internal state on stdout
