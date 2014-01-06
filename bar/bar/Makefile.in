@@ -1051,9 +1051,10 @@ test/data/extended_attribute.dat:
 test/data/sub_dir_extended_attribute:
 	$(INSTALL) -d $(@D)
 	$(RMRF) $@; $(INSTALL) -d $@; $(ATTR) -s foo1 -V test $@ 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" $@ 1>/dev/null
-test/data/hardlink_extended_attribute.dat:
+test/data/hardlinkdata_extended_attribute.dat test/data/hardlink_extended_attribute.dat:
 	$(INSTALL) -d $(@D)
-	($(CD) $(@D); $(RMF) hardlink.dat; $(LN) hardlinkdata.dat $(@F)); $(ATTR) -s foo1 -V test $@ 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" $@ 1>/dev/null
+	$(DD) if=$(DEVICE_RANDOM) of=test/data/hardlinkdata_extended_attribute.dat bs=1 count=1024 2>/dev/null
+	($(CD) $(@D); $(RMF) hardlink_extended_attribute.dat; $(LN) hardlinkdata_extended_attribute.dat hardlink_extended_attribute.dat); $(ATTR) -s foo1 -V test test/data/hardlink_extended_attribute.dat 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" test/data/hardlink_extended_attribute.dat 1>/dev/null
 endif
 test/data/fifo:
 	$(INSTALL) -d $(@D)
