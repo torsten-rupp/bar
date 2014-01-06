@@ -526,7 +526,9 @@ TEST_FILES = \
   test/data/delta2/test.dat
 ifneq ($(ATTR),)
 TEST_FILES += \
-  test/data/extended_attribute.dat
+  test/data/extended_attribute.dat \
+  test/data/sub_dir_extended_attribute \
+  test/data/hardlink_extended_attribute.dat
 endif
 
 # temporary test files
@@ -1012,7 +1014,7 @@ test/data/sub-ignore-dir:
 test/data/linkdata.dat test/data/link.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=test/data/linkdata.dat bs=1 count=1024 2>/dev/null
-	($(CD) test/data; $(RMF) link.dat; $(LN) -s linkdata.dat link.dat)
+	($(CD) $(@D); $(RMF) link.dat; $(LN) -s linkdata.dat link.dat)
 test/data/link-not-existing-file.dat:
 	$(INSTALL) -d $(@D)
 	($(CD) test/data; $(RMF) link-not-existing-file.dat; $(LN) -s not-existing-file link-not-existing-file.dat)
@@ -1023,7 +1025,7 @@ test/data/circular-link.dat.marker:
 test/data/hardlinkdata.dat test/data/hardlink.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=test/data/hardlinkdata.dat bs=1 count=1024 2>/dev/null
-	($(CD) test/data; $(RMF) hardlink.dat; $(LN) hardlinkdata.dat hardlink.dat)
+	($(CD) $(@D); $(RMF) hardlink.dat; $(LN) hardlinkdata.dat hardlink.dat)
 test/data/file400.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 400 $@
@@ -1046,6 +1048,12 @@ ifneq ($(ATTR),)
 test/data/extended_attribute.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(ATTR) -s foo1 -V test $@ 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" $@ 1>/dev/null
+test/data/sub_dir_extended_attribute:
+	$(INSTALL) -d $(@D)
+	$(RMRF) $@; $(INSTALL) -d $@; $(ATTR) -s foo1 -V test $@ 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" $@ 1>/dev/null
+test/data/hardlink_extended_attribute.dat:
+	$(INSTALL) -d $(@D)
+	($(CD) $(@D); $(RMF) hardlink.dat; $(LN) hardlinkdata.dat $(@F)); $(ATTR) -s foo1 -V test $@ 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" $@ 1>/dev/null
 endif
 test/data/fifo:
 	$(INSTALL) -d $(@D)
