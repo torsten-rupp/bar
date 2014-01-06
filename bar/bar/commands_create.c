@@ -2657,7 +2657,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
   DEBUG_TESTCODE("storeArchiveFile1") { String_delete(storageName); String_delete(destinationFileName); return DEBUG_TESTCODE_ERROR(); }
 
   // set database storage name and uuid
-  if (storageMsg.storageId != DATABASE_ID_NONE)
+  if (storageId != DATABASE_ID_NONE)
   {
     printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,destinationFileName);
     error = Index_update(indexDatabaseHandle,
