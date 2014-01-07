@@ -5330,6 +5330,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   Errors        error;
+  String        fileName,pathName,baseName;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -5360,7 +5361,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
       return;
     }
 
-    // delete job file
+    // delete job file, state file
     error = File_delete(jobNode->fileName,FALSE);
     if (error != ERROR_NONE)
     {
@@ -5368,6 +5369,18 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
       Semaphore_unlock(&jobList.lock);
       return;
     }
+
+    // delete job schedule file
+    fileName = File_newFileName();
+    File_splitFileName(jobNode->fileName,&pathName,&baseName);
+    File_setFileName(fileName,pathName);
+    File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
+    File_deleteFileName(baseName);
+    File_deleteFileName(pathName);
+    (void)File_delete(fileName,FALSE);
+    File_deleteFileName(fileName);
+
+    // remove from list
     List_removeAndFree(&jobList,jobNode,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
   }
 
