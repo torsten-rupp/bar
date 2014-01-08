@@ -748,6 +748,53 @@ LOCAL void deleteScheduleNode(ScheduleNode *scheduleNode)
 }
 
 /***********************************************************************\
+* Name   : equalsScheduleNode
+* Purpose: compare schedule nodes if equals
+* Input  : scheduleNode1,scheduleNode2 - schedule nodes
+* Output : -
+* Return : 1 iff scheduleNode1 = scheduleNode2
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleNode *scheduleNode2)
+{
+  assert(scheduleNode1 != NULL);
+  assert(scheduleNode2 != NULL);
+
+  if      (   (scheduleNode1->date.year  != scheduleNode2->date.year )
+           || (scheduleNode1->date.month != scheduleNode2->date.month)
+           || (scheduleNode1->date.day   != scheduleNode2->date.day  )
+          )
+  {
+    return 0;
+  }
+
+  if      (scheduleNode1->weekDays != scheduleNode2->weekDays)
+  {
+    return 0;
+  }
+
+  if      (   (scheduleNode1->time.hour   != scheduleNode2->time.hour )
+           || (scheduleNode1->time.minute != scheduleNode2->time.minute)
+          )
+  {
+    return 0;
+  }
+
+  if      (scheduleNode1->archiveType != scheduleNode2->archiveType)
+  {
+    return 0;
+  }
+
+  if      (!String_equals(scheduleNode1->customText,scheduleNode2->customText))
+  {
+    return 0;
+  }
+
+  return 1;
+}
+
+/***********************************************************************\
 * Name   : getNewJobId
 * Purpose: get new job id
 * Input  : -
@@ -831,7 +878,6 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->runningInfo.name);
 
   String_delete(jobNode->scheduleCustomText);
-  String_delete(jobNode->scheduleTitle);
 
   if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
   if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
@@ -896,7 +942,7 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
   jobNode->id                             = getNewJobId();
   jobNode->state                          = JOB_STATE_NONE;
   jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
-  jobNode->scheduleTitle                  = String_new();
+  jobNode->scheduleTitle                  = NULL;
   jobNode->scheduleCustomText             = String_new();
   jobNode->requestedAbortFlag             = FALSE;
   jobNode->requestedVolumeNumber          = 0;
@@ -966,7 +1012,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->id                             = getNewJobId();
   newJobNode->state                          = JOB_STATE_NONE;
   newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
-  newJobNode->scheduleTitle                  = String_new();
+  newJobNode->scheduleTitle                  = NULL;
   newJobNode->scheduleCustomText             = String_new();
   newJobNode->requestedAbortFlag             = FALSE;
   newJobNode->requestedVolumeNumber          = 0;
@@ -1325,7 +1371,7 @@ LOCAL StringNode *deleteJobSections(StringList *stringList,
     }
 
     // parse and match
-    if (   String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*",NULL,NULL,string,NULL)
+    if (   String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL)
         && String_equalsCString(string,name)
        )
     {
@@ -1589,6 +1635,7 @@ LOCAL bool readJob(JobNode *jobNode)
   assert(jobNode->fileName != NULL);
 
   // reset job values
+  String_clear(jobNode->uuid);
   String_clear(jobNode->archiveName);
   EntryList_clear(&jobNode->includeEntryList);
   PatternList_clear(&jobNode->excludePatternList);
@@ -1689,7 +1736,10 @@ LOCAL bool readJob(JobNode *jobNode)
       }
       File_ungetLine(&fileHandle,line,&lineNb);
 
-      List_append(&jobNode->scheduleList,scheduleNode);
+      if (!List_appendUniq(&jobNode->scheduleList,scheduleNode,CALLBACK((ListNodeEqualsFunction)equalsScheduleNode,scheduleNode)))
+      {
+        deleteScheduleNode(scheduleNode);
+      }
     }
     else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
     {
@@ -1740,6 +1790,13 @@ LOCAL bool readJob(JobNode *jobNode)
 
   // close file
   (void)File_close(&fileHandle);
+
+  // set UUID if not exists
+  if (String_isEmpty(jobNode->uuid))
+  {
+    Misc_getUUID(jobNode->uuid);
+    updateJob(jobNode);
+  }
 
   // save time modified
   jobNode->timeModified = File_getFileTimeModified(jobNode->fileName);
@@ -2447,7 +2504,7 @@ LOCAL void schedulerThreadCode(void)
           // set state
           jobNode->state              = JOB_STATE_WAITING;
           jobNode->archiveType        = executeScheduleNode->archiveType;
-          jobNode->scheduleCustomText = executeScheduleNode->customText;
+          String_set(jobNode->scheduleCustomText,executeScheduleNode->customText);
           jobNode->requestedAbortFlag = FALSE;
           resetJobRunningInfo(jobNode);
         }
