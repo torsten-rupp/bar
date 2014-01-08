@@ -67,11 +67,11 @@ typedef void*(*ListNodeCopyFunction)(const void *fromNode, void *userData);
 * Input  : node     - node to check
 *          userData - user data
 * Output : -
-* Return : -
+* Return : TRUE iff node equals
 * Notes  : -
 \***********************************************************************/
 
-typedef int(*ListNodeEqualsFunction)(const void *node, void *userData);
+typedef bool(*ListNodeEqualsFunction)(const void *node, void *userData);
 
 /***********************************************************************\
 * Name   : ListNodeCompareFunction
@@ -94,6 +94,7 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
   #define List_deleteNode(...) __List_deleteNode(__FILE__,__LINE__,__VA_ARGS__)
   #define List_insert(...) __List_insert(__FILE__,__LINE__,__VA_ARGS__)
   #define List_append(...) __List_append(__FILE__,__LINE__,__VA_ARGS__)
+  #define List_appendUniq(...) __List_appendUniq(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 #define LIST_STATIC_INIT {NULL,NULL}
@@ -461,6 +462,34 @@ void __List_append(const char *fileName,
                    void       *node
                   );
 #endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : List_appendUniq
+* Purpose: append node to end of list if not already in list
+* Input  : list - list
+*          node - node to add
+*
+* Output : -
+* Return : TRUE iff node added
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+bool List_appendUniq(void                   *list,
+                     void                   *node,
+                     ListNodeEqualsFunction listNodeEqualsFunction,
+                     void                   *listNodeEqualsUserData
+                    );
+#else /* not NDEBUG */
+bool __List_appendUniq(const char             *fileName,
+                       ulong                  lineNb,
+                       void                   *list,
+                       void                   *node,
+                       ListNodeEqualsFunction listNodeEqualsFunction,
+                       void                   *listNodeEqualsUserData
+                      );
+#endif /* NDEBUG */
+
 
 /***********************************************************************\
 * Name   : List_remove

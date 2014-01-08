@@ -660,6 +660,54 @@ void __List_append(const char *fileName,
   #endif /* NDEBUG */
 }
 
+#ifdef NDEBUG
+bool List_appendUniq(void                   *list,
+                     void                   *node,
+                     ListNodeEqualsFunction listNodeEqualsFunction,
+                     void                   *listNodeEqualsUserData
+                    )
+#else /* not NDEBUG */
+bool __List_appendUniq(const char             *fileName,
+                       ulong                  lineNb,
+                       void                   *list,
+                       void                   *node,
+                       ListNodeEqualsFunction listNodeEqualsFunction,
+                       void                   *listNodeEqualsUserData
+                      )
+#endif /* NDEBUG */
+{
+  bool existsFlag;
+  Node *existingNode;
+
+  assert(list != NULL);
+  assert(node != NULL);
+  assert(listNodeEqualsFunction != NULL);
+
+  existsFlag = FALSE;
+  LIST_ITERATE((List*)list,existingNode)
+  {
+    if (listNodeEqualsFunction(existingNode,listNodeEqualsUserData))
+    {
+      existsFlag = TRUE;
+      break;
+    }
+  }
+
+  if (!existsFlag)
+  {
+    #ifdef NDEBUG
+      List_append(list,node);
+    #else /* not NDEBUG */
+      __List_append(fileName,lineNb,list,node);
+    #endif /* NDEBUG */
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 void *List_remove(void *list,
                   void *node
                  )
@@ -734,7 +782,7 @@ bool List_contains(const void             *list,
   findNode = ((List*)list)->head;
   while (   (findNode != NULL)
          && (   ((listNodeEqualsFunction == NULL) && (findNode != node))
-             || ((listNodeEqualsFunction != NULL) && (listNodeEqualsFunction(findNode,listNodeEqualsUserData) != 0))
+             || ((listNodeEqualsFunction != NULL) && !listNodeEqualsFunction(findNode,listNodeEqualsUserData))
             )
         )
   {
@@ -755,7 +803,7 @@ const Node *List_findFirst(const void             *list,
   assert(listNodeEqualsFunction != NULL);
 
   node = ((List*)list)->head;
-  while ((node != NULL) && (listNodeEqualsFunction(node,listNodeEqualsUserData) != 0))
+  while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
   {
     node = node->next;
   }
@@ -777,7 +825,7 @@ const Node *List_findNext(const void             *list,
   if (node != NULL)
   {
     node = (((Node*)node))->next;
-    while ((node != NULL) && (listNodeEqualsFunction(node,listNodeEqualsUserData) != 0))
+    while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
     {
       node = (((Node*)node))->next;
     }
