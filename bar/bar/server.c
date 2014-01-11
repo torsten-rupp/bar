@@ -2186,8 +2186,8 @@ LOCAL void jobThreadCode(void)
   PatternList_init(&excludePatternList);
   PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
-  scheduleTitle      = String_new();
-  scheduleCustomText = String_new();
+  scheduleTitle      = NULL;
+  scheduleCustomText = NULL;
 
   while (!quitFlag)
   {
@@ -2223,9 +2223,9 @@ LOCAL void jobThreadCode(void)
     PatternList_clear(&deltaSourcePatternList); PatternList_copy(&jobNode->deltaSourcePatternList,&deltaSourcePatternList,NULL,NULL);
     PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,NULL,NULL);
     initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
-    archiveType = jobNode->archiveType,
-    String_set(scheduleTitle,jobNode->scheduleTitle);
-    String_set(scheduleCustomText,jobNode->scheduleCustomText);
+    archiveType        = jobNode->archiveType,
+    scheduleTitle      = jobNode->scheduleTitle;
+    scheduleCustomText = jobNode->scheduleCustomText;
 
     // unlock (Note: job is now protected by running state)
     Semaphore_unlock(&jobList.lock);
@@ -2395,8 +2395,6 @@ LOCAL void jobThreadCode(void)
   PatternList_done(&deltaSourcePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
-  String_delete(scheduleCustomText);
-  String_delete(scheduleTitle);
   String_delete(uuid);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
