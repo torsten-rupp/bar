@@ -1095,7 +1095,7 @@ LOCAL Errors formatArchiveFileName(String       fileName,
                                    bool         lastPartFlag
                                   )
 {
-  TextMacro textMacros[5];
+  TextMacro textMacros[9];
 
   String    uuid;
   bool      partNumberFlag;
@@ -1103,6 +1103,7 @@ LOCAL Errors formatArchiveFileName(String       fileName,
     struct tm tmBuffer;
   #endif /* HAVE_LOCALTIME_R */
   struct tm *tm;
+  uint      weekNumberU,weekNumberW;
   ulong     i,j;
   char      format[4];
   char      buffer[256];
@@ -1114,15 +1115,40 @@ LOCAL Errors formatArchiveFileName(String       fileName,
 
   // init variables
   uuid = Misc_getUUID(String_new());
+  #ifdef HAVE_LOCALTIME_R
+    tm = localtime_r(&time,&tmBuffer);
+  #else /* not HAVE_LOCALTIME_R */
+    tm = localtime(&time);
+  #endif /* HAVE_LOCALTIME_R */
+  assert(tm != NULL);
+  strftime(buffer,sizeof(buffer)-1,"%U",tm);
+  weekNumberU = (uint)atoi(buffer);
+  strftime(buffer,sizeof(buffer)-1,"%W",tm);
+  weekNumberW = (uint)atoi(buffer);
 
   // expand named macros
   switch (archiveType)
   {
-    case ARCHIVE_TYPE_NORMAL:       TEXT_MACRO_N_CSTRING(textMacros[0],"%type","normal");       break;
-    case ARCHIVE_TYPE_FULL:         TEXT_MACRO_N_CSTRING(textMacros[0],"%type","full");         break;
-    case ARCHIVE_TYPE_INCREMENTAL:  TEXT_MACRO_N_CSTRING(textMacros[0],"%type","incremental");  break;
-    case ARCHIVE_TYPE_DIFFERENTIAL: TEXT_MACRO_N_CSTRING(textMacros[0],"%type","differential"); break;
-    case ARCHIVE_TYPE_UNKNOWN:      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","unknown");      break;
+    case ARCHIVE_TYPE_NORMAL:
+      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","normal");
+      TEXT_MACRO_N_CSTRING(textMacros[0],"%T","N");
+      break;
+    case ARCHIVE_TYPE_FULL:
+      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","full");
+      TEXT_MACRO_N_CSTRING(textMacros[0],"%T","F");
+      break;
+    case ARCHIVE_TYPE_INCREMENTAL:
+      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","incremental");
+      TEXT_MACRO_N_CSTRING(textMacros[0],"%T","I");
+      break;
+    case ARCHIVE_TYPE_DIFFERENTIAL:
+      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","differential");
+      TEXT_MACRO_N_CSTRING(textMacros[0],"%T","D");
+      break;
+    case ARCHIVE_TYPE_UNKNOWN:
+      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","unknown");
+      TEXT_MACRO_N_CSTRING(textMacros[0],"%T","U");
+      break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1136,6 +1162,10 @@ LOCAL Errors formatArchiveFileName(String       fileName,
       TEXT_MACRO_N_CSTRING(textMacros[2],"%uuid", String_cString(uuid));
       TEXT_MACRO_N_CSTRING(textMacros[3],"%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "");
       TEXT_MACRO_N_CSTRING(textMacros[4],"%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "");
+      TEXT_MACRO_N_INTEGER(textMacros[5],"%U2",(weekNumberU%2)+1);
+      TEXT_MACRO_N_INTEGER(textMacros[6],"%U4",(weekNumberU%4)+1);
+      TEXT_MACRO_N_INTEGER(textMacros[7],"%W2",(weekNumberW%2)+1);
+      TEXT_MACRO_N_INTEGER(textMacros[8],"%W4",(weekNumberW%4)+1);
       Misc_expandMacros(fileName,String_cString(templateFileName),textMacros,SIZE_OF_ARRAY(textMacros));
       break;
     case FORMAT_MODE_PATTERN:
@@ -1143,6 +1173,10 @@ LOCAL Errors formatArchiveFileName(String       fileName,
       TEXT_MACRO_N_CSTRING(textMacros[2],"%uuid", "[-0-9a-fA-F]+");
       TEXT_MACRO_N_CSTRING(textMacros[3],"%title","\\S+");
       TEXT_MACRO_N_CSTRING(textMacros[4],"%text", "\\S+");
+      TEXT_MACRO_N_CSTRING(textMacros[5],"%U2","[12]");
+      TEXT_MACRO_N_CSTRING(textMacros[6],"%U4","[1234]");
+      TEXT_MACRO_N_CSTRING(textMacros[7],"%W2","[12]");
+      TEXT_MACRO_N_CSTRING(textMacros[8],"%W4","[1234]");
       break;
     #ifndef NDEBUG
       default:
@@ -1152,13 +1186,7 @@ LOCAL Errors formatArchiveFileName(String       fileName,
   }
   Misc_expandMacros(fileName,String_cString(templateFileName),textMacros,SIZE_OF_ARRAY(textMacros));
 
-  // expand time macros, part number
-  #ifdef HAVE_LOCALTIME_R
-    tm = localtime_r(&time,&tmBuffer);
-  #else /* not HAVE_LOCALTIME_R */
-    tm = localtime(&time);
-  #endif /* HAVE_LOCALTIME_R */
-  assert(tm != NULL);
+  // expand date/time macros, part number
   partNumberFlag = FALSE;
   i = 0L;
   while (i < String_length(fileName))
@@ -1181,12 +1209,12 @@ LOCAL Errors formatArchiveFileName(String       fileName,
               i += 1L;
               break;
             default:
-              // format time part
+              // format date/time part
               switch (String_index(fileName,i+1))
               {
                 case 'E':
                 case 'O':
-                  // %Ex, %Ox
+                  // %Ex, %Ox: extended date/time macros
                   format[0] = '%';
                   format[1] = String_index(fileName,i+1);
                   format[2] = String_index(fileName,i+2);
@@ -1195,7 +1223,7 @@ LOCAL Errors formatArchiveFileName(String       fileName,
                   String_remove(fileName,i,3);
                   break;
                 default:
-                  // %x
+                  // %x: date/time macros
                   format[0] = '%';
                   format[1] = String_index(fileName,i+1);
                   format[2] = '\0';
@@ -1240,7 +1268,7 @@ LOCAL Errors formatArchiveFileName(String       fileName,
         }
         break;
       case '#':
-        // #...
+        // #...#
         switch (formatMode)
         {
           case FORMAT_MODE_ARCHIVE_FILE_NAME:
