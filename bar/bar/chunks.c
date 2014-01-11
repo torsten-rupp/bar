@@ -1284,17 +1284,18 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
                 {
                   ulong size;
 
+                  size = 0L;
                   switch (definition[i+0])
                   {
                     case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY  :
                     case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY :
-                    case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY  : size = 1; break;
+                    case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY  : size = 1L; break;
                     case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-                    case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY : size = 2; break;
+                    case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY : size = 2L; break;
                     case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-                    case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY : size = 4; break;
+                    case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY : size = 4L; break;
                     case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-                    case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY : size = 8; break;
+                    case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY : size = 8L; break;
                   }
 
                   // put array data
