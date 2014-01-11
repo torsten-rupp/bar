@@ -10457,7 +10457,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
-      error = FUNCTION_NOT_SUPPORTED;
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
       HALT_INTERNAL_ERROR("scp does not support directory operations");
@@ -10562,7 +10562,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
         }
       #else /* not HAVE_SSH2 */
-        error = FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_WEBDAV:
