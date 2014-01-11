@@ -74,16 +74,16 @@ LOCAL SourceList sourceList;
 * Input  : storageName    - storage name
 *          storagePattern - storage pattern
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addSourceNodes(const String storageName, const Pattern *storagePattern)
+LOCAL Errors addSourceNodes(const String storageName, const Pattern *storagePattern)
 {
   JobOptions                 jobOptions;
   StorageSpecifier           storageSpecifier;
-  StorageSpecifier           storageDirectorySpecifier;
   Errors                     error;
+  StorageSpecifier           storageDirectorySpecifier;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
   SourceNode                 *sourceNode;
@@ -98,7 +98,7 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
   {
     Storage_doneSpecifier(&storageSpecifier);
     doneJobOptions(&jobOptions);
-    return;
+    return error;
   }
 
   // get path storage specifier
@@ -137,7 +137,6 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
           Storage_duplicateSpecifier(&sourceNode->storageSpecifier,&storageSpecifier);
           String_set(sourceNode->storageSpecifier.fileName,fileName);
           List_append(&sourceList,sourceNode);
-          break;
         }
       }
     }
@@ -145,9 +144,10 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
     Storage_closeDirectoryList(&storageDirectoryListHandle);
   }
 
-  // add file entry if not found in directory
+  // add file entry directly if no matching entry found in directory
   if (sourceNode == NULL)
   {
+    printWarning("No matching entry for delta source '%s' found",String_cString(Storage_getPrintableName(&storageSpecifier,NULL)));
     sourceNode = LIST_NEW_NODE(SourceNode);
     if (sourceNode == NULL)
     {
@@ -162,6 +162,8 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
   Storage_doneSpecifier(&storageDirectorySpecifier);
   Storage_doneSpecifier(&storageSpecifier);
   doneJobOptions(&jobOptions);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -896,12 +898,17 @@ Errors Source_addSource(const String storageName)
 Errors Source_addSourceList(const PatternList *sourcePatternList)
 {
   PatternNode *patternNode;
+  Errors      error;
 
   assert(sourcePatternList != NULL);
 
   PATTERNLIST_ITERATE(sourcePatternList,patternNode)
   {
-    addSourceNodes(patternNode->string,&patternNode->pattern);
+    error = addSourceNodes(patternNode->string,&patternNode->pattern);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
 
   return ERROR_NONE;
