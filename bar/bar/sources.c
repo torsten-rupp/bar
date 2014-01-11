@@ -915,10 +915,10 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
                        )
 {
   bool             restoredFlag;
+  Errors           error;
   FragmentNode     fragmentNode;
   bool             semaphoreLock;
   SourceNode       *sourceNode;
-  Errors           error;
   String           tmpFileName;
   StorageSpecifier storageSpecifier;
   String           localStorageName;
@@ -934,6 +934,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
   sourceHandle->baseOffset  = 0LL;
 
   restoredFlag = FALSE;
+  error        = ERROR_UNKNOWN;
 
   // check if source can be restored from local files given by command option --delta-source
   if (!restoredFlag)
@@ -979,7 +980,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
           {
             if (Archive_isArchiveFile(sourceNode->storageSpecifier.fileName))
             {
-              // restore to temporary file (ignore error)
+              // restore to temporary file
               error = restoreFile(sourceNode->storageSpecifier.fileName,
                                   name,
                                   jobOptions,
@@ -1062,7 +1063,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
                                             );
             if (error == ERROR_NONE)
             {
-              // restore to temporary file (ignore error)
+              // restore to temporary file
               error = restoreFile(localStorageName,
                                   name,
                                   jobOptions,
@@ -1266,7 +1267,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
   }
   else
   {
-    return ERRORX_(DELTA_SOURCE_NOT_FOUND,0,String_cString(sourceStorageName));
+    return (error != ERROR_NONE) ? error : ERRORX_(DELTA_SOURCE_NOT_FOUND,0,String_cString(sourceStorageName));
   }
 }
 
