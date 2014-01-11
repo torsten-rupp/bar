@@ -3117,7 +3117,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
-  // init prootocol specific values
+  // init protocol specific values
   switch (storageHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
