@@ -1259,6 +1259,7 @@ class TabJobs
   private final Image  IMAGE_DEVICE_INCLUDED;
   private final Image  IMAGE_DEVICE_EXCLUDED;
   private final Image  IMAGE_TRASHCAN;
+  private final Image  IMAGE_TOGGLE_MARK;
 
   // date/time format
   private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -1383,6 +1384,7 @@ class TabJobs
     IMAGE_DEVICE_INCLUDED    = Widgets.loadImage(display,"deviceIncluded.png");
     IMAGE_DEVICE_EXCLUDED    = Widgets.loadImage(display,"deviceExcluded.png");
     IMAGE_TRASHCAN           = Widgets.loadImage(display,"trashcan.png");
+    IMAGE_TOGGLE_MARK        = Widgets.loadImage(display,"togglemark.png");
 
     // get cursors
     waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
@@ -2323,6 +2325,7 @@ class TabJobs
             }
           }
         });
+        widgetExcludeList.setToolTipText("List with exclude patterns, right-click for context menu.");
 
         menu = Widgets.newPopupMenu(shell);
         {
@@ -2341,6 +2344,7 @@ class TabJobs
               }
             }
           });
+
           menuItem = Widgets.addMenuItem(menu,"Edit\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
@@ -2390,7 +2394,6 @@ class TabJobs
           });
         }
         widgetExcludeList.setMenu(menu);
-        widgetExcludeList.setToolTipText("List with exclude patterns, right-click for context menu.");
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -6963,11 +6966,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       if (!pattern.equals(""))
       {
         excludeHashSet.add(pattern);
-        Widgets.insertListEntry(widgetExcludeList,
-                                findListIndex(widgetExcludeList,pattern),
-                                pattern,
-                                pattern
-                               );
+        widgetExcludeList.add(pattern,findListIndex(widgetExcludeList,pattern));
       }
     }
   }
@@ -8312,12 +8311,17 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         addDragAndDrop(composite,"%A","full week day name",                            11,1);
         addDragAndDrop(composite,"%u","day of week 1..7",                              12,1);
         addDragAndDrop(composite,"%w","day of week 0..6",                              13,1);
-        addDragAndDrop(composite,"%U","week number 1..52",                             14,1);
-        addDragAndDrop(composite,"%C","century two digits",                            15,1);
-        addDragAndDrop(composite,"%y","year two digits",                               16,1);
-        addDragAndDrop(composite,"%Y","year four digits",                              17,1);
-        addDragAndDrop(composite,"%S","seconds since 1.1.1970 00:00",                  18,1);
-        addDragAndDrop(composite,"%Z","time-zone abbreviation",                        19,1);
+        addDragAndDrop(composite,"%U","week number 00..53",                            14,1);
+        addDragAndDrop(composite,"%U2","week number 1 or 2",                           15,1);
+        addDragAndDrop(composite,"%U4","week number 1, 2, 3, 4",                       16,1);
+        addDragAndDrop(composite,"%W","week number 00..53",                            17,1);
+        addDragAndDrop(composite,"%W2","week number 1 or 2",                           18,1);
+        addDragAndDrop(composite,"%W4","week number 1, 2, 3, 4",                       19,1);
+        addDragAndDrop(composite,"%C","century two digits",                            20,1);
+        addDragAndDrop(composite,"%y","year two digits",                               21,1);
+        addDragAndDrop(composite,"%Y","year four digits",                              22,1);
+        addDragAndDrop(composite,"%S","seconds since 1.1.1970 00:00",                  23,1);
+        addDragAndDrop(composite,"%Z","time-zone abbreviation",                        24,1);
 
         // column 3
         addDragAndDrop(composite,"%%","%",                                             0, 2);
@@ -8673,6 +8677,16 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
               buffer.append("0");
             else if (storageNamePart.string.equals("%U"))
               buffer.append("51");
+            else if (storageNamePart.string.equals("%U2"))
+              buffer.append("1");
+            else if (storageNamePart.string.equals("%U4"))
+              buffer.append("3");
+            else if (storageNamePart.string.equals("%W"))
+              buffer.append("51");
+            else if (storageNamePart.string.equals("%W2"))
+              buffer.append("1");
+            else if (storageNamePart.string.equals("%W4"))
+              buffer.append("3");
             else if (storageNamePart.string.equals("%C"))
               buffer.append("20");
             else if (storageNamePart.string.equals("%y"))
@@ -8942,7 +8956,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
       Widgets.layout(subComposite,0,1,TableLayoutData.WE);
       {
         widgetYear = Widgets.newOptionMenu(subComposite);
-        widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015"});
+        widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020"});
         widgetYear.setText(scheduleData.getYear()); if (widgetYear.getText().equals("")) widgetYear.setText("*");
         if (widgetYear.getText().equals("")) widgetYear.setText("*");
         Widgets.layout(widgetYear,0,0,TableLayoutData.W);
@@ -9001,6 +9015,23 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         Widgets.layout(widgetWeekDays[ScheduleData.SUN],0,6,TableLayoutData.W);
         widgetWeekDays[ScheduleData.SUN].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.SUN));
         widgetWeekDays[ScheduleData.SUN].setToolTipText("Week days to execute job.");
+
+        button = Widgets.newButton(subComposite,IMAGE_TOGGLE_MARK);
+        Widgets.layout(button,0,7,TableLayoutData.W);
+        widgetWeekDays[ScheduleData.SUN].setToolTipText("Toggle week days set.");
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            for (Button button : widgetWeekDays)
+            {
+              button.setSelection(!button.getSelection());
+            }
+          }
+        });
       }
 
       label = Widgets.newLabel(composite,"Time:");
