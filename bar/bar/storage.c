@@ -10457,11 +10457,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
-      #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-      #else /* not HAVE_SSH2 */
-        error = FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
       HALT_INTERNAL_ERROR("scp does not support directory operations");
