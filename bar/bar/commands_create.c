@@ -1171,12 +1171,12 @@ LOCAL Errors formatArchiveFileName(String       fileName,
           switch (String_index(fileName,i+1))
           {
             case '%':
-              // %%
+              // %% -> %
               String_remove(fileName,i,1);
               i += 1L;
               break;
             case '#':
-              // %#
+              // %# -> #
               String_remove(fileName,i,1);
               i += 1L;
               break;
