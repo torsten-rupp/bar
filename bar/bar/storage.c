@@ -3087,6 +3087,10 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   assert(storageSpecifier != NULL);
   assert(jobOptions != NULL);
 
+  #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && !defined(HAVE_SSH2)
+    UNUSED_VARIABLE(serverConnectionPriority);
+  #endif /* !defined(HAVE_CURL) && !defined(HAVE_FTP) && !defined(HAVE_SSH2) */
+
   // initialize variables
   AutoFree_init(&autoFreeList);
   storageHandle->mode                      = STORAGE_MODE_UNKNOWN;
