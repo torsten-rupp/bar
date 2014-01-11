@@ -6292,8 +6292,6 @@ Errors Storage_open(StorageHandle *storageHandle)
           storageHandle->scp.size = (uint64)fileInfo.st_size;
         }
       #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(storageSpecifier);
-
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
@@ -6381,8 +6379,6 @@ Errors Storage_open(StorageHandle *storageHandle)
           storageHandle->sftp.size = sftpAttributes.filesize;
         }
       #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(storageSpecifier);
-
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
@@ -6662,8 +6658,6 @@ Errors Storage_open(StorageHandle *storageHandle)
           }
         }
       #else /* not HAVE_ISO9660 */
-        UNUSED_VARIABLE(storageSpecifier);
-
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_ISO9660 */
       break;
@@ -6671,6 +6665,7 @@ Errors Storage_open(StorageHandle *storageHandle)
       // init variables
 
       // open file
+#warning TODO still not implemented
 #if 0
       error = File_open(&storageHandle->fileSystem.fileHandle,
                         storageHandle->fileSystem.fileName,
