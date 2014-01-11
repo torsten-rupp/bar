@@ -8292,9 +8292,10 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         addDragAndDrop(composite,"####","part number 4 digits",                        7, 0);
 
         addDragAndDrop(composite,"%type","archive type: full,incremental,differential",9, 0);
-        addDragAndDrop(composite,"%last","'-last' if last archive part",               10,0);
-        addDragAndDrop(composite,"%uuid","universally unique identifier",              11,0);
-        addDragAndDrop(composite,"%text","schedule custom text",                       12,0);
+        addDragAndDrop(composite,"%T","archive type short: F, I, D",                   10,0);
+        addDragAndDrop(composite,"%last","'-last' if last archive part",               11,0);
+        addDragAndDrop(composite,"%uuid","universally unique identifier",              12,0);
+        addDragAndDrop(composite,"%text","schedule custom text",                       13,0);
 
         // column 2
         addDragAndDrop(composite,"%d","day 01..31",                                    0, 1);
@@ -8641,6 +8642,8 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
             }
             else if (storageNamePart.string.equals("%type"))
               buffer.append("full");
+            else if (storageNamePart.string.equals("%T"))
+              buffer.append("F");
             else if (storageNamePart.string.equals("%last"))
               buffer.append("-last");
             else if (storageNamePart.string.equals("%uuid"))
