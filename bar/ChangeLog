@@ -1,5 +1,6 @@
 2014-01-05 0.18
   * added multi-core compression/encryption support!
+  * dramatic speed-up when creating archives!
   * added automatic delete of duplicate index entries when
     server is started
   * store and restore extended file attributes (EAs)
@@ -40,7 +41,8 @@
   * avoid console input in non-interactive mode
   * added options --[ftp|ssh|webdav]-max-connections
   * support listing remote directory content
-  * dramatic speed-up when creating archives!
+  * barcontrol: added time macros %U2, %U4, %W, %W2 and %W4,
+    added macros %T, %uuid, %text
 
 2013-05-05 0.17b
   * fixed parsing of storage specifier (ftp, scp/sftp,
