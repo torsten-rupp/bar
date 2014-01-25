@@ -1,4 +1,4 @@
-2014-01-05 0.18
+2014-01-18 0.18
   * added multi-core compression/encryption support!
   * dramatic speed-up when creating archives!
   * added automatic delete of duplicate index entries when
@@ -7,11 +7,11 @@
   * fixed create index: do not delete index which is currently
     updated
   * added support for crash dump tool Breakpad
-  * upgrade gpg-error 1.10, gcrypt 1.5.0
-  * support cross-compilation Linux -> Windows
+  * upgrade gpg-error 1.10, gcrypt 1.5.0, gnutls 3.1.18
+  * start support cross-compilation Linux -> Windows
   * replaced FTPLib by curl+c-areas
   * added support for WebDAV protocol
-  * integrated a scan-node which will scan partiallly broken
+  * integrated a scan-mode which will scan partially broken
     archives for still readable parts
   * fix output in verbose/quiet mode
   * fixed restore: list files when "only newest" is disabled
