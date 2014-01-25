@@ -2168,60 +2168,64 @@ Errors Crypt_getDecryptKey(CryptKey   *privateKey,
 #ifndef NDEBUG
 void Crypt_dumpKey(const CryptKey *cryptKey)
 {
-  gcry_sexp_t   sexpToken;
-  gcry_sexp_t   rsaToken;
-  gcry_sexp_t   nToken,eToken;
-  gcry_mpi_t    n,e;
-  gcry_sexp_t   dToken,pToken,qToken,uToken;
-  gcry_mpi_t    d,p,q,u;
-  unsigned char *s;
+  #ifdef HAVE_GCRYPT
+    gcry_sexp_t   sexpToken;
+    gcry_sexp_t   rsaToken;
+    gcry_sexp_t   nToken,eToken;
+    gcry_mpi_t    n,e;
+    gcry_sexp_t   dToken,pToken,qToken,uToken;
+    gcry_mpi_t    d,p,q,u;
+    unsigned char *s;
+  #endif /* HAVE_GCRYPT */
 
+  assert(cryptKey != NULL);
 //gcry_sexp_dump(cryptKey->key);
 
-  sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
-  if (sexpToken != NULL)
-  {
-    printf("Public key:\n");
+  #ifdef HAVE_GCRYPT
+    sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
+    if (sexpToken != NULL)
+    {
+      printf("Public key:\n");
 
-    rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
-    nToken   = gcry_sexp_find_token(rsaToken,"n",0);
-    eToken   = gcry_sexp_find_token(rsaToken,"e",0);
+      rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
+      nToken   = gcry_sexp_find_token(rsaToken,"n",0);
+      eToken   = gcry_sexp_find_token(rsaToken,"e",0);
 //fprintf(stderr,"%s, %d: rsa\n",__FILE__,__LINE__); gcry_sexp_dump(rsaToken);
 //fprintf(stderr,"%s, %d: nToken\n",__FILE__,__LINE__); gcry_sexp_dump(nToken);
 //fprintf(stderr,"%s, %d: eToken\n",__FILE__,__LINE__); gcry_sexp_dump(eToken);
 
-    n = gcry_sexp_nth_mpi(nToken,1,GCRYMPI_FMT_USG);
-    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,n);
-    printf("  n=%s\n",s);
-    free(s);
+      n = gcry_sexp_nth_mpi(nToken,1,GCRYMPI_FMT_USG);
+      gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,n);
+      printf("  n=%s\n",s);
+      free(s);
 
-    e = gcry_sexp_nth_mpi(eToken,1,GCRYMPI_FMT_USG);
-    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,e);
-    printf("  e=%s\n",s);
-    free(s);
+      e = gcry_sexp_nth_mpi(eToken,1,GCRYMPI_FMT_USG);
+      gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,e);
+      printf("  e=%s\n",s);
+      free(s);
 
-    gcry_mpi_release(e);
-    gcry_mpi_release(n);
+      gcry_mpi_release(e);
+      gcry_mpi_release(n);
 
-    gcry_sexp_release(eToken);
-    gcry_sexp_release(nToken);
+      gcry_sexp_release(eToken);
+      gcry_sexp_release(nToken);
 
-    gcry_sexp_release(rsaToken);
-    gcry_sexp_release(sexpToken);
-  }
+      gcry_sexp_release(rsaToken);
+      gcry_sexp_release(sexpToken);
+    }
 
-  sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
-  if (sexpToken != NULL)
-  {
-    printf("Private key:\n");
+    sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
+    if (sexpToken != NULL)
+    {
+      printf("Private key:\n");
 
-    rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
-    nToken   = gcry_sexp_find_token(rsaToken,"n",0);
-    eToken   = gcry_sexp_find_token(rsaToken,"e",0);
-    dToken   = gcry_sexp_find_token(rsaToken,"d",0);
-    pToken   = gcry_sexp_find_token(rsaToken,"p",0);
-    qToken   = gcry_sexp_find_token(rsaToken,"q",0);
-    uToken   = gcry_sexp_find_token(rsaToken,"u",0);
+      rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
+      nToken   = gcry_sexp_find_token(rsaToken,"n",0);
+      eToken   = gcry_sexp_find_token(rsaToken,"e",0);
+      dToken   = gcry_sexp_find_token(rsaToken,"d",0);
+      pToken   = gcry_sexp_find_token(rsaToken,"p",0);
+      qToken   = gcry_sexp_find_token(rsaToken,"q",0);
+      uToken   = gcry_sexp_find_token(rsaToken,"u",0);
 //fprintf(stderr,"%s, %d: rsa\n",__FILE__,__LINE__); gcry_sexp_dump(rsaToken);
 //fprintf(stderr,"%s, %d: nToken\n",__FILE__,__LINE__); gcry_sexp_dump(nToken);
 //fprintf(stderr,"%s, %d: eToken\n",__FILE__,__LINE__); gcry_sexp_dump(eToken);
@@ -2230,48 +2234,51 @@ void Crypt_dumpKey(const CryptKey *cryptKey)
 //fprintf(stderr,"%s, %d: qToken\n",__FILE__,__LINE__); gcry_sexp_dump(qToken);
 //fprintf(stderr,"%s, %d: uToken\n",__FILE__,__LINE__); gcry_sexp_dump(uToken);
 
-    n = gcry_sexp_nth_mpi(nToken,1,GCRYMPI_FMT_USG);
-    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,n);
-    printf("  n=%s\n",s);
-    free(s);
-    e = gcry_sexp_nth_mpi(eToken,1,GCRYMPI_FMT_USG);
-    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,e);
-    printf("  e=%s\n",s);
-    free(s);
-    d = gcry_sexp_nth_mpi(dToken,1,GCRYMPI_FMT_USG);
-    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,d);
-    printf("  d=%s\n",s);
-    free(s);
-    p = gcry_sexp_nth_mpi(pToken,1,GCRYMPI_FMT_USG);
-    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,p);
-    printf("  p=%s\n",s);
-    free(s);
-    q = gcry_sexp_nth_mpi(qToken,1,GCRYMPI_FMT_USG);
-    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,q);
-    printf("  q=%s\n",s);
-    free(s);
-    u = gcry_sexp_nth_mpi(uToken,1,GCRYMPI_FMT_USG);
-    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,u);
-    printf("  u=%s\n",s);
-    free(s);
+      n = gcry_sexp_nth_mpi(nToken,1,GCRYMPI_FMT_USG);
+      gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,n);
+      printf("  n=%s\n",s);
+      free(s);
+      e = gcry_sexp_nth_mpi(eToken,1,GCRYMPI_FMT_USG);
+      gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,e);
+      printf("  e=%s\n",s);
+      free(s);
+      d = gcry_sexp_nth_mpi(dToken,1,GCRYMPI_FMT_USG);
+      gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,d);
+      printf("  d=%s\n",s);
+      free(s);
+      p = gcry_sexp_nth_mpi(pToken,1,GCRYMPI_FMT_USG);
+      gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,p);
+      printf("  p=%s\n",s);
+      free(s);
+      q = gcry_sexp_nth_mpi(qToken,1,GCRYMPI_FMT_USG);
+      gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,q);
+      printf("  q=%s\n",s);
+      free(s);
+      u = gcry_sexp_nth_mpi(uToken,1,GCRYMPI_FMT_USG);
+      gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,u);
+      printf("  u=%s\n",s);
+      free(s);
 
-    gcry_mpi_release(u);
-    gcry_mpi_release(q);
-    gcry_mpi_release(p);
-    gcry_mpi_release(d);
-    gcry_mpi_release(e);
-    gcry_mpi_release(n);
+      gcry_mpi_release(u);
+      gcry_mpi_release(q);
+      gcry_mpi_release(p);
+      gcry_mpi_release(d);
+      gcry_mpi_release(e);
+      gcry_mpi_release(n);
 
-    gcry_sexp_release(uToken);
-    gcry_sexp_release(qToken);
-    gcry_sexp_release(pToken);
-    gcry_sexp_release(dToken);
-    gcry_sexp_release(eToken);
-    gcry_sexp_release(nToken);
+      gcry_sexp_release(uToken);
+      gcry_sexp_release(qToken);
+      gcry_sexp_release(pToken);
+      gcry_sexp_release(dToken);
+      gcry_sexp_release(eToken);
+      gcry_sexp_release(nToken);
 
-    gcry_sexp_release(rsaToken);
-    gcry_sexp_release(sexpToken);
-  }
+      gcry_sexp_release(rsaToken);
+      gcry_sexp_release(sexpToken);
+    }
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptKey);
+  #endif /* HAVE_GCRYPT */
 }
 #endif /* NDEBUG */
 
