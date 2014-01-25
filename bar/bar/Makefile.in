@@ -505,12 +505,12 @@ TEST_FILES = \
   test/data/readonly512k.dat \
   test/data/unreadable.dat \
   test/data/smallfile.dat \
-  test/data/sub-dir \
-  test/data/sub-ignore-dir \
+  test/data/sub_dir \
+  test/data/sub_ignore_dir \
   test/data/linkdata.dat \
   test/data/link.dat \
-  test/data/link-not-existing-file.dat \
-  test/data/circular-link.dat.marker \
+  test/data/link_not_existing_file.dat \
+  test/data/circular_link.dat.marker \
   test/data/hardlinkdata.dat \
   test/data/hardlink.dat \
   test/data/file400.dat \
@@ -1004,10 +1004,10 @@ test/data/unreadable.dat:
 test/data/smallfile.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1 count=128 2>/dev/null
-test/data/sub-dir:
+test/data/sub_dir:
 	$(INSTALL) -d $(@D)
 	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World > $@/test.dat
-test/data/sub-ignore-dir:
+test/data/sub_ignore_dir:
 	$(INSTALL) -d $(@D)
 	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World > $@/test.dat
 	touch $@/.nobackup
@@ -1015,12 +1015,12 @@ test/data/linkdata.dat test/data/link.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=test/data/linkdata.dat bs=1 count=1024 2>/dev/null
 	($(CD) $(@D); $(RMF) link.dat; $(LN) -s linkdata.dat link.dat)
-test/data/link-not-existing-file.dat:
+test/data/link_not_existing_file.dat:
 	$(INSTALL) -d $(@D)
-	($(CD) test/data; $(RMF) link-not-existing-file.dat; $(LN) -s not-existing-file link-not-existing-file.dat)
-test/data/circular-link.dat.marker:
+	($(CD) test/data; $(RMF) link_not_existing_file.dat; $(LN) -s not-existing-file link_not_existing_file.dat)
+test/data/circular_link.dat.marker:
 	$(INSTALL) -d $(@D)
-	($(CD) test/data; $(LN) -s circular-link.dat circular-link.dat)
+	($(CD) test/data; $(LN) -s circular_link.dat circular_link.dat)
 	touch $@
 test/data/hardlinkdata.dat test/data/hardlink.dat:
 	$(INSTALL) -d $(@D)
@@ -1104,7 +1104,7 @@ test_file_operations_base: \
 	SSH_ASKPASS= $(TEST_BAR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
-	$(DIFF) -r -x unreadable.dat -x link-not-existing-file.dat -x circular-link.dat -x circular-link.dat.marker -x fifo -x sub-ignore-dir -x nodump.dat test/data test/restore/test/data
+	$(DIFF) -r -x unreadable.dat -x link_not_existing_file.dat -x circular_link.dat -x circular_link.dat.marker -x fifo -x sub_ignore_dir -x nodump.dat test/data test/restore/test/data
 	$(READLINK) test/restore/test/data/link.dat 2>/dev/null $(if $(QUIET),1>/dev/null)
 	test `$(STAT) --format "%a" test/restore/test/data/file400.dat 2>/dev/null` = "400" $(if $(QUIET),1>/dev/null)
 	test `$(STAT) --format "%a" test/restore/test/data/file640.dat 2>/dev/null` = "640" $(if $(QUIET),1>/dev/null)
