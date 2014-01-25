@@ -315,7 +315,7 @@ LOCAL Errors restoreFile(const String                    storageName,
   {
     printError("Cannot initialize storage '%s' (error: %s)\n",
                String_cString(storageName),
-               Errors_getText(error)
+               Error_getText(error)
               );
     Storage_doneSpecifier(&storageSpecifier);
     return error;
@@ -334,7 +334,7 @@ LOCAL Errors restoreFile(const String                    storageName,
   {
     printError("Cannot initialize storage '%s' (error: %s)!\n",
                String_cString(storageName),
-               Errors_getText(error)
+               Error_getText(error)
               );
     Storage_doneSpecifier(&storageSpecifier);
     return error;
@@ -422,7 +422,7 @@ LOCAL Errors restoreFile(const String                    storageName,
             {
               printError("Cannot create/write to file '%s' (error: %s)\n",
                          String_cString(destinationFileName),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
@@ -436,7 +436,7 @@ LOCAL Errors restoreFile(const String                    storageName,
             {
               printError("Cannot write file '%s' (error: %s)\n",
                          String_cString(destinationFileName),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               File_close(&fileHandle);
               Archive_closeEntry(&archiveEntryInfo);
@@ -473,7 +473,7 @@ LOCAL Errors restoreFile(const String                    storageName,
               {
                 printError("Cannot write file '%s' (error: %s)\n",
                            String_cString(destinationFileName),
-                           Errors_getText(error)
+                           Error_getText(error)
                           );
                 failError = error;
                 break;
@@ -568,7 +568,7 @@ LOCAL Errors restoreFile(const String                    storageName,
             {
               printError("Cannot create/write to file '%s' (error: %s)\n",
                          String_cString(destinationFileName),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               Archive_closeEntry(&archiveEntryInfo);
               String_delete(imageName);
@@ -582,7 +582,7 @@ LOCAL Errors restoreFile(const String                    storageName,
             {
               printError("Cannot write file '%s' (error: %s)\n",
                          String_cString(destinationFileName),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               File_close(&fileHandle);
               Archive_closeEntry(&archiveEntryInfo);
@@ -619,7 +619,7 @@ LOCAL Errors restoreFile(const String                    storageName,
               {
                 printError("Cannot write file '%s' (error: %s)\n",
                            String_cString(destinationFileName),
-                           Errors_getText(error)
+                           Error_getText(error)
                           );
                 failError = error;
                 break;
@@ -695,7 +695,7 @@ LOCAL Errors restoreFile(const String                    storageName,
             {
               printError("Cannot create/write to file '%s' (error: %s)\n",
                          String_cString(destinationFileName),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               Archive_closeEntry(&archiveEntryInfo);
               StringList_done(&fileNameList);
@@ -709,7 +709,7 @@ LOCAL Errors restoreFile(const String                    storageName,
             {
               printError("Cannot write file '%s' (error: %s)\n",
                          String_cString(destinationFileName),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               File_close(&fileHandle);
               Archive_closeEntry(&archiveEntryInfo);
@@ -746,7 +746,7 @@ LOCAL Errors restoreFile(const String                    storageName,
               {
                 printError("Cannot write file '%s' (error: %s)\n",
                            String_cString(destinationFileName),
-                           Errors_getText(error)
+                           Error_getText(error)
                           );
                 failError = error;
                 break;

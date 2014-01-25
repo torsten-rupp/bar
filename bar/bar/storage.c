@@ -4785,7 +4785,7 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
                 }
                 else
                 {
-                  printInfo(0,"FAIL (error: %s)\n",Errors_getText(error));
+                  printInfo(0,"FAIL (error: %s)\n",Error_getText(error));
                   if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
                   {
                     retryFlag = Misc_getYesNo("Retry write image to medium?");

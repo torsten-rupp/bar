@@ -1568,7 +1568,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
     logMessage(LOG_TYPE_WARNING,
                "cannot set file permissions of job '%s' (error: %s)\n",
                String_cString(jobNode->fileName),
-               Errors_getText(error)
+               Error_getText(error)
               );
   }
 
@@ -2301,7 +2301,7 @@ LOCAL void jobThreadCode(void)
                          "Done job '%s': '%s' (error: %s)\n",
                          String_cString(jobNode->name),
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(jobNode->runningInfo.error)
+                         Error_getText(jobNode->runningInfo.error)
                         );
             }
             else
@@ -2338,7 +2338,7 @@ LOCAL void jobThreadCode(void)
             logMessage(LOG_TYPE_ALWAYS,
                        "Done restore archive '%s' (error: %s)\n",
                        Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                       Errors_getText(jobNode->runningInfo.error)
+                       Error_getText(jobNode->runningInfo.error)
                       );
             break;
           #ifndef NDEBUG
@@ -2356,7 +2356,7 @@ LOCAL void jobThreadCode(void)
                  "Aborted job '%s': invalid storage '%s' (error: %s)\n",
                  String_cString(jobNode->name),
                  Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                 Errors_getText(jobNode->runningInfo.error)
+                 Error_getText(jobNode->runningInfo.error)
                 );
     }
 
@@ -2926,7 +2926,7 @@ LOCAL void indexThreadCode(void)
 
           // stop if done or quit or interrupted
           if (   (error == ERROR_NONE)
-              || (Errors_getCode(error) == ERROR_INTERRUPTED)
+              || (Error_getCode(error) == ERROR_INTERRUPTED)
               || quitFlag
              )
           {
@@ -2960,13 +2960,13 @@ LOCAL void indexThreadCode(void)
                       String_cString(printableStorageName)
                      );
         }
-        else if (Errors_getCode(error) == ERROR_INTERRUPTED)
+        else if (Error_getCode(error) == ERROR_INTERRUPTED)
         {
           plogMessage(LOG_TYPE_INDEX,
                       "INDEX",
                       "Interrupted create index for '%s' - postpone\n",
                       String_cString(printableStorageName),
-                      Errors_getText(error)
+                      Error_getText(error)
                      );
         }
         else
@@ -2975,7 +2975,7 @@ LOCAL void indexThreadCode(void)
                       "INDEX",
                       "Cannot create index for '%s' (error: %s)\n",
                       String_cString(printableStorageName),
-                      Errors_getText(error)
+                      Error_getText(error)
                      );
         }
       }
@@ -3339,7 +3339,7 @@ LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, 
 
   result = String_new();
 
-  String_format(result,"%d %d %d ",id,completeFlag ? 1 : 0,Errors_getCode(errorCode));
+  String_format(result,"%d %d %d ",id,completeFlag ? 1 : 0,Error_getCode(errorCode));
   va_start(arguments,format);
   String_vformat(result,format,arguments);
   va_end(arguments);
@@ -3903,7 +3903,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String
   // format result
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
                    "error=%'s",
-                   Errors_getText(error)
+                   Error_getText(error)
                   );
 }
 
@@ -4387,7 +4387,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
   error = Device_openDeviceList(&deviceListHandle);
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"cannot open device list: %s",Errors_getText(error));
+    sendClientResult(clientInfo,id,TRUE,error,"cannot open device list: %s",Error_getText(error));
     return;
   }
 
@@ -4399,7 +4399,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
     error = Device_readDeviceList(&deviceListHandle,deviceName);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,error,"cannot read device list: %s",Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,error,"cannot read device list: %s",Error_getText(error));
       Device_closeDeviceList(&deviceListHandle);
       String_delete(deviceName);
       return;
@@ -4409,7 +4409,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
     error = Device_getDeviceInfo(&deviceInfo,deviceName);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,error,"cannot read device info: %s",Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,error,"cannot read device info: %s",Error_getText(error));
       Device_closeDeviceList(&deviceListHandle);
       String_delete(deviceName);
       return;
@@ -4498,7 +4498,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
                                    );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"open storage directory fail: %s",Errors_getText(error));
+    sendClientResult(clientInfo,id,TRUE,error,"open storage directory fail: %s",Error_getText(error));
     Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageDirectory);
     return;
@@ -4595,7 +4595,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "fileType=UNKNOWN error=%'s",
-                       Errors_getText(error)
+                       Error_getText(error)
                       );
     }
   }
@@ -5133,7 +5133,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
     if (error != ERROR_NONE)
     {
       File_deleteFileName(fileName);
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Error_getText(error));
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -5242,7 +5242,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringM
     if (error != ERROR_NONE)
     {
       File_deleteFileName(fileName);
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Error_getText(error));
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -5345,7 +5345,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
     if (error != ERROR_NONE)
     {
       File_deleteFileName(fileName);
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error renaming job #%d: %s",jobId,Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error renaming job #%d: %s",jobId,Error_getText(error));
       Semaphore_unlock(&jobList.lock);
       String_delete(newName);
       return;
@@ -5420,7 +5420,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
     error = File_delete(jobNode->fileName,FALSE);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error deleting job #%d: %s",jobId,Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error deleting job #%d: %s",jobId,Error_getText(error));
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -7195,7 +7195,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
+    sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
     String_delete(storageName);
     return;
   }
@@ -7211,7 +7211,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                       );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
+    sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
     String_delete(storageName);
     return;
   }
@@ -7226,7 +7226,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   if (error != ERROR_NONE)
   {
     Storage_doneSpecifier(&storageSpecifier);
-    sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
+    sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
     String_delete(storageName);
     return;
   }
@@ -7279,7 +7279,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                          );
             if (error != ERROR_NONE)
             {
-              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Errors_getText(error));
+              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
               String_delete(deltaSourceName);
               String_delete(fileName);
               break;
@@ -7343,7 +7343,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                           );
             if (error != ERROR_NONE)
             {
-              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Errors_getText(error));
+              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
               String_delete(deltaSourceName);
               String_delete(imageName);
               break;
@@ -7396,7 +7396,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                               );
             if (error != ERROR_NONE)
             {
-              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Errors_getText(error));
+              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
               String_delete(directoryName);
               break;
             }
@@ -7441,7 +7441,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                          );
             if (error != ERROR_NONE)
             {
-              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Errors_getText(error));
+              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
               String_delete(name);
               String_delete(linkName);
               break;
@@ -7498,7 +7498,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                              );
             if (error != ERROR_NONE)
             {
-              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Errors_getText(error));
+              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
               String_delete(deltaSourceName);
               StringList_done(&fileNameList);
               break;
@@ -7549,7 +7549,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                             );
             if (error != ERROR_NONE)
             {
-              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Errors_getText(error));
+              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
               String_delete(name);
               break;
             }
@@ -7579,7 +7579,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,error,"Cannot read next entry of storage '%S': %s",storageName,Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,error,"Cannot read next entry of storage '%S': %s",storageName,Error_getText(error));
       break;
     }
   }
@@ -7806,7 +7806,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       String_delete(fileName);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
-      sendClientResult(clientInfo,id,TRUE,error,"init storage fail: %s",Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,error,"init storage fail: %s",Error_getText(error));
       return;
     }
 
@@ -7819,7 +7819,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       String_delete(fileName);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
-      sendClientResult(clientInfo,id,TRUE,error,"delete storage file fail: %s",Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,error,"delete storage file fail: %s",Error_getText(error));
       return;
     }
 
@@ -7835,7 +7835,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       String_delete(fileName);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
-      sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
       return;
     }
 
@@ -7926,7 +7926,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                           NULL,
                           NULL
                          );
-  sendClientResult(clientInfo,id,TRUE,error,Errors_getText(error));
+  sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
   EntryList_done(&restoreEntryList);
   StringList_done(&storageNameList);
 
@@ -8096,7 +8096,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
       String_delete(storageName);
       Storage_doneSpecifier(&storageSpecifier);
 
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Errors_getText(error));
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
 
       String_delete(patternText);
       return;
@@ -8279,7 +8279,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
                           );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Errors_getText(error));
+        sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
         return;
       }
     }
@@ -8296,7 +8296,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
                                    );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Errors_getText(error));
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
         return;
       }
       while (Index_getNextStorage(&indexQueryHandle,
@@ -8321,7 +8321,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
           if (error != ERROR_NONE)
           {
             Index_doneList(&indexQueryHandle);
-            sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Errors_getText(error));
+            sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
             return;
           }
         }
@@ -8410,7 +8410,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
                                    );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Errors_getText(error));
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
         return;
       }
       while (Index_getNextStorage(&indexQueryHandle,
@@ -8866,7 +8866,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Errors_getText(error));
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
@@ -8949,7 +8949,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Errors_getText(error));
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
@@ -9025,7 +9025,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Errors_getText(error));
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
@@ -9102,7 +9102,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Errors_getText(error));
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
@@ -9183,7 +9183,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Errors_getText(error));
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
@@ -9268,7 +9268,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Errors_getText(error));
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
@@ -10279,7 +10279,7 @@ Errors Server_run(uint             port,
     {
       printError("Cannot create directory '%s' (error: %s)\n",
                  serverJobsDirectory,
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       return error;
     }
@@ -10306,7 +10306,7 @@ Errors Server_run(uint             port,
     {
       printError("Cannot initialize server at port %u (error: %s)!\n",
                  port,
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       return error;
     }
@@ -10332,7 +10332,7 @@ Errors Server_run(uint             port,
         {
           printError("Cannot initialize TLS/SSL server at port %u (error: %s)!\n",
                      tlsPort,
-                     Errors_getText(error)
+                     Error_getText(error)
                     );
           if (port != 0) Network_doneServer(&serverSocketHandle);
           return FALSE;
@@ -10479,7 +10479,7 @@ Errors Server_run(uint             port,
       else
       {
         printError("Cannot establish client connection (error: %s)!\n",
-                   Errors_getText(error)
+                   Error_getText(error)
                   );
       }
     }
@@ -10514,7 +10514,7 @@ Errors Server_run(uint             port,
       else
       {
         printError("Cannot establish client TLS connection (error: %s)!\n",
-                   Errors_getText(error)
+                   Error_getText(error)
                   );
       }
     }
@@ -10758,7 +10758,7 @@ Errors Server_batch(int inputDescriptor,
   {
     fprintf(stderr,
             "Cannot initialize input: %s!\n",
-            Errors_getText(error)
+            Error_getText(error)
            );
     return error;
   }
@@ -10767,7 +10767,7 @@ Errors Server_batch(int inputDescriptor,
   {
     fprintf(stderr,
             "Cannot initialize output: %s!\n",
-            Errors_getText(error)
+            Error_getText(error)
            );
     File_close(&inputFileHandle);
     return error;
