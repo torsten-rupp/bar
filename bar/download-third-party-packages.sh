@@ -526,22 +526,64 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $gnutlsFlag -eq 1; then
-    # gnutls 2.10.2
+
+#28C67298
+#gpg --recv-keys 28C67298
+#gpg --list-keys 28C67298; echo $?
+    # nettle 2.6
     (
      if test -n "$destination"; then
        cd $destination
      else
        cd $tmpDirectory
      fi
-     if test ! -f gnutls-2.10.2.tar.bz2; then
-       $WGET $WGET_OPTIONS 'ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-2.10.2.tar.bz2'
+     if test ! -f nettle-2.6.tar.gz; then
+       $WGET $WGET_OPTIONS 'ftp://ftp.lysator.liu.se/pub/security/lsh/nettle-2.6.tar.gz'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xjf gnutls-2.10.2.tar.bz2
+       $TAR xzf nettle-2.6.tar.gz
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/gnutls-2.10.2 gnutls
+      $LN -f -s $tmpDirectory/nettle-2.6 nettle
+    fi
+
+#https://gmplib.org/download/gmp/gmp-5.1.3.tar.bz2.sig
+    # gmp 5.1.3
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+     if test ! -f gmp-5.1.3.tar.bz2; then
+       $WGET $WGET_OPTIONS 'https://gmplib.org/download/gmp/gmp-5.1.3.tar.bz2'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xjf gmp-5.1.3.tar.bz2
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      $LN -f -s $tmpDirectory/gmp-5.1.3 gmp
+    fi
+
+    # gnutls 3.1.18
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+
+     if test ! -f gnutls-3.1.18.tar.xz; then
+       $WGET $WGET_OPTIONS 'ftp://ftp.gnutls.org/gcrypt/gnutls/v3.1/gnutls-3.1.18.tar.xz'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xJf gnutls-3.1.18.tar.xz
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      $LN -f -s $tmpDirectory/gnutls-3.1.18 gnutls
     fi
   fi
 
@@ -728,6 +770,16 @@ else
     $RMF $tmpDirectory/gnutls-*.tar.bz2
     $RMRF $tmpDirectory/gnutls-*
     $RMF gnutls
+
+    # gmp
+    $RMF $tmpDirectory/gmp-*.tar.bz2
+    $RMRF $tmpDirectory/gmp-*
+    $RMF gmp
+
+    # nettle
+    $RMF $tmpDirectory/nettle-*.tar.bz2
+    $RMRF $tmpDirectory/nettle-*
+    $RMF nettle
   fi
 
   if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
