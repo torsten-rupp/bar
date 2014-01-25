@@ -5150,7 +5150,7 @@ LOCAL void deletePIDFile(void)
 
 LOCAL int errorToExitcode(Errors error)
 {
-  switch (Errors_getCode(error))
+  switch (Error_getCode(error))
   {
     case ERROR_NONE:
       return EXITCODE_OK;
