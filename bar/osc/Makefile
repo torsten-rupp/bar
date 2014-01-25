@@ -39,6 +39,18 @@ default: \
 .PHONY: all rebuild changelog
 all:
 
+.PHONY: clean
+clean:
+
+.PHONY: help
+help:
+	@$(ECHO) "Help:"
+	@$(ECHO) ""
+	@$(ECHO) "  changelog  - create debian.changelog "
+	@$(ECHO) "  commit     - commit changes to osc; MSG=<commit message>"
+	@$(ECHO) "  rebuild    - start rebuild"
+	@$(ECHO) "  download   - download built packages"
+
 changelog:
 	./changelog.pl < ../ChangeLog > $(OSC_PATH)/debian.changelog
 
@@ -50,14 +62,5 @@ commit:
 rebuild:
 	($(CD) $(OSC_PATH); $(OSC) rebuildpac home\:torsten20\:BAR/BAR)
 
-.PHONY: clean
-clean:
-
-.PHONY: help
-help:
-	@$(ECHO) "Help:"
-	@$(ECHO) ""
-	@$(ECHO) "  changelog  - create debian.changelog "
-	@$(ECHO) "  commit     - commit changes to osc; MSG=<commit message>"
-	@$(ECHO) "  rebuild    - start rebuild"
-
+download:
+	./download-packages.sh

@@ -16,6 +16,7 @@ BuildRequires: java-devel >= 1.6.0
 BuildRequires: tar
 BuildRequires: unzip
 BuildRequires: patch
+BuildRequires: m4
 BuildRequires: e2fsprogs
 
 %description
@@ -82,9 +83,17 @@ mkdir packages
   ln -s packages/libssh2-1.4.2 libssh2
 )
 (
-  cp %{_sourcedir}/gnutls-2.10.2.tar.bz2 packages
-  (cd packages; tar xjf gnutls-2.10.2.tar.bz2)
-  ln -s packages/gnutls-2.10.2 gnutls
+  cp %{_sourcedir}/nettle-2.6.tar.gz packages
+  (cd packages; tar xzf nettle-2.6.tar.gz)
+  ln -s packages/nettle-2.6 nettle
+
+  cp %{_sourcedir}/gmp-5.1.3.tar.bz2 packages
+  (cd packages; tar xjf gmp-5.1.3.tar.bz2)
+  ln -s packages/gmp-5.1.3 gmp
+
+  cp %{_sourcedir}/gnutls-3.1.18.tar.xz packages
+  (cd packages; tar xJf gnutls-3.1.18.tar.xz)
+  ln -s packages/gnutls-3.1.18 gnutls
 )
 (
   cp %{_sourcedir}/libcdio-0.82.tar.gz packages
