@@ -110,7 +110,7 @@ Errors Command_test(const StringList                *storageNameList,
     {
       printError("Invalid storage '%s' (error: %s)!\n",
                  String_cString(storageName),
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
       continue;
@@ -129,7 +129,7 @@ Errors Command_test(const StringList                *storageNameList,
     {
       printError("Cannot initialize storage '%s' (error: %s)!\n",
                  String_cString(storageName),
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
       continue;
@@ -149,7 +149,7 @@ Errors Command_test(const StringList                *storageNameList,
     {
       printError("Cannot open storage '%s' (error: %s)!\n",
                  Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
       (void)Storage_done(&storageHandle);
@@ -168,7 +168,7 @@ Errors Command_test(const StringList                *storageNameList,
       {
         printError("Cannot read next entry in archive '%s' (error: %s)!\n",
                    Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                   Errors_getText(error)
+                   Error_getText(error)
                   );
         if (failError == ERROR_NONE) failError = error;
         break;
@@ -205,7 +205,7 @@ Errors Command_test(const StringList                *storageNameList,
             {
               printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(fileName);
               if (failError == ERROR_NONE) failError = error;
@@ -247,7 +247,7 @@ Errors Command_test(const StringList                *storageNameList,
                   printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
                              Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   break;
                 }
@@ -309,7 +309,7 @@ Errors Command_test(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("closing 'file' entry fail (error: %s)!\n",
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(fileName);
               if (failError == ERROR_NONE) failError = error;
@@ -348,7 +348,7 @@ Errors Command_test(const StringList                *storageNameList,
             {
               printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(deviceName);
               if (failError == ERROR_NONE) failError = error;
@@ -405,7 +405,7 @@ Errors Command_test(const StringList                *storageNameList,
                   printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
                              Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   break;
                 }
@@ -466,7 +466,7 @@ Errors Command_test(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("closing 'image' entry fail (error: %s)!\n",
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(deviceName);
               if (failError == ERROR_NONE) failError = error;
@@ -496,7 +496,7 @@ Errors Command_test(const StringList                *storageNameList,
             {
               printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(directoryName);
               if (failError == ERROR_NONE) failError = error;
@@ -535,7 +535,7 @@ Errors Command_test(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("closing 'directory' entry fail (error: %s)!\n",
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(directoryName);
               if (failError == ERROR_NONE) failError = error;
@@ -568,7 +568,7 @@ Errors Command_test(const StringList                *storageNameList,
             {
               printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(fileName);
               String_delete(linkName);
@@ -609,7 +609,7 @@ Errors Command_test(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("closing 'link' entry fail (error: %s)!\n",
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(fileName);
               String_delete(linkName);
@@ -654,7 +654,7 @@ Errors Command_test(const StringList                *storageNameList,
             {
               printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               StringList_done(&fileNameList);
               if (failError == ERROR_NONE) failError = error;
@@ -703,7 +703,7 @@ Errors Command_test(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot read content of archive '%s' (error: %s)!\n",
                                  Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       break;
                     }
@@ -780,7 +780,7 @@ Errors Command_test(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("closing 'hard link' entry fail (error: %s)!\n",
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               StringList_done(&fileNameList);
               if (failError == ERROR_NONE) failError = error;
@@ -810,7 +810,7 @@ Errors Command_test(const StringList                *storageNameList,
             {
               printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(fileName);
               if (failError == ERROR_NONE) failError = error;
@@ -849,7 +849,7 @@ Errors Command_test(const StringList                *storageNameList,
             if (error != ERROR_NONE)
             {
               printError("closing 'special' entry fail (error: %s)!\n",
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(fileName);
               if (failError == ERROR_NONE) failError = error;

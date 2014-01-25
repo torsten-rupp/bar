@@ -287,7 +287,7 @@ Errors Command_restore(const StringList                *storageNameList,
     {
       printError("Invalid storage '%s' (error: %s)!\n",
                  String_cString(storageName),
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
       continue;
@@ -308,7 +308,7 @@ Errors Command_restore(const StringList                *storageNameList,
     {
       printError("Cannot initialize storage '%s' (error: %s)!\n",
                  String_cString(storageName),
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
       continue;
@@ -326,7 +326,7 @@ Errors Command_restore(const StringList                *storageNameList,
     {
       printError("Cannot open storage '%s' (error: %s)!\n",
                  Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
       (void)Storage_done(&storageHandle);
@@ -356,7 +356,7 @@ Errors Command_restore(const StringList                *storageNameList,
       {
         printError("Cannot read next entry in archive '%s' (error: %s)!\n",
                    Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                   Errors_getText(error)
+                   Error_getText(error)
                   );
         if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
         break;
@@ -400,7 +400,7 @@ Errors Command_restore(const StringList                *storageNameList,
             {
               printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               File_doneExtendedAttributes(&fileExtendedAttributeList);
               String_delete(fileName);
@@ -484,7 +484,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     printInfo(1,"FAIL!\n");
                     printError("Cannot create directory '%s' (error: %s)\n",
                                String_cString(parentDirectoryName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     String_delete(parentDirectoryName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -504,7 +504,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot set owner ship of directory '%s' (error: %s)\n",
                                  String_cString(parentDirectoryName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       String_delete(parentDirectoryName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -515,7 +515,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     {
                       printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
                                    String_cString(parentDirectoryName),
-                                   Errors_getText(error)
+                                   Error_getText(error)
                                   );
                     }
                   }
@@ -532,7 +532,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   printInfo(1,"FAIL!\n");
                   printError("Cannot create/write to file '%s' (error: %s)\n",
                              String_cString(destinationFileName),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   if (jobOptions->stopOnErrorFlag) restoreInfo.failError = error;
                   AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
@@ -547,7 +547,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   printInfo(1,"FAIL!\n");
                   printError("Cannot write file '%s' (error: %s)\n",
                              String_cString(destinationFileName),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   if (jobOptions->stopOnErrorFlag) restoreInfo.failError = error;
                   AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
@@ -575,7 +575,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
                              Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                   break;
@@ -588,7 +588,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     printInfo(1,"FAIL!\n");
                     printError("Cannot write file '%s' (error: %s)\n",
                                String_cString(destinationFileName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     if (jobOptions->stopOnErrorFlag) restoreInfo.failError = error;
                     break;
@@ -652,7 +652,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot set file info of '%s' (error: %s)\n",
                                  String_cString(destinationFileName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       restoreInfo.failError = error;
                       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
@@ -662,7 +662,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     {
                       printWarning("Cannot set file info of '%s' (error: %s)\n",
                                    String_cString(destinationFileName),
-                                   Errors_getText(error)
+                                   Error_getText(error)
                                   );
                     }
                   }
@@ -713,7 +713,7 @@ Errors Command_restore(const StringList                *storageNameList,
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
-              printWarning("close 'file' entry fail (error: %s)\n",Errors_getText(error));
+              printWarning("close 'file' entry fail (error: %s)\n",Error_getText(error));
             }
 
             // free resources
@@ -761,7 +761,7 @@ Errors Command_restore(const StringList                *storageNameList,
             {
               printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(deviceName);
               (void)Archive_closeEntry(&archiveEntryInfo);
@@ -849,7 +849,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     printInfo(1,"FAIL!\n");
                     printError("Cannot create directory '%s' (error: %s)\n",
                                String_cString(parentDirectoryName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     String_delete(parentDirectoryName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -869,7 +869,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot set owner ship of directory '%s' (error: %s)\n",
                                  String_cString(parentDirectoryName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       String_delete(parentDirectoryName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -880,7 +880,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     {
                       printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
                                    String_cString(parentDirectoryName),
-                                   Errors_getText(error)
+                                   Error_getText(error)
                                   );
                     }
                   }
@@ -900,7 +900,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     printInfo(1,"FAIL!\n");
                     printError("Cannot open to device '%s' (error: %s)\n",
                                String_cString(destinationDeviceName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                   }
                   type = DEVICE;
@@ -915,7 +915,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     printInfo(1,"FAIL!\n");
                     printError("Cannot open to file '%s' (error: %s)\n",
                                String_cString(destinationDeviceName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                   }
                   type = FILE;
@@ -941,7 +941,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot write to device '%s' (error: %s)\n",
                                  String_cString(destinationDeviceName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                     }
                     break;
@@ -952,7 +952,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot write to file '%s' (error: %s)\n",
                                  String_cString(destinationDeviceName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                     }
                     break;
@@ -994,7 +994,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
                              Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                   break;
@@ -1012,7 +1012,7 @@ Errors Command_restore(const StringList                *storageNameList,
                         printInfo(1,"FAIL!\n");
                         printError("Cannot write to device '%s' (error: %s)\n",
                                    String_cString(destinationDeviceName),
-                                   Errors_getText(error)
+                                   Error_getText(error)
                                   );
                       }
                       break;
@@ -1023,7 +1023,7 @@ Errors Command_restore(const StringList                *storageNameList,
                         printInfo(1,"FAIL!\n");
                         printError("Cannot write to file '%s' (error: %s)\n",
                                    String_cString(destinationDeviceName),
-                                   Errors_getText(error)
+                                   Error_getText(error)
                                   );
                       }
                       break;
@@ -1131,7 +1131,7 @@ Errors Command_restore(const StringList                *storageNameList,
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
-              printWarning("close 'image' entry fail (error: %s)\n",Errors_getText(error));
+              printWarning("close 'image' entry fail (error: %s)\n",Error_getText(error));
             }
 
             // free resources
@@ -1164,7 +1164,7 @@ Errors Command_restore(const StringList                *storageNameList,
             {
               printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(directoryName);
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -1218,7 +1218,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   printInfo(1,"FAIL!\n");
                   printError("Cannot create directory '%s' (error: %s)\n",
                              String_cString(destinationFileName),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -1242,7 +1242,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     printInfo(1,"FAIL!\n");
                     printError("Cannot set directory info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     if (jobOptions->stopOnErrorFlag)
                     {
@@ -1255,7 +1255,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   {
                     printWarning("Cannot set directory info of '%s' (error: %s)\n",
                                  String_cString(destinationFileName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                   }
                 }
@@ -1289,7 +1289,7 @@ Errors Command_restore(const StringList                *storageNameList,
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
-              printWarning("close 'directory' entry fail (error: %s)\n",Errors_getText(error));
+              printWarning("close 'directory' entry fail (error: %s)\n",Error_getText(error));
             }
 
             // free resources
@@ -1327,7 +1327,7 @@ Errors Command_restore(const StringList                *storageNameList,
             {
               printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               File_doneExtendedAttributes(&fileExtendedAttributeList);
               String_delete(fileName);
@@ -1374,7 +1374,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     printInfo(1,"FAIL!\n");
                     printError("Cannot create directory '%s' (error: %s)\n",
                                String_cString(parentDirectoryName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     String_delete(parentDirectoryName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -1394,7 +1394,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot set owner ship of directory '%s' (error: %s)\n",
                                  String_cString(parentDirectoryName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       String_delete(parentDirectoryName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -1405,7 +1405,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     {
                       printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
                                    String_cString(parentDirectoryName),
-                                   Errors_getText(error)
+                                   Error_getText(error)
                                   );
                     }
                   }
@@ -1440,7 +1440,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   printError("Cannot create link '%s' -> '%s' (error: %s)\n",
                              String_cString(destinationFileName),
                              String_cString(fileName),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -1464,7 +1464,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     printInfo(1,"FAIL!\n");
                     printError("Cannot set file info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     if (jobOptions->stopOnErrorFlag)
                     {
@@ -1477,7 +1477,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   {
                     printWarning("Cannot set file info of '%s' (error: %s)\n",
                                  String_cString(destinationFileName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                   }
                 }
@@ -1511,7 +1511,7 @@ Errors Command_restore(const StringList                *storageNameList,
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
-              printWarning("close 'link' entry fail (error: %s)\n",Errors_getText(error));
+              printWarning("close 'link' entry fail (error: %s)\n",Error_getText(error));
             }
 
             // free resources
@@ -1561,7 +1561,7 @@ Errors Command_restore(const StringList                *storageNameList,
             {
               printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               StringList_done(&fileNameList);
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -1614,7 +1614,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot create directory '%s' (error: %s)\n",
                                  String_cString(parentDirectoryName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       String_delete(parentDirectoryName);
                       if (jobOptions->stopOnErrorFlag)
@@ -1641,7 +1641,7 @@ Errors Command_restore(const StringList                *storageNameList,
                         printInfo(1,"FAIL!\n");
                         printError("Cannot set owner ship of directory '%s' (error: %s)\n",
                                    String_cString(parentDirectoryName),
-                                   Errors_getText(error)
+                                   Error_getText(error)
                                   );
                         String_delete(parentDirectoryName);
                         restoreInfo.failError = error;
@@ -1651,7 +1651,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       {
                         printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
                                      String_cString(parentDirectoryName),
-                                     Errors_getText(error)
+                                     Error_getText(error)
                                     );
                       }
                     }
@@ -1704,7 +1704,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot create/write to file '%s' (error: %s)\n",
                                  String_cString(destinationFileName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       if (jobOptions->stopOnErrorFlag)
                       {
@@ -1726,7 +1726,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot write file '%s' (error: %s)\n",
                                  String_cString(destinationFileName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       File_close(&fileHandle);
                       if (jobOptions->stopOnErrorFlag)
@@ -1763,7 +1763,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot read content of archive '%s' (error: %s)!\n",
                                  Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       restoreInfo.failError = error;
                       break;
@@ -1776,7 +1776,7 @@ Errors Command_restore(const StringList                *storageNameList,
                         printInfo(1,"FAIL!\n");
                         printError("Cannot write file '%s' (error: %s)\n",
                                    String_cString(destinationFileName),
-                                   Errors_getText(error)
+                                   Error_getText(error)
                                   );
                         if (jobOptions->stopOnErrorFlag)
                         {
@@ -1849,7 +1849,7 @@ Errors Command_restore(const StringList                *storageNameList,
                           printInfo(1,"FAIL!\n");
                           printError("Cannot set file info of '%s' (error: %s)\n",
                                      String_cString(destinationFileName),
-                                     Errors_getText(error)
+                                     Error_getText(error)
                                     );
                           restoreInfo.failError = error;
                           break;
@@ -1858,7 +1858,7 @@ Errors Command_restore(const StringList                *storageNameList,
                         {
                           printWarning("Cannot set file info of '%s' (error: %s)\n",
                                        String_cString(destinationFileName),
-                                       Errors_getText(error)
+                                       Error_getText(error)
                                       );
                         }
                       }
@@ -1904,7 +1904,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot create/write to file '%s' (error: %s)\n",
                                  String_cString(destinationFileName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       if (jobOptions->stopOnErrorFlag)
                       {
@@ -1962,7 +1962,7 @@ Errors Command_restore(const StringList                *storageNameList,
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
-              printWarning("close 'hard link' entry fail (error: %s)\n",Errors_getText(error));
+              printWarning("close 'hard link' entry fail (error: %s)\n",Error_getText(error));
             }
 
             // free resources
@@ -1997,7 +1997,7 @@ Errors Command_restore(const StringList                *storageNameList,
             {
               printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
                          Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               String_delete(fileName);
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -2041,7 +2041,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     printInfo(1,"FAIL!\n");
                     printError("Cannot create directory '%s' (error: %s)\n",
                                String_cString(parentDirectoryName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     String_delete(parentDirectoryName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -2061,7 +2061,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       printInfo(1,"FAIL!\n");
                       printError("Cannot set owner ship of directory '%s' (error: %s)\n",
                                  String_cString(parentDirectoryName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       String_delete(parentDirectoryName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -2072,7 +2072,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     {
                       printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
                                    String_cString(parentDirectoryName),
-                                   Errors_getText(error)
+                                   Error_getText(error)
                                   );
                     }
                   }
@@ -2110,7 +2110,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   printInfo(1,"FAIL!\n");
                   printError("Cannot create special device '%s' (error: %s)\n",
                              String_cString(fileName),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -2134,7 +2134,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     printInfo(1,"FAIL!\n");
                     printError("Cannot set file info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     if (jobOptions->stopOnErrorFlag)
                     {
@@ -2147,7 +2147,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   {
                     printWarning("Cannot set file info of '%s' (error: %s)\n",
                                  String_cString(destinationFileName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                   }
                 }
@@ -2181,7 +2181,7 @@ Errors Command_restore(const StringList                *storageNameList,
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
-              printWarning("close 'special' entry fail (error: %s)\n",Errors_getText(error));
+              printWarning("close 'special' entry fail (error: %s)\n",Error_getText(error));
             }
 
             // free resources
@@ -2248,7 +2248,7 @@ Errors Command_restore(const StringList                *storageNameList,
               {
                 printError("Cannot set file info of '%s' (error: %s)\n",
                            String_cString(fragmentNode->name),
-                           Errors_getText(error)
+                           Error_getText(error)
                           );
                 restoreInfo.failError = error;
               }
@@ -2256,7 +2256,7 @@ Errors Command_restore(const StringList                *storageNameList,
               {
                 printWarning("Cannot set file info of '%s' (error: %s)\n",
                              String_cString(fragmentNode->name),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
               }
             }

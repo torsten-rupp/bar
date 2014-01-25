@@ -1806,7 +1806,7 @@ remoteBarFlag=FALSE;
           {
             printError("Cannot read next entry from storage '%s' (error: %s)!\n",
                        Storage_getPrintableNameCString(storageSpecifier,NULL),
-                       Errors_getText(error)
+                       Error_getText(error)
                       );
             break;
           }
@@ -1846,7 +1846,7 @@ remoteBarFlag=FALSE;
                 {
                   printError("Cannot read 'file' content from storage '%s' (error: %s)!\n",
                              Storage_getPrintableNameCString(storageSpecifier,NULL),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   String_delete(deltaSourceName);
                   String_delete(fileName);
@@ -1905,7 +1905,7 @@ remoteBarFlag=FALSE;
                 error = Archive_closeEntry(&archiveEntryInfo);
                 if (error != ERROR_NONE)
                 {
-                  printWarning("close 'file' entry fail (error: %s)\n",Errors_getText(error));
+                  printWarning("close 'file' entry fail (error: %s)\n",Error_getText(error));
                 }
 
                 // free resources
@@ -1945,7 +1945,7 @@ remoteBarFlag=FALSE;
                 {
                   printError("Cannot read 'image' content from storage '%s' (error: %s)!\n",
                              Storage_getPrintableNameCString(storageSpecifier,NULL),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   String_delete(deltaSourceName);
                   String_delete(deviceName);
@@ -2004,7 +2004,7 @@ remoteBarFlag=FALSE;
                 error = Archive_closeEntry(&archiveEntryInfo);
                 if (error != ERROR_NONE)
                 {
-                  printWarning("close 'image' entry fail (error: %s)\n",Errors_getText(error));
+                  printWarning("close 'image' entry fail (error: %s)\n",Error_getText(error));
                 }
 
                 // free resources
@@ -2033,7 +2033,7 @@ remoteBarFlag=FALSE;
                 {
                   printError("Cannot read 'directory' content from storage '%s' (error: %s)!\n",
                              Storage_getPrintableNameCString(storageSpecifier,NULL),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   String_delete(directoryName);
                   break;
@@ -2075,7 +2075,7 @@ remoteBarFlag=FALSE;
                 error = Archive_closeEntry(&archiveEntryInfo);
                 if (error != ERROR_NONE)
                 {
-                  printWarning("close 'directory' entry fail (error: %s)\n",Errors_getText(error));
+                  printWarning("close 'directory' entry fail (error: %s)\n",Error_getText(error));
                 }
 
                 // free resources
@@ -2106,7 +2106,7 @@ remoteBarFlag=FALSE;
                 {
                   printError("Cannot read 'link' content from storage '%s' (error: %s)!\n",
                              Storage_getPrintableNameCString(storageSpecifier,NULL),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   String_delete(fileName);
                   String_delete(linkName);
@@ -2149,7 +2149,7 @@ remoteBarFlag=FALSE;
                 error = Archive_closeEntry(&archiveEntryInfo);
                 if (error != ERROR_NONE)
                 {
-                  printWarning("close 'link' entry fail (error: %s)\n",Errors_getText(error));
+                  printWarning("close 'link' entry fail (error: %s)\n",Error_getText(error));
                 }
 
                 // free resources
@@ -2192,7 +2192,7 @@ remoteBarFlag=FALSE;
                 {
                   printError("Cannot read 'hard link' content from storage '%s' (error: %s)!\n",
                              Storage_getPrintableNameCString(storageSpecifier,NULL),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   String_delete(deltaSourceName);
                   StringList_done(&fileNameList);
@@ -2254,7 +2254,7 @@ remoteBarFlag=FALSE;
                 error = Archive_closeEntry(&archiveEntryInfo);
                 if (error != ERROR_NONE)
                 {
-                  printWarning("close 'hard link' entry fail (error: %s)\n",Errors_getText(error));
+                  printWarning("close 'hard link' entry fail (error: %s)\n",Error_getText(error));
                 }
 
                 // free resources
@@ -2283,7 +2283,7 @@ remoteBarFlag=FALSE;
                 {
                   printError("Cannot read 'special' content from storage '%s' (error: %s)!\n",
                              Storage_getPrintableNameCString(storageSpecifier,NULL),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   String_delete(fileName);
                   break;
@@ -2329,7 +2329,7 @@ remoteBarFlag=FALSE;
                 error = Archive_closeEntry(&archiveEntryInfo);
                 if (error != ERROR_NONE)
                 {
-                  printWarning("close 'special' entry fail (error: %s)\n",Errors_getText(error));
+                  printWarning("close 'special' entry fail (error: %s)\n",Error_getText(error));
                 }
 
                 // free resources
@@ -2411,7 +2411,7 @@ remoteBarFlag=FALSE;
             printError("Cannot connect to '%s:%d' (error: %s)!\n",
                        String_cString(storageSpecifier->hostName),
                        storageSpecifier->hostPort,
-                       Errors_getText(error)
+                       Error_getText(error)
                       );
             break;
           }
@@ -2430,7 +2430,7 @@ remoteBarFlag=FALSE;
         {
           printError("Cannot execute remote BAR program '%s' (error: %s)!\n",
                      String_cString(line),
-                     Errors_getText(error)
+                     Error_getText(error)
                     );
           String_delete(line);
           break;
@@ -3279,7 +3279,7 @@ Errors Command_list(StringList                      *storageNameList,
     {
       printError("Invalid storage '%s' (error: %s)!\n",
                  String_cString(storageName),
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
       continue;
@@ -3343,7 +3343,7 @@ Errors Command_list(StringList                      *storageNameList,
     {
       printError("Cannot initialize storage '%s' (error: %s)!\n",
                  String_cString(storageName),
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
       continue;
