@@ -1468,6 +1468,7 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_Z
         {
           int compressionLevel;
+          int zlibResult;
 
           compressionLevel = 0;
           switch (compressAlgorithm)
@@ -1494,19 +1495,21 @@ bool Compress_isValidAlgorithm(uint16 n)
           switch (compressMode)
           {
             case COMPRESS_MODE_DEFLATE:
-              if (deflateInit(&compressInfo->zlib.stream,compressionLevel) != Z_OK)
+              zlibResult = deflateInit(&compressInfo->zlib.stream,compressionLevel);
+              if (zlibResult != Z_OK)
               {
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-                return ERROR_INIT_COMPRESS;
+                return ERRORX_(INIT_COMPRESS,zlibResult,zError(zlibResult));
               }
               break;
             case COMPRESS_MODE_INFLATE:
-              if (inflateInit(&compressInfo->zlib.stream) != Z_OK)
+              zlibResult = inflateInit(&compressInfo->zlib.stream);
+              if (zlibResult != Z_OK)
               {
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-                return ERROR_INIT_COMPRESS;
+                return ERRORX_(INIT_COMPRESS,zlibResult,zError(zlibResult));
               }
               break;
             #ifndef NDEBUG
@@ -1531,6 +1534,8 @@ bool Compress_isValidAlgorithm(uint16 n)
     case COMPRESS_ALGORITHM_BZIP2_9:
       #ifdef HAVE_BZ2
         {
+          int bz2Result;
+
           compressInfo->bzlib.compressionLevel = 0;
           switch (compressAlgorithm)
           {
@@ -1555,19 +1560,21 @@ bool Compress_isValidAlgorithm(uint16 n)
           switch (compressMode)
           {
             case COMPRESS_MODE_DEFLATE:
-              if (BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0) != BZ_OK)
+              bz2Result = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
+              if (bz2Result != BZ_OK)
               {
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-                return ERROR_INIT_COMPRESS;
+                return ERRORX_(INIT_COMPRESS,bz2Result,NULL);
               }
               break;
             case COMPRESS_MODE_INFLATE:
-              if (BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0) != BZ_OK)
+              bz2Result = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
+              if (bz2Result != BZ_OK)
               {
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-                return ERROR_INIT_COMPRESS;
+                return ERRORX_(INIT_COMPRESS,bz2Result,NULL);
               }
               break;
             #ifndef NDEBUG
@@ -1593,6 +1600,7 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_LZMA
         {
           lzma_stream streamInit = LZMA_STREAM_INIT;
+          lzma_ret    lzmaResult;
 
           compressInfo->lzmalib.compressionLevel = 0;
           switch (compressAlgorithm)
@@ -1617,20 +1625,22 @@ bool Compress_isValidAlgorithm(uint16 n)
           {
             case COMPRESS_MODE_DEFLATE:
               compressInfo->lzmalib.stream = streamInit;
-              if (lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE) != LZMA_OK)
+              lzmaResult = lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE);
+              if (lzmaResult != LZMA_OK)
               {
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-                return ERROR_INIT_COMPRESS;
+                return ERRORX_(INIT_COMPRESS,lzmaResult,NULL);
               }
               break;
             case COMPRESS_MODE_INFLATE:
               compressInfo->lzmalib.stream = streamInit;
-              if (lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0) != LZMA_OK)
+              lzmaResult = lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0);
+              if (lzmaResult != LZMA_OK)
               {
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-                return ERROR_INIT_COMPRESS;
+                return ERRORX_(INIT_COMPRESS,lzmaResult,NULL);
               }
               break;
             #ifndef NDEBUG
@@ -1656,6 +1666,7 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_XDELTA3
         {
           xd3_config xd3Config;
+          int        xd3Result;
 
           // initialize variables
           compressInfo->xdelta.sourceHandle = sourceHandle;
@@ -1693,11 +1704,12 @@ bool Compress_isValidAlgorithm(uint16 n)
           // init xdelta stream (Note: clear memory is required by xdelta library!)
           memset(&compressInfo->xdelta.stream,0,sizeof(compressInfo->xdelta.stream));
           compressInfo->xdelta.stream.getblk = NULL;
-          if (xd3_config_stream(&compressInfo->xdelta.stream,&xd3Config) != 0)
+          xd3Result = xd3_config_stream(&compressInfo->xdelta.stream,&xd3Config);
+          if (xd3Result != 0)
           {
             RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
             RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-            return ERROR_INIT_COMPRESS;
+            return ERRORX_(INIT_COMPRESS,xd3Result,xd3_strerror(xd3Result));
           }
 
           // allocate source data buffer
@@ -1707,7 +1719,7 @@ bool Compress_isValidAlgorithm(uint16 n)
             xd3_free_stream(&compressInfo->xdelta.stream);
             RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
             RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-            return ERROR_INIT_COMPRESS;
+            return ERRORX_(INIT_COMPRESS,0,"insufficient memory");
           }
 
           // init xdelta source variables (Note: clear memory is required by xdelta library!)
@@ -1717,13 +1729,14 @@ bool Compress_isValidAlgorithm(uint16 n)
           compressInfo->xdelta.source.onblk    = (usize_t)0;
           compressInfo->xdelta.source.curblkno = (xoff_t)(-1);
           compressInfo->xdelta.source.curblk   = compressInfo->xdelta.sourceBuffer;
-          if (xd3_set_source(&compressInfo->xdelta.stream,&compressInfo->xdelta.source) != 0)
+          xd3Result = xd3_set_source(&compressInfo->xdelta.stream,&compressInfo->xdelta.source);
+          if (xd3Result != 0)
           {
             xd3_free_stream(&compressInfo->xdelta.stream);
             free(compressInfo->xdelta.sourceBuffer);
             RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
             RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-            return ERROR_INIT_COMPRESS;
+            return ERRORX_(INIT_COMPRESS,xd3Result,xd3_strerror(xd3Result));
           }
         }
       #else /* not HAVE_XDELTA3 */
