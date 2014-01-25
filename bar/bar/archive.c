@@ -9975,15 +9975,15 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   }
   if (error != ERROR_NONE)
   {
-    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
+    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
     Index_setState(databaseHandle,
                    storageId,
                    INDEX_STATE_ERROR,
                    0LL,
                    "%s (error code: %d)",
-                   Errors_getText(error),
-                   Errors_getCode(error)
+                   Error_getText(error),
+                   Error_getCode(error)
                   );
     String_delete(printableStorageName);
     Storage_doneSpecifier(&storageSpecifier);
@@ -9996,7 +9996,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                      );
   if (error != ERROR_NONE)
   {
-    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
+    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
     Archive_close(&archiveInfo);
     Index_setState(databaseHandle,
@@ -10004,8 +10004,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                    INDEX_STATE_ERROR,
                    0LL,
                    "%s (error code: %d)",
-                   Errors_getText(error),
-                   Errors_getCode(error)
+                   Error_getText(error),
+                   Error_getCode(error)
                   );
     String_delete(printableStorageName);
     Storage_doneSpecifier(&storageSpecifier);
@@ -10407,9 +10407,9 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   }
   if      (error != ERROR_NONE)
   {
-    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
+    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
-    if (Errors_getCode(error) == ERROR_NO_CRYPT_PASSWORD)
+    if (Error_getCode(error) == ERROR_NO_CRYPT_PASSWORD)
     {
       Index_setState(databaseHandle,
                      storageId,
@@ -10425,8 +10425,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                      INDEX_STATE_ERROR,
                      0LL, // lastCheckedTimestamp
                      "%s (error code: %d)",
-                     Errors_getText(error),
-                     Errors_getCode(error)
+                     Error_getText(error),
+                     Error_getCode(error)
                     );
     }
   }
@@ -10482,8 +10482,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                      INDEX_STATE_ERROR,
                      0LL, // lastCheckedTimestamp
                      "%s (error code: %d)",
-                     Errors_getText(error),
-                     Errors_getCode(error)
+                     Error_getText(error),
+                     Error_getCode(error)
                     );
     }
   }
@@ -10645,7 +10645,7 @@ Errors Archive_copy(const String                    storageName,
               printInfo(2,"FAIL!\n");
               printError("Cannot write file '%s' (error: %s)\n",
                          String_cString(destinationFileName),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               File_close(&fileHandle);
               String_delete(destinationFileName);
@@ -10681,7 +10681,7 @@ Errors Archive_copy(const String                    storageName,
               printInfo(2,"FAIL!\n");
               printError("Cannot read content of archive '%s' (error: %s)!\n",
                          String_cString(printableArchiveName),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
               break;
@@ -10693,7 +10693,7 @@ Errors Archive_copy(const String                    storageName,
               printInfo(2,"FAIL!\n");
               printError("Cannot write file '%s' (error: %s)\n",
                          String_cString(destinationFileName),
-                         Errors_getText(error)
+                         Error_getText(error)
                         );
               if (jobOptions->stopOnErrorFlag)
               {
@@ -10774,7 +10774,7 @@ Errors Archive_copy(const String                    storageName,
           {
             printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
                        String_cString(printableArchiveName),
-                       Errors_getText(error)
+                       Error_getText(error)
                       );
             String_delete(imageName);
             if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -10831,7 +10831,7 @@ Errors Archive_copy(const String                    storageName,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot write to device '%s' (error: %s)\n",
                            String_cString(destinationDeviceName),
-                           Errors_getText(error)
+                           Error_getText(error)
                           );
                 String_delete(destinationDeviceName);
                 (void)Archive_closeEntry(&archiveEntryInfo);
@@ -10848,7 +10848,7 @@ Errors Archive_copy(const String                    storageName,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot write to device '%s' (error: %s)\n",
                            String_cString(destinationDeviceName),
-                           Errors_getText(error)
+                           Error_getText(error)
                           );
                 Device_close(&deviceHandle);
                 String_delete(destinationDeviceName);
@@ -10883,7 +10883,7 @@ Errors Archive_copy(const String                    storageName,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot read content of archive '%s' (error: %s)!\n",
                            String_cString(printableArchiveName),
-                           Errors_getText(error)
+                           Error_getText(error)
                           );
                 if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                 break;
@@ -10896,7 +10896,7 @@ Errors Archive_copy(const String                    storageName,
                   printInfo(2,"FAIL!\n");
                   printError("Cannot write to device '%s' (error: %s)\n",
                              String_cString(destinationDeviceName),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -10966,7 +10966,7 @@ Errors Archive_copy(const String                    storageName,
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
-            printWarning("close 'image' entry fail (error: %s)\n",Errors_getText(error));
+            printWarning("close 'image' entry fail (error: %s)\n",Error_getText(error));
           }
 
           // free resources
@@ -10993,7 +10993,7 @@ Errors Archive_copy(const String                    storageName,
           {
             printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
                        String_cString(printableArchiveName),
-                       Errors_getText(error)
+                       Error_getText(error)
                       );
             String_delete(directoryName);
             if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -11045,7 +11045,7 @@ Errors Archive_copy(const String                    storageName,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot create directory '%s' (error: %s)\n",
                            String_cString(destinationFileName),
-                           Errors_getText(error)
+                           Error_getText(error)
                           );
                 String_delete(destinationFileName);
                 (void)Archive_closeEntry(&archiveEntryInfo);
@@ -11071,7 +11071,7 @@ Errors Archive_copy(const String                    storageName,
                   printInfo(2,"FAIL!\n");
                   printError("Cannot set directory info of '%s' (error: %s)\n",
                              String_cString(destinationFileName),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   String_delete(destinationFileName);
                   (void)Archive_closeEntry(&archiveEntryInfo);
@@ -11086,7 +11086,7 @@ Errors Archive_copy(const String                    storageName,
                 {
                   printWarning("Cannot set directory info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                 }
               }
@@ -11120,7 +11120,7 @@ Errors Archive_copy(const String                    storageName,
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
-            printWarning("close 'directory' entry fail (error: %s)\n",Errors_getText(error));
+            printWarning("close 'directory' entry fail (error: %s)\n",Error_getText(error));
           }
 
           // free resources
@@ -11151,7 +11151,7 @@ Errors Archive_copy(const String                    storageName,
           {
             printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
                        String_cString(printableArchiveName),
-                       Errors_getText(error)
+                       Error_getText(error)
                       );
             String_delete(fileName);
             String_delete(linkName);
@@ -11192,7 +11192,7 @@ Errors Archive_copy(const String                    storageName,
                   printInfo(2,"FAIL!\n");
                   printError("Cannot create directory '%s' (error: %s)\n",
                              String_cString(parentDirectoryName),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   String_delete(parentDirectoryName);
                   String_delete(destinationFileName);
@@ -11215,7 +11215,7 @@ Errors Archive_copy(const String                    storageName,
                     printInfo(2,"FAIL!\n");
                     printError("Cannot set owner ship of directory '%s' (error: %s)\n",
                                String_cString(parentDirectoryName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     String_delete(parentDirectoryName);
                     String_delete(destinationFileName);
@@ -11228,7 +11228,7 @@ Errors Archive_copy(const String                    storageName,
                   {
                     printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
                                  String_cString(parentDirectoryName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                   }
                 }
@@ -11266,7 +11266,7 @@ Errors Archive_copy(const String                    storageName,
                 printError("Cannot create link '%s' -> '%s' (error: %s)\n",
                            String_cString(destinationFileName),
                            String_cString(fileName),
-                           Errors_getText(error)
+                           Error_getText(error)
                           );
                 String_delete(destinationFileName);
                 (void)Archive_closeEntry(&archiveEntryInfo);
@@ -11293,7 +11293,7 @@ Errors Archive_copy(const String                    storageName,
                   printInfo(2,"FAIL!\n");
                   printError("Cannot set file info of '%s' (error: %s)\n",
                              String_cString(destinationFileName),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   String_delete(destinationFileName);
                   (void)Archive_closeEntry(&archiveEntryInfo);
@@ -11309,7 +11309,7 @@ Errors Archive_copy(const String                    storageName,
                 {
                   printWarning("Cannot set file info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                 }
               }
@@ -11343,7 +11343,7 @@ Errors Archive_copy(const String                    storageName,
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
-            printWarning("close 'link' entry fail (error: %s)\n",Errors_getText(error));
+            printWarning("close 'link' entry fail (error: %s)\n",Error_getText(error));
           }
 
           // free resources
@@ -11384,7 +11384,7 @@ Errors Archive_copy(const String                    storageName,
           {
             printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
                        String_cString(printableArchiveName),
-                       Errors_getText(error)
+                       Error_getText(error)
                       );
             StringList_done(&fileNameList);
             if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -11431,7 +11431,7 @@ Errors Archive_copy(const String                    storageName,
                     printInfo(2,"FAIL!\n");
                     printError("Cannot create directory '%s' (error: %s)\n",
                                String_cString(parentDirectoryName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     String_delete(parentDirectoryName);
                     if (jobOptions->stopOnErrorFlag)
@@ -11457,7 +11457,7 @@ Errors Archive_copy(const String                    storageName,
                       printInfo(2,"FAIL!\n");
                       printError("Cannot set owner ship of directory '%s' (error: %s)\n",
                                  String_cString(parentDirectoryName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       String_delete(parentDirectoryName);
                       restoreInfo.failError = error;
@@ -11467,7 +11467,7 @@ Errors Archive_copy(const String                    storageName,
                     {
                       printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
                                    String_cString(parentDirectoryName),
-                                   Errors_getText(error)
+                                   Error_getText(error)
                                   );
                     }
                   }
@@ -11511,7 +11511,7 @@ Errors Archive_copy(const String                    storageName,
                     printInfo(2,"FAIL!\n");
                     printError("Cannot create/write to file '%s' (error: %s)\n",
                                String_cString(destinationFileName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     if (jobOptions->stopOnErrorFlag)
                     {
@@ -11531,7 +11531,7 @@ Errors Archive_copy(const String                    storageName,
                     printInfo(2,"FAIL!\n");
                     printError("Cannot write file '%s' (error: %s)\n",
                                String_cString(destinationFileName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     File_close(&fileHandle);
                     if (jobOptions->stopOnErrorFlag)
@@ -11567,7 +11567,7 @@ Errors Archive_copy(const String                    storageName,
                     printInfo(2,"FAIL!\n");
                     printError("Cannot read content of archive '%s' (error: %s)!\n",
                                String_cString(printableArchiveName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     restoreInfo.failError = error;
                     break;
@@ -11580,7 +11580,7 @@ Errors Archive_copy(const String                    storageName,
                       printInfo(2,"FAIL!\n");
                       printError("Cannot write file '%s' (error: %s)\n",
                                  String_cString(destinationFileName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       if (jobOptions->stopOnErrorFlag)
                       {
@@ -11641,7 +11641,7 @@ Errors Archive_copy(const String                    storageName,
                       printInfo(2,"FAIL!\n");
                       printError("Cannot set file info of '%s' (error: %s)\n",
                                  String_cString(destinationFileName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                       restoreInfo.failError = error;
                       break;
@@ -11650,7 +11650,7 @@ Errors Archive_copy(const String                    storageName,
                     {
                       printWarning("Cannot set file info of '%s' (error: %s)\n",
                                    String_cString(destinationFileName),
-                                   Errors_getText(error)
+                                   Error_getText(error)
                                   );
                     }
                   }
@@ -11691,7 +11691,7 @@ Errors Archive_copy(const String                    storageName,
                     printInfo(2,"FAIL!\n");
                     printError("Cannot create/write to file '%s' (error: %s)\n",
                                String_cString(destinationFileName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     if (jobOptions->stopOnErrorFlag)
                     {
@@ -11745,7 +11745,7 @@ Errors Archive_copy(const String                    storageName,
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
-            printWarning("close 'hard link' entry fail (error: %s)\n",Errors_getText(error));
+            printWarning("close 'hard link' entry fail (error: %s)\n",Error_getText(error));
           }
 
           // free resources
@@ -11773,7 +11773,7 @@ Errors Archive_copy(const String                    storageName,
           {
             printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
                        String_cString(printableArchiveName),
-                       Errors_getText(error)
+                       Error_getText(error)
                       );
             String_delete(fileName);
             if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -11813,7 +11813,7 @@ Errors Archive_copy(const String                    storageName,
                   printInfo(2,"FAIL!\n");
                   printError("Cannot create directory '%s' (error: %s)\n",
                              String_cString(parentDirectoryName),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   String_delete(parentDirectoryName);
                   String_delete(destinationFileName);
@@ -11835,7 +11835,7 @@ Errors Archive_copy(const String                    storageName,
                     printInfo(2,"FAIL!\n");
                     printError("Cannot set owner ship of directory '%s' (error: %s)\n",
                                String_cString(parentDirectoryName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                     String_delete(parentDirectoryName);
                     String_delete(destinationFileName);
@@ -11848,7 +11848,7 @@ Errors Archive_copy(const String                    storageName,
                   {
                     printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
                                  String_cString(parentDirectoryName),
-                                 Errors_getText(error)
+                                 Error_getText(error)
                                 );
                   }
                 }
@@ -11888,7 +11888,7 @@ Errors Archive_copy(const String                    storageName,
                 printInfo(2,"FAIL!\n");
                 printError("Cannot create special device '%s' (error: %s)\n",
                            String_cString(fileName),
-                           Errors_getText(error)
+                           Error_getText(error)
                           );
                 String_delete(destinationFileName);
                 (void)Archive_closeEntry(&archiveEntryInfo);
@@ -11914,7 +11914,7 @@ Errors Archive_copy(const String                    storageName,
                   printInfo(2,"FAIL!\n");
                   printError("Cannot set file info of '%s' (error: %s)\n",
                              String_cString(destinationFileName),
-                             Errors_getText(error)
+                             Error_getText(error)
                             );
                   String_delete(destinationFileName);
                   (void)Archive_closeEntry(&archiveEntryInfo);
@@ -11929,7 +11929,7 @@ Errors Archive_copy(const String                    storageName,
                 {
                   printWarning("Cannot set file info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
-                               Errors_getText(error)
+                               Error_getText(error)
                               );
                 }
               }
@@ -11963,7 +11963,7 @@ Errors Archive_copy(const String                    storageName,
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
-            printWarning("close 'special' entry fail (error: %s)\n",Errors_getText(error));
+            printWarning("close 'special' entry fail (error: %s)\n",Error_getText(error));
           }
 
           // free resources
