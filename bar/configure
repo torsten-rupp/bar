@@ -673,6 +673,7 @@ HAVE_PCRE
 HAVE_ISO9660
 HAVE_GNU_TLS
 HAVE_SSH2
+HAVE_SSL
 HAVE_FTP
 HAVE_GCRYPT
 HAVE_XDELTA
@@ -5705,13 +5706,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in pthreadGC2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -5765,13 +5766,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in wsock32 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -6007,13 +6008,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in z ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -6240,13 +6241,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in bz2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -6505,13 +6506,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in lzma ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -6905,13 +6906,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in gpg-error ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -7031,13 +7032,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in gcrypt ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -7159,19 +7160,21 @@ fi
 fi
 
 if test $ENABLE_TLS = "yes"; then
-  if test -d gnutls -o -d "`readlink gnutls`"; then
+  if test \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gmp -o -d "`readlink gmp`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
+      if test -z "$HAVE_GCRYPT"; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gcrypt is missing. Compiling or linking gnutls may fail!" >&5
+$as_echo "$as_me: WARNING: gcrypt is missing. Compiling or linking gnutls may fail!" >&2;}
+      fi
 
-  $as_echo_n "Compile gnutls... " >&6
 
-      result=1
-      if test $result -eq 1; then
-        (cd gnutls; ./configure \
-          --host=$host_cpu-$host_os \
+  $as_echo_n "Compile gmp... " >&6
+
+      result1=1
+      if test $result1 -eq 1; then
+        (cd gmp; ./configure \
           --prefix=$cwd/packages \
-          --with-libgcrypt-prefix=$cwd/packages \
-          --with-included-libtasn1 \
           --disable-shared \
           --enable-static \
         ) 1>/dev/null 2>$tmpFile
@@ -7179,38 +7182,128 @@ if test $ENABLE_TLS = "yes"; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
           cat $tmpFile
-          result=0
+          result1=0
         fi
       fi
-      if test $result -eq 1; then
+      if test $result1 -eq 1; then
+        (cd gmp; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        (cd gmp; make install) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+$as_echo "fail (install)" >&6; }
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
+
+
+  $as_echo_n "Compile nettle... " >&6
+
+      result2=1
+      if test $result2 -eq 1; then
+        (cd nettle; ./configure \
+          --prefix=$cwd/packages \
+          --with-include-path=$cwd/packages/include \
+          --with-lib-path=$cwd/packages/lib \
+          --disable-shared \
+          --enable-static \
+        ) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+          cat $tmpFile
+          result2=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        (cd nettle; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+          cat $tmpFile
+          result2=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        (cd nettle; make install) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+$as_echo "fail (install)" >&6; }
+          cat $tmpFile
+          result2=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
+
+
+  $as_echo_n "Compile gnutls... " >&6
+
+      result3=1
+      if test $result3 -eq 1; then
+        (cd gnutls; GMP_LIBS=-L$cwd/packages/lib ./configure \
+          --host=$host_cpu-$host_os \
+          --prefix=$cwd/packages \
+          --with-libnettle-prefix=$cwd/packages \
+          --with-included-libtasn1 \
+          --disable-shared \
+          --enable-static \
+          --without-p11-kit \
+          --without-tpm \
+          --disable-doc \
+        ) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+          cat $tmpFile
+          result3=0
+        fi
+      fi
+      if test $result3 -eq 1; then
         (cd gnutls; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
           cat $tmpFile
-          result=0
+          result3=0
         fi
       fi
-      if test $result -eq 1; then
+      if test $result3 -eq 1; then
         (cd gnutls; make install) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
           cat $tmpFile
-          result=0
+          result3=0
         fi
       fi
-      if test $result -eq 1; then
+      if test $result3 -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
 $as_echo "done" >&6; }
       fi
     else
-      result=1
+      result1=1
+      result2=1
+      result3=1
     fi
 
-    if test $result -eq 1; then
+    if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
       HAVE_GNU_TLS=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls gmp nettle hogweed"
 
 $as_echo "#define HAVE_GNU_TLS 1" >>confdefs.h
 
@@ -7286,8 +7379,6 @@ $as_echo "#define HAVE_GNU_TLS 1" >>confdefs.h
 
 fi
 
-#xxxx
-#      AC_SEARCH_LIBRARIES(SSL_new,gnutls-openssl,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls-openssl";AC_DEFINE(HAVE_GNU_TLS_OPENSSL,1,[GNU TLS OpenSSL installed])])
 
 
     ac_result=""
@@ -7361,13 +7452,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in gnutls ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -7476,13 +7567,6 @@ fi
 
       fi
 
-#      if test -z "$HAVE_GNU_TLS_OPENSSL"; then
-#        AC_SEARCH_STATIC_LIBRARIES(SSL_new,gnutls-openssl,[HAVE_GNU_TLS_OPENSSL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls-openssl";AC_DEFINE(HAVE_GNU_TLS_OPENSSL,1,[static GNU TLS OpenSSL installed])])
-#      fi
-#      if test -z "$HAVE_GNU_TLS_OPENSSL"; then
-#        AC_SEARCH_LIBRARIES(SSL_new,gnutls-openssl,[HAVE_GNU_TLS_OPENSSL=1;LIBRARIES="$LIBRARIES gnutls-openssl";AC_DEFINE(HAVE_GNU_TLS_OPENSSL,1,[GNU TLS OpenSSL installed])])
-#      fi
-
       if test -z "$HAVE_TASN1"; then
 
 
@@ -7495,13 +7579,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in tasn1 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -7728,13 +7812,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in ftp ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -7909,7 +7993,7 @@ $as_echo "fail (make)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd openssl; make install) 1>/dev/null 2>$tmpFile
+        (cd openssl; make all install_sw) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
@@ -7926,7 +8010,11 @@ $as_echo "done" >&6; }
     fi
 
     if test $result -eq 1; then
+      HAVE_SSL=1
       STATIC_LIBRARIES="$STATIC_LIBRARIES crypto ssl"
+
+$as_echo "#define HAVE_SSL 1" >>confdefs.h
+
     fi
   fi
 
@@ -8087,13 +8175,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in ssh2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -8278,13 +8366,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in crypto ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -8398,6 +8486,23 @@ fi
 if test $ENABLE_CURL = "yes"; then
   if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      if test -z "$HAVE_Z"; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: zlib is missing. Compiling or linking curl may fail!" >&5
+$as_echo "$as_me: WARNING: zlib is missing. Compiling or linking curl may fail!" >&2;}
+      fi
+      if test -z "$HAVE_GNU_TLS"; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gnutls is missing. Compiling or linking curl may fail!" >&5
+$as_echo "$as_me: WARNING: gnutls is missing. Compiling or linking curl may fail!" >&2;}
+      fi
+      if test -z "$HAVE_SSL"; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libssl is missing. Compiling or linking curl may fail!" >&5
+$as_echo "$as_me: WARNING: libssl is missing. Compiling or linking curl may fail!" >&2;}
+      fi
+      if test -z "$HAVE_SSH2"; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libssh2 is missing. Compiling or linking curl may fail!" >&5
+$as_echo "$as_me: WARNING: libssh2 is missing. Compiling or linking curl may fail!" >&2;}
+      fi
 
 
   $as_echo_n "Compile c-ares... " >&6
@@ -8825,13 +8930,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in mxml ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -8951,13 +9056,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in cares ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -9077,13 +9182,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in curl ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -9194,7 +9299,8 @@ fi
     fi
   fi
 
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+  if test "$HAVE_CURL"; then
+        if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -9255,7 +9361,7 @@ else
   as_fn_error $? "SSL library required for curl" "$LINENO" 5
 fi
 
-  else
+    else
 
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing SSL_new" >&5
@@ -9267,13 +9373,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in ssl ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -9318,6 +9424,7 @@ else
   as_fn_error $? "static SSL library required for curl" "$LINENO" 5
 fi
 
+    fi
   fi
 fi
 
@@ -9512,13 +9619,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in iso9660 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -9790,13 +9897,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in pcre_compile ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10137,13 +10244,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in ExceptionHandler ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -11169,13 +11276,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in uuid ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -11231,13 +11338,13 @@ else
             ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS -static"
+            CFLAGS="$CFLAGS"
       for ac_library in idn ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -12035,7 +12142,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const__SC_NPROCESSORS_CONF" >&5
 $as_echo "$ac_cv_const__SC_NPROCESSORS_CONF" >&6; }
 
-if test $ENABLE_SSH = "yes"; then
+if test $HAVE_SSH2; then
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant CRYPTO_LOCK is available" >&5
@@ -14352,103 +14459,6 @@ fi
 
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CRYPTO_set_id_callback" >&5
-$as_echo_n "checking for CRYPTO_set_id_callback... " >&6; }
-if ${ac_cv_func_CRYPTO_set_id_callback+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-      ac_cv_func_CRYPTO_set_id_callback="no"
-      echo > conftest.log
-
-      for ac_headers in openssl/crypto.h ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z "$ac_headers"; then echo "extern void CRYPTO_set_id_callback();"; fi`
-                                         #ifdef CRYPTO_set_id_callback
-                                         #else
-                                           return (int)CRYPTO_set_id_callback;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_func_CRYPTO_set_id_callback=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_CRYPTO_set_id_callback" >&5
-$as_echo "$ac_cv_func_CRYPTO_set_id_callback" >&6; }
-  if test "$ac_cv_func_CRYPTO_set_id_callback" != no; then :
-
-elif :; then :
-  as_fn_error $? "OpenSSL CRYPTO_set_id_callback() is not available" "$LINENO" 5
-fi
-
-
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CRYPTO_set_locking_callback" >&5
-$as_echo_n "checking for CRYPTO_set_locking_callback... " >&6; }
-if ${ac_cv_func_CRYPTO_set_locking_callback+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-      ac_cv_func_CRYPTO_set_locking_callback="no"
-      echo > conftest.log
-
-      for ac_headers in openssl/crypto.h ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z "$ac_headers"; then echo "extern void CRYPTO_set_locking_callback();"; fi`
-                                         #ifdef CRYPTO_set_locking_callback
-                                         #else
-                                           return (int)CRYPTO_set_locking_callback;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_func_CRYPTO_set_locking_callback=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_CRYPTO_set_locking_callback" >&5
-$as_echo "$ac_cv_func_CRYPTO_set_locking_callback" >&6; }
-  if test "$ac_cv_func_CRYPTO_set_locking_callback" != no; then :
-
-elif :; then :
-  as_fn_error $? "OpenSSL CRYPTO_set_locking_callback() is not available" "$LINENO" 5
-fi
-
-
-
-
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libssh2_channel_send_keepalive" >&5
 $as_echo_n "checking for libssh2_channel_send_keepalive... " >&6; }
 if ${ac_cv_func_libssh2_channel_send_keepalive+:} false; then :
@@ -15151,7 +15161,106 @@ elif :; then :
 fi
 
 
-if test $ENABLE_CURL = "yes"; then
+if test "$HAVE_SSH2"; then
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CRYPTO_set_id_callback" >&5
+$as_echo_n "checking for CRYPTO_set_id_callback... " >&6; }
+if ${ac_cv_func_CRYPTO_set_id_callback+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_CRYPTO_set_id_callback="no"
+      echo > conftest.log
+
+      for ac_headers in openssl/crypto.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void CRYPTO_set_id_callback();"; fi`
+                                         #ifdef CRYPTO_set_id_callback
+                                         #else
+                                           return (int)CRYPTO_set_id_callback;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_CRYPTO_set_id_callback=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_CRYPTO_set_id_callback" >&5
+$as_echo "$ac_cv_func_CRYPTO_set_id_callback" >&6; }
+  if test "$ac_cv_func_CRYPTO_set_id_callback" != no; then :
+
+elif :; then :
+  as_fn_error $? "CRYPTO_set_id_callback() required for SSH2" "$LINENO" 5
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CRYPTO_set_locking_callback" >&5
+$as_echo_n "checking for CRYPTO_set_locking_callback... " >&6; }
+if ${ac_cv_func_CRYPTO_set_locking_callback+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_CRYPTO_set_locking_callback="no"
+      echo > conftest.log
+
+      for ac_headers in openssl/crypto.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void CRYPTO_set_locking_callback();"; fi`
+                                         #ifdef CRYPTO_set_locking_callback
+                                         #else
+                                           return (int)CRYPTO_set_locking_callback;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_CRYPTO_set_locking_callback=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_CRYPTO_set_locking_callback" >&5
+$as_echo "$ac_cv_func_CRYPTO_set_locking_callback" >&6; }
+  if test "$ac_cv_func_CRYPTO_set_locking_callback" != no; then :
+
+elif :; then :
+  as_fn_error $? "CRYPTO_set_locking_callback() required for SSH2" "$LINENO" 5
+fi
+
+  fi
+
+if test "$HAVE_CURL"; then
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gpg_strerror" >&5
