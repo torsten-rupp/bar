@@ -153,7 +153,19 @@ ERROR WEBDAV_AUTHENTICATION          "invalid Webdav user/password"
 ERROR WEBDAV_GET_SIZE                "get Webdav file size fail"
 
 // --- compress ---------------------------------------------------------
-ERROR INIT_COMPRESS                  "init compress fail"
+ERROR INIT_COMPRESS
+  strncpy(errorText,"init compress fail",sizeof(errorText)-1);
+  strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  else
+  {
+    strncat(errorText,ERROR_ERRNO_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
 ERROR DEFLATE_FAIL
   strncpy(errorText,"compress fail",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
