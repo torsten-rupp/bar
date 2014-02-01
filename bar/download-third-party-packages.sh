@@ -256,9 +256,31 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [curl] [mxml] [openssl] [libssh2] [gnutls] [libcdio] [breakpad] [pcre] [epm] [launch4j] [jre-windows]"
-  $ECHO ""
   $ECHO "Download additional third party packages."
+  $ECHO ""
+  $ECHO "Usage: download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [<package>] ..."
+  $ECHO ""
+  $ECHO "Packages (included in 'all'):"
+  $ECHO ""
+  $ECHO " zlib"
+  $ECHO " bzip2"
+  $ECHO " lzma"
+  $ECHO " xdelta"
+  $ECHO " gcrypt"
+  $ECHO " curl"
+  $ECHO " mxml"
+  $ECHO " openssl"
+  $ECHO " libssh2"
+  $ECHO " gnutls"
+  $ECHO " libcdio"
+  $ECHO " breakpad"
+  $ECHO " pcre"
+  $ECHO " epm"
+  $ECHO ""
+  $ECHO "Additional packages:"
+  $ECHO ""
+  $ECHO " launch4j"
+  $ECHO " jre-windows"
   exit 0
 fi
 
@@ -712,7 +734,7 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  if test $allFlag -eq 1 -o $launch4jFlag -eq 1; then
+  if test $launch4jFlag -eq 1; then
     # launchj4
     (
      if test -n "$destination"; then
@@ -732,7 +754,7 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  if test $allFlag -eq 1 -o $jreWindowsFlag -eq 1; then
+  if test $jreWindowsFlag -eq 1; then
     # Windows JRE from OpenJDK 6
     (
      if test -n "$destination"; then
@@ -878,14 +900,14 @@ else
     $RMF pcre
   fi
 
-  if test $allFlag -eq 1 -o $launch4jFlag -eq 1; then
+  if test $launch4jFlag -eq 1; then
     # launch4j
     $RMF $tmpDirectory/launch4j-*.tgz
     $RMRF $tmpDirectory/launch4j
     $RMF launch4j
   fi
 
-  if test $allFlag -eq 1 -o $jreWindowsFlag -eq 1; then
+  if test $jreWindowsFlag -eq 1; then
     # Windows JRE
     $RMF $tmpDirectory/openjdk-*.zip
     $RMRF $tmpDirectory/openjdk-*
