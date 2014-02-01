@@ -117,6 +117,41 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
   extern "C" {
 #endif
 
+#ifdef HAVE_LZMA
+/***********************************************************************\
+* Name   : lzmaErrorText
+* Purpose: get error text for LZMA error code
+* Input  : lzmaResult - LZMA result
+* Output : -
+* Return : error text or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const char *lzmaErrorText(lzma_ret lzmaResult)
+{
+  const char *errorText;
+
+  switch (lzmaResult)
+  {
+      case LZMA_OK:                errorText = NULL; break;
+      case LZMA_STREAM_END:        errorText = "end of stream"; break;
+      case LZMA_NO_CHECK:          errorText = "no integrity check"; break;
+      case LZMA_UNSUPPORTED_CHECK: errorText = "unsupported integrity check"; break;
+      case LZMA_GET_CHECK:         errorText = "integrity check id found"; break;
+      case LZMA_MEM_ERROR:         errorText = "insufficient memory"; break;
+      case LZMA_MEMLIMIT_ERROR:    errorText = "memory limit reached"; break;
+      case LZMA_FORMAT_ERROR:      errorText = "data format not recognized"; break;
+      case LZMA_OPTIONS_ERROR:     errorText = "invalid or unsupported option"; break;
+      case LZMA_DATA_ERROR:        errorText = "corrupt data"; break;
+      case LZMA_BUF_ERROR:         errorText = "no input/output data"; break;
+      case LZMA_PROG_ERROR:        errorText = "programming error: invalid arguments or corrupt decoder"; break;
+      default:                     errorText = "unknown"; break;
+  }
+
+  return errorText;
+}
+#endif /* HAVE_LZMA */
+
 /***********************************************************************\
 * Name   : compressData
 * Purpose: compress data if possible
@@ -378,7 +413,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                 lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
                 if (lzmaResult != LZMA_OK)
                 {
-                  return ERROR_(DEFLATE_FAIL,lzmaResult);
+                  return ERRORX_(DEFLATE_FAIL,lzmaResult,lzmaErrorText(lzmaResult));
                 }
                 RingBuffer_decrement(&compressInfo->dataRingBuffer,
                                      maxDataBytes-compressInfo->lzmalib.stream.avail_in
@@ -414,7 +449,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                 }
                 else if (lzmaResult != LZMA_OK)
                 {
-                  return ERROR_(DEFLATE_FAIL,lzmaResult);
+                  return ERRORX_(DEFLATE_FAIL,lzmaResult,lzmaErrorText(lzmaResult));
                 }
                 RingBuffer_increment(&compressInfo->compressRingBuffer,
                                      maxCompressBytes-compressInfo->lzmalib.stream.avail_out
@@ -1001,7 +1036,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 }
                 else if (lzmaResult != LZMA_OK)
                 {
-                  return ERROR_(INFLATE_FAIL,lzmaResult);
+                  return ERRORX_(INFLATE_FAIL,lzmaResult,lzmaErrorText(lzmaResult));
                 }
                 RingBuffer_decrement(&compressInfo->compressRingBuffer,
                                      maxCompressBytes-compressInfo->lzmalib.stream.avail_in
@@ -1040,7 +1075,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 }
                 else if (lzmaResult != LZMA_OK)
                 {
-                  return ERROR_(INFLATE_FAIL,lzmaResult);
+                  return ERRORX_(INFLATE_FAIL,lzmaResult,lzmaErrorText(lzmaResult));
                 }
                 RingBuffer_increment(&compressInfo->dataRingBuffer,
                                      maxDataBytes-compressInfo->lzmalib.stream.avail_out
@@ -1630,7 +1665,7 @@ bool Compress_isValidAlgorithm(uint16 n)
               {
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-                return ERRORX_(INIT_COMPRESS,lzmaResult,NULL);
+                return ERRORX_(INIT_COMPRESS,lzmaResult,lzmaErrorText(lzmaResult));
               }
               break;
             case COMPRESS_MODE_INFLATE:
@@ -1640,7 +1675,7 @@ bool Compress_isValidAlgorithm(uint16 n)
               {
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-                return ERRORX_(INIT_COMPRESS,lzmaResult,NULL);
+                return ERRORX_(INIT_COMPRESS,lzmaResult,lzmaErrorText(lzmaResult));
               }
               break;
             #ifndef NDEBUG
