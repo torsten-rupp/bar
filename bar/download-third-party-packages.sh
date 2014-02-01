@@ -50,7 +50,7 @@ pthreadsW32Flag=0
 breakpadFlag=0
 epmFlag=0
 launch4jFlag=0
-jreFlag=0
+jreWindowsFlag=0
 destination=""
 noDecompressFlag=0
 
@@ -157,9 +157,9 @@ while test $# != 0; do
           allFlag=0
           launch4jFlag=1
           ;;
-        jre)
+        jre-windows)
           allFlag=0
-          jreFlag=1
+          jreWindowsFlag=1
           ;;
         *)
           $ECHO >&2 "ERROR: unknown package '$1'"
@@ -244,9 +244,9 @@ while test $# != 0; do
       allFlag=0
       launch4jFlag=1
       ;;
-    jre)
+    jre-windows)
       allFlag=0
-      jreFlag=1
+      jreWindowsFlag=1
       ;;
     *)
       $ECHO >&2 "ERROR: unknown package '$1'"
@@ -256,7 +256,7 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [curl] [mxml] [openssl] [libssh2] [gnutls] [libcdio] [breakpad] [pcre] [epm] [launch4j] [jre]"
+  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [curl] [mxml] [openssl] [libssh2] [gnutls] [libcdio] [breakpad] [pcre] [epm] [launch4j] [jre-windows]"
   $ECHO ""
   $ECHO "Download additional third party packages."
   exit 0
@@ -713,7 +713,7 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $launch4jFlag -eq 1; then
-    # JRE from OpenJDK 6
+    # launchj4
     (
      if test -n "$destination"; then
        cd $destination
@@ -732,8 +732,8 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  if test $allFlag -eq 1 -o $jreFlag -eq 1; then
-    # JRE from OpenJDK 6
+  if test $allFlag -eq 1 -o $jreWindowsFlag -eq 1; then
+    # Windows JRE from OpenJDK 6
     (
      if test -n "$destination"; then
        cd $destination
@@ -747,15 +747,15 @@ if test $cleanFlag -eq 0; then
        $WGET $WGET_OPTIONS 'https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip'
      fi
      if test $noDecompressFlag -eq 0; then
-       $UNZIP openjdk-1.6.0-unofficial-b30-windows-i586-image.zip 'openjdk-1.6.0-unofficial-b30-windows-i586-image/jre/*'
+       $UNZIP -o openjdk-1.6.0-unofficial-b30-windows-i586-image.zip 'openjdk-1.6.0-unofficial-b30-windows-i586-image/jre/*'
      fi
      if test $noDecompressFlag -eq 0; then
-       $UNZIP openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip 'openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre/*'
+       $UNZIP -o openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip 'openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre/*'
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre
-      $LN -f -s $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_64
+      $LN -f -s $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows
+      $LN -f -s $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64
     fi
   fi
 else
@@ -876,6 +876,20 @@ else
     # breakpad
     $RMRF $tmpDirectory/pthreads-w32-*
     $RMF pcre
+  fi
+
+  if test $allFlag -eq 1 -o $launch4jFlag -eq 1; then
+    # launch4j
+    $RMF $tmpDirectory/launch4j-*.tgz
+    $RMRF $tmpDirectory/launch4j
+    $RMF launch4j
+  fi
+
+  if test $allFlag -eq 1 -o $jreWindowsFlag -eq 1; then
+    # Windows JRE
+    $RMF $tmpDirectory/openjdk-*.zip
+    $RMRF $tmpDirectory/openjdk-*
+    $RMF jre_windows jre_windows_64
   fi
 
   if test $allFlag -eq 1 -o $epmFlag -eq 1; then
