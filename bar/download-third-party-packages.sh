@@ -23,6 +23,7 @@ SVN="svn"
 TAR="tar"
 WGET="wget"
 WGET_OPTIONS="--timeout=30 --tries=3"
+UNZIP="unzip"
 
 # --------------------------------- variables --------------------------------
 
@@ -48,6 +49,8 @@ pcreFlag=0
 pthreadsW32Flag=0
 breakpadFlag=0
 epmFlag=0
+launch4jFlag=0
+jreFlag=0
 destination=""
 noDecompressFlag=0
 
@@ -150,6 +153,14 @@ while test $# != 0; do
           allFlag=0
           epmFlag=1
           ;;
+        launch4j)
+          allFlag=0
+          launch4jFlag=1
+          ;;
+        jre)
+          allFlag=0
+          jreFlag=1
+          ;;
         *)
           $ECHO >&2 "ERROR: unknown package '$1'"
           exit 1
@@ -229,6 +240,14 @@ while test $# != 0; do
       allFlag=0
       epmFlag=1
       ;;
+    launch4j)
+      allFlag=0
+      launch4jFlag=1
+      ;;
+    jre)
+      allFlag=0
+      jreFlag=1
+      ;;
     *)
       $ECHO >&2 "ERROR: unknown package '$1'"
       exit 1
@@ -237,7 +256,7 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [curl] [mxml] [openssl] [libssh2] [gnutls] [libcdio] [breakpad] [pcre] [epm]"
+  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [curl] [mxml] [openssl] [libssh2] [gnutls] [libcdio] [breakpad] [pcre] [epm] [launch4j] [jre]"
   $ECHO ""
   $ECHO "Download additional third party packages."
   exit 0
@@ -245,18 +264,23 @@ fi
 
 # check if wget, patch are available
 type $WGET 1>/dev/null 2>/dev/null && $WGET --version 1>/dev/null 2>/dev/null
-if test $? -ne 0; then
+if test $? -gt 0; then
   $ECHO >&2 "ERROR: command 'wget' is not available"
   exit 1
 fi
 type $SVN 1>/dev/null 2>/dev/null && $SVN --version 1>/dev/null 2>/dev/null
-if test $? -ne 0; then
+if test $? -gt 0; then
   $ECHO >&2 "ERROR: command 'svn' is not available"
   exit 1
 fi
 type $PATCH 1>/dev/null 2>/dev/null && $PATCH --version 1>/dev/null 2>/dev/null
-if test $? -ne 0; then
+if test $? -gt 0; then
   $ECHO >&2 "ERROR: command 'patch' is not available"
+  exit 1
+fi
+type $UNZIP 1>/dev/null 2>/dev/null && $UNZIP --version 1>/dev/null 2>/dev/null
+if test $? -gt 10; then
+  $ECHO >&2 "ERROR: command 'unzip' is not available"
   exit 1
 fi
 
@@ -685,6 +709,53 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       $LN -f -s $tmpDirectory/epm-4.2 epm
+    fi
+  fi
+
+  if test $allFlag -eq 1 -o $launch4jFlag -eq 1; then
+    # JRE from OpenJDK 6
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+     if test ! -f launch4j-3.1.0-beta2-linux.tgz; then
+       $WGET $WGET_OPTIONS 'http://downloads.sourceforge.net/project/launch4j/launch4j-3/3.1.0-beta2/launch4j-3.1.0-beta2-linux.tgz'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf launch4j-3.1.0-beta2-linux.tgz
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      $LN -f -s $tmpDirectory/launch4j launch4j
+    fi
+  fi
+
+  if test $allFlag -eq 1 -o $jreFlag -eq 1; then
+    # JRE from OpenJDK 6
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+     if test ! -f openjdk-1.6.0-unofficial-b30-windows-i586-image.zip; then
+       $WGET $WGET_OPTIONS 'https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip'
+     fi
+     if test ! -f openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip; then
+       $WGET $WGET_OPTIONS 'https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $UNZIP openjdk-1.6.0-unofficial-b30-windows-i586-image.zip 'openjdk-1.6.0-unofficial-b30-windows-i586-image/jre/*'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $UNZIP openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip 'openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre/*'
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      $LN -f -s $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre
+      $LN -f -s $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_64
     fi
   fi
 else
