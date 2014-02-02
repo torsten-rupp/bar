@@ -39,35 +39,6 @@
 extern "C" {
 #endif
 
-/***********************************************************************\
-* Name   : resourceToString
-* Purpose: convert resource to string
-* Input  : resource     - resource
-*          resourceSize - size of resource
-* Output : -
-* Return : string
-* Notes  : -
-\***********************************************************************/
-
-LOCAL const char *resourceToString(const uint8_t *resource, size_t resourceSize)
-{
-  static char s[2*16+1];
-  size_t      i;
-
-  assert(resourceSize <= 16);
-
-  for (i = 0; i < resourceSize; i++)
-  {
-    if (i < 16)
-    {
-      sprintf(&s[i*2],"%02x",resource[i]);
-    }
-  }
-  s[2*16] = '\0';
-
-  return s;
-}
-
 // ----------------------------------------------------------------------
 
 void AutoFree_init(AutoFreeList *autoFreeList)
@@ -138,7 +109,6 @@ void AutoFree_cleanup(AutoFreeList *autoFreeList)
 #ifdef NDEBUG
 bool AutoFree_add(AutoFreeList     *autoFreeList,
                   const void       *resource,
-                  size_t           resourceSize,
                   AutoFreeFunction autoFreeFunction
                  )
 #else /* not NDEBUG */
@@ -146,7 +116,6 @@ bool __AutoFree_add(const char       *__fileName__,
                     uint             __lineNb__,
                     AutoFreeList     *autoFreeList,
                     const void       *resource,
-                    size_t           resourceSize,
                     AutoFreeFunction autoFreeFunction
                    )
 #endif /* NDEBUG */
@@ -154,7 +123,6 @@ bool __AutoFree_add(const char       *__fileName__,
   AutoFreeNode *autoFreeNode;
 
   assert(autoFreeList != NULL);
-  assert(resourceSize <= SIZE_OF_MEMBER(AutoFreeNode,resource));
 
   pthread_mutex_lock(&autoFreeList->lock);
   {
@@ -170,9 +138,7 @@ bool __AutoFree_add(const char       *__fileName__,
     }
 
     // init resource node
-    memcpy(autoFreeNode->resource,resource,resourceSize);
-    autoFreeNode->resourceSize = resourceSize;
-//    autoFreeNode->resource         = resource;
+    autoFreeNode->resource         = resource;
     autoFreeNode->autoFreeFunction = autoFreeFunction;
     #ifndef NDEBUG
       autoFreeNode->fileName = __fileName__;
@@ -192,15 +158,13 @@ bool __AutoFree_add(const char       *__fileName__,
 
 #ifdef NDEBUG
 void AutoFree_remove(AutoFreeList *autoFreeList,
-                     const void   *resource,
-                     size_t       resourceSize
+                     const void   *resource
                     )
 #else /* not NDEBUG */
 void __AutoFree_remove(const char   *__fileName__,
                        uint         __lineNb__,
                        AutoFreeList *autoFreeList,
-                       const void   *resource,
-                       size_t       resourceSize
+                       const void   *resource
                       )
 #endif /* NDEBUG */
 {
@@ -208,7 +172,6 @@ void __AutoFree_remove(const char   *__fileName__,
   AutoFreeNode *autoFreeNode;
 
   assert(autoFreeList != NULL);
-  assert(resourceSize <= SIZE_OF_MEMBER(AutoFreeNode,resource));
 
   pthread_mutex_lock(&autoFreeList->lock);
   {
@@ -217,9 +180,7 @@ void __AutoFree_remove(const char   *__fileName__,
     autoFreeNode = autoFreeList->head;
     while (autoFreeNode != NULL)
     {
-      if (   (autoFreeNode->resourceSize == resourceSize)
-          && (memcmp(autoFreeNode->resource,resource,resourceSize) == 0)
-         )
+      if (autoFreeNode->resource == resource)
       {
         // remove from list
         autoFreeNode = List_removeAndFree(autoFreeList,autoFreeNode,CALLBACK(NULL,NULL));
@@ -234,8 +195,8 @@ void __AutoFree_remove(const char   *__fileName__,
     if (!foundFlag)
     {
       #ifndef NDEBUG
-        fprintf(stderr,"DEBUG WARNING: auto resource %s not found in auto resource list at %s, line %u\n",
-                resourceToString(resource,resourceSize),
+        fprintf(stderr,"DEBUG WARNING: auto resource %p not found in auto resource list at %s, line %u\n",
+                resource,
                 __fileName__,
                 __lineNb__
                );
@@ -243,8 +204,8 @@ void __AutoFree_remove(const char   *__fileName__,
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
       #else /* not NDEBUG */
-        fprintf(stderr,"DEBUG WARNING: auto resource %s not found in auto resource list\n",
-                resourceToString(resource,resourceSize)
+        fprintf(stderr,"DEBUG WARNING: auto resource %p not found in auto resource list\n",
+                resource
                );
       #endif /* not NDEBUG */
       HALT_INTERNAL_ERROR("");
@@ -333,8 +294,8 @@ void AutoFree_dumpInfo(AutoFreeList *autoFreeList, FILE *handle)
   {
     LIST_ITERATE(autoFreeList,autoFreeNode)
     {
-      fprintf(handle,"DEBUG: auto resource %s added at %s, line %lu\n",
-              resourceToString(autoFreeNode->resource,autoFreeNode->resourceSize),
+      fprintf(handle,"DEBUG: auto resource %p added at %s, line %lu\n",
+              autoFreeNode->resource,
               autoFreeNode->fileName,
               autoFreeNode->lineNb
              );

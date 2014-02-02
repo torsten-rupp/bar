@@ -31,14 +31,13 @@
 /**************************** Datatypes ********************************/
 
 // free functions
-typedef void(*AutoFreeFunction)(void *resource);
+typedef void(*AutoFreeFunction)(const void *resource);
 
 typedef struct AutoFreeNode
 {
   LIST_NODE_HEADER(struct AutoFreeNode);
 
-  uint8_t          resource[16];
-  size_t           resourceSize;
+  const void       *resource;
   AutoFreeFunction autoFreeFunction;
   void             *autoFreeUserData;
 
@@ -74,8 +73,7 @@ typedef struct
 #ifdef __GNUC__
   #define AUTOFREE_ADD(autoFreeList,resource_,freeFunctionBody) \
     AutoFree_add(autoFreeList, \
-                 (void*)&resource_, \
-                 sizeof(resource_), \
+                 resource_, \
                  (AutoFreeFunction)({ \
                                      auto void __closure__(void); \
                                      void __closure__(void)freeFunctionBody __closure__; \
@@ -84,8 +82,7 @@ typedef struct
 
   #define AUTOFREE_ADDX(autoFreeList,resource_,freeFunctionSignature,freeFunctionBody) \
     AutoFree_add(autoFreeList, \
-                 (void*)&resource_, \
-                 sizeof(resource_), \
+                 resource_, \
                  (AutoFreeFunction)({ \
                                      auto void __closure__ freeFunctionSignature; \
                                      void __closure__ freeFunctionSignature freeFunctionBody __closure__; \
@@ -96,8 +93,7 @@ typedef struct
     do \
     { \
       AutoFree_remove(autoFreeList, \
-                      (void*)&resource_, \
-                      sizeof(resource_) \
+                      resource_ \
                      ); \
     } \
     while (0)
@@ -179,7 +175,6 @@ void AutoFree_cleanup(AutoFreeList *autoFreeList);
 * Purpose: add resource to auto-free list
 * Input  : autoFreeList     - auto-free list
 *          resource         - resource
-*          resourceSize     - size of resource
 *          autoFreeFunction - free function
 * Output : -
 * Return : TRUE iff resourced added
@@ -189,7 +184,6 @@ void AutoFree_cleanup(AutoFreeList *autoFreeList);
 #ifdef NDEBUG
 bool AutoFree_add(AutoFreeList     *autoFreeList,
                   const void       *resource,
-                  size_t           resourceSize,
                   AutoFreeFunction autoFreeFunction
                  );
 #else /* not NDEBUG */
@@ -197,7 +191,6 @@ bool __AutoFree_add(const char       *__fileName__,
                     uint             __lineNb__,
                     AutoFreeList     *autoFreeList,
                     const void       *resource,
-                    size_t           resourceSize,
                     AutoFreeFunction autoFreeFunction
                    );
 #endif /* NDEBUG */
@@ -207,7 +200,6 @@ bool __AutoFree_add(const char       *__fileName__,
 * Purpose: remove resource from auto-free list
 * Input  : autoFreeList - auto-free list
 *          resource     - resource
-*          resourceSize - size of resource
 * Output : -
 * Return : -
 * Notes  : resource is not freed!
@@ -215,15 +207,13 @@ bool __AutoFree_add(const char       *__fileName__,
 
 #ifdef NDEBUG
 void AutoFree_remove(AutoFreeList *autoFreeList,
-                     const void   *resource,
-                     size_t       resourceSize
+                     const void   *resource
                     );
 #else /* not NDEBUG */
 void __AutoFree_remove(const char   *__fileName__,
                        uint         __lineNb__,
                        AutoFreeList *autoFreeList,
-                       const void   *resource,
-                       size_t       resourceSize
+                       const void   *resource
                       );
 #endif /* NDEBUG */
 
