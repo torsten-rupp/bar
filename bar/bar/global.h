@@ -259,6 +259,18 @@ typedef void                void32;
 #define UNUSED_VARIABLE(variable) (void)variable
 
 /***********************************************************************\
+* Name   : SIZE_OF_MEMBER
+* Purpose: get size of struct member
+* Input  : type   - struct type
+*          member - member name
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define SIZE_OF_MEMBER(type,member) (sizeof(((type*)NULL)->member))
+
+/***********************************************************************\
 * Name   : SIZE_OF_ARRAY
 * Purpose: get size of array
 * Input  : array - array
