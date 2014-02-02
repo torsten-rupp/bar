@@ -36,13 +36,13 @@ typedef struct AutoFreeNode
 {
   LIST_NODE_HEADER(struct AutoFreeNode);
 
-  void             *resource;
+  uint64           resource;
   AutoFreeFunction autoFreeFunction;
   void             *autoFreeUserData;
 
   #ifndef NDEBUG
-    const char     *fileName;
-    ulong          lineNb;
+    const char   *fileName;
+    ulong        lineNb;
     #ifdef HAVE_BACKTRACE
       void const *stackTrace[16];
       int        stackTraceSize;
@@ -72,7 +72,7 @@ typedef struct
 #ifdef __GNUC__
   #define AUTOFREE_ADD(autoFreeList,resource_,freeFunctionBody) \
     AutoFree_add(autoFreeList,\
-                 (void*)(unsigned long long)resource_, \
+                 (uint64)resource_, \
                  (AutoFreeFunction)({ \
                                      auto void __closure__(void); \
                                      void __closure__(void)freeFunctionBody __closure__; \
@@ -81,12 +81,19 @@ typedef struct
 
   #define AUTOFREE_ADDX(autoFreeList,resource_,freeFunctionSignature,freeFunctionBody) \
     AutoFree_add(autoFreeList,\
-                 (void*)(unsigned long long)resource_, \
+                 (uint64)resource_, \
                  (AutoFreeFunction)({ \
                                      auto void __closure__ freeFunctionSignature; \
                                      void __closure__ freeFunctionSignature freeFunctionBody __closure__; \
                                    }) \
                 )
+
+  #define AUTOFREE_REMOVE(autoFreeList,resource_) \
+    do \
+    { \
+      AutoFree_remove(autoFreeList,(uint64)resource_); \
+    } \
+    while (0)
 
   #define AUTOFREE_FREE(functionBody) \
   ({ \
@@ -170,14 +177,14 @@ void AutoFree_cleanup(AutoFreeList *autoFreeList);
 
 #ifdef NDEBUG
 bool AutoFree_add(AutoFreeList     *autoFreeList,
-                  void             *resource,
+                  uint64           resource,
                   AutoFreeFunction autoFreeFunction
                  );
 #else /* not NDEBUG */
 bool __AutoFree_add(const char       *__fileName__,
                     uint             __lineNb__,
                     AutoFreeList     *autoFreeList,
-                    void             *resource,
+                    uint64           resource,
                     AutoFreeFunction autoFreeFunction
                    );
 #endif /* NDEBUG */
@@ -194,13 +201,13 @@ bool __AutoFree_add(const char       *__fileName__,
 
 #ifdef NDEBUG
 void AutoFree_remove(AutoFreeList *autoFreeList,
-                     void         *resource
+                     uint64       resource
                     );
 #else /* not NDEBUG */
 void __AutoFree_remove(const char   *__fileName__,
                        uint         __lineNb__,
                        AutoFreeList *autoFreeList,
-                       void         *resource
+                       uint64       resource
                       );
 #endif /* NDEBUG */
 

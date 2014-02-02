@@ -627,7 +627,7 @@ Errors Command_restore(const StringList                *storageNameList,
               if (!jobOptions->dryRunFlag)
               {
                 (void)File_close(&fileHandle);
-                AutoFree_remove(&autoFreeList,&fileHandle);
+                AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
               }
 
               if (fragmentNode != NULL)
@@ -1069,11 +1069,11 @@ Errors Command_restore(const StringList                *storageNameList,
                 {
                   case DEVICE:
                     (void)Device_close(&deviceHandle);
-                    AutoFree_remove(&autoFreeList,&deviceHandle);
+                    AUTOFREE_REMOVE(&autoFreeList,&deviceHandle);
                     break;
                   case FILE:
                     (void)File_close(&fileHandle);
-                    AutoFree_remove(&autoFreeList,&fileHandle);
+                    AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
                     break;
                   default:
                     #ifndef NDEBUG
@@ -1824,7 +1824,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   if (!jobOptions->dryRunFlag)
                   {
                     (void)File_close(&fileHandle);
-                    AutoFree_remove(&autoFreeList,&fileHandle);
+                    AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
                   }
 
                   if (fragmentNode != NULL)
@@ -1950,8 +1950,8 @@ Errors Command_restore(const StringList                *storageNameList,
             }
             String_delete(destinationFileName);
             String_delete(hardLinkFileName);
-            AutoFree_remove(&autoFreeList,destinationFileName);
-            AutoFree_remove(&autoFreeList,hardLinkFileName);
+            AUTOFREE_REMOVE(&autoFreeList,destinationFileName);
+            AUTOFREE_REMOVE(&autoFreeList,hardLinkFileName);
             if (restoreInfo.failError != ERROR_NONE)
             {
               AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);

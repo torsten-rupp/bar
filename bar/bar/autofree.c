@@ -108,14 +108,14 @@ void AutoFree_cleanup(AutoFreeList *autoFreeList)
 
 #ifdef NDEBUG
 bool AutoFree_add(AutoFreeList     *autoFreeList,
-                  void             *resource,
+                  uint64           resource,
                   AutoFreeFunction autoFreeFunction
                  )
 #else /* not NDEBUG */
 bool __AutoFree_add(const char       *__fileName__,
                     uint             __lineNb__,
                     AutoFreeList     *autoFreeList,
-                    void             *resource,
+                    uint64           resource,
                     AutoFreeFunction autoFreeFunction
                    )
 #endif /* NDEBUG */
@@ -158,13 +158,13 @@ bool __AutoFree_add(const char       *__fileName__,
 
 #ifdef NDEBUG
 void AutoFree_remove(AutoFreeList *autoFreeList,
-                     void         *resource
+                     uint64       resource
                     )
 #else /* not NDEBUG */
 void __AutoFree_remove(const char   *__fileName__,
                        uint         __lineNb__,
                        AutoFreeList *autoFreeList,
-                       void         *resource
+                       uint64       resource
                       )
 #endif /* NDEBUG */
 {
