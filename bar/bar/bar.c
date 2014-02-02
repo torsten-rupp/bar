@@ -2531,7 +2531,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   DEBUG_TESTCODE("initAll1") { Password_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,Password_initAll,{ Password_doneAll(); });
+  AUTOFREE_ADD(&autoFreeList,&Password_initAll,{ Password_doneAll(); });
 
   error = Compress_initAll();
   if (error != ERROR_NONE)
@@ -2540,7 +2540,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   DEBUG_TESTCODE("initAll2") { Compress_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,Compress_initAll,{ Compress_doneAll(); });
+  AUTOFREE_ADD(&autoFreeList,&Compress_initAll,{ Compress_doneAll(); });
 
   error = Crypt_initAll();
   if (error != ERROR_NONE)
@@ -2549,7 +2549,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   DEBUG_TESTCODE("initAll3") { Crypt_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,Crypt_initAll,{ Crypt_doneAll(); });
+  AUTOFREE_ADD(&autoFreeList,&Crypt_initAll,{ Crypt_doneAll(); });
 
   error = Pattern_initAll();
   if (error != ERROR_NONE)
@@ -2558,7 +2558,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   DEBUG_TESTCODE("initAll4") { Pattern_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,Pattern_initAll,{ Password_doneAll(); });
+  AUTOFREE_ADD(&autoFreeList,&Pattern_initAll,{ Password_doneAll(); });
 
   error = PatternList_initAll();
   if (error != ERROR_NONE)
@@ -2567,7 +2567,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   DEBUG_TESTCODE("initAll5") { PatternList_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,PatternList_initAll,{ PatternList_doneAll(); });
+  AUTOFREE_ADD(&autoFreeList,&PatternList_initAll,{ PatternList_doneAll(); });
 
   error = Chunk_initAll();
   if (error != ERROR_NONE)
@@ -2576,7 +2576,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   DEBUG_TESTCODE("initAll6") { Chunk_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,Chunk_initAll,{ Chunk_doneAll(); });
+  AUTOFREE_ADD(&autoFreeList,&Chunk_initAll,{ Chunk_doneAll(); });
 
   error = Source_initAll();
   if (error != ERROR_NONE)
@@ -2585,7 +2585,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   DEBUG_TESTCODE("initAll7") { Source_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,Source_initAll,{ Source_doneAll(); });
+  AUTOFREE_ADD(&autoFreeList,&Source_initAll,{ Source_doneAll(); });
 
   error = Archive_initAll();
   if (error != ERROR_NONE)
@@ -2594,7 +2594,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   DEBUG_TESTCODE("initAll8") { Archive_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,Archive_initAll,{ Archive_doneAll(); });
+  AUTOFREE_ADD(&autoFreeList,&Archive_initAll,{ Archive_doneAll(); });
 
   error = Storage_initAll();
   if (error != ERROR_NONE)
@@ -2603,7 +2603,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   DEBUG_TESTCODE("initAll9") { Storage_doneAll(), AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,Storage_initAll,{ Storage_doneAll(); });
+  AUTOFREE_ADD(&autoFreeList,&Storage_initAll,{ Storage_doneAll(); });
 
   error = Index_initAll();
   if (error != ERROR_NONE)
@@ -2612,7 +2612,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   DEBUG_TESTCODE("initAll10") { Index_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,Index_initAll,{ Index_doneAll(); });
+  AUTOFREE_ADD(&autoFreeList,&Index_initAll,{ Index_doneAll(); });
 
   error = Network_initAll();
   if (error != ERROR_NONE)
@@ -2621,7 +2621,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   DEBUG_TESTCODE("initAll11") { Network_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,Network_initAll,{ Network_doneAll(); });
+  AUTOFREE_ADD(&autoFreeList,&Network_initAll,{ Network_doneAll(); });
 
   error = Server_initAll();
   if (error != ERROR_NONE)
@@ -2630,7 +2630,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   DEBUG_TESTCODE("initAll12") { Server_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,Server_initAll,{ Server_doneAll(); });
+  AUTOFREE_ADD(&autoFreeList,&Server_initAll,{ Server_doneAll(); });
 
   // initialize variables
   initGlobalOptions();
