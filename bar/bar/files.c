@@ -2926,7 +2926,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
 
   // get attributes
   name = names;
-  while ((name-names) < namesLength)
+  while ((uint)(name-names) < namesLength)
   {
     // allocate buffer for data
     n = lgetxattr(String_cString(fileName),name,NULL,0);
