@@ -197,7 +197,6 @@ BAR_SOURCES          = bar.c \
                        devices.c \
                        filesystems.c \
                        archive.c \
-                       archive_format.c \
                        chunks.c \
                        patterns.c \
                        patternlists.c \
@@ -376,12 +375,12 @@ bar-debug@EXEEXT@: \
 # create BAR symbol files
 ifeq (@HAVE_BREAKPAD@,1)
 bar.symbols: bar@EXEEXT@
-	$(DUMP_SYMS) bar@EXEEXT@ > $@
+	$(DUMP_SYMS) ./bar@EXEEXT@ > $@
 endif
 
 ifeq (@HAVE_BREAKPAD@,1)
 bar-debug.symbols: bar-debug@EXEEXT@
-	$(DUMP_SYMS) bar-debug@EXEEXT@ > $@
+	$(DUMP_SYMS) ./bar-debug@EXEEXT@ > $@
 endif
 
 # compile SQLite, xdelta C source without warning and debug flags
@@ -2885,6 +2884,10 @@ endif
 
 # ----------------------------------------------------------------------------
 
+ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(MAKECMDGOALS),distclean)
 -include Makefile.depend
+endif
+endif
 
 # end of file
