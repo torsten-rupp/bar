@@ -665,7 +665,7 @@ LOCAL bool lock(const char         *fileName,
         else
         {
           fprintf(stderr,
-                  "DEBUG WARNING: too many thread locks for semaphore '%s' at %s, line %lu (max. %lu)!\n",
+                  "DEBUG WARNING: too many thread locks for semaphore '%s' at %s, line %lu (max. %u)!\n",
                   semaphore->name,
                   fileName,
                   lineNb,
