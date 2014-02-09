@@ -5451,6 +5451,8 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   // init variables
   AutoFree_init(&autoFreeList1);
 
+  if (deltaSourceSize != NULL) (*deltaSourceSize) = 0LL;
+
   archiveEntryInfo->archiveInfo               = archiveInfo;
   archiveEntryInfo->mode                      = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType          = ARCHIVE_ENTRY_TYPE_FILE;
@@ -6005,6 +6007,8 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
   // init variables
   AutoFree_init(&autoFreeList1);
+
+  if (deltaSourceSize != NULL) (*deltaSourceSize) = 0LL;
 
   archiveEntryInfo->archiveInfo                = archiveInfo;
   archiveEntryInfo->mode                       = ARCHIVE_MODE_READ;
@@ -7236,6 +7240,8 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
   // init variables
   AutoFree_init(&autoFreeList1);
+
+  if (deltaSourceSize != NULL) (*deltaSourceSize) = 0LL;
 
   archiveEntryInfo->archiveInfo                   = archiveInfo;
   archiveEntryInfo->mode                          = ARCHIVE_MODE_READ;
