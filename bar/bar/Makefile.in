@@ -2467,6 +2467,7 @@ memcheck: \
 memcheck_extended: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
+	@$(RMF) test/key.*; $(MAKE) test/key.public test/key.private
 	$(MAKE) \
           VALGRIND_OPTIONS="--leak-check=full" \
             $(if $(CHECK),\
