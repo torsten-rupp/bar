@@ -420,7 +420,7 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
 {
   #if HAVE_UUID_GENERATE
     uuid_t uuid;
-    char   *s;
+    char   s[36+1];
   #else /* not HAVE_UUID_GENERATE */
     FILE *file;
     char *s;
@@ -434,14 +434,11 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
   #if HAVE_UUID_GENERATE
     uuid_generate(uuid);
 
-    s = (char*)malloc(36+1);
-    if (s != NULL)
-    {
-      uuid_unparse_lower(uuid,s);
-      strncpy(buffer,s,bufferSize-1);
-      buffer[bufferSize-1] = '\0';
-      free(s);
-    }
+    uuid_unparse_lower(uuid,s);
+    s[36] = '\0';
+
+    strncpy(buffer,s,bufferSize-1);
+    buffer[bufferSize-1] = '\0';
   #else /* not HAVE_UUID_GENERATE */
 
     file = fopen("/proc/sys/kernel/random/uuid","r");
