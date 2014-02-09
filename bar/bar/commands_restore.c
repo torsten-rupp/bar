@@ -225,7 +225,7 @@ Errors Command_restore(const StringList                *storageNameList,
   bool              abortFlag;
   Errors            error;
   ArchiveInfo       archiveInfo;
-  void              *autoFreeSavePoint;
+  void              *autoFreeSavePoint1,*autoFreeSavePoint2;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
   FragmentNode      *fragmentNode;
@@ -377,7 +377,7 @@ Errors Command_restore(const StringList                *storageNameList,
             uint64                    length;
             ulong                     n;
 
-            autoFreeSavePoint = AutoFree_save(&autoFreeList);
+            autoFreeSavePoint1 = AutoFree_save(&autoFreeList);
 
             // read file
             fileName = String_new();
@@ -405,7 +405,7 @@ Errors Command_restore(const StringList                *storageNameList,
               File_doneExtendedAttributes(&fileExtendedAttributeList);
               String_delete(fileName);
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+              AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
               continue;
             }
             AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
@@ -444,7 +444,7 @@ Errors Command_restore(const StringList                *storageNameList,
                               fragmentOffset,
                               (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
                              );
-                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                     continue;
                   }
                 }
@@ -453,7 +453,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
                   {
                     printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
-                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                     continue;
                   }
                   fragmentNode = FragmentList_add(&fragmentList,destinationFileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
@@ -488,7 +488,7 @@ Errors Command_restore(const StringList                *storageNameList,
                               );
                     String_delete(parentDirectoryName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                     continue;
                   }
 
@@ -508,7 +508,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                 );
                       String_delete(parentDirectoryName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                      AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                       continue;
                     }
                     else
@@ -535,7 +535,7 @@ Errors Command_restore(const StringList                *storageNameList,
                              Error_getText(error)
                             );
                   if (jobOptions->stopOnErrorFlag) restoreInfo.failError = error;
-                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                   continue;
                 }
                 AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
@@ -550,7 +550,7 @@ Errors Command_restore(const StringList                *storageNameList,
                              Error_getText(error)
                             );
                   if (jobOptions->stopOnErrorFlag) restoreInfo.failError = error;
-                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                   continue;
                 }
               }
@@ -603,13 +603,13 @@ Errors Command_restore(const StringList                *storageNameList,
               }
               if      (restoreInfo.failError != ERROR_NONE)
               {
-                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                 continue;
               }
               else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
               {
                 printInfo(1,"ABORTED\n");
-                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                 continue;
               }
               printInfo(2,"    \b\b\b\b");
@@ -655,7 +655,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                  Error_getText(error)
                                 );
                       restoreInfo.failError = error;
-                      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                      AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                       continue;
                     }
                     else
@@ -719,7 +719,7 @@ Errors Command_restore(const StringList                *storageNameList,
             // free resources
             File_doneExtendedAttributes(&fileExtendedAttributeList);
             String_delete(fileName);
-            AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint1,FALSE);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
@@ -740,7 +740,7 @@ Errors Command_restore(const StringList                *storageNameList,
             uint64       block;
             ulong        bufferBlockCount;
 
-            autoFreeSavePoint = AutoFree_save(&autoFreeList);
+            autoFreeSavePoint1 = AutoFree_save(&autoFreeList);
 
             // read image
             deviceName = String_new();
@@ -815,7 +815,7 @@ Errors Command_restore(const StringList                *storageNameList,
                               blockOffset*(uint64)deviceInfo.blockSize,
                               ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
                              );
-                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                     continue;
                   }
                 }
@@ -853,7 +853,7 @@ Errors Command_restore(const StringList                *storageNameList,
                               );
                     String_delete(parentDirectoryName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                     continue;
                   }
 
@@ -873,7 +873,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                 );
                       String_delete(parentDirectoryName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                      AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                       continue;
                     }
                     else
@@ -927,7 +927,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   {
                     restoreInfo.failError = error;
                   }
-                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                   continue;
                 }
 
@@ -968,7 +968,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   {
                     restoreInfo.failError = error;
                   }
-                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                   continue;
                 }
               }
@@ -1051,13 +1051,13 @@ Errors Command_restore(const StringList                *storageNameList,
               }
               if      (restoreInfo.failError != ERROR_NONE)
               {
-                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                 continue;
               }
               else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
               {
                 printInfo(1,"ABORTED\n");
-                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                 continue;
               }
               printInfo(2,"    \b\b\b\b");
@@ -1136,7 +1136,7 @@ Errors Command_restore(const StringList                *storageNameList,
 
             // free resources
             String_delete(deviceName);
-            AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint1,FALSE);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
@@ -1147,7 +1147,7 @@ Errors Command_restore(const StringList                *storageNameList,
             String                    destinationFileName;
 //            FileInfo localFileInfo;
 
-            autoFreeSavePoint = AutoFree_save(&autoFreeList);
+            autoFreeSavePoint1 = AutoFree_save(&autoFreeList);
 
             // read directory
             directoryName = String_new();
@@ -1199,7 +1199,7 @@ Errors Command_restore(const StringList                *storageNameList,
                           "  Restore directory '%s'...skipped (file exists)\n",
                           String_cString(destinationFileName)
                          );
-                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                 continue;
               }
 
@@ -1224,7 +1224,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   {
                     restoreInfo.failError = error;
                   }
-                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                   continue;
                 }
               }
@@ -1248,7 +1248,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     {
                       restoreInfo.failError = error;
                     }
-                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                     continue;
                   }
                   else
@@ -1295,7 +1295,7 @@ Errors Command_restore(const StringList                *storageNameList,
             // free resources
             File_doneExtendedAttributes(&fileExtendedAttributeList);
             String_delete(directoryName);
-            AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint1,FALSE);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
@@ -1308,7 +1308,7 @@ Errors Command_restore(const StringList                *storageNameList,
             String                    parentDirectoryName;
 //            FileInfo localFileInfo;
 
-            autoFreeSavePoint = AutoFree_save(&autoFreeList);
+            autoFreeSavePoint1 = AutoFree_save(&autoFreeList);
 
             // read link
             linkName = String_new();
@@ -1378,7 +1378,7 @@ Errors Command_restore(const StringList                *storageNameList,
                               );
                     String_delete(parentDirectoryName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                     continue;
                   }
 
@@ -1398,7 +1398,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                 );
                       String_delete(parentDirectoryName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                      AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                       continue;
                     }
                     else
@@ -1424,7 +1424,7 @@ Errors Command_restore(const StringList                *storageNameList,
                 {
                   restoreInfo.failError = ERRORX_(FILE_EXISTS_,0,String_cString(destinationFileName));
                 }
-                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                 continue;
               }
 
@@ -1446,7 +1446,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   {
                     restoreInfo.failError = error;
                   }
-                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                   continue;
                 }
               }
@@ -1470,7 +1470,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     {
                       restoreInfo.failError = error;
                     }
-                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                     continue;
                   }
                   else
@@ -1518,7 +1518,7 @@ Errors Command_restore(const StringList                *storageNameList,
             File_doneExtendedAttributes(&fileExtendedAttributeList);
             String_delete(fileName);
             String_delete(linkName);
-            AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint1,FALSE);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
@@ -1538,7 +1538,7 @@ Errors Command_restore(const StringList                *storageNameList,
             uint64                    length;
             ulong                     n;
 
-            autoFreeSavePoint = AutoFree_save(&autoFreeList);
+            autoFreeSavePoint1 = AutoFree_save(&autoFreeList);
 
             // read hard link
             StringList_init(&fileNameList);
@@ -1565,7 +1565,7 @@ Errors Command_restore(const StringList                *storageNameList,
                         );
               StringList_done(&fileNameList);
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+              AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
               continue;
             }
             AUTOFREE_ADD(&autoFreeList,&fileNameList,{ StringList_done(&fileNameList); });
@@ -1574,9 +1574,10 @@ Errors Command_restore(const StringList                *storageNameList,
 
             hardLinkFileName    = String_new();
             destinationFileName = String_new();
-            restoredDataFlag    = FALSE;
             AUTOFREE_ADD(&autoFreeList,hardLinkFileName,{ String_delete(hardLinkFileName); });
             AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
+            restoredDataFlag    = FALSE;
+            autoFreeSavePoint2  = AutoFree_save(&autoFreeList);
             STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
             {
               if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
@@ -1624,7 +1625,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       }
                       else
                       {
-                        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                        AutoFree_restore(&autoFreeList,autoFreeSavePoint2,TRUE);
                         continue;
                       }
                     }
@@ -1674,7 +1675,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                   fragmentOffset,
                                   (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
                                  );
-                        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                        AutoFree_restore(&autoFreeList,autoFreeSavePoint2,TRUE);
                         continue;
                       }
                     }
@@ -1683,7 +1684,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
                       {
                         printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
-                        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                        AutoFree_restore(&autoFreeList,autoFreeSavePoint2,TRUE);
                         continue;
                       }
                       fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
@@ -1713,7 +1714,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       }
                       else
                       {
-                        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                        AutoFree_restore(&autoFreeList,autoFreeSavePoint2,TRUE);
                         continue;
                       }
                     }
@@ -1736,7 +1737,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       }
                       else
                       {
-                        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                        AutoFree_restore(&autoFreeList,autoFreeSavePoint2,TRUE);
                         continue;
                       }
                     }
@@ -1891,7 +1892,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
                   {
                     printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
-                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint2,TRUE);
                     continue;
                   }
 
@@ -1913,7 +1914,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       }
                       else
                       {
-                        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                        AutoFree_restore(&autoFreeList,autoFreeSavePoint2,TRUE);
                         continue;
                       }
                     }
@@ -1948,13 +1949,14 @@ Errors Command_restore(const StringList                *storageNameList,
                 printInfo(2,"  Restore '%s'...skipped\n",String_cString(fileName));
               }
             }
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint2,FALSE);
             String_delete(destinationFileName);
             String_delete(hardLinkFileName);
             AUTOFREE_REMOVE(&autoFreeList,destinationFileName);
             AUTOFREE_REMOVE(&autoFreeList,hardLinkFileName);
             if (restoreInfo.failError != ERROR_NONE)
             {
-              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+              AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
               continue;
             }
 
@@ -1968,7 +1970,7 @@ Errors Command_restore(const StringList                *storageNameList,
             // free resources
             File_doneExtendedAttributes(&fileExtendedAttributeList);
             StringList_done(&fileNameList);
-            AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint1,FALSE);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
@@ -1980,7 +1982,7 @@ Errors Command_restore(const StringList                *storageNameList,
             String                    parentDirectoryName;
 //            FileInfo localFileInfo;
 
-            autoFreeSavePoint = AutoFree_save(&autoFreeList);
+            autoFreeSavePoint1 = AutoFree_save(&autoFreeList);
 
             // read special device
             fileName = String_new();
@@ -2045,7 +2047,7 @@ Errors Command_restore(const StringList                *storageNameList,
                               );
                     String_delete(parentDirectoryName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                     continue;
                   }
 
@@ -2065,7 +2067,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                 );
                       String_delete(parentDirectoryName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
-                      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                      AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                       continue;
                     }
                     else
@@ -2091,7 +2093,7 @@ Errors Command_restore(const StringList                *storageNameList,
                 {
                   restoreInfo.failError = ERRORX_(FILE_EXISTS_,0,String_cString(destinationFileName));
                 }
-                AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                 continue;
               }
 
@@ -2116,7 +2118,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   {
                     restoreInfo.failError = error;
                   }
-                  AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                  AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                   continue;
                 }
               }
@@ -2140,7 +2142,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     {
                       restoreInfo.failError = error;
                     }
-                    AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+                    AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
                     continue;
                   }
                   else
@@ -2187,7 +2189,7 @@ Errors Command_restore(const StringList                *storageNameList,
             // free resources
             File_doneExtendedAttributes(&fileExtendedAttributeList);
             String_delete(fileName);
-            AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint1,FALSE);
           }
           break;
         default:
