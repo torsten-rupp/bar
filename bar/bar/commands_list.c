@@ -1822,7 +1822,7 @@ remoteBarFlag=FALSE;
                 String             fileName;
                 FileInfo           fileInfo;
                 String             deltaSourceName;
-                uint64             delteSourceSize;
+                uint64             deltaSourceSize;
                 uint64             fragmentOffset,fragmentSize;
 
                 // read archive file
@@ -1838,7 +1838,7 @@ remoteBarFlag=FALSE;
                                               &fileInfo,
                                               NULL,  // fileExtendedAttributeList
                                               deltaSourceName,
-                                              &delteSourceSize,
+                                              &deltaSourceSize,
                                               &fragmentOffset,
                                               &fragmentSize
                                              );
@@ -1870,7 +1870,7 @@ remoteBarFlag=FALSE;
                                     cryptAlgorithm,
                                     cryptType,
                                     deltaSourceName,
-                                    delteSourceSize,
+                                    deltaSourceSize,
                                     fragmentOffset,
                                     fragmentSize
                                    );
@@ -1893,7 +1893,7 @@ remoteBarFlag=FALSE;
                                   cryptAlgorithm,
                                   cryptType,
                                   deltaSourceName,
-                                  delteSourceSize,
+                                  deltaSourceSize,
                                   fragmentOffset,
                                   fragmentSize
                                  );
@@ -1922,7 +1922,7 @@ remoteBarFlag=FALSE;
                 String             deviceName;
                 DeviceInfo         deviceInfo;
                 String             deltaSourceName;
-                uint64             delteSourceSize;
+                uint64             deltaSourceSize;
                 uint64             blockOffset,blockCount;
 
                 // read archive image
@@ -1937,7 +1937,7 @@ remoteBarFlag=FALSE;
                                                deviceName,
                                                &deviceInfo,
                                                deltaSourceName,
-                                               &delteSourceSize,
+                                               &deltaSourceSize,
                                                &blockOffset,
                                                &blockCount
                                               );
@@ -1968,7 +1968,7 @@ remoteBarFlag=FALSE;
                                      cryptAlgorithm,
                                      cryptType,
                                      deltaSourceName,
-                                     delteSourceSize,
+                                     deltaSourceSize,
                                      deviceInfo.blockSize,
                                      blockOffset,
                                      blockCount
@@ -1991,7 +1991,7 @@ remoteBarFlag=FALSE;
                                    cryptAlgorithm,
                                    cryptType,
                                    deltaSourceName,
-                                   delteSourceSize,
+                                   deltaSourceSize,
                                    deviceInfo.blockSize,
                                    blockOffset,
                                    blockCount
