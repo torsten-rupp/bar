@@ -441,7 +441,7 @@ const char *File_getSystemTmpDirectory(void);
                          const String directory
                         );
   Errors File_getTmpFileCString(FileHandle   *fileHandle,
-                                char const   *pattern,
+                                const char   *pattern,
                                 const String directory
                                );
 #else /* not NDEBUG */
@@ -454,7 +454,7 @@ const char *File_getSystemTmpDirectory(void);
   Errors __File_getTmpFileCString(const char   *__fileName__,
                                   uint         __lineNb__,
                                   FileHandle   *fileHandle,
-                                  char const   *pattern,
+                                  const char   *pattern,
                                   const String directory
                                  );
 #endif /* NDEBUG */
@@ -471,7 +471,7 @@ const char *File_getSystemTmpDirectory(void);
 \***********************************************************************/
 
 Errors File_getTmpFileName(String fileName, const String pattern, const String directory);
-Errors File_getTmpFileNameCString(String fileName, char const *pattern, const String directory);
+Errors File_getTmpFileNameCString(String fileName, const char *pattern, const String directory);
 
 /***********************************************************************\
 * Name   : File_getTmpDirectoryName, File_getTmpDirectoryNameCString
@@ -486,7 +486,7 @@ Errors File_getTmpFileNameCString(String fileName, char const *pattern, const St
 \***********************************************************************/
 
 Errors File_getTmpDirectoryName(String directoryName, const String pattern, const String directory);
-Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern, const String directory);
+Errors File_getTmpDirectoryNameCString(String directoryName, const char *pattern, const String directory);
 
 /*---------------------------------------------------------------------*/
 

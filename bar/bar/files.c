@@ -754,7 +754,7 @@ Errors File_getTmpFileName(String fileName, const String pattern, const String d
   return File_getTmpFileNameCString(fileName,String_cString(pattern),directory);
 }
 
-Errors File_getTmpFileNameCString(String fileName, char const *pattern, const String directory)
+Errors File_getTmpFileNameCString(String fileName, const char *pattern, const String directory)
 {
   char   *s;
   int    handle;
