@@ -567,11 +567,11 @@ LOCAL bool lock(const char         *fileName,
           else
           {
             fprintf(stderr,
-                    "DEBUG WARNING: too many thread locks for semaphore '%s' at %s, line %lu (max. %u)!\n",
+                    "DEBUG WARNING: too many thread locks for semaphore '%s' at %s, line %lu (max. %lu)!\n",
                     semaphore->name,
                     fileName,
                     lineNb,
-                    SIZE_OF_ARRAY(semaphore->lockedBy)
+                    (ulong)SIZE_OF_ARRAY(semaphore->lockedBy)
                    );
           }
         #endif /* not NDEBUG */
@@ -665,11 +665,11 @@ LOCAL bool lock(const char         *fileName,
         else
         {
           fprintf(stderr,
-                  "DEBUG WARNING: too many thread locks for semaphore '%s' at %s, line %lu (max. %u)!\n",
+                  "DEBUG WARNING: too many thread locks for semaphore '%s' at %s, line %lu (max. %lu)!\n",
                   semaphore->name,
                   fileName,
                   lineNb,
-                  SIZE_OF_ARRAY(semaphore->lockedBy)
+                  (ulong)SIZE_OF_ARRAY(semaphore->lockedBy)
                  );
         }
       #endif /* not NDEBUG */
