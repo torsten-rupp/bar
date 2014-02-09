@@ -394,7 +394,7 @@ typedef struct
   ServerCommandFunction serverCommandFunction;
   AuthorizationStates   authorizationState;
   uint                  id;
-  Array                 arguments;
+//  Array                 arguments;
   StringMap             argumentMap;
 } CommandMsg;
 
@@ -9647,6 +9647,10 @@ LOCAL bool parseCommand(CommandMsg *commandMsg,
   assert(commandMsg != NULL);
 
   // initialize variables
+  commandMsg->serverCommandFunction = NULL;
+  commandMsg->authorizationState    = AUTHORIZATION_STATE_WAITING;
+  commandMsg->id                    = 0;
+  commandMsg->argumentMap           = NULL;
   command   = String_new();
   arguments = String_new();
 
