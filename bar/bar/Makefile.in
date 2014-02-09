@@ -10,53 +10,52 @@
 
 #---------------------------------- settings ---------------------------------
 
-PLATFORM            = @PLATFORM@
+PLATFORM              = @PLATFORM@
 
-TESTCODE_EXITCODE   = 124
+TESTCODE_EXITCODE     = 124
 
 #------------------------------------ paths ----------------------------------
 
-SOURCE_DIR          = @srcdir@
+SOURCE_DIR            = @srcdir@
 
-INSTALL_DIR         = @INSTALL_DIR@
-INSTALL_BIN_DIR     = @INSTALL_BIN_DIR@
-CONFIG_DIR          = @CONFIG_DIR@
-TLS_DIR             = @TLS_DIR@
+INSTALL_DIR           = @INSTALL_DIR@
+INSTALL_BIN_DIR       = @INSTALL_BIN_DIR@
+CONFIG_DIR            = @CONFIG_DIR@
+TLS_DIR               = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
 # shell in Makefile must be bash
-SHELL               = bash
+SHELL                 = bash
 
-CC                  = @CC@
-CC_FLAGS            = @CC_FLAGS@ -g
-CC_WARN_FLAGS       = @CC_WARN_FLAGS@
-CXX                 = @CXX@
-CXX_FLAGS           = @CXX_FLAGS@ -g
-CXX_WARN_FLAGS      = @CXX_WARN_FLAGS@
-CC_OPTIMIZE         = @CC_OPTIMIZE@
-CC_OPTIMIZE_RELEASE = @CC_OPTIMIZE_RELEASE@
-CC_OPTIMIZE_DEBUG   = @CC_OPTIMIZE_DEBUG@
-CC_ADDITIONAL =
-ifndef NDEBUG
-  CC_ADDITIONAL += -finstrument-functions
-endif
-CC_DEFINES          = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG
-CC_DEFINES_RELEASE  = @CC_DEFINES_RELEASE@
-CC_DEFINES_DEBUG    = @CC_DEFINES_DEBUG@
+CC                    = @CC@
+CC_FLAGS              = @CC_FLAGS@ -g
+CC_WARN_FLAGS         = @CC_WARN_FLAGS@
+CXX                   = @CXX@
+CXX_FLAGS             = @CXX_FLAGS@ -g
+CXX_WARN_FLAGS        = @CXX_WARN_FLAGS@
+CC_OPTIMIZE           = @CC_OPTIMIZE@
+CC_OPTIMIZE_RELEASE   = @CC_OPTIMIZE_RELEASE@
+CC_OPTIMIZE_DEBUG     = @CC_OPTIMIZE_DEBUG@
+CC_ADDITIONAL         =
+CC_ADDITIONAL_RELEASE =
+CC_ADDITIONAL_DEBUG   = -finstrument-functions
+CC_DEFINES            = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG
+CC_DEFINES_RELEASE    = @CC_DEFINES_RELEASE@
+CC_DEFINES_DEBUG      = @CC_DEFINES_DEBUG@
 # -D_LONG_LONG
-CC_INCLUDES         = @CC_INCLUDES@
+CC_INCLUDES           = @CC_INCLUDES@
 ifdef WERROR
   CC_FLAGS += -Werror
 endif
 
-LD                  = $(if @CXX@,@CXX@,@CC@)
-LD_FLAGS            = @LD_FLAGS@
-LD_LIBRARY_PATHS    = @LIBRARY_PATHS@
-LD_LIBRARIES        = @LIBRARIES@
-LD_STATIC_LIBRARIES = @STATIC_LIBRARIES@
-LD_STATIC_PREFIX    = -Wl,-Bstatic
-LD_DYNAMIC_PREFIX   = -Wl,-Bdynamic
+LD                    = $(if @CXX@,@CXX@,@CC@)
+LD_FLAGS              = @LD_FLAGS@
+LD_LIBRARY_PATHS      = @LIBRARY_PATHS@
+LD_LIBRARIES          = @LIBRARIES@
+LD_STATIC_LIBRARIES   = @STATIC_LIBRARIES@
+LD_STATIC_PREFIX      = -Wl,-Bstatic
+LD_DYNAMIC_PREFIX     = -Wl,-Bdynamic
 
 #---------------------------------- commands----------------------------------
 
@@ -157,21 +156,21 @@ vpath %.cpp $(SOURCE_DIR)
 
 release/%.o: $(SOURCE_DIR)/%.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
 
 debug/%.o: $(SOURCE_DIR)/%.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
 
 # compile C++ source
 %.o: %.cpp
 	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $*.o
 
 release/%.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o release/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o release/$*.o
 
 debug/%.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o debug/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o debug/$*.o
 
 # link object files
 %@EXEEXT@: release/%.o
@@ -1199,13 +1198,13 @@ test_file_operations_destroyed: \
 	$(RMRF) $(TEST_FILES_CLEAN)
 	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:16:FIL0 > $${fileName}_destroyed; done
-	! `SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
+	- `SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:20:XXXX > $${fileName}_destroyed; done
-	! `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
+	- `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:32:XXXX > $${fileName}_destroyed; done
-	! `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
+	- `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName d:1000:10 > $${fileName}_destroyed; done
-	! `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
+	- `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 
 # helper function to create test file with data
 # call functionTestFileCreate,<data device>,<file>,<size>
