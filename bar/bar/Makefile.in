@@ -16,46 +16,47 @@ TESTCODE_EXITCODE     = 124
 
 #------------------------------------ paths ----------------------------------
 
-SOURCE_DIR            = @srcdir@
+SOURCE_DIR      = @srcdir@
 
-INSTALL_DIR           = @INSTALL_DIR@
-INSTALL_BIN_DIR       = @INSTALL_BIN_DIR@
-CONFIG_DIR            = @CONFIG_DIR@
-TLS_DIR               = @TLS_DIR@
+INSTALL_DIR     = @INSTALL_DIR@
+INSTALL_BIN_DIR = @INSTALL_BIN_DIR@
+CONFIG_DIR      = @CONFIG_DIR@
+TLS_DIR         = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
 # shell in Makefile must be bash
-SHELL                 = bash
+SHELL                  = bash
 
-CC                    = @CC@
-CC_FLAGS              = @CC_FLAGS@ -g
-CC_WARN_FLAGS         = @CC_WARN_FLAGS@
-CXX                   = @CXX@
-CXX_FLAGS             = @CXX_FLAGS@ -g
-CXX_WARN_FLAGS        = @CXX_WARN_FLAGS@
-CC_OPTIMIZE           = @CC_OPTIMIZE@
-CC_OPTIMIZE_RELEASE   = @CC_OPTIMIZE_RELEASE@
-CC_OPTIMIZE_DEBUG     = @CC_OPTIMIZE_DEBUG@
-CC_ADDITIONAL         =
-CC_ADDITIONAL_RELEASE =
-CC_ADDITIONAL_DEBUG   = -finstrument-functions
-CC_DEFINES            = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG
-CC_DEFINES_RELEASE    = @CC_DEFINES_RELEASE@
-CC_DEFINES_DEBUG      = @CC_DEFINES_DEBUG@
+CC                     = @CC@
+CC_FLAGS               = @CC_FLAGS@ -g
+CC_WARN_FLAGS          = @CC_WARN_FLAGS@
+CXX                    = @CXX@
+CXX_FLAGS              = @CXX_FLAGS@ -g
+CXX_WARN_FLAGS         = @CXX_WARN_FLAGS@
+CC_OPTIMIZE            = @CC_OPTIMIZE@
+CC_OPTIMIZE_RELEASE    = @CC_OPTIMIZE_RELEASE@
+CC_OPTIMIZE_DEBUG      = @CC_OPTIMIZE_DEBUG@
+CC_ADDITIONAL          =
+CC_ADDITIONAL_RELEASE  =
+CC_ADDITIONAL_DEBUG    = -finstrument-functions
+CC_ADDITIONAL_VALGRIND = -fno-builtin
+CC_DEFINES             = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG
+CC_DEFINES_RELEASE     = @CC_DEFINES_RELEASE@
+CC_DEFINES_DEBUG       = @CC_DEFINES_DEBUG@
 # -D_LONG_LONG
-CC_INCLUDES           = @CC_INCLUDES@
+CC_INCLUDES            = @CC_INCLUDES@
 ifdef WERROR
   CC_FLAGS += -Werror
 endif
 
-LD                    = $(if @CXX@,@CXX@,@CC@)
-LD_FLAGS              = @LD_FLAGS@
-LD_LIBRARY_PATHS      = @LIBRARY_PATHS@
-LD_LIBRARIES          = @LIBRARIES@
-LD_STATIC_LIBRARIES   = @STATIC_LIBRARIES@
-LD_STATIC_PREFIX      = -Wl,-Bstatic
-LD_DYNAMIC_PREFIX     = -Wl,-Bdynamic
+LD                     = $(if @CXX@,@CXX@,@CC@)
+LD_FLAGS               = @LD_FLAGS@
+LD_LIBRARY_PATHS       = @LIBRARY_PATHS@
+LD_LIBRARIES           = @LIBRARIES@
+LD_STATIC_LIBRARIES    = @STATIC_LIBRARIES@
+LD_STATIC_PREFIX       = -Wl,-Bstatic
+LD_DYNAMIC_PREFIX      = -Wl,-Bdynamic
 
 #---------------------------------- commands----------------------------------
 
@@ -156,21 +157,28 @@ vpath %.cpp $(SOURCE_DIR)
 
 release/%.o: $(SOURCE_DIR)/%.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
 
 debug/%.o: $(SOURCE_DIR)/%.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
+
+valgrind/%.o: $(SOURCE_DIR)/%.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
 
 # compile C++ source
 %.o: %.cpp
 	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $*.o
 
 release/%.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o release/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $(@D)/$*.o
 
 debug/%.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o debug/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $(@D)/$*.o
+
+valgrind/%.o: %.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $(@D)/$*.o
 
 # link object files
 %@EXEEXT@: release/%.o
@@ -179,6 +187,11 @@ debug/%.o: %.cpp
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 
 %-debug@EXEEXT@: debug/%.o
+	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
+
+%-valgrind@EXEEXT@: valgrind/%.o
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
@@ -237,6 +250,10 @@ BAR_OBJECTS_DEBUG    = $(foreach z,$(BAR_SOURCES),debug/$(patsubst %.c,%.o,$(pat
                        debug/errors.o \
                        debug/archive_format.o
 
+BAR_OBJECTS_VALGRIND = $(foreach z,$(BAR_SOURCES),valgrind/$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
+                       valgrind/errors.o \
+                       valgrind/archive_format.o
+
 EXTERN_SOURCES       = sqlite3.c
 
 EXTERN_OBJECTS       = $(foreach z,$(EXTERN_SOURCES),$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
@@ -288,6 +305,7 @@ clean: \
   testcode_clean
 	$(RMF) $(BAR_OBJECTS_RELEASE)
 	$(RMF) $(BAR_OBJECTS_DEBUG)
+	$(RMF) $(BAR_OBJECTS_VALGRIND)
 	$(RMF) $(EXTERN_OBJECTS)
 	$(RMF) $(DESTROYER_OBJECTS)
 	$(RMF) $(INTERMEDIATE)
@@ -298,6 +316,7 @@ distclean: \
   clean
 	$(RMF) Makefile Makefile.depend
 	$(RMF) config.h
+	$(RMRF) release debug valgrind
 
 # help
 .PHONY: help
@@ -369,6 +388,13 @@ bar@EXEEXT@: \
 
 bar-debug@EXEEXT@: \
   $(BAR_OBJECTS_DEBUG) \
+  $(EXTERN_OBJECTS)
+
+# Note: a special valgrind version is needed because of a bug in valgrind
+#       reporting false positives when gcc builtin-functions are used.
+#       See: https://bugs.launchpad.net/ubuntu/+source/valgrind/+bug/852760
+bar-valgrind@EXEEXT@: \
+  $(BAR_OBJECTS_VALGRIND) \
   $(EXTERN_OBJECTS)
 
 # create BAR symbol files
@@ -539,10 +565,11 @@ TEST_FILES_CLEAN = \
   test/*.image \
   test/index.db
 
-# test bar exeuctable
-TEST_BAR ?= ./bar@EXEEXT@
-TEST_BAR_DEBUG = ./bar-debug@EXEEXT@
-TEST_DESTROYER = ./destroyer@EXEEXT@
+# test bar exeuctables
+TEST_BAR          ?= ./bar@EXEEXT@
+TEST_BAR_DEBUG    = ./bar-debug@EXEEXT@
+TEST_BAR_VALGRIND = ./bar-valgrind@EXEEXT@
+TEST_DESTROYER    = ./destroyer@EXEEXT@
 
 # test keys
 TEST_KEYS = test/key.public \
@@ -2426,7 +2453,7 @@ test_dvd_operations: \
 # valgrind checks
 .PHONY: memcheck
 memcheck: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	@$(RMF) test/key.*; $(MAKE) test/key.public test/key.private
 	$(MAKE) \
@@ -2438,7 +2465,7 @@ memcheck: \
 
 .PHONY: memcheck_extended
 memcheck_extended: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	$(MAKE) \
           VALGRIND_OPTIONS="--leak-check=full" \
@@ -2449,7 +2476,7 @@ memcheck_extended: \
 
 .PHONY: memcheck1 memcheck2 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7
 memcheck1: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	valgrind \
           --log-file=valgrind.log \
@@ -2457,7 +2484,7 @@ memcheck1: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar --help > /dev/null
+          $(TEST_BAR_VALGRIND) --help > /dev/null
 memcheck2: \
   memcheck2a \
   memcheck2b \
@@ -2465,7 +2492,7 @@ memcheck2: \
   memcheck2d \
   memcheck2e
 memcheck2a: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	valgrind \
           --log-file=valgrind.log \
@@ -2473,9 +2500,9 @@ memcheck2a: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 memcheck2b: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	valgrind \
           --log-file=valgrind.log \
@@ -2483,9 +2510,9 @@ memcheck2b: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -c test/test.bar test/data $(BAR_OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files > /dev/null
 memcheck2c: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	valgrind \
           --log-file=valgrind.log \
@@ -2493,9 +2520,9 @@ memcheck2c: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -c test/test.bar test/data $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --overwrite-archive-files > /dev/null
 memcheck2d: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	valgrind \
           --log-file=valgrind.log \
@@ -2503,9 +2530,9 @@ memcheck2d: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -c test/test.bar test/data $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --overwrite-archive-files > /dev/null
 memcheck2e: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	valgrind \
           --log-file=valgrind.log \
@@ -2513,9 +2540,9 @@ memcheck2e: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -c test/test-###.bar test/data $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test-###.bar test/data $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files > /dev/null
 memcheck2f: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	valgrind \
           --log-file=valgrind.log \
@@ -2523,51 +2550,51 @@ memcheck2f: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files --dry-run > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files --dry-run > /dev/null
 memcheck3: bar
-	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -l test/test*.bar $(BAR_OPTIONS) > /dev/null
+          $(TEST_BAR_VALGRIND) -l test/test*.bar $(BAR_OPTIONS) > /dev/null
 memcheck4: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -t test/test*.bar $(BAR_OPTIONS) > /dev/null
+          $(TEST_BAR_VALGRIND) -t test/test*.bar $(BAR_OPTIONS) > /dev/null
 memcheck5: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -d test/test*.bar $(BAR_OPTIONS) > /dev/null
+          $(TEST_BAR_VALGRIND) -d test/test*.bar $(BAR_OPTIONS) > /dev/null
 memcheck6: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -x test/test*.bar $(BAR_OPTIONS) --destination test/restore > /dev/null
+          $(TEST_BAR_VALGRIND) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore > /dev/null
 memcheck7: \
-  $(TEST_BAR) \
+  $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	valgrind \
           --log-file=valgrind.log \
@@ -2575,7 +2602,7 @@ memcheck7: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar \
+          $(TEST_BAR_VALGRIND) \
             --daemon \
             --no-detach \
             --server-jobs-directory jobs \
