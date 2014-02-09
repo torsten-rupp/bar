@@ -409,7 +409,7 @@ void Misc_udelay(uint64 time)
 
 String Misc_getUUID(String string)
 {
-  char buffer[1024];
+  char buffer[64];
 
   assert(string != NULL);
 
