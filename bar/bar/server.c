@@ -7151,23 +7151,23 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
 * Notes  : Arguments:
 *            name=<storage name>
 *          Result:
-*            FILE <name> <size> <time modifed> <archive file size> <delta compress algorithm> \
-*            <byte compress algorithm> <crypt algorithm> <crypt type> <delta source name> \
-*            <delta source size> <fragment offest> <fragment size>
+*            type=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> archiveSize=<n [bytes]> deltaCompressAlgorithm=<n> \
+*            byteCompressAlgorithm=<n> cryptAlgorithm=<n> cryptType=<n> deltaSourceName=<name> \
+*            deltaSourceSize=<n [bytes]> fragmentOffset=<n> fragmentSize=<n [bytes]>
 *
-*            IMAGE <name> <size> <archive file size> <delta compress algorithm> \
-*            <byte compress algorithm> <crypt algorithm> <crypt type> <delta source name> \
-*            <delta source size> <block size> <block offest> <block size>
+*            type=IMAGE name=<name> size=<n [bytes]> archiveSize=<n [bytes]> deltaCompressAlgorithm=<n> \
+*            byteCompressAlgorithm=<n> cryptAlgorithm=<n> cryptType=<n> deltaSourceName=<name> \
+*            deltaSourceSize=<n [bytes]> blockSize=<n [bytes]> blockOffset=<n> blockCount=<n>
 *
-*            DIRECTORY <name> <time modified> <crypt algorithm> <crypt type>
+*            type=DIRECTORY name=<name> dateTime=<time stamp> cryptAlgorithm=<n> cryptType=<n>
 *
-*            LINK <link name> <name> <crypt algorithm> <crypt type>
+*            type=LINK <link name> name=<name> cryptAlgorithm=<n> cryptType=<n>
 *
-*            HARDLINK <name> <size> <time modifed> <chunk size> <delta compress algorithm> \
-*            <byte compress algorithm> <crypt algorithm> <crypt type> <delta source name> \
-*            <delta source size> <fragment offest> <fragment size>
+*            type=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> archiveSize=<n [bytes]> deltaCompressAlgorithm=<n> \
+*            byteCompressAlgorithm=<n> cryptAlgorithm=<n> cryptType=<n> deltaSourceName=<name> \
+*            deltaSourceSize=<n [bytes]> fragmentOffset=<n> fragmentSize=<n [bytes]>
 *
-*            SPECIAL <name>
+*            type=SPECIAL name=<name>
 *            ...
 \***********************************************************************/
 
@@ -7291,9 +7291,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                 && !PatternList_match(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-#warning todo map
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "FILE %'S %llu %llu %llu %d %d %d %d %'S %llu %llu %llu",
+                               "type=FILE name=%'S size=%llu dateTime=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fragmentOffset=%llu fragmentSize=%llu",
                                fileName,
                                fileInfo.size,
                                fileInfo.timeModified,
@@ -7356,9 +7355,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                 && !PatternList_match(&clientInfo->excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-#warning todo map
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "IMAGE %'S %llu %llu %d %d %d %d %'S %llu %u %llu %llu",
+                               "type=IMAGE name=%'S size=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu blockSize=%u blockOffset=%llu blockCount=%llu",
                                imageName,
                                deviceInfo.size,
                                archiveEntryInfo.image.chunkImageData.info.size,
@@ -7409,9 +7407,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                 && !PatternList_match(&clientInfo->excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-#warning todo map
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "DIRECTORY %'S %llu %d %d",
+                               "type=DIRECTORY name=%'S dateTime=%llu cryptAlgorithm=%d cryptType=%d",
                                directoryName,
                                fileInfo.timeModified,
                                cryptAlgorithm,
@@ -7456,9 +7453,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                 && !PatternList_match(&clientInfo->excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-#warning todo map
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "LINK %'S %'S %d %d",
+                               "type=LINK linkName=%'S name=%'S cryptAlgorithm=%d cryptType=%d",
                                linkName,
                                name,
                                cryptAlgorithm,
@@ -7514,9 +7510,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                 && !PatternList_matchStringList(&clientInfo->excludePatternList,&fileNameList,PATTERN_MATCH_MODE_EXACT)
                )
             {
-#warning todo map
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "HARDLINK %'S %llu %llu %llu %d %d %d %d %'S %llu %llu %llu",
+                               "type=HARDLINK name=%'S size=%llu dateTime=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fragmentOffset=%llu fragmentSize=%llu",
                                StringList_first(&fileNameList,NULL),
                                fileInfo.size,
                                fileInfo.timeModified,
@@ -7565,9 +7560,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                 && !PatternList_match(&clientInfo->excludePatternList,name,PATTERN_MATCH_MODE_EXACT)
                )
             {
-#warning todo map
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "SPECIAL %'S",
+                               "type=SPECIAL name=%'S",
                                name
                               );
             }
