@@ -125,6 +125,10 @@ ifeq (@HAVE_GCRYPT@,1)
 CRYPT_NAMES    += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256
 endif
 
+# ports used for tests
+TEST_SERVER_PORT=39909
+TEST_SERVER_SSL_PORT=39910
+
 # password used for tests
 TEST_PASSWORD=Franz_Kafka:Die_Verwandlung
 
@@ -353,7 +357,7 @@ help:
 	@$(ECHO) "  test_image_operations_reiserfs"
 	@$(ECHO) ""
 	@$(ECHO) "  memcheck"
-	@$(ECHO) "  memcheck_extended"
+	@$(ECHO) "  memcheck_extended [CHECK=1|2|2a|2b|2c|2d|2e|3|4|5|6|7]"
 	@$(ECHO) ""
 	@$(ECHO) "  testcode_init                             init test code name"
 	@$(ECHO) "  testcode                                  run all test code"
@@ -2610,17 +2614,22 @@ memcheck7: \
             --server-ca-file=bar-ca.pem \
             --server-cert-file=bar-server-cert.pem \
             --server-key-file=bar-server-key.pem \
-            --server-port=39909 \
-            --server-tls-port=39910 \
+            --server-port=$(TEST_SERVER_PORT) \
+            --server-tls-port=$(TEST_SSL_SERVER_PORT) \
             --server-debug &
 	$(SLEEP) 30
-	$(ECHO) 'VERSION' | $(NETCAT) localhost 39909
-	$(ECHO) '1 JOB_LIST' | $(NETCAT) localhost 39909
-	$(ECHO) '1 DEVICE_LIST' | $(NETCAT) localhost 39909
-	$(ECHO) '1 FILE_LIST /tmp'| $(NETCAT) localhost 39909
-	$(ECHO) '1 PASSWORDS_CLEAR' | $(NETCAT) localhost 39909
-	$(ECHO) '1 INDEX_STORAGE_LIST 10 * x'| $(NETCAT) localhost 39909
-	$(ECHO) 'QUIT' | $(NETCAT) localhost 39909
+	$(ECHO) '1 VERSION' | $(NETCAT) localhost $(TEST_SERVER_PORT)
+	$(ECHO) '1 JOB_LIST' | $(NETCAT) localhost $(TEST_SERVER_PORT)
+	$(ECHO) '1 DEVICE_LIST' | $(NETCAT) localhost $(TEST_SERVER_PORT)
+	$(ECHO) '1 FILE_LIST storageDirectory=/tmp'| $(NETCAT) localhost $(TEST_SERVER_PORT)
+	$(ECHO) '1 PASSWORDS_CLEAR' | $(NETCAT) localhost $(TEST_SERVER_PORT)
+	$(ECHO) '1 INDEX_STORAGE_LIST maxCount=10 indexState=* indexMode=* pattern=x'| $(NETCAT) localhost $(TEST_SERVER_PORT)
+	$(ECHO) '1 DEBUG_PRINT_STATISTICS' | $(NETCAT) localhost $(TEST_SERVER_PORT)
+	$(ECHO) '1 DEBUG_PRINT_MEMORY_INFO' | $(NETCAT) localhost $(TEST_SERVER_PORT)
+	$(ECHO) '1 DEBUG_DUMP_MEMORY_INFO' | $(NETCAT) localhost $(TEST_SERVER_PORT)
+	$(ECHO) 'UNKNOWN' | $(NETCAT) localhost $(TEST_SERVER_PORT)
+	$(ECHO) '1 UNKNOWN' | $(NETCAT) localhost $(TEST_SERVER_PORT)
+	$(ECHO) '1 QUIT' | $(NETCAT) localhost $(TEST_SERVER_PORT)
 
 #valgrind --tool=cachegrind ./bar -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
 
