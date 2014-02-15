@@ -644,9 +644,10 @@ LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
 }
 
 /***********************************************************************\
-* Name   : copyScheduleNode
-* Purpose: copy allocated schedule node
+* Name   : freeScheduleNode
+* Purpose: free schedule node
 * Input  : scheduleNode - schedule node
+* Input  : userData     - not used
 * Output : -
 * Return : copied schedule node
 * Notes  : -
@@ -884,7 +885,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
 
   doneJobOptions(&jobNode->jobOptions);
-  List_done(&jobNode->scheduleList,CALLBACK(NULL,NULL));
+  List_done(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   PatternList_done(&jobNode->compressExcludePatternList);
   PatternList_done(&jobNode->deltaSourcePatternList);
   PatternList_done(&jobNode->excludePatternList);
@@ -7148,7 +7149,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <storage name>
+*            name=<storage name>
 *          Result:
 *            FILE <name> <size> <time modifed> <archive file size> <delta compress algorithm> \
 *            <byte compress algorithm> <crypt algorithm> <crypt type> <delta source name> \
@@ -7290,6 +7291,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                 && !PatternList_match(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
+#warning todo map
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "FILE %'S %llu %llu %llu %d %d %d %d %'S %llu %llu %llu",
                                fileName,
@@ -7354,6 +7356,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                 && !PatternList_match(&clientInfo->excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                )
             {
+#warning todo map
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "IMAGE %'S %llu %llu %d %d %d %d %'S %llu %u %llu %llu",
                                imageName,
@@ -7406,6 +7409,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                 && !PatternList_match(&clientInfo->excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
+#warning todo map
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "DIRECTORY %'S %llu %d %d",
                                directoryName,
@@ -7452,6 +7456,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                 && !PatternList_match(&clientInfo->excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
+#warning todo map
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "LINK %'S %'S %d %d",
                                linkName,
@@ -7509,6 +7514,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                 && !PatternList_matchStringList(&clientInfo->excludePatternList,&fileNameList,PATTERN_MATCH_MODE_EXACT)
                )
             {
+#warning todo map
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "HARDLINK %'S %llu %llu %llu %d %d %d %d %'S %llu %llu %llu",
                                StringList_first(&fileNameList,NULL),
@@ -7559,6 +7565,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                 && !PatternList_match(&clientInfo->excludePatternList,name,PATTERN_MATCH_MODE_EXACT)
                )
             {
+#warning todo map
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "SPECIAL %'S",
                                name
@@ -8013,7 +8020,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 *            pattern=<pattern>
 *            maxCount=<n>|0
 *            indexState=<state>|*
-*            mode=<mode>|*
+*            indexMode=<mode>|*
 *          Result:
 *            storageId=<storage id>
 *            name=<name>
@@ -10800,9 +10807,9 @@ Errors Server_batch(int inputDescriptor,
   }
 #else /* 0 */
 fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-String_setCString(commandString,"1 SET crypt-password 'muster'");processCommand(&clientInfo,commandString);
-String_setCString(commandString,"2 ADD_INCLUDE_PATTERN REGEX test/[^/]*");processCommand(&clientInfo,commandString);
-String_setCString(commandString,"3 ARCHIVE_LIST test.bar");processCommand(&clientInfo,commandString);
+String_setCString(commandString,"1 SET crypt-password password='muster'");processCommand(&clientInfo,commandString);
+String_setCString(commandString,"2 ADD_INCLUDE_PATTERN type=REGEX pattern=test/[^/]*");processCommand(&clientInfo,commandString);
+String_setCString(commandString,"3 ARCHIVE_LIST name=test.bar");processCommand(&clientInfo,commandString);
 //String_setCString(commandString,"3 ARCHIVE_LIST backup/backup-torsten-bar-000.bar");processCommand(&clientInfo,commandString);
 processCommand(&clientInfo,commandString);
 #endif /* 0 */
