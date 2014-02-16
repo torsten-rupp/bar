@@ -113,19 +113,19 @@
 #define DVD_LOAD_VOLUME_COMMAND               "eject -t %device"
 #define DVD_IMAGE_COMMAND                     "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define DVD_ECC_COMMAND                       "nice dvdisaster -mRS02 -n dvd -c -i %image -v"
-#warning todo remove -dry-run
 #define DVD_WRITE_COMMAND                     "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory"
+//#warning todo remove -dry-run
 //#define DVD_WRITE_COMMAND                     "nice growisofs -Z %device -A BAR -V Backup -volset %number -dry-run -r %directory"
-#warning todo remove -dry-run
 #define DVD_WRITE_IMAGE_COMMAND               "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload"
+//#warning todo remove -dry-run
 //#define DVD_WRITE_IMAGE_COMMAND               "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -dry-run"
 
 #define BD_UNLOAD_VOLUME_COMMAND              "eject -r %device"
 #define BD_LOAD_VOLUME_COMMAND                "eject -t %device"
 #define BD_IMAGE_COMMAND                      "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define BD_ECC_COMMAND                        "nice dvdisaster -mRS02 -n bd -c -i %image -v"
-#warning todo remove -dry-run
 #define BD_WRITE_COMMAND                      "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory"
+//#warning todo remove -dry-run
 //#define BD_WRITE_COMMAND                      "nice growisofs -Z %device -A BAR -V Backup -volset %number -dry-run -r %directory"
 #define BD_WRITE_IMAGE_COMMAND                "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload"
 //#define BD_WRITE_IMAGE_COMMAND                "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload  -dry-run"
@@ -593,7 +593,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("cd-request-volume-command",    0,  1,0,globalOptions.cd.requestVolumeCommand,                                                                  "request new CD volume command","command"                                  ),
   CMD_OPTION_STRING       ("cd-unload-volume-command",     0,  1,0,globalOptions.cd.unloadVolumeCommand,                                                                   "unload CD volume command","command"                                       ),
   CMD_OPTION_STRING       ("cd-load-volume-command",       0,  1,0,globalOptions.cd.loadVolumeCommand,                                                                     "load CD volume command","command"                                         ),
-  CMD_OPTION_INTEGER64    ("cd-volume-size",               0,  1,0,globalOptions.cd.volumeSize,                     0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "CD volume size","unlimited"                                               ),
+  CMD_OPTION_INTEGER64    ("cd-volume-size",               0,  1,0,globalOptions.cd.volumeSize,                     0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "CD volume size","unlimited"                                               ),
   CMD_OPTION_STRING       ("cd-image-pre-command",         0,  1,0,globalOptions.cd.imagePreProcessCommand,                                                                "make CD image pre-process command","command"                              ),
   CMD_OPTION_STRING       ("cd-image-post-command",        0,  1,0,globalOptions.cd.imagePostProcessCommand,                                                               "make CD image post-process command","command"                             ),
   CMD_OPTION_STRING       ("cd-image-command",             0,  1,0,globalOptions.cd.imageCommand,                                                                          "make CD image command","command"                                          ),
@@ -609,7 +609,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("dvd-request-volume-command",   0,  1,0,globalOptions.dvd.requestVolumeCommand,                                                                 "request new DVD volume command","command"                                 ),
   CMD_OPTION_STRING       ("dvd-unload-volume-command",    0,  1,0,globalOptions.dvd.unloadVolumeCommand,                                                                  "unload DVD volume command","command"                                      ),
   CMD_OPTION_STRING       ("dvd-load-volume-command",      0,  1,0,globalOptions.dvd.loadVolumeCommand,                                                                    "load DVD volume command","command"                                        ),
-  CMD_OPTION_INTEGER64    ("dvd-volume-size",              0,  1,0,globalOptions.dvd.volumeSize,                    0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "DVD volume size","unlimited"                                              ),
+  CMD_OPTION_INTEGER64    ("dvd-volume-size",              0,  1,0,globalOptions.dvd.volumeSize,                    0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "DVD volume size","unlimited"                                              ),
   CMD_OPTION_STRING       ("dvd-image-pre-command",        0,  1,0,globalOptions.dvd.imagePreProcessCommand,                                                               "make DVD image pre-process command","command"                             ),
   CMD_OPTION_STRING       ("dvd-image-post-command",       0,  1,0,globalOptions.dvd.imagePostProcessCommand,                                                              "make DVD image post-process command","command"                            ),
   CMD_OPTION_STRING       ("dvd-image-command",            0,  1,0,globalOptions.dvd.imageCommand,                                                                         "make DVD image command","command"                                         ),
@@ -625,7 +625,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("bd-request-volume-command",    0,  1,0,globalOptions.bd.requestVolumeCommand,                                                                  "request new BD volume command","command"                                  ),
   CMD_OPTION_STRING       ("bd-unload-volume-command",     0,  1,0,globalOptions.bd.unloadVolumeCommand,                                                                   "unload BD volume command","command"                                       ),
   CMD_OPTION_STRING       ("bd-load-volume-command",       0,  1,0,globalOptions.bd.loadVolumeCommand,                                                                     "load BD volume command","command"                                         ),
-  CMD_OPTION_INTEGER64    ("bd-volume-size",               0,  1,0,globalOptions.bd.volumeSize,                     0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "BD volume size","unlimited"                                               ),
+  CMD_OPTION_INTEGER64    ("bd-volume-size",               0,  1,0,globalOptions.bd.volumeSize,                     0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "BD volume size","unlimited"                                               ),
   CMD_OPTION_STRING       ("bd-image-pre-command",         0,  1,0,globalOptions.bd.imagePreProcessCommand,                                                                "make BD image pre-process command","command"                              ),
   CMD_OPTION_STRING       ("bd-image-post-command",        0,  1,0,globalOptions.bd.imagePostProcessCommand,                                                               "make BD image post-process command","command"                             ),
   CMD_OPTION_STRING       ("bd-image-command",             0,  1,0,globalOptions.bd.imageCommand,                                                                          "make BD image command","command"                                          ),
@@ -641,7 +641,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("device-request-volume-command",0,  1,0,defaultDevice.requestVolumeCommand,                                                                     "request new volume command","command"                                     ),
   CMD_OPTION_STRING       ("device-load-volume-command",   0,  1,0,defaultDevice.loadVolumeCommand,                                                                        "load volume command","command"                                            ),
   CMD_OPTION_STRING       ("device-unload-volume-command", 0,  1,0,defaultDevice.unloadVolumeCommand,                                                                      "unload volume command","command"                                          ),
-  CMD_OPTION_INTEGER64    ("device-volume-size",           0,  1,0,defaultDevice.volumeSize,                        0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "volume size","unlimited"                                                  ),
+  CMD_OPTION_INTEGER64    ("device-volume-size",           0,  1,0,defaultDevice.volumeSize,                        0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "volume size","unlimited"                                                  ),
   CMD_OPTION_STRING       ("device-image-pre-command",     0,  1,0,defaultDevice.imagePreProcessCommand,                                                                   "make image pre-process command","command"                                 ),
   CMD_OPTION_STRING       ("device-image-post-command",    0,  1,0,defaultDevice.imagePostProcessCommand,                                                                  "make image post-process command","command"                                ),
   CMD_OPTION_STRING       ("device-image-command",         0,  1,0,defaultDevice.imageCommand,                                                                             "make image command","command"                                             ),
@@ -652,7 +652,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("device-write-post-command",    0,  1,0,defaultDevice.writePostProcessCommand,                                                                  "write device post-process command","command"                              ),
   CMD_OPTION_STRING       ("device-write-command",         0,  1,0,defaultDevice.writeCommand,                                                                             "write device command","command"                                           ),
 
-  CMD_OPTION_INTEGER64    ("volume-size",                  0,  1,1,jobOptions.volumeSize,                           0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "volume size","unlimited"                                                  ),
+  CMD_OPTION_INTEGER64    ("volume-size",                  0,  1,1,jobOptions.volumeSize,                           0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "volume size","unlimited"                                                  ),
   CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,1,jobOptions.errorCorrectionCodesFlag,                                                                    "add error-correction codes with 'dvdisaster' tool"                        ),
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,1,jobOptions.alwaysCreateImageFlag,                                                                       "always create image for CD/DVD/BD/device"                                 ),
 
@@ -914,7 +914,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_SPECIAL  ("delta-source",                 &deltaSourcePatternList,-1,                                    configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
 
-  CONFIG_VALUE_INTEGER64("volume-size",                  &jobOptions.volumeSize,-1,                                     0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER64("volume-size",                  &jobOptions.volumeSize,-1,                                     0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_BOOLEAN  ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                        ),
   CONFIG_VALUE_BOOLEAN  ("always-create-image",          &jobOptions.alwaysCreateImageFlag,-1                           ),
 
@@ -958,7 +958,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_STRING   ("cd-request-volume-command",    &globalOptions.cd.requestVolumeCommand,-1                      ),
   CONFIG_VALUE_STRING   ("cd-unload-volume-command",     &globalOptions.cd.unloadVolumeCommand,-1                       ),
   CONFIG_VALUE_STRING   ("cd-load-volume-command",       &globalOptions.cd.loadVolumeCommand,-1                         ),
-  CONFIG_VALUE_INTEGER64("cd-volume-size",               &globalOptions.cd.volumeSize,-1,                               0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER64("cd-volume-size",               &globalOptions.cd.volumeSize,-1,                               0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_STRING   ("cd-image-pre-command",         &globalOptions.cd.imagePreProcessCommand,-1                    ),
   CONFIG_VALUE_STRING   ("cd-image-post-command",        &globalOptions.cd.imagePostProcessCommand,-1                   ),
   CONFIG_VALUE_STRING   ("cd-image-command",             &globalOptions.cd.imageCommand,-1                              ),
@@ -974,7 +974,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_STRING   ("dvd-request-volume-command",   &globalOptions.dvd.requestVolumeCommand,-1                     ),
   CONFIG_VALUE_STRING   ("dvd-unload-volume-command",    &globalOptions.dvd.unloadVolumeCommand,-1                      ),
   CONFIG_VALUE_STRING   ("dvd-load-volume-command",      &globalOptions.dvd.loadVolumeCommand,-1                        ),
-  CONFIG_VALUE_INTEGER64("dvd-volume-size",              &globalOptions.dvd.volumeSize,-1,                              0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER64("dvd-volume-size",              &globalOptions.dvd.volumeSize,-1,                              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_STRING   ("dvd-image-pre-command",        &globalOptions.dvd.imagePreProcessCommand,-1                   ),
   CONFIG_VALUE_STRING   ("dvd-image-post-command",       &globalOptions.dvd.imagePostProcessCommand,-1                  ),
   CONFIG_VALUE_STRING   ("dvd-image-command",            &globalOptions.dvd.imageCommand,-1                             ),
@@ -990,7 +990,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_STRING   ("bd-request-volume-command",    &globalOptions.bd.requestVolumeCommand,-1                      ),
   CONFIG_VALUE_STRING   ("bd-unload-volume-command",     &globalOptions.bd.unloadVolumeCommand,-1                       ),
   CONFIG_VALUE_STRING   ("bd-load-volume-command",       &globalOptions.bd.loadVolumeCommand,-1                         ),
-  CONFIG_VALUE_INTEGER64("bd-volume-size",               &globalOptions.bd.volumeSize,-1,                               0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER64("bd-volume-size",               &globalOptions.bd.volumeSize,-1,                               0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_STRING   ("bd-image-pre-command",         &globalOptions.bd.imagePreProcessCommand,-1                    ),
   CONFIG_VALUE_STRING   ("bd-image-post-command",        &globalOptions.bd.imagePostProcessCommand,-1                   ),
   CONFIG_VALUE_STRING   ("bd-image-command",             &globalOptions.bd.imageCommand,-1                              ),
@@ -1006,7 +1006,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_STRING   ("device-request-volume-command",&currentDevice,offsetof(Device,requestVolumeCommand)           ),
   CONFIG_VALUE_STRING   ("device-unload-volume-command", &currentDevice,offsetof(Device,unloadVolumeCommand)            ),
   CONFIG_VALUE_STRING   ("device-load-volume-command",   &currentDevice,offsetof(Device,loadVolumeCommand)              ),
-  CONFIG_VALUE_INTEGER64("device-volume-size",           &currentDevice,offsetof(Device,volumeSize),                    0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER64("device-volume-size",           &currentDevice,offsetof(Device,volumeSize),                    0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_STRING   ("device-image-pre-command",     &currentDevice,offsetof(Device,imagePreProcessCommand)         ),
   CONFIG_VALUE_STRING   ("device-image-post-command",    &currentDevice,offsetof(Device,imagePostProcessCommand)        ),
   CONFIG_VALUE_STRING   ("device-image-command",         &currentDevice,offsetof(Device,imageCommand)                   ),
@@ -3620,21 +3620,21 @@ void getCDSettings(const JobOptions *jobOptions,
   assert(jobOptions != NULL);
   assert(opticalDisk != NULL);
 
-  opticalDisk->defaultDeviceName       = (jobOptions->opticalDisk.defaultDeviceName       != NULL)?jobOptions->opticalDisk.defaultDeviceName      :globalOptions.cd.defaultDeviceName;
-  opticalDisk->requestVolumeCommand    = (jobOptions->opticalDisk.requestVolumeCommand    != NULL)?jobOptions->opticalDisk.requestVolumeCommand   :globalOptions.cd.requestVolumeCommand;
-  opticalDisk->unloadVolumeCommand     = (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)?jobOptions->opticalDisk.unloadVolumeCommand    :globalOptions.cd.unloadVolumeCommand;
-  opticalDisk->loadVolumeCommand       = (jobOptions->opticalDisk.loadVolumeCommand       != NULL)?jobOptions->opticalDisk.loadVolumeCommand      :globalOptions.cd.loadVolumeCommand;
-  opticalDisk->volumeSize              = (jobOptions->opticalDisk.volumeSize              != 0LL )?jobOptions->opticalDisk.volumeSize             :globalOptions.cd.volumeSize;
-  opticalDisk->imagePreProcessCommand  = (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)?jobOptions->opticalDisk.imagePreProcessCommand :globalOptions.cd.imagePreProcessCommand;
-  opticalDisk->imagePostProcessCommand = (jobOptions->opticalDisk.imagePostProcessCommand != NULL)?jobOptions->opticalDisk.imagePostProcessCommand:globalOptions.cd.imagePostProcessCommand;
-  opticalDisk->imageCommand            = (jobOptions->opticalDisk.imageCommand            != NULL)?jobOptions->opticalDisk.imageCommand           :globalOptions.cd.imageCommand;
-  opticalDisk->eccPreProcessCommand    = (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)?jobOptions->opticalDisk.eccPreProcessCommand   :globalOptions.cd.eccPreProcessCommand;
-  opticalDisk->eccPostProcessCommand   = (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)?jobOptions->opticalDisk.eccPostProcessCommand  :globalOptions.cd.eccPostProcessCommand;
-  opticalDisk->eccCommand              = (jobOptions->opticalDisk.eccCommand              != NULL)?jobOptions->opticalDisk.eccCommand             :globalOptions.cd.eccCommand;
-  opticalDisk->writePreProcessCommand  = (jobOptions->opticalDisk.writePreProcessCommand  != NULL)?jobOptions->opticalDisk.writePreProcessCommand :globalOptions.cd.writePreProcessCommand;
-  opticalDisk->writePostProcessCommand = (jobOptions->opticalDisk.writePostProcessCommand != NULL)?jobOptions->opticalDisk.writePostProcessCommand:globalOptions.cd.writePostProcessCommand;
-  opticalDisk->writeCommand            = (jobOptions->opticalDisk.writeCommand            != NULL)?jobOptions->opticalDisk.writeCommand           :globalOptions.cd.writeCommand;
-  opticalDisk->writeImageCommand       = (jobOptions->opticalDisk.writeImageCommand       != NULL)?jobOptions->opticalDisk.writeImageCommand      :globalOptions.cd.writeImageCommand;
+  opticalDisk->defaultDeviceName       = (jobOptions->opticalDisk.defaultDeviceName       != NULL) ? jobOptions->opticalDisk.defaultDeviceName       : globalOptions.cd.defaultDeviceName;
+  opticalDisk->requestVolumeCommand    = (jobOptions->opticalDisk.requestVolumeCommand    != NULL) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.cd.requestVolumeCommand;
+  opticalDisk->unloadVolumeCommand     = (jobOptions->opticalDisk.unloadVolumeCommand     != NULL) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.cd.unloadVolumeCommand;
+  opticalDisk->loadVolumeCommand       = (jobOptions->opticalDisk.loadVolumeCommand       != NULL) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.cd.loadVolumeCommand;
+  opticalDisk->volumeSize              = (jobOptions->opticalDisk.volumeSize              != 0LL ) ? jobOptions->opticalDisk.volumeSize              : globalOptions.cd.volumeSize;
+  opticalDisk->imagePreProcessCommand  = (jobOptions->opticalDisk.imagePreProcessCommand  != NULL) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.cd.imagePreProcessCommand;
+  opticalDisk->imagePostProcessCommand = (jobOptions->opticalDisk.imagePostProcessCommand != NULL) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.cd.imagePostProcessCommand;
+  opticalDisk->imageCommand            = (jobOptions->opticalDisk.imageCommand            != NULL) ? jobOptions->opticalDisk.imageCommand            : globalOptions.cd.imageCommand;
+  opticalDisk->eccPreProcessCommand    = (jobOptions->opticalDisk.eccPreProcessCommand    != NULL) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.cd.eccPreProcessCommand;
+  opticalDisk->eccPostProcessCommand   = (jobOptions->opticalDisk.eccPostProcessCommand   != NULL) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.cd.eccPostProcessCommand;
+  opticalDisk->eccCommand              = (jobOptions->opticalDisk.eccCommand              != NULL) ? jobOptions->opticalDisk.eccCommand              : globalOptions.cd.eccCommand;
+  opticalDisk->writePreProcessCommand  = (jobOptions->opticalDisk.writePreProcessCommand  != NULL) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.cd.writePreProcessCommand;
+  opticalDisk->writePostProcessCommand = (jobOptions->opticalDisk.writePostProcessCommand != NULL) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.cd.writePostProcessCommand;
+  opticalDisk->writeCommand            = (jobOptions->opticalDisk.writeCommand            != NULL) ? jobOptions->opticalDisk.writeCommand            : globalOptions.cd.writeCommand;
+  opticalDisk->writeImageCommand       = (jobOptions->opticalDisk.writeImageCommand       != NULL) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.cd.writeImageCommand;
 }
 
 void getDVDSettings(const JobOptions *jobOptions,
@@ -3644,21 +3644,21 @@ void getDVDSettings(const JobOptions *jobOptions,
   assert(jobOptions != NULL);
   assert(opticalDisk != NULL);
 
-  opticalDisk->defaultDeviceName       = (jobOptions->opticalDisk.defaultDeviceName       != NULL)?jobOptions->opticalDisk.defaultDeviceName      :globalOptions.dvd.defaultDeviceName;
-  opticalDisk->requestVolumeCommand    = (jobOptions->opticalDisk.requestVolumeCommand    != NULL)?jobOptions->opticalDisk.requestVolumeCommand   :globalOptions.dvd.requestVolumeCommand;
-  opticalDisk->unloadVolumeCommand     = (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)?jobOptions->opticalDisk.unloadVolumeCommand    :globalOptions.dvd.unloadVolumeCommand;
-  opticalDisk->loadVolumeCommand       = (jobOptions->opticalDisk.loadVolumeCommand       != NULL)?jobOptions->opticalDisk.loadVolumeCommand      :globalOptions.dvd.loadVolumeCommand;
-  opticalDisk->volumeSize              = (jobOptions->opticalDisk.volumeSize              != 0LL )?jobOptions->opticalDisk.volumeSize             :globalOptions.dvd.volumeSize;
-  opticalDisk->imagePreProcessCommand  = (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)?jobOptions->opticalDisk.imagePreProcessCommand :globalOptions.dvd.imagePreProcessCommand;
-  opticalDisk->imagePostProcessCommand = (jobOptions->opticalDisk.imagePostProcessCommand != NULL)?jobOptions->opticalDisk.imagePostProcessCommand:globalOptions.dvd.imagePostProcessCommand;
-  opticalDisk->imageCommand            = (jobOptions->opticalDisk.imageCommand            != NULL)?jobOptions->opticalDisk.imageCommand           :globalOptions.dvd.imageCommand;
-  opticalDisk->eccPreProcessCommand    = (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)?jobOptions->opticalDisk.eccPreProcessCommand   :globalOptions.dvd.eccPreProcessCommand;
-  opticalDisk->eccPostProcessCommand   = (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)?jobOptions->opticalDisk.eccPostProcessCommand  :globalOptions.dvd.eccPostProcessCommand;
-  opticalDisk->eccCommand              = (jobOptions->opticalDisk.eccCommand              != NULL)?jobOptions->opticalDisk.eccCommand             :globalOptions.dvd.eccCommand;
-  opticalDisk->writePreProcessCommand  = (jobOptions->opticalDisk.writePreProcessCommand  != NULL)?jobOptions->opticalDisk.writePreProcessCommand :globalOptions.dvd.writePreProcessCommand;
-  opticalDisk->writePostProcessCommand = (jobOptions->opticalDisk.writePostProcessCommand != NULL)?jobOptions->opticalDisk.writePostProcessCommand:globalOptions.dvd.writePostProcessCommand;
-  opticalDisk->writeCommand            = (jobOptions->opticalDisk.writeCommand            != NULL)?jobOptions->opticalDisk.writeCommand           :globalOptions.dvd.writeCommand;
-  opticalDisk->writeImageCommand       = (jobOptions->opticalDisk.writeImageCommand       != NULL)?jobOptions->opticalDisk.writeImageCommand      :globalOptions.dvd.writeImageCommand;
+  opticalDisk->defaultDeviceName       = (jobOptions->opticalDisk.defaultDeviceName       != NULL) ? jobOptions->opticalDisk.defaultDeviceName       : globalOptions.dvd.defaultDeviceName;
+  opticalDisk->requestVolumeCommand    = (jobOptions->opticalDisk.requestVolumeCommand    != NULL) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.dvd.requestVolumeCommand;
+  opticalDisk->unloadVolumeCommand     = (jobOptions->opticalDisk.unloadVolumeCommand     != NULL) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.dvd.unloadVolumeCommand;
+  opticalDisk->loadVolumeCommand       = (jobOptions->opticalDisk.loadVolumeCommand       != NULL) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.dvd.loadVolumeCommand;
+  opticalDisk->volumeSize              = (jobOptions->opticalDisk.volumeSize              != 0LL ) ? jobOptions->opticalDisk.volumeSize              : globalOptions.dvd.volumeSize;
+  opticalDisk->imagePreProcessCommand  = (jobOptions->opticalDisk.imagePreProcessCommand  != NULL) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.dvd.imagePreProcessCommand;
+  opticalDisk->imagePostProcessCommand = (jobOptions->opticalDisk.imagePostProcessCommand != NULL) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.dvd.imagePostProcessCommand;
+  opticalDisk->imageCommand            = (jobOptions->opticalDisk.imageCommand            != NULL) ? jobOptions->opticalDisk.imageCommand            : globalOptions.dvd.imageCommand;
+  opticalDisk->eccPreProcessCommand    = (jobOptions->opticalDisk.eccPreProcessCommand    != NULL) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.dvd.eccPreProcessCommand;
+  opticalDisk->eccPostProcessCommand   = (jobOptions->opticalDisk.eccPostProcessCommand   != NULL) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.dvd.eccPostProcessCommand;
+  opticalDisk->eccCommand              = (jobOptions->opticalDisk.eccCommand              != NULL) ? jobOptions->opticalDisk.eccCommand              : globalOptions.dvd.eccCommand;
+  opticalDisk->writePreProcessCommand  = (jobOptions->opticalDisk.writePreProcessCommand  != NULL) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.dvd.writePreProcessCommand;
+  opticalDisk->writePostProcessCommand = (jobOptions->opticalDisk.writePostProcessCommand != NULL) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.dvd.writePostProcessCommand;
+  opticalDisk->writeCommand            = (jobOptions->opticalDisk.writeCommand            != NULL) ? jobOptions->opticalDisk.writeCommand            : globalOptions.dvd.writeCommand;
+  opticalDisk->writeImageCommand       = (jobOptions->opticalDisk.writeImageCommand       != NULL) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.dvd.writeImageCommand;
 }
 
 void getBDSettings(const JobOptions *jobOptions,
@@ -3668,21 +3668,21 @@ void getBDSettings(const JobOptions *jobOptions,
   assert(jobOptions != NULL);
   assert(opticalDisk != NULL);
 
-  opticalDisk->defaultDeviceName       = (jobOptions->opticalDisk.defaultDeviceName       != NULL)?jobOptions->opticalDisk.defaultDeviceName      :globalOptions.bd.defaultDeviceName;
-  opticalDisk->requestVolumeCommand    = (jobOptions->opticalDisk.requestVolumeCommand    != NULL)?jobOptions->opticalDisk.requestVolumeCommand   :globalOptions.bd.requestVolumeCommand;
-  opticalDisk->unloadVolumeCommand     = (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)?jobOptions->opticalDisk.unloadVolumeCommand    :globalOptions.bd.unloadVolumeCommand;
-  opticalDisk->loadVolumeCommand       = (jobOptions->opticalDisk.loadVolumeCommand       != NULL)?jobOptions->opticalDisk.loadVolumeCommand      :globalOptions.bd.loadVolumeCommand;
-  opticalDisk->volumeSize              = (jobOptions->opticalDisk.volumeSize              != 0LL )?jobOptions->opticalDisk.volumeSize             :globalOptions.bd.volumeSize;
-  opticalDisk->imagePreProcessCommand  = (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)?jobOptions->opticalDisk.imagePreProcessCommand :globalOptions.bd.imagePreProcessCommand;
-  opticalDisk->imagePostProcessCommand = (jobOptions->opticalDisk.imagePostProcessCommand != NULL)?jobOptions->opticalDisk.imagePostProcessCommand:globalOptions.bd.imagePostProcessCommand;
-  opticalDisk->imageCommand            = (jobOptions->opticalDisk.imageCommand            != NULL)?jobOptions->opticalDisk.imageCommand           :globalOptions.bd.imageCommand;
-  opticalDisk->eccPreProcessCommand    = (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)?jobOptions->opticalDisk.eccPreProcessCommand   :globalOptions.bd.eccPreProcessCommand;
-  opticalDisk->eccPostProcessCommand   = (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)?jobOptions->opticalDisk.eccPostProcessCommand  :globalOptions.bd.eccPostProcessCommand;
-  opticalDisk->eccCommand              = (jobOptions->opticalDisk.eccCommand              != NULL)?jobOptions->opticalDisk.eccCommand             :globalOptions.bd.eccCommand;
-  opticalDisk->writePreProcessCommand  = (jobOptions->opticalDisk.writePreProcessCommand  != NULL)?jobOptions->opticalDisk.writePreProcessCommand :globalOptions.bd.writePreProcessCommand;
-  opticalDisk->writePostProcessCommand = (jobOptions->opticalDisk.writePostProcessCommand != NULL)?jobOptions->opticalDisk.writePostProcessCommand:globalOptions.bd.writePostProcessCommand;
-  opticalDisk->writeCommand            = (jobOptions->opticalDisk.writeCommand            != NULL)?jobOptions->opticalDisk.writeCommand           :globalOptions.bd.writeCommand;
-  opticalDisk->writeImageCommand       = (jobOptions->opticalDisk.writeImageCommand       != NULL)?jobOptions->opticalDisk.writeImageCommand      :globalOptions.bd.writeImageCommand;
+  opticalDisk->defaultDeviceName       = (jobOptions->opticalDisk.defaultDeviceName       != NULL) ? jobOptions->opticalDisk.defaultDeviceName       : globalOptions.bd.defaultDeviceName;
+  opticalDisk->requestVolumeCommand    = (jobOptions->opticalDisk.requestVolumeCommand    != NULL) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.bd.requestVolumeCommand;
+  opticalDisk->unloadVolumeCommand     = (jobOptions->opticalDisk.unloadVolumeCommand     != NULL) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.bd.unloadVolumeCommand;
+  opticalDisk->loadVolumeCommand       = (jobOptions->opticalDisk.loadVolumeCommand       != NULL) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.bd.loadVolumeCommand;
+  opticalDisk->volumeSize              = (jobOptions->opticalDisk.volumeSize              != 0LL ) ? jobOptions->opticalDisk.volumeSize              : globalOptions.bd.volumeSize;
+  opticalDisk->imagePreProcessCommand  = (jobOptions->opticalDisk.imagePreProcessCommand  != NULL) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.bd.imagePreProcessCommand;
+  opticalDisk->imagePostProcessCommand = (jobOptions->opticalDisk.imagePostProcessCommand != NULL) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.bd.imagePostProcessCommand;
+  opticalDisk->imageCommand            = (jobOptions->opticalDisk.imageCommand            != NULL) ? jobOptions->opticalDisk.imageCommand            : globalOptions.bd.imageCommand;
+  opticalDisk->eccPreProcessCommand    = (jobOptions->opticalDisk.eccPreProcessCommand    != NULL) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.bd.eccPreProcessCommand;
+  opticalDisk->eccPostProcessCommand   = (jobOptions->opticalDisk.eccPostProcessCommand   != NULL) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.bd.eccPostProcessCommand;
+  opticalDisk->eccCommand              = (jobOptions->opticalDisk.eccCommand              != NULL) ? jobOptions->opticalDisk.eccCommand              : globalOptions.bd.eccCommand;
+  opticalDisk->writePreProcessCommand  = (jobOptions->opticalDisk.writePreProcessCommand  != NULL) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.bd.writePreProcessCommand;
+  opticalDisk->writePostProcessCommand = (jobOptions->opticalDisk.writePostProcessCommand != NULL) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.bd.writePostProcessCommand;
+  opticalDisk->writeCommand            = (jobOptions->opticalDisk.writeCommand            != NULL) ? jobOptions->opticalDisk.writeCommand            : globalOptions.bd.writeCommand;
+  opticalDisk->writeImageCommand       = (jobOptions->opticalDisk.writeImageCommand       != NULL) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.bd.writeImageCommand;
 }
 
 void getDeviceSettings(const String     name,
@@ -3701,20 +3701,20 @@ void getDeviceSettings(const String     name,
   {
     deviceNode = deviceNode->next;
   }
-  device->defaultDeviceName       = (jobOptions->device.defaultDeviceName       != NULL)?jobOptions->device.defaultDeviceName      :((deviceNode != NULL)?deviceNode->device.defaultDeviceName      :globalOptions.defaultDevice->defaultDeviceName      );
-  device->requestVolumeCommand    = (jobOptions->device.requestVolumeCommand    != NULL)?jobOptions->device.requestVolumeCommand   :((deviceNode != NULL)?deviceNode->device.requestVolumeCommand   :globalOptions.defaultDevice->requestVolumeCommand   );
-  device->unloadVolumeCommand     = (jobOptions->device.unloadVolumeCommand     != NULL)?jobOptions->device.unloadVolumeCommand    :((deviceNode != NULL)?deviceNode->device.unloadVolumeCommand    :globalOptions.defaultDevice->unloadVolumeCommand    );
-  device->loadVolumeCommand       = (jobOptions->device.loadVolumeCommand       != NULL)?jobOptions->device.loadVolumeCommand      :((deviceNode != NULL)?deviceNode->device.loadVolumeCommand      :globalOptions.defaultDevice->loadVolumeCommand      );
-  device->volumeSize              = (jobOptions->device.volumeSize              != 0LL )?jobOptions->device.volumeSize             :((deviceNode != NULL)?deviceNode->device.volumeSize             :globalOptions.defaultDevice->volumeSize             );
-  device->imagePreProcessCommand  = (jobOptions->device.imagePreProcessCommand  != NULL)?jobOptions->device.imagePreProcessCommand :((deviceNode != NULL)?deviceNode->device.imagePreProcessCommand :globalOptions.defaultDevice->imagePreProcessCommand );
-  device->imagePostProcessCommand = (jobOptions->device.imagePostProcessCommand != NULL)?jobOptions->device.imagePostProcessCommand:((deviceNode != NULL)?deviceNode->device.imagePostProcessCommand:globalOptions.defaultDevice->imagePostProcessCommand);
-  device->imageCommand            = (jobOptions->device.imageCommand            != NULL)?jobOptions->device.imageCommand           :((deviceNode != NULL)?deviceNode->device.imageCommand           :globalOptions.defaultDevice->imageCommand           );
-  device->eccPreProcessCommand    = (jobOptions->device.eccPreProcessCommand    != NULL)?jobOptions->device.eccPreProcessCommand   :((deviceNode != NULL)?deviceNode->device.eccPreProcessCommand   :globalOptions.defaultDevice->eccPreProcessCommand   );
-  device->eccPostProcessCommand   = (jobOptions->device.eccPostProcessCommand   != NULL)?jobOptions->device.eccPostProcessCommand  :((deviceNode != NULL)?deviceNode->device.eccPostProcessCommand  :globalOptions.defaultDevice->eccPostProcessCommand  );
-  device->eccCommand              = (jobOptions->device.eccCommand              != NULL)?jobOptions->device.eccCommand             :((deviceNode != NULL)?deviceNode->device.eccCommand             :globalOptions.defaultDevice->eccCommand             );
-  device->writePreProcessCommand  = (jobOptions->device.writePreProcessCommand  != NULL)?jobOptions->device.writePreProcessCommand :((deviceNode != NULL)?deviceNode->device.writePreProcessCommand :globalOptions.defaultDevice->writePreProcessCommand );
-  device->writePostProcessCommand = (jobOptions->device.writePostProcessCommand != NULL)?jobOptions->device.writePostProcessCommand:((deviceNode != NULL)?deviceNode->device.writePostProcessCommand:globalOptions.defaultDevice->writePostProcessCommand);
-  device->writeCommand            = (jobOptions->device.writeCommand            != NULL)?jobOptions->device.writeCommand           :((deviceNode != NULL)?deviceNode->device.writeCommand           :globalOptions.defaultDevice->writeCommand           );
+  device->defaultDeviceName       = (jobOptions->device.defaultDeviceName       != NULL) ? jobOptions->device.defaultDeviceName       : ((deviceNode != NULL) ? deviceNode->device.defaultDeviceName       : globalOptions.defaultDevice->defaultDeviceName      );
+  device->requestVolumeCommand    = (jobOptions->device.requestVolumeCommand    != NULL) ? jobOptions->device.requestVolumeCommand    : ((deviceNode != NULL) ? deviceNode->device.requestVolumeCommand    : globalOptions.defaultDevice->requestVolumeCommand   );
+  device->unloadVolumeCommand     = (jobOptions->device.unloadVolumeCommand     != NULL) ? jobOptions->device.unloadVolumeCommand     : ((deviceNode != NULL) ? deviceNode->device.unloadVolumeCommand     : globalOptions.defaultDevice->unloadVolumeCommand    );
+  device->loadVolumeCommand       = (jobOptions->device.loadVolumeCommand       != NULL) ? jobOptions->device.loadVolumeCommand       : ((deviceNode != NULL) ? deviceNode->device.loadVolumeCommand       : globalOptions.defaultDevice->loadVolumeCommand      );
+  device->volumeSize              = (jobOptions->device.volumeSize              != 0LL ) ? jobOptions->device.volumeSize              : ((deviceNode != NULL) ? deviceNode->device.volumeSize              : globalOptions.defaultDevice->volumeSize             );
+  device->imagePreProcessCommand  = (jobOptions->device.imagePreProcessCommand  != NULL) ? jobOptions->device.imagePreProcessCommand  : ((deviceNode != NULL) ? deviceNode->device.imagePreProcessCommand  : globalOptions.defaultDevice->imagePreProcessCommand );
+  device->imagePostProcessCommand = (jobOptions->device.imagePostProcessCommand != NULL) ? jobOptions->device.imagePostProcessCommand : ((deviceNode != NULL) ? deviceNode->device.imagePostProcessCommand : globalOptions.defaultDevice->imagePostProcessCommand);
+  device->imageCommand            = (jobOptions->device.imageCommand            != NULL) ? jobOptions->device.imageCommand            : ((deviceNode != NULL) ? deviceNode->device.imageCommand            : globalOptions.defaultDevice->imageCommand           );
+  device->eccPreProcessCommand    = (jobOptions->device.eccPreProcessCommand    != NULL) ? jobOptions->device.eccPreProcessCommand    : ((deviceNode != NULL) ? deviceNode->device.eccPreProcessCommand    : globalOptions.defaultDevice->eccPreProcessCommand   );
+  device->eccPostProcessCommand   = (jobOptions->device.eccPostProcessCommand   != NULL) ? jobOptions->device.eccPostProcessCommand   : ((deviceNode != NULL) ? deviceNode->device.eccPostProcessCommand   : globalOptions.defaultDevice->eccPostProcessCommand  );
+  device->eccCommand              = (jobOptions->device.eccCommand              != NULL) ? jobOptions->device.eccCommand              : ((deviceNode != NULL) ? deviceNode->device.eccCommand              : globalOptions.defaultDevice->eccCommand             );
+  device->writePreProcessCommand  = (jobOptions->device.writePreProcessCommand  != NULL) ? jobOptions->device.writePreProcessCommand  : ((deviceNode != NULL) ? deviceNode->device.writePreProcessCommand  : globalOptions.defaultDevice->writePreProcessCommand );
+  device->writePostProcessCommand = (jobOptions->device.writePostProcessCommand != NULL) ? jobOptions->device.writePostProcessCommand : ((deviceNode != NULL) ? deviceNode->device.writePostProcessCommand : globalOptions.defaultDevice->writePostProcessCommand);
+  device->writeCommand            = (jobOptions->device.writeCommand            != NULL) ? jobOptions->device.writeCommand            : ((deviceNode != NULL) ? deviceNode->device.writeCommand            : globalOptions.defaultDevice->writeCommand           );
 }
 
 Errors inputCryptPassword(void         *userData,
