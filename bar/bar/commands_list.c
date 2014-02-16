@@ -3287,7 +3287,6 @@ Errors Command_list(StringList                      *storageNameList,
 
     error = ERROR_UNKNOWN;
 
-    // try archive content list
     if (error != ERROR_NONE)
     {
       // init storage
@@ -3316,7 +3315,6 @@ Errors Command_list(StringList                      *storageNameList,
       }
     }
 
-    // try directory list
     if (error != ERROR_NONE)
     {
       // open directory list
