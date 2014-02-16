@@ -1095,7 +1095,7 @@ LOCAL Errors formatArchiveFileName(String       fileName,
                                    bool         lastPartFlag
                                   )
 {
-  TextMacro textMacros[9];
+  TextMacro textMacros[10];
 
   String    uuid;
   bool      partNumberFlag;
@@ -1121,9 +1121,9 @@ LOCAL Errors formatArchiveFileName(String       fileName,
     tm = localtime(&time);
   #endif /* HAVE_LOCALTIME_R */
   assert(tm != NULL);
-  strftime(buffer,sizeof(buffer)-1,"%U",tm);
+  strftime(buffer,sizeof(buffer)-1,"%U",tm); buffer[sizeof(buffer)-1] = '\0';
   weekNumberU = (uint)atoi(buffer);
-  strftime(buffer,sizeof(buffer)-1,"%W",tm);
+  strftime(buffer,sizeof(buffer)-1,"%W",tm); buffer[sizeof(buffer)-1] = '\0';
   weekNumberW = (uint)atoi(buffer);
 
   // expand named macros
@@ -1131,23 +1131,23 @@ LOCAL Errors formatArchiveFileName(String       fileName,
   {
     case ARCHIVE_TYPE_NORMAL:
       TEXT_MACRO_N_CSTRING(textMacros[0],"%type","normal");
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%T","N");
+      TEXT_MACRO_N_CSTRING(textMacros[1],"%T","N");
       break;
     case ARCHIVE_TYPE_FULL:
       TEXT_MACRO_N_CSTRING(textMacros[0],"%type","full");
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%T","F");
+      TEXT_MACRO_N_CSTRING(textMacros[1],"%T","F");
       break;
     case ARCHIVE_TYPE_INCREMENTAL:
       TEXT_MACRO_N_CSTRING(textMacros[0],"%type","incremental");
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%T","I");
+      TEXT_MACRO_N_CSTRING(textMacros[1],"%T","I");
       break;
     case ARCHIVE_TYPE_DIFFERENTIAL:
       TEXT_MACRO_N_CSTRING(textMacros[0],"%type","differential");
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%T","D");
+      TEXT_MACRO_N_CSTRING(textMacros[1],"%T","D");
       break;
     case ARCHIVE_TYPE_UNKNOWN:
       TEXT_MACRO_N_CSTRING(textMacros[0],"%type","unknown");
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%T","U");
+      TEXT_MACRO_N_CSTRING(textMacros[1],"%T","U");
       break;
     #ifndef NDEBUG
       default:
@@ -1158,25 +1158,25 @@ LOCAL Errors formatArchiveFileName(String       fileName,
   switch (formatMode)
   {
     case FORMAT_MODE_ARCHIVE_FILE_NAME:
-      TEXT_MACRO_N_CSTRING(textMacros[1],"%last", lastPartFlag ? "-last" : "");
-      TEXT_MACRO_N_CSTRING(textMacros[2],"%uuid", String_cString(uuid));
-      TEXT_MACRO_N_CSTRING(textMacros[3],"%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "");
-      TEXT_MACRO_N_CSTRING(textMacros[4],"%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "");
-      TEXT_MACRO_N_INTEGER(textMacros[5],"%U2",(weekNumberU%2)+1);
-      TEXT_MACRO_N_INTEGER(textMacros[6],"%U4",(weekNumberU%4)+1);
-      TEXT_MACRO_N_INTEGER(textMacros[7],"%W2",(weekNumberW%2)+1);
-      TEXT_MACRO_N_INTEGER(textMacros[8],"%W4",(weekNumberW%4)+1);
+      TEXT_MACRO_N_CSTRING(textMacros[2],"%last", lastPartFlag ? "-last" : "");
+      TEXT_MACRO_N_CSTRING(textMacros[3],"%uuid", String_cString(uuid));
+      TEXT_MACRO_N_CSTRING(textMacros[4],"%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "");
+      TEXT_MACRO_N_CSTRING(textMacros[5],"%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "");
+      TEXT_MACRO_N_INTEGER(textMacros[6],"%U2",(weekNumberU%2)+1);
+      TEXT_MACRO_N_INTEGER(textMacros[7],"%U4",(weekNumberU%4)+1);
+      TEXT_MACRO_N_INTEGER(textMacros[8],"%W2",(weekNumberW%2)+1);
+      TEXT_MACRO_N_INTEGER(textMacros[9],"%W4",(weekNumberW%4)+1);
       Misc_expandMacros(fileName,String_cString(templateFileName),textMacros,SIZE_OF_ARRAY(textMacros));
       break;
     case FORMAT_MODE_PATTERN:
-      TEXT_MACRO_N_CSTRING(textMacros[1],"%last", "(-last){0,1}");
-      TEXT_MACRO_N_CSTRING(textMacros[2],"%uuid", "[-0-9a-fA-F]+");
-      TEXT_MACRO_N_CSTRING(textMacros[3],"%title","\\S+");
-      TEXT_MACRO_N_CSTRING(textMacros[4],"%text", "\\S+");
-      TEXT_MACRO_N_CSTRING(textMacros[5],"%U2","[12]");
-      TEXT_MACRO_N_CSTRING(textMacros[6],"%U4","[1234]");
-      TEXT_MACRO_N_CSTRING(textMacros[7],"%W2","[12]");
-      TEXT_MACRO_N_CSTRING(textMacros[8],"%W4","[1234]");
+      TEXT_MACRO_N_CSTRING(textMacros[2],"%last", "(-last){0,1}");
+      TEXT_MACRO_N_CSTRING(textMacros[3],"%uuid", "[-0-9a-fA-F]+");
+      TEXT_MACRO_N_CSTRING(textMacros[4],"%title","\\S+");
+      TEXT_MACRO_N_CSTRING(textMacros[5],"%text", "\\S+");
+      TEXT_MACRO_N_CSTRING(textMacros[6],"%U2","[12]");
+      TEXT_MACRO_N_CSTRING(textMacros[7],"%U4","[1234]");
+      TEXT_MACRO_N_CSTRING(textMacros[8],"%W2","[12]");
+      TEXT_MACRO_N_CSTRING(textMacros[9],"%W4","[1234]");
       break;
     #ifndef NDEBUG
       default:
@@ -1231,7 +1231,7 @@ LOCAL Errors formatArchiveFileName(String       fileName,
                   String_remove(fileName,i,2);
                   break;
               }
-              length = strftime(buffer,sizeof(buffer)-1,format,tm);
+              length = strftime(buffer,sizeof(buffer)-1,format,tm); buffer[sizeof(buffer)-1] = '\0';
 
               // insert into string
               switch (formatMode)
