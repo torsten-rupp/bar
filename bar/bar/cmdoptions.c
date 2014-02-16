@@ -1033,12 +1033,10 @@ bool CmdOption_parse(const char              *argv[],
                 return FALSE;
               }
               z++;
-              s = argv[z];
-              value = s;
+              value = argv[z];
             }
             else
             {
-              s = NULL;
               value = NULL;
             }
 
@@ -1053,14 +1051,7 @@ bool CmdOption_parse(const char              *argv[],
             }
 
             // next option char
-            if (s == NULL)
-            {
-              optionChars++;
-            }
-            else
-            {
-              optionChars = NULL;
-            }
+            optionChars++;
           }
           else
           {
