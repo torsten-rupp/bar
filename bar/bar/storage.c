@@ -6632,6 +6632,10 @@ Errors Storage_open(StorageHandle *storageHandle)
           storageHandle->opticalDisk.read.buffer.length     = 0L;
 
           // check if device exists
+          if (String_isEmpty(storageHandle->storageSpecifier.deviceName))
+          {
+            return ERROR_NO_DEVICE_NAME;
+          }
           if (!File_exists(storageHandle->storageSpecifier.deviceName))
           {
             return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageHandle->storageSpecifier.deviceName));
@@ -6653,8 +6657,8 @@ Errors Storage_open(StorageHandle *storageHandle)
 
           // prepare file for reading
           storageHandle->opticalDisk.read.iso9660Stat = iso9660_ifs_stat_translate(storageHandle->opticalDisk.read.iso9660Handle,
-                                                                                       String_cString(storageHandle->storageSpecifier.fileName)
-                                                                                      );
+                                                                                   String_cString(storageHandle->storageSpecifier.fileName)
+                                                                                  );
           if (storageHandle->opticalDisk.read.iso9660Stat == NULL)
           {
             iso9660_close(storageHandle->opticalDisk.read.iso9660Handle);
@@ -10045,6 +10049,10 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
         storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(storageSpecifier->fileName);
 
         // check if device exists
+        if (String_isEmpty(storageSpecifier->deviceName))
+        {
+          return ERROR_NO_DEVICE_NAME;
+        }
         if (!File_exists(storageSpecifier->deviceName))
         {
           return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageSpecifier->deviceName));
