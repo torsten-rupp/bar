@@ -3719,37 +3719,37 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
         switch (storageHandle->storageSpecifier.type)
         {
           case STORAGE_TYPE_CD:
-            volumeSize = (jobOptions->volumeSize > 0LL)
-                          ?jobOptions->volumeSize
-                          :((globalOptions.cd.volumeSize > 0LL)
-                            ?globalOptions.cd.volumeSize
-                            :(jobOptions->errorCorrectionCodesFlag
-                              ?CD_VOLUME_ECC_SIZE
-                              :CD_VOLUME_SIZE
+            volumeSize = (jobOptions->volumeSize != MAX_INT64)
+                          ? jobOptions->volumeSize
+                          : ((globalOptions.cd.volumeSize != MAX_INT64)
+                            ? globalOptions.cd.volumeSize
+                            : (jobOptions->errorCorrectionCodesFlag
+                              ? CD_VOLUME_ECC_SIZE
+                              : CD_VOLUME_SIZE
                              )
                            );
             maxMediumSize = MAX_CD_SIZE;
             break;
           case STORAGE_TYPE_DVD:
-            volumeSize = (jobOptions->volumeSize > 0LL)
-                          ?jobOptions->volumeSize
-                          :((globalOptions.dvd.volumeSize > 0LL)
-                            ?globalOptions.dvd.volumeSize
-                            :(jobOptions->errorCorrectionCodesFlag
-                              ?DVD_VOLUME_ECC_SIZE
-                              :DVD_VOLUME_SIZE
+            volumeSize = (jobOptions->volumeSize != MAX_INT64)
+                          ? jobOptions->volumeSize
+                          : ((globalOptions.dvd.volumeSize != MAX_INT64)
+                            ? globalOptions.dvd.volumeSize
+                            : (jobOptions->errorCorrectionCodesFlag
+                              ? DVD_VOLUME_ECC_SIZE
+                              : DVD_VOLUME_SIZE
                              )
                            );
             maxMediumSize = MAX_DVD_SIZE;
             break;
           case STORAGE_TYPE_BD:
-            volumeSize = (jobOptions->volumeSize > 0LL)
-                          ?jobOptions->volumeSize
-                          :((globalOptions.bd.volumeSize > 0LL)
-                            ?globalOptions.bd.volumeSize
-                            :(jobOptions->errorCorrectionCodesFlag
-                              ?BD_VOLUME_ECC_SIZE
-                              :BD_VOLUME_SIZE
+            volumeSize = (jobOptions->volumeSize != MAX_INT64)
+                          ? jobOptions->volumeSize
+                          : ((globalOptions.bd.volumeSize != MAX_INT64)
+                            ? globalOptions.bd.volumeSize
+                            : (jobOptions->errorCorrectionCodesFlag
+                              ? BD_VOLUME_ECC_SIZE
+                              : BD_VOLUME_SIZE
                             )
                            );
             maxMediumSize = MAX_BD_SIZE;
