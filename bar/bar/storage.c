@@ -9348,7 +9348,8 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
                                  ServerConnectionPriorities serverConnectionPriority
                                 )
 {
-  Errors error;
+  AutoFreeList autoFreeList;
+  Errors       error;
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
@@ -9357,6 +9358,11 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && (!defined(HAVE_CURL) || !defined(HAVE_MXML))
     UNUSED_VARIABLE(serverConnectionPriority);
   #endif
+
+  // initialize variables
+  AutoFree_init(&autoFreeList);
+  Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
+  AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->storageSpecifier,{ Storage_doneSpecifier(&storageDirectoryListHandle->storageSpecifier); });
 
   // open directory listing
   error = ERROR_UNKNOWN;
@@ -9374,6 +9380,11 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       error = File_openDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,
                                      storageSpecifier->fileName
                                     );
+      if (error != ERROR_NONE)
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
       break;
     case STORAGE_TYPE_FTP:
       #if   defined(HAVE_CURL)
@@ -9390,75 +9401,74 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           storageDirectoryListHandle->type         = STORAGE_TYPE_FTP;
           StringList_init(&storageDirectoryListHandle->ftp.lineList);
           storageDirectoryListHandle->ftp.fileName = String_new();
+          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.fileName,{ String_delete(storageDirectoryListHandle->ftp.fileName); });
+          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.lineList,{ StringList_done(&storageDirectoryListHandle->ftp.lineList); });
 
           // get FTP server settings
-          storageDirectoryListHandle->ftp.server = getFTPServerSettings(storageSpecifier->hostName,jobOptions,&ftpServer);
-          if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,ftpServer.loginName);
-          if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
-          if (String_isEmpty(storageSpecifier->hostName))
+          storageDirectoryListHandle->ftp.server = getFTPServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,ftpServer.loginName);
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
           {
-            error = ERROR_NO_HOST_NAME;
-            String_delete(storageDirectoryListHandle->ftp.fileName);
-            StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return ERROR_NO_HOST_NAME;
           }
 
           // allocate FTP server
           if (!allocateServer(storageDirectoryListHandle->ftp.server,serverConnectionPriority,60*1000L))
           {
-            String_delete(storageDirectoryListHandle->ftp.fileName);
-            StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            error = ERROR_TOO_MANY_CONNECTIONS;
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return ERROR_TOO_MANY_CONNECTIONS;
           }
+          AUTOFREE_ADD(&autoFreeList,storageDirectoryListHandle->ftp.server,{ freeServer(storageDirectoryListHandle->ftp.server); });
 
           // check FTP login, get correct password
           error = ERROR_UNKNOWN;
-          if ((error != ERROR_NONE) && !Password_isEmpty(storageSpecifier->loginPassword))
+          if ((error != ERROR_NONE) && !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword))
           {
-            error = checkFTPLogin(storageSpecifier->hostName,
-                                  storageSpecifier->hostPort,
-                                  storageSpecifier->loginName,
-                                  storageSpecifier->loginPassword
+            error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                  storageDirectoryListHandle->storageSpecifier.hostPort,
+                                  storageDirectoryListHandle->storageSpecifier.loginName,
+                                  storageDirectoryListHandle->storageSpecifier.loginPassword
                                  );
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(ftpServer.password))
           {
-            error = checkFTPLogin(storageSpecifier->hostName,
-                                  storageSpecifier->hostPort,
-                                  storageSpecifier->loginName,
+            error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                  storageDirectoryListHandle->storageSpecifier.hostPort,
+                                  storageDirectoryListHandle->storageSpecifier.loginName,
                                   ftpServer.password
                                  );
             if (error == ERROR_NONE)
             {
-              Password_set(storageSpecifier->loginPassword,ftpServer.password);
+              Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,ftpServer.password);
             }
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(defaultFTPPassword))
           {
-            error = checkFTPLogin(storageSpecifier->hostName,
-                                  storageSpecifier->hostPort,
-                                  storageSpecifier->loginName,
+            error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                  storageDirectoryListHandle->storageSpecifier.hostPort,
+                                  storageDirectoryListHandle->storageSpecifier.loginName,
                                   defaultFTPPassword
                                  );
             if (error == ERROR_NONE)
             {
-              Password_set(storageSpecifier->loginPassword,defaultFTPPassword);
+              Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,defaultFTPPassword);
             }
           }
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initFTPPassword(storageSpecifier->hostName,storageSpecifier->loginName,jobOptions))
+            if (initFTPPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions))
             {
-              error = checkFTPLogin(storageSpecifier->hostName,
-                                    storageSpecifier->hostPort,
-                                    storageSpecifier->loginName,
+              error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                    storageDirectoryListHandle->storageSpecifier.hostPort,
+                                    storageDirectoryListHandle->storageSpecifier.loginName,
                                     defaultFTPPassword
                                    );
               if (error == ERROR_NONE)
               {
-                Password_set(storageSpecifier->loginPassword,defaultFTPPassword);
+                Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,defaultFTPPassword);
               }
             }
             else
@@ -9468,21 +9478,16 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
           if (error != ERROR_NONE)
           {
-            freeServer(storageDirectoryListHandle->ftp.server);
-            String_delete(storageDirectoryListHandle->ftp.fileName);
-            StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
 
           // init Curl handle
           curlHandle = curl_easy_init();
           if (curlHandle == NULL)
           {
-            freeServer(storageDirectoryListHandle->ftp.server);
-            String_delete(storageDirectoryListHandle->ftp.fileName);
-            StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            error = ERROR_FTP_SESSION_FAIL;
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return ERROR_FTP_SESSION_FAIL;
           }
           /* Note: curl trigger from time to time a SIGALRM. The curl option
                    CURLOPT_NOSIGNAL should stop this. But it seems there is
@@ -9499,9 +9504,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           // get URL
-          url = String_format(String_new(),"ftp://%S",storageSpecifier->hostName);
-          if (storageSpecifier->hostPort != 0) String_format(url,":d",storageSpecifier->hostPort);
-          File_initSplitFileName(&nameTokenizer,storageSpecifier->fileName);
+          url = String_format(String_new(),"ftp://%S",storageDirectoryListHandle->storageSpecifier.hostName);
+          if (storageDirectoryListHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageDirectoryListHandle->storageSpecifier.hostPort);
+          File_initSplitFileName(&nameTokenizer,storageDirectoryListHandle->storageSpecifier.fileName);
           while (File_getNextSplitFileName(&nameTokenizer,&name))
           {
             String_appendChar(url,'/');
@@ -9516,17 +9521,15 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeServer(storageDirectoryListHandle->ftp.server);
-            String_delete(storageDirectoryListHandle->ftp.fileName);
-            StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
 
           // set FTP login
-          (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageSpecifier->loginName));
-          plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
+          (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageDirectoryListHandle->storageSpecifier.loginName));
+          plainLoginPassword = Password_deploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
           (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-          Password_undeploy(storageSpecifier->loginPassword);
+          Password_undeploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
 
           // read directory
           curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlFTPParseDirectoryListCallback);
@@ -9543,16 +9546,13 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeServer(storageDirectoryListHandle->ftp.server);
-            String_delete(storageDirectoryListHandle->ftp.fileName);
-            StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
 
           // free resources
           String_delete(url);
           (void)curl_easy_cleanup(curlHandle);
-          freeServer(storageDirectoryListHandle->ftp.server);
         }
       #elif defined(HAVE_FTP)
         {
@@ -9564,53 +9564,55 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           storageDirectoryListHandle->type                 = STORAGE_TYPE_FTP;
           storageDirectoryListHandle->ftp.fileListFileName = String_new();
           storageDirectoryListHandle->ftp.line             = String_new();
+          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.line,{ String_delete(storageDirectoryListHandle->ftp.line); });
+          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.fileListFileName,{ String_delete(storageDirectoryListHandle->ftp.fileListFileName); });
 
           // create temporary list file
           error = File_getTmpFileName(storageDirectoryListHandle->ftp.fileListFileName,NULL,tmpDirectory);
           if (error != ERROR_NONE)
           {
-            String_delete(storageDirectoryListHandle->ftp.line);
-            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
+          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.fileListFileName,{ File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE); });
 
           // get FTP server settings
-          getFTPServerSettings(storageSpecifier->hostName,jobOptions,&ftpServer);
-          if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,ftpServer.loginName);
-          if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
-          if (String_isEmpty(storageSpecifier->hostName))
+          getFTPServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,ftpServer.loginName);
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
           {
-            error = ERROR_NO_HOST_NAME;
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return ERROR_NO_HOST_NAME;
           }
 
           // check FTP login, get correct password
           error = ERROR_UNKNOWN;
-          if ((error != ERROR_NONE) && !Password_isEmpty(storageSpecifier->loginPassword))
+          if ((error != ERROR_NONE) && !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword))
           {
-            error = checkFTPLogin(storageSpecifier->hostName,
-                                  storageSpecifier->hostPort,
-                                  storageSpecifier->loginName,
-                                  storageSpecifier->loginPassword
+            error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                  storageDirectoryListHandle->storageSpecifier.hostPort,
+                                  storageDirectoryListHandle->storageSpecifier.loginName,
+                                  storageDirectoryListHandle->storageSpecifier.loginPassword
                                  );
           }
           if ((error != ERROR_NONE) && (ftpServer.password != NULL))
           {
-            error = checkFTPLogin(storageSpecifier->hostName,
-                                  storageSpecifier->hostPort,
-                                  storageSpecifier->loginName,
+            error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                  storageDirectoryListHandle->storageSpecifier.hostPort,
+                                  storageDirectoryListHandle->storageSpecifier.loginName,
                                   ftpServer.password
                                  );
             if (error == ERROR_NONE)
             {
-              Password_set(storageSpecifier->loginPassword,ftpServer.password);
+              Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,ftpServer.password);
             }
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(defaultFTPPassword))
           {
-            error = checkFTPLogin(storageSpecifier->hostName,
-                                  storageSpecifier->hostPort,
-                                  storageSpecifier->loginName,
+            error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                  storageDirectoryListHandle->storageSpecifier.hostPort,
+                                  storageDirectoryListHandle->storageSpecifier.loginName,
                                   defaultFTPPassword
                                  );
             if (error == ERROR_NONE)
@@ -9621,16 +9623,16 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initFTPPassword(storageSpecifier->hostName,storageSpecifier->loginName,jobOptions))
+            if (initFTPPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions))
             {
-              error = checkFTPLogin(storageSpecifier->hostName,
-                                    storageSpecifier->hostPort,
-                                    storageSpecifier->loginName,
+              error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                    storageDirectoryListHandle->storageSpecifier.hostPort,
+                                    storageDirectoryListHandle->storageSpecifier.loginName,
                                     defaultFTPPassword
                                    );
               if (error == ERROR_NONE)
               {
-                Password_set(storageSpecifier->loginPassword,defaultFTPPassword);
+                Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,defaultFTPPassword);
               }
             }
             else
@@ -9640,61 +9642,50 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
           if (error != ERROR_NONE)
           {
-            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryListHandle->ftp.line);
-            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
 
           // FTP connect
-          if (!Network_hostExists(storageSpecifier->hostName))
+          if (!Network_hostExists(storageDirectoryListHandle->storageSpecifier.hostName))
           {
             error = ERRORX_(HOST_NOT_FOUND,0,String_cString(hostName));
-            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryListHandle->ftp.line);
-            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
           if (FtpConnect(String_cString(hostName),&control) != 1)
           {
             error = ERROR_FTP_SESSION_FAIL;
-            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryListHandle->ftp.line);
-            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
 
           // FTP login
-          plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
-          if (FtpLogin(String_cString(storageSpecifier->loginName),
+          plainLoginPassword = Password_deploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
+          if (FtpLogin(String_cString(storageDirectoryListHandle->storageSpecifier.loginName),
                        plainLoginPassword,
                        control
                       ) != 1
              )
           {
-            error = ERROR_FTP_AUTHENTICATION;
             Password_undeploy(loginPassword);
             FtpClose(control);
-            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryListHandle->ftp.line);
-            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return ERROR_FTP_AUTHENTICATION;
           }
           Password_undeploy(loginPassword);
 
           // read directory: first try non-passive, then passive mode
           FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,control);
-          if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(storageSpecifier->fileName),control) != 1)
+          if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(storageDirectoryListHandle->storageSpecifier.fileName),control) != 1)
           {
             FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,control);
-            if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(storageSpecifier->fileName),control) != 1)
+            if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(storageDirectoryListHandle->storageSpecifier.fileName),control) != 1)
             {
-              error = ERRORX_(OPEN_DIRECTORY,0,String_cString(storageSpecifier->fileName));
+              error = ERRORX_(OPEN_DIRECTORY,0,String_cString(storageDirectoryListHandle->storageSpecifier.fileName));
               FtpClose(control);
-              File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
-              String_delete(storageDirectoryListHandle->ftp.line);
-              String_delete(storageDirectoryListHandle->ftp.fileListFileName);
-              break;
+              AutoFree_cleanup(&autoFreeList);
+              return error;
             }
           }
 
@@ -9705,10 +9696,8 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           error = File_open(&storageDirectoryListHandle->ftp.fileHandle,storageDirectoryListHandle->ftp.fileListFileName,FILE_OPEN_READ);
           if (error != ERROR_NONE)
           {
-            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryListHandle->ftp.line);
-            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
 
           // free resources
@@ -9742,54 +9731,87 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           storageDirectoryListHandle->sftp.buffer        = (char*)malloc(MAX_FILENAME_LENGTH);
           if (storageDirectoryListHandle->sftp.buffer == NULL)
           {
-            error = ERROR_INSUFFICIENT_MEMORY;
-            break;
+            String_delete(storageDirectoryListHandle->sftp.pathName);
+            AutoFree_cleanup(&autoFreeList);
+            return ERROR_INSUFFICIENT_MEMORY;
           }
           storageDirectoryListHandle->sftp.bufferLength  = 0;
           storageDirectoryListHandle->sftp.entryReadFlag = FALSE;
+          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.buffer,{ free(storageDirectoryListHandle->sftp.buffer); });
+          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.pathName,{ String_delete(storageDirectoryListHandle->sftp.pathName); });
 
           // set pathname
-          String_set(storageDirectoryListHandle->sftp.pathName,storageSpecifier->fileName);
+          String_set(storageDirectoryListHandle->sftp.pathName,storageDirectoryListHandle->storageSpecifier.fileName);
 
           // get SSH server settings
-          getSSHServerSettings(storageSpecifier->hostName,jobOptions,&sshServer);
-          if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,sshServer.loginName);
-          if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
-          if (String_isEmpty(storageSpecifier->hostName))
+          getSSHServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&sshServer);
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,sshServer.loginName);
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (storageDirectoryListHandle->storageSpecifier.hostPort == 0) storageDirectoryListHandle->storageSpecifier.hostPort = sshServer.port;
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
           {
-            error = ERROR_NO_HOST_NAME;
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return ERROR_NO_HOST_NAME;
           }
 
           // open network connection
-          error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
-                                  SOCKET_TYPE_SSH,
-                                  storageSpecifier->hostName,
-                                  (storageSpecifier->hostPort != 0) ? storageSpecifier->hostPort : sshServer.port,
-                                  storageSpecifier->loginName,
-                                  (sshServer.password != NULL) ? sshServer.password : defaultSSHPassword,
-                                  sshServer.publicKeyFileName,
-                                  sshServer.privateKeyFileName,
-                                  0
-                                 );
+          error = ERROR_UNKNOWN;
+          if ((error == ERROR_UNKNOWN) && !Password_isEmpty(sshServer.password))
+          {
+            error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
+                                    SOCKET_TYPE_SSH,
+                                    storageDirectoryListHandle->storageSpecifier.hostName,
+                                    storageDirectoryListHandle->storageSpecifier.hostPort,
+                                    storageDirectoryListHandle->storageSpecifier.loginName,
+                                    sshServer.password,
+                                    sshServer.publicKeyFileName,
+                                    sshServer.privateKeyFileName,
+                                    0
+                                   );
+          }
+          if (error == ERROR_UNKNOWN)
+          {
+            // initialize default password
+            if (   initSSHPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions)
+                && !Password_isEmpty(defaultSSHPassword)
+               )
+            {
+              error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
+                                      SOCKET_TYPE_SSH,
+                                      storageDirectoryListHandle->storageSpecifier.hostName,
+                                      storageDirectoryListHandle->storageSpecifier.hostPort,
+                                      storageDirectoryListHandle->storageSpecifier.loginName,
+                                      defaultSSHPassword,
+                                      sshServer.publicKeyFileName,
+                                      sshServer.privateKeyFileName,
+                                      0
+                                     );
+            }
+            else
+            {
+              error = !Password_isEmpty(defaultSSHPassword)
+                        ? ERRORX_(INVALID_SSH_PASSWORD,0,String_cString(storageDirectoryListHandle->storageSpecifier.hostName))
+                        : ERRORX_(NO_SSH_PASSWORD,0,String_cString(storageDirectoryListHandle->storageSpecifier.hostName));
+            }
+          }
+          assert(error != ERROR_UNKNOWN);
           if (error != ERROR_NONE)
           {
-            free(storageDirectoryListHandle->sftp.buffer);
-            String_delete(storageDirectoryListHandle->sftp.pathName);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
           libssh2_session_set_timeout(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle),READ_TIMEOUT);
+          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.socketHandle,{ Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle); });
 
           // init SFTP session
           storageDirectoryListHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle));
           if (storageDirectoryListHandle->sftp.sftp == NULL)
           {
             error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
-            Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
-            free(storageDirectoryListHandle->sftp.buffer);
-            String_delete(storageDirectoryListHandle->sftp.pathName);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
+          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.sftp,{ libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp); });
 
           // open directory for reading
           storageDirectoryListHandle->sftp.sftpHandle = libssh2_sftp_opendir(storageDirectoryListHandle->sftp.sftp,
@@ -9798,11 +9820,8 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           if (storageDirectoryListHandle->sftp.sftpHandle == NULL)
           {
             error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
-            libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp);
-            Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
-            free(storageDirectoryListHandle->sftp.buffer);
-            String_delete(storageDirectoryListHandle->sftp.pathName);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
 
           // free resources
@@ -9833,65 +9852,66 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           storageDirectoryListHandle->webdav.currentNode = NULL;
 
           // get WebDAV server settings
-          storageDirectoryListHandle->webdav.server = getWebDAVServerSettings(storageSpecifier->hostName,jobOptions,&webDAVServer);
-          if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,webDAVServer.loginName);
-          if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
-          if (String_isEmpty(storageSpecifier->hostName))
+          storageDirectoryListHandle->webdav.server = getWebDAVServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&webDAVServer);
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,webDAVServer.loginName);
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
           {
-            error = ERROR_NO_HOST_NAME;
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return ERROR_NO_HOST_NAME;
           }
 
           // allocate WebDAV server
           if (!allocateServer(storageDirectoryListHandle->webdav.server,serverConnectionPriority,60*1000L))
           {
-            error = ERROR_TOO_MANY_CONNECTIONS;
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return ERROR_TOO_MANY_CONNECTIONS;
           }
+          AUTOFREE_ADD(&autoFreeList,storageDirectoryListHandle->webdav.server,{ freeServer(storageDirectoryListHandle->webdav.server); });
 
           // check WebDAV login, get correct password
           error = ERROR_UNKNOWN;
-          if ((error != ERROR_NONE) && !Password_isEmpty(storageSpecifier->loginPassword))
+          if ((error != ERROR_NONE) && !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword))
           {
-            error = checkWebDAVLogin(storageSpecifier->hostName,
-                                     storageSpecifier->loginName,
-                                     storageSpecifier->loginPassword
+            error = checkWebDAVLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                     storageDirectoryListHandle->storageSpecifier.loginName,
+                                     storageDirectoryListHandle->storageSpecifier.loginPassword
                                     );
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(webDAVServer.password))
           {
-            error = checkWebDAVLogin(storageSpecifier->hostName,
-                                     storageSpecifier->loginName,
+            error = checkWebDAVLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                     storageDirectoryListHandle->storageSpecifier.loginName,
                                      webDAVServer.password
                                     );
             if (error == ERROR_NONE)
             {
-              Password_set(storageSpecifier->loginPassword,webDAVServer.password);
+              Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,webDAVServer.password);
             }
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(defaultWebDAVPassword))
           {
-            error = checkWebDAVLogin(storageSpecifier->hostName,
-                                     storageSpecifier->loginName,
+            error = checkWebDAVLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                     storageDirectoryListHandle->storageSpecifier.loginName,
                                      defaultWebDAVPassword
                                     );
             if (error == ERROR_NONE)
             {
-              Password_set(storageSpecifier->loginPassword,defaultWebDAVPassword);
+              Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,defaultWebDAVPassword);
             }
           }
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initWebDAVPassword(storageSpecifier->hostName,storageSpecifier->loginName,jobOptions))
+            if (initWebDAVPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions))
             {
-              error = checkWebDAVLogin(storageSpecifier->hostName,
-                                       storageSpecifier->loginName,
+              error = checkWebDAVLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                       storageDirectoryListHandle->storageSpecifier.loginName,
                                        defaultWebDAVPassword
                                       );
               if (error == ERROR_NONE)
               {
-                Password_set(storageSpecifier->loginPassword,defaultWebDAVPassword);
+                Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,defaultWebDAVPassword);
               }
             }
             else
@@ -9901,17 +9921,16 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           }
           if (error != ERROR_NONE)
           {
-            freeServer(storageDirectoryListHandle->webdav.server);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
 
           // init handle
           curlHandle = curl_easy_init();
           if (curlHandle == NULL)
           {
-            freeServer(storageDirectoryListHandle->webdav.server);
-            error = ERROR_WEBDAV_SESSION_FAIL;
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return ERROR_WEBDAV_SESSION_FAIL;
           }
           /* Note: curl trigger from time to time a SIGALRM. The curl option
                    CURLOPT_NOSIGNAL should stop this. But it seems there is
@@ -9929,9 +9948,9 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           }
 
           // get URL
-          url = String_format(String_new(),"http://%S",storageSpecifier->hostName);
-          if (storageSpecifier->hostPort != 0) String_format(url,":d",storageSpecifier->hostPort);
-          File_initSplitFileName(&nameTokenizer,storageSpecifier->fileName);
+          url = String_format(String_new(),"http://%S",storageDirectoryListHandle->storageSpecifier.hostName);
+          if (storageDirectoryListHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageDirectoryListHandle->storageSpecifier.hostPort);
+          File_initSplitFileName(&nameTokenizer,storageDirectoryListHandle->storageSpecifier.fileName);
           while (File_getNextSplitFileName(&nameTokenizer,&name))
           {
             String_appendChar(url,'/');
@@ -9947,15 +9966,15 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             error = ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeServer(storageDirectoryListHandle->webdav.server);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
 
           // set login
-          (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageSpecifier->loginName));
-          plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
+          (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageDirectoryListHandle->storageSpecifier.loginName));
+          plainLoginPassword = Password_deploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
           (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-          Password_undeploy(storageSpecifier->loginPassword);
+          Password_undeploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
 
           // read directory data
           directoryData = String_new();
@@ -9983,11 +10002,10 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           {
             error = ERROR_READ_DIRECTORY;
             String_delete(directoryData);
-            curl_slist_free_all(curlSList);
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeServer(storageDirectoryListHandle->webdav.server);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
 
           // parse directory entries
@@ -10001,8 +10019,8 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             String_delete(directoryData);
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeServer(storageDirectoryListHandle->webdav.server);
-            break;
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
           storageDirectoryListHandle->webdav.lastNode = storageDirectoryListHandle->webdav.rootNode;
 
@@ -10019,7 +10037,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           String_delete(directoryData);
           String_delete(url);
           (void)curl_easy_cleanup(curlHandle);
-          freeServer(storageDirectoryListHandle->webdav.server);
         }
       #else /* not HAVE_CURL */
         UNUSED_VARIABLE(jobOptions);
@@ -10031,7 +10048,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
       // init variables
-      switch (storageSpecifier->type)
+      switch (storageDirectoryListHandle->storageSpecifier.type)
       {
         case STORAGE_TYPE_CD : storageDirectoryListHandle->type = STORAGE_TYPE_CD;  break;
         case STORAGE_TYPE_DVD: storageDirectoryListHandle->type = STORAGE_TYPE_DVD; break;
@@ -10046,54 +10063,94 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #ifdef HAVE_ISO9660
         UNUSED_VARIABLE(jobOptions);
 
-        storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(storageSpecifier->fileName);
+        // init variables
+        storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(storageDirectoryListHandle->storageSpecifier.fileName);
+        AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.pathName,{ String_delete(storageDirectoryListHandle->opticalDisk.pathName); });
+
+        // get device name
+        if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.deviceName))
+        {
+          switch (storageDirectoryListHandle->storageSpecifier.type)
+          {
+            case STORAGE_TYPE_CD:
+              String_set(storageDirectoryListHandle->storageSpecifier.deviceName,globalOptions.cd.defaultDeviceName);
+              break;
+            case STORAGE_TYPE_DVD:
+              String_set(storageDirectoryListHandle->storageSpecifier.deviceName,globalOptions.dvd.defaultDeviceName);
+              break;
+            case STORAGE_TYPE_BD:
+              String_set(storageDirectoryListHandle->storageSpecifier.deviceName,globalOptions.bd.defaultDeviceName);
+              break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+               #endif /* NDEBUG */
+              break;
+          }
+        }
 
         // check if device exists
-        if (String_isEmpty(storageSpecifier->deviceName))
+        if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.deviceName))
         {
+          AutoFree_cleanup(&autoFreeList);
           return ERROR_NO_DEVICE_NAME;
         }
-        if (!File_exists(storageSpecifier->deviceName))
+        if (!File_exists(storageDirectoryListHandle->storageSpecifier.deviceName))
         {
-          return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageSpecifier->deviceName));
+          error = ERRORX_(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
+          AutoFree_cleanup(&autoFreeList);
+          return error;
         }
 
         // open optical disk/ISO 9660 file
-        storageDirectoryListHandle->opticalDisk.iso9660Handle = iso9660_open(String_cString(storageSpecifier->deviceName));
+        storageDirectoryListHandle->opticalDisk.iso9660Handle = iso9660_open(String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
         if (storageDirectoryListHandle->opticalDisk.iso9660Handle == NULL)
         {
-          if (File_isFile(storageSpecifier->deviceName))
+          if (File_isFile(storageDirectoryListHandle->storageSpecifier.deviceName))
           {
-            error = ERRORX_(OPEN_ISO9660_FILE,errno,String_cString(storageSpecifier->deviceName));
+            error = ERRORX_(OPEN_ISO9660_FILE,errno,String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
           }
           else
           {
-            error = ERRORX_(OPEN_OPTICAL_DISK,errno,String_cString(storageSpecifier->deviceName));
+            error = ERRORX_(OPEN_OPTICAL_DISK,errno,String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
+          }
+          if (error != ERROR_NONE)
+          {
+            AutoFree_cleanup(&autoFreeList);
+            return error;
           }
         }
+        AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.iso9660Handle,{ iso9660_close(storageDirectoryListHandle->opticalDisk.iso9660Handle); });
 
         // open directory for reading
         storageDirectoryListHandle->opticalDisk.cdioList = iso9660_ifs_readdir(storageDirectoryListHandle->opticalDisk.iso9660Handle,
-                                                                               String_cString(storageSpecifier->fileName)
+                                                                               String_cString(storageDirectoryListHandle->storageSpecifier.fileName)
                                                                               );
         if (storageDirectoryListHandle->opticalDisk.cdioList == NULL)
         {
-          iso9660_close(storageDirectoryListHandle->opticalDisk.iso9660Handle);
-          return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(storageSpecifier->fileName));
+          error = ERRORX_(FILE_NOT_FOUND_,errno,String_cString(storageDirectoryListHandle->storageSpecifier.fileName));
+          AutoFree_cleanup(&autoFreeList);
+          return error;
         }
 
         storageDirectoryListHandle->opticalDisk.cdioNextNode = _cdio_list_begin(storageDirectoryListHandle->opticalDisk.cdioList);
       #else /* not HAVE_ISO9660 */
         // open directory
         error = File_openDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle,
-                                       storageSpecifier->fileName
+                                       storageDirectoryListHandle->storageSpecifier.fileName
                                       );
+        if (error != NULL)
+        {
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.directoryListHandle,{ File_closeDirectoryList(storageDirectoryListHandle->opticalDisk.directoryListHandle); });
       #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
       UNUSED_VARIABLE(jobOptions);
 
-      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     default:
       #ifndef NDEBUG
@@ -10101,9 +10158,9 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* NDEBUG */
       break;
   }
-  assert(error != ERROR_UNKNOWN);
+  AutoFree_done(&autoFreeList);
 
-  return error;
+  return ERROR_NONE;
 }
 
 void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
@@ -10119,6 +10176,7 @@ void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryList
       break;
     case STORAGE_TYPE_FTP:
       #if   defined(HAVE_CURL)
+        freeServer(storageDirectoryListHandle->ftp.server);
         String_delete(storageDirectoryListHandle->ftp.fileName);
         StringList_done(&storageDirectoryListHandle->ftp.lineList);
       #elif defined(HAVE_FTP)
@@ -10173,6 +10231,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* NDEBUG */
       break;
   }
+  Storage_doneSpecifier(&storageDirectoryListHandle->storageSpecifier);
 }
 
 bool Storage_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)

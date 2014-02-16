@@ -433,6 +433,8 @@ typedef struct
 
 typedef struct
 {
+  StorageSpecifier storageSpecifier;                       // storage specifier data
+
   StorageTypes type;
   union
   {
