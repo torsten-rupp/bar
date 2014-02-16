@@ -102,7 +102,7 @@
 
 #define DEFAULT_DATABASE_INDEX_FILE           "/var/lib/bar/index.db"
 
-#define CD_UNLOAD_VOLUME_COMMAND              "eject -r %device"
+#define CD_UNLOAD_VOLUME_COMMAND              "eject %device"
 #define CD_LOAD_VOLUME_COMMAND                "eject -t %device"
 #define CD_IMAGE_COMMAND                      "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define CD_ECC_COMMAND                        "nice dvdisaster -mRS02 -n cd -c -i %image -v"
