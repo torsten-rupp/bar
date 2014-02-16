@@ -109,7 +109,7 @@
 #define CD_WRITE_COMMAND                      "nice sh -c 'mkisofs -V Backup -volset %number -r -o %image %directory && cdrecord dev=%device %image'"
 #define CD_WRITE_IMAGE_COMMAND                "nice cdrecord dev=%device %image"
 
-#define DVD_UNLOAD_VOLUME_COMMAND             "eject -r %device"
+#define DVD_UNLOAD_VOLUME_COMMAND             "eject %device"
 #define DVD_LOAD_VOLUME_COMMAND               "eject -t %device"
 #define DVD_IMAGE_COMMAND                     "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define DVD_ECC_COMMAND                       "nice dvdisaster -mRS02 -n dvd -c -i %image -v"
@@ -120,7 +120,7 @@
 //#warning todo remove -dry-run
 //#define DVD_WRITE_IMAGE_COMMAND               "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -dry-run"
 
-#define BD_UNLOAD_VOLUME_COMMAND              "eject -r %device"
+#define BD_UNLOAD_VOLUME_COMMAND              "eject %device"
 #define BD_LOAD_VOLUME_COMMAND                "eject -t %device"
 #define BD_IMAGE_COMMAND                      "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define BD_ECC_COMMAND                        "nice dvdisaster -mRS02 -n bd -c -i %image -v"
