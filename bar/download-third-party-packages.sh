@@ -634,7 +634,7 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
-    # libcdio 0.82
+    # libcdio 0.92
     (
      if test -n "$destination"; then
        cd $destination
@@ -642,15 +642,15 @@ if test $cleanFlag -eq 0; then
        cd $tmpDirectory
      fi
 
-     if test ! -f libcdio-0.82.tar.gz; then
-       $WGET $WGET_OPTIONS 'ftp://ftp.gnu.org/gnu/libcdio/libcdio-0.82.tar.gz'
+     if test ! -f libcdio-0.92.tar.gz; then
+       $WGET $WGET_OPTIONS 'ftp://ftp.gnu.org/gnu/libcdio/libcdio-0.92.tar.gz'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf libcdio-0.82.tar.gz
+       $TAR xzf libcdio-0.92.tar.gz
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/libcdio-0.82 libcdio
+      $LN -f -s $tmpDirectory/libcdio-0.92 libcdio
     fi
   fi
 
