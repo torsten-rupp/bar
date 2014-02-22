@@ -10144,7 +10144,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.directoryListHandle,{ File_closeDirectoryList(storageDirectoryListHandle->opticalDisk.directoryListHandle); });
+        AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.directoryListHandle,{ File_closeDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle); });
       #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
