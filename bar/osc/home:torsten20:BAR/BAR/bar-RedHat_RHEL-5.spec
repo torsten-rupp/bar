@@ -114,7 +114,7 @@ mkdir packages
 %__rm -rf "%{buildroot}"
 
 %check
-%{__make} test1 test2 test3 test5
+%{__make} test1 test2 test3 test5 COMPRESS_NAMES_LZMA="lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7 lzma8"
 
 %files
 %defattr(-,root,root)
