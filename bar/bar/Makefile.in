@@ -98,6 +98,7 @@ MKFS          = /sbin/mkfs
 MOUNT         = /bin/mount
 UMOUNT        = /bin/umount
 SUDO          = sudo
+VALGRIND      = valgrind  
 
 LOOP0         = /dev/loop0
 LOOP1         = /dev/loop1
@@ -111,12 +112,22 @@ VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MAJOR|$(SED) 's
 VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 
 # supported compress algorithms
-COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9
-ifeq (@HAVE_BZ2@,1)
-COMPRESS_NAMES += bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
-endif
-ifeq (@HAVE_LZMA@,1)
-COMPRESS_NAMES += lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7 lzma8 lzma9
+ifeq ($(COMPRESS_NAMES),)
+  COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9
+  ifeq ($(COMPRESS_NAMES_BZIP),)
+    ifeq (@HAVE_BZ2@,1)
+      COMPRESS_NAMES += bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
+    endif
+  else
+    COMPRESS_NAMES += $(COMPRESS_NAMES_BZIP)
+  endif
+  ifeq ($(COMPRESS_NAMES_LZMA),)
+    ifeq (@HAVE_LZMA@,1)
+      COMPRESS_NAMES += lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7 lzma8 lzma9
+    endif
+  else
+    COMPRESS_NAMES += $(COMPRESS_NAMES_LZMA)
+  endif
 endif
 
 # supported crypt algorithms
@@ -2464,7 +2475,7 @@ memcheck: \
           VALGRIND_OPTIONS="--leak-check=summary" \
           $(if $(CHECK),\
             memcheck$(CHECK),\
-            memcheck1 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 \
+            memcheck1 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 memcheck8 \
            )
 
 .PHONY: memcheck_extended
@@ -2476,14 +2487,14 @@ memcheck_extended: \
           VALGRIND_OPTIONS="--leak-check=full" \
             $(if $(CHECK),\
               memcheck$(CHECK),\
-              memcheck1 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 \
+              memcheck1 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 memcheck8 \
              )
 
-.PHONY: memcheck1 memcheck2 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7
+.PHONY: memcheck1 memcheck2 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 memcheck8
 memcheck1: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	valgrind \
+	$(VALGRIND) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2499,7 +2510,7 @@ memcheck2: \
 memcheck2a: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	valgrind \
+	$(VALGRIND) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2509,7 +2520,7 @@ memcheck2a: \
 memcheck2b: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	valgrind \
+	$(VALGRIND) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2519,7 +2530,7 @@ memcheck2b: \
 memcheck2c: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	valgrind \
+	$(VALGRIND) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2529,7 +2540,7 @@ memcheck2c: \
 memcheck2d: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	valgrind \
+	$(VALGRIND) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2539,7 +2550,7 @@ memcheck2d: \
 memcheck2e: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	valgrind \
+	$(VALGRIND) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2549,7 +2560,7 @@ memcheck2e: \
 memcheck2f: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	valgrind \
+	$(VALGRIND) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2558,7 +2569,7 @@ memcheck2f: \
           $(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files --dry-run > /dev/null
 memcheck3: bar
 	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
-	valgrind \
+	$(VALGRIND) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2569,7 +2580,7 @@ memcheck4: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
-	valgrind \
+	$(VALGRIND) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2580,7 +2591,7 @@ memcheck5: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
-	valgrind \
+	$(VALGRIND) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2591,7 +2602,7 @@ memcheck6: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
-	valgrind \
+	$(VALGRIND) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2601,7 +2612,25 @@ memcheck6: \
 memcheck7: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	valgrind \
+	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	-$(VALGRIND) \
+          --log-file=valgrind.log \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(TEST_BAR_VALGRIND) dvd:///dev/dvd $(BAR_OPTIONS) > /dev/null
+	-$(VALGRIND) \
+          --log-file=valgrind.log \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(TEST_BAR_VALGRIND) dvd:///dev/dvd: $(BAR_OPTIONS) > /dev/null
+memcheck8: \
+  $(TEST_BAR_VALGRIND) \
+  $(TEST_FILES)
+	$(VALGRIND) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
