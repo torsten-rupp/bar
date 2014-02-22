@@ -2080,7 +2080,7 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
   }
   else
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse owner ship value '%s'",value);
+    snprintf(errorMessage,errorMessageSize,"Unknown owner ship value '%s'",value);
     return FALSE;
   }
 
@@ -2172,7 +2172,7 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
     }
     if (!foundFlag)
     {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse compress algorithm value '%s'",algorithm1);
+      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm1);
       return FALSE;
     }
 
@@ -2197,7 +2197,7 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
     }
     if (!foundFlag)
     {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse compress algorithm value '%s'",algorithm2);
+      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm2);
       return FALSE;
     }
   }
@@ -2224,7 +2224,7 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
     }
     if (!foundFlag)
     {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse compress algorithm value '%s'",value);
+      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",value);
       return FALSE;
     }
   }
@@ -3912,7 +3912,7 @@ bool configValueParseOwner(void *userData, void *variable, const char *name, con
   }
   else
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse owner ship value '%s'",value);
+    snprintf(errorMessage,errorMessageSize,"Unknown owner ship value '%s'",value);
     return FALSE;
   }
 
@@ -4325,7 +4325,7 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
     }
     if (!foundFlag)
     {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse compress algorithm value '%s'",algorithm1);
+      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm1);
       return FALSE;
     }
 
@@ -4350,7 +4350,7 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
     }
     if (!foundFlag)
     {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse compress algorithm value '%s'",algorithm2);
+      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm2);
       return FALSE;
     }
   }
@@ -4377,7 +4377,7 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
     }
     if (!foundFlag)
     {
-      snprintf(errorMessage,errorMessageSize,"Cannot parse compress algorithm value '%s'",value);
+      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",value);
       return FALSE;
     }
   }
