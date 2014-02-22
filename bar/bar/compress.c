@@ -1544,7 +1544,7 @@ bool Compress_isValidAlgorithm(uint16 n)
               {
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-                return ERRORX_(INIT_COMPRESS,zlibResult,zError(zlibResult));
+                return ERRORX_(INIT_DECOMPRESS,zlibResult,zError(zlibResult));
               }
               break;
             #ifndef NDEBUG
@@ -1609,7 +1609,7 @@ bool Compress_isValidAlgorithm(uint16 n)
               {
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-                return ERRORX_(INIT_COMPRESS,bz2Result,NULL);
+                return ERRORX_(INIT_DECOMPRESS,bz2Result,NULL);
               }
               break;
             #ifndef NDEBUG
@@ -1655,11 +1655,11 @@ bool Compress_isValidAlgorithm(uint16 n)
               #endif /* NDEBUG */
               break;
           }
+          compressInfo->lzmalib.stream = streamInit;
           compressInfo->lzmalib.stream.allocator = NULL;
           switch (compressMode)
           {
             case COMPRESS_MODE_DEFLATE:
-              compressInfo->lzmalib.stream = streamInit;
               lzmaResult = lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE);
               if (lzmaResult != LZMA_OK)
               {
@@ -1669,13 +1669,12 @@ bool Compress_isValidAlgorithm(uint16 n)
               }
               break;
             case COMPRESS_MODE_INFLATE:
-              compressInfo->lzmalib.stream = streamInit;
               lzmaResult = lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0);
               if (lzmaResult != LZMA_OK)
               {
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-                return ERRORX_(INIT_COMPRESS,lzmaResult,lzmaErrorText(lzmaResult));
+                return ERRORX_(INIT_DECOMPRESS,lzmaResult,lzmaErrorText(lzmaResult));
               }
               break;
             #ifndef NDEBUG
