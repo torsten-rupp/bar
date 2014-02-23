@@ -420,7 +420,7 @@ class Command
    * @param timeout timeout or -1 [ms]
    * @return error code
    */
-  public synchronized int getNextResult(TypeMap typeMap, String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap, int timeout)
+  public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap, int timeout)
   {
     // init variables
     if (unknownValueMap != null) unknownValueMap.clear();
@@ -437,7 +437,7 @@ class Command
         if ((valueMap != null) && !line.isEmpty())
         {
           valueMap.clear();
-          if (!StringParser.parse(line,typeMap,valueMap,unknownValueMap))
+          if (!StringParser.parse(line,valueMap,unknownValueMap))
           {
             throw new RuntimeException("parse '"+line+"' fail");
           }
@@ -461,9 +461,9 @@ class Command
    * @param unknownValueMap unknown values map or null
    * @return error code
    */
-  public synchronized int getResult(TypeMap typeMap, String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap)
+  public synchronized int getResult(String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap)
   {
-    return getNextResult(typeMap,errorMessage,valueMap,unknownValueMap,0);
+    return getNextResult(errorMessage,valueMap,unknownValueMap,0);
   }
 
   /** get next result
@@ -473,9 +473,9 @@ class Command
    * @param timeout timeout or -1 [ms]
    * @return error code
    */
-  public synchronized int getNextResult(TypeMap typeMap, String[] errorMessage, ValueMap valueMap, int timeout)
+  public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap, int timeout)
   {
-    return getNextResult(typeMap,errorMessage,valueMap,(ValueMap)null,timeout);
+    return getNextResult(errorMessage,valueMap,(ValueMap)null,timeout);
   }
 
   /** get next result
@@ -484,9 +484,9 @@ class Command
    * @param valueMap value map
    * @return error code
    */
-  public synchronized int getNextResult(TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
+  public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap)
   {
-    return getNextResult(typeMap,errorMessage,valueMap,0);
+    return getNextResult(errorMessage,valueMap,0);
   }
 
 
@@ -496,9 +496,9 @@ class Command
    * @param valueMap value map
    * @return error code
    */
-  public synchronized int getResult(TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
+  public synchronized int getResult(String[] errorMessage, ValueMap valueMap)
   {
-    return getNextResult(typeMap,errorMessage,valueMap);
+    return getNextResult(errorMessage,valueMap);
   }
 
   /** get result list
@@ -508,7 +508,7 @@ class Command
    * @param unknownValueMap unknown values map or null
    * @return error code
    */
-  public synchronized int getResult(TypeMap typeMap, String[] errorMessage, List<ValueMap> valueMapList, ValueMap unknownValueMap)
+  public synchronized int getResult(String[] errorMessage, List<ValueMap> valueMapList, ValueMap unknownValueMap)
   {
     valueMapList.clear();
     if (unknownValueMap != null) unknownValueMap.clear();
@@ -520,7 +520,7 @@ class Command
         if (!line.isEmpty())
         {
           ValueMap valueMap = new ValueMap();
-          StringParser.parse(line,typeMap,valueMap,unknownValueMap);
+          StringParser.parse(line,valueMap,unknownValueMap);
 //Dprintf.dprintf("line=%s",line);
 //Dprintf.dprintf("typeMap=%s",typeMap);
 //Dprintf.dprintf("valueMap=%s",valueMap);
@@ -543,9 +543,9 @@ class Command
    * @param valueMapList value map list
    * @return error code
    */
-  public synchronized int getResult(TypeMap typeMap, String[] errorMessage, List<ValueMap> valueMapList)
+  public synchronized int getResult(String[] errorMessage, List<ValueMap> valueMapList)
   {
-    return getResult(typeMap,errorMessage,valueMapList,(ValueMap)null);
+    return getResult(errorMessage,valueMapList,(ValueMap)null);
   }
 
   /** get error code
@@ -1303,7 +1303,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, final TypeMap typeMap, final String[] errorMessage, final CommandResultHandler commandResultHandler, BusyIndicator busyIndicator)
+  public static int executeCommand(String commandString, final String[] errorMessage, final CommandResultHandler commandResultHandler, BusyIndicator busyIndicator)
   {
     return executeCommand(commandString,
                           busyIndicator,
@@ -1312,7 +1312,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       public int handleResult(Command command)
       {
         ValueMap valueMap = new ValueMap();
-        int      error    = command.getNextResult(typeMap,errorMessage,valueMap);
+        int      error    = command.getNextResult(errorMessage,valueMap);
         if (error == Errors.NONE)
         {
           error = commandResultHandler.handleResult(valueMap);
@@ -1330,9 +1330,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param commandResultHandler command result handler
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, final TypeMap typeMap, final String[] errorMessage, CommandResultHandler commandResultHandler)
+  public static int executeCommand(String commandString, final String[] errorMessage, CommandResultHandler commandResultHandler)
   {
-    return executeCommand(commandString,typeMap,errorMessage,commandResultHandler,(BusyIndicator)null);
+    return executeCommand(commandString,errorMessage,commandResultHandler,(BusyIndicator)null);
   }
 
   /** execute command
@@ -1344,7 +1344,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, final TypeMap typeMap, final String[] errorMessage, final ValueMap valueMap, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
+  public static int executeCommand(String commandString, final String[] errorMessage, final ValueMap valueMap, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
   {
     return executeCommand(commandString,
                           busyIndicator,
@@ -1352,8 +1352,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       public int handleResult(Command command)
       {
-//Dprintf.dprintf("handle command=%s",command);
-        return command.getResult(typeMap,errorMessage,valueMap,unknownValueMap);
+        return command.getResult(errorMessage,valueMap,unknownValueMap);
       }
     });
   }
@@ -1366,9 +1365,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param unknownValueMap unknown values map or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, TypeMap typeMap, String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap)
+  public static int executeCommand(String commandString, String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap)
   {
-    return executeCommand(commandString,typeMap,errorMessage,valueMap,unknownValueMap,(BusyIndicator)null);
+    return executeCommand(commandString,errorMessage,valueMap,unknownValueMap,(BusyIndicator)null);
   }
 
   /** execute command
@@ -1378,9 +1377,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param valueMap value map
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
+  public static int executeCommand(String commandString, String[] errorMessage, ValueMap valueMap)
   {
-    return executeCommand(commandString,typeMap,errorMessage,valueMap,(ValueMap)null);
+    return executeCommand(commandString,errorMessage,valueMap,(ValueMap)null);
   }
 
   /** execute command
@@ -1390,7 +1389,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static int executeCommand(String command, String[] errorMessage)
   {
-    return executeCommand(command,(TypeMap)null,errorMessage,(ValueMap)null);
+    return executeCommand(command,errorMessage,(ValueMap)null);
   }
 
   /** execute command
@@ -1411,7 +1410,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, final TypeMap typeMap, final String[] errorMessage, final List<ValueMap> valueMapList, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
+  public static int executeCommand(String commandString, final String[] errorMessage, final List<ValueMap> valueMapList, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
   {
     return executeCommand(commandString,
                           busyIndicator,
@@ -1419,7 +1418,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       public int handleResult(Command command)
       {
-        return command.getResult(typeMap,errorMessage,valueMapList,unknownValueMap);
+        return command.getResult(errorMessage,valueMapList,unknownValueMap);
       }
     });
   }
@@ -1432,9 +1431,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param unknownValueMap unknown values map or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, TypeMap typeMap, String[] errorMessage, List<ValueMap> valueMapList, ValueMap unknownValueMap)
+  public static int executeCommand(String commandString, String[] errorMessage, List<ValueMap> valueMapList, ValueMap unknownValueMap)
   {
-    return executeCommand(commandString,typeMap,errorMessage,valueMapList,unknownValueMap,(BusyIndicator)null);
+    return executeCommand(commandString,errorMessage,valueMapList,unknownValueMap,(BusyIndicator)null);
   }
 
   /** execute command
@@ -1444,9 +1443,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param valueMapList value map list
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, TypeMap typeMap, String[] errorMessage, List<ValueMap> valueMapList)
+  public static int executeCommand(String commandString, String[] errorMessage, List<ValueMap> valueMapList)
   {
-    return executeCommand(commandString,typeMap,errorMessage,valueMapList,(ValueMap)null);
+    return executeCommand(commandString,errorMessage,valueMapList,(ValueMap)null);
   }
 
   /** set boolean value on BAR server
@@ -1490,7 +1489,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     ValueMap resultMap    = new ValueMap();
 
     if (executeCommand(StringParser.format("OPTION_GET jobId=%d name=%S",jobId,name),
-                       new TypeMap("value",Boolean.class),
                        errorMessage,
                        resultMap
                       ) == Errors.NONE
@@ -1515,7 +1513,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     ValueMap resultMap    = new ValueMap();
 
     if (executeCommand(StringParser.format("OPTION_GET jobId=%d name=%S",jobId,name),
-                       new TypeMap("value",Long.class),
                        errorMessage,
                        resultMap
                       ) == Errors.NONE
@@ -1540,7 +1537,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     ValueMap resultMap    = new ValueMap();
 
     if (executeCommand(StringParser.format("OPTION_GET jobId=%d name=%S",jobId,name),
-                       new TypeMap("value",String.class),
                        errorMessage,
                        resultMap
                       ) == Errors.NONE

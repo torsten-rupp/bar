@@ -1171,9 +1171,6 @@ public class BARControl
     String[]            errorMessage  = new String[1];
     ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
     int errorCode = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                             new TypeMap("jobId", int.class,
-                                                         "name",  String.class
-                                                        ),
                                              errorMessage,
                                              resultMapList
                                             );
@@ -1826,24 +1823,12 @@ public class BARControl
                                                            0,
                                                            false
                                                           ),
-                                       new TypeMap("entryType",EntryTypes.class,
-                                                   "storageName",String.class,
-                                                   "storageDateTime",long.class,
-                                                   "name",String.class,
-                                                   "size",long.class,
-                                                   "dateTime",long.class,
-                                                   "userId",int.class,
-                                                   "groupId",int.class,
-                                                   "permission",long.class,
-                                                   "fragmentOffset",long.class,
-                                                   "fragmentSize",long.class
-                                                  ),
                                        errorMessage,
                                        new CommandResultHandler()
                                        {
                                          public int handleResult(ValueMap resultMap)
                                          {
-                                           EntryTypes entryType = resultMap.getEnum("entryType");
+                                           EntryTypes entryType = resultMap.getEnum("entryType",EntryTypes.class);
                                            switch (entryType)
                                            {
                                              case FILE:
@@ -2043,7 +2028,6 @@ public class BARControl
           // get server state
           String serverState = null;
           errorCode = BARServer.executeCommand(StringParser.format("STATUS"),
-                                               new TypeMap("type",String.class),
                                                errorMessage,
                                                resultMap
                                               );
@@ -2075,19 +2059,6 @@ public class BARControl
 
           // get joblist
           errorCode = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                               new TypeMap("jobId",                 int.class,
-                                                           "name",                  String.class,
-                                                           "state",                 String.class,
-                                                           "archiveType",           String.class,
-                                                           "archivePartSize",       long.class,
-                                                           "deltaCompressAlgorithm",String.class,
-                                                           "byteCompressAlgorithm", String.class,
-                                                           "cryptAlgorithm",        String.class,
-                                                           "cryptType",             String.class,
-                                                           "cryptPasswordMode",     String.class,
-                                                           "lastExecutedDateTime",  long.class,
-                                                           "estimatedRestTime",     long.class
-                                                           ),
                                                errorMessage,
                                                resultMapList
                                               );
