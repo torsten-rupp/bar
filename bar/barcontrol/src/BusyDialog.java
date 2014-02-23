@@ -761,7 +761,7 @@ class BusyDialog
     {
       public void run()
       {
-        while (!animationQuit)
+        while (!animationQuit && !dialog.isDisposed())
         {
           // animate
           display.syncExec(new Runnable()
