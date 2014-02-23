@@ -1766,6 +1766,19 @@ class Dialogs
   /** confirmation dialog
    * @param parentShell parent shell
    * @param title title string
+   * @param image image to show
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @return value
+   */
+  public static boolean confirm(Shell parentShell, String title, Image image, String message, String yesText)
+  {
+    return confirm(parentShell,title,null,image,message,yesText,"Cancel");
+  }
+
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param title title string
    * @param showAgainFieldFlag show again field updater or null
    * @param message confirmation message
    * @param yesText yes-text
@@ -1819,6 +1832,18 @@ class Dialogs
   public static boolean confirm(Shell parentShell, String title, String message, String yesText, String noText)
   {
     return confirm(parentShell,title,(BooleanFieldUpdater)null,message,yesText,noText);
+  }
+
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @return value
+   */
+  public static boolean confirm(Shell parentShell, String title, String message, String yesText)
+  {
+    return confirm(parentShell,title,(BooleanFieldUpdater)null,message,yesText,"Cancel");
   }
 
   /** confirmation dialog
@@ -3014,11 +3039,25 @@ class Dialogs
    * @param title title string
    * @param text text before input element
    * @param value value to edit (can be null)
+   * @param okText OK button text
+   * @return string or null on cancel
+   */
+  public static String string(Shell parentShell, String title, String text, String value, String okText)
+  {
+    return string(parentShell,title,text,value,okText,"Cancel");
+  }
+
+
+  /** simple string dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be null)
    * @return string or null on cancel
    */
   public static String string(Shell parentShell, String title, String text, String value)
   {
-    return string(parentShell,title,text,value,"Save","Cancel");
+    return string(parentShell,title,text,value,"Save");
   }
 
   /** simple string dialog
