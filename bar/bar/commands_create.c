@@ -3025,7 +3025,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                     createInfo->storageSpecifier->loginName,
                                     createInfo->storageSpecifier->deviceName,
                                     storageMsg.destinationFileName,
-                                    INDEX_STATE_ALL
+                                    INDEX_STATE_SET_ALL
                                    );
       while (Index_getNextStorage(&indexQueryHandle,
                                   &oldStorageId,
