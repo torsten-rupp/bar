@@ -2935,12 +2935,9 @@ Dprintf.dprintf("process line by line");
                     return;
                   }
                 }
-Dprintf.dprintf("");
                 if (busyDialog.isAborted())
                 {
-Dprintf.dprintf("------------------------------------------------------------------");
                   command.abort();
-Dprintf.dprintf("");
                 }
 
                 // close busy dialog, restore cursor
@@ -3004,7 +3001,7 @@ Dprintf.dprintf("");
           for (StorageData storageData : selectedStorageHashSet)
           {
             String[] resultErrorMessage = new String[1];
-            int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s jobId=%d",
+            int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
                                                                          "*",
                                                                          storageData.id
                                                                         ),
@@ -3039,7 +3036,7 @@ Dprintf.dprintf("");
       if (Dialogs.confirm(shell,"Really refresh all indizes with error state?"))
       {
         String[] resultErrorMessage = new String[1];
-        int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s jobId=%d",
+        int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
                                                                      "ERROR",
                                                                      0
                                                                     ),
