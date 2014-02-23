@@ -46,7 +46,13 @@ typedef enum
 } IndexStates;
 typedef uint64 IndexStateSet;
 
-#define INDEX_STATE_ALL (INDEX_STATE_OK|INDEX_STATE_CREATE|INDEX_STATE_UPDATE_REQUESTED|INDEX_STATE_UPDATE)
+#define INDEX_STATE_SET_ALL (1 << INDEX_STATE_NONE|\
+                             1 << INDEX_STATE_OK|\
+                             1 << INDEX_STATE_CREATE|\
+                             1 << INDEX_STATE_UPDATE_REQUESTED|\
+                             1 << INDEX_STATE_UPDATE|\
+                             1 << INDEX_STATE_ERROR\
+                            )
 
 // index modes
 typedef enum

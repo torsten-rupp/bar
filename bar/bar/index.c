@@ -40,8 +40,7 @@ LOCAL const struct
   { "create",           INDEX_STATE_CREATE           },
   { "update_requested", INDEX_STATE_UPDATE_REQUESTED },
   { "update",           INDEX_STATE_UPDATE           },
-  { "error",            INDEX_STATE_ERROR            },
-  { "*",                INDEX_STATE_ALL              }
+  { "error",            INDEX_STATE_ERROR            }
 };
 
 LOCAL const struct
@@ -1108,10 +1107,8 @@ long Index_countState(DatabaseHandle *databaseHandle,
                            databaseHandle,
                            "SELECT COUNT(id) \
                             FROM storage \
-                            WHERE (%d=%d OR state=%d) \
+                            WHERE state=%d \
                            ",
-                           indexState,
-                           INDEX_STATE_ALL,
                            indexState
                           );
   if (error != ERROR_NONE)
