@@ -86,10 +86,19 @@ class ValueMap extends HashMap<String,Object>
    * @return int value
    */
   public int getInt(String name, Integer defaultValue)
+    throws IllegalArgumentException
   {
-    if      (containsKey(name))
+    Object object = get(name);
+    if      (object != null)
     {
-      return (Integer)get(name);
+      if (object instanceof String)
+      {
+        return Integer.parseInt((String)object);
+      }
+      else
+      {
+        return (Integer)object;
+      }
     }
     else if (defaultValue != null)
     {
@@ -106,6 +115,7 @@ class ValueMap extends HashMap<String,Object>
    * @return int value
    */
   public int getInt(String name)
+    throws IllegalArgumentException
   {
     return getInt(name,null);
   }
@@ -116,10 +126,19 @@ class ValueMap extends HashMap<String,Object>
    * @return int value
    */
   public long getLong(String name, Long defaultValue)
+    throws IllegalArgumentException
   {
-    if      (containsKey(name))
+    Object object = get(name);
+    if      (object != null)
     {
-      return (Long)get(name);
+      if (object instanceof String)
+      {
+        return Long.parseLong((String)object);
+      }
+      else
+      {
+        return (Long)object;
+      }
     }
     else if (defaultValue != null)
     {
@@ -136,6 +155,7 @@ class ValueMap extends HashMap<String,Object>
    * @return int value
    */
   public long getLong(String name)
+    throws IllegalArgumentException
   {
     return getLong(name,null);
   }
@@ -146,10 +166,19 @@ class ValueMap extends HashMap<String,Object>
    * @return double value
    */
   public double getDouble(String name, Double defaultValue)
+    throws IllegalArgumentException
   {
-    if      (containsKey(name))
+    Object object = get(name);
+    if      (object != null)
     {
-      return (Double)get(name);
+      if (object instanceof String)
+      {
+        return Double.parseDouble((String)object);
+      }
+      else
+      {
+        return (Double)object;
+      }
     }
     else if (defaultValue != null)
     {
@@ -166,6 +195,7 @@ class ValueMap extends HashMap<String,Object>
    * @return double value
    */
   public double getDouble(String name)
+    throws IllegalArgumentException
   {
     return getDouble(name,null);
   }
@@ -176,10 +206,24 @@ class ValueMap extends HashMap<String,Object>
    * @return boolean value
    */
   public boolean getBoolean(String name, Boolean defaultValue)
+    throws IllegalArgumentException
   {
-    if      (containsKey(name))
+    Object object = get(name);
+    if      (object != null)
     {
-      return (Boolean)get(name);
+      if (object instanceof String)
+      {
+        String value = (String)object;
+
+        return    value.equalsIgnoreCase("yes")
+               || value.equalsIgnoreCase("on")
+               || value.equalsIgnoreCase("true")
+               || value.equals("1");
+      }
+      else
+      {
+        return (Boolean)object;
+      }
     }
     else if (defaultValue != null)
     {
@@ -196,6 +240,7 @@ class ValueMap extends HashMap<String,Object>
    * @return boolean value
    */
   public boolean getBoolean(String name)
+    throws IllegalArgumentException
   {
     return getBoolean(name,null);
   }
@@ -207,10 +252,19 @@ class ValueMap extends HashMap<String,Object>
    * @return string value
    */
   public char getChar(String name, Character defaultValue)
+    throws IllegalArgumentException
   {
-    if      (containsKey(name))
+    Object object = get(name);
+    if      (object != null)
     {
-      return (Character)get(name);
+      if (object instanceof String)
+      {
+        return ((String)object).charAt(0);
+      }
+      else
+      {
+        return (Character)get(name);
+      }
     }
     else if (defaultValue != null)
     {
@@ -227,6 +281,7 @@ class ValueMap extends HashMap<String,Object>
    * @return string value
    */
   public char getChar(String name)
+    throws IllegalArgumentException
   {
     return getChar(name,null);
   }
@@ -237,10 +292,12 @@ class ValueMap extends HashMap<String,Object>
    * @return string value
    */
   public String getString(String name, String defaultValue)
+    throws IllegalArgumentException
   {
-    if      (containsKey(name))
+    Object object = get(name);
+    if      (object != null)
     {
-      return (String)get(name);
+      return (String)object;
     }
     else if (defaultValue != null)
     {
@@ -258,6 +315,7 @@ class ValueMap extends HashMap<String,Object>
    * @return string value
    */
   public String getString(String name)
+    throws IllegalArgumentException
   {
     return getString(name,null);
   }
@@ -267,11 +325,43 @@ class ValueMap extends HashMap<String,Object>
    * @param defaultValue default value
    * @return enum value
    */
-  public <T extends Enum<T>> T getEnum(String name, T defaultValue)
+  public <T extends Enum<T>> T getEnum(String name, Class<T> type, T defaultValue)
+    throws IllegalArgumentException
   {
-    if      (containsKey(name))
+    Object object = get(name);
+    if      (object != null)
     {
-      return (T)get(name);
+      if (object instanceof String)
+      {
+        String value = (String)object;
+
+        Enum[] enumConstants = (Enum[])type.getEnumConstants();
+        int n;
+        try
+        {
+          n = Integer.parseInt(value);
+        }
+        catch (NumberFormatException exception)
+        {
+          n = -1;
+        }
+        boolean foundFlag = false;
+        for (Enum enumConstant : enumConstants)
+        {
+          if (   value.equalsIgnoreCase(enumConstant.name())
+              || (enumConstant.ordinal() == n)
+              || value.equalsIgnoreCase(enumConstant.toString())
+             )
+          {
+            return (T)enumConstant;
+          }
+        }
+        throw new IllegalArgumentException("unknown enum value '"+value+"' for "+name);
+      }
+      else
+      {
+        return (T)object;
+      }
     }
     else if (defaultValue != null)
     {
@@ -287,9 +377,10 @@ class ValueMap extends HashMap<String,Object>
    * @param name name
    * @return enum value
    */
-  public <T extends Enum<T>> T getEnum(String name)
+  public <T extends Enum<T>> T getEnum(String name, Class<T> type)
+    throws IllegalArgumentException
   {
-    return getEnum(name,null);
+    return getEnum(name,type,null);
   }
 
   /** convert to string
@@ -1147,6 +1238,7 @@ public class StringParser
    * @return index of first not parsed character or -1 on error
    */
   public static int parse(String string, int index, TypeMap typeMap, ValueMap valueMap, ValueMap unknownValueMap, String stringQuotes)
+    throws NumberFormatException
   {
     final String ESCAPE_CHARACTERS = "0abtnvfre";
     final char[] ESCAPE_MAP        = new char[]{'\0','\007','\b','\t','\n','\013','\014','\r','\033'};
