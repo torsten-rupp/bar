@@ -2749,7 +2749,7 @@ LOCAL void indexThreadCode(void)
                                 NULL, // loginName
                                 NULL, // deviceName
                                 NULL, // fileName
-                                INDEX_STATE_ALL
+                                INDEX_STATE_SET_ALL
                                );
   if (error == ERROR_NONE)
   {
@@ -2773,7 +2773,7 @@ LOCAL void indexThreadCode(void)
                                     NULL, // loginName
                                     NULL, // deviceName
                                     NULL, // fileName
-                                    INDEX_STATE_ALL
+                                    INDEX_STATE_SET_ALL
                                    );
       if (error == ERROR_NONE)
       {
@@ -3205,7 +3205,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                   NULL, // loginName
                                   NULL, // deviceName
                                   NULL, // fileName
-                                  INDEX_STATE_ALL
+                                  INDEX_STATE_SET_ALL
                                  );
     if (error == ERROR_NONE)
     {
@@ -3352,7 +3352,7 @@ LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, 
 }
 
 /***********************************************************************\
-* Name   : commandAborted
+* Name   : isCommandAborted
 * Purpose: check if command was aborted
 * Input  : clientInfo - client info
 * Output : -
@@ -3361,7 +3361,7 @@ LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool commandAborted(ClientInfo *clientInfo, uint commandId)
+LOCAL bool isCommandAborted(ClientInfo *clientInfo, uint commandId)
 {
   bool abortedFlag;
 
@@ -4949,7 +4949,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
   {
     jobNode = jobList.head;
     while (   (jobNode != NULL)
-           && !commandAborted(clientInfo,id)
+           && !isCommandAborted(clientInfo,id)
           )
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
@@ -7236,7 +7236,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   error = ERROR_NONE;
   while (   !Archive_eof(&archiveInfo,TRUE)
          && (error == ERROR_NONE)
-         && !commandAborted(clientInfo,id)
+         && !isCommandAborted(clientInfo,id)
         )
   {
     // get next file type
@@ -7639,7 +7639,7 @@ LOCAL bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInf
                    restoreStatusInfo->storageTotalBytes
                   );
 
-  return !commandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
+  return !isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
 }
 
 
@@ -8038,7 +8038,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   ulong            n;
   StorageSpecifier storageSpecifier;
   String           storageName;
-  String           storageFileName;
   String           printableStorageName;
   String           errorMessage;
   DatabaseId       storageId;
@@ -8053,7 +8052,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 
   // get max. count, status pattern, filter pattern,
   StringMap_getUInt(argumentMap,"maxCount",&maxCount,0);
-  if (!StringMap_getEnumSet(argumentMap,"indexState",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_ALL,"|",0))
+  if (!StringMap_getEnumSet(argumentMap,"indexState",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
@@ -8075,7 +8074,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     // initialize variables
     Storage_initSpecifier(&storageSpecifier);
     storageName          = String_new();
-    storageFileName      = String_new();
     errorMessage         = String_new();
     printableStorageName = String_new();
 
@@ -8093,7 +8091,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     {
       String_delete(printableStorageName);
       String_delete(errorMessage);
-      String_delete(storageFileName);
       String_delete(storageName);
       Storage_doneSpecifier(&storageSpecifier);
 
@@ -8104,6 +8101,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     }
     n = 0L;
     while (   ((maxCount == 0) || (n < maxCount))
+           && !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
                                    &storageId,
                                    NULL, // uuid
@@ -8146,7 +8144,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     // free resources
     String_delete(printableStorageName);
     String_delete(errorMessage);
-    String_delete(storageFileName);
     String_delete(storageName);
     Storage_doneSpecifier(&storageSpecifier);
 
@@ -8233,8 +8230,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <status>|*
-*            <id>|0
+*            <state>|*
+*            <storageId>|0
 *          Result:
 \***********************************************************************/
 
@@ -8245,12 +8242,15 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
   DatabaseId       storageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
+  StorageSpecifier storageSpecifier;
+  String           storageName;
+  String           printableStorageName;
   IndexStates      indexState;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // state, id
+  // get state, storageId
   if      (stringEquals(StringMap_getTextCString(argumentMap,"state","*"),"*"))
   {
     stateAny = TRUE;
@@ -8264,9 +8264,9 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  if (!StringMap_getInt64(argumentMap,"jobId",&storageId,0))
+  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<storage id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<storage id>");
     return;
   }
 
@@ -8286,6 +8286,12 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     }
     else
     {
+      // initialize variables
+      Storage_initSpecifier(&storageSpecifier);
+      storageName          = String_new();
+      printableStorageName = String_new();
+
+      // delete indizes
       error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
                                     STORAGE_TYPE_ANY,
@@ -8293,33 +8299,56 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
                                     NULL, // loginName
                                     NULL, // deviceName
                                     NULL, // fileName
-                                    INDEX_STATE_ALL
+                                    INDEX_STATE_SET_ALL
                                    );
       if (error != ERROR_NONE)
       {
+        String_delete(printableStorageName);
+        String_delete(storageName);
+        Storage_doneSpecifier(&storageSpecifier);
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
         return;
       }
-      while (Index_getNextStorage(&indexQueryHandle,
-                                  &storageId,
-                                  NULL, // uuid
-                                  NULL, // storageName
-                                  NULL, // createdDateTime
-                                  NULL, // size
-                                  &indexState,
-                                  NULL, // indexMode
-                                  NULL, // lastCheckedDateTime
-                                  NULL  // errorMessage
-                                 )
+      while (   !isCommandAborted(clientInfo,id)
+             && Index_getNextStorage(&indexQueryHandle,
+                                     &storageId,
+                                     NULL, // uuid
+                                     storageName,
+                                     NULL, // createdDateTime
+                                     NULL, // size
+                                     &indexState,
+                                     NULL, // indexMode
+                                     NULL, // lastCheckedDateTime
+                                     NULL  // errorMessage
+                                    )
             )
       {
         if (stateAny || (state == indexState))
         {
+          // get printable name (if possible)
+          error = Storage_parseName(&storageSpecifier,storageName);
+          if (error == ERROR_NONE)
+          {
+            String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+          }
+          else
+          {
+            String_set(printableStorageName,storageName);
+          }
+
           // delete index
           error = Index_delete(indexDatabaseHandle,
                                storageId
                               );
-          if (error != ERROR_NONE)
+          if (error == ERROR_NONE)
+          {
+            sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                             "storageId=%llu name=%'S",
+                             storageId,
+                             printableStorageName
+                            );
+          }
+          else
           {
             Index_doneList(&indexQueryHandle);
             sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
@@ -8328,6 +8357,11 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
         }
       }
       Index_doneList(&indexQueryHandle);
+
+      // free resources
+      String_delete(printableStorageName);
+      String_delete(storageName);
+      Storage_doneSpecifier(&storageSpecifier);
     }
   }
   else
@@ -8349,8 +8383,8 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <status>|*
-*            <id>|0
+*            <state>|*
+*            <storageId>|0
 *          Result:
 \***********************************************************************/
 
@@ -8380,9 +8414,9 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  if (!StringMap_getInt64(argumentMap,"jobId",&storageId,0))
+  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<storage id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<storage id>");
     return;
   }
 
@@ -8407,24 +8441,25 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
                                     NULL, // loginName
                                     NULL, // deviceName
                                     NULL, // fileName
-                                    INDEX_STATE_ALL
+                                    INDEX_STATE_SET_ALL
                                    );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
         return;
       }
-      while (Index_getNextStorage(&indexQueryHandle,
-                                  &storageId,
-                                  NULL, // uuid
-                                  NULL, // storageName
-                                  NULL, // createdDateTime
-                                  NULL, // size
-                                  &indexState,
-                                  NULL, // indexMode
-                                  NULL, // lastCheckedDateTime
-                                  NULL  // errorMessage
-                                 )
+      while (   !isCommandAborted(clientInfo,id)
+             && Index_getNextStorage(&indexQueryHandle,
+                                     &storageId,
+                                     NULL, // uuid
+                                     NULL, // storageName
+                                     NULL, // createdDateTime
+                                     NULL, // size
+                                     &indexState,
+                                     NULL, // indexMode
+                                     NULL, // lastCheckedDateTime
+                                     NULL  // errorMessage
+                                    )
             )
       {
         if (stateAny || (state == indexState))
@@ -8876,7 +8911,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         return;
       }
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-             && !commandAborted(clientInfo,id)
+             && !isCommandAborted(clientInfo,id)
              && Index_getNextFile(&indexQueryHandle,
                                   &storageId,
                                   storageName,
@@ -8959,7 +8994,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         return;
       }
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-             && !commandAborted(clientInfo,id)
+             && !isCommandAborted(clientInfo,id)
              && Index_getNextImage(&indexQueryHandle,
                                    &storageId,
                                    storageName,
@@ -9035,7 +9070,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         return;
       }
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-             && !commandAborted(clientInfo,id)
+             && !isCommandAborted(clientInfo,id)
              && Index_getNextDirectory(&indexQueryHandle,
                                        &storageId,
                                        storageName,
@@ -9113,7 +9148,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       destinationName = String_new();
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-             && !commandAborted(clientInfo,id)
+             && !isCommandAborted(clientInfo,id)
              && Index_getNextLink(&indexQueryHandle,
                                   &storageId,
                                   storageName,
@@ -9194,7 +9229,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       destinationName = String_new();
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-             && !commandAborted(clientInfo,id)
+             && !isCommandAborted(clientInfo,id)
              && Index_getNextHardLink(&indexQueryHandle,
                                       &storageId,
                                       storageName,
@@ -9278,7 +9313,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         return;
       }
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-             && !commandAborted(clientInfo,id)
+             && !isCommandAborted(clientInfo,id)
              && Index_getNextSpecial(&indexQueryHandle,
                                      &storageId,
                                      storageName,
@@ -9327,7 +9362,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     // send data
     indexNode = indexList.head;
     while (   (indexNode != NULL)
-           && !commandAborted(clientInfo,id)
+           && !isCommandAborted(clientInfo,id)
           )
     {
       switch (indexNode->type)
