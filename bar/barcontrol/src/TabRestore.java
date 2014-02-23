@@ -523,34 +523,24 @@ class TabRestore
                                                   );
 
             // read results, update/add data
-            final TypeMap TYPE_MAP = new TypeMap("storageId",long.class,
-                                                 "name",String.class,
-                                                 "dateTime",long.class,
-                                                 "size",long.class,
-                                                 "indexState",IndexStates.class,
-                                                 "indexMode",IndexModes.class,
-                                                 "lastCheckedDateTime",long.class,
-                                                 "errorMessage",String.class
-                                                );
             String[] resultErrorMessage = new String[1];
             ValueMap resultMap          = new ValueMap();
             while (!command.endOfData())
             {
-              if (command.getNextResult(TYPE_MAP,
-                                        resultErrorMessage,
+              if (command.getNextResult(resultErrorMessage,
                                         resultMap,
                                         5*1000
                                        ) == Errors.NONE
                  )
               {
-                long        storageId           = resultMap.getLong  ("storageId"          );
-                String      name                = resultMap.getString("name"               );
-                long        dateTime            = resultMap.getLong  ("dateTime"           );
-                long        size                = resultMap.getLong  ("size"               );
-                IndexStates indexState          = resultMap.getEnum  ("indexState"         );
-                IndexModes  indexMode           = resultMap.getEnum  ("indexMode"          );
-                long        lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime");
-                String      errorMessage        = resultMap.getString("errorMessage"       );
+                long        storageId           = resultMap.getLong  ("storageId"                   );
+                String      name                = resultMap.getString("name"                        );
+                long        dateTime            = resultMap.getLong  ("dateTime"                    );
+                long        size                = resultMap.getLong  ("size"                        );
+                IndexStates indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
+                IndexModes  indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class  );
+                long        lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"         );
+                String      errorMessage        = resultMap.getString("errorMessage"                );
 
                 StorageData storageData;
                 synchronized(storageDataMap)
@@ -951,18 +941,6 @@ Dprintf.dprintf("process line by line");
                                                                entryMaxCount,
                                                                newestEntriesOnlyFlag
                                                               ),
-                                           new TypeMap("entryType",EntryTypes.class,
-                                                       "storageName",String.class,
-                                                       "storageDateTime",long.class,
-                                                       "name",String.class,
-                                                       "size",long.class,
-                                                       "dateTime",long.class,
-                                                       "userId",int.class,
-                                                       "groupId",int.class,
-                                                       "permission",long.class,
-                                                       "fragmentOffset",long.class,
-                                                       "fragmentSize",long.class
-                                                      ),
                                            resultErrorMessage,
                                            resultMapList
                                           ) == Errors.NONE
@@ -970,7 +948,7 @@ Dprintf.dprintf("process line by line");
               {
                 for (ValueMap resultMap : resultMapList)
                 {
-                  EntryTypes entryType = resultMap.getEnum("entryType");
+                  EntryTypes entryType = resultMap.getEnum("entryType",EntryTypes.class);
                   switch (entryType)
                   {
                     case FILE:
@@ -2884,123 +2862,129 @@ Dprintf.dprintf("process line by line");
   {
     try
     {
-      if (Dialogs.confirm(shell,"Really remove all indizes with error state?"))
+      // get number of indizes with error state
+      final String[] resultErrorMessage = new String[1];
+      ValueMap       resultMap          = new ValueMap();
+      if (BARServer.executeCommand("INDEX_STORAGE_INFO",
+                                   resultErrorMessage,
+                                   resultMap
+                                  ) != Errors.NONE
+         )
       {
-        final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes with error",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
-
-        new BackgroundTask(busyDialog)
+        display.syncExec(new Runnable()
         {
-          public void run(final BusyDialog busyDialog, Object userData)
+          public void run()
           {
-            try
+            Dialogs.error(shell,"Cannot get database indizes with error state (error: "+resultErrorMessage[0]+")");
+          }
+        });
+        return;
+      }
+      long errorCount = resultMap.getLong("errorCount");
+
+      if (errorCount > 0)
+      {
+        if (Dialogs.confirm(shell,String.format("Really remove %d indizes with error state?",errorCount)))
+        {
+          final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes with error",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+          busyDialog.autoAnimate();
+          busyDialog.setMaximum(errorCount);
+
+          new BackgroundTask(busyDialog)
+          {
+            public void run(final BusyDialog busyDialog, Object userData)
             {
-              int                       errorCode;
-              final String[]            resultErrorMessage = new String[1];
-              final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-
-              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST pattern=%'S indexState=%s indexMode=%s",
-                                                                       "*",
-                                                                       "ERROR",
-                                                                       "*"
-                                                                      ),
-                                                   new TypeMap("storageId",        long.class,
-                                                               "name",             String.class,
-                                                               "dateTime",         long.class,
-                                                               "size",             long.class,
-                                                               "indexState",       IndexStates.class,
-                                                               "indexMode",        IndexModes.class,
-                                                               "lastCheckDateTime",long.class,
-                                                               "errorMessage",     String.class
-                                                              ),
-                                                   resultErrorMessage,
-                                                   resultMapList
-                                                  );
-              if (errorCode == Errors.NONE)
+              try
               {
-                busyDialog.setMaximum(resultMapList.size());
-                int n = 0;
-                for (ValueMap resultMap : resultMapList)
+                final String[] resultErrorMessage = new String[1];
+                ValueMap       resultMap          = new ValueMap();
+
+                // remove indizes with error state
+                Command command = BARServer.runCommand("INDEX_STORAGE_REMOVE state=ERROR storageId=0");
+
+                long n = 0;
+                while (!command.endOfData() && !busyDialog.isAborted())
                 {
-                  long   storageId = resultMap.getLong  ("storageId");
-                  String name      = resultMap.getString("name"     );
-
-                  // update busy dialog
-                  busyDialog.updateText("%d: '%s'",storageId,name);
-
-                  // remove storage index
-                  errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=%s jobId=%d",
-                                                                           "*",
-                                                                           storageId
-                                                                          ),
-                                                       resultErrorMessage
-                                                      );
-                  if (errorCode != Errors.NONE)
+                  if (command.getNextResult(resultErrorMessage,
+                                            resultMap,
+                                            5*1000
+                                           ) == Errors.NONE
+                     )
                   {
-                    final String errorText = String.format("Cannot remove database indizes for '%s' (error: %s)",name,resultErrorMessage[0]);
+                    long        storageId           = resultMap.getLong  ("storageId"          );
+                    String      name                = resultMap.getString("name"               );
+
+                    busyDialog.updateText(String.format("%d: %s",storageId,name));
+
+                    n++;
+                    busyDialog.updateProgressBar(n);
+                  }
+                  else
+                  {
                     display.syncExec(new Runnable()
                     {
                       public void run()
                       {
-                        Dialogs.error(shell,errorText);
+                        busyDialog.close();
+                        Dialogs.error(shell,"Cannot remove database indizes with error state (error: "+resultErrorMessage[0]+")");
                       }
                     });
-                    break;
-                  }
 
-                  // update progress bar
-                  n++;
-                  busyDialog.updateProgressBar(n);
+                    updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
+
+                    return;
+                  }
                 }
-              }
-              else
-              {
+Dprintf.dprintf("");
+                if (busyDialog.isAborted())
+                {
+Dprintf.dprintf("------------------------------------------------------------------");
+                  command.abort();
+Dprintf.dprintf("");
+                }
+
+                // close busy dialog, restore cursor
                 display.syncExec(new Runnable()
                 {
                   public void run()
                   {
-                    Dialogs.error(shell,"Cannot remove database indizes with error state (error: "+resultErrorMessage[0]+")");
+                    busyDialog.close();
                   }
                 });
+Dprintf.dprintf("");
+
+                updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
+Dprintf.dprintf("");
               }
-
-              // close busy dialog, restore cursor
-              display.syncExec(new Runnable()
+              catch (CommunicationError error)
               {
-                public void run()
+                final String errorMessage = error.getMessage();
+                display.syncExec(new Runnable()
                 {
-                  busyDialog.close();
-                }
-              });
-
-              updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
-            }
-            catch (CommunicationError error)
-            {
-              final String errorMessage = error.getMessage();
-              display.syncExec(new Runnable()
+                  public void run()
+                  {
+                    busyDialog.close();
+                    Dialogs.error(shell,"Communication error while removing database indizes (error: "+errorMessage+")");
+                   }
+                });
+              }
+              catch (Exception exception)
               {
-                public void run()
-                {
-                  busyDialog.close();
-                  Dialogs.error(shell,"Communication error while removing database indizes (error: "+errorMessage+")");
-                 }
-              });
+                BARServer.disconnect();
+                System.err.println("ERROR: "+exception.getMessage());
+                BARControl.printStackTrace(exception);
+                System.exit(1);
+              }
             }
-            catch (Exception exception)
-            {
-              BARServer.disconnect();
-              System.err.println("ERROR: "+exception.getMessage());
-              BARControl.printStackTrace(exception);
-              System.exit(1);
-            }
-          }
-        };
+          };
+        }
       }
     }
     catch (CommunicationError error)
     {
       Dialogs.error(shell,"Communication error while removing database indizes (error: "+error.toString()+")");
     }
+Dprintf.dprintf("");
   }
 
   /** refresh storage from index database
@@ -3128,20 +3112,13 @@ Dprintf.dprintf("process line by line");
                                             );
 
               // read results, update/add data
-              final TypeMap TYPE_MAP = new TypeMap("name",String.class,
-                                                   "entryDoneBytes",long.class,
-                                                   "entryTotalBytes",long.class,
-                                                   "storageDoneBytes",long.class,
-                                                   "storageTotalBytes",long.class
-                                                  );
               String[] resultErrorMessage = new String[1];
               ValueMap resultMap          = new ValueMap();
               while (   !command.endOfData()
                      && !busyDialog.isAborted()
                     )
               {
-                if (command.getNextResult(TYPE_MAP,
-                                          resultErrorMessage,
+                if (command.getNextResult(resultErrorMessage,
                                           resultMap,
                                           60*1000
                                          ) == Errors.NONE
@@ -3500,20 +3477,13 @@ Dprintf.dprintf("process line by line");
                                             );
 
               // read results, update/add data
-              final TypeMap TYPE_MAP = new TypeMap("name",String.class,
-                                                   "entryDoneBytes",long.class,
-                                                   "entryTotalBytes",long.class,
-                                                   "storageDoneBytes",long.class,
-                                                   "storageTotalBytes",long.class
-                                                  );
               String[] resultErrorMessage = new String[1];
               ValueMap resultMap          = new ValueMap();
               while (   !command.endOfData()
                      && !busyDialog.isAborted()
                     )
               {
-                if (command.getNextResult(TYPE_MAP,
-                                          resultErrorMessage,
+                if (command.getNextResult(resultErrorMessage,
                                           resultMap,
                                           60*1000
                                          ) == Errors.NONE

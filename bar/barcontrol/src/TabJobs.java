@@ -540,10 +540,6 @@ class TabJobs
                                                                      directoryInfoRequest.name,
                                                                      directoryInfoRequest.timeout
                                                                     ),
-                                                 new TypeMap("count", long.class,
-                                                             "size",  long.class,
-                                                             "timeoutFlag",boolean.class
-                                                            ),
                                                  resultErrorMessage,
                                                  resultMap
                                                 );
@@ -5968,9 +5964,6 @@ Dprintf.dprintf("");
     String[]            resultErrorMessage = new String[1];
     ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
     int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                         new TypeMap("jobId",int.class,
-                                                     "name", String.class
-                                                    ),
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -6478,13 +6471,6 @@ throw new Error("NYI");
     int error = BARServer.executeCommand(StringParser.format("FILE_LIST storageDirectory=%S",
                                                              "file://"+fileTreeData.name
                                                             ),
-                                                            new TypeMap("fileType",FileTypes.class,
-                                                                        "name",String.class,
-                                                                        "size",long.class,
-                                                                        "dateTime",long.class,
-                                                                        "noBackupFlag",boolean.class,
-                                                                        "specialType",SpecialTypes.class
-                                                                       ),
                                                             resultErrorMessage,
                                                             resultMapList
                                                     );
@@ -6492,7 +6478,7 @@ throw new Error("NYI");
     {
       for (ValueMap resultMap : resultMapList)
       {
-        FileTypes fileType = resultMap.getEnum("fileType");
+        FileTypes fileType = resultMap.getEnum("fileType",FileTypes.class);
         switch (fileType)
         {
           case FILE:
@@ -6608,7 +6594,7 @@ throw new Error("NYI");
               long    size     = resultMap.getLong  ("size"    );
               long    dateTime = resultMap.getLong  ("dateTime");
 
-              SpecialTypes specialType = resultMap.getEnum("specialType");
+              SpecialTypes specialType = resultMap.getEnum("specialType",SpecialTypes.class);
               switch (specialType)
               {
                 case CHARACTER_DEVICE:
@@ -6759,10 +6745,6 @@ throw new Error("NYI");
     String[]            resultErrorMessage = new String[1];
     ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
     int error = BARServer.executeCommand(StringParser.format("DEVICE_LIST"),
-                                         new TypeMap("name",String.class,
-                                                     "size",long.class,
-                                                     "mountedFlag",Boolean.class
-                                                    ),
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -6884,10 +6866,6 @@ throw new Error("NYI");
     int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobId=%d",
                                                              selectedJobId
                                                             ),
-                                         new TypeMap("entryType",  EntryTypes.class,
-                                                     "patternType",PatternTypes.class,
-                                                     "pattern",    String.class
-                                                    ),
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -6901,9 +6879,9 @@ throw new Error("NYI");
     for (ValueMap resultMap : resultMapList)
     {
       // get data
-      EntryTypes   entryType   = resultMap.getEnum  ("entryType"  );
-      PatternTypes patternType = resultMap.getEnum  ("patternType");
-      String       pattern     = resultMap.getString("pattern"    );
+      EntryTypes   entryType   = resultMap.getEnum  ("entryType",  EntryTypes.class  );
+      PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
+      String       pattern     = resultMap.getString("pattern"                       );
 
       if (!pattern.equals(""))
       {
@@ -6943,9 +6921,6 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST jobId=%d",
                                                              selectedJobId
                                                             ),
-                                         new TypeMap("patternType",PatternTypes.class,
-                                                     "pattern",    String.class
-                                                    ),
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -6960,8 +6935,8 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     for (ValueMap resultMap : resultMapList)
     {
       // get data
-      PatternTypes patternType = resultMap.getEnum  ("patternType");
-      String       pattern     = resultMap.getString("pattern"    );
+      PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
+      String       pattern     = resultMap.getString("pattern"                       );
 
       if (!pattern.equals(""))
       {
@@ -6982,9 +6957,6 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST jobId=%d",
                                                              selectedJobId
                                                             ),
-                                                            new TypeMap("patternType",PatternTypes.class,
-                                                                        "pattern",    String.class
-                                                                       ),
                                                             resultErrorMessage,
                                                             resultMapList
                                                            );
@@ -6999,8 +6971,8 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     for (ValueMap resultMap : resultMapList)
     {
       // get data
-      PatternTypes patternType = resultMap.getEnum  ("patternType");
-      String       pattern     = resultMap.getString("pattern"    );
+      PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
+      String       pattern     = resultMap.getString("pattern"                       );
 
       if (!pattern.equals(""))
       {
@@ -8877,13 +8849,6 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
     String[]            resultErrorMessage  = new String[1];
     ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
     int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobId=%d",selectedJobId),
-                                         new TypeMap("date",       String.class,
-                                                     "weekDays",   String.class,
-                                                     "time",       String.class,
-                                                     "archiveType",String.class,
-                                                     "customText", String.class,
-                                                     "enabledFlag",Boolean.class
-                                                    ),
                                          resultErrorMessage,
                                          resultMapList
                                         );

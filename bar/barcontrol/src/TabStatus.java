@@ -1103,9 +1103,6 @@ class TabStatus
     String[] errorMessage = new String[1];
     ValueMap resultMap    = new ValueMap();
     int error = BARServer.executeCommand(StringParser.format("STATUS"),
-                                         new TypeMap("type",String.class,
-                                                     "time",long.class
-                                                    ),
                                          errorMessage,
                                          resultMap
                                         );
@@ -1200,19 +1197,6 @@ class TabStatus
       String[]                  resultErrorMessage = new String[1];
       final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
       int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                           new TypeMap("jobId",                 int.class,
-                                                       "name",                  String.class,
-                                                       "state",                 String.class,
-                                                       "archiveType",           String.class,
-                                                       "archivePartSize",       long.class,
-                                                       "deltaCompressAlgorithm",String.class,
-                                                       "byteCompressAlgorithm", String.class,
-                                                       "cryptAlgorithm",        String.class,
-                                                       "cryptType",             String.class,
-                                                       "cryptPasswordMode",     String.class,
-                                                       "lastExecutedDateTime",  long.class,
-                                                       "estimatedRestTime",     long.class
-                                                       ),
                                            resultErrorMessage,
                                            resultMapList
                                           );
@@ -1317,42 +1301,12 @@ class TabStatus
    */
   private void updateJobInfo()
   {
-    final TypeMap xTYPES = new TypeMap("jobId",int.class,
-                                      "name", String.class
-                                     );
-
     if (selectedJobData != null)
     {
       // get job info
       final String resultErrorMessage[] = new String[1];
       final ValueMap resultMap          = new ValueMap();
       int error = BARServer.executeCommand(StringParser.format("JOB_INFO jobId=%d",selectedJobData.id),
-                                           new TypeMap("state",                String.class,
-                                                       "error",                String.class,
-                                                       "doneEntries",          long.class,
-                                                       "doneBytes",            long.class,
-                                                       "totalEntries",         long.class,
-                                                       "totalBytes",           long.class,
-                                                       "collectTotalSumDone",  boolean.class,
-                                                       "skippedEntries",       long.class,
-                                                       "skippedBytes",         long.class,
-                                                       "errorEntries",         long.class,
-                                                       "errorBytes",           long.class,
-                                                       "entriesPerSecond",     double.class,
-                                                       "bytesPerSecond",       double.class,
-                                                       "storageBytesPerSecond",double.class,
-                                                       "archiveBytes",         long.class,
-                                                       "compressionRatio",     double.class,
-                                                       "entryName",            String.class,
-                                                       "entryDoneBytes",       long.class,
-                                                       "entryTotalBytes",      long.class,
-                                                       "storageName",          String.class,
-                                                       "storageDoneBytes",     long.class,
-                                                       "storageTotalBytes",    long.class,
-                                                       "volumeNumber",         long.class,
-                                                       "volumeProgress",       double.class,
-                                                       "requestedVolumeNumber",int.class
-                                                      ),
                                            resultErrorMessage,
                                            resultMap
                                           );
