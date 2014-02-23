@@ -1256,6 +1256,7 @@ class TabJobs
   private final Image  IMAGE_DEVICE_EXCLUDED;
   private final Image  IMAGE_TRASHCAN;
   private final Image  IMAGE_TOGGLE_MARK;
+  private final Image  IMAGE_EDIT;
 
   // date/time format
   private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -1381,6 +1382,7 @@ class TabJobs
     IMAGE_DEVICE_EXCLUDED    = Widgets.loadImage(display,"deviceExcluded.png");
     IMAGE_TRASHCAN           = Widgets.loadImage(display,"trashcan.png");
     IMAGE_TOGGLE_MARK        = Widgets.loadImage(display,"togglemark.png");
+    IMAGE_EDIT               = Widgets.loadImage(display,"edit.png");
 
     // get cursors
     waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
@@ -3652,7 +3654,7 @@ Dprintf.dprintf("");
           Widgets.addModifyListener(new WidgetModifyListener(text,storageFileName));
           text.setToolTipText("Name of storage files to create. Several macros are supported. Click on button to the right to open storage file name editor.");
 
-          button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+          button = Widgets.newButton(composite,IMAGE_EDIT);
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3665,6 +3667,34 @@ Dprintf.dprintf("");
               if (selectedJobId != 0)
               {
                 storageFileNameEdit();
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              }
+            }
+          });
+
+          button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+          Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              if (selectedJobId != 0)
+              {
+                String fileName = Dialogs.fileSave(shell,
+                                                   "Select storage file name",
+                                                   storageFileName.getString(),
+                                                   new String[]{"BAR files","*.bar",
+                                                                "All files","*",
+                                                               }
+                                                  );
+                if (fileName != null)
+                {
+                  storageFileName.set(fileName);
+                }
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             }
