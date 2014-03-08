@@ -2652,41 +2652,246 @@ LOCAL bool indexAbortCallback(void *userData)
 }
 
 /***********************************************************************\
-* Name   : indexThreadCode
-* Purpose: index thread entry
+* Name   : indexCleanup
+* Purpose: index cleanup
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void indexThreadCode(void)
+LOCAL void indexCleanup(void)
 {
-  int64                  storageId;
-  IndexQueryHandle       indexQueryHandle1,indexQueryHandle2;
-  StorageSpecifier       storageSpecifier;
-  String                 storageName,printableStorageName;
-  StorageHandle          storageHandle;
-  int64                  duplicateStorageId;
-  String                 duplicateStorageName;
-  IndexCryptPasswordList indexCryptPasswordList;
-  SemaphoreLock          semaphoreLock;
-  JobOptions             jobOptions;
-  Errors                 error;
-  JobNode                *jobNode;
-  IndexCryptPasswordNode *indexCryptPasswordNode;
-  int                    z;
+  Errors           error;
+  DatabaseId       storageId;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       databaseId;
+  IndexQueryHandle indexQueryHandle1,indexQueryHandle2;
+  StorageSpecifier storageSpecifier;
+  String           storageName,printableStorageName;
+  int64            duplicateStorageId;
+  String           duplicateStorageName;
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
   printableStorageName = String_new();
-  List_init(&indexCryptPasswordList);
 
-  error = ERROR_NONE;
-
-  // reset/delete incomplete database entries (ignore possible errors)
   plogMessage(LOG_TYPE_INDEX,"INDEX","Start clean-up database\n");
+
+  // delete orphaned entries (entries without storage)
+  error = Index_initListFiles(&indexQueryHandle,
+                              indexDatabaseHandle,
+                              NULL,
+                              0,
+                              NULL
+                             );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextFile(&indexQueryHandle,
+                             &databaseId,
+                             storageName,
+                             NULL,  // storageDateTime,
+                             NULL,  // name,
+                             NULL,  // size,
+                             NULL,  // timeModified,
+                             NULL,  // userId,
+                             NULL,  // groupId,
+                             NULL,  // permission,
+                             NULL,  // fragmentOffset,
+                             NULL   // fragmentSize
+                            )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteFile(indexDatabaseHandle,databaseId);
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  error = Index_initListImages(&indexQueryHandle,
+                                    indexDatabaseHandle,
+                                    NULL,
+                                    0,
+                                    NULL
+                                   );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextImage(&indexQueryHandle,
+                              &databaseId,
+                              storageName,
+                              NULL,  // storageDateTime,
+                              NULL,  // imageName,
+                              NULL,  // size,
+                              NULL,  // blockOffset,
+                              NULL   // blockCount
+                             )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteImage(indexDatabaseHandle,databaseId);
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  error = Index_initListDirectories(&indexQueryHandle,
+                                    indexDatabaseHandle,
+                                    NULL,
+                                    0,
+                                    NULL
+                                   );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextDirectory(&indexQueryHandle,
+                                  &databaseId,
+                                  storageName,
+                                  NULL,  // storageDateTime,
+                                  NULL,  // directoryName,
+                                  NULL,  // timeModified,
+                                  NULL,  // userId,
+                                  NULL,  // groupId,
+                                  NULL   // permission
+                                 )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteDirectory(indexDatabaseHandle,databaseId);
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  error = Index_initListLinks(&indexQueryHandle,
+                                    indexDatabaseHandle,
+                                    NULL,
+                                    0,
+                                    NULL
+                                   );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextLink(&indexQueryHandle,
+                             &databaseId,
+                             storageName,
+                             NULL,  // storageDateTime,
+                             NULL,  // name,
+                             NULL,  // destinationName
+                             NULL,  // timeModified,
+                             NULL,  // userId,
+                             NULL,  // groupId,
+                             NULL   // permission
+                            )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteLink(indexDatabaseHandle,databaseId);
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  error = Index_initListHardLinks(&indexQueryHandle,
+                                    indexDatabaseHandle,
+                                    NULL,
+                                    0,
+                                    NULL
+                                   );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextHardLink(&indexQueryHandle,
+                                 &databaseId,
+                                 storageName,
+                                 NULL,  // storageDateTime,
+                                 NULL,  // fileName,
+                                 NULL,  // size,
+                                 NULL,  // timeModified,
+                                 NULL,  // userId,
+                                 NULL,  // groupId,
+                                 NULL,  // permission,
+                                 NULL,  // fragmentOffset
+                                 NULL   // fragmentSize
+                                )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteHardLink(indexDatabaseHandle,databaseId);
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  error = Index_initListSpecial(&indexQueryHandle,
+                                    indexDatabaseHandle,
+                                    NULL,
+                                    0,
+                                    NULL
+                                   );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextSpecial(&indexQueryHandle,
+                                &databaseId,
+                                storageName,
+                                NULL,  // storageDateTime,
+                                NULL,  // name,
+                                NULL,  // timeModified,
+                                NULL,  // userId,
+                                NULL,  // groupId,
+                                NULL   // permission
+                               )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteSpecial(indexDatabaseHandle,databaseId);
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  plogMessage(LOG_TYPE_INDEX,"INDEX","Cleaned orphaned entries\n");
+
+  // delete storage entries without name
+  error = Index_initListStorage(&indexQueryHandle,
+                                indexDatabaseHandle,
+                                STORAGE_TYPE_ANY,
+                                NULL, // hostName
+                                NULL, // loginName
+                                NULL, // deviceName
+                                NULL, // fileName
+                                INDEX_STATE_SET_ALL
+                               );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // uuid
+                                storageName,
+                                NULL, // createdDateTime
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        error = Index_delete(indexDatabaseHandle,storageId);
+        if (error == ERROR_NONE)
+        {
+          plogMessage(LOG_TYPE_INDEX,
+                      "INDEX",
+                      "Deleted index #%lld without name\n",
+                      storageId
+                     );
+        }
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  // reset incomplete updated database entries
   while (Index_findByState(indexDatabaseHandle,
                            INDEX_STATE_SET(INDEX_STATE_UPDATE),
                            &storageId,
@@ -2697,13 +2902,35 @@ LOCAL void indexThreadCode(void)
          && (error == ERROR_NONE)
         )
   {
+    // get printable name (if possible)
+    error = Storage_parseName(&storageSpecifier,storageName);
+    if (error == ERROR_NONE)
+    {
+      String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+    }
+    else
+    {
+      String_set(printableStorageName,storageName);
+    }
+
     error = Index_setState(indexDatabaseHandle,
                            storageId,
                            INDEX_STATE_UPDATE_REQUESTED,
                            0LL,
                            NULL
                           );
+    if (error == ERROR_NONE)
+    {
+      plogMessage(LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Requested update index #%lld: %s\n",
+                  storageId,
+                  String_cString(printableStorageName)
+                 );
+    }
   }
+
+  // delete incomplete created database entries
   while (Index_findByState(indexDatabaseHandle,
                            INDEX_STATE_SET(INDEX_STATE_CREATE),
                            &storageId,
@@ -2739,8 +2966,7 @@ LOCAL void indexThreadCode(void)
     }
   }
 
-#if 1
-  // delete duplicate index entries
+  // delete duplicate storage entries
   duplicateStorageName = String_new();
   error = Index_initListStorage(&indexQueryHandle1,
                                 indexDatabaseHandle,
@@ -2806,7 +3032,15 @@ LOCAL void indexThreadCode(void)
             }
 
             error = Index_delete(indexDatabaseHandle,duplicateStorageId);
-            if (error == ERROR_NONE) plogMessage(LOG_TYPE_INDEX,"INDEX","Deleted duplicate index #%lld: %s\n",duplicateStorageId,String_cString(printableStorageName));
+            if (error == ERROR_NONE)
+            {
+              plogMessage(LOG_TYPE_INDEX,
+                          "INDEX",
+                          "Deleted duplicate index #%lld: %s\n",
+                          duplicateStorageId,
+                          String_cString(printableStorageName)
+                         );
+            }
           }
         }
         Index_doneList(&indexQueryHandle2);
@@ -2815,7 +3049,7 @@ LOCAL void indexThreadCode(void)
     Index_doneList(&indexQueryHandle1);
   }
   String_delete(duplicateStorageName);
-#endif /* 0 */
+  plogMessage(LOG_TYPE_INDEX,"INDEX","Cleaned duplicates\n");
 
   // if no auto-update then set all requested updates to state "error"
   if (!globalOptions.indexDatabaseAutoUpdateFlag)
@@ -2838,7 +3072,48 @@ LOCAL void indexThreadCode(void)
                             );
     }
   }
+
   plogMessage(LOG_TYPE_ALWAYS,"INDEX","Done clean-up database\n");
+
+  // free resources
+  String_delete(printableStorageName);
+  String_delete(storageName);
+  Storage_doneSpecifier(&storageSpecifier);
+}
+
+/***********************************************************************\
+* Name   : indexThreadCode
+* Purpose: index thread entry
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void indexThreadCode(void)
+{
+  DatabaseId             storageId;
+  StorageSpecifier       storageSpecifier;
+  String                 storageName,printableStorageName;
+  StorageHandle          storageHandle;
+  IndexCryptPasswordList indexCryptPasswordList;
+  SemaphoreLock          semaphoreLock;
+  JobOptions             jobOptions;
+  Errors                 error;
+  JobNode                *jobNode;
+  IndexCryptPasswordNode *indexCryptPasswordNode;
+  int                    z;
+
+  // initialize variables
+  Storage_initSpecifier(&storageSpecifier);
+  storageName          = String_new();
+  printableStorageName = String_new();
+  List_init(&indexCryptPasswordList);
+
+  error = ERROR_NONE;
+
+  // clean-up index
+  indexCleanup();
 
   // add/update index database
   while (!quitFlag)
@@ -3074,7 +3349,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
   FileInfo                   fileInfo;
-  int64                      storageId;
+  DatabaseId                 storageId;
   uint64                     createdDateTime;
   IndexStates                indexState;
   uint64                     lastCheckedDateTime;
@@ -3107,6 +3382,10 @@ LOCAL void autoIndexUpdateThreadCode(void)
       error = Storage_parseName(&storageSpecifier,storageDirectoryName);
       if (error == ERROR_NONE)
       {
+if (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )
+{
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+}
         if (   (storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
             || (storageSpecifier.type == STORAGE_TYPE_FTP       )
             || (storageSpecifier.type == STORAGE_TYPE_SSH       )
@@ -3141,6 +3420,9 @@ LOCAL void autoIndexUpdateThreadCode(void)
                 continue;
               }
 
+              // get printable storage name
+              String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,fileName));
+
               // get index id, request index update
               if (Index_findByName(indexDatabaseHandle,
                                    storageSpecifier.type,
@@ -3174,7 +3456,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
               {
                 // add index
                 error = Index_create(indexDatabaseHandle,
-                                     storageName,
+                                     printableStorageName,
                                      NULL,
                                      INDEX_STATE_UPDATE_REQUESTED,
                                      INDEX_MODE_AUTO,
@@ -8174,9 +8456,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String   storageName;
-  int64    storageId;
-  Errors   error;
+  String     storageName;
+  DatabaseId storageId;
+  Errors     error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8392,7 +8674,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
 {
   bool             stateAny;
   IndexStates      state;
-  int64            storageId;
+  DatabaseId       storageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexStates      indexState;
@@ -8833,6 +9115,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   String           destinationName;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
+  DatabaseId       databaseId;
   uint64           size;
   uint64           timeModified;
   uint             userId,groupId;
@@ -8913,7 +9196,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
              && !isCommandAborted(clientInfo,id)
              && Index_getNextFile(&indexQueryHandle,
-                                  &storageId,
+                                  &databaseId,
                                   storageName,
                                   &storageDateTime,
                                   name,
@@ -8996,7 +9279,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
              && !isCommandAborted(clientInfo,id)
              && Index_getNextImage(&indexQueryHandle,
-                                   &storageId,
+                                   &databaseId,
                                    storageName,
                                    &storageDateTime,
                                    name,
@@ -9072,7 +9355,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
              && !isCommandAborted(clientInfo,id)
              && Index_getNextDirectory(&indexQueryHandle,
-                                       &storageId,
+                                       &databaseId,
                                        storageName,
                                        &storageDateTime,
                                        name,
@@ -9150,7 +9433,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
              && !isCommandAborted(clientInfo,id)
              && Index_getNextLink(&indexQueryHandle,
-                                  &storageId,
+                                  &databaseId,
                                   storageName,
                                   &storageDateTime,
                                   name,
@@ -9231,7 +9514,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
              && !isCommandAborted(clientInfo,id)
              && Index_getNextHardLink(&indexQueryHandle,
-                                      &storageId,
+                                      &databaseId,
                                       storageName,
                                       &storageDateTime,
                                       name,
@@ -9315,7 +9598,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
              && !isCommandAborted(clientInfo,id)
              && Index_getNextSpecial(&indexQueryHandle,
-                                     &storageId,
+                                     &databaseId,
                                      storageName,
                                      &storageDateTime,
                                      name,
