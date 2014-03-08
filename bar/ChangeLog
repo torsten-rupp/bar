@@ -1,4 +1,4 @@
-2014-01-18 0.18
+2014-03-08 0.18
   * added multi-core compression/encryption support!
   * dramatic speed-up when creating archives!
   * added automatic delete of duplicate index entries when
@@ -43,6 +43,9 @@
   * support listing remote directory content
   * barcontrol: added time macros %U2, %U4, %W, %W2 and %W4,
     added macros %T, %uuid, %text
+  * barcontrol: added file selector button to storage name
+    input
+  * barcontrol: list storage ignoring case
 
 2013-05-05 0.17b
   * fixed parsing of storage specifier (ftp, scp/sftp,
