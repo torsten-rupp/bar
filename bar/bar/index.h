@@ -223,7 +223,7 @@ bool Index_parseMode(const char *name, IndexModes *indexMode);
 \***********************************************************************/
 
 bool Index_findById(DatabaseHandle *databaseHandle,
-                    int64          storageId,
+                    DatabaseId     storageId,
                     String         storageName,
                     IndexStates    *indexState,
                     uint64         *lastCheckedTimestamp
@@ -253,7 +253,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                       const String   findLoginName,
                       const String   findDeviceName,
                       const String   findFileName,
-                      int64          *storageId,
+                      DatabaseId     *storageId,
                       String         uuid,
                       IndexStates    *indexState,
                       uint64         *lastCheckedTimestamp
@@ -275,7 +275,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 
 bool Index_findByState(DatabaseHandle *databaseHandle,
                        IndexStateSet  indexStateSet,
-                       int64          *storageId,
+                       DatabaseId     *storageId,
                        String         storageName,
                        String         uuid,
                        uint64         *lastCheckedTimestamp
@@ -299,7 +299,7 @@ Errors Index_create(DatabaseHandle *databaseHandle,
                     const String   uuid,
                     IndexStates    indexState,
                     IndexModes     indexMode,
-                    int64          *storageId
+                    DatabaseId     *storageId
                    );
 
 /***********************************************************************\
@@ -313,7 +313,7 @@ Errors Index_create(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_delete(DatabaseHandle *databaseHandle,
-                    int64          storageId
+                    DatabaseId     storageId
                    );
 
 /***********************************************************************\
@@ -327,7 +327,7 @@ Errors Index_delete(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_clear(DatabaseHandle *databaseHandle,
-                   int64          storageId
+                   DatabaseId     storageId
                   );
 
 /***********************************************************************\
@@ -344,7 +344,7 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_update(DatabaseHandle *databaseHandle,
-                    int64          storageId,
+                    DatabaseId     storageId,
                     String         storageName,
                     String         uuid,
                     uint64         size
@@ -364,7 +364,7 @@ Errors Index_update(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_getState(DatabaseHandle *databaseHandle,
-                      int64          storageId,
+                      DatabaseId     storageId,
                       IndexStates    *indexState,
                       uint64         *lastCheckedTimestamp,
                       String         errorMessage
@@ -386,7 +386,7 @@ Errors Index_getState(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_setState(DatabaseHandle *databaseHandle,
-                      int64          storageId,
+                      DatabaseId     storageId,
                       IndexStates    indexState,
                       uint64         lastCheckedTimestamp,
                       const char     *errorMessage,
@@ -463,6 +463,20 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                          );
 
 /***********************************************************************\
+* Name   : Index_deleteStorage
+* Purpose: delete storage entry including attached files, image,
+*          directories, link, hard link, special entries
+* Input  : indexQueryHandle - index query handle
+*          databaseId       - database id of entry
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+bool Index_deleteStorage(IndexQueryHandle *indexQueryHandle,
+                         DatabaseId       *databaseId
+                        );
+
+/***********************************************************************\
 * Name   : Index_initListFiles
 * Purpose: list file entries
 * Input  : indexQueryHandle - index query handle variable
@@ -513,6 +527,19 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
                       );
 
 /***********************************************************************\
+* Name   : Index_deleteFile
+* Purpose: delete file entry
+* Input  : databaseHandle - database handle
+*          databaseId     - database id of entry
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteFile(DatabaseHandle *databaseHandle,
+                        DatabaseId     databaseId
+                       );
+
+/***********************************************************************\
 * Name   : Index_initListImages
 * Purpose: list image entries
 * Input  : databaseHandle - database handle
@@ -552,6 +579,19 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
                         uint64           *blockOffset,
                         uint64           *blockCount
                        );
+
+/***********************************************************************\
+* Name   : Index_deleteImage
+* Purpose: delete image entry
+* Input  : databaseHandle - database handle
+*          databaseId     - database id of entry
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteImage(DatabaseHandle *databaseHandle,
+                         DatabaseId     databaseId
+                        );
 
 /***********************************************************************\
 * Name   : Index_initListDirectories
@@ -597,6 +637,19 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
                            );
 
 /***********************************************************************\
+* Name   : Index_deleteDirectory
+* Purpose: delete directory entry
+* Input  : databaseHandle - database handle
+*          databaseId     - database id of entry
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteDirectory(DatabaseHandle *databaseHandle,
+                             DatabaseId     databaseId
+                            );
+
+/***********************************************************************\
 * Name   : Index_initListLinks
 * Purpose: list link entries
 * Input  : databaseHandle - database handle
@@ -640,6 +693,19 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
                        uint32           *groupId,
                        uint32           *permission
                       );
+
+/***********************************************************************\
+* Name   : Index_deleteLink
+* Purpose: delete link entry
+* Input  : databaseHandle - database handle
+*          databaseId     - database id of entry
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteLink(DatabaseHandle *databaseHandle,
+                        DatabaseId     databaseId
+                       );
 
 /***********************************************************************\
 * Name   : Index_initListHardLinks
@@ -692,6 +758,19 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
                           );
 
 /***********************************************************************\
+* Name   : Index_deleteHardLink
+* Purpose: delete hard link entry
+* Input  : databaseHandle - database handle
+*          databaseId     - database id of entry
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteHardLink(DatabaseHandle *databaseHandle,
+                            DatabaseId     databaseId
+                           );
+
+/***********************************************************************\
 * Name   : Index_initListSpecial
 * Purpose: list special entries
 * Input  : databaseHandle - database handle
@@ -735,6 +814,19 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
                          );
 
 /***********************************************************************\
+* Name   : Index_deleteSpecial
+* Purpose: delete special entry
+* Input  : databaseHandle - database handle
+*          databaseId     - database id of entry
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteSpecial(DatabaseHandle *databaseHandle,
+                           DatabaseId     databaseId
+                          );
+
+/***********************************************************************\
 * Name   : Index_doneList
 * Purpose: done index list
 * Input  : indexQueryHandle - index query handle
@@ -766,7 +858,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle);
 \***********************************************************************/
 
 Errors Index_addFile(DatabaseHandle *databaseHandle,
-                     int64          storageId,
+                     DatabaseId     storageId,
                      const String   fileName,
                      uint64         size,
                      uint64         timeLastAccess,
@@ -795,7 +887,7 @@ Errors Index_addFile(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_addImage(DatabaseHandle *databaseHandle,
-                      int64          storageId,
+                      DatabaseId     storageId,
                       const String   imageName,
                       int64          size,
                       ulong          blockSize,
@@ -821,7 +913,7 @@ Errors Index_addImage(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_addDirectory(DatabaseHandle *databaseHandle,
-                          int64          storageId,
+                          DatabaseId     storageId,
                           String         directoryName,
                           uint64         timeLastAccess,
                           uint64         timeModified,
@@ -850,7 +942,7 @@ Errors Index_addDirectory(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_addLink(DatabaseHandle *databaseHandle,
-                     int64          storageId,
+                     DatabaseId     storageId,
                      const String   linkName,
                      const String   destinationName,
                      uint64         timeLastAccess,
@@ -882,7 +974,7 @@ Errors Index_addLink(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_addHardLink(DatabaseHandle *databaseHandle,
-                         int64          storageId,
+                         DatabaseId     storageId,
                          const String   fileName,
                          uint64         size,
                          uint64         timeLastAccess,
@@ -915,7 +1007,7 @@ Errors Index_addHardLink(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_addSpecial(DatabaseHandle   *databaseHandle,
-                        int64            storageId,
+                        DatabaseId       storageId,
                         const String     name,
                         FileSpecialTypes specialType,
                         uint64           timeLastAccess,

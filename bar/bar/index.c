@@ -530,7 +530,7 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
 }
 
 bool Index_findById(DatabaseHandle *databaseHandle,
-                    int64          storageId,
+                    DatabaseId     storageId,
                     String         storageName,
                     IndexStates    *indexState,
                     uint64         *lastCheckedTimestamp
@@ -574,7 +574,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                       const String   loginName,
                       const String   deviceName,
                       const String   fileName,
-                      int64          *storageId,
+                      DatabaseId     *storageId,
                       String         uuid,
                       IndexStates    *indexState,
                       uint64         *lastCheckedTimestamp
@@ -691,7 +691,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 
 bool Index_findByState(DatabaseHandle *databaseHandle,
                        IndexStateSet  indexStateSet,
-                       int64          *storageId,
+                       DatabaseId     *storageId,
                        String         storageName,
                        String         uuid,
                        uint64         *lastCheckedTimestamp
@@ -744,7 +744,7 @@ Errors Index_create(DatabaseHandle *databaseHandle,
                     String         uuid,
                     IndexStates    indexState,
                     IndexModes     indexMode,
-                    int64          *storageId
+                    DatabaseId     *storageId
                    )
 {
   Errors error;
@@ -791,7 +791,7 @@ Errors Index_create(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_delete(DatabaseHandle *databaseHandle,
-                    int64          storageId
+                    DatabaseId     storageId
                    )
 {
   Errors error;
@@ -800,7 +800,6 @@ Errors Index_delete(DatabaseHandle *databaseHandle,
   assert(storageId != 0LL);
 
   // Note: do in single steps to avoid long-time-locking of database!
-
   error = Database_execute(databaseHandle,
                            NULL,
                            NULL,
@@ -855,7 +854,7 @@ Errors Index_delete(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_clear(DatabaseHandle *databaseHandle,
-                   int64          storageId
+                   DatabaseId     storageId
                   )
 {
   Errors error;
@@ -864,7 +863,6 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
   assert(storageId != 0LL);
 
   // Note: do in single steps to avoid long-time-locking of database!
-
   error = Database_execute(databaseHandle,
                            NULL,
                            NULL,
@@ -911,7 +909,7 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_update(DatabaseHandle *databaseHandle,
-                    int64          storageId,
+                    DatabaseId     storageId,
                     String         storageName,
                     String         uuid,
                     uint64         size
@@ -974,7 +972,7 @@ Errors Index_update(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_getState(DatabaseHandle *databaseHandle,
-                      int64          storageId,
+                      DatabaseId     storageId,
                       IndexStates    *indexState,
                       uint64         *lastCheckedTimestamp,
                       String         errorMessage
@@ -1014,7 +1012,7 @@ Errors Index_getState(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_setState(DatabaseHandle *databaseHandle,
-                      int64          storageId,
+                      DatabaseId     storageId,
                       IndexStates    indexState,
                       uint64         lastCheckedTimestamp,
                       const char     *errorMessage,
@@ -1147,10 +1145,10 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle);
   indexQueryHandle->storage.type = storageType;
-  if (hostName   != NULL) indexQueryHandle->storage.hostNamePattern   = Pattern_new(hostName,  PATTERN_TYPE_REGEX,PATTERN_FLAG_NONE);
-  if (loginName  != NULL) indexQueryHandle->storage.loginNamePattern  = Pattern_new(loginName, PATTERN_TYPE_REGEX,PATTERN_FLAG_NONE);
-  if (deviceName != NULL) indexQueryHandle->storage.deviceNamePattern = Pattern_new(deviceName,PATTERN_TYPE_REGEX,PATTERN_FLAG_NONE);
-  if (fileName   != NULL) indexQueryHandle->storage.fileNamePattern   = Pattern_new(fileName,  PATTERN_TYPE_REGEX,PATTERN_FLAG_NONE);
+  if (hostName   != NULL) indexQueryHandle->storage.hostNamePattern   = Pattern_new(hostName,  PATTERN_TYPE_REGEX,PATTERN_FLAG_IGNORE_CASE);
+  if (loginName  != NULL) indexQueryHandle->storage.loginNamePattern  = Pattern_new(loginName, PATTERN_TYPE_REGEX,PATTERN_FLAG_IGNORE_CASE);
+  if (deviceName != NULL) indexQueryHandle->storage.deviceNamePattern = Pattern_new(deviceName,PATTERN_TYPE_REGEX,PATTERN_FLAG_IGNORE_CASE);
+  if (fileName   != NULL) indexQueryHandle->storage.fileNamePattern   = Pattern_new(fileName,  PATTERN_TYPE_REGEX,PATTERN_FLAG_IGNORE_CASE);
 
   indexStateSetString = String_new();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
@@ -1368,6 +1366,20 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
                             );
 }
 
+Errors Index_deleteFile(DatabaseHandle *databaseHandle,
+                        DatabaseId     databaseId
+                       )
+{
+  assert(databaseHandle != NULL);
+
+  return Database_execute(databaseHandle,
+                          NULL,
+                          NULL,
+                          "DELETE FROM files WHERE id=%ld;",
+                          databaseId
+                         );
+}
+
 Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             DatabaseHandle   *databaseHandle,
                             const DatabaseId *storageIds,
@@ -1447,6 +1459,20 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
                              blockOffset,
                              blockCount
                             );
+}
+
+Errors Index_deleteImage(DatabaseHandle *databaseHandle,
+                         DatabaseId     databaseId
+                        )
+{
+  assert(databaseHandle != NULL);
+
+  return Database_execute(databaseHandle,
+                          NULL,
+                          NULL,
+                          "DELETE FROM files WHERE id=%ld;",
+                          databaseId
+                         );
 }
 
 Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
@@ -1531,6 +1557,20 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
                              groupId,
                              permission
                             );
+}
+
+Errors Index_deleteDirectory(DatabaseHandle *databaseHandle,
+                             DatabaseId     databaseId
+                            )
+{
+  assert(databaseHandle != NULL);
+
+  return Database_execute(databaseHandle,
+                          NULL,
+                          NULL,
+                          "DELETE FROM directories WHERE id=%ld;",
+                          databaseId
+                         );
 }
 
 Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
@@ -1618,6 +1658,20 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
                              groupId,
                              permission
                             );
+}
+
+Errors Index_deleteLink(DatabaseHandle *databaseHandle,
+                        DatabaseId     databaseId
+                       )
+{
+  assert(databaseHandle != NULL);
+
+  return Database_execute(databaseHandle,
+                          NULL,
+                          NULL,
+                          "DELETE FROM links WHERE id=%ld;",
+                          databaseId
+                         );
 }
 
 Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
@@ -1713,6 +1767,20 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
                             );
 }
 
+Errors Index_deleteHardLink(DatabaseHandle *databaseHandle,
+                            DatabaseId     databaseId
+                           )
+{
+  assert(databaseHandle != NULL);
+
+  return Database_execute(databaseHandle,
+                          NULL,
+                          NULL,
+                          "DELETE FROM hardlinks WHERE id=%ld;",
+                          databaseId
+                         );
+}
+
 Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
                              const DatabaseId *storageIds,
@@ -1797,6 +1865,20 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
                             );
 }
 
+Errors Index_deleteSpecial(DatabaseHandle *databaseHandle,
+                           DatabaseId     databaseId
+                          )
+{
+  assert(databaseHandle != NULL);
+
+  return Database_execute(databaseHandle,
+                          NULL,
+                          NULL,
+                          "DELETE FROM special WHERE id=%ld;",
+                          databaseId
+                         );
+}
+
 void Index_doneList(IndexQueryHandle *indexQueryHandle)
 {
   assert(indexQueryHandle != NULL);
@@ -1806,7 +1888,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle)
 }
 
 Errors Index_addFile(DatabaseHandle *databaseHandle,
-                     int64          storageId,
+                     DatabaseId     storageId,
                      const String   fileName,
                      uint64         size,
                      uint64         timeLastAccess,
@@ -1869,7 +1951,7 @@ Errors Index_addFile(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_addImage(DatabaseHandle *databaseHandle,
-                      int64          storageId,
+                      DatabaseId     storageId,
                       const String   imageName,
                       int64          size,
                       ulong          blockSize,
@@ -1914,7 +1996,7 @@ Errors Index_addImage(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_addDirectory(DatabaseHandle *databaseHandle,
-                          int64          storageId,
+                          DatabaseId     storageId,
                           String         directoryName,
                           uint64         timeLastAccess,
                           uint64         timeModified,
@@ -1965,7 +2047,7 @@ Errors Index_addDirectory(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_addLink(DatabaseHandle *databaseHandle,
-                     int64          storageId,
+                     DatabaseId     storageId,
                      const String   linkName,
                      const String   destinationName,
                      uint64         timeLastAccess,
@@ -2021,7 +2103,7 @@ Errors Index_addLink(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_addHardLink(DatabaseHandle *databaseHandle,
-                         int64          storageId,
+                         DatabaseId     storageId,
                          const String   fileName,
                          uint64         size,
                          uint64         timeLastAccess,
@@ -2084,7 +2166,7 @@ Errors Index_addHardLink(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_addSpecial(DatabaseHandle   *databaseHandle,
-                        int64            storageId,
+                        DatabaseId       storageId,
                         const String     name,
                         FileSpecialTypes specialType,
                         uint64           timeLastAccess,
