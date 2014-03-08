@@ -318,71 +318,80 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 {
   bool           semaphoreLock;
   const Password *password;
+  bool           doneFlag;
   Password       newPassword;
   Errors         error;
 
   assert(passwordHandle != NULL);
 
   password = NULL;
+  doneFlag = FALSE;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&passwordHandle->archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    if      (passwordHandle->passwordNode != NULL)
+    while ((password == NULL) && !doneFlag)
     {
-      // get next password from list
-      password = passwordHandle->passwordNode->password;
-      passwordHandle->passwordNode = passwordHandle->passwordNode->next;
-    }
-    else if (passwordHandle->passwordMode == PASSWORD_MODE_CONFIG)
-    {
-      if (passwordHandle->cryptPassword != NULL)
+      if      (passwordHandle->passwordNode != NULL)
       {
-        // get password
-        password = (Password*)passwordHandle->cryptPassword;
+        // get next password from list
+        password = passwordHandle->passwordNode->password;
+        passwordHandle->passwordNode = passwordHandle->passwordNode->next;
       }
-
-      // next password mode is: default
-      passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
-    }
-    else if (passwordHandle->passwordMode == PASSWORD_MODE_DEFAULT)
-    {
-      if (globalOptions.cryptPassword != NULL)
+      else if (passwordHandle->passwordMode == PASSWORD_MODE_CONFIG)
       {
-        // get password
-        password = globalOptions.cryptPassword;
-      }
-
-      // next password mode is: ask
-      passwordHandle->passwordMode = PASSWORD_MODE_ASK;
-    }
-    else if (   (passwordHandle->passwordMode == PASSWORD_MODE_ASK)
-             && !passwordHandle->inputFlag
-            )
-    {
-      if (passwordHandle->archiveGetCryptPasswordFunction != NULL)
-      {
-        // input password
-        Password_init(&newPassword);
-        error = passwordHandle->archiveGetCryptPasswordFunction(passwordHandle->archiveGetCryptPasswordUserData,
-                                                                &newPassword,
-                                                                (passwordHandle->archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
-                                                                  ? Storage_getPrintableName(&passwordHandle->archiveInfo->storage.storageSpecifier,NULL)
-                                                                  : NULL,
-                                                                FALSE,
-                                                                FALSE
-                                                               );
-        if (error != ERROR_NONE)
+        if (passwordHandle->cryptPassword != NULL)
         {
-          return NULL;
+          // get password
+          password = (Password*)passwordHandle->cryptPassword;
         }
 
-        // add to password list
-        password = Archive_appendDecryptPassword(&newPassword);
+        // next password mode is: default
+        passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
+      }
+      else if (passwordHandle->passwordMode == PASSWORD_MODE_DEFAULT)
+      {
+        if (globalOptions.cryptPassword != NULL)
+        {
+          // get password
+          password = globalOptions.cryptPassword;
+        }
 
-        // free resources
-        Password_done(&newPassword);
+        // next password mode is: ask
+        passwordHandle->passwordMode = PASSWORD_MODE_ASK;
+      }
+      else if (   (passwordHandle->passwordMode == PASSWORD_MODE_ASK)
+               && !passwordHandle->inputFlag
+              )
+      {
+        if (passwordHandle->archiveGetCryptPasswordFunction != NULL)
+        {
+          // input password
+          Password_init(&newPassword);
+          error = passwordHandle->archiveGetCryptPasswordFunction(passwordHandle->archiveGetCryptPasswordUserData,
+                                                                  &newPassword,
+                                                                  (passwordHandle->archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                                                    ? Storage_getPrintableName(&passwordHandle->archiveInfo->storage.storageSpecifier,NULL)
+                                                                    : NULL,
+                                                                  FALSE,
+                                                                  FALSE
+                                                                 );
+          if (error != ERROR_NONE)
+          {
+            return NULL;
+          }
 
-        // next password mode is: none
-        passwordHandle->inputFlag = TRUE;
+          // add to password list
+          password = Archive_appendDecryptPassword(&newPassword);
+
+          // free resources
+          Password_done(&newPassword);
+
+          // next password mode is: none
+          passwordHandle->inputFlag = TRUE;
+        }
+      }
+      else
+      {
+        doneFlag = TRUE;
       }
     }
   }
