@@ -8035,9 +8035,11 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     }
 
     // parse storage name
+    Storage_initSpecifier(&storageSpecifier);
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
+      Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
       sendClientResult(clientInfo,id,TRUE,ERROR_ARCHIVE_NOT_FOUND,"storage not found");
       return;
