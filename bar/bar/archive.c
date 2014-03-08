@@ -9938,11 +9938,11 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   // get printable name (if possible)
   if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
   {
-//    Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+    String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
   }
   else
   {
-//    String_set(printableStorageName,storageName);
+    String_set(printableStorageName,storageName);
   }
 
   // open archive (Note optimization: try sftp for scp protocol, because sftp support seek()-operation)
