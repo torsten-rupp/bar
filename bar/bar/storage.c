@@ -6939,6 +6939,10 @@ Errors Storage_delete(StorageHandle *storageHandle,
       {
         error = File_delete(storageFileName,FALSE);
       }
+      else
+      {
+        error = ERROR_NONE;
+      }
       break;
     case STORAGE_TYPE_FTP:
       #if   defined(HAVE_CURL)
@@ -6953,16 +6957,10 @@ Errors Storage_delete(StorageHandle *storageHandle,
           String            ftpCommand;
           struct curl_slist *curlSList;
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          // open Curl handle
+          curlHandle = curl_easy_init();
+          if (curlHandle != NULL)
           {
-            // initialize variables
-
-            // open Curl handles
-            curlHandle = curl_easy_init();
-            if (curlHandle == NULL)
-            {
-              return ERROR_FTP_SESSION_FAIL;
-            }
             /* Note: curl trigger from time to time a SIGALRM. The curl option
                      CURLOPT_NOSIGNAL should stop this. But it seems there is
                      a bug in curl which cause random crashes when
@@ -6995,47 +6993,59 @@ Errors Storage_delete(StorageHandle *storageHandle,
 
             // set FTP connect
             curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-            if (curlCode != CURLE_OK)
-            {
-              String_delete(url);
-              String_delete(baseName);
-              String_delete(pathName);
-              (void)curl_easy_cleanup(curlHandle);
-              return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
-            }
-
-            // set FTP login
-            (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-            plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-            (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-            Password_undeploy(storageHandle->storageSpecifier.loginPassword);
-
-            // delete file
-            ftpCommand = String_format(String_new(),"*DELE %S",storageFileName);
-            curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
-            curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
             if (curlCode == CURLE_OK)
             {
-              curlCode = curl_easy_setopt(curlHandle,CURLOPT_QUOTE,curlSList);
+              // set FTP login
+              (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
+              plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
+              (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+              Password_undeploy(storageHandle->storageSpecifier.loginPassword);
+
+              if (!storageHandle->jobOptions->dryRunFlag)
+              {
+                // delete file
+                ftpCommand = String_format(String_new(),"*DELE %S",storageFileName);
+                curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
+                curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_QUOTE,curlSList);
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_perform(curlHandle);
+                }
+                (void)curl_easy_setopt(curlHandle,CURLOPT_QUOTE,NULL);
+                if (curlCode == CURLE_OK)
+                {
+                  error = ERROR_NONE;
+                }
+                else
+                {
+                  error = ERRORX_(DELETE_FILE,0,curl_multi_strerror(curlCode));
+                }
+                curl_slist_free_all(curlSList);
+                String_delete(ftpCommand);
+              }
+              else
+              {
+                error = ERROR_NONE;
+              }
             }
-            if (curlCode == CURLE_OK)
+            else
             {
-              curlCode = curl_easy_perform(curlHandle);
-            }
-            (void)curl_easy_setopt(curlHandle,CURLOPT_QUOTE,NULL);
-            curl_slist_free_all(curlSList);
-            String_delete(ftpCommand);
-            if (curlCode != CURLE_OK)
-            {
-              String_delete(url);
-              String_delete(baseName);
-              String_delete(pathName);
-              (void)curl_easy_cleanup(curlHandle);
-              return ERRORX_(DELETE_FILE,0,curl_multi_strerror(curlCode));
+              error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             }
 
             // free resources
+            String_delete(url);
+            String_delete(baseName);
+            String_delete(pathName);
             (void)curl_easy_cleanup(curlHandle);
+          }
+          else
+          {
+            error = ERROR_FTP_SESSION_FAIL;
           }
         }
       #elif defined(HAVE_FTP)
@@ -7044,6 +7054,10 @@ Errors Storage_delete(StorageHandle *storageHandle,
         if (!storageHandle->jobOptions->dryRunFlag)
         {
           error = (FtpDelete(String_cString(storageFileName),storageHandle->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
+        }
+        else
+        {
+          error = ERROR_NONE;
         }
       #else /* not HAVE_CURL || HAVE_FTP */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -7066,14 +7080,11 @@ whould this be a possible implementation?
 
           // there is no unlink command for scp: execute either 'rm' or 'del' on remote server
           command = String_new();
-          if (error != ERROR_NONE)
-          {
-            String_format(String_clear(command),"rm %'S",storageFileName);
-            error = (libssh2_channel_exec(storageHandle->scp.channel,
-                                          String_cString(command)
-                                         ) != 0
-                    ) ? ERROR_NONE : ERROR_DELETE_FILE;
-          }
+          String_format(String_clear(command),"rm %'S",storageFileName);
+          error = (libssh2_channel_exec(storageHandle->scp.channel,
+                                        String_cString(command)
+                                       ) != 0
+                  ) ? ERROR_NONE : ERROR_DELETE_FILE;
           if (error != ERROR_NONE)
           {
             String_format(String_clear(command),"del %'S",storageFileName);
@@ -7106,11 +7117,11 @@ whould this be a possible implementation?
         {
           libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          // init session
+          storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
+          if (storageHandle->sftp.sftp != NULL)
           {
-            // init session
-            storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
-            if (storageHandle->sftp.sftp != NULL)
+            if (!storageHandle->jobOptions->dryRunFlag)
             {
               // delete file
               if (libssh2_sftp_unlink(storageHandle->sftp.sftp,
@@ -7130,20 +7141,24 @@ whould this be a possible implementation?
                                  sshErrorText
                                 );
               }
-
-              libssh2_sftp_shutdown(storageHandle->sftp.sftp);
             }
             else
             {
-              char *sshErrorText;
-
-              libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-              error = ERRORX_(SSH,
-                              libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                              sshErrorText
-                             );
-              Network_disconnect(&storageHandle->sftp.socketHandle);
+              error = ERROR_NONE;
             }
+
+            libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+          }
+          else
+          {
+            char *sshErrorText;
+
+            libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
+            error = ERRORX_(SSH,
+                            libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
+                            sshErrorText
+                           );
+            Network_disconnect(&storageHandle->sftp.socketHandle);
           }
           Network_disconnect(&storageHandle->sftp.socketHandle);
         }
@@ -7163,14 +7178,10 @@ whould this be a possible implementation?
           StringTokenizer   nameTokenizer;
           String            name;
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          // initialize variables
+          curlHandle = curl_easy_init();
+          if (curlHandle != NULL)
           {
-            // initialize variables
-            curlHandle = curl_easy_init();
-            if (curlHandle == NULL)
-            {
-              return ERROR_WEBDAV_SESSION_FAIL;
-            }
             /* Note: curl trigger from time to time a SIGALRM. The curl option
                      CURLOPT_NOSIGNAL should stop this. But it seems there is
                      a bug in curl which cause random crashes when
@@ -7190,26 +7201,11 @@ whould this be a possible implementation?
             baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
             if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
 
-            // set WebDAV connect
-            curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(baseURL));
-            if (curlCode != CURLE_OK)
-            {
-              String_delete(baseURL);
-              (void)curl_easy_cleanup(curlHandle);
-              return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
-            }
-
-            // set WebDAV login
-            (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-            plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-            (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-            Password_undeploy(storageHandle->storageSpecifier.loginPassword);
-
             // get pathname, basename
             pathName = File_getFilePathName(String_new(),storageFileName);
             baseName = File_getFileBaseName(String_new(),storageFileName);
 
-            // delete file
+            // get URL
             url = String_format(String_duplicate(baseURL),"/");
             File_initSplitFileName(&nameTokenizer,pathName);
             while (File_getNextSplitFileName(&nameTokenizer,&name))
@@ -7219,35 +7215,62 @@ whould this be a possible implementation?
             }
             File_doneSplitFileName(&nameTokenizer);
             String_append(url,baseName);
-            curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+
+            // set WebDAV connect
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(baseURL));
             if (curlCode == CURLE_OK)
             {
-              curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
+              // set WebDAV login
+              (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
+              plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
+              (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+              Password_undeploy(storageHandle->storageSpecifier.loginPassword);
+
+              if (!storageHandle->jobOptions->dryRunFlag)
+              {
+                // delete file
+                curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_perform(curlHandle);
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  error = ERROR_NONE;
+                }
+                else
+                {
+                  error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
+                }
+              }
+              else
+              {
+                error = ERROR_NONE;
+              }
             }
-            if (curlCode == CURLE_OK)
+            else
             {
-              curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+              error = ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             }
-            if (curlCode == CURLE_OK)
-            {
-              curlCode = curl_easy_perform(curlHandle);
-            }
-            if (curlCode != CURLE_OK)
-            {
-              String_delete(url);
-              String_delete(baseName);
-              String_delete(pathName);
-              String_delete(baseURL);
-              (void)curl_easy_cleanup(curlHandle);
-              return ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
-            }
-            String_delete(url);
 
             // free resources
+            String_delete(url);
             String_delete(baseName);
             String_delete(pathName);
             String_delete(baseURL);
             (void)curl_easy_cleanup(curlHandle);
+          }
+          else
+          {
+            error = ERROR_WEBDAV_SESSION_FAIL;
           }
         }
       #else /* not HAVE_CURL */
