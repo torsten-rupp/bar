@@ -7986,7 +7986,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 
 /***********************************************************************\
 * Name   : serverCommand_storageDelete
-* Purpose: delete storage
+* Purpose: delete storage and remove database index
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -7994,7 +7994,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <storage id>
+*            storageId=<storage id>
 *          Result:
 \***********************************************************************/
 
@@ -8011,9 +8011,9 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   assert(argumentMap != NULL);
 
   // get storage id
-  if (!StringMap_getInt64(argumentMap,"jobId",&storageId,0))
+  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<storage id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<storage id>");
     return;
   }
 
@@ -8041,11 +8041,11 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     {
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
-      sendClientResult(clientInfo,id,TRUE,ERROR_ARCHIVE_NOT_FOUND,"storage not found");
+      sendClientResult(clientInfo,id,TRUE,ERROR_ARCHIVE_NOT_FOUND,"invalid storage name");
       return;
     }
 
-// NYI: move this special handling of limited scp into Storage_delete()?
+#warning NYI: move this special handling of limited scp into Storage_delete()?
     // init storage
     fileName = String_new();
     if (storageSpecifier.type == STORAGE_TYPE_SCP)
@@ -8091,7 +8091,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       String_delete(fileName);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
-      sendClientResult(clientInfo,id,TRUE,error,"init storage fail: %s",Error_getText(error));
+      sendClientResult(clientInfo,id,TRUE,error,"init storage: %s",Error_getText(error));
       return;
     }
 
@@ -8101,10 +8101,11 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
                           );
     if (error != ERROR_NONE)
     {
+      Storage_done(&storageHandle);
       String_delete(fileName);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
-      sendClientResult(clientInfo,id,TRUE,error,"delete storage file fail: %s",Error_getText(error));
+      sendClientResult(clientInfo,id,TRUE,error,"delete storage file: %s",Error_getText(error));
       return;
     }
 
@@ -8120,7 +8121,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       String_delete(fileName);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
-      sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
+      sendClientResult(clientInfo,id,TRUE,error,"remove index: %s",Error_getText(error));
       return;
     }
 
