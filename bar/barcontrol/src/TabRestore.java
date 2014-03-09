@@ -1611,7 +1611,6 @@ Dprintf.dprintf("process line by line");
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             restoreArchives(getCheckedStorageNameHashSet(),
                             widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
                             widgetOverwriteEntries.getSelection()
@@ -1629,7 +1628,6 @@ Dprintf.dprintf("process line by line");
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             deleteStorage();
           }
         });
@@ -2560,7 +2558,7 @@ Dprintf.dprintf("process line by line");
 
                 // delete storage
                 final String[] resultErrorMessage = new String[1];
-                int errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE jobId=%d",storageData.id),
+                int errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%d",storageData.id),
                                                          resultErrorMessage
                                                         );
                 if (errorCode == Errors.NONE)
@@ -2576,18 +2574,33 @@ Dprintf.dprintf("process line by line");
                   if (!ignoreAllErrorsFlag)
                   {
                     final int[] selection = new int[1];
-                    display.syncExec(new Runnable()
+                    if (selectedStorageHashSet.size() > (n+1))
                     {
-                      public void run()
+                      display.syncExec(new Runnable()
                       {
-                        selection[0] = Dialogs.select(shell,
-                                                      "Confirmation",
-                                                      "Cannot delete strorage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+resultErrorMessage[0]+")",
-                                                      new String[]{"Continue","Continue with all","Abort"},
-                                                      0
-                                                     );
-                      }
-                    });
+                        public void run()
+                        {
+                          selection[0] = Dialogs.select(shell,
+                                                        "Confirmation",
+                                                        "Cannot delete strorage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+resultErrorMessage[0]+")",
+                                                        new String[]{"Continue","Continue with all","Abort"},
+                                                        0
+                                                       );
+                        }
+                      });
+                    }
+                    else
+                    {
+                      display.syncExec(new Runnable()
+                      {
+                        public void run()
+                        {
+                          Dialogs.error(shell,
+                                        "Cannot delete strorage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+resultErrorMessage[0]+")"
+                                       );
+                        }
+                      });
+                    }
                     switch (selection[0])
                     {
                       case 0:
