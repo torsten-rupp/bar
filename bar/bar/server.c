@@ -8003,7 +8003,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   DatabaseId       storageId;
   String           storageName;
   StorageSpecifier storageSpecifier;
-  String           fileName;
   Errors           error;
   StorageHandle    storageHandle;
 
@@ -8047,7 +8046,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
 #warning NYI: move this special handling of limited scp into Storage_delete()?
     // init storage
-    fileName = String_new();
     if (storageSpecifier.type == STORAGE_TYPE_SCP)
     {
       // try to init scp-storage first with sftp
@@ -8088,7 +8086,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     }
     if (error != ERROR_NONE)
     {
-      String_delete(fileName);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
       sendClientResult(clientInfo,id,TRUE,error,"init storage: %s",Error_getText(error));
@@ -8097,12 +8094,11 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
     // delete storage
     error = Storage_delete(&storageHandle,
-                           fileName
+                           storageSpecifier.fileName
                           );
     if (error != ERROR_NONE)
     {
       Storage_done(&storageHandle);
-      String_delete(fileName);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
       sendClientResult(clientInfo,id,TRUE,error,"delete storage file: %s",Error_getText(error));
@@ -8118,7 +8114,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
                         );
     if (error != ERROR_NONE)
     {
-      String_delete(fileName);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
       sendClientResult(clientInfo,id,TRUE,error,"remove index: %s",Error_getText(error));
@@ -8126,7 +8121,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     }
 
     // free resources
-    String_delete(fileName);
     Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
   }
