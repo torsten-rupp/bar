@@ -1059,7 +1059,7 @@ public class BARControl
    */
   private void printUsage()
   {
-    System.out.println("barcontrol usage: <options> --");
+    System.out.println("barcontrol usage: <options> [--] [<host name>]");
     System.out.println("");
     System.out.println("Options: -p|--port=<n>                              - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
     System.out.println("         --tls-port=<n>                             - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
