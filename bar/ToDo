@@ -11,7 +11,6 @@ ToDo
 - Windows port
 - re-read configuration when modified
 - configure band-width on run-time
-- ACL, EAs
 - send job from server to other server
 - send-only ssh-login (possible?)
 - clear internal performance arrays before next job is started
@@ -87,7 +86,7 @@ ToDo
 - database lock timeout?
   http://beets.radbox.org/blog/sqlite-nightmare.html
 - higher thread priority for collector thread?
-- UUID for jobs, max. number of jobs to keep
+- max. number of jobs to keep
 - ReedSolomon codes
 - pre/post-process filter for single entries
 - read/write tar-format at stdin/stdout for pipeling
