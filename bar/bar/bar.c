@@ -4807,6 +4807,10 @@ bool configValueFormatScheduleWeekDays(void **formatUserData, void *userData, St
 
       String_delete(names);
     }
+    else
+    {
+      String_appendCString(line,"*");
+    }
 
     (*formatUserData) = NULL;
 
