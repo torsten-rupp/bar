@@ -1,28 +1,38 @@
-2014-03-08 0.18
+2014-03-15 0.18
   * added multi-core compression/encryption support!
   * dramatic speed-up when creating archives!
   * added automatic delete of duplicate index entries when
     server is started
   * store and restore extended file attributes (EAs)
-  * fixed create index: do not delete index which is currently
-    updated
-  * added support for crash dump tool Breakpad
-  * upgrade gpg-error 1.10, gcrypt 1.5.0, gnutls 3.1.18, libcdio 0.92
-  * start support cross-compilation Linux -> Windows
-  * replaced FTPLib by curl+c-areas
+  * improved FTP access: replaced FTPLib by curl+c-areas
   * added support for WebDAV protocol
+  * added support for crash dump tool Breakpad
   * integrated a scan-mode which will scan partially broken
     archives for still readable parts
-  * fix output in verbose/quiet mode
+  * server protocol changes: replaced list of values by value map
+    for easier extension of protocol. Note: you _must_ update
+    both server and clients with this change.
+  * added uuid to jobs
+  * added custom text to schedule entries
+  * added macros %uuid, %text to storage name template
+  * added options --[ftp|ssh|webdav]-max-connections: limit
+    number of concurrent network connections for server
+  * barcontrol: added time macros %U2, %U4, %W, %W2 and %W4,
+    added macros %T, %uuid, %text
+  * barcontrol: added file selector button to storage name
+    input
+  * support listing remote directory content
+  * start support cross-compilation Linux -> Windows
+  * upgrade gpg-error 1.10, gcrypt 1.5.0, gnutls 3.1.18, libcdio 0.92
+  * fixed create index: do not delete index which is currently
+    updated
+  * fixed output in verbose/quiet mode
   * fixed restore: list files when "only newest" is disabled
   * fixed duplicate archive entries when multiple include options
     are specified (thanks to Stefan A.)
   * fixed writing .bid file when no directory is given
   * barcontrol: fixed duplicate job
   * barcontrol: added insert/edit/delete keyboard shortcuts
-  * server protocol changes: replaced list of values by value map
-    for easier extension of protocol. Note: you _must_ update
-    both server and clients with this change.
   * barcontrol: passwords sent to the bar daemon are now RSA
     encrypted! This makes it much harder to steal plain text
     passwords even when no TLS encrypted network connection is
@@ -32,20 +42,13 @@
   * using gcc to compile is now mandatory (required because of
     improved error-handlingn with using closure like code)
   * improved defense against denial-of-service-attack: force
-    delay for clients with multiple authorazation failure
-  * added macros %uuid, %text to storage name template
+    delay for clients with multiple authorization failure
   * changed schedule entry in job configuration: use a section.
     Entries in the old format are still read, but not created
     anymore.
-  * added custom text to schedule entries
   * avoid console input in non-interactive mode
-  * added options --[ftp|ssh|webdav]-max-connections
-  * support listing remote directory content
-  * barcontrol: added time macros %U2, %U4, %W, %W2 and %W4,
-    added macros %T, %uuid, %text
-  * barcontrol: added file selector button to storage name
-    input
-  * barcontrol: list storage ignoring case
+  * fixed barcontrol: list storage ignoring case
+  * fixed barcontrol: delete storage files
 
 2013-05-05 0.17b
   * fixed parsing of storage specifier (ftp, scp/sftp,
