@@ -2482,7 +2482,7 @@ LOCAL void schedulerThreadCode(void)
             }
 
             // check if another thread is pending for job list
-            pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
+            pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
             // next time
             dateTime -= 60LL;
@@ -3382,10 +3382,6 @@ LOCAL void autoIndexUpdateThreadCode(void)
       error = Storage_parseName(&storageSpecifier,storageDirectoryName);
       if (error == ERROR_NONE)
       {
-if (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )
-{
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-}
         if (   (storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
             || (storageSpecifier.type == STORAGE_TYPE_FTP       )
             || (storageSpecifier.type == STORAGE_TYPE_SSH       )
@@ -6802,7 +6798,7 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, cons
 * Notes  : Arguments:
 *            jobId=<id>
 *            date=<year>|*-<month>|*-<day>|*
-*            weekDay=<week day>|*
+*            weekDays=<week day>,...|*
 *            time=<hour>|*:<minute>|*
 *            archiveType=normal|full|incremental|differential
 *            customText=<text>
@@ -6846,7 +6842,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
   weekDays = String_new();
   if (!StringMap_getString(argumentMap,"weekDays",weekDays,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected weekDay=<name>|*");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected weekDays=<name>|*");
     String_delete(weekDays);
     String_delete(date);
     String_delete(title);
