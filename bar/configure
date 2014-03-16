@@ -2536,6 +2536,9 @@ ENABLE_BREAKPAD="yes"
 ENABLE_GUI="yes"
 ENABLE_PACKAGE_COMPILE="yes"
 
+# error log
+tmpFile=`mktemp configure-XXXXXX`
+
 
 case "$host_os" in
   linux-*)
@@ -2543,7 +2546,12 @@ case "$host_os" in
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     SHELLEXT=""
-    CPU_CORES=`nproc`
+    nproc 1>/dev/null 2>&1
+    if test $? -eq 0; then
+      CPU_CORES=`nproc`
+    else
+      CPU_CORES=1
+    fi
     ;;
   windows*)
     PLATFORM=WINDOWS
@@ -3051,29 +3059,41 @@ if test -d epm -o -d "`readlink epm`"; then
     if test $result -eq 1; then
       (cd epm; ./configure \
         --prefix=$cwd/packages \
-      ) 1>/dev/null 2>$tmpFile
+      ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-        cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
         result=0
       fi
     fi
     if test $result -eq 1; then
-      (cd epm; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+      (cd epm; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-        cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
         result=0
       fi
     fi
     if test $result -eq 1; then
-      (cd epm; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
+      (cd epm; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-        cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
         result=0
       fi
     fi
@@ -5822,9 +5842,6 @@ fi
 esac
 
 
-# error log
-tmpFile=`mktemp configure-XXXXXX`
-
 # create packages directory
 cwd=`pwd`
 mkdir packages 2>/dev/null
@@ -5892,29 +5909,41 @@ if test -d zlib -o -d "`readlink zlib`"; then
       (cd zlib; ./configure \
         --prefix=$cwd/packages \
         --static \
-      ) 1>/dev/null 2>$tmpFile
+      ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-        cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
         result=0
       fi
     fi
     if test $result -eq 1; then
-      (cd zlib; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+      (cd zlib; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-        cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
         result=0
       fi
     fi
     if test $result -eq 1; then
-      (cd zlib; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
+      (cd zlib; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-        cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
         result=0
       fi
     fi
@@ -6134,20 +6163,28 @@ if test $ENABLE_BZIP2 = "yes"; then
 
       result=1
       if test $result -eq 1; then
-        (cd bzip2; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd bzip2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
       if test $result -eq 1; then
-        (cd bzip2; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
+        (cd bzip2; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
@@ -6390,29 +6427,41 @@ $as_echo "$as_me: WARNING: xz-5.0.4 not available - skipped libtool patch!" >&2;
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
-        ) 1>/dev/null 2>$tmpFile
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
       if test $result -eq 1; then
-        (cd xz; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd xz; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
       if test $result -eq 1; then
-        (cd xz; make install) 1>/dev/null 2>$tmpFile
+        (cd xz; make install) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
@@ -6651,29 +6700,41 @@ if test $ENABLE_GCRYPT = "yes"; then
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
-        ) 1>/dev/null 2>$tmpFile
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result1=0
         fi
       fi
       if test $result1 -eq 1; then
-        (cd libgpg-error; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd libgpg-error; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result1=0
         fi
       fi
       if test $result1 -eq 1; then
-        (cd libgpg-error; make install) 1>/dev/null 2>$tmpFile
+        (cd libgpg-error; make install) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result1=0
         fi
       fi
@@ -6714,29 +6775,41 @@ $as_echo "$as_me: WARNING: libgcrypt-1.5.0 not available - skipped libtool patch
           --disable-shared \
           --enable-static \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
-        ) 1>/dev/null 2>$tmpFile
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result2=0
         fi
       fi
       if test $result2 -eq 1; then
-        (cd libgcrypt; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd libgcrypt; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result2=0
         fi
       fi
       if test $result2 -eq 1; then
-        (cd libgcrypt; make install) 1>/dev/null 2>$tmpFile
+        (cd libgcrypt; make install) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result2=0
         fi
         case $host_os in
@@ -7160,7 +7233,7 @@ fi
 fi
 
 if test $ENABLE_TLS = "yes"; then
-  if test \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gmp -o -d "`readlink gmp`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \); then
+  if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
       if test -z "$HAVE_GCRYPT"; then
@@ -7177,29 +7250,41 @@ $as_echo "$as_me: WARNING: gcrypt is missing. Compiling or linking gnutls may fa
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
-        ) 1>/dev/null 2>$tmpFile
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result1=0
         fi
       fi
       if test $result1 -eq 1; then
-        (cd gmp; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd gmp; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result1=0
         fi
       fi
       if test $result1 -eq 1; then
-        (cd gmp; make install) 1>/dev/null 2>$tmpFile
+        (cd gmp; make install) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result1=0
         fi
       fi
@@ -7219,29 +7304,41 @@ $as_echo "done" >&6; }
           --with-lib-path=$cwd/packages/lib \
           --disable-shared \
           --enable-static \
-        ) 1>/dev/null 2>$tmpFile
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result2=0
         fi
       fi
       if test $result2 -eq 1; then
-        (cd nettle; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd nettle; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result2=0
         fi
       fi
       if test $result2 -eq 1; then
-        (cd nettle; make install) 1>/dev/null 2>$tmpFile
+        (cd nettle; make install) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result2=0
         fi
       fi
@@ -7265,29 +7362,41 @@ $as_echo "done" >&6; }
           --without-p11-kit \
           --without-tpm \
           --disable-doc \
-        ) 1>/dev/null 2>$tmpFile
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result3=0
         fi
       fi
       if test $result3 -eq 1; then
-        (cd gnutls; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd gnutls; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result3=0
         fi
       fi
       if test $result3 -eq 1; then
-        (cd gnutls; make install) 1>/dev/null 2>$tmpFile
+        (cd gnutls; make install) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result3=0
         fi
       fi
@@ -7705,20 +7814,28 @@ if test $ENABLE_FTP = "yes"; then
   $as_echo_n "Compile ftplib... " >&6
 
       if test $result -eq 1; then
-        (cd ftplib/linux; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd ftplib/linux; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
       if test $result -eq 1; then
-        (cd ftplib/linux; cp ftplib.h $cwd/packages/include && cp libftp.a $cwd/packages/lib) 1>/dev/null 2>$tmpFile
+        (cd ftplib/linux; cp ftplib.h $cwd/packages/include && cp libftp.a $cwd/packages/lib) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
@@ -7945,22 +8062,30 @@ if test $ENABLE_SSH = "yes"; then
               (cd openssl; ./Configure \
                 --prefix=$cwd/packages \
                 linux-x86_64 -Wa,--noexecstack \
-              ) 1>/dev/null 2>$tmpFile
+              ) 1>$tmpFile 2>&1
               if test $? -ne 0; then
                 { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-                cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
                 result=0
               fi
             else
               (cd openssl; ./Configure \
                 --prefix=$cwd/packages \
                 linux-generic32 -Wa,--noexecstack \
-              ) 1>/dev/null 2>$tmpFile
+              ) 1>$tmpFile 2>&1
               if test $? -ne 0; then
                 { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-                cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
                 result=0
               fi
             fi
@@ -7969,11 +8094,15 @@ $as_echo "fail (configure)" >&6; }
             (cd openssl; ./Configure \
               --prefix=$cwd/packages \
               mingw \
-            ) 1>/dev/null 2>$tmpFile
+            ) 1>$tmpFile 2>&1
             if test $? -ne 0; then
               { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-              cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
               result=0
             fi
             ;;
@@ -7984,20 +8113,28 @@ $as_echo "fail (configure)" >&6; }
       fi
       if test $result -eq 1; then
         # Note: OpenSSL does not support "make -j..."
-        (cd openssl; make clean; make) 1>/dev/null 2>$tmpFile
+        (cd openssl; make clean; make) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
       if test $result -eq 1; then
-        (cd openssl; make all install_sw) 1>/dev/null 2>$tmpFile
+        (cd openssl; make all install_sw) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
@@ -8052,29 +8189,41 @@ $as_echo "$as_me: WARNING: libssh2-1.4.2 not available - skipped libtool patch!"
           --with-libgcrypt-prefix=$cwd/packages \
           --disable-shared --enable-static \
           --enable-debug \
-        ) 1>/dev/null 2>$tmpFile
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
       if test $result -eq 1; then
-        (cd libssh2; make clean; make -C src) 1>/dev/null 2>$tmpFile
+        (cd libssh2; make clean; make -C src) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
       if test $result -eq 1; then
-        (cd libssh2; make install-exec install-data) 1>/dev/null 2>$tmpFile
+        (cd libssh2; make install-exec install-data) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
         case $host_os in
@@ -8534,29 +8683,41 @@ $as_echo "$as_me: WARNING: libssh2 is missing. Compiling or linking curl may fai
           --disable-shared \
           --enable-static \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-        ) 1>/dev/null 2>$tmpFile
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result1=0
         fi
       fi
       if test $result1 -eq 1; then
-        (cd c-ares; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd c-ares; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result1=0
         fi
       fi
       if test $result1 -eq 1; then
-        (cd c-ares; make install) 1>/dev/null 2>$tmpFile
+        (cd c-ares; make install) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result1=0
         fi
         case $host_os in
@@ -8608,34 +8769,46 @@ $as_echo "$as_me: WARNING: curl-7.28.1 not available - skipped libtool patch!" >
           --with-gnutls=$cwd/packages \
           --with-libssh2=$cwd/packages \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-        ) 1>/dev/null 2>$tmpFile
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result2=0
         fi
       fi
       if test $result2 -eq 1; then
-        (cd curl; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd curl; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result2=0
         fi
       fi
       if test $result2 -eq 1; then
-        (cd curl; make install) 1>/dev/null 2>$tmpFile
+        (cd curl; make install) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result2=0
         fi
         case $host_os in
           mingw*)
-            (cd packages/lib; ln -s libcurl.lib libcurl.a) 1>/dev/null 2>/dev/null
+            (cd packages/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
             ;;
           *)
             ;;
@@ -8675,29 +8848,41 @@ $as_echo "done" >&6; }
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
-        ) 1>/dev/null 2>$tmpFile
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result3=0
         fi
       fi
       if test $result3 -eq 1; then
-        (cd mxml; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd mxml; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result3=0
         fi
       fi
       if test $result3 -eq 1; then
-        (cd mxml; make install) 1>/dev/null 2>$tmpFile
+        (cd mxml; make install) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result3=0
         fi
         case $host_os in
@@ -9442,29 +9627,41 @@ if test $ENABLE_ISO9660 = "yes"; then
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
-        ) 1>/dev/null 2>$tmpFile
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result1=0
         fi
       fi
       if test $result1 -eq 1; then
-        (cd libiconv; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd libiconv; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result1=0
         fi
       fi
       if test $result1 -eq 1; then
-        (cd libiconv; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
+        (cd libiconv; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result1=0
         fi
       fi
@@ -9494,7 +9691,7 @@ $as_echo "done" >&6; }
             --enable-static=iso9660 \
             --disable-shared \
             --enable-static \
-          ) 1>/dev/null 2>$tmpFile
+          ) 1>$tmpFile 2>&1
         else
           (cd libcdio; ./configure \
             --host=$host_cpu-$host_os \
@@ -9502,30 +9699,42 @@ $as_echo "done" >&6; }
             --disable-cxx \
             --enable-static=iso9660 \
             --disable-shared \
-          ) 1>/dev/null 2>$tmpFile
+          ) 1>$tmpFile 2>&1
         fi
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result2=0
         fi
       fi
       if test $result2 -eq 1; then
-        (cd libcdio; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd libcdio; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result2=0
         fi
       fi
       if test $result2 -eq 1; then
-        (cd libcdio; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
+        (cd libcdio; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result2=0
         fi
       fi
@@ -9772,29 +9981,41 @@ $as_echo "$as_me: WARNING: pcre-8.32 not available - skipped libtool patch!" >&2
           --disable-shared \
           --enable-static \
           --enable-utf8
-        ) 1>/dev/null 2>$tmpFile
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
       if test $result -eq 1; then
-        (cd pcre; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd pcre; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
       if test $result -eq 1; then
-        (cd pcre; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
+        (cd pcre; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
         case $host_os in
@@ -10027,14 +10248,18 @@ case "$host_os" in
           result=1
           if test $result -eq 1; then
             if test "$ENABLE_DEBUG" = "yes"; then
-              (cd pthreads-w32; make clean; make CC="$CC" AS="$AS" AR="$AR" RANLIB="$RANLIB" RC="$RC" GC-static-debug) 1>/dev/null 2>$tmpFile
+              (cd pthreads-w32; make clean; make CC="$CC" AS="$AS" AR="$AR" RANLIB="$RANLIB" RC="$RC" GC-static-debug) 1>$tmpFile 2>&1
             else
-              (cd pthreads-w32; make clean; make CC="$CC" AS="$AS" AR="$AR" RANLIB="$RANLIB" RC="$RC" GC-static) 1>/dev/null 2>$tmpFile
+              (cd pthreads-w32; make clean; make CC="$CC" AS="$AS" AR="$AR" RANLIB="$RANLIB" RC="$RC" GC-static) 1>$tmpFile 2>&1
             fi
             if test $? -ne 0; then
               { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-              cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
               result=0
             fi
           fi
@@ -10077,34 +10302,46 @@ if test $ENABLE_BREAKPAD = "yes"; then
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd breakpad; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
             --prefix=$cwd/packages \
-          ) 1>/dev/null 2>$tmpFile
+          ) 1>$tmpFile 2>&1
         else
           (cd breakpad; ./configure \
             --prefix=$cwd/packages \
-          ) 1>/dev/null 2>$tmpFile
+          ) 1>$tmpFile 2>&1
         fi
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
       if test $result -eq 1; then
-        (cd breakpad; make clean; make -j$CPU_CORES) 1>/dev/null 2>$tmpFile
+        (cd breakpad; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
       if test $result -eq 1; then
-        (cd breakpad; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
+        (cd breakpad; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
-          cat $tmpFile
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
           result=0
         fi
       fi
@@ -10407,8 +10644,6 @@ done
 
   fi
 fi
-
-rm -f $tmpFile
 
 
 # set variables for tests
@@ -16900,4 +17135,7 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
+
+
+rm -f $tmpFile
 
