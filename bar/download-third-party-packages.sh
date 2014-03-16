@@ -24,6 +24,7 @@ TAR="tar"
 WGET="wget"
 WGET_OPTIONS="--timeout=30 --tries=3"
 UNZIP="unzip"
+XZ="xz"
 
 # --------------------------------- variables --------------------------------
 
@@ -305,6 +306,11 @@ if test $? -gt 10; then
   $ECHO >&2 "ERROR: command 'unzip' is not available"
   exit 1
 fi
+type $XZ 1>/dev/null 2>/dev/null && $XZ --version 1>/dev/null 2>/dev/null
+if test $? -gt 10; then
+  $ECHO >&2 "ERROR: command 'xz' is not available"
+  exit 1
+fi
 
 # run
 tmpDirectory="packages"
@@ -572,10 +578,6 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $gnutlsFlag -eq 1; then
-
-#28C67298
-#gpg --recv-keys 28C67298
-#gpg --list-keys 28C67298; echo $?
     # nettle 2.6
     (
      if test -n "$destination"; then
@@ -594,7 +596,6 @@ if test $cleanFlag -eq 0; then
       $LN -f -s $tmpDirectory/nettle-2.6 nettle
     fi
 
-#https://gmplib.org/download/gmp/gmp-5.1.3.tar.bz2.sig
     # gmp 5.1.3
     (
      if test -n "$destination"; then
@@ -625,7 +626,7 @@ if test $cleanFlag -eq 0; then
        $WGET $WGET_OPTIONS 'ftp://ftp.gnutls.org/gcrypt/gnutls/v3.1/gnutls-3.1.18.tar.xz'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xJf gnutls-3.1.18.tar.xz
+       $XZ -d -c gnutls-3.1.18.tar.xz | $TAR xf -
      fi
     )
     if test $noDecompressFlag -eq 0; then
