@@ -265,6 +265,9 @@
 /* SSH2 has libssh2_sftp_seek64() function */
 #undef HAVE_SSH2_SFTP_SEEK64
 
+/* ssl installed (local) */
+#undef HAVE_SSL
+
 /* stat() available */
 #undef HAVE_STAT
 
