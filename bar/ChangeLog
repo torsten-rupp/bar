@@ -23,7 +23,8 @@
     input
   * support listing remote directory content
   * start support cross-compilation Linux -> Windows
-  * upgrade gpg-error 1.10, gcrypt 1.5.0, gnutls 3.1.18, libcdio 0.92
+  * upgrade gpg-error 1.10, gcrypt 1.5.0, gnutls 3.1.18, libcdio 0.92,
+    pcre 8.34
   * fixed create index: do not delete index which is currently
     updated
   * fixed output in verbose/quiet mode
