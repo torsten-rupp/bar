@@ -7246,11 +7246,21 @@ $as_echo "$as_me: WARNING: gcrypt is missing. Compiling or linking gnutls may fa
 
       result1=1
       if test $result1 -eq 1; then
-        (cd gmp; ./configure \
-          --prefix=$cwd/packages \
-          --disable-shared \
-          --enable-static \
-        ) 1>$tmpFile 2>&1
+        if test -n "`uname -m|grep x86_64`"; then
+          (cd gmp; CFLAGS= ./configure \
+            --prefix=$cwd/packages \
+            --disable-shared \
+            --enable-static \
+            ABI=64 \
+          ) 1>$tmpFile 2>&1
+        else
+          (cd gmp; CFLAGS= ./configure \
+            --prefix=$cwd/packages \
+            --disable-shared \
+            --enable-static \
+            ABI=32 \
+          ) 1>$tmpFile 2>&1
+        fi
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -8677,7 +8687,7 @@ $as_echo "$as_me: WARNING: libssh2 is missing. Compiling or linking curl may fai
         esac
       fi
       if test $result1 -eq 1; then
-        (cd c-ares; ./configure \
+        (cd c-ares; CFLAGS= ./configure \
           --host=$host_cpu-$host_os \
           --prefix=$cwd/packages \
           --disable-shared \

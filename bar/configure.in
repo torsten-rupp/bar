@@ -1421,11 +1421,21 @@ if test $ENABLE_TLS = "yes"; then
       AC_MSG_COMPILE([gmp])
       result1=1
       if test $result1 -eq 1; then
-        (cd gmp; ./configure \
-          --prefix=$cwd/packages \
-          --disable-shared \
-          --enable-static \
-        ) 1>$tmpFile 2>&1
+        if test -n "`uname -m|grep x86_64`"; then
+          (cd gmp; CFLAGS= ./configure \
+            --prefix=$cwd/packages \
+            --disable-shared \
+            --enable-static \
+            ABI=64 \
+          ) 1>$tmpFile 2>&1
+        else
+          (cd gmp; CFLAGS= ./configure \
+            --prefix=$cwd/packages \
+            --disable-shared \
+            --enable-static \
+            ABI=32 \
+          ) 1>$tmpFile 2>&1
+        fi
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1828,7 +1838,7 @@ if test $ENABLE_CURL = "yes"; then
         esac
       fi
       if test $result1 -eq 1; then
-        (cd c-ares; ./configure \
+        (cd c-ares; CFLAGS= ./configure \
           --host=$host_cpu-$host_os \
           --prefix=$cwd/packages \
           --disable-shared \
