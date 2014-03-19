@@ -674,7 +674,7 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
-    # pcre 8.32
+    # pcre 8.34
     (
      if test -n "$destination"; then
        cd $destination
@@ -682,14 +682,14 @@ if test $cleanFlag -eq 0; then
        cd $tmpDirectory
      fi
 
-     if test ! -f pcre-8.32.tar.bz2; then
-       $WGET $WGET_OPTIONS 'ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.32.tar.bz2'
+     if test ! -f pcre-8.34.tar.bz2; then
+       $WGET $WGET_OPTIONS 'ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.34.tar.bz2'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xjf pcre-8.32.tar.bz2
+       $TAR xjf pcre-8.34.tar.bz2
      fi
     )
-    $LN -f -s $tmpDirectory/pcre-8.32 pcre
+    $LN -f -s $tmpDirectory/pcre-8.34 pcre
   fi
 
   if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
