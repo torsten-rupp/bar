@@ -13,12 +13,11 @@ BuildRoot:     %{_tmppath}/build-%{name}-%{version}
 BuildRequires: gcc gcc-c++ glibc-devel make
 BuildRequires: jre >= 1.6.0
 BuildRequires: java-devel >= 1.6.0
-#BuildRequires: gnutls
-#BuildRequires: openssl
-#BuildRequires: openssl-devel
 BuildRequires: tar
 BuildRequires: unzip
+BuildRequires: xz
 BuildRequires: patch
+BuildRequires: m4
 BuildRequires: e2fsprogs
 
 %description
@@ -85,9 +84,9 @@ mkdir packages
   ln -s packages/libssh2-1.4.2 libssh2
 )
 (
-  cp %{_sourcedir}/gnutls-2.10.2.tar.bz2 packages
-  (cd packages; tar xjf gnutls-2.10.2.tar.bz2)
-  ln -s packages/gnutls-2.10.2 gnutls
+  cp %{_sourcedir}/gnutls-3.1.18.tar.xz packages
+  (cd packages; xz -d -c gnutls-3.1.18.tar.xz | tar xf -)
+  ln -s packages/gnutls-3.1.18 gnutls
 )
 (
   cp %{_sourcedir}/libcdio-0.82.tar.gz packages
@@ -95,9 +94,9 @@ mkdir packages
   ln -s packages/libcdio-0.82 libcdio
 )
 (
-  cp %{_sourcedir}/pcre-8.32.tar.bz2 packages
-  (cd packages; tar xzf pcre-8.32.tar.bz2)
-  ln -s packages/pcre-8.32 pcre
+  cp %{_sourcedir}/pcre-8.34.tar.bz2 packages
+  (cd packages; tar xzf pcre-8.34.tar.bz2)
+  ln -s packages/pcre-8.34 pcre
 )
 %configure
 %{__make} OPTFLAGS="%{optflags}"

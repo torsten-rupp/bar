@@ -15,6 +15,7 @@ BuildRequires: jre >= 1.6.0
 BuildRequires: java-devel >= 1.6.0
 BuildRequires: tar
 BuildRequires: unzip
+BuildRequires: xz
 BuildRequires: patch
 BuildRequires: m4
 BuildRequires: e2fsprogs
@@ -65,6 +66,19 @@ mkdir packages
   ln -s packages/openssl-1.0.1c openssl
 )
 (
+  cp %{_sourcedir}/c-ares-1.10.0.tar.gz packages
+  (cd packages; tar xzf c-ares-1.10.0.tar.gz)
+  ln -s packages/c-ares-1.10.0 c-ares
+
+  cp %{_sourcedir}/curl-7.28.1.tar.bz2 packages
+  (cd packages; tar xjf curl-7.28.1.tar.bz2)
+  ln -s packages/curl-7.28.1 curl
+
+  cp %{_sourcedir}/mxml-2.7.tar.gz packages
+  (cd packages; tar xzf mxml-2.7.tar.gz)
+  ln -s packages/mxml-2.7 mxml
+)
+(
   cp %{_sourcedir}/libssh2-1.4.2.tar.gz packages
   (cd packages; tar xzf libssh2-1.4.2.tar.gz)
   ln -s packages/libssh2-1.4.2 libssh2
@@ -79,7 +93,7 @@ mkdir packages
   ln -s packages/gmp-5.1.3 gmp
 
   cp %{_sourcedir}/gnutls-3.1.18.tar.xz packages
-  (cd packages; tar xJf gnutls-3.1.18.tar.xz)
+  (cd packages; xz -d -c gnutls-3.1.18.tar.xz | tar xf -)
   ln -s packages/gnutls-3.1.18 gnutls
 )
 (
@@ -88,9 +102,9 @@ mkdir packages
   ln -s packages/libcdio-0.82 libcdio
 )
 (
-  cp %{_sourcedir}/pcre-8.32.tar.bz2 packages
-  (cd packages; tar xjf pcre-8.32.tar.bz2)
-  ln -s packages/pcre-8.32 pcre
+  cp %{_sourcedir}/pcre-8.34.tar.bz2 packages
+  (cd packages; tar xjf pcre-8.34.tar.bz2)
+  ln -s packages/pcre-8.34 pcre
 )
 %configure
 %{__make} OPTFLAGS="%{optflags}"
