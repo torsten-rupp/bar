@@ -1107,23 +1107,23 @@ LOCAL void output(FILE *file, const String string)
           // wipe-out current line
           for (z = 0; z < String_length(lastOutputLine); z++)
           {
-            fwrite("\b",1,1,file);
+            (void)fwrite("\b",1,1,file);
           }
           for (z = 0; z < String_length(lastOutputLine); z++)
           {
-            fwrite(" ",1,1,file);
+            (void)fwrite(" ",1,1,file);
           }
           for (z = 0; z < String_length(lastOutputLine); z++)
           {
-            fwrite("\b",1,1,file);
+            (void)fwrite("\b",1,1,file);
           }
 
           // restore line
-          fwrite(String_cString(outputLine),1,String_length(outputLine),file);
+          (void)fwrite(String_cString(outputLine),1,String_length(outputLine),file);
         }
 
         // output string
-        fwrite(String_cString(string),1,String_length(string),file);
+        (void)fwrite(String_cString(string),1,String_length(string),file);
 
         // store output string
         STRING_CHAR_ITERATE(string,z,ch)
@@ -1149,8 +1149,8 @@ LOCAL void output(FILE *file, const String string)
     {
       if (String_index(string,STRING_END) == '\n')
       {
-        if (outputLine != NULL) fwrite(String_cString(outputLine),1,String_length(outputLine),file);
-        fwrite(String_cString(string),1,String_length(string),file);
+        if (outputLine != NULL) (void)fwrite(String_cString(outputLine),1,String_length(outputLine),file);
+        (void)fwrite(String_cString(string),1,String_length(string),file);
         String_clear(outputLine);
       }
       else
@@ -1162,7 +1162,7 @@ LOCAL void output(FILE *file, const String string)
   else
   {
     // no thread local vairable -> output string
-    fwrite(String_cString(string),1,String_length(string),file);
+    (void)fwrite(String_cString(string),1,String_length(string),file);
   }
   fflush(file);
 }
