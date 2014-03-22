@@ -46,10 +46,10 @@ clean:
 help:
 	@$(ECHO) "Help:"
 	@$(ECHO) ""
-	@$(ECHO) "  changelog  - create debian.changelog "
-	@$(ECHO) "  commit     - commit changes to osc; MSG=<commit message>"
-	@$(ECHO) "  rebuild    - start rebuild"
-	@$(ECHO) "  download   - download built packages"
+	@$(ECHO) "  changelog             - create debian.changelog "
+	@$(ECHO) "  commit                - commit changes to osc; MSG=<commit message>"
+	@$(ECHO) "  rebuild               - start rebuild"
+	@$(ECHO) "  download VERSION=<n>  - download built packages"
 
 changelog:
 	./changelog.pl < ../ChangeLog > $(OSC_PATH)/debian.changelog
@@ -63,4 +63,4 @@ rebuild:
 	($(CD) $(OSC_PATH); $(OSC) rebuildpac home\:torsten20\:BAR/BAR)
 
 download:
-	./download-packages.sh
+	./download-packages.sh $(VERSION)
