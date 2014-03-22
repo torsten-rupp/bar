@@ -6735,7 +6735,7 @@ $as_echo "done" >&6; }
 
     if test $result -eq 1; then
       HAVE_LZO=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES lzo"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2"
 
 $as_echo "#define HAVE_LZO 1" >>confdefs.h
 
@@ -6797,7 +6797,7 @@ fi
 $as_echo "$ac_cv_search_libraries_lzo1x_1_compress" >&6; }
   ac_result=$ac_cv_search_libraries_lzo1x_1_compress
   if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZO=1;LIBRARIES="lzo $LIBRARIES";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZO=1;LIBRARIES="lzo2 $LIBRARIES";
 $as_echo "#define HAVE_LZO 1" >>confdefs.h
 
 fi
@@ -6861,7 +6861,7 @@ fi
 $as_echo "$ac_cv_search_static_lzo1x_1_compress" >&6; }
   ac_result=$ac_cv_search_static_lzo1x_1_compress
   if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzo";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2";
 $as_echo "#define HAVE_LZO 1" >>confdefs.h
 
 fi
@@ -6923,7 +6923,7 @@ fi
 $as_echo "$ac_cv_search_libraries_lzo1x_1_compress" >&6; }
   ac_result=$ac_cv_search_libraries_lzo1x_1_compress
   if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZO=1;LIBRARIES="lzo $LIBRARIES";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZO=1;LIBRARIES="lzo2 $LIBRARIES";
 $as_echo "#define HAVE_LZO 1" >>confdefs.h
 
 fi
@@ -16743,6 +16743,7 @@ host="$host"
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
                    HAVE_BZ2=$HAVE_BZ2
                    HAVE_LZMA=$HAVE_LZMA
+                   HAVE_LZO=$HAVE_LZO
                    HAVE_XDELTA=$HAVE_XDELTA
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP

@@ -1298,19 +1298,19 @@ if test $ENABLE_LZO = "yes"; then
 
     if test $result -eq 1; then
       HAVE_LZO=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES lzo"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2"
       AC_DEFINE(HAVE_LZO,1,[lzo installed (local)])
     fi
   else
     dnl search for installed lzo library
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;LIBRARIES="lzo $LIBRARIES";AC_DEFINE(HAVE_LZO,1,[lzo installed])])
+      AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;LIBRARIES="lzo2 $LIBRARIES";AC_DEFINE(HAVE_LZO,1,[lzo installed])])
     else
       if test -z "$HAVE_BZ2"; then
-        AC_SEARCH_STATIC_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzo";AC_DEFINE(HAVE_LZO,1,[static lzo installed])])
+        AC_SEARCH_STATIC_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2";AC_DEFINE(HAVE_LZO,1,[static lzo installed])])
       fi
       if test -z "$HAVE_BZ2"; then
-        AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;LIBRARIES="lzo $LIBRARIES";AC_DEFINE(HAVE_LZO,1,[lzo installed])])
+        AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;LIBRARIES="lzo2 $LIBRARIES";AC_DEFINE(HAVE_LZO,1,[lzo installed])])
       fi
     fi
   fi
@@ -2744,6 +2744,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
                    HAVE_BZ2=$HAVE_BZ2
                    HAVE_LZMA=$HAVE_LZMA
+                   HAVE_LZO=$HAVE_LZO
                    HAVE_XDELTA=$HAVE_XDELTA
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP
