@@ -130,9 +130,8 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
 
   assert(compressInfo != NULL);
 
-  error = ERROR_UNKNOWN;
-
   // compress if possible
+  error = ERROR_UNKNOWN;
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
@@ -270,9 +269,8 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
   assert(compressInfo != NULL);
 
-  error = ERROR_UNKNOWN;
-
   // decompress if possible
+  error = ERROR_UNKNOWN;
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
@@ -348,7 +346,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       #ifdef HAVE_BZ2
         error = CompressBZ2_decompressData(compressInfo);
       #else /* not HAVE_BZ2 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_BZ2 */
       break;
     case COMPRESS_ALGORITHM_LZMA_1:
@@ -364,7 +362,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       #ifdef HAVE_LZMA
         error = CompressLZMA_decompressData(compressInfo);
       #else /* not HAVE_LZMA */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZMA */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
@@ -380,7 +378,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       #ifdef HAVE_XDELTA3
         error = CompressXD3_decompressData(compressInfo);
       #else /* not HAVE_XDELTA3 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_XDELTA3 */
       break;
     default:
@@ -496,8 +494,6 @@ bool Compress_isValidAlgorithm(uint16 n)
     UNUSED_VARIABLE(sourceHandle);
   #endif
 
-  error = ERROR_UNKNOWN;
-
   // init variables
   compressInfo->compressMode         = compressMode;
   compressInfo->compressAlgorithm    = compressAlgorithm;
@@ -516,6 +512,7 @@ bool Compress_isValidAlgorithm(uint16 n)
     HALT_INSUFFICIENT_MEMORY();
   }
 
+  error = ERROR_UNKNOWN;
   switch (compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
@@ -565,7 +562,7 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_LZMA
         error = CompressLZMA_init(compressInfo,compressMode,compressAlgorithm);
       #else /* not HAVE_LZMA */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZMA */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
@@ -580,7 +577,7 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_XDELTA3
         error = CompressXD3_init(compressInfo,compressAlgorithm,sourceHandle);
       #else /* not HAVE_XDELTA3 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_XDELTA3 */
       break;
     default:
@@ -695,8 +692,6 @@ Errors Compress_reset(CompressInfo *compressInfo)
 
   assert(compressInfo != NULL);
 
-  error = ERROR_UNKNOWN;
-
   // reset variables, buffers
   compressInfo->compressState = COMPRESS_STATE_INIT;
   compressInfo->endOfDataFlag = FALSE;
@@ -704,6 +699,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
   RingBuffer_clear(&compressInfo->dataRingBuffer,NULL,NULL);
   RingBuffer_clear(&compressInfo->compressRingBuffer,NULL,NULL);
 
+  error = ERROR_UNKNOWN;
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
@@ -738,7 +734,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #ifdef HAVE_BZ2
         error = CompressBZ2_reset(compressInfo);
       #else /* not HAVE_BZ2 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_BZ2 */
       break;
     case COMPRESS_ALGORITHM_LZMA_1:
@@ -753,7 +749,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #ifdef HAVE_LZMA
         error = CompressLZMA_reset(compressInfo);
       #else /* not HAVE_LZMA */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZMA */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
@@ -768,7 +764,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #ifdef HAVE_XDELTA3
         error = CompressXD3_reset(compressInfo);
       #else /* not HAVE_XDELTA3 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_XDELTA3 */
       break;
     default:
