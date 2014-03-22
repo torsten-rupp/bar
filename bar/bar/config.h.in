@@ -181,6 +181,9 @@
 /* lzma installed */
 #undef HAVE_LZMA
 
+/* lzo installed */
+#undef HAVE_LZO
+
 /* major() available */
 #undef HAVE_MAJOR
 
