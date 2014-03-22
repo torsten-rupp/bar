@@ -1,4 +1,4 @@
-2014-03-15 0.18
+2014-03-21 0.18
   * added multi-core compression/encryption support!
   * dramatic speed-up when creating archives!
   * added automatic delete of duplicate index entries when
