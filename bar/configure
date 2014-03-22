@@ -677,6 +677,7 @@ HAVE_SSL
 HAVE_FTP
 HAVE_GCRYPT
 HAVE_XDELTA
+HAVE_LZO
 HAVE_LZMA
 HAVE_BZ2
 ENABLE_GUI
@@ -687,8 +688,9 @@ ENABLE_CURL
 ENABLE_FTP
 ENABLE_GCRYPT
 ENABLE_XDELTA3
+ENABLE_LZO
 ENABLE_LZMA
-ENABLE_BZIP2
+ENABLE_BZ2
 ENABLE_DEBUG
 SHELLEXT
 EXEEXT
@@ -754,7 +756,7 @@ with_launch4j_dir
 enable_debug
 enable_link_static
 enable_link_dynamic
-enable_bzip2
+enable_bz2
 enable_lzma
 enable_xdelta3
 enable_gcrypt
@@ -1394,7 +1396,7 @@ Optional Features:
                           --enable-link-dynamic)
   --enable-link-dynamic   enable dynamic linkage (same as
                           --disable-link-static)
-  --disable-bzip2         disable bzip2 support
+  --disable-bz2           disable bzip2 support
   --disable-lzma          disable lzma support
   --disable-xdelta3       disable xdelta3 support
   --disable-gcrypt        disable gcrypt support
@@ -2521,8 +2523,9 @@ STATIC_LIBRARIES=""
 
 ENABLE_DEBUG="no"
 ENABLE_LINK_DYNAMIC="no"
-ENABLE_BZIP2="yes"
+ENABLE_BZ2="yes"
 ENABLE_LZMA="yes"
+ENABLE_LZO="yes"
 ENABLE_XDELTA3="yes"
 ENABLE_GCRYPT="yes"
 ENABLE_FTP="yes"
@@ -2640,9 +2643,9 @@ if test "${enable_link_dynamic+set}" = set; then :
 
 fi
 
-# Check whether --enable-bzip2 was given.
-if test "${enable_bzip2+set}" = set; then :
-  enableval=$enable_bzip2; ENABLE_BZIP2=$enableval
+# Check whether --enable-bz2 was given.
+if test "${enable_bz2+set}" = set; then :
+  enableval=$enable_bz2; ENABLE_BZ2=$enableval
 
 fi
 
@@ -6154,7 +6157,7 @@ fi
   fi
 fi
 
-if test $ENABLE_BZIP2 = "yes"; then
+if test $ENABLE_BZ2 = "yes"; then
   if test -d bzip2 -o -d "`readlink bzip2`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
@@ -6665,6 +6668,263 @@ $as_echo "$ac_cv_search_libraries_lzma_easy_encoder" >&6; }
   if test "$ac_result" != no; then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZMA=1;LIBRARIES="lzma $LIBRARIES";
 $as_echo "#define HAVE_LZMA 1" >>confdefs.h
+
+fi
+
+      fi
+    fi
+  fi
+fi
+
+if test $ENABLE_LZO = "yes"; then
+  if test -d lzo -o -d "`readlink lzo`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+
+  $as_echo_n "Compile lzo... " >&6
+
+      result=1
+      if test $result -eq 1; then
+        (cd lzo; ./configure \
+          --prefix=$cwd/packages \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd lzo; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd lzo; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_LZO=1
+      STATIC_LIBRARIES="$STATIC_LIBRARIES lzo"
+
+$as_echo "#define HAVE_LZO 1" >>confdefs.h
+
+    fi
+  else
+        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing lzo1x_1_compress" >&5
+$as_echo_n "checking for library containing lzo1x_1_compress... " >&6; }
+if ${ac_cv_search_libraries_lzo1x_1_compress+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in lzo ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void lzo1x_1_compress();"; fi`
+                                         return (int)lzo1x_1_compress;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_lzo1x_1_compress=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_lzo1x_1_compress+:} false; then :
+
+else
+  ac_cv_search_libraries_lzo1x_1_compress=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_lzo1x_1_compress" >&5
+$as_echo "$ac_cv_search_libraries_lzo1x_1_compress" >&6; }
+  ac_result=$ac_cv_search_libraries_lzo1x_1_compress
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZO=1;LIBRARIES="lzo $LIBRARIES";
+$as_echo "#define HAVE_LZO 1" >>confdefs.h
+
+fi
+
+    else
+      if test -z "$HAVE_BZ2"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing lzo1x_1_compress" >&5
+$as_echo_n "checking for static library containing lzo1x_1_compress... " >&6; }
+if ${ac_cv_search_static_lzo1x_1_compress+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in lzo ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void lzo1x_1_compress();"; fi`
+                                         return (int)lzo1x_1_compress;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_lzo1x_1_compress=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_lzo1x_1_compress+:} false; then :
+
+else
+  ac_cv_search_static_lzo1x_1_compress=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_lzo1x_1_compress" >&5
+$as_echo "$ac_cv_search_static_lzo1x_1_compress" >&6; }
+  ac_result=$ac_cv_search_static_lzo1x_1_compress
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzo";
+$as_echo "#define HAVE_LZO 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_BZ2"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing lzo1x_1_compress" >&5
+$as_echo_n "checking for library containing lzo1x_1_compress... " >&6; }
+if ${ac_cv_search_libraries_lzo1x_1_compress+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in lzo ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void lzo1x_1_compress();"; fi`
+                                         return (int)lzo1x_1_compress;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_lzo1x_1_compress=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_lzo1x_1_compress+:} false; then :
+
+else
+  ac_cv_search_libraries_lzo1x_1_compress=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_lzo1x_1_compress" >&5
+$as_echo "$ac_cv_search_libraries_lzo1x_1_compress" >&6; }
+  ac_result=$ac_cv_search_libraries_lzo1x_1_compress
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZO=1;LIBRARIES="lzo $LIBRARIES";
+$as_echo "#define HAVE_LZO 1" >>confdefs.h
 
 fi
 
@@ -17082,6 +17342,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
                     echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo yes; else echo no; fi`";
                     echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo yes; else echo no; fi`";
+                    echo "  lzo compression   : `if test "$HAVE_LZO"; then echo yes; else echo no; fi`";
                     echo "  xdelta compression: `if test "$HAVE_XDELTA"; then echo yes; else echo no; fi`";
                     echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo yes; else echo no; fi`";
                     echo "  FTP support       : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";

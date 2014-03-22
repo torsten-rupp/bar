@@ -37,6 +37,7 @@ allFlag=1
 zlibFlag=0
 bzip2Flag=0
 lzmaFlag=0
+lzoFlag=0
 xdeltaFlag=0
 gcryptFlag=0
 ftplibFlag=0
@@ -100,6 +101,10 @@ while test $# != 0; do
         lzma)
           allFlag=0
           lzmaFlag=1
+          ;;
+        lzo)
+          allFlag=0
+          lzoFlag=1
           ;;
         xdelta)
           allFlag=0
@@ -188,6 +193,10 @@ while test $# != 0; do
       allFlag=0
       lzmaFlag=1
       ;;
+    lzo)
+      allFlag=0
+      lzoFlag=1
+      ;;
     xdelta)
       allFlag=0
       xdeltaFlag=1
@@ -266,6 +275,7 @@ if test $helpFlag -eq 1; then
   $ECHO " zlib"
   $ECHO " bzip2"
   $ECHO " lzma"
+  $ECHO " lzo"
   $ECHO " xdelta"
   $ECHO " gcrypt"
   $ECHO " curl"
@@ -380,6 +390,26 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       $LN -f -s `find $tmpDirectory -type d -name "xz-*"` xz
+    fi
+  fi
+
+  if test $allFlag -eq 1 -o $lzoFlag -eq 1; then
+    # lzo 2.06
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+     if test ! -f lzo-2.06.tar.gz; then
+       $WGET $WGET_OPTIONS 'http://www.oberhumer.com/opensource/lzo/download/lzo-2.06.tar.gz'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf lzo-2.06.tar.gz
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      $LN -f -s $tmpDirectory/lzo-2.06 lzo
     fi
   fi
 
@@ -803,6 +833,13 @@ else
     $RMF `find $tmpDirectory -type f -name "xz-*.tar.gz" 2>/dev/null`
     $RMRF `find $tmpDirectory -type d -name "xz-*" 2>/dev/null`
     $RMF xz
+  fi
+
+  if test $allFlag -eq 1 -o $lzoFlag -eq 1; then
+    # lzo
+    $RMF $tmpDirectory/lzo-*.tar.gz
+    $RMRF $tmpDirectory/lzo-*
+    $RMF lzo
   fi
 
   if test $allFlag -eq 1 -o $xdeltaFlag -eq 1; then
