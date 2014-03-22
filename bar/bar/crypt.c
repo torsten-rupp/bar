@@ -19,7 +19,9 @@
   #include <arpa/inet.h>
 #endif /* HAVE_ARPA_INET_H */
 #ifdef HAVE_GCRYPT
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   #include <gcrypt.h>
+  #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #endif /* HAVE_GCRYPT */
 #include <zlib.h>
 #include <errno.h>

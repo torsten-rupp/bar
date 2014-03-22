@@ -17,7 +17,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #ifdef HAVE_GCRYPT
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   #include <gcrypt.h>
+  #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #endif /* HAVE_GCRYPT */
 #include <assert.h>
 
