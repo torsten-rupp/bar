@@ -15,7 +15,9 @@
 #include <stdio.h>
 #include <time.h>
 #ifdef HAVE_GCRYPT
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   #include <gcrypt.h>
+  #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #endif /* HAVE_GCRYPT */
 #ifdef HAVE_TERMIOS_H
   #include <termios.h>
