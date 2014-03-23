@@ -388,10 +388,13 @@ help:
 .PHONY: depend
 depend: Makefile.depend
 
-Makefile.depend: $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(INTERMEDIATE)
+Makefile.depend: $(BAR_SOURCES) $(EXTERN_SOURCES) $(INTERMEDIATE)
 	$(ECHO) > Makefile.depend
-	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES); do \
-          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM >> Makefile.depend $(SOURCE_DIR)/$$z; \
+	for z in $(BAR_SOURCES) $(EXTERN_SOURCES); do \
+          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z | \
+            $(SED) 's/\(.*\.o:\)/release\/\1/g' >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z | \
+            $(SED) 's/\(.*\.o:\)/debug\/\1/g' >> Makefile.depend; \
         done;
 
 # ----------------------------------------------------------------------------
@@ -474,9 +477,15 @@ index_definition.h: $(SOURCE_DIR)/index_definition.sql
 
 # create destroyer (for testing only!)
 destroyer@EXEEXT@: $(DESTROYER_OBJECTS) 
+	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 
 # show chunks program
 showchunks@EXEEXT@: showchunks.o
+	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 
 # ----------------------------------------------------------------------------
 
