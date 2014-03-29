@@ -128,6 +128,13 @@ ifeq ($(COMPRESS_NAMES),)
   else
     COMPRESS_NAMES += $(COMPRESS_NAMES_LZMA)
   endif
+  ifeq ($(COMPRESS_NAMES_LZO),)
+    ifeq (@HAVE_LZO@,1)
+      COMPRESS_NAMES += lzo1 lzo2 lzo3 lzo4 lzo5
+    endif
+  else
+    COMPRESS_NAMES += $(COMPRESS_NAMES_LZO) 
+  endif
 endif
 
 # supported crypt algorithms
