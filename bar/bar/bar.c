@@ -328,6 +328,14 @@ LOCAL const struct
     {"lzma8",COMPRESS_ALGORITHM_LZMA_8},
     {"lzma9",COMPRESS_ALGORITHM_LZMA_9},
   #endif /* HAVE_LZMA */
+
+  #ifdef HAVE_LZO
+    {"lzo1",COMPRESS_ALGORITHM_LZO_1},
+    {"lzo2",COMPRESS_ALGORITHM_LZO_2},
+    {"lzo3",COMPRESS_ALGORITHM_LZO_3},
+    {"lzo4",COMPRESS_ALGORITHM_LZO_4},
+    {"lzo5",COMPRESS_ALGORITHM_LZO_5},
+  #endif /* HAVE_LZO */
 };
 
 #if 0
@@ -517,6 +525,10 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
                                                                                                                                                                            #ifdef HAVE_LZMA
                                                                                                                                                                            "\n"
                                                                                                                                                                            "  lzma1..lzma9: LZMA compression level 1..9"
+                                                                                                                                                                           #endif
+                                                                                                                                                                           #ifdef HAVE_LZO
+                                                                                                                                                                           "\n"
+                                                                                                                                                                           "  lzo1..lzo5  : LZO compression level 1..5"
                                                                                                                                                                            #endif
                                                                                                                                                                            #ifdef HAVE_XDELTA
                                                                                                                                                                            "\n"
