@@ -1,3 +1,6 @@
+2014-??-?? 0.19
+  * added LZO compression
+
 2014-03-21 0.18
   * added multi-core compression/encryption support!
   * dramatic speed-up when creating archives!
