@@ -1626,16 +1626,15 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   }
   else
   {
-    // check for end-of-compressed byte-data
-    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.byteCompressInfo,
-                                                  COMPRESS_BLOCK_TYPE_ANY,
-                                                  &blockCount
-                                                 );
+    // check for end-of-decompressed byte-data
+    error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->file.byteCompressInfo,
+                                                   &bytesRead
+                                                  );
     if (error != ERROR_NONE)
     {
       return error;
     }
-    if (blockCount <= 0)
+    if (bytesRead <= 0)
     {
       return ERROR_COMPRESS_EOF;
     }
