@@ -259,7 +259,7 @@ Errors Command_test(const StringList                *storageNameList,
               if (error != ERROR_NONE)
               {
                 if (failError == ERROR_NONE) failError = error;
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 continue;
               }
@@ -291,7 +291,7 @@ Errors Command_test(const StringList                *storageNameList,
                 printInfo(1,"FAIL!\n");
                 printError("unexpected data at end of file entry '%S'!\n",fileName);
                 if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 break;
               }
@@ -417,7 +417,7 @@ Errors Command_test(const StringList                *storageNameList,
               if (error != ERROR_NONE)
               {
                 if (failError == ERROR_NONE) failError = error;
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deviceName);
                 continue;
               }
@@ -448,7 +448,7 @@ Errors Command_test(const StringList                *storageNameList,
                 printInfo(1,"FAIL!\n");
                 printError("unexpected data at end of image entry '%S'!\n",deviceName);
                 if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deviceName);
                 break;
               }
@@ -514,7 +514,7 @@ Errors Command_test(const StringList                *storageNameList,
               {
                 printInfo(1,"FAIL!\n");
                 printError("unexpected data at end of directory entry '%S'!\n",directoryName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(directoryName);
                 if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
                 break;
@@ -587,7 +587,7 @@ Errors Command_test(const StringList                *storageNameList,
               {
                 printInfo(1,"FAIL!\n");
                 printError("unexpected data at end of link entry '%S'!\n",linkName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
                 if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
@@ -771,6 +771,7 @@ Errors Command_test(const StringList                *storageNameList,
             }
             if (failError != ERROR_NONE)
             {
+              (void)Archive_closeEntry(&archiveEntryInfo);
               StringList_done(&fileNameList);
               break;
             }
@@ -828,7 +829,7 @@ Errors Command_test(const StringList                *storageNameList,
               {
                 printInfo(1,"FAIL!\n");
                 printError("unexpected data at end of special entry '%S'!\n",fileName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
                 break;
