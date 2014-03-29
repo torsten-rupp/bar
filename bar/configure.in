@@ -556,6 +556,7 @@ AC_SUBST(ENABLE_DEBUG)                      dnl "yes" for debug version, "no" ot
 AC_SUBST(ENABLE_BZ2)                        dnl "yes" for bzip2 support, "no" otherwise
 AC_SUBST(ENABLE_LZMA)                       dnl "yes" for lzma support, "no" otherwise
 AC_SUBST(ENABLE_LZO)                        dnl "yes" for lzo support, "no" otherwise
+AC_SUBST(ENABLE_LZ4)                        dnl "yes" for lz4 support, "no" otherwise
 AC_SUBST(ENABLE_XDELTA3)                    dnl "yes" for xdelta3 support, "no" otherwise
 AC_SUBST(ENABLE_GCRYPT)                     dnl "yes" for gcrypt support, "no" otherwise
 AC_SUBST(ENABLE_FTP)                        dnl "yes" for ftp support, "no" otherwise
@@ -568,6 +569,7 @@ AC_SUBST(ENABLE_GUI)                        dnl "yes" for GUI support, "no" othe
 AC_SUBST(HAVE_BZ2)                          dnl "1" for bzip2 support, "" otherwise
 AC_SUBST(HAVE_LZMA)                         dnl "1" for lzma support, "" otherwise
 AC_SUBST(HAVE_LZO)                          dnl "1" for lzo support, "" otherwise
+AC_SUBST(HAVE_LZ4)                          dnl "1" for lz4 support, "" otherwise
 AC_SUBST(HAVE_XDELTA)                       dnl "1" for xdelta support, "" otherwise
 AC_SUBST(HAVE_GCRYPT)                       dnl "1" for gcrypt support, "" otherwise
 AC_SUBST(HAVE_FTP)                          dnl "1" for ftp support, "" otherwise
@@ -666,6 +668,7 @@ ENABLE_LINK_DYNAMIC="no"
 ENABLE_BZ2="yes"
 ENABLE_LZMA="yes"
 ENABLE_LZO="yes"
+ENABLE_LZ4="yes"
 ENABLE_XDELTA3="yes"
 ENABLE_GCRYPT="yes"
 ENABLE_FTP="yes"
@@ -1311,6 +1314,56 @@ if test $ENABLE_LZO = "yes"; then
       fi
       if test -z "$HAVE_BZ2"; then
         AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;LIBRARIES="lzo2 $LIBRARIES";AC_DEFINE(HAVE_LZO,1,[lzo installed])])
+      fi
+    fi
+  fi
+fi
+
+if test $ENABLE_LZ4 = "yes"; then
+  if test -d lz4 -o -d "`readlink lz4`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile lz4 library
+
+      AC_MSG_COMPILE([lz4])
+      result=1
+      if test $result -eq 1; then
+        (cd lz4; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd lz4; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_LZ4=1
+      STATIC_LIBRARIES="$STATIC_LIBRARIES lz4"
+      AC_DEFINE(HAVE_LZ4,1,[lz4 installed (local)])
+    fi
+  else
+    dnl search for installed lz4 library
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(LZ4_compress,lz4,[HAVE_LZ4=1;LIBRARIES="lz4 $LIBRARIES";AC_DEFINE(HAVE_LZ4,1,[lz4 installed])])
+    else
+      if test -z "$HAVE_BZ2"; then
+        AC_SEARCH_STATIC_LIBRARIES(LZ4_compress,lz4,[HAVE_LZ4=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lz4";AC_DEFINE(HAVE_LZ4,1,[static lz4 installed])])
+      fi
+      if test -z "$HAVE_BZ2"; then
+        AC_SEARCH_LIBRARIES(LZ4_compress,lz4,[HAVE_LZ4=1;LIBRARIES="lz4 $LIBRARIES";AC_DEFINE(HAVE_LZ4,1,[lz4 installed])])
       fi
     fi
   fi
@@ -2714,6 +2767,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo yes; else echo no; fi`";
                     echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo yes; else echo no; fi`";
                     echo "  lzo compression   : `if test "$HAVE_LZO"; then echo yes; else echo no; fi`";
+                    echo "  lz4 compression   : `if test "$HAVE_LZ4"; then echo yes; else echo no; fi`";
                     echo "  xdelta compression: `if test "$HAVE_XDELTA"; then echo yes; else echo no; fi`";
                     echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo yes; else echo no; fi`";
                     echo "  FTP support       : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
@@ -2745,6 +2799,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_BZ2=$HAVE_BZ2
                    HAVE_LZMA=$HAVE_LZMA
                    HAVE_LZO=$HAVE_LZO
+                   HAVE_LZ4=$HAVE_LZ4
                    HAVE_XDELTA=$HAVE_XDELTA
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP

@@ -38,6 +38,7 @@ zlibFlag=0
 bzip2Flag=0
 lzmaFlag=0
 lzoFlag=0
+lz4Flag=0
 xdeltaFlag=0
 gcryptFlag=0
 ftplibFlag=0
@@ -105,6 +106,10 @@ while test $# != 0; do
         lzo)
           allFlag=0
           lzoFlag=1
+          ;;
+        lz4)
+          allFlag=0
+          lz4Flag=1
           ;;
         xdelta)
           allFlag=0
@@ -197,6 +202,10 @@ while test $# != 0; do
       allFlag=0
       lzoFlag=1
       ;;
+    lz4)
+      allFlag=0
+      lz4Flag=1
+      ;;
     xdelta)
       allFlag=0
       xdeltaFlag=1
@@ -276,6 +285,7 @@ if test $helpFlag -eq 1; then
   $ECHO " bzip2"
   $ECHO " lzma"
   $ECHO " lzo"
+  $ECHO " lz4"
   $ECHO " xdelta"
   $ECHO " gcrypt"
   $ECHO " curl"
@@ -410,6 +420,29 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       $LN -f -s $tmpDirectory/lzo-2.06 lzo
+    fi
+  fi
+
+  if test $allFlag -eq 1 -o $lz4Flag -eq 1; then
+    # lz4
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+     fileName=`ls lz4-*.tar.gz 2>/dev/null`
+     if test ! -f "$fileName"; then
+       url=`$WGET $WGET_OPTIONS --quiet -O - 'http://code.google.com/p/lz4'|grep -E -e 'lz4-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/lz4-.*\.tar\.gz\)".*|\1|g'`
+       fileName=`echo $URL|sed 's|.*/\(lz4-.*\.tar\.gz\).*|\1|g'`
+       $WGET $WGET_OPTIONS "$url"
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf $fileName
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      $LN -f -s `find $tmpDirectory -type d -name "lz4-*"` lz4
     fi
   fi
 
