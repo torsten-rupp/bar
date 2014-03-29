@@ -178,6 +178,9 @@
 /* lstat64() available */
 #undef HAVE_LSTAT64
 
+/* lz4 installed */
+#undef HAVE_LZ4
+
 /* lzma installed */
 #undef HAVE_LZMA
 
