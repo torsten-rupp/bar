@@ -231,10 +231,10 @@ LOCAL Errors CompressZIP_decompressData(CompressInfo *compressInfo)
 
 /*---------------------------------------------------------------------*/
 
-static Errors CompressZIP_init(CompressInfo       *compressInfo,
-                        CompressModes      compressMode,
-                        CompressAlgorithms compressAlgorithm
-                       )
+LOCAL Errors CompressZIP_init(CompressInfo       *compressInfo,
+                              CompressModes      compressMode,
+                              CompressAlgorithms compressAlgorithm
+                             )
 {
   int compressionLevel;
   int zlibResult;
@@ -293,7 +293,7 @@ static Errors CompressZIP_init(CompressInfo       *compressInfo,
   return ERROR_NONE;
 }
 
-static void CompressZIP_done(CompressInfo *compressInfo)
+LOCAL void CompressZIP_done(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
@@ -313,7 +313,7 @@ static void CompressZIP_done(CompressInfo *compressInfo)
   }
 }
 
-static Errors CompressZIP_reset(CompressInfo *compressInfo)
+LOCAL Errors CompressZIP_reset(CompressInfo *compressInfo)
 {
   int zlibResult;
 
@@ -346,14 +346,14 @@ static Errors CompressZIP_reset(CompressInfo *compressInfo)
   return ERROR_NONE;
 }
 
-static uint64 CompressZIP_getInputLength(CompressInfo *compressInfo)
+LOCAL uint64 CompressZIP_getInputLength(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
   return (uint64)compressInfo->zlib.stream.total_in;
 }
 
-static uint64 CompressZIP_getOutputLength(CompressInfo *compressInfo)
+LOCAL uint64 CompressZIP_getOutputLength(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 

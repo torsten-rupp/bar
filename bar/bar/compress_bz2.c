@@ -226,10 +226,10 @@ LOCAL Errors CompressBZ2_decompressData(CompressInfo *compressInfo)
 
 /*---------------------------------------------------------------------*/
 
-static Errors CompressBZ2_init(CompressInfo       *compressInfo,
-                        CompressModes      compressMode,
-                        CompressAlgorithms compressAlgorithm
-                       )
+LOCAL Errors CompressBZ2_init(CompressInfo       *compressInfo,
+                              CompressModes      compressMode,
+                              CompressAlgorithms compressAlgorithm
+                             )
 {
   int bz2Result;
 
@@ -286,7 +286,7 @@ static Errors CompressBZ2_init(CompressInfo       *compressInfo,
   return ERROR_NONE;
 }
 
-static void CompressBZ2_done(CompressInfo *compressInfo)
+LOCAL void CompressBZ2_done(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
@@ -306,7 +306,7 @@ static void CompressBZ2_done(CompressInfo *compressInfo)
   }
 }
 
-static Errors CompressBZ2_reset(CompressInfo *compressInfo)
+LOCAL Errors CompressBZ2_reset(CompressInfo *compressInfo)
 {
   int bzlibResult;
 
@@ -341,14 +341,14 @@ static Errors CompressBZ2_reset(CompressInfo *compressInfo)
   return ERROR_NONE;
 }
 
-static uint64 CompressBZ2_getInputLength(CompressInfo *compressInfo)
+LOCAL uint64 CompressBZ2_getInputLength(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
   return ((uint64)compressInfo->bzlib.stream.total_in_hi32 << 32) | ((uint64)compressInfo->bzlib.stream.total_in_lo32 << 0);
 }
 
-static uint64 CompressBZ2_getOutputLength(CompressInfo *compressInfo)
+LOCAL uint64 CompressBZ2_getOutputLength(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 

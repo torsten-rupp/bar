@@ -259,10 +259,10 @@ LOCAL Errors CompressLZMA_decompressData(CompressInfo *compressInfo)
 
 /*---------------------------------------------------------------------*/
 
-static Errors CompressLZMA_init(CompressInfo       *compressInfo,
-                        CompressModes      compressMode,
-                        CompressAlgorithms compressAlgorithm
-                       )
+LOCAL Errors CompressLZMA_init(CompressInfo       *compressInfo,
+                               CompressModes      compressMode,
+                               CompressAlgorithms compressAlgorithm
+                              )
 {
   lzma_stream streamInit = LZMA_STREAM_INIT;
   lzma_ret    lzmaResult;
@@ -319,14 +319,14 @@ static Errors CompressLZMA_init(CompressInfo       *compressInfo,
   return ERROR_NONE;
 }
 
-static void CompressLZMA_done(CompressInfo *compressInfo)
+LOCAL void CompressLZMA_done(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
   lzma_end(&compressInfo->lzmalib.stream);
 }
 
-static Errors CompressLZMA_reset(CompressInfo *compressInfo)
+LOCAL Errors CompressLZMA_reset(CompressInfo *compressInfo)
 {
   lzma_stream streamInit = LZMA_STREAM_INIT;
   int         lzmalibResult;
@@ -364,14 +364,14 @@ static Errors CompressLZMA_reset(CompressInfo *compressInfo)
   return ERROR_NONE;
 }
 
-static uint64 CompressLZMA_getInputLength(CompressInfo *compressInfo)
+LOCAL uint64 CompressLZMA_getInputLength(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
   return (uint64)compressInfo->lzmalib.stream.total_in;
 }
 
-static uint64 CompressLZMA_getOutputLength(CompressInfo *compressInfo)
+LOCAL uint64 CompressLZMA_getOutputLength(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 

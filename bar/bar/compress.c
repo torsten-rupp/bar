@@ -39,48 +39,54 @@
 
 LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } COMPRESS_ALGORITHMS[] =
 {
-  { "none",    COMPRESS_ALGORITHM_NONE     },
+  { "none",     COMPRESS_ALGORITHM_NONE      },
 
-  { "zip0",    COMPRESS_ALGORITHM_ZIP_0    },
-  { "zip1",    COMPRESS_ALGORITHM_ZIP_1    },
-  { "zip2",    COMPRESS_ALGORITHM_ZIP_2    },
-  { "zip3",    COMPRESS_ALGORITHM_ZIP_3    },
-  { "zip4",    COMPRESS_ALGORITHM_ZIP_4    },
-  { "zip5",    COMPRESS_ALGORITHM_ZIP_5    },
-  { "zip6",    COMPRESS_ALGORITHM_ZIP_6    },
-  { "zip7",    COMPRESS_ALGORITHM_ZIP_7    },
-  { "zip8",    COMPRESS_ALGORITHM_ZIP_8    },
-  { "zip9",    COMPRESS_ALGORITHM_ZIP_9    },
+  { "zip0",     COMPRESS_ALGORITHM_ZIP_0     },
+  { "zip1",     COMPRESS_ALGORITHM_ZIP_1     },
+  { "zip2",     COMPRESS_ALGORITHM_ZIP_2     },
+  { "zip3",     COMPRESS_ALGORITHM_ZIP_3     },
+  { "zip4",     COMPRESS_ALGORITHM_ZIP_4     },
+  { "zip5",     COMPRESS_ALGORITHM_ZIP_5     },
+  { "zip6",     COMPRESS_ALGORITHM_ZIP_6     },
+  { "zip7",     COMPRESS_ALGORITHM_ZIP_7     },
+  { "zip8",     COMPRESS_ALGORITHM_ZIP_8     },
+  { "zip9",     COMPRESS_ALGORITHM_ZIP_9     },
 
-  { "bzip1",   COMPRESS_ALGORITHM_BZIP2_1  },
-  { "bzip2",   COMPRESS_ALGORITHM_BZIP2_2  },
-  { "bzip3",   COMPRESS_ALGORITHM_BZIP2_3  },
-  { "bzip4",   COMPRESS_ALGORITHM_BZIP2_4  },
-  { "bzip5",   COMPRESS_ALGORITHM_BZIP2_5  },
-  { "bzip6",   COMPRESS_ALGORITHM_BZIP2_6  },
-  { "bzip7",   COMPRESS_ALGORITHM_BZIP2_7  },
-  { "bzip8",   COMPRESS_ALGORITHM_BZIP2_8  },
-  { "bzip9",   COMPRESS_ALGORITHM_BZIP2_9  },
+  { "bzip1",    COMPRESS_ALGORITHM_BZIP2_1   },
+  { "bzip2",    COMPRESS_ALGORITHM_BZIP2_2   },
+  { "bzip3",    COMPRESS_ALGORITHM_BZIP2_3   },
+  { "bzip4",    COMPRESS_ALGORITHM_BZIP2_4   },
+  { "bzip5",    COMPRESS_ALGORITHM_BZIP2_5   },
+  { "bzip6",    COMPRESS_ALGORITHM_BZIP2_6   },
+  { "bzip7",    COMPRESS_ALGORITHM_BZIP2_7   },
+  { "bzip8",    COMPRESS_ALGORITHM_BZIP2_8   },
+  { "bzip9",    COMPRESS_ALGORITHM_BZIP2_9   },
 
-  { "lzma1",   COMPRESS_ALGORITHM_LZMA_1   },
-  { "lzma2",   COMPRESS_ALGORITHM_LZMA_2   },
-  { "lzma3",   COMPRESS_ALGORITHM_LZMA_3   },
-  { "lzma4",   COMPRESS_ALGORITHM_LZMA_4   },
-  { "lzma5",   COMPRESS_ALGORITHM_LZMA_5   },
-  { "lzma6",   COMPRESS_ALGORITHM_LZMA_6   },
-  { "lzma7",   COMPRESS_ALGORITHM_LZMA_7   },
-  { "lzma8",   COMPRESS_ALGORITHM_LZMA_8   },
-  { "lzma9",   COMPRESS_ALGORITHM_LZMA_9   },
+  { "lzma1",    COMPRESS_ALGORITHM_LZMA_1    },
+  { "lzma2",    COMPRESS_ALGORITHM_LZMA_2    },
+  { "lzma3",    COMPRESS_ALGORITHM_LZMA_3    },
+  { "lzma4",    COMPRESS_ALGORITHM_LZMA_4    },
+  { "lzma5",    COMPRESS_ALGORITHM_LZMA_5    },
+  { "lzma6",    COMPRESS_ALGORITHM_LZMA_6    },
+  { "lzma7",    COMPRESS_ALGORITHM_LZMA_7    },
+  { "lzma8",    COMPRESS_ALGORITHM_LZMA_8    },
+  { "lzma9",    COMPRESS_ALGORITHM_LZMA_9    },
 
-  { "xdelta1", COMPRESS_ALGORITHM_XDELTA_1 },
-  { "xdelta2", COMPRESS_ALGORITHM_XDELTA_2 },
-  { "xdelta3", COMPRESS_ALGORITHM_XDELTA_3 },
-  { "xdelta4", COMPRESS_ALGORITHM_XDELTA_4 },
-  { "xdelta5", COMPRESS_ALGORITHM_XDELTA_5 },
-  { "xdelta6", COMPRESS_ALGORITHM_XDELTA_6 },
-  { "xdelta7", COMPRESS_ALGORITHM_XDELTA_7 },
-  { "xdelta8", COMPRESS_ALGORITHM_XDELTA_8 },
-  { "xdelta9", COMPRESS_ALGORITHM_XDELTA_9 },
+  { "xdelta1",  COMPRESS_ALGORITHM_XDELTA_1  },
+  { "xdelta2",  COMPRESS_ALGORITHM_XDELTA_2  },
+  { "xdelta3",  COMPRESS_ALGORITHM_XDELTA_3  },
+  { "xdelta4",  COMPRESS_ALGORITHM_XDELTA_4  },
+  { "xdelta5",  COMPRESS_ALGORITHM_XDELTA_5  },
+  { "xdelta6",  COMPRESS_ALGORITHM_XDELTA_6  },
+  { "xdelta7",  COMPRESS_ALGORITHM_XDELTA_7  },
+  { "xdelta8",  COMPRESS_ALGORITHM_XDELTA_8  },
+  { "xdelta9",  COMPRESS_ALGORITHM_XDELTA_9  },
+
+  { "lzo1",     COMPRESS_ALGORITHM_LZO_1     },
+  { "lzo2",     COMPRESS_ALGORITHM_LZO_2     },
+  { "lzo3",     COMPRESS_ALGORITHM_LZO_3     },
+  { "lzo4",     COMPRESS_ALGORITHM_LZO_4     },
+  { "lzo5",     COMPRESS_ALGORITHM_LZO_5     },
 };
 
 // size of compress buffers
@@ -109,6 +115,9 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
 #ifdef HAVE_LZMA
   #include "compress_lzma.c"
 #endif /* HAVE_LZMA */
+#ifdef HAVE_LZO
+  #include "compress_lzo.c"
+#endif /* HAVE_LZO */
 #ifdef HAVE_XDELTA3
   #include "compress_xd3.c"
 #endif /* HAVE_XDELTA3 */
@@ -224,6 +233,18 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #else /* not HAVE_LZMA */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZMA */
+      break;
+    case COMPRESS_ALGORITHM_LZO_1:
+    case COMPRESS_ALGORITHM_LZO_2:
+    case COMPRESS_ALGORITHM_LZO_3:
+    case COMPRESS_ALGORITHM_LZO_4:
+    case COMPRESS_ALGORITHM_LZO_5:
+      // compress with lzo
+      #ifdef HAVE_LZO
+        error = CompressLZO_compressData(compressInfo);
+      #else /* not HAVE_LZO */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
@@ -365,6 +386,18 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZMA */
       break;
+    case COMPRESS_ALGORITHM_LZO_1:
+    case COMPRESS_ALGORITHM_LZO_2:
+    case COMPRESS_ALGORITHM_LZO_3:
+    case COMPRESS_ALGORITHM_LZO_4:
+    case COMPRESS_ALGORITHM_LZO_5:
+      // decompress with lzo
+      #ifdef HAVE_LZO
+        error = CompressLZO_decompressData(compressInfo);
+      #else /* not HAVE_LZO */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZO */
+      break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
     case COMPRESS_ALGORITHM_XDELTA_3:
@@ -495,12 +528,12 @@ bool Compress_isValidAlgorithm(uint16 n)
   #endif
 
   // init variables
-  compressInfo->compressMode         = compressMode;
-  compressInfo->compressAlgorithm    = compressAlgorithm;
-  compressInfo->blockLength          = blockLength;
-  compressInfo->compressState        = COMPRESS_STATE_INIT;
-  compressInfo->endOfDataFlag        = FALSE;
-  compressInfo->flushFlag            = FALSE;
+  compressInfo->compressMode      = compressMode;
+  compressInfo->compressAlgorithm = compressAlgorithm;
+  compressInfo->blockLength       = blockLength;
+  compressInfo->compressState     = COMPRESS_STATE_INIT;
+  compressInfo->endOfDataFlag     = FALSE;
+  compressInfo->flushFlag         = FALSE;
 
   // allocate buffers
   if (!RingBuffer_init(&compressInfo->dataRingBuffer,1,FLOOR(MAX_BUFFER_SIZE,blockLength)))
@@ -564,6 +597,18 @@ bool Compress_isValidAlgorithm(uint16 n)
       #else /* not HAVE_LZMA */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZMA */
+      break;
+    case COMPRESS_ALGORITHM_LZO_1:
+    case COMPRESS_ALGORITHM_LZO_2:
+    case COMPRESS_ALGORITHM_LZO_3:
+    case COMPRESS_ALGORITHM_LZO_4:
+    case COMPRESS_ALGORITHM_LZO_5:
+      // decompress with lzo
+      #ifdef HAVE_LZO
+        error = CompressLZO_init(compressInfo,compressMode,compressAlgorithm);
+      #else /* not HAVE_LZO */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
@@ -661,6 +706,17 @@ bool Compress_isValidAlgorithm(uint16 n)
       #else /* not HAVE_LZMA */
       #endif /* HAVE_LZMA */
       break;
+    case COMPRESS_ALGORITHM_LZO_1:
+    case COMPRESS_ALGORITHM_LZO_2:
+    case COMPRESS_ALGORITHM_LZO_3:
+    case COMPRESS_ALGORITHM_LZO_4:
+    case COMPRESS_ALGORITHM_LZO_5:
+      #ifdef HAVE_LZO
+        CompressLZO_done(compressInfo);
+      #else /* not HAVE_LZO */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZO */
+      break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
     case COMPRESS_ALGORITHM_XDELTA_3:
@@ -751,6 +807,17 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #else /* not HAVE_LZMA */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZMA */
+      break;
+    case COMPRESS_ALGORITHM_LZO_1:
+    case COMPRESS_ALGORITHM_LZO_2:
+    case COMPRESS_ALGORITHM_LZO_3:
+    case COMPRESS_ALGORITHM_LZO_4:
+    case COMPRESS_ALGORITHM_LZO_5:
+      #ifdef HAVE_LZO
+        error = CompressLZO_reset(compressInfo);
+      #else /* not HAVE_LZO */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
@@ -957,6 +1024,17 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo)
         length = 0LL;
       #endif /* HAVE_LZMA */
       break;
+    case COMPRESS_ALGORITHM_LZO_1:
+    case COMPRESS_ALGORITHM_LZO_2:
+    case COMPRESS_ALGORITHM_LZO_3:
+    case COMPRESS_ALGORITHM_LZO_4:
+    case COMPRESS_ALGORITHM_LZO_5:
+      #ifdef HAVE_LZO
+        length = CompressLZO_getInputLength(compressInfo);
+      #else /* not HAVE_LZO */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZO */
+      break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
     case COMPRESS_ALGORITHM_XDELTA_3:
@@ -1039,6 +1117,17 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo)
       #else /* not HAVE_LZMA */
         length = 0LL;
       #endif /* HAVE_LZMA */
+      break;
+    case COMPRESS_ALGORITHM_LZO_1:
+    case COMPRESS_ALGORITHM_LZO_2:
+    case COMPRESS_ALGORITHM_LZO_3:
+    case COMPRESS_ALGORITHM_LZO_4:
+    case COMPRESS_ALGORITHM_LZO_5:
+      #ifdef HAVE_LZO
+        length = CompressLZO_getOutputLength(compressInfo);
+      #else /* not HAVE_LZO */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:

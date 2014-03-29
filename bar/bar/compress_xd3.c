@@ -615,10 +615,10 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
 
 /*---------------------------------------------------------------------*/
 
-static Errors CompressXD3_init(CompressInfo       *compressInfo,
-                        CompressAlgorithms compressAlgorithm,
-                        SourceHandle       *sourceHandle
-                       )
+LOCAL Errors CompressXD3_init(CompressInfo       *compressInfo,
+                              CompressAlgorithms compressAlgorithm,
+                              SourceHandle       *sourceHandle
+                             )
 {
   xd3_config xd3Config;
   int        xd3Result;
@@ -699,7 +699,7 @@ static Errors CompressXD3_init(CompressInfo       *compressInfo,
   return ERROR_NONE;
 }
 
-static void CompressXD3_done(CompressInfo *compressInfo)
+LOCAL void CompressXD3_done(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
@@ -709,7 +709,7 @@ static void CompressXD3_done(CompressInfo *compressInfo)
   free(compressInfo->xdelta.sourceBuffer);
 }
 
-static Errors CompressXD3_reset(CompressInfo *compressInfo)
+LOCAL Errors CompressXD3_reset(CompressInfo *compressInfo)
 {
   xd3_config xd3Config;
 
@@ -776,14 +776,14 @@ static Errors CompressXD3_reset(CompressInfo *compressInfo)
   return ERROR_NONE;
 }
 
-static uint64 CompressXD3_getInputLength(CompressInfo *compressInfo)
+LOCAL uint64 CompressXD3_getInputLength(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
   return (uint64)compressInfo->xdelta.stream.total_in;
 }
 
-static uint64 CompressXD3_getOutputLength(CompressInfo *compressInfo)
+LOCAL uint64 CompressXD3_getOutputLength(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
