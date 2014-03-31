@@ -650,7 +650,9 @@ LOCAL void pauseCreate(const CreateInfo *createInfo)
 {
   assert(createInfo != NULL);
 
-  while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
+  while (   ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
+         && !isAborted(createInfo)
+        )
   {
     Misc_udelay(500L*1000L);
   }
@@ -669,7 +671,9 @@ LOCAL void pauseStorage(const CreateInfo *createInfo)
 {
   assert(createInfo != NULL);
 
-  while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
+  while (   ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
+         && !isAborted(createInfo)
+        )
   {
     Misc_udelay(500L*1000L);
   }
@@ -4359,7 +4363,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("Cannot create new archive file entry '%s' (error: %s)\n",
+      printError("Cannot create new archive hardlink entry '%s' (error: %s)\n",
                  String_cString(StringList_first(nameList,NULL)),
                  Error_getText(error)
                 );
@@ -4469,7 +4473,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("Cannot close archive file entry (error: %s)!\n",
+      printError("Cannot close archive hardlink entry (error: %s)!\n",
                  Error_getText(error)
                 );
       if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
