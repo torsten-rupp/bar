@@ -275,7 +275,7 @@ Errors Command_compare(const StringList                *storageNameList,
               {
                 printInfo(1,"FAIL!\n");
                 printError("File '%s' not found!\n",String_cString(fileName));
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
                 break;
@@ -284,7 +284,7 @@ Errors Command_compare(const StringList                *storageNameList,
               {
                 printInfo(1,"FAIL!\n");
                 printError("'%s' is not a file!\n",String_cString(fileName));
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
                 break;
@@ -315,7 +315,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            String_cString(fileName),
                            Error_getText(error)
                           );
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 continue;
@@ -332,7 +332,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            File_getSize(&fileHandle)
                           );
                 File_close(&fileHandle);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_ENTRIES_DIFFER;
                 continue;
@@ -348,7 +348,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            Error_getText(error)
                           );
                 File_close(&fileHandle);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 continue;
@@ -414,14 +414,14 @@ Errors Command_compare(const StringList                *storageNameList,
               if (error != ERROR_NONE)
               {
                 File_close(&fileHandle);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 continue;
               }
               if (failError != ERROR_NONE)
               {
                 File_close(&fileHandle);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 break;
               }
@@ -547,7 +547,7 @@ Errors Command_compare(const StringList                *storageNameList,
               {
                 printInfo(1,"FAIL!\n");
                 printError("Device '%s' not found!\n",String_cString(deviceName));
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deviceName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
                 break;
@@ -585,7 +585,7 @@ Errors Command_compare(const StringList                *storageNameList,
                             );
                   if (jobOptions->stopOnErrorFlag) failError = error;
                 }
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deviceName);
                 continue;
               }
@@ -600,7 +600,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            String_cString(deviceName),
                            BUFFER_SIZE
                           );
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deviceName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
                 continue;
@@ -616,7 +616,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            String_cString(deviceName),
                            Error_getText(error)
                           );
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deviceName);
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 continue;
@@ -633,7 +633,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            Device_getSize(&deviceHandle)
                           );
                 Device_close(&deviceHandle);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deviceName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_ENTRIES_DIFFER;
                 continue;
@@ -659,7 +659,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            Error_getText(error)
                           );
                 Device_close(&deviceHandle);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deviceName);
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 continue;
@@ -745,7 +745,7 @@ Errors Command_compare(const StringList                *storageNameList,
               {
                 if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
                 Device_close(&deviceHandle);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deviceName);
                 continue;
               }
@@ -753,7 +753,7 @@ Errors Command_compare(const StringList                *storageNameList,
               {
                 if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
                 Device_close(&deviceHandle);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deviceName);
                 break;
               }
@@ -855,7 +855,7 @@ Errors Command_compare(const StringList                *storageNameList,
               {
                 printInfo(1,"FAIL!\n");
                 printError("Directory '%s' does not exists!\n",String_cString(directoryName));
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(directoryName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
                 break;
@@ -866,7 +866,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 printError("'%s' is not a directory!\n",
                            String_cString(directoryName)
                           );
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(directoryName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
                 break;
@@ -881,7 +881,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            String_cString(directoryName),
                            Error_getText(error)
                           );
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(directoryName);
                 if (failError == ERROR_NONE) failError = error;
                 break;
@@ -964,7 +964,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            String_cString(linkName),
                            String_cString(fileName)
                           );
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
@@ -976,7 +976,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 printError("'%s' is not a link!\n",
                            String_cString(linkName)
                           );
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
@@ -993,7 +993,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            Error_getText(error)
                           );
                 String_delete(localFileName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag) failError = error;
@@ -1008,7 +1008,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            String_cString(fileName)
                           );
                 String_delete(localFileName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_ENTRIES_DIFFER;
@@ -1025,7 +1025,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            String_cString(linkName),
                            Error_getText(error)
                           );
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
                 if (failError == ERROR_NONE) failError = error;
@@ -1400,7 +1400,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 printError("Special device '%s' does not exists!\n",
                            String_cString(fileName)
                           );
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
                 break;
@@ -1411,7 +1411,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 printError("'%s' is not a special device!\n",
                            String_cString(fileName)
                           );
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
                 break;
@@ -1425,7 +1425,7 @@ Errors Command_compare(const StringList                *storageNameList,
                            String_cString(fileName),
                            Error_getText(error)
                           );
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 break;
@@ -1436,7 +1436,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 printError("Different types of special device '%s'!\n",
                            String_cString(fileName)
                           );
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 break;
@@ -1450,7 +1450,7 @@ Errors Command_compare(const StringList                *storageNameList,
                   printError("Different major numbers of special device '%s'!\n",
                              String_cString(fileName)
                             );
-                  Archive_closeEntry(&archiveEntryInfo);
+                  (void)Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
                   if (jobOptions->stopOnErrorFlag) failError = error;
                   break;
@@ -1460,7 +1460,7 @@ Errors Command_compare(const StringList                *storageNameList,
                   printError("Different minor numbers of special device '%s'!\n",
                              String_cString(fileName)
                             );
-                  Archive_closeEntry(&archiveEntryInfo);
+                  (void)Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
                   if (jobOptions->stopOnErrorFlag) failError = error;
                   break;
