@@ -1296,7 +1296,14 @@ class TabJobs
   private WidgetVariable  archivePartSize         = new WidgetVariable(0);
   private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable(new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
   private WidgetVariable  deltaSource             = new WidgetVariable("");
-  private WidgetVariable  byteCompressAlgorithm   = new WidgetVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9","lzo1","lzo2","lzo3","lzo4","lzo5"});
+  private WidgetVariable  byteCompressAlgorithm   = new WidgetVariable(new String[]{"none",
+                                                                                    "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
+                                                                                    "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
+                                                                                    "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
+                                                                                    "lzo1","lzo2","lzo3","lzo4","lzo5",
+                                                                                    "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9"
+                                                                                   }
+                                                                      );
   private WidgetVariable  compressMinSize         = new WidgetVariable(0);
   private WidgetVariable  cryptAlgorithm          = new WidgetVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
   private WidgetVariable  cryptType               = new WidgetVariable(new String[]{"none","symmetric","asymmetric"});
@@ -2733,7 +2740,14 @@ class TabJobs
           Widgets.layout(label,0,2,TableLayoutData.NONE);
 
           combo = Widgets.newOptionMenu(composite);
-          combo.setItems(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9","lzo1","lzo2","lzo3","lzo4","lzo5"});
+          combo.setItems(new String[]{"none",
+                                      "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
+                                      "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
+                                      "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
+                                      "lzo1","lzo2","lzo3","lzo4","lzo5",
+                                      "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9"
+                                     }
+                        );
           Widgets.layout(combo,0,3,TableLayoutData.W);
           combo.addSelectionListener(new SelectionListener()
           {

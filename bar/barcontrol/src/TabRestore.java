@@ -2803,7 +2803,7 @@ Dprintf.dprintf("process line by line");
 
                 // remove entry
                 final String[] resultErrorMessage = new String[1];
-                int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* jobId=%d",storageData.id),
+                int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* storageId=%d",storageData.id),
                                                          resultErrorMessage
                                                         );
                 if (errorCode == Errors.NONE)
