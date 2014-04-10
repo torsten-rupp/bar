@@ -6986,7 +6986,11 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       if (!pattern.equals(""))
       {
         excludeHashSet.add(pattern);
-        widgetExcludeList.add(pattern,findListIndex(widgetExcludeList,pattern));
+        Widgets.insertListEntry(widgetExcludeList,
+                          findListIndex(widgetExcludeList,pattern),
+                          (Object)pattern,
+                          pattern
+                         );
       }
     }
   }
@@ -7024,7 +7028,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
          compressExcludeHashSet.add(pattern);
          Widgets.insertListEntry(widgetCompressExcludeList,
                                  findListIndex(widgetCompressExcludeList,pattern),
-                                 pattern,
+                                 (Object)pattern,
                                  pattern
                                 );
       }
@@ -7495,7 +7499,7 @@ throw new Error("NYI");
     // update list
     Widgets.insertListEntry(widgetExcludeList,
                             findListIndex(widgetExcludeList,pattern),
-                            pattern,
+                            (Object)pattern,
                             pattern
                            );
 
@@ -7541,7 +7545,7 @@ throw new Error("NYI");
     {
       Widgets.insertListEntry(widgetExcludeList,
                               findListIndex(widgetExcludeList,pattern),
-                              pattern,
+                              (Object)pattern,
                               pattern
                              );
     }
@@ -7767,7 +7771,7 @@ throw new Error("NYI");
 Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
       Widgets.insertListEntry(widgetCompressExcludeList,
                               findListIndex(widgetCompressExcludeList,pattern),
-                              pattern,
+                              (Object)pattern,
                               pattern
                              );
     }
@@ -7805,7 +7809,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         compressExcludeHashSet.add(pattern);
         Widgets.insertListEntry(widgetCompressExcludeList,
                                 findListIndex(widgetCompressExcludeList,pattern),
-                                pattern,
+                                (Object)pattern,
                                 pattern
                                );
       }
@@ -7884,7 +7888,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
                               );
       Widgets.insertListEntry(widgetCompressExcludeList,
                               findListIndex(widgetCompressExcludeList,pattern),
-                              pattern,
+                              (Object)pattern,
                               pattern
                              );
     }
