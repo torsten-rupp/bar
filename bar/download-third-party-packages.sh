@@ -596,22 +596,22 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $opensslFlag -eq 1; then
-    # openssl 1.0.1c
+    # openssl 1.0.1g
     (
      if test -n "$destination"; then
        cd $destination
      else
        cd $tmpDirectory
      fi
-     if test ! -f openssl-1.0.1c.tar.gz; then
-       $WGET $WGET_OPTIONS 'http://www.openssl.org/source/openssl-1.0.1c.tar.gz'
+     if test ! -f openssl-1.0.1g.tar.gz; then
+       $WGET $WGET_OPTIONS 'http://www.openssl.org/source/openssl-1.0.1g.tar.gz'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf openssl-1.0.1c.tar.gz
+       $TAR xzf openssl-1.0.1g.tar.gz
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/openssl-1.0.1c openssl
+      $LN -f -s $tmpDirectory/openssl-1.0.1g openssl
     fi
   fi
 
