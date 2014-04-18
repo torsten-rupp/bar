@@ -1309,10 +1309,10 @@ if test $ENABLE_LZO = "yes"; then
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;LIBRARIES="lzo2 $LIBRARIES";AC_DEFINE(HAVE_LZO,1,[lzo installed])])
     else
-      if test -z "$HAVE_BZ2"; then
+      if test -z "$HAVE_LZO"; then
         AC_SEARCH_STATIC_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2";AC_DEFINE(HAVE_LZO,1,[static lzo installed])])
       fi
-      if test -z "$HAVE_BZ2"; then
+      if test -z "$HAVE_LZO"; then
         AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;LIBRARIES="lzo2 $LIBRARIES";AC_DEFINE(HAVE_LZO,1,[lzo installed])])
       fi
     fi
@@ -1359,10 +1359,10 @@ if test $ENABLE_LZ4 = "yes"; then
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(LZ4_compress,lz4,[HAVE_LZ4=1;LIBRARIES="lz4 $LIBRARIES";AC_DEFINE(HAVE_LZ4,1,[lz4 installed])])
     else
-      if test -z "$HAVE_BZ2"; then
+      if test -z "$HAVE_LZ4"; then
         AC_SEARCH_STATIC_LIBRARIES(LZ4_compress,lz4,[HAVE_LZ4=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lz4";AC_DEFINE(HAVE_LZ4,1,[static lz4 installed])])
       fi
-      if test -z "$HAVE_BZ2"; then
+      if test -z "$HAVE_LZ4"; then
         AC_SEARCH_LIBRARIES(LZ4_compress,lz4,[HAVE_LZ4=1;LIBRARIES="lz4 $LIBRARIES";AC_DEFINE(HAVE_LZ4,1,[lz4 installed])])
       fi
     fi
@@ -2701,6 +2701,88 @@ AC_DEFINE_UNQUOTED(FILE_SEPARATOR_STRING,"$FILE_SEPARATOR_CHAR",[file separator 
 AC_DEFINE_UNQUOTED(CONFIG_DIR,"$CONFIG_DIR",[configuration directory])
 AC_DEFINE_UNQUOTED(TLS_DIR,   "$TLS_DIR",   [TLS directory])
 
+AC_TRY_LINK([#include <stdio.h>
+             #include "zlib.h"
+            ],
+            [printf("%s\n",zlibVersion());],
+            VERSION_Z=`./conftest$ac_exeext`,
+            VERSION_Z=
+           )
+AC_TRY_LINK([#include <stdio.h>
+             #include "bzlib.h"
+            ],
+            [printf("%s\n",BZ2_bzlibVersion());],
+            VERSION_BZ2=`./conftest$ac_exeext`,
+            VERSION_BZ2=
+           )
+AC_TRY_LINK([#include <stdio.h>
+             #include "lzma.h"
+            ],
+            [printf("%d.%d.%d\n",LZMA_VERSION_MAJOR,LZMA_VERSION_MINOR,LZMA_VERSION_PATCH);],
+            VERSION_LZMA=`./conftest$ac_exeext`,
+            VERSION_LZMA=
+           )
+AC_TRY_LINK([#include <stdio.h>
+             #include "lzo/lzoconf.h"
+            ],
+            [printf("%s\n",LZO_VERSION_STRING);],
+            VERSION_LZO=`./conftest$ac_exeext`,
+            VERSION_LZO=
+           )
+AC_TRY_LINK([#include <stdio.h>
+             #include "lz4.h"],
+             [printf("%d.%d.%d\n",LZ4_VERSION_MAJOR,LZ4_VERSION_MINOR,LZ4_VERSION_RELEASE);],
+             VERSION_LZ4=`./conftest$ac_exeext`,
+             VERSION_LZ4=
+            )
+AC_TRY_LINK([#include <stdio.h>
+             #include "gcrypt.h"
+            ],
+            [printf("%s\n",GCRYPT_VERSION);],
+            VERSION_GCRYPT=`./conftest$ac_exeext`,
+            VERSION_GCRYPT=
+           )
+AC_TRY_LINK([#include <stdio.h>
+             #include "curl/curl.h"],
+            [printf("%s\n",LIBCURL_VERSION);],
+            VERSION_CURL=`./conftest$ac_exeext`,
+            VERSION_CURL=
+           )
+AC_TRY_LINK([#include <stdio.h>
+             #include "openssl/opensslv.h"
+            ],
+            [printf("%s\n",OPENSSL_VERSION_TEXT);],
+            VERSION_OPENSSL=`./conftest$ac_exeext`,
+            VERSION_OPENSSL=
+           )
+AC_TRY_LINK([#include <stdio.h>
+             #include "libssh2.h"],
+            [printf("%d.%d.%d\n",LIBSSH2_VERSION_MAJOR,LIBSSH2_VERSION_MINOR,LIBSSH2_VERSION_PATCH);],
+            VERSION_LIBSSH2=`./conftest$ac_exeext`,
+            VERSION_LIBSSH2=
+           )
+AC_TRY_LINK([#include <stdio.h>
+             #include "gnutls/gnutls.h"
+            ],
+            [printf("%s\n",GNUTLS_VERSION);],
+            VERSION_GNUTLS=`./conftest$ac_exeext`,
+            VERSION_GNUTLS=
+           )
+AC_TRY_LINK([#include <stdio.h>
+             #include "cdio/cdio.h"
+            ],
+            [printf("%s\n",CDIO_VERSION);],
+            VERSION_CDIO=`./conftest$ac_exeext`,
+            VERSION_CDIO=
+           )
+AC_TRY_LINK([#include <stdio.h>
+             #include "pcre.h"
+            ],
+            [printf("%s\n",pcre_version());],
+            VERSION_PCRE=`./conftest$ac_exeext`,
+            VERSION_PCRE=
+           )
+
 dnl ------------ autoheader: top/bottom include for config.h -----------
 
 AC_CONFIG_HEADERS(bar/config.h)
@@ -2764,18 +2846,19 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  host              : $host";
                     echo "  debug version     : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
                     echo "  dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo yes; else echo no; fi`";
-                    echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo yes; else echo no; fi`";
-                    echo "  lzo compression   : `if test "$HAVE_LZO"; then echo yes; else echo no; fi`";
-                    echo "  lz4 compression   : `if test "$HAVE_LZ4"; then echo yes; else echo no; fi`";
+                    echo "  zip compression   : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
+                    echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
+                    echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
+                    echo "  lzo compression   : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
+                    echo "  lz4 compression   : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
                     echo "  xdelta compression: `if test "$HAVE_XDELTA"; then echo yes; else echo no; fi`";
-                    echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo yes; else echo no; fi`";
+                    echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
                     echo "  FTP support       : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
-                    echo "  curl support      : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo yes; else echo no; fi`";
-                    echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo yes; else echo no; fi`";
-                    echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo yes; else echo no; fi`";
-                    echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo yes; else echo no; fi`";
-                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo yes; else echo no; fi`";
+                    echo "  curl support      : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
+                    echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
+                    echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
+                    echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
+                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
                     echo "  Crash dump support: `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
                     echo "  GUI support       : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory     : $SWT_DIR"
@@ -2796,6 +2879,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    host="$host"
                    ENABLE_DEBUG=$ENABLE_DEBUG
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
+                   HAVE_Z=$HAVE_Z
                    HAVE_BZ2=$HAVE_BZ2
                    HAVE_LZMA=$HAVE_LZMA
                    HAVE_LZO=$HAVE_LZO
@@ -2817,6 +2901,18 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    CONFIG_DIR="$CONFIG_DIR"
                    TLS_DIR="$TLS_DIR"
                    EPM="$EPM"
+                   VERSION_Z="$VERSION_Z"
+                   VERSION_BZ2="$VERSION_BZ2"
+                   VERSION_LZMA="$VERSION_LZMA"
+                   VERSION_LZO="$VERSION_LZO"
+                   VERSION_LZ4="$VERSION_LZ4"
+                   VERSION_GCRYPT="$VERSION_GCRYPT"
+                   VERSION_CURL="$VERSION_CURL"
+                   VERSION_OPENSSL="$VERSION_OPENSSL"
+                   VERSION_LIBSSH2="$VERSION_LIBSSH2"
+                   VERSION_GNUTLS="$VERSION_GNUTLS"
+                   VERSION_CDIO="$VERSION_CDIO"
+                   VERSION_PCRE="$VERSION_PCRE"
                   )
 
 AC_OUTPUT

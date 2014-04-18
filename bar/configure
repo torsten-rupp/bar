@@ -6806,7 +6806,7 @@ $as_echo "#define HAVE_LZO 1" >>confdefs.h
 fi
 
     else
-      if test -z "$HAVE_BZ2"; then
+      if test -z "$HAVE_LZO"; then
 
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing lzo1x_1_compress" >&5
@@ -6870,7 +6870,7 @@ $as_echo "#define HAVE_LZO 1" >>confdefs.h
 fi
 
       fi
-      if test -z "$HAVE_BZ2"; then
+      if test -z "$HAVE_LZO"; then
 
 
     ac_result=""
@@ -7048,7 +7048,7 @@ $as_echo "#define HAVE_LZ4 1" >>confdefs.h
 fi
 
     else
-      if test -z "$HAVE_BZ2"; then
+      if test -z "$HAVE_LZ4"; then
 
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing LZ4_compress" >&5
@@ -7112,7 +7112,7 @@ $as_echo "#define HAVE_LZ4 1" >>confdefs.h
 fi
 
       fi
-      if test -z "$HAVE_BZ2"; then
+      if test -z "$HAVE_LZ4"; then
 
 
     ac_result=""
@@ -16233,6 +16233,263 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "zlib.h"
+
+int
+main ()
+{
+printf("%s\n",zlibVersion());
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_Z=`./conftest$ac_exeext`
+else
+  VERSION_Z=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "bzlib.h"
+
+int
+main ()
+{
+printf("%s\n",BZ2_bzlibVersion());
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_BZ2=`./conftest$ac_exeext`
+else
+  VERSION_BZ2=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "lzma.h"
+
+int
+main ()
+{
+printf("%d.%d.%d\n",LZMA_VERSION_MAJOR,LZMA_VERSION_MINOR,LZMA_VERSION_PATCH);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_LZMA=`./conftest$ac_exeext`
+else
+  VERSION_LZMA=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "lzo/lzoconf.h"
+
+int
+main ()
+{
+printf("%s\n",LZO_VERSION_STRING);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_LZO=`./conftest$ac_exeext`
+else
+  VERSION_LZO=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "lz4.h"
+int
+main ()
+{
+printf("%d.%d.%d\n",LZ4_VERSION_MAJOR,LZ4_VERSION_MINOR,LZ4_VERSION_RELEASE);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_LZ4=`./conftest$ac_exeext`
+else
+  VERSION_LZ4=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "gcrypt.h"
+
+int
+main ()
+{
+printf("%s\n",GCRYPT_VERSION);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_GCRYPT=`./conftest$ac_exeext`
+else
+  VERSION_GCRYPT=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "curl/curl.h"
+int
+main ()
+{
+printf("%s\n",LIBCURL_VERSION);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_CURL=`./conftest$ac_exeext`
+else
+  VERSION_CURL=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "openssl/opensslv.h"
+
+int
+main ()
+{
+printf("%s\n",OPENSSL_VERSION_TEXT);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_OPENSSL=`./conftest$ac_exeext`
+else
+  VERSION_OPENSSL=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "libssh2.h"
+int
+main ()
+{
+printf("%d.%d.%d\n",LIBSSH2_VERSION_MAJOR,LIBSSH2_VERSION_MINOR,LIBSSH2_VERSION_PATCH);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_LIBSSH2=`./conftest$ac_exeext`
+else
+  VERSION_LIBSSH2=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "gnutls/gnutls.h"
+
+int
+main ()
+{
+printf("%s\n",GNUTLS_VERSION);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_GNUTLS=`./conftest$ac_exeext`
+else
+  VERSION_GNUTLS=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "cdio/cdio.h"
+
+int
+main ()
+{
+printf("%s\n",CDIO_VERSION);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_CDIO=`./conftest$ac_exeext`
+else
+  VERSION_CDIO=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "pcre.h"
+
+int
+main ()
+{
+printf("%s\n",pcre_version());
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_PCRE=`./conftest$ac_exeext`
+else
+  VERSION_PCRE=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $VERSION_GNUTLS" >&5
+$as_echo "$as_me: WARNING: $VERSION_GNUTLS" >&2;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $VERSION_OPENSSL" >&5
+$as_echo "$as_me: WARNING: $VERSION_OPENSSL" >&2;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $GCRYPT_VERSION" >&5
+$as_echo "$as_me: WARNING: $GCRYPT_VERSION" >&2;}
+
+
 
 ac_config_headers="$ac_config_headers bar/config.h"
 
@@ -16986,6 +17243,7 @@ cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 host="$host"
                    ENABLE_DEBUG=$ENABLE_DEBUG
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
+                   HAVE_Z=$HAVE_Z
                    HAVE_BZ2=$HAVE_BZ2
                    HAVE_LZMA=$HAVE_LZMA
                    HAVE_LZO=$HAVE_LZO
@@ -17007,6 +17265,18 @@ host="$host"
                    CONFIG_DIR="$CONFIG_DIR"
                    TLS_DIR="$TLS_DIR"
                    EPM="$EPM"
+                   VERSION_Z="$VERSION_Z"
+                   VERSION_BZ2="$VERSION_BZ2"
+                   VERSION_LZMA="$VERSION_LZMA"
+                   VERSION_LZO="$VERSION_LZO"
+                   VERSION_LZ4="$VERSION_LZ4"
+                   VERSION_GCRYPT="$VERSION_GCRYPT"
+                   VERSION_CURL="$VERSION_CURL"
+                   VERSION_OPENSSL="$VERSION_OPENSSL"
+                   VERSION_LIBSSH2="$VERSION_LIBSSH2"
+                   VERSION_GNUTLS="$VERSION_GNUTLS"
+                   VERSION_CDIO="$VERSION_CDIO"
+                   VERSION_PCRE="$VERSION_PCRE"
 
 
 _ACEOF
@@ -17587,18 +17857,19 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  host              : $host";
                     echo "  debug version     : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
                     echo "  dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo yes; else echo no; fi`";
-                    echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo yes; else echo no; fi`";
-                    echo "  lzo compression   : `if test "$HAVE_LZO"; then echo yes; else echo no; fi`";
-                    echo "  lz4 compression   : `if test "$HAVE_LZ4"; then echo yes; else echo no; fi`";
+                    echo "  zip compression   : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
+                    echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
+                    echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
+                    echo "  lzo compression   : `if test "$HAVE_LZO"; then echo "yes ($VERSION_LZO)"; else echo no; fi`";
+                    echo "  lz4 compression   : `if test "$HAVE_LZ4"; then echo "yes ($VERSION_LZ4)"; else echo no; fi`";
                     echo "  xdelta compression: `if test "$HAVE_XDELTA"; then echo yes; else echo no; fi`";
-                    echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo yes; else echo no; fi`";
+                    echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
                     echo "  FTP support       : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
-                    echo "  curl support      : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo yes; else echo no; fi`";
-                    echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo yes; else echo no; fi`";
-                    echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo yes; else echo no; fi`";
-                    echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo yes; else echo no; fi`";
-                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo yes; else echo no; fi`";
+                    echo "  curl support      : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
+                    echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
+                    echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
+                    echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
+                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
                     echo "  Crash dump support: `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
                     echo "  GUI support       : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory     : $SWT_DIR"
