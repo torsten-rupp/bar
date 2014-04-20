@@ -1,7 +1,7 @@
 # norootforbuild
 
 Name:          bar
-Version:       0.18
+Version:       0.18a
 Release:       0
 Summary:       Backup ARchiver
 Source:        http://www.kigen.de/projects/bar/bar-%{version}.tar.bz2
@@ -61,9 +61,9 @@ mkdir packages
   ln -s packages/libgcrypt-1.5.0 libgcrypt
 )
 (
-  cp %{_sourcedir}/openssl-1.0.1c.tar.gz packages
-  (cd packages; tar xzf openssl-1.0.1c.tar.gz)
-  ln -s packages/openssl-1.0.1c openssl
+  cp %{_sourcedir}/openssl-1.0.1g.tar.gz packages
+  (cd packages; tar xzf openssl-1.0.1g.tar.gz)
+  ln -s packages/openssl-1.0.1g openssl
 )
 (
   cp %{_sourcedir}/c-ares-1.10.0.tar.gz packages
@@ -89,9 +89,9 @@ mkdir packages
   ln -s packages/gnutls-3.1.18 gnutls
 )
 (
-  cp %{_sourcedir}/libcdio-0.82.tar.gz packages
-  (cd packages; tar xzf libcdio-0.82.tar.gz)
-  ln -s packages/libcdio-0.82 libcdio
+  cp %{_sourcedir}/libcdio-0.92.tar.gz packages
+  (cd packages; tar xzf libcdio-0.92.tar.gz)
+  ln -s packages/libcdio-0.92 libcdio
 )
 (
   cp %{_sourcedir}/pcre-8.34.tar.bz2 packages
@@ -103,6 +103,12 @@ mkdir packages
 
 %install
 %makeinstall DIST=1 SYSTEM=CentOS
+(
+)
+
+%post -p chmod 700 /etc/bar
+%post -p chmod 600 /etc/bar/bar.cfg
+%post -p echo Hello %{_sysconfdir}
 
 %clean
 %__rm -rf "%{buildroot}"
@@ -117,10 +123,22 @@ mkdir packages
 %{_bindir}/barcontrol-linux.jar
 %{_bindir}/barcontrol-linux_64.jar
 %{_bindir}/bar-keygen
-%doc ChangeLog doc/README doc/bar.pdf
-%{_mandir}/man7/bar.7.gz
-%dir /etc/bar
-%config /etc/bar/bar.cfg
 /etc/init.d/barserver
+
+%defattr(0600,root,root)
+/etc/bar/bar.cfg
+
+%dir
+%defattr(0700,root,root)
+/etc/bar/jobs
+
+%doc
+ChangeLog
+doc/README
+doc/bar.pdf
+%{_mandir}/man7/bar.7.gz
+
+%config
+/etc/bar/bar.cfg
 
 %changelog
