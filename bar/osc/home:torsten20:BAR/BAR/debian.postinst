@@ -1,0 +1,4 @@
+#!/bin/sh
+
+chmod 700 /etc/bar
+chmod 600 /etc/bar/bar.cfg
