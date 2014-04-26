@@ -573,6 +573,9 @@ AC_SUBST(HAVE_LZ4)                          dnl "1" for lz4 support, "" otherwis
 AC_SUBST(HAVE_XDELTA)                       dnl "1" for xdelta support, "" otherwise
 AC_SUBST(HAVE_GCRYPT)                       dnl "1" for gcrypt support, "" otherwise
 AC_SUBST(HAVE_FTP)                          dnl "1" for ftp support, "" otherwise
+AC_SUBST(HAVE_CARES)                        dnl "1" for c-areas support, "" otherwise
+AC_SUBST(HAVE_CURL)                         dnl "1" for curl support, "" otherwise
+AC_SUBST(HAVE_MXML)                         dnl "1" for mxml support, "" otherwise
 AC_SUBST(HAVE_SSL)                          dnl "1" for ssl support, "" otherwise
 AC_SUBST(HAVE_SSH2)                         dnl "1" for ssh2 support, "" otherwise
 AC_SUBST(HAVE_GNU_TLS)                      dnl "1" for GNU TLS support, "" otherwise
@@ -2022,8 +2025,11 @@ if test $ENABLE_CURL = "yes"; then
           --disable-shared \
           --enable-static \
           --disable-ldap \
+          --disable-rtsp \
+          --without-librtmp \
           --enable-ares=$cwd/packages \
           --with-zlib=$cwd/packages \
+          --with-ssl=$cwd/packages \
           --with-gnutls=$cwd/packages \
           --with-libssh2=$cwd/packages \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
@@ -2469,6 +2475,7 @@ if test $ENABLE_BREAKPAD = "yes"; then
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
+        cp -r breakpad/src $cwd/packages/include/breakpad 1>$tmpFile 2>&1
       fi
       if test $result -eq 1; then
         AC_MSG_RESULT([done])
@@ -2479,6 +2486,7 @@ if test $ENABLE_BREAKPAD = "yes"; then
 
     if test $result -eq 1; then
       HAVE_BREAKPAD=1
+      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include/breakpad"
       STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
       AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed (local)])
 
@@ -2500,6 +2508,28 @@ if test $ENABLE_BREAKPAD = "yes"; then
     AC_PATH_PROGS(DUMP_SYMS,dump_syms)
   fi
 fi
+
+AC_ARG_ENABLE(
+  package-check,
+  AC_HELP_STRING([--enable-package-check],[enable check packages]),
+  [
+   AS_IF(test $HAVE_BZ2    ,,AC_MSG_ERROR([bzip2 missing]))
+   AS_IF(test $HAVE_LZMA   ,,AC_MSG_ERROR([lzma missing]))
+   AS_IF(test $HAVE_LZO    ,,AC_MSG_ERROR([lzo missing]))
+   AS_IF(test $HAVE_LZ4    ,,AC_MSG_ERROR([lz4 missing]))
+   AS_IF(test $HAVE_XDELTA ,,AC_MSG_ERROR([xdelta missing]))
+   AS_IF(test $HAVE_GCRYPT ,,AC_MSG_ERROR([gcrypt missing]))
+   AS_IF(test $HAVE_FTP    ,,AC_MSG_ERROR([ftp missing]))
+   AS_IF(test $HAVE_CARES  ,,AC_MSG_ERROR([c-ares missing]))
+   AS_IF(test $HAVE_CURL   ,,AC_MSG_ERROR([curl missing]))
+   AS_IF(test $HAVE_MXML   ,,AC_MSG_ERROR([mxml missing]))
+   AS_IF(test $HAVE_SSL    ,,AC_MSG_ERROR([ssl missing]))
+   AS_IF(test $HAVE_SSH2   ,,AC_MSG_ERROR([ssh2 missing]))
+   AS_IF(test $HAVE_GNU_TLS,,AC_MSG_ERROR([GNU TLS missing]))
+   AS_IF(test $HAVE_ISO9660,,AC_MSG_ERROR([ISO9660 missing]))
+   AS_IF(test $HAVE_PCRE   ,,AC_MSG_ERROR([PCRE missing]))
+  ]
+)
 
 dnl -------------- headers/functions/definitions/libraries -------------
 
@@ -2807,7 +2837,7 @@ AH_BOTTOM([#endif /* __CONFIG__ */])
 dnl --------------------------------------------------------------------
 
 if test "$prefix" = "NONE"; then
-  prefix=/usr/local
+  prefix=/usr
 fi
 INSTALL_DIR=$prefix
 if test "$bindir" = "\${exec_prefix}/bin"; then
@@ -2819,7 +2849,7 @@ if test "$bindir" = "\${exec_prefix}/bin"; then
 else
   INSTALL_BIN_DIR=$bindir
 fi
-if test "$mandir" = "\${prefix}/man"; then
+if test "$mandir" = "\${datarootdir}/man"; then
   MAN_DIR=${prefix}/man
 else
   MAN_DIR=${mandir}
@@ -2870,7 +2900,21 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  Config directory  : $CONFIG_DIR"
                     echo "  TLS directory     : $TLS_DIR"
                     echo ""
-                    if test ! "$HAVE_BZ2" -o ! "$HAVE_LZMA" -o ! "$HAVE_XDELTA" -o ! "$HAVE_GCRYPT" -o ! "$HAVE_FTP" -o ! "$HAVE_SSH2" -o ! "$HAVE_GNU_TLS"; then
+                    if test    ! "$HAVE_BZ2" \
+                            -o ! "$HAVE_LZMA" \
+                            -o ! "$HAVE_LZO" \
+                            -o ! "$HAVE_LZ4" \
+                            -o ! "$HAVE_XDELTA" \
+                            -o ! "$HAVE_GCRYPT" \
+                            -o ! "$HAVE_FTP" \
+                            -o ! "$HAVE_CARES" \
+                            -o ! "$HAVE_CURL" \
+                            -o ! "$HAVE_MXML" \
+                            -o ! "$HAVE_SSL" \
+                            -o ! "$HAVE_SSH2" \
+                            -o ! "$HAVE_GNU_TLS" \
+                            -o ! "$HAVE_ISO9660" \
+                            -o ! "$HAVE_PCRE"; then
                       echo "Note: you can download missing additional packages with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
                       echo "      after downloading."

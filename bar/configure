@@ -674,6 +674,9 @@ HAVE_ISO9660
 HAVE_GNU_TLS
 HAVE_SSH2
 HAVE_SSL
+HAVE_MXML
+HAVE_CURL
+HAVE_CARES
 HAVE_FTP
 HAVE_GCRYPT
 HAVE_XDELTA
@@ -769,6 +772,7 @@ enable_tls
 enable_iso9660
 enable_gui
 enable_package_compile
+enable_package_check
 enable_largefile
 '
       ac_precious_vars='build_alias
@@ -1410,6 +1414,7 @@ Optional Features:
   --disable-gui           disable GUI support (barcontrol)
   --disable-package-compile
                           disable compilation of external packages
+  --enable-package-check  enable check packages
   --disable-largefile     omit support for large files
 
 Optional Packages:
@@ -9279,8 +9284,11 @@ $as_echo "$as_me: WARNING: curl-7.28.1 not available - skipped libtool patch!" >
           --disable-shared \
           --enable-static \
           --disable-ldap \
+          --disable-rtsp \
+          --without-librtmp \
           --enable-ares=$cwd/packages \
           --with-zlib=$cwd/packages \
+          --with-ssl=$cwd/packages \
           --with-gnutls=$cwd/packages \
           --with-libssh2=$cwd/packages \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
@@ -10859,6 +10867,7 @@ $as_echo "fail (install)" >&6; }
 
           result=0
         fi
+        cp -r breakpad/src $cwd/packages/include/breakpad 1>$tmpFile 2>&1
       fi
       if test $result -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
@@ -10870,6 +10879,7 @@ $as_echo "done" >&6; }
 
     if test $result -eq 1; then
       HAVE_BREAKPAD=1
+      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include/breakpad"
       STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
 
 $as_echo "#define HAVE_BREAKPAD 1" >>confdefs.h
@@ -11159,6 +11169,89 @@ done
 
   fi
 fi
+
+# Check whether --enable-package-check was given.
+if test "${enable_package_check+set}" = set; then :
+  enableval=$enable_package_check;
+   if test $HAVE_BZ2    ; then :
+
+else
+  as_fn_error $? "bzip2 missing" "$LINENO" 5
+fi
+   if test $HAVE_LZMA   ; then :
+
+else
+  as_fn_error $? "lzma missing" "$LINENO" 5
+fi
+   if test $HAVE_LZO    ; then :
+
+else
+  as_fn_error $? "lzo missing" "$LINENO" 5
+fi
+   if test $HAVE_LZ4    ; then :
+
+else
+  as_fn_error $? "lz4 missing" "$LINENO" 5
+fi
+   if test $HAVE_XDELTA ; then :
+
+else
+  as_fn_error $? "xdelta missing" "$LINENO" 5
+fi
+   if test $HAVE_GCRYPT ; then :
+
+else
+  as_fn_error $? "gcrypt missing" "$LINENO" 5
+fi
+   if test $HAVE_FTP    ; then :
+
+else
+  as_fn_error $? "ftp missing" "$LINENO" 5
+fi
+   if test $HAVE_CARES  ; then :
+
+else
+  as_fn_error $? "c-ares missing" "$LINENO" 5
+fi
+   if test $HAVE_CURL   ; then :
+
+else
+  as_fn_error $? "curl missing" "$LINENO" 5
+fi
+   if test $HAVE_MXML   ; then :
+
+else
+  as_fn_error $? "mxml missing" "$LINENO" 5
+fi
+   if test $HAVE_SSL    ; then :
+
+else
+  as_fn_error $? "ssl missing" "$LINENO" 5
+fi
+   if test $HAVE_SSH2   ; then :
+
+else
+  as_fn_error $? "ssh2 missing" "$LINENO" 5
+fi
+   if test $HAVE_GNU_TLS; then :
+
+else
+  as_fn_error $? "GNU TLS missing" "$LINENO" 5
+fi
+   if test $HAVE_ISO9660; then :
+
+else
+  as_fn_error $? "ISO9660 missing" "$LINENO" 5
+fi
+   if test $HAVE_PCRE   ; then :
+
+else
+  as_fn_error $? "PCRE missing" "$LINENO" 5
+fi
+
+
+fi
+
 
 
 # set variables for tests
@@ -16482,13 +16575,6 @@ else
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $VERSION_GNUTLS" >&5
-$as_echo "$as_me: WARNING: $VERSION_GNUTLS" >&2;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $VERSION_OPENSSL" >&5
-$as_echo "$as_me: WARNING: $VERSION_OPENSSL" >&2;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $GCRYPT_VERSION" >&5
-$as_echo "$as_me: WARNING: $GCRYPT_VERSION" >&2;}
-
 
 
 ac_config_headers="$ac_config_headers bar/config.h"
@@ -16503,7 +16589,7 @@ ac_config_headers="$ac_config_headers bar/config.h"
 
 
 if test "$prefix" = "NONE"; then
-  prefix=/usr/local
+  prefix=/usr
 fi
 INSTALL_DIR=$prefix
 if test "$bindir" = "\${exec_prefix}/bin"; then
@@ -16515,7 +16601,7 @@ if test "$bindir" = "\${exec_prefix}/bin"; then
 else
   INSTALL_BIN_DIR=$bindir
 fi
-if test "$mandir" = "\${prefix}/man"; then
+if test "$mandir" = "\${datarootdir}/man"; then
   MAN_DIR=${prefix}/man
 else
   MAN_DIR=${mandir}
@@ -17881,7 +17967,21 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  Config directory  : $CONFIG_DIR"
                     echo "  TLS directory     : $TLS_DIR"
                     echo ""
-                    if test ! "$HAVE_BZ2" -o ! "$HAVE_LZMA" -o ! "$HAVE_XDELTA" -o ! "$HAVE_GCRYPT" -o ! "$HAVE_FTP" -o ! "$HAVE_SSH2" -o ! "$HAVE_GNU_TLS"; then
+                    if test    ! "$HAVE_BZ2" \
+                            -o ! "$HAVE_LZMA" \
+                            -o ! "$HAVE_LZO" \
+                            -o ! "$HAVE_LZ4" \
+                            -o ! "$HAVE_XDELTA" \
+                            -o ! "$HAVE_GCRYPT" \
+                            -o ! "$HAVE_FTP" \
+                            -o ! "$HAVE_CARES" \
+                            -o ! "$HAVE_CURL" \
+                            -o ! "$HAVE_MXML" \
+                            -o ! "$HAVE_SSL" \
+                            -o ! "$HAVE_SSH2" \
+                            -o ! "$HAVE_GNU_TLS" \
+                            -o ! "$HAVE_ISO9660" \
+                            -o ! "$HAVE_PCRE"; then
                       echo "Note: you can download missing additional packages with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
                       echo "      after downloading."
