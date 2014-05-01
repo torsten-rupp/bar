@@ -73,6 +73,7 @@ typedef struct
   struct
   {
     StorageTypes type;
+    Pattern      *storageNamePattern;
     Pattern      *hostNamePattern;
     Pattern      *loginNamePattern;
     Pattern      *deviceNamePattern;
@@ -413,10 +414,11 @@ long Index_countState(DatabaseHandle *databaseHandle,
 * Input  : IndexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
-*          hostName         - host name pattern or NULL
-*          loginName        - login name pattern or NULL
-*          deviceName       - device name pattern or NULL
-*          fileName         - file name pattern or NULL
+*          storageName      - storage name pattern (glob) or NULL
+*          hostName         - host name pattern (glob) or NULL
+*          loginName        - login name pattern (glob) or NULL
+*          deviceName       - device name pattern (glob) or NULL
+*          fileName         - file name pattern (glob) or NULL
 *          indexState       - index state
 * Output : IndexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
@@ -426,6 +428,7 @@ long Index_countState(DatabaseHandle *databaseHandle,
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
                              StorageTypes     storageType,
+                             const String     storageName,
                              const String     hostName,
                              const String     loginName,
                              const String     deviceName,
@@ -481,7 +484,7 @@ bool Index_deleteStorage(IndexQueryHandle *indexQueryHandle,
 * Purpose: list file entries
 * Input  : indexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
-*          pattern          - name pattern (can be NULL)
+*          pattern          - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -543,7 +546,7 @@ Errors Index_deleteFile(DatabaseHandle *databaseHandle,
 * Name   : Index_initListImages
 * Purpose: list image entries
 * Input  : databaseHandle - database handle
-*          pattern        - name pattern (can be NULL)
+*          pattern        - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -597,7 +600,7 @@ Errors Index_deleteImage(DatabaseHandle *databaseHandle,
 * Name   : Index_initListDirectories
 * Purpose: list directory entries
 * Input  : databaseHandle - database handle
-*          pattern        - name pattern (can be NULL)
+*          pattern        - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -653,7 +656,7 @@ Errors Index_deleteDirectory(DatabaseHandle *databaseHandle,
 * Name   : Index_initListLinks
 * Purpose: list link entries
 * Input  : databaseHandle - database handle
-*          pattern        - name pattern (can be NULL)
+*          pattern        - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - inxe query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -711,7 +714,7 @@ Errors Index_deleteLink(DatabaseHandle *databaseHandle,
 * Name   : Index_initListHardLinks
 * Purpose: list hard link entries
 * Input  : databaseHandle - database handle
-*          pattern        - name pattern (can be NULL)
+*          pattern        - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - indxe query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -774,7 +777,7 @@ Errors Index_deleteHardLink(DatabaseHandle *databaseHandle,
 * Name   : Index_initListSpecial
 * Purpose: list special entries
 * Input  : databaseHandle - database handle
-*          pattern        - name pattern (can be NULL)
+*          pattern        - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
