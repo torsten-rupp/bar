@@ -3025,6 +3025,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
                                     STORAGE_TYPE_ANY,
+                                    NULL,
                                     createInfo->storageSpecifier->hostName,
                                     createInfo->storageSpecifier->loginName,
                                     createInfo->storageSpecifier->deviceName,
