@@ -3033,8 +3033,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                    );
       while (Index_getNextStorage(&indexQueryHandle,
                                   &oldStorageId,
-                                  oldStorageName,
                                   NULL, // uuid
+                                  oldStorageName,
                                   NULL, // createdDateTime
                                   NULL, // size
                                   NULL, // indexState,
