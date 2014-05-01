@@ -972,6 +972,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
           {
             connectErrorMessage = exception.getMessage();
           }
+          catch (IOException exception)
+          {
+            connectErrorMessage = BARControl.reniceIOException(exception).getMessage();
+          }
           catch (Exception exception)
           {
             connectErrorMessage = exception.getMessage();
@@ -1076,21 +1080,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 //            passwordCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
             passwordKey         = publicKey;
           }
-          catch (java.security.NoSuchAlgorithmException  exception)
-          {
-            if (Settings.debugFlag)
-            {
-              BARControl.printStackTrace(exception);
-            }
-          }
-          catch (javax.crypto.NoSuchPaddingException exception)
-          {
-            if (Settings.debugFlag)
-            {
-              BARControl.printStackTrace(exception);
-            }
-          }
-          catch (java.security.spec.InvalidKeySpecException exception)
+          catch (Exception exception)
           {
             if (Settings.debugFlag)
             {

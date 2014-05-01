@@ -1040,12 +1040,17 @@ public class BARControl
    */
   public static IOException reniceIOException(IOException exception)
   {
-    final Pattern PATTERN = Pattern.compile("^(.*?)\\s*java.io.IOException: error=\\d+,\\s*(.*)$",Pattern.CASE_INSENSITIVE);
+    final Pattern PATTERN1 = Pattern.compile("^(.*?)\\s*java.io.IOException:\\s*error=\\d+,\\s*(.*)$",Pattern.CASE_INSENSITIVE);
+    final Pattern PATTERN2 = Pattern.compile("^.*\\.SunCertPathBuilderException:\\s*(.*)$",Pattern.CASE_INSENSITIVE);
 
     Matcher matcher;
-    if ((matcher = PATTERN.matcher(exception.getMessage())).matches())
+    if      ((matcher = PATTERN1.matcher(exception.getMessage())).matches())
     {
-      exception = new IOException(matcher.group(1)+" "+matcher.group(2));
+      exception = new IOException(matcher.group(1)+" "+matcher.group(2),exception);
+    }
+    else if ((matcher = PATTERN2.matcher(exception.getMessage())).matches())
+    {
+      exception = new IOException(matcher.group(1),exception);
     }
 
     return exception;
