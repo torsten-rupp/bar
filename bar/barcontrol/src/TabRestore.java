@@ -533,44 +533,54 @@ class TabRestore
                                        ) == Errors.NONE
                  )
               {
-                long        storageId           = resultMap.getLong  ("storageId"                   );
-                String      name                = resultMap.getString("name"                        );
-                long        dateTime            = resultMap.getLong  ("dateTime"                    );
-                long        size                = resultMap.getLong  ("size"                        );
-                IndexStates indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
-                IndexModes  indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class  );
-                long        lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"         );
-                String      errorMessage        = resultMap.getString("errorMessage"                );
-
-                StorageData storageData;
-                synchronized(storageDataMap)
+                try
                 {
-                  storageData = storageDataMap.get(storageId);
-                  if (storageData != null)
+                  long        storageId           = resultMap.getLong  ("storageId"                   );
+                  String      name                = resultMap.getString("name"                        );
+                  long        dateTime            = resultMap.getLong  ("dateTime"                    );
+                  long        size                = resultMap.getLong  ("size"                        );
+                  IndexStates indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
+                  IndexModes  indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class  );
+                  long        lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"         );
+                  String      errorMessage        = resultMap.getString("errorMessage"                );
+
+                  StorageData storageData;
+                  synchronized(storageDataMap)
                   {
-                    storageData.name                = name;
-                    storageData.size                = size;
-                    storageData.dateTime            = dateTime;
-                    storageData.indexState          = indexState;
-                    storageData.indexMode           = indexMode;
-                    storageData.lastCheckedDateTime = lastCheckedDateTime;
-                    storageData.errorMessage        = errorMessage;
+                    storageData = storageDataMap.get(storageId);
+                    if (storageData != null)
+                    {
+                      storageData.name                = name;
+                      storageData.size                = size;
+                      storageData.dateTime            = dateTime;
+                      storageData.indexState          = indexState;
+                      storageData.indexMode           = indexMode;
+                      storageData.lastCheckedDateTime = lastCheckedDateTime;
+                      storageData.errorMessage        = errorMessage;
+                    }
+                    else
+                    {
+                      storageData = new StorageData(storageId,
+                                                    name,
+                                                    size,
+                                                    dateTime,
+                                                    new File(name).getName(),
+                                                    indexState,
+                                                    indexMode,
+                                                    lastCheckedDateTime,
+                                                    errorMessage
+                                                   );
+                    }
                   }
-                  else
+                  newStorageDataMap.put(storageData);
+                }
+                catch (IllegalArgumentException exception)
+                {
+                  if (Settings.debugFlag)
                   {
-                    storageData = new StorageData(storageId,
-                                                  name,
-                                                  size,
-                                                  dateTime,
-                                                  new File(name).getName(),
-                                                  indexState,
-                                                  indexMode,
-                                                  lastCheckedDateTime,
-                                                  errorMessage
-                                                 );
+                    System.err.println("ERROR: "+exception.getMessage());
                   }
                 }
-                newStorageDataMap.put(storageData);
               }
             }
           }
@@ -929,165 +939,163 @@ class TabRestore
             if (entryPattern != null)
             {
               // execute command
-              String[]            resultErrorMessage  = new String[1];
-              ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
+              Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S checkedStorageOnlyFlag=%y entryMaxCount=%d newestEntriesOnlyFlag=%y",
+                                                                         entryPattern,
+                                                                         checkedStorageOnlyFlag,
+                                                                         entryMaxCount,
+                                                                         newestEntriesOnlyFlag
+                                                                        )
+                                                    );
 
-//TODO
-Dprintf.dprintf("process line by line");
-
-              if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S checkedStorageOnlyFlag=%y entryMaxCount=%d newestEntriesOnlyFlag=%y",
-                                                               entryPattern,
-                                                               checkedStorageOnlyFlag,
-                                                               entryMaxCount,
-                                                               newestEntriesOnlyFlag
-                                                              ),
-                                           resultErrorMessage,
-                                           resultMapList
-                                          ) == Errors.NONE
-                 )
+              // read results, update/add data
+              String[] resultErrorMessage = new String[1];
+              ValueMap resultMap          = new ValueMap();
+              while (!command.endOfData())
               {
-                for (ValueMap resultMap : resultMapList)
+                if (command.getNextResult(resultErrorMessage,
+                                          resultMap,
+                                          5*1000
+                                         ) == Errors.NONE
+                   )
                 {
-                  EntryTypes entryType = resultMap.getEnum("entryType",EntryTypes.class);
-                  switch (entryType)
+                  try
                   {
-                    case FILE:
-                      {
-                        String storageName     = resultMap.getString("storageName"    );
-                        long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                        String fileName        = resultMap.getString("name"           );
-                        long   size            = resultMap.getLong  ("size"           );
-                        long   dateTime        = resultMap.getLong  ("dateTime"       );
-                        long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
-                        long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
+                    switch (resultMap.getEnum("entryType",EntryTypes.class))
+                    {
+                      case FILE:
+                        {
+                          String storageName     = resultMap.getString("storageName"    );
+                          long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                          String fileName        = resultMap.getString("name"           );
+                          long   size            = resultMap.getLong  ("size"           );
+                          long   dateTime        = resultMap.getLong  ("dateTime"       );
+                          long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
+                          long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
 
-                        EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.FILE);
-                        if (entryData != null)
-                        {
-                          entryData.size     = size;
-                          entryData.dateTime = dateTime;
+                          EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.FILE);
+                          if (entryData != null)
+                          {
+                            entryData.size     = size;
+                            entryData.dateTime = dateTime;
+                          }
+                          else
+                          {
+                            entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.FILE,size,dateTime);
+                            entryDataMap.put(entryData);
+                          }
                         }
-                        else
+                        break;
+                      case IMAGE:
                         {
-                          entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.FILE,size,dateTime);
-                          entryDataMap.put(entryData);
-                        }
-                      }
-                      break;
-                    case IMAGE:
-                      {
-                        String storageName     = resultMap.getString("name"           );
-                        long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                        String imageName       = resultMap.getString("name"           );
-                        long   size            = resultMap.getLong  ("size"           );
-                        long   blockOffset     = resultMap.getLong  ("blockOffset"    );
-                        long   blockCount      = resultMap.getLong  ("blockCount"     );
+                          String storageName     = resultMap.getString("storageName"    );
+                          long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                          String imageName       = resultMap.getString("name"           );
+                          long   size            = resultMap.getLong  ("size"           );
+                          long   blockOffset     = resultMap.getLong  ("blockOffset"    );
+                          long   blockCount      = resultMap.getLong  ("blockCount"     );
 
-                        EntryData entryData = entryDataMap.get(storageName,imageName,EntryTypes.IMAGE);
-                        if (entryData != null)
-                        {
-                          entryData.size = size;
+                          EntryData entryData = entryDataMap.get(storageName,imageName,EntryTypes.IMAGE);
+                          if (entryData != null)
+                          {
+                            entryData.size = size;
+                          }
+                          else
+                          {
+                            entryData = new EntryData(storageName,storageDateTime,imageName,EntryTypes.IMAGE,size,0L);
+                            entryDataMap.put(entryData);
+                          }
                         }
-                        else
+                        break;
+                      case DIRECTORY:
                         {
-                          entryData = new EntryData(storageName,storageDateTime,imageName,EntryTypes.IMAGE,size,0L);
-                          entryDataMap.put(entryData);
-                        }
-                      }
-                      break;
-                    case DIRECTORY:
-                      {
-                        String storageName     = resultMap.getString("name"           );
-                        long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                        String directoryName   = resultMap.getString("name"           );
-                        long   dateTime        = resultMap.getLong  ("dateTime"       );
+                          String storageName     = resultMap.getString("storageName"    );
+                          long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                          String directoryName   = resultMap.getString("name"           );
+                          long   dateTime        = resultMap.getLong  ("dateTime"       );
 
-                        EntryData entryData = entryDataMap.get(storageName,directoryName,EntryTypes.DIRECTORY);
-                        if (entryData != null)
-                        {
-                          entryData.dateTime = dateTime;
+                          EntryData entryData = entryDataMap.get(storageName,directoryName,EntryTypes.DIRECTORY);
+                          if (entryData != null)
+                          {
+                            entryData.dateTime = dateTime;
+                          }
+                          else
+                          {
+                            entryData = new EntryData(storageName,storageDateTime,directoryName,EntryTypes.DIRECTORY,dateTime);
+                            entryDataMap.put(entryData);
+                          }
                         }
-                        else
+                        break;
+                      case LINK:
                         {
-                          entryData = new EntryData(storageName,storageDateTime,directoryName,EntryTypes.DIRECTORY,dateTime);
-                          entryDataMap.put(entryData);
-                        }
-                      }
-                      break;
-                    case LINK:
-                      {
-                        String storageName     = resultMap.getString("name"           );
-                        long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                        String linkName        = resultMap.getString("name"           );
-                        String destinationName = resultMap.getString("destinationName");
-                        long   dateTime        = resultMap.getLong  ("dateTime"       );
+                          String storageName     = resultMap.getString("storageName"    );
+                          long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                          String linkName        = resultMap.getString("name"           );
+                          String destinationName = resultMap.getString("destinationName");
+                          long   dateTime        = resultMap.getLong  ("dateTime"       );
 
-                        EntryData entryData = entryDataMap.get(storageName,linkName,EntryTypes.LINK);
-                        if (entryData != null)
-                        {
-                          entryData.dateTime = dateTime;
+                          EntryData entryData = entryDataMap.get(storageName,linkName,EntryTypes.LINK);
+                          if (entryData != null)
+                          {
+                            entryData.dateTime = dateTime;
+                          }
+                          else
+                          {
+                            entryData = new EntryData(storageName,storageDateTime,linkName,EntryTypes.LINK,dateTime);
+                            entryDataMap.put(entryData);
+                          }
                         }
-                        else
+                        break;
+                      case HARDLINK:
                         {
-                          entryData = new EntryData(storageName,storageDateTime,linkName,EntryTypes.LINK,dateTime);
-                          entryDataMap.put(entryData);
-                        }
-                      }
-                      break;
-                    case HARDLINK:
-                      {
-                        String storageName     = resultMap.getString("name"           );
-                        long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                        String fileName        = resultMap.getString("name"           );
-                        long   size            = resultMap.getLong  ("size"           );
-                        long   dateTime        = resultMap.getLong  ("dateTime"       );
-                        long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
-                        long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
+                          String storageName     = resultMap.getString("storageName"    );
+                          long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                          String fileName        = resultMap.getString("name"           );
+                          long   size            = resultMap.getLong  ("size"           );
+                          long   dateTime        = resultMap.getLong  ("dateTime"       );
+                          long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
+                          long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
 
-                        EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.HARDLINK);
-                        if (entryData != null)
-                        {
-                          entryData.dateTime = dateTime;
+                          EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.HARDLINK);
+                          if (entryData != null)
+                          {
+                            entryData.dateTime = dateTime;
+                          }
+                          else
+                          {
+                            entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.HARDLINK,dateTime);
+                            entryDataMap.put(entryData);
+                          }
                         }
-                        else
+                        break;
+                      case SPECIAL:
                         {
-                          entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.HARDLINK,dateTime);
-                          entryDataMap.put(entryData);
-                        }
-                      }
-                      break;
-                    case SPECIAL:
-                      {
-                        String storageName     = resultMap.getString("name"           );
-                        long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                        String name            = resultMap.getString("name"           );
-                        long   dateTime        = resultMap.getLong  ("dateTime"       );
+                          String storageName     = resultMap.getString("storageName"    );
+                          long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                          String name            = resultMap.getString("name"           );
+                          long   dateTime        = resultMap.getLong  ("dateTime"       );
 
-                        EntryData entryData = entryDataMap.get(storageName,name,EntryTypes.SPECIAL);
-                        if (entryData != null)
-                        {
-                          entryData.dateTime = dateTime;
+                          EntryData entryData = entryDataMap.get(storageName,name,EntryTypes.SPECIAL);
+                          if (entryData != null)
+                          {
+                            entryData.dateTime = dateTime;
+                          }
+                          else
+                          {
+                            entryData = new EntryData(storageName,storageDateTime,name,EntryTypes.SPECIAL,dateTime);
+                            entryDataMap.put(entryData);
+                          }
                         }
-                        else
-                        {
-                          entryData = new EntryData(storageName,storageDateTime,name,EntryTypes.SPECIAL,dateTime);
-                          entryDataMap.put(entryData);
-                        }
-                      }
-                      break;
+                        break;
+                    }
+                  }
+                  catch (IllegalArgumentException exception)
+                  {
+                    if (Settings.debugFlag)
+                    {
+                      System.err.println("ERROR: "+exception.getMessage());
+                    }
                   }
                 }
-              }
-              else
-              {
-                final String errorText = String.format("Cannot list entries (error: %s)",resultErrorMessage[0]);
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    Dialogs.error(shell,errorText);
-                  }
-                });
               }
             }
           }
@@ -2924,13 +2932,23 @@ Dprintf.dprintf("process line by line");
                                            ) == Errors.NONE
                      )
                   {
-                    long        storageId           = resultMap.getLong  ("storageId"          );
-                    String      name                = resultMap.getString("name"               );
+                    try
+                    {
+                      long        storageId           = resultMap.getLong  ("storageId"          );
+                      String      name                = resultMap.getString("name"               );
 
-                    busyDialog.updateText(String.format("%d: %s",storageId,name));
+                      busyDialog.updateText(String.format("%d: %s",storageId,name));
 
-                    n++;
-                    busyDialog.updateProgressBar(n);
+                      n++;
+                      busyDialog.updateProgressBar(n);
+                    }
+                    catch (IllegalArgumentException exception)
+                    {
+                      if (Settings.debugFlag)
+                      {
+                        System.err.println("ERROR: "+exception.getMessage());
+                      }
+                    }
                   }
                   else
                   {
@@ -3134,15 +3152,24 @@ Dprintf.dprintf("");
                                          ) == Errors.NONE
                    )
                 {
-//Dprintf.dprintf("resultMap=%s",resultMap);
-                  String name              = resultMap.getString("name"            );
-                  long   entryDoneBytes    = resultMap.getLong  ("entryDoneBytes"  );
-                  long   entryTotalBytes   = resultMap.getLong  ("entryTotalBytes" );
-//                  long   storageDoneBytes  = resultMap.getLong("storageDoneBytes" );
-//                  long   storageTotalBytes = resultMap.getLong("storageTotalBytes");
+                  try
+                  {
+                    String name              = resultMap.getString("name"            );
+                    long   entryDoneBytes    = resultMap.getLong  ("entryDoneBytes"  );
+                    long   entryTotalBytes   = resultMap.getLong  ("entryTotalBytes" );
+  //                  long   storageDoneBytes  = resultMap.getLong("storageDoneBytes" );
+  //                  long   storageTotalBytes = resultMap.getLong("storageTotalBytes");
 
-                  busyDialog.updateText(1,name);
-                  busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                    busyDialog.updateText(1,name);
+                    busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                  }
+                  catch (IllegalArgumentException exception)
+                  {
+                    if (Settings.debugFlag)
+                    {
+                      System.err.println("ERROR: "+exception.getMessage());
+                    }
+                  }
                 }
               }
 //Dprintf.dprintf("command=%s",command);
@@ -3499,15 +3526,24 @@ Dprintf.dprintf("");
                                          ) == Errors.NONE
                    )
                 {
-//Dprintf.dprintf("resultMap=%s",resultMap);
-                  String name              = resultMap.getString("name"            );
-                  long   entryDoneBytes    = resultMap.getLong("entryDoneBytes"    );
-                  long   entryTotalBytes   = resultMap.getLong("entryTotalBytes"   );
-//                  long   storageDoneBytes  = resultMap.getLong("storageDoneBytes" );
-//                  long   storageTotalBytes = resultMap.getLong("storageTotalBytes");
+                  try
+                  {
+                    String name              = resultMap.getString("name"            );
+                    long   entryDoneBytes    = resultMap.getLong("entryDoneBytes"    );
+                    long   entryTotalBytes   = resultMap.getLong("entryTotalBytes"   );
+  //                  long   storageDoneBytes  = resultMap.getLong("storageDoneBytes" );
+  //                  long   storageTotalBytes = resultMap.getLong("storageTotalBytes");
 
-                  busyDialog.updateText(1,name);
-                  busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                    busyDialog.updateText(1,name);
+                    busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                  }
+                  catch (IllegalArgumentException exception)
+                  {
+                    if (Settings.debugFlag)
+                    {
+                      System.err.println("ERROR: "+exception.getMessage());
+                    }
+                  }
                 }
                 else
                 {
