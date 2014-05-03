@@ -312,7 +312,7 @@ INTERMEDIATE         = errors.c \
 
 TARGETS              = bar@EXEEXT@ \
                        bar-debug@EXEEXT@ \
-                       $(if @HAVE_BREAKPAD@,bar.symbols bar-debug.symbols) \
+                       $(if @HAVE_BREAKPAD@,bar.sym bar-debug.sym) \
                        bar-keygen \
                        destroyer@EXEEXT@ \
 
@@ -389,6 +389,8 @@ help:
 	@$(ECHO) "  performance4, performance_lzma_compress"
 	@$(ECHO) "  performance5, performance_delta_compress"
 	@$(ECHO) ""
+	@$(ECHO) "  crashdump MINIDUMP=<file name>"
+	@$(ECHO) ""       
 	@$(ECHO) "  dist"
 
 # create dependencies
@@ -424,12 +426,12 @@ bar-valgrind@EXEEXT@: \
 
 # create BAR symbol files
 ifeq (@HAVE_BREAKPAD@,1)
-bar.symbols: bar@EXEEXT@
+bar.sym: bar@EXEEXT@
 	$(DUMP_SYMS) ./bar@EXEEXT@ > $@
 endif
 
 ifeq (@HAVE_BREAKPAD@,1)
-bar-debug.symbols: bar-debug@EXEEXT@
+bar-debug.sym: bar-debug@EXEEXT@
 	$(DUMP_SYMS) ./bar-debug@EXEEXT@ > $@
 endif
 
@@ -2961,6 +2963,20 @@ ifneq ($(DIRECTORY),)
                           $(DIRECTORY)/bar/test/data
 else
 	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
+endif
+
+# ----------------------------------------------------------------------------
+
+.PHONY: crashdump
+crashdump:
+ifneq ($(MINIDUMP),)
+	../packages/breakpad/src/tools/linux/md2core/minidump-2-core -v $(MINIDUMP) 1>bar.core 2>bar.core.out
+	(a=`grep -w GUID bar.core.ouot |grep bar|sed 's/-.*//g'`; \
+         b=`objdump -h ./bar|grep \.text|awk '{print $$4}'`; \
+         gdb --eval-command="add-symbol-file ./bar `perl -e 'die unless $$ARGV[0] && $$ARGV[1]; printf("%#x\n", hex($$ARGV[0]) + hex($$ARGV[1]))' $$a $$b;`" --core ./bar.core; \
+        )
+else
+	echo "Please specify minidump file with MINIDUMP=<file name>"
 endif
 
 # ----------------------------------------------------------------------------
