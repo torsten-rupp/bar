@@ -868,6 +868,10 @@ AC_PROG_INSTALL
 if test -z "$INSTALL"; then
   AC_MSG_ERROR([Cannot find a 'install' in PATH. Please check your PATH environment variable.])
 fi
+AC_PATH_PROGS(M4,m4)
+if test -z "$M4"; then
+  AC_MSG_ERROR([Cannot find a 'm4' in PATH. Please check your PATH environment variable.])
+fi
 if test -d epm -o -d "`readlink epm`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
     dnl compile epm
