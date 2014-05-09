@@ -17,125 +17,125 @@ endif
 
 build: build-stamp
 build-stamp:
-	dh_testdir
+    dh_testdir
 
-	# Add here commands to compile the package.
-	ln -s packages/zlib-1.2.7 zlib
-	ln -s packages/bzip2-1.0.5 bzip2
-	ln -s packages/xz-5.0.5 xz
-	ln -s packages/xdelta3.0.0 xdelta3
-	ln -s packages/ftplib-3.1 ftplib
-	ln -s packages/libgpg-error-1.10 libgpg-error
-	ln -s packages/libgcrypt-1.5.0 libgcrypt
-	ln -s packages/gmp-5.1.3 gmp
-	ln -s packages/nettle-2.6 nettle
-	ln -s packages/gnutls-3.1.18 gnutls
-	ln -s packages/openssl-1.0.1g openssl
-	ln -s packages/libssh2-1.4.2 libssh2
-	ln -s packages/curl-7.28.1 curl
-	ln -s packages/c-ares-1.10.0 c-ares
-	ln -s packages/mxml-2.7 mxml
-	ln -s packages/libcdio-0.92 libcdio
-	ln -s packages/pcre-8.34 pcre
-	./configure
-	make all
-	# --- end custom part for compiling
+    # Add here commands to compile the package.
+    ln -s packages/zlib-1.2.7 zlib
+    ln -s packages/bzip2-1.0.5 bzip2
+    ln -s packages/xz-5.0.5 xz
+    ln -s packages/xdelta3.0.0 xdelta3
+    ln -s packages/ftplib-3.1 ftplib
+    ln -s packages/libgpg-error-1.10 libgpg-error
+    ln -s packages/libgcrypt-1.5.0 libgcrypt
+    ln -s packages/gmp-5.1.3 gmp
+    ln -s packages/nettle-2.6 nettle
+    ln -s packages/gnutls-3.1.18 gnutls
+    ln -s packages/openssl-1.0.1g openssl
+    ln -s packages/libssh2-1.4.2 libssh2
+    ln -s packages/curl-7.28.1 curl
+    ln -s packages/c-ares-1.10.0 c-ares
+    ln -s packages/mxml-2.7 mxml
+    ln -s packages/libcdio-0.92 libcdio
+    ln -s packages/pcre-8.34 pcre
+    ./configure --enable-package-check
+    make all
+    # --- end custom part for compiling
 
-	touch build-stamp
+    touch build-stamp
 
 clean:
-	dh_testdir
-	dh_testroot
-	rm -f build-stamp
+    dh_testdir
+    dh_testroot
+    rm -f build-stamp
 
-	# Add here commands to clean up after the build process.
-	make clean || true
-	# --- end custom part for cleaning up
+    # Add here commands to clean up after the build process.
+    make clean || true
+    # --- end custom part for cleaning up
 
-	dh_clean
+    dh_clean
 
 install: build
-	dh_testdir
-	dh_testroot
-	dh_clean -k
-	dh_installdirs
+    dh_testdir
+    dh_testroot
+    dh_clean -k
+    dh_installdirs
 
-	# Add here commands to install the package
-	# --- end custom part for installing
+    # Add here commands to install the package
+    # --- end custom part for installing
 
 install-bar: build
-	dh_testdir
-	dh_testroot
-	dh_clean -k
-	dh_installdirs
+    dh_testdir
+    dh_testroot
+    dh_clean -k
+    dh_installdirs
 
-	# Add here commands to install the package
-	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
-	make \
+    # Add here commands to install the package
+    # The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
+    make \
           DESTDIR=/usr/src/packages/BUILD/debian/bar DIST=1 SYSTEM=Debian \
           install_base install_man
-	# --- end custom part for installing
+    # --- end custom part for installing
 
 install-bar-gui: build
-	dh_testdir
-	dh_testroot
-	dh_clean -k
-	dh_installdirs
+    dh_testdir
+    dh_testroot
+    dh_clean -k
+    dh_installdirs
 
-	# Add here commands to install the package
-	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
-	make \
+    # Add here commands to install the package
+    # The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
+    make \
           DESTDIR=/usr/src/packages/BUILD/debian/bar-gui DIST=1 SYSTEM=Debian \
           install_gui
-	# --- end custom part for installing
+    # --- end custom part for installing
 
 # Build architecture-independent files here.
 binary-indep: build install
-	# We have nothing to do by default.
+    # We have nothing to do by default.
 
 # Build architecture-dependent files here.
 bar: build install-bar
-	dh_testdir
-	dh_testroot
-	dh_installdirs -p$@
-	dh_installdocs -p$@
-	dh_installexamples -p$@
-	dh_installmenu -p$@
-	dh_installcron -p$@
-	dh_installman -p$@
-	dh_installinfo -p$@
-	dh_installchangelogs -p$@
-	dh_link -p$@
-	dh_strip -p$@
-	dh_compress -p$@
-	dh_fixperms -p$@
-	dh_installdeb -p$@
-	dh_shlibdeps -p$@
-	dh_gencontrol -p$@
-	dh_md5sums -p$@
-	dh_builddeb -p$@
+    dh_testdir
+    dh_testroot
+    dh_installdirs -p$@
+    dh_installdocs -p$@
+    dh_installexamples -p$@
+    dh_installmenu -p$@
+    dh_installcron -p$@
+    dh_installman -p$@
+    dh_installinfo -p$@
+    dh_installchangelogs -p$@
+    dh_link -p$@
+    dh_strip -p$@
+    dh_compress -p$@
+    dh_fixperms -p$@
+    dh_installdeb -p$@
+    dh_shlibdeps -p$@
+    dh_gencontrol -p$@
+    dh_md5sums -p$@
+    dh_builddeb -p$@
 
 # Build architecture-dependent files here.
 bar-gui: build install-bar-gui
-	dh_testdir
-	dh_testroot
-	dh_installdirs -p$@
-	dh_installdocs -p$@
-	dh_installexamples -p$@
-	dh_installmenu -p$@
-	dh_installcron -p$@
-	dh_installman -p$@
-	dh_installinfo -p$@
-	dh_installchangelogs -p$@
-	dh_link -p$@
-	dh_strip -p$@
-	dh_compress -p$@
-	dh_fixperms -p$@
-	dh_installdeb -p$@
-	dh_shlibdeps -p$@
-	dh_gencontrol -p$@
-	dh_md5sums -p$@
-	dh_builddeb -p$@
+    dh_testdir
+    dh_testroot
+    dh_installdirs -p$@
+    dh_installdocs -p$@
+    dh_installexamples -p$@
+    dh_installmenu -p$@
+    dh_installcron -p$@
+    dh_installman -p$@
+    dh_installinfo -p$@
+    dh_installchangelogs -p$@
+    dh_link -p$@
+    dh_strip -p$@
+    dh_compress -p$@
+    dh_fixperms -p$@
+    dh_installdeb -p$@
+    dh_shlibdeps -p$@
+    dh_gencontrol -p$@
+    dh_md5sums -p$@
+    dh_builddeb -p$@
 
 binary: binary-indep bar bar-gui
 .PHONY: build clean install install-bar install-bar gui binary-indep bar bar-gui binary

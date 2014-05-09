@@ -1,3 +1,22 @@
+bar (0.18a) stable; urgency=low
+  * upgraded OpenSSL to 1.0.1g (fix for Heartbleed bug)
+  * fixed replaced storage archives in database
+  * barcontrol: fixed possible exception when session id key
+    data cannot be parsed (NumberFormatException)
+  * barcontrol: fix delete database index entries
+  * barcontrol: fixed possible exception when insert
+    new element into exclude list, compress exclude list
+  * fix compile non-debug version without stacktrace function
+  * install bar binary in /usr/bin
+  * fixed install of man-page
+  * fixed include bar-keygen in base package
+  * fixed man page
+  * barcontrol: improved error message when a SSL connection
+    cannot be established
+  * barcontrol: fixed error handling
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Thu, 01 May 2014 00:00:00 +0200
+
 bar (0.18) stable; urgency=low
   * added multi-core compression/encryption support!
   * dramatic speed-up when creating archives!
@@ -1017,4 +1036,3 @@ bar (0.01) stable; urgency=low
   * initial release
 
  -- Torsten Rupp <torsten.rupp@gmx.net>  Thu, 01 Nov 2007 00:00:00 +0100
-
