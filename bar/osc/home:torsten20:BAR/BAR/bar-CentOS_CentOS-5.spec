@@ -106,7 +106,8 @@ mkdir packages
   (cd packages; tar xjf pcre-8.34.tar.bz2)
   ln -s packages/pcre-8.34 pcre
 )
-%configure
+
+%configure --enable-package-check
 %{__make} OPTFLAGS="%{optflags}"
 
 %install
@@ -119,28 +120,24 @@ mkdir packages
 %{__make} test1 test2 test3 test5 COMPRESS_NAMES_LZMA="lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7 lzma8"
 
 %files
+
 %defattr(-,root,root)
+
 %{_bindir}/bar
+%{_bindir}/bar-debug
 %{_bindir}/barcontrol
 %{_bindir}/barcontrol-linux.jar
 %{_bindir}/barcontrol-linux_64.jar
 %{_bindir}/bar-keygen
 /etc/init.d/barserver
 
-%defattr(0600,root,root)
-/etc/bar/bar.cfg
+%dir /etc/bar
+%dir %attr(0700,root,root) /etc/bar/jobs
 
-%dir
-%defattr(0700,root,root)
-/etc/bar/jobs
+%config(noreplace) %attr(0600,root,root) /etc/bar/bar.cfg
 
-%doc
-ChangeLog
-doc/README
-doc/bar.pdf
-%{_mandir}/man7/bar.7.gz
-
-%config
-/etc/bar/bar.cfg
+%doc ChangeLog doc/README
+%doc doc/bar.pdf
+%doc %{_mandir}/man7/bar.7.gz
 
 %changelog
