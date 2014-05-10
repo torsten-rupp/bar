@@ -1,3 +1,10 @@
+bar (0.18b) stable; urgency=low
+  * fixed server start script barserver for Debian
+  * do not download emp, breakpad by default
+  * fix compilation some third party package: m4 required
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Fri, 09 May 2014 00:00:00 +0200
+
 bar (0.18a) stable; urgency=low
   * upgraded OpenSSL to 1.0.1g (fix for Heartbleed bug)
   * fixed replaced storage archives in database
@@ -14,6 +21,7 @@ bar (0.18a) stable; urgency=low
   * barcontrol: improved error message when a SSL connection
     cannot be established
   * barcontrol: fixed error handling
+  * fixed free resources when creating image archives
 
  -- Torsten Rupp <torsten.rupp@gmx.net>  Thu, 01 May 2014 00:00:00 +0200
 
