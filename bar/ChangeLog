@@ -1,6 +1,29 @@
 2014-??-?? 0.19
   * added LZO compression
 
+2014-05-09 0.18b
+  * fixed server start script barserver for Debian
+  * do not download epm, breakpad by default
+  * fix compilation some third party package: m4 required
+
+2014-05-01 0.18a
+  * upgraded OpenSSL to 1.0.1g (fix for Heartbleed bug)
+  * fixed replaced storage archives in database
+  * barcontrol: fixed possible exception when session id key
+    data cannot be parsed (NumberFormatException)
+  * barcontrol: fix delete database index entries
+  * barcontrol: fixed possible exception when insert
+    new element into exclude list, compress exclude list
+  * fix compile non-debug version without stacktrace function
+  * install bar binary in /usr/bin
+  * fixed install of man-page
+  * fixed include bar-keygen in base package
+  * fixed man page
+  * barcontrol: improved error message when a SSL connection
+    cannot be established
+  * barcontrol: fixed error handling
+  * fixed free resources when creating image archives
+
 2014-03-21 0.18
   * added multi-core compression/encryption support!
   * dramatic speed-up when creating archives!
