@@ -6025,14 +6025,24 @@ Dprintf.dprintf("");
       widgetJobList.removeAll();
       for (ValueMap resultMap : resultMapList)
       {
-        // get data
-        int    jobId = resultMap.getInt   ("jobId");
-        String name  = resultMap.getString("name" );
+        try
+        {
+          // get data
+          int    jobId = resultMap.getInt   ("jobId");
+          String name  = resultMap.getString("name" );
 
 // TODO deleted jobs?
-        int index = findJobListIndex(name);
-        widgetJobList.add(name,index);
-        jobIds.put(name,jobId);
+          int index = findJobListIndex(name);
+          widgetJobList.add(name,index);
+          jobIds.put(name,jobId);
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugFlag)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
+          }
+        }
       }
     }
   }
@@ -6523,179 +6533,189 @@ throw new Error("NYI");
     {
       for (ValueMap resultMap : resultMapList)
       {
-        FileTypes fileType = resultMap.getEnum("fileType",FileTypes.class);
-        switch (fileType)
+        try
         {
-          case FILE:
-            {
-              String  name         = resultMap.getString ("name"              );
-              long    size         = resultMap.getLong   ("size"              );
-              long    dateTime     = resultMap.getLong   ("dateTime"          );
-              boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
-
-              // create file tree data
-              fileTreeData = new FileTreeData(name,FileTypes.FILE,size,dateTime,new File(name).getName());
-
-              // add entry
-              Image image;
-              if      (includeHashMap.containsKey(name))
-                image = IMAGE_FILE_INCLUDED;
-              else if (excludeHashSet.contains(name))
-                image = IMAGE_FILE_EXCLUDED;
-              else
-                image = IMAGE_FILE;
-
-              subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-              subTreeItem.setText(0,fileTreeData.title);
-              subTreeItem.setText(1,"FILE");
-              subTreeItem.setText(2,Units.formatByteSize(size));
-              subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
-              subTreeItem.setImage(image);
-            }
-            break;
-          case DIRECTORY:
-            {
-              String  name         = resultMap.getString ("name"              );
-              long    dateTime     = resultMap.getLong   ("dateTime"          );
-              boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
-
-              // create file tree data
-              fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,dateTime,new File(name).getName());
-
-              // add entry
-              Image   image;
-              if      (includeHashMap.containsKey(name))
-                image = IMAGE_DIRECTORY_INCLUDED;
-              else if (excludeHashSet.contains(name))
-                image = IMAGE_DIRECTORY_EXCLUDED;
-              else
-                image = IMAGE_DIRECTORY;
-
-              subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,true);
-              subTreeItem.setText(0,fileTreeData.title);
-              subTreeItem.setText(1,"DIR");
-              subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
-              subTreeItem.setImage(image);
-
-              // request directory info
-              directoryInfoThread.add(name,subTreeItem);
-            }
-            break;
-          case LINK:
-            {
-              String  name         = resultMap.getString ("name"              );
-              long    dateTime     = resultMap.getLong   ("dateTime"          );
-              boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
-
-              // create file tree data
-              fileTreeData = new FileTreeData(name,FileTypes.LINK,dateTime,new File(name).getName());
-
-              // add entry
-              Image image;
-              if      (includeHashMap.containsKey(name))
-                image = IMAGE_LINK_INCLUDED;
-              else if (excludeHashSet.contains(name))
-                image = IMAGE_LINK_EXCLUDED;
-              else
-                image = IMAGE_LINK;
-
-              subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-              subTreeItem.setText(0,fileTreeData.title);
-              subTreeItem.setText(1,"LINK");
-              subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
-              subTreeItem.setImage(image);
-            }
-            break;
-          case HARDLINK:
-            {
-              String  name         = resultMap.getString ("name"              );
-              long    size         = resultMap.getLong   ("size"              );
-              long    dateTime     = resultMap.getLong   ("dateTime"          );
-              boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
-
-              // create file tree data
-              fileTreeData = new FileTreeData(name,FileTypes.HARDLINK,size,dateTime,new File(name).getName());
-
-              // add entry
-              Image image;
-              if      (includeHashMap.containsKey(name))
-                image = IMAGE_FILE_INCLUDED;
-              else if (excludeHashSet.contains(name))
-                image = IMAGE_FILE_EXCLUDED;
-              else
-                image = IMAGE_FILE;
-
-              subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-              subTreeItem.setText(0,fileTreeData.title);
-              subTreeItem.setText(1,"HARDLINK");
-              subTreeItem.setText(2,Units.formatByteSize(size));
-              subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
-              subTreeItem.setImage(image);
-            }
-            break;
-          case SPECIAL:
-            {
-              String  name     = resultMap.getString("name"    );
-              long    size     = resultMap.getLong  ("size"    );
-              long    dateTime = resultMap.getLong  ("dateTime");
-
-              SpecialTypes specialType = resultMap.getEnum("specialType",SpecialTypes.class);
-              switch (specialType)
+          FileTypes fileType = resultMap.getEnum("fileType",FileTypes.class);
+          switch (fileType)
+          {
+            case FILE:
               {
-                case CHARACTER_DEVICE:
-                  // create file tree data
-                  fileTreeData = new FileTreeData(name,SpecialTypes.CHARACTER_DEVICE,dateTime,name);
+                String  name         = resultMap.getString ("name"              );
+                long    size         = resultMap.getLong   ("size"              );
+                long    dateTime     = resultMap.getLong   ("dateTime"          );
+                boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
 
-                  // add entry
-                  subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                  subTreeItem.setText(0,fileTreeData.title);
-                  subTreeItem.setText(1,"CHARACTER DEVICE");
-                  subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
-                  break;
-                case BLOCK_DEVICE:
-                  // create file tree data
-                  fileTreeData = new FileTreeData(name,SpecialTypes.BLOCK_DEVICE,size,dateTime,name);
+                // create file tree data
+                fileTreeData = new FileTreeData(name,FileTypes.FILE,size,dateTime,new File(name).getName());
 
-                  // add entry
-                  subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                  subTreeItem.setText(0,fileTreeData.title);
-                  subTreeItem.setText(1,"BLOCK DEVICE");
-                  if (size >= 0) subTreeItem.setText(2,Units.formatByteSize(size));
-                  subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
-                  break;
-                case FIFO:
-                  // create file tree data
-                  fileTreeData = new FileTreeData(name,SpecialTypes.FIFO,dateTime,name);
+                // add entry
+                Image image;
+                if      (includeHashMap.containsKey(name))
+                  image = IMAGE_FILE_INCLUDED;
+                else if (excludeHashSet.contains(name))
+                  image = IMAGE_FILE_EXCLUDED;
+                else
+                  image = IMAGE_FILE;
 
-                  // add entry
-                  subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                  subTreeItem.setText(0,fileTreeData.title);
-                  subTreeItem.setText(1,"FIFO");
-                  subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
-                  break;
-                case SOCKET:
-                  // create file tree data
-                  fileTreeData = new FileTreeData(name,SpecialTypes.SOCKET,dateTime,name);
-
-                  // add entry
-                  subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                  subTreeItem.setText(0,fileTreeData.title);
-                  subTreeItem.setText(1,"SOCKET");
-                  subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
-                  break;
-                case OTHER:
-                  // create file tree data
-                  fileTreeData = new FileTreeData(name,SpecialTypes.OTHER,dateTime,name);
-
-                  // add entry
-                  subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                  subTreeItem.setText(0,fileTreeData.title);
-                  subTreeItem.setText(1,"SPECIAL");
-                  subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
-                  break;
+                subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                subTreeItem.setText(0,fileTreeData.title);
+                subTreeItem.setText(1,"FILE");
+                subTreeItem.setText(2,Units.formatByteSize(size));
+                subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                subTreeItem.setImage(image);
               }
-            }
-            break;
+              break;
+            case DIRECTORY:
+              {
+                String  name         = resultMap.getString ("name"              );
+                long    dateTime     = resultMap.getLong   ("dateTime"          );
+                boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
+
+                // create file tree data
+                fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,dateTime,new File(name).getName());
+
+                // add entry
+                Image   image;
+                if      (includeHashMap.containsKey(name))
+                  image = IMAGE_DIRECTORY_INCLUDED;
+                else if (excludeHashSet.contains(name))
+                  image = IMAGE_DIRECTORY_EXCLUDED;
+                else
+                  image = IMAGE_DIRECTORY;
+
+                subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,true);
+                subTreeItem.setText(0,fileTreeData.title);
+                subTreeItem.setText(1,"DIR");
+                subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                subTreeItem.setImage(image);
+
+                // request directory info
+                directoryInfoThread.add(name,subTreeItem);
+              }
+              break;
+            case LINK:
+              {
+                String  name         = resultMap.getString ("name"              );
+                long    dateTime     = resultMap.getLong   ("dateTime"          );
+                boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
+
+                // create file tree data
+                fileTreeData = new FileTreeData(name,FileTypes.LINK,dateTime,new File(name).getName());
+
+                // add entry
+                Image image;
+                if      (includeHashMap.containsKey(name))
+                  image = IMAGE_LINK_INCLUDED;
+                else if (excludeHashSet.contains(name))
+                  image = IMAGE_LINK_EXCLUDED;
+                else
+                  image = IMAGE_LINK;
+
+                subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                subTreeItem.setText(0,fileTreeData.title);
+                subTreeItem.setText(1,"LINK");
+                subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                subTreeItem.setImage(image);
+              }
+              break;
+            case HARDLINK:
+              {
+                String  name         = resultMap.getString ("name"              );
+                long    size         = resultMap.getLong   ("size"              );
+                long    dateTime     = resultMap.getLong   ("dateTime"          );
+                boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
+
+                // create file tree data
+                fileTreeData = new FileTreeData(name,FileTypes.HARDLINK,size,dateTime,new File(name).getName());
+
+                // add entry
+                Image image;
+                if      (includeHashMap.containsKey(name))
+                  image = IMAGE_FILE_INCLUDED;
+                else if (excludeHashSet.contains(name))
+                  image = IMAGE_FILE_EXCLUDED;
+                else
+                  image = IMAGE_FILE;
+
+                subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                subTreeItem.setText(0,fileTreeData.title);
+                subTreeItem.setText(1,"HARDLINK");
+                subTreeItem.setText(2,Units.formatByteSize(size));
+                subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                subTreeItem.setImage(image);
+              }
+              break;
+            case SPECIAL:
+              {
+                String  name     = resultMap.getString("name"    );
+                long    size     = resultMap.getLong  ("size", 0L);
+                long    dateTime = resultMap.getLong  ("dateTime");
+
+                SpecialTypes specialType = resultMap.getEnum("specialType",SpecialTypes.class);
+                switch (specialType)
+                {
+                  case CHARACTER_DEVICE:
+                    // create file tree data
+                    fileTreeData = new FileTreeData(name,SpecialTypes.CHARACTER_DEVICE,dateTime,name);
+
+                    // add entry
+                    subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                    subTreeItem.setText(0,fileTreeData.title);
+                    subTreeItem.setText(1,"CHARACTER DEVICE");
+                    subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                    break;
+                  case BLOCK_DEVICE:
+                    // create file tree data
+                    fileTreeData = new FileTreeData(name,SpecialTypes.BLOCK_DEVICE,size,dateTime,name);
+
+                    // add entry
+                    subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                    subTreeItem.setText(0,fileTreeData.title);
+                    subTreeItem.setText(1,"BLOCK DEVICE");
+                    if (size >= 0) subTreeItem.setText(2,Units.formatByteSize(size));
+                    subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                    break;
+                  case FIFO:
+                    // create file tree data
+                    fileTreeData = new FileTreeData(name,SpecialTypes.FIFO,dateTime,name);
+
+                    // add entry
+                    subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                    subTreeItem.setText(0,fileTreeData.title);
+                    subTreeItem.setText(1,"FIFO");
+                    subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                    break;
+                  case SOCKET:
+                    // create file tree data
+                    fileTreeData = new FileTreeData(name,SpecialTypes.SOCKET,dateTime,name);
+
+                    // add entry
+                    subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                    subTreeItem.setText(0,fileTreeData.title);
+                    subTreeItem.setText(1,"SOCKET");
+                    subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                    break;
+                  case OTHER:
+                    // create file tree data
+                    fileTreeData = new FileTreeData(name,SpecialTypes.OTHER,dateTime,name);
+
+                    // add entry
+                    subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                    subTreeItem.setText(0,fileTreeData.title);
+                    subTreeItem.setText(1,"SPECIAL");
+                    subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                    break;
+                }
+              }
+              break;
+          }
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugFlag)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
+          }
         }
       }
     }
@@ -6797,17 +6817,27 @@ throw new Error("NYI");
     {
       for (ValueMap resultMap : resultMapList)
       {
-        long    size        = resultMap.getLong   ("size"       );
-        boolean mountedFlag = resultMap.getBoolean("mountedFlag");
-        String  name        = resultMap.getString ("name"       );
+        try
+        {
+          long    size        = resultMap.getLong   ("size"       );
+          boolean mountedFlag = resultMap.getBoolean("mountedFlag");
+          String  name        = resultMap.getString ("name"       );
 
-        // create device data
-        DeviceTreeData deviceTreeData = new DeviceTreeData(name,size);
+          // create device data
+          DeviceTreeData deviceTreeData = new DeviceTreeData(name,size);
 
-        TreeItem treeItem = Widgets.addTreeItem(widgetDeviceTree,findDeviceIndex(widgetDeviceTree,deviceTreeData),deviceTreeData,false);
-        treeItem.setText(0,name);
-        treeItem.setText(1,Units.formatByteSize(size));
-        treeItem.setImage(IMAGE_DEVICE);
+          TreeItem treeItem = Widgets.addTreeItem(widgetDeviceTree,findDeviceIndex(widgetDeviceTree,deviceTreeData),deviceTreeData,false);
+          treeItem.setText(0,name);
+          treeItem.setText(1,Units.formatByteSize(size));
+          treeItem.setImage(IMAGE_DEVICE);
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugFlag)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
+          }
+        }
       }
     }
     else
@@ -6923,34 +6953,44 @@ throw new Error("NYI");
     Widgets.removeAllTableEntries(widgetIncludeTable);
     for (ValueMap resultMap : resultMapList)
     {
-      // get data
-      EntryTypes   entryType   = resultMap.getEnum  ("entryType",  EntryTypes.class  );
-      PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
-      String       pattern     = resultMap.getString("pattern"                       );
-
-      if (!pattern.equals(""))
+      try
       {
-        EntryData entryData = new EntryData(entryType,pattern);
+        // get data
+        EntryTypes   entryType   = resultMap.getEnum  ("entryType",  EntryTypes.class  );
+        PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
+        String       pattern     = resultMap.getString("pattern"                       );
+
+        if (!pattern.equals(""))
+        {
+          EntryData entryData = new EntryData(entryType,pattern);
 
 /*
-        // add entry
-        Image image;
-        if      (includeHashMap.containsKey(name))
-          image = IMAGE_DEVICE_INCLUDED;
-        else if (excludeHashSet.contains(name))
-          image = IMAGE_FILE_EXCLUDED;
-        else
-          image = IMAGE_DEVICE;
+          // add entry
+          Image image;
+          if      (includeHashMap.containsKey(name))
+            image = IMAGE_DEVICE_INCLUDED;
+          else if (excludeHashSet.contains(name))
+            image = IMAGE_FILE_EXCLUDED;
+          else
+            image = IMAGE_DEVICE;
 Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
 */
 
-        includeHashMap.put(pattern,entryData);
-        Widgets.insertTableEntry(widgetIncludeTable,
-                                 findTableIndex(widgetIncludeTable,pattern),
-                                 (Object)entryData,
-                                 entryData.getImage(),
-                                 entryData.pattern
-                                );
+          includeHashMap.put(pattern,entryData);
+          Widgets.insertTableEntry(widgetIncludeTable,
+                                   findTableIndex(widgetIncludeTable,pattern),
+                                   (Object)entryData,
+                                   entryData.getImage(),
+                                   entryData.pattern
+                                  );
+        }
+      }
+      catch (IllegalArgumentException exception)
+      {
+        if (Settings.debugFlag)
+        {
+          System.err.println("ERROR: "+exception.getMessage());
+        }
       }
     }
   }
@@ -6979,18 +7019,28 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
 
     for (ValueMap resultMap : resultMapList)
     {
-      // get data
-      PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
-      String       pattern     = resultMap.getString("pattern"                       );
-
-      if (!pattern.equals(""))
+      try
       {
-        excludeHashSet.add(pattern);
-        Widgets.insertListEntry(widgetExcludeList,
-                          findListIndex(widgetExcludeList,pattern),
-                          (Object)pattern,
-                          pattern
-                         );
+        // get data
+        PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
+        String       pattern     = resultMap.getString("pattern"                       );
+
+        if (!pattern.equals(""))
+        {
+          excludeHashSet.add(pattern);
+          Widgets.insertListEntry(widgetExcludeList,
+                            findListIndex(widgetExcludeList,pattern),
+                            (Object)pattern,
+                            pattern
+                           );
+        }
+      }
+      catch (IllegalArgumentException exception)
+      {
+        if (Settings.debugFlag)
+        {
+          System.err.println("ERROR: "+exception.getMessage());
+        }
       }
     }
   }
@@ -7019,18 +7069,28 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
 
     for (ValueMap resultMap : resultMapList)
     {
-      // get data
-      PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
-      String       pattern     = resultMap.getString("pattern"                       );
-
-      if (!pattern.equals(""))
+      try
       {
-         compressExcludeHashSet.add(pattern);
-         Widgets.insertListEntry(widgetCompressExcludeList,
-                                 findListIndex(widgetCompressExcludeList,pattern),
-                                 (Object)pattern,
-                                 pattern
-                                );
+        // get data
+        PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
+        String       pattern     = resultMap.getString("pattern"                       );
+
+        if (!pattern.equals(""))
+        {
+           compressExcludeHashSet.add(pattern);
+           Widgets.insertListEntry(widgetCompressExcludeList,
+                                   findListIndex(widgetCompressExcludeList,pattern),
+                                   (Object)pattern,
+                                   pattern
+                                  );
+        }
+      }
+      catch (IllegalArgumentException exception)
+      {
+        if (Settings.debugFlag)
+        {
+          System.err.println("ERROR: "+exception.getMessage());
+        }
       }
     }
   }
@@ -8913,25 +8973,35 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
       widgetScheduleList.removeAll();
       for (ValueMap resultMap : resultMapList)
       {
-        // get data
-        String  date        = resultMap.getString ("date"       );
-        String  weekDays    = resultMap.getString ("weekDays"   );
-        String  time        = resultMap.getString ("time"       );
-        String  archiveType = resultMap.getString ("archiveType");
-        String  customText  = resultMap.getString ("customText" );
-        boolean enabled     = resultMap.getBoolean("enabledFlag");
+        try
+        {
+          // get data
+          String  date        = resultMap.getString ("date"       );
+          String  weekDays    = resultMap.getString ("weekDays"   );
+          String  time        = resultMap.getString ("time"       );
+          String  archiveType = resultMap.getString ("archiveType");
+          String  customText  = resultMap.getString ("customText" );
+          boolean enabled     = resultMap.getBoolean("enabledFlag");
 
-        ScheduleData scheduleData = new ScheduleData(date,weekDays,time,archiveType,customText,enabled);
+          ScheduleData scheduleData = new ScheduleData(date,weekDays,time,archiveType,customText,enabled);
 
-        scheduleList.add(scheduleData);
-        TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
-        tableItem.setData(scheduleData);
-        tableItem.setText(0,scheduleData.getDate());
-        tableItem.setText(1,scheduleData.getWeekDays());
-        tableItem.setText(2,scheduleData.getTime());
-        tableItem.setText(3,scheduleData.archiveType);
-        tableItem.setText(4,scheduleData.customText);
-        tableItem.setText(5,scheduleData.enabled ? "yes" : "no");
+          scheduleList.add(scheduleData);
+          TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
+          tableItem.setData(scheduleData);
+          tableItem.setText(0,scheduleData.getDate());
+          tableItem.setText(1,scheduleData.getWeekDays());
+          tableItem.setText(2,scheduleData.getTime());
+          tableItem.setText(3,scheduleData.archiveType);
+          tableItem.setText(4,scheduleData.customText);
+          tableItem.setText(5,scheduleData.enabled ? "yes" : "no");
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugFlag)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
+          }
+        }
       }
     }
   }
