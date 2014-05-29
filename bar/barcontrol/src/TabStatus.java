@@ -1462,14 +1462,63 @@ class TabStatus
 
     if (!selectedJobData.state.equals("running") || Dialogs.confirm(shell,"Abort running job '"+selectedJobData.name+"'?",false))
     {
-      String[] resultErrorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobId=%d",selectedJobData.id),
-                                           resultErrorMessage
-                                          );
-      if (error != Errors.NONE)
+      final BusyDialog busyDialog = new BusyDialog(shell,"Abort",300,100,"Abort job '"+selectedJobData.name+"'...",BusyDialog.TEXT0);
+      busyDialog.autoAnimate();
+
+      new BackgroundTask(busyDialog)
       {
-        Dialogs.error(shell,"Cannot abort job (error: %s)",resultErrorMessage[0]);
-      }
+        public void run(final BusyDialog busyDialog, Object userData)
+        {
+          try
+          {
+            // abort job
+            final String[] resultErrorMessage = new String[1];
+            int error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobId=%d",selectedJobData.id),
+                                                 resultErrorMessage
+                                                );
+            if (error == Errors.NONE)
+            {
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  busyDialog.close();
+                }
+              });
+            }
+            else
+            {
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  busyDialog.close();
+                  Dialogs.error(shell,"Cannot abort job (error: %s)",resultErrorMessage[0]);
+                }
+              });
+            }
+          }
+          catch (CommunicationError error)
+          {
+            final String errorMessage = error.getMessage();
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                busyDialog.close();
+                Dialogs.error(shell,"Communication error while deleting storage (error: "+errorMessage+")");
+               }
+            });
+          }
+          catch (Exception exception)
+          {
+            BARServer.disconnect();
+            System.err.println("ERROR: "+exception.getMessage());
+            BARControl.printStackTrace(exception);
+            System.exit(1);
+          }
+        }
+      };
     }
   }
 
