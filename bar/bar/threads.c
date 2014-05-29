@@ -19,6 +19,7 @@
 #include <semaphore.h>
 #include <limits.h>
 #include <unistd.h>
+#include <errno.h>
 #include <assert.h>
 
 #include "global.h"
@@ -175,6 +176,28 @@ bool Thread_join(Thread *thread)
   assert(thread != NULL);
 
   return pthread_join(thread->handle,NULL) == 0;
+}
+
+void Thread_delay(uint time)
+{
+  #ifdef HAVE_NANOSLEEP
+    struct timespec ts;
+  #endif /* HAVE_NANOSLEEP */
+
+  #if   defined(HAVE_NANOSLEEP)
+    ts.tv_sec  = (ulong)(time/1000LL);
+    ts.tv_nsec = (ulong)((time%1000LL)*1000000);
+    while (   (nanosleep(&ts,&ts) == -1)
+           && (errno == EINTR)
+          )
+    {
+      // nothing to do
+    }
+  #elif defined(PLATFORM_WINDOWS)
+    Sleep(time);
+  #else
+    #error nanosleep() not available nor Windows system!
+  #endif
 }
 
 void Thread_initLocalVariable(ThreadLocalStorage *threadLocalStorage, ThreadLocalStorageAllocFunction threadLocalStorageAllocFunction, void *threadLocalStorageAllocUserData)

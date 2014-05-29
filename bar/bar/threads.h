@@ -146,6 +146,17 @@ INLINE void Thread_yield(void)
 #endif /* NDEBUG || __THREADS_IMPLEMENATION__ */
 
 /***********************************************************************\
+* Name   : Thread_delay
+* Purpose: delay thread execution
+* Input  : time - delay time [ms]
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Thread_delay(uint time);
+
+/***********************************************************************\
 * Name   : Thread_getCurrentId
 * Purpose: get current thread id
 * Input  : -
