@@ -2633,7 +2633,7 @@ class TabRestore
                 if (abortFlag || busyDialog.isAborted()) break;
               }
 
-              // close busy dialog, restore cursor
+              // close busy dialog
               display.syncExec(new Runnable()
               {
                 public void run()
@@ -2841,7 +2841,7 @@ class TabRestore
                 if (busyDialog.isAborted()) break;
               }
 
-              // close busy dialog, restore cursor
+              // close busy dialog
               display.syncExec(new Runnable()
               {
                 public void run()
@@ -2971,7 +2971,7 @@ class TabRestore
                   command.abort();
                 }
 
-                // close busy dialog, restore cursor
+                // close busy dialog
                 display.syncExec(new Runnable()
                 {
                   public void run()
@@ -3360,6 +3360,17 @@ Dprintf.dprintf("");
                                      entryData.storageName,
                                      entryData.name,
                                      "FILE",
+                                     Units.formatByteSize(entryData.size),
+                                     simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                    );
+            break;
+          case IMAGE:
+            Widgets.insertTableEntry(widgetEntryList,
+                                     findEntryListIndex(entryData),
+                                     (Object)entryData,
+                                     entryData.storageName,
+                                     entryData.name,
+                                     "IMAGE",
                                      Units.formatByteSize(entryData.size),
                                      simpleDateFormat.format(new Date(entryData.dateTime*1000))
                                     );
