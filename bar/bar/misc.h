@@ -178,6 +178,17 @@ typedef struct
 #endif
 
 /***********************************************************************\
+* Name   : Misc_getRandom
+* Purpose: get random value
+* Input  : -
+* Output : -
+* Return : random value
+* Notes  : -
+\***********************************************************************/
+
+uint64 Misc_getRandom(uint64 min, uint64 max);
+
+/***********************************************************************\
 * Name   : getTimestamp
 * Purpose: get timestamp
 * Input  : -
@@ -320,8 +331,9 @@ String Misc_expandMacros(String          string,
 *          macros                  - macros array
 *          macroCount              - number of macros in array
 *          stdoutExecuteIOFunction - stdout callback or NULL
+*          stdoutExecuteIOUserData - user data for stdoout callback
 *          stderrExecuteIOFunction - stderr callback or NULL
-*          executeIOUserData       - user data for callbacks
+*          stderrExecuteIOUserData - user data for stderr callback
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -331,8 +343,9 @@ Errors Misc_executeCommand(const char        *commandTemplate,
                            const TextMacro   macros[],
                            uint              macroCount,
                            ExecuteIOFunction stdoutExecuteIOFunction,
+                           void              *stdoutExecuteIOUserData,
                            ExecuteIOFunction stderrExecuteIOFunction,
-                           void              *executeIOUserData
+                           void              *stderrExecuteIOUserData
                           );
 
 /*---------------------------------------------------------------------*/
