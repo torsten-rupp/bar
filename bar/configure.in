@@ -13,7 +13,7 @@ dnl ----------------------- additional macros --------------------------
 dnl --- print compile info
 AC_DEFUN([AC_MSG_COMPILE],
 [
-  _AS_ECHO_N([Compile $1... ])
+  _AS_ECHO_N([compile $1... ])
 ])
 
 dnl --- output log file
@@ -2544,6 +2544,7 @@ AC_SET_TOOLCHAIN_SETTINGS($CC_FLAGS,$CXX_FLAGS,$CC_DEFINES,$CC_INCLUDES,$LD_FLAG
 AC_CHECK_HEADERS(\
                  arpa/inet.h \
                  grp.h \
+                 libintl.h \
                  linux/fs.h \
                  linux/tcp.h \
                  netdb.h \
@@ -2708,6 +2709,8 @@ AC_CHECK_FUNCTION(uuid_unparse_lower,AC_DEFINE(HAVE_UUID_UNPARSE_LOWER,1,[uuid_u
 
 AC_CHECK_FUNCTION(sysconf,  AC_DEFINE(HAVE_SYSCONF,  1,[sysconf() available]))
 AC_CHECK_FUNCTION(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]))
+
+AC_CHECK_FUNCTION(gettext,AC_DEFINE(HAVE_GETTEXT,1,[gettext() available]))
 
 if test "$HAVE_SSH2"; then
   AC_CHECK_FUNCTION(CRYPTO_set_id_callback,     ,AC_ERROR([CRYPTO_set_id_callback() required for SSH2]),openssl/crypto.h)
