@@ -27,6 +27,9 @@
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
+#ifdef HAVE_LIBINTL_H
+  #include <libintl.h>
+#endif
 #ifdef HAVE_BACKTRACE
   #include <execinfo.h>
 #endif
@@ -94,8 +97,14 @@
 #else
   #define MAX_LONG_LONG    9223372036854775807LL
 #endif
-#define MIN_INT64          MIN_LONG_LONG
-#define MAX_INT64          MAX_LONG_LONG
+#define MIN_INT8           -128
+#define MAX_INT8           127
+#define MIN_INT16          -32768
+#define MAX_INT16          32767
+#define MIN_INT32          -2147483648
+#define MAX_INT32          2147483647
+#define MIN_INT64          9223372036854775808LL
+#define MAX_INT64          9223372036854775807LL
 
 #define MIN_UCHAR          0
 #define MAX_UCHAR          UCHAR_MAX
@@ -109,10 +118,16 @@
 #ifdef HAVE_ULLONG_MAX
   #define MAX_ULONG_LONG   ULLONG_MAX
 #else
-  #define MAX_ULONG_LONG   18446744073709551615LL
+  #define MAX_ULONG_LONG   18446744073709551615LLU
 #endif
-#define MIN_UINT64         0LL
-#define MAX_UINT64         MAX_ULONG_LONG
+#define MIN_UINT8          0
+#define MAX_UINT8          255
+#define MIN_UINT16         0
+#define MAX_UINT16         65535
+#define MIN_UINT32         0L
+#define MAX_UINT32         4294967296LU
+#define MIN_UINT64         0L
+#define MAX_UINT64         18446744073709551615LLU
 
 #define MIN_FLOAT          FLT_MIN
 #define MAX_FLOAT          FLT_MAX
@@ -124,11 +139,14 @@
 #define MAX_LONGDOUBLE     LDBL_MAX
 #define EPSILON_LONGDOUBLE LDBL_EPSILON
 
-
+// memory sizes
+#define KB 1024
+#define MB (1024*1024)
+#define GB (1024L*1024L*1024L)
 
 // special constants
 #define NO_WAIT      0
-#define WAIT_FOREVER (-1)
+#define WAIT_FOREVER -1L
 
 // exit codes
 #define EXITCODE_INTERNAL_ERROR 128
@@ -151,13 +169,15 @@ typedef unsigned short int  ushortint;
 #endif
 typedef unsigned long long  ulonglong;
 
+// compare results
 typedef enum
 {
   CMP_LOWER=-1,
   CMP_EQUAL=0,
   CMP_GREATER=+1
-} TCmpResults;
+} CmpResults;
 
+// base datatypes
 typedef uint8_t             byte;
 
 typedef unsigned char       bool8;
@@ -173,6 +193,25 @@ typedef unsigned short int  uint16;
 typedef unsigned int        uint32;
 typedef unsigned long long  uint64;
 typedef void                void32;
+
+// mask+shift data
+typedef struct
+{
+  uint16 mask;
+  uint   shift;
+} MaskShift16;
+
+typedef struct
+{
+  uint32 mask;
+  uint   shift;
+} MaskShift32;
+
+typedef struct
+{
+  uint64 mask;
+  uint   shift;
+} MaskShift64;
 
 /**************************** Variables ********************************/
 
@@ -210,6 +249,9 @@ typedef void                void32;
 
 // only for better reading
 #define CALLBACK(code,argument) code,argument
+
+// mask and shift value
+#define MASKSHIFT(n,maskShift) (((n) & maskShift.mask) >> maskShift.shift)
 
 /***********************************************************************\
 * Name   : CALLBACK_INLINE
@@ -767,6 +809,21 @@ typedef void                void32;
 #define MEMSET(p,value,size) memset(p,value,size)
 
 #define MEMCLEAR(p,size) memset(p,0,size)
+
+/***********************************************************************\
+* Name   : _
+* Purpose: internationalization text macro
+* Input  : text - text
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef HAVE_LIBINTL_H
+  #define _(text) gettext(text)
+#else
+  #define _(text) text
+#endif /* HAVE_LIBINTL_H */
 
 /***********************************************************************\
 * Name   : DEBUG_MEMORY_FENCE, DEBUG_MEMORY_FENCE_INIT,
@@ -1511,15 +1568,15 @@ void debugDumpCurrentStackTrace(FILE       *handle,
 /***********************************************************************\
 * Name   : debugDumpMemory
 * Purpose: dump memory content (hex dump)
-* Input  : printAddress - TRUE to print address, FALSE otherwise
-*          address - start address
-*          length  - length
+* Input  : address      - start address
+*          length       - length
+*          printAddress - TRUE to print address, FALSE otherwise
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void debugDumpMemory(bool printAddress, const void *address, uint length);
+void debugDumpMemory(const void *address, uint length, bool printAddress);
 #endif /* NDEBUG */
 
 #ifdef __cplusplus

@@ -666,7 +666,7 @@ void debugDumpCurrentStackTrace(FILE *handle, const char *title, uint indent)
 #endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
 
 #ifndef NDEBUG
-void debugDumpMemory(bool printAddress, const void *address, uint length)
+void debugDumpMemory(const void *address, uint length, bool printAddress)
 {
   const byte *p;
   uint       z,i;
