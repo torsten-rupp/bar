@@ -28,6 +28,9 @@
 /* backtrace() available */
 #undef HAVE_BACKTRACE
 
+/* bindtextdomain() available */
+#undef HAVE_BINDTEXTDOMAIN
+
 /* BLKGETSIZE available */
 #undef HAVE_BLKGETSIZE
 
@@ -253,6 +256,9 @@
 /* Define to 1 if you have the <regex.h> header file. */
 #undef HAVE_REGEX_H
 
+/* setlocale() available */
+#undef HAVE_SETLOCALE
+
 /* SIGPIPE available */
 #undef HAVE_SIGPIPE
 
@@ -372,6 +378,9 @@
 
 /* Define to 1 if you have the <termios.h> header file. */
 #undef HAVE_TERMIOS_H
+
+/* textdomain() available */
+#undef HAVE_TEXTDOMAIN
 
 /* defined if uint is available */
 #undef HAVE_UINT
