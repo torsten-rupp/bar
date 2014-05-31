@@ -2593,6 +2593,7 @@ case $host_os in
     AC_ERROR([Unsupported operating system '$host_os'])
     ;;
 esac
+
 dnl for debug/test only
 dnl AC_CHECK_FUNCTION(gethostbyname,AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]),,winsock2.h)
 dnl AC_CHECK_FUNCTION(gethostbyname,AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]),,winsock2.h)
@@ -2710,7 +2711,10 @@ AC_CHECK_FUNCTION(uuid_unparse_lower,AC_DEFINE(HAVE_UUID_UNPARSE_LOWER,1,[uuid_u
 AC_CHECK_FUNCTION(sysconf,  AC_DEFINE(HAVE_SYSCONF,  1,[sysconf() available]))
 AC_CHECK_FUNCTION(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]))
 
-AC_CHECK_FUNCTION(gettext,AC_DEFINE(HAVE_GETTEXT,1,[gettext() available]))
+AC_CHECK_FUNCTION(setlocale,     AC_DEFINE(HAVE_SETLOCALE,     1,[setlocale() available]))
+AC_CHECK_FUNCTION(textdomain,    AC_DEFINE(HAVE_TEXTDOMAIN,    1,[textdomain() available]))
+AC_CHECK_FUNCTION(bindtextdomain,AC_DEFINE(HAVE_BINDTEXTDOMAIN,1,[bindtextdomain() available]))
+AC_CHECK_FUNCTION(gettext,       AC_DEFINE(HAVE_GETTEXT,       1,[gettext() available]))
 
 if test "$HAVE_SSH2"; then
   AC_CHECK_FUNCTION(CRYPTO_set_id_callback,     ,AC_ERROR([CRYPTO_set_id_callback() required for SSH2]),openssl/crypto.h)

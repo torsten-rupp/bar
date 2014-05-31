@@ -12288,6 +12288,7 @@ fi
     ;;
 esac
 
+
 # set variables for tests
 
   CFLAGS="$CC_FLAGS"
@@ -16053,6 +16054,156 @@ elif :; then :
 
 fi
 
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for setlocale" >&5
+$as_echo_n "checking for setlocale... " >&6; }
+if ${ac_cv_func_setlocale+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_setlocale="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void setlocale();"; fi`
+                                         #ifdef setlocale
+                                         #else
+                                           return (int)setlocale;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_setlocale=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_setlocale" >&5
+$as_echo "$ac_cv_func_setlocale" >&6; }
+  if test "$ac_cv_func_setlocale" != no; then :
+
+$as_echo "#define HAVE_SETLOCALE 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for textdomain" >&5
+$as_echo_n "checking for textdomain... " >&6; }
+if ${ac_cv_func_textdomain+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_textdomain="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void textdomain();"; fi`
+                                         #ifdef textdomain
+                                         #else
+                                           return (int)textdomain;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_textdomain=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_textdomain" >&5
+$as_echo "$ac_cv_func_textdomain" >&6; }
+  if test "$ac_cv_func_textdomain" != no; then :
+
+$as_echo "#define HAVE_TEXTDOMAIN 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for bindtextdomain" >&5
+$as_echo_n "checking for bindtextdomain... " >&6; }
+if ${ac_cv_func_bindtextdomain+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_bindtextdomain="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void bindtextdomain();"; fi`
+                                         #ifdef bindtextdomain
+                                         #else
+                                           return (int)bindtextdomain;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_bindtextdomain=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_bindtextdomain" >&5
+$as_echo "$ac_cv_func_bindtextdomain" >&6; }
+  if test "$ac_cv_func_bindtextdomain" != no; then :
+
+$as_echo "#define HAVE_BINDTEXTDOMAIN 1" >>confdefs.h
+
+elif :; then :
+
+fi
 
 
 
