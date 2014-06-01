@@ -1,0 +1,41 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-06-01 09:10+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: bar.c:1460
+#, c-format
+msgid "Cannot get file info for configuration file '%s' (error: %s)\n"
+msgstr ""
+
+#: bar.c:1470
+#, c-format
+msgid "Cannot open configuration file '%s' (error: %s)!\n"
+msgstr "Die Konfigurationsdatei '%s' kann nicht geffnet werden (Fehler: %s)!\n"
+
+#: bar.c:1452
+#, c-format
+msgid ""
+"Configuration file '%s' has wrong file permission %03o. Please make sure "
+"read permissions are limited to file owner (mode 600).\n"
+msgstr ""
+"Die Konfigurationsdatei '%s' besitzt unzureichende Zugriffsrechte %03o. "
+"Stellen Sie sicher, dass die Zugriffsrechte auf den Besitzer der Datei "
+"beschrnkt sind (Modus 600).\n"
+
+#~ msgid "Hello World"
+#~ msgstr "こんいちわ！"

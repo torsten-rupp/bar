@@ -1,0 +1,32 @@
+CD       = cd
+
+XGETTEXT = @XGETTEXT@
+MSGMERGE = @MSGMERGE@
+MSGFMT   = @MSGFMT@
+
+TARGETS = de/LC_MESSAGES/bar.mo \
+          ja/LC_MESSAGES/bar.mo
+
+.PHONY: all
+all: $(TARGETS)
+
+bar.pot: ../*.c
+	($(CD) ..; $(XGETTEXT) -d bar -L C -o po/$@ -k_ -s *.c)
+#        msginit --locale=de --input po/bar.pot
+
+%.po: bar.pot
+	$(MSGMERGE) -s -U $@ bar.pot
+
+de/LC_MESSAGES/bar.mo: german.po
+	$(MSGFMT) german.po -o $@
+
+ja/LC_MESSAGES/bar.mo: japanese.po
+	$(MSGFMT) german.po -o $@
+
+# generate missing locale
+# sudo locate-gen de_DE.UTF-8
+#
+# show locales
+# locale -a
+#        msgmerge -U po/german.po po/bar.pot
+#        msgfmt po/german.po   -o po/de/LC_MESSAGES/bar.mo
