@@ -1,5 +1,7 @@
 CD       = cd
 INSTALL  = @INSTALL@
+RMF      = rm -f
+RMRF     = rm -rf
 
 XGETTEXT = @XGETTEXT@
 MSGMERGE = @MSGMERGE@
@@ -8,8 +10,16 @@ MSGFMT   = @MSGFMT@
 TARGETS = de/LC_MESSAGES/bar.mo \
           ja/LC_MESSAGES/bar.mo
 
-.PHONY: all
+.PHONY: all clean distclean
 all: $(TARGETS)
+
+clean:
+	$(RMF) $(TARGETS)
+
+distclean: \
+  clean
+	$(RMRF) de ja
+	$(RMF) Makefile
 
 bar.pot: ../*.c
 	($(CD) ..; $(XGETTEXT) -d bar -L C -o po/$@ -k_ -s *.c)
