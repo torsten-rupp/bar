@@ -589,6 +589,7 @@ AC_SUBST(INSTALL_BIN_DIR)                   dnl installation directory for binar
 AC_SUBST(CONFIG_DIR)                        dnl configuration directory
 AC_SUBST(TLS_DIR)                           dnl TLS/SSL directory
 AC_SUBST(MAN_DIR)                           dnl man page directory
+AC_SUBST(LOCALE_DIR)                        dnl locale directory
 
 AC_SUBST(CC)                                dnl C compiler
 AC_SUBST(LD)                                dnl linker
@@ -642,6 +643,10 @@ AC_SUBST(MKFS_EXT4)                         dnl mksfs.ext4 command
 AC_SUBST(MKFS_MSDOS)                        dnl mksfs.msdos command
 AC_SUBST(MKFS_REISERFS)                     dnl mksfs.reiserfs command
 AC_SUBST(MKFS_REISER4)                      dnl mksfs.reiser4 command
+
+AC_SUBST(XGETTEXT)                          dnl xgettext command
+AC_SUBST(MSGMERGE)                          dnl msgmerge command
+AC_SUBST(MSGFMT)                            dnl msgfmt command
 
 AC_SUBST(EPM)                               dnl EPM tool
 AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
@@ -864,14 +869,30 @@ AC_PATH_PROGS(PERL,perl)
 if test -z "$PERL"; then
   AC_MSG_ERROR([Cannot find a 'perl' in PATH. Please check your PATH environment variable.])
 fi
+
 AC_PROG_INSTALL
 if test -z "$INSTALL"; then
   AC_MSG_ERROR([Cannot find a 'install' in PATH. Please check your PATH environment variable.])
 fi
+
 AC_PATH_PROGS(M4,m4)
 if test -z "$M4"; then
   AC_MSG_ERROR([Cannot find a 'm4' in PATH. Please check your PATH environment variable.])
 fi
+
+AC_PATH_PROGS(XGETTEXT,xgettext)
+if test -z "$XGETTEXT"; then
+  AC_MSG_ERROR([Cannot find a 'xgettext' in PATH. Please check your PATH environment variable.])
+fi
+AC_PATH_PROGS(MSGMERGE,msgmerge)
+if test -z "$MSGMERGE"; then
+  AC_MSG_ERROR([Cannot find a 'msgmerge' in PATH. Please check your PATH environment variable.])
+fi
+AC_PATH_PROGS(MSGFMT,msgfmt)
+if test -z "$MSGFMT"; then
+  AC_MSG_ERROR([Cannot find a 'msgfmt' in PATH. Please check your PATH environment variable.])
+fi
+
 if test -d epm -o -d "`readlink epm`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
     dnl compile epm
@@ -2861,9 +2882,14 @@ else
   INSTALL_BIN_DIR=$bindir
 fi
 if test "$mandir" = "\${datarootdir}/man"; then
-  MAN_DIR=${prefix}/man
+  MAN_DIR=$prefix/share/man
 else
   MAN_DIR=${mandir}
+fi
+if test "$localedir" = "\${datarootdir}/locale"; then
+  LOCALE_DIR=$prefix/share/locale
+else
+  LOCALE_DIR=${localedir}
 fi
 
 dnl patch PACKAGE entries in config.h
@@ -2873,6 +2899,7 @@ AC_CONFIG_COMMANDS(SET_PACKAGE_IN_CONFIG_H,
 dnl make files
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(bar/Makefile)
+AC_CONFIG_FILES(bar/po/Makefile)
 AC_CONFIG_FILES(barcontrol/Makefile)
 
 dnl config files
