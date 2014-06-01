@@ -28,6 +28,7 @@ ETC_DIR            = /etc
 
 INSTALL_DIR        = $(if $(prefix),$(prefix),@INSTALL_DIR@)
 INSTALL_BIN_DIR    = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
+INSTALL_LOCALE_DIR = $(if $(localedir),$(localedir),@LOCALE_DIR@)
 INSTALL_ETC_DIR    = $(if $(sysconfdir),$(sysconfdir),/etc)
 INSTALL_CONFIG_DIR = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
 INSTALL_MAN_DIR    = $(if $(mandir),$(mandir),@MAN_DIR@)
@@ -58,6 +59,7 @@ LN         = ln
 MD5SUM     = @MD5SUM@
 MKDIR      = mkdir
 MV         = mv
+NROFF      = nroff
 PERL       = @PERL@
 RMDIR      = rmdir
 RMF        = rm -f
@@ -288,12 +290,8 @@ else
 	@$(ECHO) "ERROR: no 'txt2man' tool available! Cannot create man page."
 endif
 
-showman:
-ifneq ($(TXT2MAN),)
-	$(CAT) $(SOURCE_DIR)/doc/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" -T
-else
-	@$(ECHO) "ERROR: no 'txt2man' tool available! Cannot create man page."
-endif
+showman: doc/bar.7
+	$(NROFF) -man doc/bar.7
 
 # create manual
 
@@ -325,6 +323,8 @@ install_base: \
   $(DOC)
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar/bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar/bar-debug@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar/bar-keygen@SHELLEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
 	if test ! -f "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; then \
           $(INSTALL) -m 600 bar/bar.cfg "$(DESTDIR)$(INSTALL_CONFIG_DIR)"; \
@@ -354,6 +354,9 @@ install_base: \
         else \
           echo "$(INSTALL_ETC_DIR)/init.d/barserver NOT installed - file already exists!"; \
         fi
+	for language in de ja; do \
+          $(INSTALL) bar/po/$$language/LC_MESSAGES/bar.mo "$(DESTDIR)$(INSTALL_LOCALE_DIR)/$$language/LC_MESSAGES/bar.mo"; \
+        done
 
 # install GUI files
 # Note: prefix is used for temporary installations
@@ -366,7 +369,6 @@ install_gui: \
   )
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 ifeq ($(ENABLE_GUI),yes)
-	$(INSTALL) bar/bar-keygen "$(DESTDIR)$(INSTALL_BIN_DIR)"
 ifeq ($(PLATFORM),LINUX)
 	$(INSTALL) barcontrol/barcontrol \
                    barcontrol/barcontrol-linux.jar \
@@ -419,7 +421,7 @@ uninstall:
 	@read -n 1 -p "Really uninstall? [y/N] " s; \
         if test "$s" = "y" -o "$s" = "Y"; then \
           $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"; \
-          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-keygen"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-keygen@SHELLEXT@"; \
           $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
                                                       "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
                                                       "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
@@ -446,8 +448,8 @@ barserver_ssl:
 	@$(MAKE) -C bar barserver_ssl
 
 # do tests
-.PHONY: test test1 test2 test3 test4 test5 test6 test7 test_combined
-.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_dvd test_parameters
+.PHONY: test test1 test2 test3 test4 test5 test6 test7
+.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_dvd test_parameters test_combined
 test:
 	@$(MAKE) -C bar test
 test1 test_basic:
@@ -464,6 +466,8 @@ test6 test_image:
 	@$(MAKE) -C bar test6
 test7 test_dvd:
 	@$(MAKE) -C bar test7
+test_parameters:
+	@$(MAKE) -C bar test_parameters
 test_combined:
 	@$(MAKE) -C bar test_all
 
