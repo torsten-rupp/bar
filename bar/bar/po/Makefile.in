@@ -1,4 +1,5 @@
 CD       = cd
+INSTALL  = @INSTALL@
 
 XGETTEXT = @XGETTEXT@
 MSGMERGE = @MSGMERGE@
@@ -15,12 +16,15 @@ bar.pot: ../*.c
 #        msginit --locale=de --input po/bar.pot
 
 %.po: bar.pot
+	$(INSTALL) -d $(@D)
 	$(MSGMERGE) -s -U $@ bar.pot
 
 de/LC_MESSAGES/bar.mo: german.po
+	$(INSTALL) -d $(@D)
 	$(MSGFMT) german.po -o $@
 
 ja/LC_MESSAGES/bar.mo: japanese.po
+	$(INSTALL) -d $(@D)
 	$(MSGFMT) german.po -o $@
 
 # generate missing locale
