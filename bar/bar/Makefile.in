@@ -315,6 +315,7 @@ TARGETS              = bar@EXEEXT@ \
                        $(if @HAVE_BREAKPAD@,bar.sym bar-debug.sym) \
                        bar-keygen \
                        destroyer@EXEEXT@ \
+                       po \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -349,9 +350,17 @@ help:
 	@$(ECHO) "  clean "
 	@$(ECHO) "  distclean"
 	@$(ECHO) ""
+	@$(ECHO) "  po"
+	@$(ECHO) ""
 	@$(ECHO) "  run"
+	@$(ECHO) "  run_en"
+	@$(ECHO) "  run_de"
+	@$(ECHO) "  run_jp"
 	@$(ECHO) "  run_ssl"
 	@$(ECHO) "  rundev"
+	@$(ECHO) "  rundev_en"
+	@$(ECHO) "  rundev_de"
+	@$(ECHO) "  rundev_jp"
 	@$(ECHO) "  rundev_ssl"
 	@$(ECHO) ""
 	@$(ECHO) "  test[-debug]"
@@ -496,24 +505,53 @@ showchunks@EXEEXT@: showchunks.o
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 
+# i18n
+.PHONY: po
+po:
+	$(MAKE) -C po
+
 # ----------------------------------------------------------------------------
 
 # run server
-.PHONY: rundev rundev_ssl runserver runserver_ssl
-run runserver: bar
+.PHONY: run runserver run_en runserver_en run_de runserver_de run_ssl runserver_ssl
+run runserver: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs
 
-run_ssl runserver_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+run_en runserver_en: bar@EXEEXT@
+	$(INSTALL) -d jobs
+	__BAR_LOCALE__=$(PWD)/po LANGUAGE=en_US nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs
+
+run_de runserver_de: bar@EXEEXT@
+	$(INSTALL) -d jobs
+	__BAR_LOCALE__=$(PWD)/po LANGUAGE=de_DE nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs
+
+run_jp runserver_jp: bar@EXEEXT@
+	$(INSTALL) -d jobs
+	__BAR_LOCALE__=$(PWD)/po LANGUAGE=ja_JP nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs
+
+run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem
 
-.PHONY: rundev rundev_ssl runserver runserver_ssl
-rundev: bar
+.PHONY: rundev rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl
+rundev: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910
 
-rundev_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+rundev_en: bar@EXEEXT@
+	$(INSTALL) -d jobs
+	__BAR_LOCALE__=$(PWD)/po LANGUAGE=en_US nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910
+
+rundev_de: bar@EXEEXT@
+	$(INSTALL) -d jobs
+	__BAR_LOCALE__=$(PWD)/po LANGUAGE=de_DE nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910
+
+rundev_jp: bar@EXEEXT@
+	$(INSTALL) -d jobs
+	__BAR_LOCALE__=$(PWD)/po LANGUAGE=ja_JP nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910
+
+rundev_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	nice ./bar --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 --server-tls-port=39910
 
