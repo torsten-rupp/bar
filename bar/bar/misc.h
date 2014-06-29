@@ -204,11 +204,33 @@ uint64 Misc_getTimestamp(void);
 * Purpose: get current date/time
 * Input  : -
 * Output : -
-* Return : date/time (seconds since 1970-1-1 00:00:00)
+* Return : date/time (seconds since 1970-01-01 00:00:00)
 * Notes  : -
 \***********************************************************************/
 
 uint64 Misc_getCurrentDateTime(void);
+
+/***********************************************************************\
+* Name   : Misc_getCurrentDateTime
+* Purpose: get current date/time
+* Input  : -
+* Output : -
+* Return : date (seconds since 1970-01-01 00:00:00)
+* Notes  : -
+\***********************************************************************/
+
+uint64 Misc_getCurrentDate(void);
+
+/***********************************************************************\
+* Name   : Misc_getCurrentTime
+* Purpose: get current time
+* Input  : -
+* Output : -
+* Return : time (seconds since 00:00:00)
+* Notes  : -
+\***********************************************************************/
+
+uint32 Misc_getCurrentTime(void);
 
 /***********************************************************************\
 * Name   : Misc_splitDateTime

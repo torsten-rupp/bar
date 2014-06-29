@@ -28,7 +28,7 @@
 #endif /* HAVE_SYS_IOCTL_H */
 #ifdef HAVE_TERMIOS_H
   #include <termios.h>
-#endif /* HAVE_TERMIOS */
+#endif /* HAVE_TERMIOS_H */
 #ifdef HAVE_UUID_UUID_H
   #include <uuid/uuid.h>
 #endif /* HAVE_UUID_UUID_H */
@@ -133,6 +133,21 @@ LOCAL bool readProcessIO(int fd, String line)
 
 /*---------------------------------------------------------------------*/
 
+uint64 Misc_getRandom(uint64 min, uint64 max)
+{
+  uint n;
+
+  srand(time(NULL));
+
+  n = max-min;
+
+  return min+(  (((uint64)(rand() & 0xFFFF)) << 48)
+              | (((uint64)(rand() & 0xFFFF)) << 32)
+              | (((uint64)(rand() & 0xFFFF)) << 16)
+              | (((uint64)(rand() & 0xFFFF)) <<  0)
+             )%n;
+}
+
 uint64 Misc_getTimestamp(void)
 {
   struct timeval tv;
@@ -154,6 +169,24 @@ uint64 Misc_getCurrentDateTime(void)
   gettimeofday(&tv,NULL);
 
   return (uint64)tv.tv_sec;
+}
+
+uint64 Misc_getCurrentDate(void)
+{
+  uint64 dateTime;
+
+  dateTime = Misc_getCurrentDateTime();
+
+  return dateTime & ~(24*60*60-1);
+}
+
+uint32 Misc_getCurrentTime(void)
+{
+  uint64 dateTime;
+
+  dateTime = Misc_getCurrentDateTime();
+
+  return dateTime % (24*60*60);
 }
 
 void Misc_splitDateTime(uint64   dateTime,
@@ -398,10 +431,10 @@ void Misc_udelay(uint64 time)
     {
       // nothing to do
     }
-  #elif defined(WIN32)
+  #elif defined(PLATFORM_WINDOWS)
     Sleep(time/1000LL);
   #else
-    #error nanosleep() not available nor Win32 system!
+    #error nanosleep() not available nor Windows system!
   #endif
 }
 
@@ -690,8 +723,9 @@ Errors Misc_executeCommand(const char        *commandTemplate,
                            const TextMacro   macros[],
                            uint              macroCount,
                            ExecuteIOFunction stdoutExecuteIOFunction,
+                           void              *stdoutExecuteIOUserData,
                            ExecuteIOFunction stderrExecuteIOFunction,
-                           void              *executeIOUserData
+                           void              *stderrExecuteIOUserData
                           )
 {
   Errors          error;
@@ -703,9 +737,10 @@ Errors Misc_executeCommand(const char        *commandTemplate,
   const char      *path;
   String          fileName;
   bool            foundFlag;
+  char const      cCommand;
   char const      **arguments;
   int             pipeStdin[2],pipeStdout[2],pipeStderr[2];
-  int             pid;
+  pid_t           pid;
   StringNode      *stringNode;
   uint            n,z;
   int             status;
@@ -743,6 +778,15 @@ Errors Misc_executeCommand(const char        *commandTemplate,
       StringList_append(&argumentList,token);
     }
     String_doneTokenizer(&stringTokenizer);
+#if 0
+fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,String_cString(command));
+stringNode = argumentList.head;
+while (stringNode != NULL)
+{
+fprintf(stderr,"%s,%d: argument %s\n",__FILE__,__LINE__,String_cString(stringNode->string));
+stringNode = stringNode->next;
+}
+#endif /* 0 */
 
     // find command in PATH
     path = getenv("PATH");
@@ -765,15 +809,24 @@ Errors Misc_executeCommand(const char        *commandTemplate,
       File_deleteFileName(fileName);
     }
 
-#if 0
-fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,String_cString(command));
-stringNode = argumentList.head;
-while (stringNode != NULL)
-{
-fprintf(stderr,"%s,%d: argument %s\n",__FILE__,__LINE__,String_cString(stringNode->string));
-stringNode = stringNode->next;
-}
-#endif /* 0 */
+    // get arguments
+    n = 1+StringList_count(&argumentList)+1;
+    arguments = (char const**)malloc(n*sizeof(char*));
+    if (arguments == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    z = 0;
+    arguments[z] = String_cString(command); z++;
+    stringNode = argumentList.head;
+    while (stringNode != NULL)
+    {
+      assert(z < n);
+      arguments[z] = String_cString(stringNode->string); z++;
+      stringNode = stringNode->next;
+    }
+    assert(z < n);
+    arguments[z] = NULL; z++;
 
     #if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
 #if 1
@@ -781,6 +834,7 @@ stringNode = stringNode->next;
       if (pipe(pipeStdin) != 0)
       {
         error = ERRORX_(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
+        free(arguments);
         StringList_done(&argumentList);
         String_delete(command);
         String_delete(commandLine);
@@ -791,6 +845,7 @@ stringNode = stringNode->next;
         error = ERRORX_(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
         close(pipeStdin[0]);
         close(pipeStdin[1]);
+        free(arguments);
         StringList_done(&argumentList);
         String_delete(command);
         String_delete(commandLine);
@@ -803,6 +858,7 @@ stringNode = stringNode->next;
         close(pipeStdout[1]);
         close(pipeStdin[0]);
         close(pipeStdin[1]);
+        free(arguments);
         StringList_done(&argumentList);
         String_delete(command);
         String_delete(commandLine);
@@ -813,6 +869,10 @@ stringNode = stringNode->next;
       pid = fork();
       if      (pid == 0)
       {
+        /* Note: do not use any function here which may synchronize (lock)
+                 with the main program!
+        */
+
         // close stdin, stdout, and stderr and reassign them to the pipes
         close(STDERR_FILENO);
         close(STDOUT_FILENO);
@@ -830,25 +890,8 @@ stringNode = stringNode->next;
         close(pipeStdout[0]);
         close(pipeStdin[1]);
 
-        // execute of external program
-        n = 1+StringList_count(&argumentList)+1;
-        arguments = (char const**)malloc(n*sizeof(char*));
-        if (arguments == NULL)
-        {
-          HALT_INSUFFICIENT_MEMORY();
-        }
-        z = 0;
-        arguments[z] = String_cString(command); z++;
-        stringNode = argumentList.head;
-        while (stringNode != NULL)
-        {
-          assert(z < n);
-          arguments[z] = String_cString(stringNode->string); z++;
-          stringNode = stringNode->next;
-        }
-        assert(z < n);
-        arguments[z] = NULL; z++;
-        execvp(String_cString(command),(char**)arguments);
+        // execute external program
+        execvp(arguments[0],(char**)arguments);
 
         // in case exec() fail, return a default exitcode
         HALT_INTERNAL_ERROR("execvp() returned");
@@ -864,6 +907,7 @@ stringNode = stringNode->next;
         close(pipeStdout[1]);
         close(pipeStdin[0]);
         close(pipeStdin[1]);
+        free(arguments);
         StringList_done(&argumentList);
         String_delete(command);
         String_delete(commandLine);
@@ -881,37 +925,41 @@ error = ERROR_NONE;
       // wait until process terminate and read stdout/stderr
       stdoutLine = String_new();
       stderrLine = String_new();
-      status = 0;
-      while ((waitpid(pid,&status,WNOHANG) == 0) || (!WIFEXITED(status) && !WIFSIGNALED(status)))
+      status = 0xFFFFFFFF;
+      while (   (waitpid(pid,&status,WNOHANG) == 0)
+             || (   !WIFEXITED(status)
+                 && !WIFSIGNALED(status)
+                )
+            )
       {
         sleepFlag = TRUE;
 
         if (readProcessIO(pipeStdout[0],stdoutLine))
         {
-          if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(executeIOUserData,stdoutLine);
+          if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(stdoutExecuteIOUserData,stdoutLine);
           String_clear(stdoutLine);
           sleepFlag = FALSE;
         }
         if (readProcessIO(pipeStderr[0],stderrLine))
         {
-          if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(executeIOUserData,stderrLine);
+          if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(stderrExecuteIOUserData,stderrLine);
           String_clear(stderrLine);
           sleepFlag = FALSE;
         }
 
         if (sleepFlag)
         {
-          Misc_udelay(500LL*1000LL);
+          Misc_udelay(1000LL*1000LL);
         }
       }
       while (readProcessIO(pipeStdout[0],stdoutLine))
       {
-        if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(executeIOUserData,stdoutLine);
+        if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(stdoutExecuteIOUserData,stdoutLine);
         String_clear(stdoutLine);
       }
       while (readProcessIO(pipeStderr[0],stderrLine))
       {
-        if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(executeIOUserData,stderrLine);
+        if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(stderrExecuteIOUserData,stderrLine);
         String_clear(stderrLine);
       }
       String_delete(stderrLine);
@@ -931,6 +979,7 @@ error = ERROR_NONE;
         if (exitcode != 0)
         {
           error = ERRORX_(EXEC_FAIL,exitcode,String_cString(commandLine));
+          free(arguments);
           StringList_done(&argumentList);
           String_delete(command);
           String_delete(commandLine);
@@ -942,6 +991,7 @@ error = ERROR_NONE;
         terminateSignal = WTERMSIG(status);
         error = ERRORX_(EXEC_FAIL,terminateSignal,String_cString(commandLine));
         printInfo(3,"FAIL (signal %d)\n",terminateSignal);
+        free(arguments);
         StringList_done(&argumentList);
         String_delete(command);
         String_delete(commandLine);
@@ -1053,11 +1103,12 @@ HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
       if (!CloseHandle(hOutputRead)) DisplayError("CloseHandle");
       if (!CloseHandle(hInputWrite)) DisplayError("CloseHandle");
 #endif
-    #else /* not defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || WIN32 */
-      #error pipe()/fork()/waitpid() not available nor Win32 system!
-    #endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || WIN32 */
+    #else /* not defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
+      #error pipe()/fork()/waitpid() not available nor Windows system!
+    #endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
 
     // free resources
+    free(arguments);
     StringList_done(&argumentList);
     String_delete(command);
     String_delete(commandLine);
