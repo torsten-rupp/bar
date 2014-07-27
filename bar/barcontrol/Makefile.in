@@ -33,6 +33,11 @@ JAVAC              = @JAVAC@
 JAVAC_FLAGS        = @JAVAC_FLAGS@ -source 1.5
 # -Xlint
 
+XGETTEXT           = xgettext
+XGETTEXT_FLAGS     = -L java -k -ktr
+MSGMERGE           = msgmerge
+MSGFMT             = msgfmt
+
 JAR                = @JAR@
 
 SWT_JAR_LINUX      = $(SOURCE_DIR)/jars/linux/swt-3.6.1.jar
@@ -72,7 +77,9 @@ endif
 endif
 endif
 
-CLASSPATH        = classes:$(SWT_JAR)
+GEXTTEXT_JAR     = $(SOURCE_DIR)/jars/gettext-commons-0.9.6.jar
+
+CLASSPATH        = classes:$(SWT_JAR):$(GEXTTEXT_JAR)
 
 #---------------------------------- commands----------------------------------
 
@@ -92,6 +99,7 @@ RMF        = rm -f
 RMRF       = rm -rf
 SED        = sed
 TAR        = tar
+TOUCH      = touch
 UNZIP      = unzip
 
 #------------------------ specific variables/settings ------------------------
@@ -147,6 +155,8 @@ OTHER_SOURCES  = barcontrol.in \
 OBJECTS        = $(foreach z,$(SOURCES),$(basename $(subst src/,classes/,$z)).class) \
                  classes/Errors.class \
                  classes/Config.class \
+                 \
+                 classes/app/i18n/Messages_de.class \
 
 INTERMEDIATE   = src/Errors.java \
                  barcontrol.jar \
@@ -210,6 +220,32 @@ help:
 src/Errors.java: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
 	$(INSTALL) -d $(@D)
 	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -j $@
+
+# compile Java source
+classes/%.class: $(SOURCE_DIR)/src/%.java src/Errors.java
+	$(INSTALL) -d classes
+ifneq ($(JAVAC),)
+	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) $(SOURCE_DIR)/src/*.java
+else
+	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"
+endif
+
+# i18n
+.PHONY: i18n po
+i18n po: \
+  po/german.po
+
+po/barcontrol.pot: $(SOURCE_DIR)/src/*.java
+	$(INSTALL) -d $(@D)
+	$(XGETTEXT) $(XGETTEXT_FLAGS) -o $@ src/*.java
+
+po/german.po: po/barcontrol.pot
+	$(INSTALL) -d $(@D)
+	$(MSGMERGE) -U $@ po/barcontrol.pot
+	$(TOUCH) $@
+
+classes/app/i18n/Messages_de.class:
+	$(MSGFMT) --java2 -d classes -r app.i18n.Messages -l de po/german.po
 
 # jars
 .PHONY: jars clean_jars
