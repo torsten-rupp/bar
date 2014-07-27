@@ -565,6 +565,7 @@ AC_SUBST(ENABLE_SSH)                        dnl "yes" for ssh support, "no" othe
 AC_SUBST(ENABLE_TLS)                        dnl "yes" for tls support, "no" otherwise
 AC_SUBST(ENABLE_ISO9660)                    dnl "yes" for iso9660 support, "no" otherwise
 AC_SUBST(ENABLE_GUI)                        dnl "yes" for GUI support, "no" otherwise
+AC_SUBST(ENABLE_GUI_I18N)                   dnl "yes" for GUI i18n support, "no" otherwise
 
 AC_SUBST(HAVE_BZ2)                          dnl "1" for bzip2 support, "" otherwise
 AC_SUBST(HAVE_LZMA)                         dnl "1" for lzma support, "" otherwise
@@ -616,6 +617,10 @@ AC_SUBST(STATIC_LIBRARIES)                  dnl libraries to link static
 AC_SUBST(JAVA)                              dnl java command
 AC_SUBST(JAVAC)                             dnl java compiler
 AC_SUBST(JAR)                               dnl jar command
+
+AC_SUBST(XGETTEXT)                          dnl xgettext command
+AC_SUBST(MSGMERGE)                          dnl msgmerge command
+AC_SUBST(MSGFMT)                            dnl msgfmt command
 
 AC_SUBST(JAVA_DATA_MODEL)                   dnl java data model (32 or 64)
 AC_SUBST(JAVA_FLAGS)                        dnl java flags
@@ -688,6 +693,7 @@ ENABLE_PCRE="yes"
 ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
 ENABLE_GUI="yes"
+ENABLE_GUI_I18N="yes"
 ENABLE_PACKAGE_COMPILE="yes"
 
 # error log
@@ -838,6 +844,11 @@ AC_ARG_ENABLE(
   gui,
   AC_HELP_STRING([--disable-gui],[disable GUI support (barcontrol)]),
   [ENABLE_GUI=$enableval]
+)
+AC_ARG_ENABLE(
+  gui-i18n,
+  AC_HELP_STRING([--disable-gui-i18n],[disable GUI localization support (barcontrol)]),
+  [ENABLE_GUI_I18N=$enableval]
 )
 AC_ARG_ENABLE(
   package-compile,
@@ -1011,6 +1022,23 @@ if test "$ENABLE_GUI" = "yes"; then
     AC_MSG_WARN([No 'jar' command found in path - cannot compile GUI])
     ENABLE_GUI="no"
   fi
+  if test "$ENABLE_GUI_I18N" = "yes"; then
+    AC_PATH_PROGS(XGETTEXT,xgettext)
+    AC_PATH_PROGS(MSGMERGE,msgmerge)
+    AC_PATH_PROGS(MSGFMT,msgfmt)
+    if test -z "$XGETTEXT"; then
+      AC_MSG_WARN([No 'xgettext' command found in path - cannot use localize application])
+      ENABLE_GUI_I18N="no"
+    fi
+    if test -z "$MSGMERGE"; then
+      AC_MSG_WARN([No 'msgmerge' command found in path - cannot use localize application])
+      ENABLE_GUI_I18N="no"
+    fi
+    if test -z "$MSGFMT"; then
+      AC_MSG_WARN([No 'msgfmt' command found in path - cannot use localize application])
+      ENABLE_GUI_I18N="no"
+    fi
+  fi
   AC_PATH_PROGS(LAUNCH4J,launch4j)
 
   if test -n "$JAVA"; then
@@ -1023,6 +1051,7 @@ if test "$ENABLE_GUI" = "yes"; then
       *)
         AC_MSG_WARN([Insufficient Java version (found $JAVA_VERSION, require 1.6 or newer) - disabled compile GUI])
         ENABLE_GUI="no"
+        ENABLE_GUI_I18N="no"
         ;;
     esac
   fi
@@ -2929,6 +2958,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
                     echo "  Crash dump support: `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
                     echo "  GUI support       : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  GUI i18n support  : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory     : $SWT_DIR"
                     echo ""
                     echo "  Packages support  : `if test -n "$EPM"; then echo yes; else echo no; fi`"
@@ -2977,6 +3007,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_PCRE=$HAVE_PCRE
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
                    ENABLE_GUI=$ENABLE_GUI
+                   ENABLE_GUI_I18N=$ENABLE_GUI_I18N
                    SWT_DIR="$SWT_DIR"
                    INSTALL_DIR="$INSTALL_DIR"
                    INSTALL_BIN_DIR="$INSTALL_BIN_DIR"
