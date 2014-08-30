@@ -1399,7 +1399,7 @@ class TabJobs
     directoryInfoThread.start();
 
     // create tab
-    widgetTab = Widgets.addTab(parentTabFolder,"Jobs"+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
+    widgetTab = Widgets.addTab(parentTabFolder,BARControl.i18n.tr("Jobs")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
     widgetTab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
 
