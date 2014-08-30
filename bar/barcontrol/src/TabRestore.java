@@ -1269,7 +1269,7 @@ class TabRestore
     waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
 
     // create tab
-    widgetTab = Widgets.addTab(parentTabFolder,"Restore"+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
+    widgetTab = Widgets.addTab(parentTabFolder,BARControl.i18n.tr("Restore")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
     widgetTab.setLayout(new TableLayout(new double[]{0.5,0.5,0.0},new double[]{0.0,1.0},2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
 
