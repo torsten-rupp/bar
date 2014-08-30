@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-07-27 10:11+0200\n"
+"POT-Creation-Date: 2014-08-30 13:38+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,10 +17,361 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/BARControl.java:1664
-msgid "hello"
+#: src/BARControl.java:1388
+msgid "Program"
 msgstr ""
 
-#: src/BARControl.java:1666
-msgid "hello4"
+#: src/BARControl.java:1390 src/TabStatus.java:499 src/TabStatus.java:961
+msgid "Start"
+msgstr ""
+
+#: src/BARControl.java:1403 src/TabStatus.java:512 src/TabStatus.java:977
+#: src/TabStatus.java:1476
+msgid "Abort"
+msgstr ""
+
+#: src/BARControl.java:1416 src/TabStatus.java:525 src/TabStatus.java:993
+#: src/TabStatus.java:1136 src/TabStatus.java:1148
+msgid "Pause"
+msgstr ""
+
+#: src/BARControl.java:1418
+msgid "10min"
+msgstr ""
+
+#: src/BARControl.java:1431
+msgid "60min"
+msgstr ""
+
+#: src/BARControl.java:1444
+msgid "120min"
+msgstr ""
+
+#: src/BARControl.java:1459
+msgid "Create operation"
+msgstr ""
+
+#: src/BARControl.java:1473
+msgid "Storage operation"
+msgstr ""
+
+#: src/BARControl.java:1500
+msgid "Index update operation"
+msgstr ""
+
+#: src/BARControl.java:1514
+msgid "Toggle suspend/continue"
+msgstr ""
+
+#: src/BARControl.java:1527
+msgid "Clear stored passwords on server"
+msgstr ""
+
+#: src/BARControl.java:1545 src/TabStatus.java:1039
+msgid "Quit"
+msgstr ""
+
+#: src/BARControl.java:1560
+msgid "Help"
+msgstr ""
+
+#: src/BARControl.java:1562 src/BARControl.java:1571
+msgid "About"
+msgstr ""
+
+#: src/BARControl.java:1571
+msgid "Written by Torsten Rupp"
+msgstr ""
+
+#: src/TabJobs.java:1402
+msgid "Jobs"
+msgstr ""
+
+#: src/TabRestore.java:1272
+msgid "Restore"
+msgstr ""
+
+#: src/TabStatus.java:427
+msgid "Status"
+msgstr ""
+
+#: src/TabStatus.java:454 src/TabStatus.java:568 src/TabStatus.java:1083
+msgid "Selected"
+msgstr ""
+
+#: src/TabStatus.java:472
+msgid "Name"
+msgstr ""
+
+#: src/TabStatus.java:474
+msgid "Click to sort for name."
+msgstr ""
+
+#: src/TabStatus.java:475
+msgid "State"
+msgstr ""
+
+#: src/TabStatus.java:477
+msgid "Click to sort for state."
+msgstr ""
+
+#: src/TabStatus.java:478
+msgid "Type"
+msgstr ""
+
+#: src/TabStatus.java:480
+msgid "Click to sort for type."
+msgstr ""
+
+#: src/TabStatus.java:481
+msgid "Part size"
+msgstr ""
+
+#: src/TabStatus.java:483
+msgid "Click to sort for part size."
+msgstr ""
+
+#: src/TabStatus.java:484
+msgid "Compress"
+msgstr ""
+
+#: src/TabStatus.java:486
+msgid "Click to sort for used compress algorithm."
+msgstr ""
+
+#: src/TabStatus.java:487
+msgid "Crypt"
+msgstr ""
+
+#: src/TabStatus.java:489
+msgid "Click to sort for used encryption algorithm."
+msgstr ""
+
+#: src/TabStatus.java:490
+msgid "Last executed"
+msgstr ""
+
+#: src/TabStatus.java:492
+msgid "Click to sort for last date/time job was executed."
+msgstr ""
+
+#: src/TabStatus.java:493
+msgid "Estimated time"
+msgstr ""
+
+#: src/TabStatus.java:495
+msgid "Click to sort for estimated rest time to execute job."
+msgstr ""
+
+#: src/TabStatus.java:538 src/TabStatus.java:1008 src/TabStatus.java:1125
+#: src/TabStatus.java:1137
+msgid "Continue"
+msgstr ""
+
+#: src/TabStatus.java:551 src/TabStatus.java:866 src/TabStatus.java:1023
+msgid "Volume"
+msgstr ""
+
+#: src/TabStatus.java:565
+msgid ""
+"List with job entries.\n"
+"Click to select job, right-click to open context menu."
+msgstr ""
+
+#: src/TabStatus.java:573
+msgid "Done"
+msgstr ""
+
+#: src/TabStatus.java:578 src/TabStatus.java:725 src/TabStatus.java:759
+#: src/TabStatus.java:801
+msgid "files"
+msgstr ""
+
+#: src/TabStatus.java:583 src/TabStatus.java:596 src/TabStatus.java:653
+#: src/TabStatus.java:666 src/TabStatus.java:730 src/TabStatus.java:743
+#: src/TabStatus.java:764 src/TabStatus.java:777 src/TabStatus.java:814
+#: src/TabStatus.java:835
+msgid "bytes"
+msgstr ""
+
+#: src/TabStatus.java:636
+msgid "bytes/s"
+msgstr ""
+
+#: src/TabStatus.java:648
+msgid "Stored"
+msgstr ""
+
+#: src/TabStatus.java:680
+msgid "Ratio"
+msgstr ""
+
+#: src/TabStatus.java:720
+msgid "Skipped"
+msgstr ""
+
+#: src/TabStatus.java:754
+msgid "Errors"
+msgstr ""
+
+#: src/TabStatus.java:788
+msgid "Total:"
+msgstr ""
+
+#: src/TabStatus.java:846
+msgid "File"
+msgstr ""
+
+#: src/TabStatus.java:856
+msgid "Storage"
+msgstr ""
+
+#: src/TabStatus.java:880
+msgid "Total bytes"
+msgstr ""
+
+#: src/TabStatus.java:887
+msgid "Message"
+msgstr ""
+
+#: src/TabStatus.java:991
+msgid "Abort selected job."
+msgstr ""
+
+#: src/TabStatus.java:1006
+msgid "Pause selected job for a specific time."
+msgstr ""
+
+#: src/TabStatus.java:1021
+msgid "Suspend selected job for an infinite time."
+msgstr ""
+
+#: src/TabStatus.java:1037
+msgid "Click when a new volume is available in drive."
+msgstr ""
+
+#: src/TabStatus.java:1055
+msgid "Quit BARControl program."
+msgstr ""
+
+#: src/TabStatus.java:1124
+msgid "Pause [%3dmin]"
+msgstr ""
+
+#: src/TabStatus.java:1149
+msgid "Suspend"
+msgstr ""
+
+#: src/TabStatus.java:1280
+msgid "suspended"
+msgstr ""
+
+#: src/TabStatus.java:1282
+msgid "unlimited"
+msgstr ""
+
+#: src/TabStatus.java:1393
+msgid "Confirmation"
+msgstr ""
+
+#: src/TabStatus.java:1394
+msgid "Start job"
+msgstr ""
+
+#: src/TabStatus.java:1395
+msgid "Normal"
+msgstr ""
+
+#: src/TabStatus.java:1396
+msgid "Full"
+msgstr ""
+
+#: src/TabStatus.java:1397
+msgid "Incremental"
+msgstr ""
+
+#: src/TabStatus.java:1398
+msgid "Differential"
+msgstr ""
+
+#: src/TabStatus.java:1399
+msgid "Dry-run"
+msgstr ""
+
+#: src/TabStatus.java:1400 src/TabStatus.java:1590
+msgid "Cancel"
+msgstr ""
+
+#: src/TabStatus.java:1402
+msgid "Store all files."
+msgstr ""
+
+#: src/TabStatus.java:1403
+msgid "Store all files and create incremental data file."
+msgstr ""
+
+#: src/TabStatus.java:1404
+msgid ""
+"Store changed files since last incremental or full storage and update "
+"incremental data file."
+msgstr ""
+
+#: src/TabStatus.java:1405
+msgid "Store changed files since last full storage."
+msgstr ""
+
+#: src/TabStatus.java:1406
+msgid "Collect and process all files, but do not create archives."
+msgstr ""
+
+#: src/TabStatus.java:1419 src/TabStatus.java:1421
+msgid "Crypt password"
+msgstr ""
+
+#: src/TabStatus.java:1440
+msgid "Cannot start job (error: %s)"
+msgstr ""
+
+#: src/TabStatus.java:1474
+msgid "Abort running job"
+msgstr ""
+
+#: src/TabStatus.java:1476
+msgid "Abort job"
+msgstr ""
+
+#: src/TabStatus.java:1507
+msgid "Cannot abort job (error: %s)"
+msgstr ""
+
+#: src/TabStatus.java:1520
+msgid "Communication error while deleting storage"
+msgstr ""
+
+#: src/TabStatus.java:1558
+msgid "Cannot pause job (error: %s)"
+msgstr ""
+
+#: src/TabStatus.java:1577
+msgid "Cannot suspend job (error: %s)"
+msgstr ""
+
+#: src/TabStatus.java:1590
+msgid "Volume request"
+msgstr ""
+
+#: src/TabStatus.java:1590
+msgid "Load volume number"
+msgstr ""
+
+#: src/TabStatus.java:1590
+msgid "OK"
+msgstr ""
+
+#: src/TabStatus.java:1590
+msgid "Unload tray"
+msgstr ""
+
+#: src/TabStatus.java:1603
+msgid "Cannot change volume job (error: %s)"
 msgstr ""

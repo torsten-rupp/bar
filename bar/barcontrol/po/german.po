@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-07-27 10:11+0200\n"
+"POT-Creation-Date: 2014-08-30 13:32+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,19 +17,373 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/BARControl.java:1664
-msgid "hello"
-msgstr "Hallo Welt!"
+#: src/BARControl.java:1388
+msgid "Program"
+msgstr "Programm"
 
-#: src/BARControl.java:1666
-#, fuzzy
-msgid "hello4"
-msgstr "Hallo"
+#: src/BARControl.java:1390 src/TabStatus.java:499 src/TabStatus.java:961
+msgid "Start"
+msgstr "Start"
 
-#, fuzzy
-#~ msgid "hello3"
-#~ msgstr "Hallo"
+#: src/BARControl.java:1403 src/TabStatus.java:512 src/TabStatus.java:977
+#: src/TabStatus.java:1476
+msgid "Abort"
+msgstr "Abbrechen"
 
+#: src/BARControl.java:1416 src/TabStatus.java:525 src/TabStatus.java:993
+#: src/TabStatus.java:1136 src/TabStatus.java:1148
+msgid "Pause"
+msgstr "Pause"
+
+#: src/BARControl.java:1418
+msgid "10min"
+msgstr "10min"
+
+#: src/BARControl.java:1431
+msgid "60min"
+msgstr "60min"
+
+#: src/BARControl.java:1444
+msgid "120min"
+msgstr ""
+
+#: src/BARControl.java:1459
+msgid "Create operation"
+msgstr "Erzeugen"
+
+#: src/BARControl.java:1473
+msgid "Storage operation"
+msgstr "Speichern"
+
+#: src/BARControl.java:1500
+msgid "Index update operation"
+msgstr "Index erneuern"
+
+#: src/BARControl.java:1514
+msgid "Toggle suspend/continue"
+msgstr "Anhalten/Weiter"
+
+#: src/BARControl.java:1527
+msgid "Clear stored passwords on server"
+msgstr "Passworte auf Server läschen"
+
+#: src/BARControl.java:1545 src/TabStatus.java:1039
+msgid "Quit"
+msgstr "Beenden"
+
+#: src/BARControl.java:1560
+msgid "Help"
+msgstr "Hilfe"
+
+#: src/BARControl.java:1562 src/BARControl.java:1571
+msgid "About"
+msgstr "Über"
+
+#: src/BARControl.java:1571
+msgid "Written by Torsten Rupp"
+msgstr "Geschrieben von Torsten Rupp"
+
+#: src/TabJobs.java:1402
+msgid "Jobs"
+msgstr "Aufträge"
+
+#: src/TabRestore.java:1272
+msgid "Restore"
+msgstr "Wiederherstellen"
+
+#: src/TabStatus.java:427
+msgid "Status"
+msgstr "Status"
+
+#: src/TabStatus.java:454 src/TabStatus.java:568 src/TabStatus.java:1083
+msgid "Selected"
+msgstr "Ausgewählt"
+
+#: src/TabStatus.java:472
+msgid "Name"
+msgstr "Name"
+
+#: src/TabStatus.java:474
+msgid "Click to sort for name."
+msgstr "Klicken um nach Namen zu sortieren."
+
+#: src/TabStatus.java:475
 #, fuzzy
-#~ msgid "hello2"
-#~ msgstr "Hallo"
+msgid "State"
+msgstr "Status"
+
+#: src/TabStatus.java:477
+msgid "Click to sort for state."
+msgstr "Klicken um nach Status zu sortieren."
+
+#: src/TabStatus.java:478
+msgid "Type"
+msgstr "Typ"
+
+#: src/TabStatus.java:480
+msgid "Click to sort for type."
+msgstr "Klicken um nach Typ zu sortieren"
+
+#: src/TabStatus.java:481
+msgid "Part size"
+msgstr "Teilgröße"
+
+#: src/TabStatus.java:483
+msgid "Click to sort for part size."
+msgstr "Klicken um nach Teilgrößen zu sortieren."
+
+#: src/TabStatus.java:484
+msgid "Compress"
+msgstr "Kompression"
+
+#: src/TabStatus.java:486
+msgid "Click to sort for used compress algorithm."
+msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren."
+
+#: src/TabStatus.java:487
+msgid "Crypt"
+msgstr "Verschlüsselung"
+
+#: src/TabStatus.java:489
+msgid "Click to sort for used encryption algorithm."
+msgstr "Klicken um nach verwendetem Verschlüsselungsalgorithmus zu sortieren."
+
+#: src/TabStatus.java:490
+msgid "Last executed"
+msgstr "Letzte Ausführung"
+
+#: src/TabStatus.java:492
+msgid "Click to sort for last date/time job was executed."
+msgstr "Klicken um nach Datum/Zeit der letzten Ausführung des Auftrags zu sortieren."
+
+#: src/TabStatus.java:493
+msgid "Estimated time"
+msgstr "Geschätzte Restzeit"
+
+#: src/TabStatus.java:495
+msgid "Click to sort for estimated rest time to execute job."
+msgstr "Klicken um nach geschötzter Restzeit für Ausführung des Auftrags zu sortieren"
+
+#: src/TabStatus.java:538 src/TabStatus.java:1008 src/TabStatus.java:1125
+#: src/TabStatus.java:1137
+msgid "Continue"
+msgstr "Weiter"
+
+#: src/TabStatus.java:551 src/TabStatus.java:866 src/TabStatus.java:1023
+msgid "Volume"
+msgstr "Medium"
+
+#: src/TabStatus.java:565
+msgid ""
+"List with job entries.\n"
+"Click to select job, right-click to open context menu."
+msgstr "Liste mit Aufträgen. Klicken um Auftrag auszuwählen, Rechtsklick für Kontextmenü."
+
+#: src/TabStatus.java:573
+msgid "Done"
+msgstr "Bearbeitet"
+
+#: src/TabStatus.java:578 src/TabStatus.java:725 src/TabStatus.java:759
+#: src/TabStatus.java:801
+msgid "files"
+msgstr "Dateien"
+
+#: src/TabStatus.java:583 src/TabStatus.java:596 src/TabStatus.java:653
+#: src/TabStatus.java:666 src/TabStatus.java:730 src/TabStatus.java:743
+#: src/TabStatus.java:764 src/TabStatus.java:777 src/TabStatus.java:814
+#: src/TabStatus.java:835
+msgid "bytes"
+msgstr "Bytes"
+
+#: src/TabStatus.java:636
+msgid "bytes/s"
+msgstr "Bytes/s"
+
+#: src/TabStatus.java:648
+#, fuzzy
+msgid "Stored"
+msgstr "Gespeichert"
+
+#: src/TabStatus.java:680
+msgid "Ratio"
+msgstr "Verhältnis"
+
+#: src/TabStatus.java:720
+msgid "Skipped"
+msgstr "Übersprungen"
+
+#: src/TabStatus.java:754
+msgid "Errors"
+msgstr "Fehler"
+
+#: src/TabStatus.java:788
+msgid "Total:"
+msgstr "Gesamt"
+
+#: src/TabStatus.java:846
+msgid "File"
+msgstr "Datei"
+
+#: src/TabStatus.java:856
+msgid "Storage"
+msgstr "Gespeichert"
+
+#: src/TabStatus.java:880
+msgid "Total bytes"
+msgstr "Bytes gesamt"
+
+#: src/TabStatus.java:887
+msgid "Message"
+msgstr "Meldung"
+
+#: src/TabStatus.java:991
+msgid "Abort selected job."
+msgstr "Ausgewählten Auftrag abbrechen."
+
+#: src/TabStatus.java:1006
+msgid "Pause selected job for a specific time."
+msgstr "Ausgewählten Auftrag für die angegebene Zeit pausieren-"
+
+#: src/TabStatus.java:1021
+msgid "Suspend selected job for an infinite time."
+msgstr "Ausgewählten Auftrag anhalten."
+
+#: src/TabStatus.java:1037
+msgid "Click when a new volume is available in drive."
+msgstr "Klicken wenn eine neues Medium im Laufwerk ist."
+
+#: src/TabStatus.java:1055
+msgid "Quit BARControl program."
+msgstr "BARControl beenden."
+
+#: src/TabStatus.java:1124
+msgid "Pause [%3dmin]"
+msgstr "Pause [%3dmin]"
+
+#: src/TabStatus.java:1149
+#, fuzzy
+msgid "Suspend"
+msgstr "Anhalten"
+
+#: src/TabStatus.java:1280
+msgid "suspended"
+msgstr "angehalten"
+
+#: src/TabStatus.java:1282
+msgid "unlimited"
+msgstr "unbegrenzt"
+
+#: src/TabStatus.java:1393
+msgid "Confirmation"
+msgstr "Bestätigung"
+
+#: src/TabStatus.java:1394
+#, fuzzy
+msgid "Start job"
+msgstr "Auftrag starten"
+
+#: src/TabStatus.java:1395
+msgid "Normal"
+msgstr "Normal"
+
+#: src/TabStatus.java:1396
+msgid "Full"
+msgstr "Vollständig"
+
+#: src/TabStatus.java:1397
+msgid "Incremental"
+msgstr "Inkrementell"
+
+#: src/TabStatus.java:1398
+msgid "Differential"
+msgstr "Differentiell"
+
+#: src/TabStatus.java:1399
+msgid "Dry-run"
+msgstr "Testlauf"
+
+#: src/TabStatus.java:1400 src/TabStatus.java:1590
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: src/TabStatus.java:1402
+msgid "Store all files."
+msgstr "Alle Dateien speichern."
+
+#: src/TabStatus.java:1403
+msgid "Store all files and create incremental data file."
+msgstr "Alle Dateien speichern und Inkrementdaten-Datei erzeugen."
+
+#: src/TabStatus.java:1404
+msgid ""
+"Store changed files since last incremental or full storage and update "
+"incremental data file."
+msgstr ""
+"Speichern von veränderten Dateien seit dem letzten inkrementellen oder "
+"vollständigen Speichern und aktuallisieren der Inkrementdaten-Datei."
+
+#: src/TabStatus.java:1405
+msgid "Store changed files since last full storage."
+msgstr ""
+"Speichern von veränderten Dateien seit dem letzten vollständigen Speichern."
+
+#: src/TabStatus.java:1406
+msgid "Collect and process all files, but do not create archives."
+msgstr "Dateien suchen und bearbeiten, aber keine Archive erzeugen."
+
+#: src/TabStatus.java:1419 src/TabStatus.java:1421
+msgid "Crypt password"
+msgstr "Verschlüsselungspasswort"
+
+#: src/TabStatus.java:1440
+msgid "Cannot start job (error: %s)"
+msgstr "Auftrag kann nicht gestartet werden (Fehler: %s)"
+
+#: src/TabStatus.java:1474
+msgid "Abort running job"
+msgstr "Laufenden Auftrag abbrechen"
+
+#: src/TabStatus.java:1476
+#, fuzzy
+msgid "Abort job"
+msgstr "Abbrechen"
+
+#: src/TabStatus.java:1507
+msgid "Cannot abort job (error: %s)"
+msgstr "Auftrag kann nicht abgebrochen werden (Fehler: %s)"
+
+#: src/TabStatus.java:1520
+msgid "Communication error while deleting storage"
+msgstr "Kommunikationsfehler beim Löschen eines Archives"
+
+#: src/TabStatus.java:1558
+#, fuzzy
+msgid "Cannot pause job (error: %s)"
+msgstr "Auftrag kann nicht gestartet werden (Fehler: %s)"
+
+#: src/TabStatus.java:1577
+#, fuzzy
+msgid "Cannot suspend job (error: %s)"
+msgstr "Auftrag kann nicht gestartet werden (Fehler: %s)"
+
+#: src/TabStatus.java:1590
+#, fuzzy
+msgid "Volume request"
+msgstr "Medium"
+
+#: src/TabStatus.java:1590
+msgid "Load volume number"
+msgstr "Medium laden"
+
+#: src/TabStatus.java:1590
+msgid "OK"
+msgstr "OK"
+
+#: src/TabStatus.java:1590
+msgid "Unload tray"
+msgstr "Schublade öffnen"
+
+#: src/TabStatus.java:1603
+#, fuzzy
+msgid "Cannot change volume job (error: %s)"
+msgstr "Auftrag kann nicht abgebrochen werden (Fehler: %s)"
