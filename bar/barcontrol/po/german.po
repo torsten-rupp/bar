@@ -3,83 +3,91 @@
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
+"Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-08-30 13:32+0200\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"POT-Creation-Date: 2014-08-30 13:39+0200\n"
+"PO-Revision-Date: 2014-08-31 13:26+0100\n"
+"Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/BARControl.java:1388
+#: src/BARControl.java:1387
 msgid "Program"
 msgstr "Programm"
 
-#: src/BARControl.java:1390 src/TabStatus.java:499 src/TabStatus.java:961
+#: src/BARControl.java:1389
+#: src/TabStatus.java:499
+#: src/TabStatus.java:961
 msgid "Start"
 msgstr "Start"
 
-#: src/BARControl.java:1403 src/TabStatus.java:512 src/TabStatus.java:977
+#: src/BARControl.java:1402
+#: src/TabStatus.java:512
+#: src/TabStatus.java:977
 #: src/TabStatus.java:1476
 msgid "Abort"
 msgstr "Abbrechen"
 
-#: src/BARControl.java:1416 src/TabStatus.java:525 src/TabStatus.java:993
-#: src/TabStatus.java:1136 src/TabStatus.java:1148
+#: src/BARControl.java:1415
+#: src/TabStatus.java:525
+#: src/TabStatus.java:993
+#: src/TabStatus.java:1136
+#: src/TabStatus.java:1148
 msgid "Pause"
 msgstr "Pause"
 
-#: src/BARControl.java:1418
+#: src/BARControl.java:1417
 msgid "10min"
 msgstr "10min"
 
-#: src/BARControl.java:1431
+#: src/BARControl.java:1430
 msgid "60min"
 msgstr "60min"
 
-#: src/BARControl.java:1444
+#: src/BARControl.java:1443
 msgid "120min"
-msgstr ""
+msgstr "120min"
 
-#: src/BARControl.java:1459
+#: src/BARControl.java:1458
 msgid "Create operation"
 msgstr "Erzeugen"
 
-#: src/BARControl.java:1473
+#: src/BARControl.java:1472
 msgid "Storage operation"
 msgstr "Speichern"
 
-#: src/BARControl.java:1500
+#: src/BARControl.java:1499
 msgid "Index update operation"
 msgstr "Index erneuern"
 
-#: src/BARControl.java:1514
+#: src/BARControl.java:1513
 msgid "Toggle suspend/continue"
 msgstr "Anhalten/Weiter"
 
-#: src/BARControl.java:1527
+#: src/BARControl.java:1526
 msgid "Clear stored passwords on server"
 msgstr "Passworte auf Server läschen"
 
-#: src/BARControl.java:1545 src/TabStatus.java:1039
+#: src/BARControl.java:1544
+#: src/TabStatus.java:1039
 msgid "Quit"
 msgstr "Beenden"
 
-#: src/BARControl.java:1560
+#: src/BARControl.java:1559
 msgid "Help"
 msgstr "Hilfe"
 
-#: src/BARControl.java:1562 src/BARControl.java:1571
+#: src/BARControl.java:1561
+#: src/BARControl.java:1570
 msgid "About"
 msgstr "Über"
 
-#: src/BARControl.java:1571
+#: src/BARControl.java:1570
 msgid "Written by Torsten Rupp"
 msgstr "Geschrieben von Torsten Rupp"
 
@@ -95,7 +103,9 @@ msgstr "Wiederherstellen"
 msgid "Status"
 msgstr "Status"
 
-#: src/TabStatus.java:454 src/TabStatus.java:568 src/TabStatus.java:1083
+#: src/TabStatus.java:454
+#: src/TabStatus.java:568
+#: src/TabStatus.java:1083
 msgid "Selected"
 msgstr "Ausgewählt"
 
@@ -164,12 +174,16 @@ msgstr "Geschätzte Restzeit"
 msgid "Click to sort for estimated rest time to execute job."
 msgstr "Klicken um nach geschötzter Restzeit für Ausführung des Auftrags zu sortieren"
 
-#: src/TabStatus.java:538 src/TabStatus.java:1008 src/TabStatus.java:1125
+#: src/TabStatus.java:538
+#: src/TabStatus.java:1008
+#: src/TabStatus.java:1125
 #: src/TabStatus.java:1137
 msgid "Continue"
 msgstr "Weiter"
 
-#: src/TabStatus.java:551 src/TabStatus.java:866 src/TabStatus.java:1023
+#: src/TabStatus.java:551
+#: src/TabStatus.java:866
+#: src/TabStatus.java:1023
 msgid "Volume"
 msgstr "Medium"
 
@@ -183,14 +197,22 @@ msgstr "Liste mit Aufträgen. Klicken um Auftrag auszuwählen, Rechtsklick für 
 msgid "Done"
 msgstr "Bearbeitet"
 
-#: src/TabStatus.java:578 src/TabStatus.java:725 src/TabStatus.java:759
+#: src/TabStatus.java:578
+#: src/TabStatus.java:725
+#: src/TabStatus.java:759
 #: src/TabStatus.java:801
 msgid "files"
 msgstr "Dateien"
 
-#: src/TabStatus.java:583 src/TabStatus.java:596 src/TabStatus.java:653
-#: src/TabStatus.java:666 src/TabStatus.java:730 src/TabStatus.java:743
-#: src/TabStatus.java:764 src/TabStatus.java:777 src/TabStatus.java:814
+#: src/TabStatus.java:583
+#: src/TabStatus.java:596
+#: src/TabStatus.java:653
+#: src/TabStatus.java:666
+#: src/TabStatus.java:730
+#: src/TabStatus.java:743
+#: src/TabStatus.java:764
+#: src/TabStatus.java:777
+#: src/TabStatus.java:814
 #: src/TabStatus.java:835
 msgid "bytes"
 msgstr "Bytes"
@@ -302,7 +324,8 @@ msgstr "Differentiell"
 msgid "Dry-run"
 msgstr "Testlauf"
 
-#: src/TabStatus.java:1400 src/TabStatus.java:1590
+#: src/TabStatus.java:1400
+#: src/TabStatus.java:1590
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -315,23 +338,19 @@ msgid "Store all files and create incremental data file."
 msgstr "Alle Dateien speichern und Inkrementdaten-Datei erzeugen."
 
 #: src/TabStatus.java:1404
-msgid ""
-"Store changed files since last incremental or full storage and update "
-"incremental data file."
-msgstr ""
-"Speichern von veränderten Dateien seit dem letzten inkrementellen oder "
-"vollständigen Speichern und aktuallisieren der Inkrementdaten-Datei."
+msgid "Store changed files since last incremental or full storage and update incremental data file."
+msgstr "Speichern von veränderten Dateien seit dem letzten inkrementellen oder vollständigen Speichern und aktuallisieren der Inkrementdaten-Datei."
 
 #: src/TabStatus.java:1405
 msgid "Store changed files since last full storage."
-msgstr ""
-"Speichern von veränderten Dateien seit dem letzten vollständigen Speichern."
+msgstr "Speichern von veränderten Dateien seit dem letzten vollständigen Speichern."
 
 #: src/TabStatus.java:1406
 msgid "Collect and process all files, but do not create archives."
 msgstr "Dateien suchen und bearbeiten, aber keine Archive erzeugen."
 
-#: src/TabStatus.java:1419 src/TabStatus.java:1421
+#: src/TabStatus.java:1419
+#: src/TabStatus.java:1421
 msgid "Crypt password"
 msgstr "Verschlüsselungspasswort"
 
