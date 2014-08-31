@@ -90,6 +90,9 @@ import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.swt.widgets.Widget;
 
+import org.xnap.commons.i18n.I18n;
+import org.xnap.commons.i18n.I18nFactory;
+
 /****************************** Classes ********************************/
 
 /** storage types
@@ -975,6 +978,8 @@ public class BARControl
   };
 
   // --------------------------- variables --------------------------------
+  public  static I18n i18n;
+
   private Display    display;
   private Shell      shell;
   private TabFolder  tabFolder;
@@ -1379,9 +1384,9 @@ public class BARControl
     // create menu
     menuBar = Widgets.newMenuBar(shell);
 
-    menu = Widgets.addMenu(menuBar,"Program");
+    menu = Widgets.addMenu(menuBar,BARControl.i18n.tr("Program"));
     {
-      menuItem = Widgets.addMenuItem(menu,"Start\u2026",SWT.CTRL+'S');
+      menuItem = Widgets.addMenuItem(menu,BARControl.i18n.tr("Start")+"\u2026",SWT.CTRL+'S');
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1394,7 +1399,7 @@ public class BARControl
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,"Abort\u2026",SWT.CTRL+'A');
+      menuItem = Widgets.addMenuItem(menu,BARControl.i18n.tr("Abort")+"\u2026",SWT.CTRL+'A');
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1407,9 +1412,9 @@ public class BARControl
         }
       });
 
-      subMenu = Widgets.addMenu(menu,"Pause");
+      subMenu = Widgets.addMenu(menu,BARControl.i18n.tr("Pause"));
       {
-        menuItem = Widgets.addMenuItem(subMenu,"10min");
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.i18n.tr("10min"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -1422,7 +1427,7 @@ public class BARControl
           }
         });
 
-        menuItem = Widgets.addMenuItem(subMenu,"60min",SWT.CTRL+'P');
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.i18n.tr("60min"),SWT.CTRL+'P');
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1435,7 +1440,7 @@ public class BARControl
           }
         });
 
-        menuItem = Widgets.addMenuItem(subMenu,"120min");
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.i18n.tr("120min"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1450,7 +1455,7 @@ public class BARControl
 
         menuItem = Widgets.addMenuSeparator(subMenu);
 
-        menuItem = Widgets.addMenuCheckbox(subMenu,"Create operation",Settings.pauseCreateFlag);
+        menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.i18n.tr("Create operation"),Settings.pauseCreateFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1464,7 +1469,7 @@ public class BARControl
           }
         });
 
-        menuItem = Widgets.addMenuCheckbox(subMenu,"Storage operation",Settings.pauseStorageFlag);
+        menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.i18n.tr("Storage operation"),Settings.pauseStorageFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1491,7 +1496,7 @@ public class BARControl
             tabStatus.jobPause(60*60);
           }
         });
-        menuItem = Widgets.addMenuCheckbox(subMenu,"Index update operation",Settings.pauseIndexUpdateFlag);
+        menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.i18n.tr("Index update operation"),Settings.pauseIndexUpdateFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1505,7 +1510,7 @@ public class BARControl
         });
       }
 
-      menuItem = Widgets.addMenuItem(menu,"Toggle suspend/continue",SWT.CTRL+'S');
+      menuItem = Widgets.addMenuItem(menu,BARControl.i18n.tr("Toggle suspend/continue"),SWT.CTRL+'S');
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1518,7 +1523,7 @@ public class BARControl
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,"Clear stored passwords on server",SWT.NONE);
+      menuItem = Widgets.addMenuItem(menu,BARControl.i18n.tr("Clear stored passwords on server"),SWT.NONE);
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1536,7 +1541,7 @@ public class BARControl
       });
 
       Widgets.addMenuSeparator(menu);
-      menuItem = Widgets.addMenuItem(menu,"Quit",SWT.CTRL+'Q');
+      menuItem = Widgets.addMenuItem(menu,BARControl.i18n.tr("Quit"),SWT.CTRL+'Q');
 
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -1551,9 +1556,9 @@ public class BARControl
       });
     }
 
-    menu = Widgets.addMenu(menuBar,"Help");
+    menu = Widgets.addMenu(menuBar,BARControl.i18n.tr("Help"));
     {
-      menuItem = Widgets.addMenuItem(menu,"About\u2026");
+      menuItem = Widgets.addMenuItem(menu,BARControl.i18n.tr("About")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1562,7 +1567,7 @@ public class BARControl
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
-          Dialogs.info(shell,"About","BAR control "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+".\n\nWritten by Torsten Rupp.\n\nThanx to Matthias Albert.");
+          Dialogs.info(shell,BARControl.i18n.tr("About"),"BAR control "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+".\n\n"+BARControl.i18n.tr("Written by Torsten Rupp")+"\n");
         }
       });
     }
@@ -1649,6 +1654,22 @@ public class BARControl
   {
     final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     final char             MAIL_AT     = '@';
+
+/*
+// xgettext -L java -k -ktr -o barcontrol.pot ../src/*.java
+// msgmerge -U german.po barcontrol.pot
+// msgfmt --java2 -d classes -r app.i18n.Messages -l de po/german.po
+I18n i18n = I18nFactory.getI18n(getClass(),"app.i18n.Messages",Locale.GERMAN,0);
+System.out.println(i18n);
+
+String s = i18n.tr("hello");
+System.out.println(s);
+s = i18n.tr("hello4");
+System.out.println(s);
+System.exit(1);
+*/
+    i18n = I18nFactory.getI18n(getClass(),"app.i18n.Messages",Locale.getDefault(),I18nFactory.FALLBACK);
+//    i18n = I18nFactory.getI18n(getClass(),"app.i18n.Messages",Locale.GERMAN,0);
 
     try
     {
@@ -1833,8 +1854,7 @@ public class BARControl
                                        {
                                          public int handleResult(ValueMap resultMap)
                                          {
-                                           EntryTypes entryType = resultMap.getEnum("entryType",EntryTypes.class);
-                                           switch (entryType)
+                                           switch (resultMap.getEnum("entryType",EntryTypes.class))
                                            {
                                              case FILE:
                                                {
