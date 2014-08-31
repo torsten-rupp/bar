@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-08-30 13:38+0200\n"
+"POT-Creation-Date: 2014-08-31 13:23+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,69 +17,69 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/BARControl.java:1388
+#: src/BARControl.java:1387
 msgid "Program"
 msgstr ""
 
-#: src/BARControl.java:1390 src/TabStatus.java:499 src/TabStatus.java:961
+#: src/BARControl.java:1389 src/TabStatus.java:499 src/TabStatus.java:961
 msgid "Start"
 msgstr ""
 
-#: src/BARControl.java:1403 src/TabStatus.java:512 src/TabStatus.java:977
+#: src/BARControl.java:1402 src/TabStatus.java:512 src/TabStatus.java:977
 #: src/TabStatus.java:1476
 msgid "Abort"
 msgstr ""
 
-#: src/BARControl.java:1416 src/TabStatus.java:525 src/TabStatus.java:993
+#: src/BARControl.java:1415 src/TabStatus.java:525 src/TabStatus.java:993
 #: src/TabStatus.java:1136 src/TabStatus.java:1148
 msgid "Pause"
 msgstr ""
 
-#: src/BARControl.java:1418
+#: src/BARControl.java:1417
 msgid "10min"
 msgstr ""
 
-#: src/BARControl.java:1431
+#: src/BARControl.java:1430
 msgid "60min"
 msgstr ""
 
-#: src/BARControl.java:1444
+#: src/BARControl.java:1443
 msgid "120min"
 msgstr ""
 
-#: src/BARControl.java:1459
+#: src/BARControl.java:1458
 msgid "Create operation"
 msgstr ""
 
-#: src/BARControl.java:1473
+#: src/BARControl.java:1472
 msgid "Storage operation"
 msgstr ""
 
-#: src/BARControl.java:1500
+#: src/BARControl.java:1499
 msgid "Index update operation"
 msgstr ""
 
-#: src/BARControl.java:1514
+#: src/BARControl.java:1513
 msgid "Toggle suspend/continue"
 msgstr ""
 
-#: src/BARControl.java:1527
+#: src/BARControl.java:1526
 msgid "Clear stored passwords on server"
 msgstr ""
 
-#: src/BARControl.java:1545 src/TabStatus.java:1039
+#: src/BARControl.java:1544 src/TabStatus.java:1039
 msgid "Quit"
 msgstr ""
 
-#: src/BARControl.java:1560
+#: src/BARControl.java:1559
 msgid "Help"
 msgstr ""
 
-#: src/BARControl.java:1562 src/BARControl.java:1571
+#: src/BARControl.java:1561 src/BARControl.java:1570
 msgid "About"
 msgstr ""
 
-#: src/BARControl.java:1571
+#: src/BARControl.java:1570
 msgid "Written by Torsten Rupp"
 msgstr ""
 
