@@ -206,6 +206,8 @@ help:
 	@$(ECHO) "  compile"
 	@$(ECHO) ""
 	@$(ECHO) "  run [O|OPTIONS=<options>]"
+	@$(ECHO) "  runde [O|OPTIONS=<options>]"
+	@$(ECHO) "  runjp [O|OPTIONS=<options>]"
 	@$(ECHO) "  rundebug [O|OPTIONS=<options>]"
 	@$(ECHO) "  runxdebug [O|OPTIONS=<options>]"
 	@$(ECHO) ""
