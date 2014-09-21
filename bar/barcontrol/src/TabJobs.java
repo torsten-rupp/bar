@@ -1311,7 +1311,16 @@ class TabJobs
   private WidgetVariable  cryptPasswordMode       = new WidgetVariable(new String[]{"default","ask","config"});
   private WidgetVariable  cryptPassword           = new WidgetVariable("");
   private WidgetVariable  incrementalListFileName = new WidgetVariable("");
-  private WidgetVariable  storageType             = new WidgetVariable(new String[]{"filesystem","ftp","scp","sftp","webdav","cd","dvd","bd","device"});
+  private WidgetVariable  storageType             = new WidgetVariable(new String[]{"filesystem",
+                                                                                    "ftp",
+                                                                                    "scp",
+                                                                                    "sftp",
+                                                                                    "webdav",
+                                                                                    "cd",
+                                                                                    "dvd",
+                                                                                    "bd",
+                                                                                    "device"}
+                                                                                   );
   private WidgetVariable  storageHostName         = new WidgetVariable("");
   private WidgetVariable  storageHostPort         = new WidgetVariable(0);
   private WidgetVariable  storageLoginName        = new WidgetVariable("");
@@ -1399,7 +1408,7 @@ class TabJobs
     directoryInfoThread.start();
 
     // create tab
-    widgetTab = Widgets.addTab(parentTabFolder,BARControl.i18n.tr("Jobs")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
+    widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Jobs")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
     widgetTab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
 
@@ -1412,6 +1421,7 @@ class TabJobs
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetJobList = Widgets.newOptionMenu(composite);
+      widgetJobList.setToolTipText(BARControl.tr("Existing job entries."));
       Widgets.layout(widgetJobList,0,1,TableLayoutData.WE);
       widgetJobList.addSelectionListener(new SelectionListener()
       {
@@ -1431,9 +1441,9 @@ class TabJobs
           }
         }
       });
-      widgetJobList.setToolTipText("Existing job entries.");
 
       button = Widgets.newButton(composite,"New\u2026");
+      button.setToolTipText(BARControl.tr("Create new job entry."));
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -1445,9 +1455,9 @@ class TabJobs
           jobNew();
         }
       });
-      button.setToolTipText("Create new job entry.");
 
       button = Widgets.newButton(composite,"Clone\u2026");
+      button.setToolTipText(BARControl.tr("Clone an existing job entry."));
       button.setEnabled(false);
       Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
       Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
@@ -1470,9 +1480,9 @@ class TabJobs
           }
         }
       });
-      button.setToolTipText("Clone an existing job entry.");
 
       button = Widgets.newButton(composite,"Rename\u2026");
+      button.setToolTipText(BARControl.tr("Rename a job entry."));
       button.setEnabled(false);
       Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
       Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
@@ -1495,9 +1505,9 @@ class TabJobs
           }
         }
       });
-      button.setToolTipText("Rename a job entry.");
 
       button = Widgets.newButton(composite,"Delete\u2026");
+      button.setToolTipText(BARControl.tr("Delete a job entry."));
       button.setEnabled(false);
       Widgets.layout(button,0,5,TableLayoutData.DEFAULT);
       Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
@@ -1520,7 +1530,6 @@ class TabJobs
           }
         }
       });
-      button.setToolTipText("Delete a job entry.");
     }
 
     // create sub-tabs
@@ -1534,6 +1543,7 @@ class TabJobs
       {
         // file tree
         widgetFileTree = Widgets.newTree(tab,SWT.MULTI);
+//        widgetFileTree.setToolTipText(BARControl.tr("Tree representation of files, directories, links and special entries.\nDouble-click to open sub-directories, right-click to open context menu.\nNote size column: numbers in red color indicates size update is still in progress."));
         Widgets.layout(widgetFileTree,0,0,TableLayoutData.NSWE);
         SelectionListener fileTreeColumnSelectionListener = new SelectionListener()
         {
@@ -1551,17 +1561,17 @@ class TabJobs
           }
         };
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Name",    SWT.LEFT, 390,true);
+        treeColumn.setToolTipText(BARControl.tr("Click to sort for name."));
         treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
-        treeColumn.setToolTipText("Click to sort for name.");
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Type",    SWT.LEFT, 160,true);
+        treeColumn.setToolTipText(BARControl.tr("Click to sort for type."));
         treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
-        treeColumn.setToolTipText("Click to sort for type.");
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Size",    SWT.RIGHT,100,true);
+        treeColumn.setToolTipText(BARControl.tr("Click to sort for size."));
         treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
-        treeColumn.setToolTipText("Click to sort for size.");
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Modified",SWT.LEFT, 100,true);
+        treeColumn.setToolTipText(BARControl.tr("Click to sort for modified time."));
         treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
-        treeColumn.setToolTipText("Click to sort for modified time.");
 
         widgetFileTree.addListener(SWT.Expand,new Listener()
         {
@@ -1817,7 +1827,6 @@ class TabJobs
           });
         }
         widgetFileTree.setMenu(menu);
-//        widgetFileTree.setToolTipText("Tree representation of files, directories, links and special entries.\nDouble-click to open sub-directories, right-click to open context menu.\nNote size column: numbers in red color indicates size update is still in progress.");
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -1825,6 +1834,7 @@ class TabJobs
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
           button = Widgets.newButton(composite,"Include");
+          button.setToolTipText(BARControl.tr("Include entry in archive."));
           Widgets.layout(button,0,0,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1850,9 +1860,9 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Include entry in archive.");
 
           button = Widgets.newButton(composite,"Exclude");
+          button.setToolTipText(BARControl.tr("Exclude entry from archive."));
           Widgets.layout(button,0,1,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1877,9 +1887,9 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Exclude entry from archive.");
 
           button = Widgets.newButton(composite,"None");
+          button.setToolTipText(BARControl.tr("Do not include/exclude entry in/from archive."));
           Widgets.layout(button,0,2,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1904,12 +1914,12 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Do not include/exclude entry in/from archive.");
 
           control = Widgets.newSpacer(composite);
           Widgets.layout(control,0,3,TableLayoutData.NONE,0,0,30,0);
 
           button = Widgets.newButton(composite,IMAGE_DIRECTORY_INCLUDED);
+          button.setToolTipText(BARControl.tr("Open all included directories."));
           Widgets.layout(button,0,4,TableLayoutData.E,0,0,2,0);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1922,9 +1932,9 @@ class TabJobs
               openIncludedDirectories();
             }
           });
-          button.setToolTipText("Open all included directories.");
 
           button = Widgets.newCheckbox(composite,"directory size");
+          button.setToolTipText(BARControl.tr("Show directory sizes (sum of file sizes)."));
           Widgets.layout(button,0,5,TableLayoutData.E,0,0,2,0);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1937,7 +1947,6 @@ class TabJobs
               directorySizesFlag = widget.getSelection();
             }
           });
-          button.setToolTipText("Show directory sizes (sum of file sizes).");
         }
       }
 
@@ -1947,6 +1956,7 @@ class TabJobs
       {
         // image tree
         widgetDeviceTree = Widgets.newTree(tab,SWT.MULTI);
+        widgetDeviceTree.setToolTipText(BARControl.tr("List of existing devices for image storage.\nRight-click to open context menu."));
         Widgets.layout(widgetDeviceTree,0,0,TableLayoutData.NSWE);
         SelectionListener deviceTreeColumnSelectionListener = new SelectionListener()
         {
@@ -2027,7 +2037,6 @@ class TabJobs
           });
         }
         widgetDeviceTree.setMenu(menu);
-        widgetDeviceTree.setToolTipText("List of existing devices for image storage.\nRight-click to open context menu.");
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -2035,6 +2044,7 @@ class TabJobs
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
           button = Widgets.newButton(composite,"Include");
+          button.setToolTipText(BARControl.tr("Include selected device for image storage."));
           Widgets.layout(button,0,0,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2053,9 +2063,9 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Include selected device for image storage.");
 
           button = Widgets.newButton(composite,"Exclude");
+          button.setToolTipText(BARControl.tr("Exclude selected device from image storage."));
           Widgets.layout(button,0,1,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2073,9 +2083,9 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Exclude selected device from image storage.");
 
           button = Widgets.newButton(composite,"None");
+          button.setToolTipText(BARControl.tr("Remove selected device from image storage."));
           Widgets.layout(button,0,2,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2093,7 +2103,6 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Remove selected device from image storage.");
         }
       }
 
@@ -2105,6 +2114,7 @@ class TabJobs
         label = Widgets.newLabel(tab,"Included:");
         Widgets.layout(label,0,0,TableLayoutData.NS);
         widgetIncludeTable = Widgets.newTable(tab);
+        widgetIncludeTable.setToolTipText(BARControl.tr("List with include patterns, right-click for context menu."));
         widgetIncludeTable.setHeaderVisible(false);
         Widgets.addTableColumn(widgetIncludeTable,0,SWT.LEFT,20);
         Widgets.addTableColumn(widgetIncludeTable,1,SWT.LEFT,1024,true);
@@ -2145,7 +2155,6 @@ class TabJobs
             }
           }
         });
-        widgetIncludeTable.setToolTipText("List of included entries.");
 
         menu = Widgets.newPopupMenu(shell);
         {
@@ -2213,13 +2222,13 @@ class TabJobs
           });
         }
         widgetIncludeTable.setMenu(menu);
-        widgetIncludeTable.setToolTipText("List with include patterns, right-click for context menu.");
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,1,TableLayoutData.W);
         {
           widgetIncludeTableInsert = Widgets.newButton(composite,"Add\u2026");
+          widgetIncludeTableInsert.setToolTipText(BARControl.tr("Add entry to included list."));
           Widgets.layout(widgetIncludeTableInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetIncludeTableInsert.addSelectionListener(new SelectionListener()
           {
@@ -2235,9 +2244,9 @@ class TabJobs
               }
             }
           });
-          widgetIncludeTableInsert.setToolTipText("Add entry to included list.");
 
           widgetIncludeTableEdit = Widgets.newButton(composite,"Edit\u2026");
+          widgetIncludeTableEdit.setToolTipText(BARControl.tr("Edit entry in included list."));
           Widgets.layout(widgetIncludeTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetIncludeTableEdit.addSelectionListener(new SelectionListener()
           {
@@ -2253,9 +2262,9 @@ class TabJobs
               }
             }
           });
-          widgetIncludeTableEdit.setToolTipText("Edit entry in included list.");
 
           widgetIncludeTableRemove = Widgets.newButton(composite,"Clone\u2026");
+          widgetIncludeTableRemove.setToolTipText(BARControl.tr("Clone entry in included list."));
           Widgets.layout(widgetIncludeTableRemove,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetIncludeTableRemove.addSelectionListener(new SelectionListener()
           {
@@ -2271,9 +2280,9 @@ class TabJobs
               }
             }
           });
-          widgetIncludeTableRemove.setToolTipText("Clone entry in included list.");
 
           button = Widgets.newButton(composite,"Remove\u2026");
+          button.setToolTipText(BARControl.tr("Remove entry from included list."));
           Widgets.layout(button,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2288,13 +2297,13 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Remove entry from included list.");
         }
 
         // excluded list
         label = Widgets.newLabel(tab,"Excluded:");
         Widgets.layout(label,2,0,TableLayoutData.NS);
         widgetExcludeList = Widgets.newList(tab);
+        widgetExcludeList.setToolTipText(BARControl.tr("List with exclude patterns, right-click for context menu."));
         Widgets.layout(widgetExcludeList,2,1,TableLayoutData.NSWE);
         widgetExcludeList.addMouseListener(new MouseListener()
         {
@@ -2330,7 +2339,6 @@ class TabJobs
             }
           }
         });
-        widgetExcludeList.setToolTipText("List with exclude patterns, right-click for context menu.");
 
         menu = Widgets.newPopupMenu(shell);
         {
@@ -2405,6 +2413,7 @@ class TabJobs
         Widgets.layout(composite,3,1,TableLayoutData.W);
         {
           widgetExcludeListInsert = Widgets.newButton(composite,"Add\u2026");
+          widgetExcludeListInsert.setToolTipText(BARControl.tr("Add entry to excluded list."));
           Widgets.layout(widgetExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetExcludeListInsert.addSelectionListener(new SelectionListener()
           {
@@ -2420,9 +2429,9 @@ class TabJobs
               }
             }
           });
-          widgetExcludeListInsert.setToolTipText("Add entry to excluded list.");
 
           widgetExcludeListEdit = Widgets.newButton(composite,"Edit\u2026");
+          widgetExcludeListEdit.setToolTipText(BARControl.tr("Edit entry in excluded list."));
           Widgets.layout(widgetExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetExcludeListEdit.addSelectionListener(new SelectionListener()
           {
@@ -2438,9 +2447,9 @@ class TabJobs
               }
             }
           });
-          widgetExcludeListEdit.setToolTipText("Edit entry in excluded list.");
 
           button = Widgets.newButton(composite,"Clone\u2026");
+          button.setToolTipText(BARControl.tr("Clone entry in excluded list."));
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2456,9 +2465,9 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Clone entry in excluded list.");
 
           widgetExcludeListRemove = Widgets.newButton(composite,"Remove\u2026");
+          widgetExcludeListRemove.setToolTipText(BARControl.tr("Remove entry from excluded list."));
           Widgets.layout(widgetExcludeListRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetExcludeListRemove.addSelectionListener(new SelectionListener()
           {
@@ -2474,7 +2483,6 @@ class TabJobs
               }
             }
           });
-          widgetExcludeListRemove.setToolTipText("Remove entry from excluded list.");
         }
 
         // options
@@ -2484,6 +2492,7 @@ class TabJobs
         Widgets.layout(composite,4,1,TableLayoutData.WE);
         {
           button = Widgets.newCheckbox(composite,"skip unreadable entries");
+          button.setToolTipText(BARControl.tr("If enabled skip not readable entries (write information to log file).\nIf disabled stop job with an error."));
           Widgets.layout(button,0,0,TableLayoutData.NW);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2499,9 +2508,9 @@ class TabJobs
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,skipUnreadable));
-          button.setToolTipText("If enabled skip not readable entries (write information to log file).\nIf disabled stop job with an error.");
 
           button = Widgets.newCheckbox(composite,"raw images");
+          button.setToolTipText(BARControl.tr("If enabled store all data of a device into an image.\nIf disabled try to detect file system and only store used blocks to image."));
           Widgets.layout(button,1,0,TableLayoutData.NW);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2517,7 +2526,6 @@ class TabJobs
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,rawImages));
-          button.setToolTipText("If enabled store all data of a device into an image.\nIf disabled try to detect file system and only store used blocks to image.");
         }
       }
 
@@ -2532,6 +2540,7 @@ class TabJobs
         Widgets.layout(composite,0,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"unlimited");
+          button.setToolTipText(BARControl.tr("Create storage files with an unlimited size. Do not split storage files."));
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2564,9 +2573,9 @@ class TabJobs
               ((Button)control).setSelection(!archivePartSizeFlag.getBoolean());
             }
           });
-          button.setToolTipText("Create storage files with an unlimited size. Do not split storage files.");
 
           button = Widgets.newRadio(composite,"limit to");
+          button.setToolTipText(BARControl.tr("Limit size of storage files to specified value."));
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2586,9 +2595,9 @@ class TabJobs
               ((Button)control).setSelection(archivePartSizeFlag.getBoolean());
             }
           });
-          button.setToolTipText("Limit size of storage files to specified value.");
 
           widgetArchivePartSize = Widgets.newCombo(composite);
+          widgetArchivePartSize.setToolTipText(BARControl.tr("Size limit for one storage file part."));
           widgetArchivePartSize.setItems(new String[]{"32M","64M","128M","140M","256M","280M","512M","600M","1G","2G","4G","8G","10G","20G"});
           widgetArchivePartSize.setData("showedErrorDialog",false);
           Widgets.layout(widgetArchivePartSize,0,2,TableLayoutData.W);
@@ -2636,7 +2645,7 @@ class TabJobs
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                  Dialogs.error(shell,String.format(BARControl.tr("'%s' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB."),string));
                   widget.forceFocus();
                 }
               }
@@ -2658,7 +2667,7 @@ class TabJobs
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                  Dialogs.error(shell,String.format(BARControl.tr("'%s' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB."),string));
                   widget.forceFocus();
                 }
               }
@@ -2688,7 +2697,7 @@ class TabJobs
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                  Dialogs.error(shell,String.format(BARControl.tr("'%s' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB."),string));
                   widget.forceFocus();
                 }
               }
@@ -2701,7 +2710,6 @@ class TabJobs
               return Units.formatByteSize(variable.getLong());
             }
           });
-          widgetArchivePartSize.setToolTipText("Size limit for one storage file part.");
 
           label = Widgets.newLabel(composite,"bytes");
           Widgets.layout(label,0,3,TableLayoutData.W);
@@ -2718,6 +2726,7 @@ class TabJobs
           Widgets.layout(label,0,0,TableLayoutData.NONE);
 
           combo = Widgets.newOptionMenu(composite);
+          combo.setToolTipText(BARControl.tr("Delta compression method to use."));
           combo.setItems(new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
           Widgets.layout(combo,0,1,TableLayoutData.W);
           combo.addSelectionListener(new SelectionListener()
@@ -2734,12 +2743,12 @@ class TabJobs
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,deltaCompressAlgorithm));
-          combo.setToolTipText("Delta compression method to use.");
 
           label = Widgets.newLabel(composite,"Byte:");
           Widgets.layout(label,0,2,TableLayoutData.NONE);
 
           combo = Widgets.newOptionMenu(composite);
+          combo.setToolTipText(BARControl.tr("Byte compression method to use."));
           combo.setItems(new String[]{"none",
                                       "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
                                       "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
@@ -2763,7 +2772,6 @@ class TabJobs
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,byteCompressAlgorithm));
-          combo.setToolTipText("Byte compression method to use.");
         }
 
         composite = Widgets.newComposite(tab);
@@ -2820,7 +2828,6 @@ class TabJobs
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(text,deltaSource));
-          text.setToolTipText("Name of source to use for delta-compression.");
 
           button = Widgets.newButton(composite,IMAGE_DIRECTORY);
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
@@ -2862,6 +2869,7 @@ class TabJobs
         {
           // compress exclude list
           widgetCompressExcludeList = Widgets.newList(composite);
+          widgetCompressExcludeList.setToolTipText(BARControl.tr("List with compress exclude patterns. Entries which match to one of these patterns will not be compressed.\nRight-click for context menu."));
           Widgets.layout(widgetCompressExcludeList,0,0,TableLayoutData.NSWE);
           widgetCompressExcludeList.addMouseListener(new MouseListener()
           {
@@ -3015,13 +3023,13 @@ class TabJobs
             });
           }
           widgetCompressExcludeList.setMenu(menu);
-          widgetCompressExcludeList.setToolTipText("List with compress exclude patterns. Entries which match to one of these patterns will not be compressed.\nRight-click for context menu.");
 
           // buttons
           subComposite = Widgets.newComposite(composite,SWT.NONE,4);
           Widgets.layout(subComposite,1,0,TableLayoutData.W);
           {
             widgetCompressExcludeListInsert = Widgets.newButton(subComposite,"Add\u2026");
+            widgetCompressExcludeListInsert.setToolTipText(BARControl.tr("Add entry to compress exclude list."));
             Widgets.layout(widgetCompressExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListInsert,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
@@ -3044,9 +3052,9 @@ class TabJobs
                 }
               }
             });
-            widgetCompressExcludeListInsert.setToolTipText("Add entry to compress exclude list.");
 
             widgetCompressExcludeListEdit = Widgets.newButton(subComposite,"Edit\u2026");
+            widgetCompressExcludeListEdit.setToolTipText(BARControl.tr("Edit entry in compress exclude list."));
             Widgets.layout(widgetCompressExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListEdit,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
@@ -3065,14 +3073,13 @@ class TabJobs
                 Button widget = (Button)selectionEvent.widget;
                 if (selectedJobId > 0)
                 {
-Dprintf.dprintf("");
                   compressExcludeListEdit();
                 }
               }
             });
-            widgetCompressExcludeListEdit.setToolTipText("Edit entry in compress exclude list.");
 
             widgetCompressExcludeListRemove = Widgets.newButton(subComposite,"Remove\u2026");
+            widgetCompressExcludeListRemove.setToolTipText(BARControl.tr("Remove entry from compress exclude list."));
             Widgets.layout(widgetCompressExcludeListRemove,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListRemove,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
@@ -3095,7 +3102,6 @@ Dprintf.dprintf("");
                 }
               }
             });
-            widgetCompressExcludeListRemove.setToolTipText("Remove entry from compress exclude list.");
           }
         }
 
@@ -3106,6 +3112,7 @@ Dprintf.dprintf("");
         Widgets.layout(composite,4,1,TableLayoutData.WE);
         {
           combo = Widgets.newOptionMenu(composite);
+          combo.setToolTipText(BARControl.tr("Encryption method to use."));
           combo.setItems(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
           Widgets.layout(combo,0,0,TableLayoutData.W);
           combo.addSelectionListener(new SelectionListener()
@@ -3122,7 +3129,6 @@ Dprintf.dprintf("");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,cryptAlgorithm));
-          combo.setToolTipText("Encryption method to use.");
         }
 
         composite = Widgets.newComposite(tab);
@@ -3130,6 +3136,7 @@ Dprintf.dprintf("");
         Widgets.layout(composite,5,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"symmetric");
+          button.setToolTipText(BARControl.tr("Use symmetric encryption with pass-phrase."));
           button.setSelection(true);
           Widgets.layout(button,0,0,TableLayoutData.W);
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptAlgorithm)
@@ -3158,9 +3165,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(cryptType.equals("none") || cryptType.equals("symmetric"));
             }
           });
-          button.setToolTipText("Use symmetric encryption with pass-phrase.");
 
           button = Widgets.newRadio(composite,"asymmetric");
+          button.setToolTipText(BARControl.tr("Use asymmetric hyprid-encryption with pass-phrase and public/private key."));
           button.setSelection(false);
           Widgets.layout(button,0,1,TableLayoutData.W);
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptAlgorithm)
@@ -3189,7 +3196,6 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(cryptType.equals("asymmetric"));
             }
           });
-          button.setToolTipText("Use asymmetric hyprid-encryption with pass-phrase and public/private key.");
 
           control = Widgets.newSpacer(composite);
           Widgets.layout(control,0,2,TableLayoutData.NONE,0,0,5,0);
@@ -3197,6 +3203,7 @@ Dprintf.dprintf("");
           label = Widgets.newLabel(composite,"Public key:");
           Widgets.layout(label,0,3,TableLayoutData.W);
           text = Widgets.newText(composite);
+          text.setToolTipText(BARControl.tr("Public key file used for asymmetric encryption."));
           Widgets.layout(text,0,4,TableLayoutData.WE);
           Widgets.addModifyListener(new WidgetModifyListener(text,new WidgetVariable[]{cryptAlgorithm,cryptType})
           {
@@ -3249,7 +3256,6 @@ Dprintf.dprintf("");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(text,cryptPublicKeyFileName));
-          text.setToolTipText("Public key file used for asymmetric encryption.");
 
           button = Widgets.newButton(composite,IMAGE_DIRECTORY);
           Widgets.layout(button,0,5,TableLayoutData.DEFAULT);
@@ -3298,6 +3304,7 @@ Dprintf.dprintf("");
         Widgets.layout(composite,6,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"default");
+          button.setToolTipText(BARControl.tr("Use default password from configuration file for encryption."));
           Widgets.layout(button,0,0,TableLayoutData.W);
           Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
           {
@@ -3328,9 +3335,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(cryptPasswordMode.equals("default"));
             }
           });
-          button.setToolTipText("Use default password from configuration file for encryption.");
 
           button = Widgets.newRadio(composite,"ask");
+          button.setToolTipText(BARControl.tr("Input password for encryption."));
           Widgets.layout(button,0,1,TableLayoutData.W);
           Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
           {
@@ -3361,9 +3368,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(cryptPasswordMode.equals("ask"));
             }
           });
-          button.setToolTipText("Input password for encryption.");
 
           button = Widgets.newRadio(composite,"this");
+          button.setToolTipText(BARControl.tr("Use specified password for encryption."));
           Widgets.layout(button,0,2,TableLayoutData.W);
           Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
           {
@@ -3394,9 +3401,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(cryptPasswordMode.equals("config"));
             }
           });
-          button.setToolTipText("Use specified password for encryption.");
 
           widgetCryptPassword1 = Widgets.newPassword(composite);
+          widgetCryptPassword1.setToolTipText(BARControl.tr("Password used for encryption."));
           Widgets.layout(widgetCryptPassword1,0,3,TableLayoutData.WE);
           Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword1,new WidgetVariable[]{cryptAlgorithm,cryptType,cryptPasswordMode})
           {
@@ -3453,12 +3460,12 @@ Dprintf.dprintf("");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword1,cryptPassword));
-          widgetCryptPassword1.setToolTipText("Password used for encryption.");
 
           label = Widgets.newLabel(composite,"Repeat:");
           Widgets.layout(label,0,4,TableLayoutData.W);
 
           widgetCryptPassword2 = Widgets.newPassword(composite);
+          widgetCryptPassword1.setToolTipText(BARControl.tr("Password used for encryption."));
           Widgets.layout(widgetCryptPassword2,0,5,TableLayoutData.WE);
           Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword2,new WidgetVariable[]{cryptAlgorithm,cryptType,cryptPasswordMode})
           {
@@ -3519,7 +3526,6 @@ Dprintf.dprintf("");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword2,cryptPassword));
-          widgetCryptPassword1.setToolTipText("Password used for encryption.");
         }
 
         // archive type
@@ -3530,6 +3536,7 @@ Dprintf.dprintf("");
         Widgets.layout(composite,7,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"normal");
+          button.setToolTipText(BARControl.tr("Normal mode: do not create incremental data files."));
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3550,9 +3557,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(archiveType.equals("normal"));
             }
           });
-          button.setToolTipText("Normal mode: do not create incremental data files.");
 
           button = Widgets.newRadio(composite,"full");
+          button.setToolTipText(BARControl.tr("Full mode: store all entries and create incremental data files."));
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3573,9 +3580,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(archiveType.equals("full"));
             }
           });
-          button.setToolTipText("Full mode: store all entries and create incremental data files.");
 
           button = Widgets.newRadio(composite,"incremental");
+          button.setToolTipText(BARControl.tr("Incremental mode: store only modified entries since last full or incremental storage."));
           Widgets.layout(button,0,2,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3596,9 +3603,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(archiveType.equals("incremental"));
             }
           });
-          button.setToolTipText("Incremental mode: store only modified entries since last full or incremental storage.");
 
           button = Widgets.newRadio(composite,"differential");
+          button.setToolTipText(BARControl.tr("Differential mode: store only modified entries since last full storage."));
           Widgets.layout(button,0,3,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3619,7 +3626,6 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(archiveType.equals("differential"));
             }
           });
-          button.setToolTipText("Differential mode: store only modified entries since last full storage.");
         }
 
         // file name
@@ -3630,6 +3636,7 @@ Dprintf.dprintf("");
         Widgets.layout(composite,8,1,TableLayoutData.WE);
         {
           text = Widgets.newText(composite);
+          text.setToolTipText(BARControl.tr("Name of storage files to create. Several macros are supported. Click on button to the right to open storage file name editor."));
           Widgets.layout(text,0,0,TableLayoutData.WE);
           text.addModifyListener(new ModifyListener()
           {
@@ -3667,7 +3674,6 @@ Dprintf.dprintf("");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(text,storageFileName));
-          text.setToolTipText("Name of storage files to create. Several macros are supported. Click on button to the right to open storage file name editor.");
 
           button = Widgets.newButton(composite,IMAGE_EDIT);
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -3724,6 +3730,7 @@ Dprintf.dprintf("");
         Widgets.layout(composite,9,1,TableLayoutData.WE);
         {
           text = Widgets.newText(composite);
+          text.setToolTipText(BARControl.tr("Name of incremental data file. If no file name is given a name is derived automatically from the storage file name."));
           Widgets.layout(text,0,0,TableLayoutData.WE);
           text.addModifyListener(new ModifyListener()
           {
@@ -3763,7 +3770,6 @@ Dprintf.dprintf("");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(text,incrementalListFileName));
-          text.setToolTipText("Name of incremental data file. If no file name is given a name is derived automatically from the storage file name.");
 
           button = Widgets.newButton(composite,IMAGE_DIRECTORY);
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -3797,6 +3803,7 @@ Dprintf.dprintf("");
         Widgets.layout(composite,10,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"file system");
+          button.setToolTipText(BARControl.tr("Store created storage files into file system destination."));
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3817,9 +3824,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(storageType.equals("filesystem"));
             }
           });
-          button.setToolTipText("Store created storage files into file system destination.");
 
           button = Widgets.newRadio(composite,"ftp");
+          button.setToolTipText(BARControl.tr("Store created storage files on FTP server."));
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3840,9 +3847,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(storageType.equals("ftp"));
             }
           });
-          button.setToolTipText("Store created storage files on FTP server.");
 
           button = Widgets.newRadio(composite,"scp");
+          button.setToolTipText(BARControl.tr("Store created storage files on SSH server via SCP protocol."));
           Widgets.layout(button,0,2,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3863,9 +3870,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(storageType.equals("scp"));
             }
           });
-          button.setToolTipText("Store created storage files on SSH server via SCP protocol.");
 
           button = Widgets.newRadio(composite,"sftp");
+          button.setToolTipText(BARControl.tr("Store created storage files on SSH server via SFTP protocol."));
           Widgets.layout(button,0,3,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3886,9 +3893,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(storageType.equals("sftp"));
             }
           });
-          button.setToolTipText("Store created storage files on SSH server via SFTP protocol.");
 
           button = Widgets.newRadio(composite,"webdav");
+          button.setToolTipText(BARControl.tr("Store created storage files on Webdav server."));
           Widgets.layout(button,0,4,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3909,9 +3916,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(storageType.equals("webdav"));
             }
           });
-          button.setToolTipText("Store created storage files on Webdav server.");
 
           button = Widgets.newRadio(composite,"CD");
+          button.setToolTipText(BARControl.tr("Store created storage files on CD."));
           Widgets.layout(button,0,5,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3956,9 +3963,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(storageType.equals("cd"));
             }
           });
-          button.setToolTipText("Store created storage files on CD.");
 
           button = Widgets.newRadio(composite,"DVD");
+          button.setToolTipText(BARControl.tr("Store created storage files on DVD."));
           Widgets.layout(button,0,6,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -4003,9 +4010,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(storageType.equals("dvd"));
             }
           });
-          button.setToolTipText("Store created storage files on DVD.");
 
           button = Widgets.newRadio(composite,"BD");
+          button.setToolTipText(BARControl.tr("Store created storage files on BD."));
           Widgets.layout(button,0,7,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -4050,9 +4057,9 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(storageType.equals("bd"));
             }
           });
-          button.setToolTipText("Store created storage files on BD.");
 
           button = Widgets.newRadio(composite,"device");
+          button.setToolTipText(BARControl.tr("Store created storage files on device."));
           Widgets.layout(button,0,8,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -4073,7 +4080,6 @@ Dprintf.dprintf("");
               ((Button)control).setSelection(storageType.equals("device"));
             }
           });
-          button.setToolTipText("Store created storage files on device.");
         }
 
         // destination file system
@@ -4090,6 +4096,7 @@ Dprintf.dprintf("");
         Widgets.setVisible(composite,false);
         {
           button = Widgets.newCheckbox(composite,"overwrite archive files");
+          button.setToolTipText(BARControl.tr("If enabled overwrite existing archive files. If disabled do not overwrite existing files and stop with an error."));
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
@@ -4105,7 +4112,6 @@ Dprintf.dprintf("");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,overwriteArchiveFiles));
-          button.setToolTipText("If enabled overwrite existing archive files. If disabled do not overwrite existing files and stop with an error.");
         }
 
         // destination ftp
@@ -4129,6 +4135,7 @@ Dprintf.dprintf("");
             Widgets.layout(label,0,0,TableLayoutData.W);
 
             text = Widgets.newText(composite);
+            text.setToolTipText(BARControl.tr("FTP server user login name. Leave it empty to use the default name from the configuration file."));
             Widgets.layout(text,0,1,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -4166,12 +4173,12 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
-            text.setToolTipText("FTP server user login name. Leave it empty to use the default name from the configuration file.");
 
             label = Widgets.newLabel(composite,"Host:");
             Widgets.layout(label,0,2,TableLayoutData.W);
 
             text = Widgets.newText(composite);
+            text.setToolTipText(BARControl.tr("FTP server name."));
             Widgets.layout(text,0,3,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -4209,12 +4216,12 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
-            text.setToolTipText("FTP server name.");
 
             label = Widgets.newLabel(composite,"Password:");
             Widgets.layout(label,0,4,TableLayoutData.W);
 
             text = Widgets.newPassword(composite);
+            text.setToolTipText(BARControl.tr("FTP server login password. Leave it empty to use the default password from the configuration file."));
             Widgets.layout(text,0,5,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -4252,7 +4259,6 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginPassword));
-            text.setToolTipText("FTP server login password. Leave it empty to use the default password from the configuration file.");
           }
 
 /*
@@ -4337,6 +4343,7 @@ Dprintf.dprintf("");
             Widgets.layout(label,0,0,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("SSH login name. Leave it empty to use the default login name from the configuration file."));
             Widgets.layout(text,0,1,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -4374,12 +4381,12 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
-            text.setToolTipText("SSH login name. Leave it empty to use the default login name from the configuration file.");
 
             label = Widgets.newLabel(subComposite,"Host:");
             Widgets.layout(label,0,2,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("SSH login host name."));
             Widgets.layout(text,0,3,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -4417,12 +4424,12 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
-            text.setToolTipText("SSH login host name.");
 
             label = Widgets.newLabel(subComposite,"Port:");
             Widgets.layout(label,0,4,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("SSH login port number. Set to 0 to use default port number from configuration file."));
             text.setData("showedErrorDialog",false);
             Widgets.layout(text,0,5,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
@@ -4523,7 +4530,6 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostPort));
-            text.setToolTipText("SSH login port number. Set to 0 to use default port number from configuration file.");
           }
 
           label = Widgets.newLabel(composite,"SSH public key:");
@@ -4533,6 +4539,7 @@ Dprintf.dprintf("");
           Widgets.layout(subComposite,1,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("SSH public key file name. Leave it empty to use the default key file from the configuration file."));
             Widgets.layout(text,0,0,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -4572,7 +4579,6 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,sshPublicKeyFileName));
-            text.setToolTipText("SSH public key file name. Leave it empty to use the default key file from the configuration file.");
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -4606,6 +4612,7 @@ Dprintf.dprintf("");
           Widgets.layout(subComposite,2,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("SSH private key file name. Leave it empty to use the default key file from the configuration file."));
             Widgets.layout(text,0,0,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -4645,7 +4652,6 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,sshPrivateKeyFileName));
-            text.setToolTipText("SSH private key file name. Leave it empty to use the default key file from the configuration file.");
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -4755,6 +4761,7 @@ Dprintf.dprintf("");
             Widgets.layout(label,0,0,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("SSH login name. Leave it empty to use the default login name from the configuration file."));
             Widgets.layout(text,0,1,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -4792,12 +4799,12 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
-            text.setToolTipText("SSH login name. Leave it empty to use the default login name from the configuration file.");
 
             label = Widgets.newLabel(subComposite,"Host:");
             Widgets.layout(label,0,2,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("SSH login host name."));
             Widgets.layout(text,0,3,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -4835,12 +4842,12 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
-            text.setToolTipText("SSH login host name.");
 
             label = Widgets.newLabel(subComposite,"Port:");
             Widgets.layout(label,0,4,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("SSH login port number. Set to 0 to use default port number from configuration file."));
             text.setData("showedErrorDialog",false);
             Widgets.layout(text,0,5,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
@@ -4941,7 +4948,6 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostPort));
-            text.setToolTipText("SSH login port number. Set to 0 to use default port number from configuration file.");
           }
 
           label = Widgets.newLabel(composite,"SSH public key:");
@@ -4951,6 +4957,7 @@ Dprintf.dprintf("");
           Widgets.layout(subComposite,1,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("SSH public key file name. Leave it empty to use the default key file from the configuration file."));
             Widgets.layout(text,0,0,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -4990,7 +4997,6 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,sshPublicKeyFileName));
-            text.setToolTipText("SSH public key file name. Leave it empty to use the default key file from the configuration file.");
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -5024,6 +5030,7 @@ Dprintf.dprintf("");
           Widgets.layout(subComposite,2,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("SSH private key file name. Leave it empty to use the default key file from the configuration file."));
             Widgets.layout(text,0,0,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -5063,7 +5070,6 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,sshPrivateKeyFileName));
-            text.setToolTipText("SSH private key file name. Leave it empty to use the default key file from the configuration file.");
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -5170,6 +5176,7 @@ Dprintf.dprintf("");
           Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("Device name. Leave it empty to use system default device name."));
             Widgets.layout(text,0,0,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -5207,7 +5214,6 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageDeviceName));
-            text.setToolTipText("Device name. Leave it empty to use system default device name.");
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -5239,6 +5245,7 @@ Dprintf.dprintf("");
           Widgets.layout(subComposite,1,1,TableLayoutData.WE);
           {
             combo = Widgets.newCombo(subComposite);
+            combo.setToolTipText(BARControl.tr("Size of medium. You may specify a smaller value than the real physical size when you have enabled error-correction codes."));
             combo.setItems(new String[]{"630M","700M","2G","3G","3.6G","4G","7.2G","8G"});
             combo.setData("showedErrorDialog",false);
             Widgets.layout(combo,0,0,TableLayoutData.W);
@@ -5368,7 +5375,6 @@ Dprintf.dprintf("");
                 return Units.formatByteSize(variable.getLong());
               }
             });
-            combo.setToolTipText("Size of medium. You may specify a smaller value than the real physical size when you have enabled error-correction codes.");
 
             label = Widgets.newLabel(subComposite,"bytes");
             Widgets.layout(label,0,1,TableLayoutData.W);
@@ -5380,6 +5386,7 @@ Dprintf.dprintf("");
           Widgets.layout(subComposite,3,1,TableLayoutData.WE);
           {
             button = Widgets.newCheckbox(subComposite,"add error-correction codes");
+            button.setToolTipText(BARControl.tr("Add error-correction codes to CD/DVD/BD image (require dvdisaster tool)."));
             Widgets.layout(button,0,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
@@ -5405,9 +5412,9 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,ecc));
-            button.setToolTipText("Add error-correction codes to CD/DVD/BD image (require dvdisaster tool).");
 
             button = Widgets.newCheckbox(subComposite,"wait for first volume");
+            button.setToolTipText(BARControl.tr("Wait until first volume is loaded."));
             Widgets.layout(button,1,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
@@ -5423,7 +5430,6 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,waitFirstVolume));
-            button.setToolTipText("Wait until first volume is loaded.");
           }
         }
 
@@ -5447,6 +5453,7 @@ Dprintf.dprintf("");
           Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("Device name."));
             Widgets.layout(text,0,0,TableLayoutData.WE);
             text.addModifyListener(new ModifyListener()
             {
@@ -5484,7 +5491,6 @@ Dprintf.dprintf("");
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageDeviceName));
-            text.setToolTipText("Device name.");
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -5516,6 +5522,7 @@ Dprintf.dprintf("");
           Widgets.layout(subComposite,1,1,TableLayoutData.WE);
           {
             combo = Widgets.newCombo(subComposite);
+            combo.setToolTipText(BARControl.tr("Size of medium for device."));
             combo.setItems(new String[]{"2G","3G","3.6G","4G"});
             combo.setData("showedErrorDialog",false);
             Widgets.layout(combo,0,0,TableLayoutData.W);
@@ -5615,7 +5622,6 @@ Dprintf.dprintf("");
                 return Units.formatByteSize(variable.getLong());
               }
             });
-            combo.setToolTipText("Size of medium for device.");
 
             label = Widgets.newLabel(subComposite,"bytes");
             Widgets.layout(label,0,1,TableLayoutData.W);
@@ -5629,6 +5635,7 @@ Dprintf.dprintf("");
       {
         // list
         widgetScheduleList = Widgets.newTable(tab,SWT.NONE);
+        widgetScheduleList.setToolTipText(BARControl.tr("List with schedule entries.\nDouble-click to edit entry, right-click to open context menu."));
         Widgets.layout(widgetScheduleList,0,0,TableLayoutData.NSWE);
         widgetScheduleList.addMouseListener(new MouseListener()
         {
@@ -5751,13 +5758,13 @@ Dprintf.dprintf("");
           });
         }
         widgetScheduleList.setMenu(menu);
-        widgetScheduleList.setToolTipText("List with schedule entries.\nDouble-click to edit entry, right-click to open context menu.");
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
           widgetScheduleListAdd = Widgets.newButton(composite,"Add\u2026");
+          widgetScheduleListAdd.setToolTipText(BARControl.tr("Add new schedule entry."));
           Widgets.layout(widgetScheduleListAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetScheduleListAdd.addSelectionListener(new SelectionListener()
           {
@@ -5770,9 +5777,9 @@ Dprintf.dprintf("");
               scheduleNew();
             }
           });
-          widgetScheduleListAdd.setToolTipText("Add new schedule entry.");
 
           widgetScheduleListEdit = Widgets.newButton(composite,"Edit\u2026");
+          widgetScheduleListEdit.setToolTipText(BARControl.tr("Edit schedule entry."));
           Widgets.layout(widgetScheduleListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetScheduleListEdit.addSelectionListener(new SelectionListener()
           {
@@ -5785,9 +5792,9 @@ Dprintf.dprintf("");
               scheduleEdit();
             }
           });
-          widgetScheduleListEdit.setToolTipText("Edit schedule entry.");
 
           button = Widgets.newButton(composite,"Clone\u2026");
+          button.setToolTipText(BARControl.tr("Clone schedule entry."));
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -5800,9 +5807,9 @@ Dprintf.dprintf("");
               scheduleClone();
             }
           });
-          button.setToolTipText("Clone schedule entry.");
 
           widgetScheduleListRemove = Widgets.newButton(composite,"Remove\u2026");
+          widgetScheduleListRemove.setToolTipText(BARControl.tr("Remove schedule entry."));
           Widgets.layout(widgetScheduleListRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetScheduleListRemove.addSelectionListener(new SelectionListener()
           {
@@ -5815,7 +5822,6 @@ Dprintf.dprintf("");
               scheduleDelete();
             }
           });
-          widgetScheduleListRemove.setToolTipText("Remove schedule entry.");
         }
       }
     }
@@ -7128,9 +7134,9 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       Widgets.layout(subComposite,0,1,TableLayoutData.WE);
       {
         widgetPattern = Widgets.newText(subComposite);
+        widgetPattern.setToolTipText(BARControl.tr("Include pattern. Use * and ? as wildcards."));
         if (entryData.pattern != null) widgetPattern.setText(entryData.pattern);
         Widgets.layout(widgetPattern,0,0,TableLayoutData.WE);
-        widgetPattern.setToolTipText("Include pattern. Use * and ? as wildcards.");
 
         button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
         Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -7453,9 +7459,9 @@ throw new Error("NYI");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetPattern = Widgets.newText(composite);
+      widgetPattern.setToolTipText(BARControl.tr("Exclude pattern. Use * and ? as wildcards."));
       if (pattern[0] != null) widgetPattern.setText(pattern[0]);
       Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
-      widgetPattern.setToolTipText("Exclude pattern. Use * and ? as wildcards.");
 
       button = Widgets.newButton(composite,IMAGE_DIRECTORY);
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
@@ -7728,9 +7734,9 @@ throw new Error("NYI");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetPattern = Widgets.newText(composite);
+      widgetPattern.setToolTipText(BARControl.tr("Compress exclude pattern. Use * and ? as wildcards."));
       if (pattern[0] != null) widgetPattern.setText(pattern[0]);
       Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
-      widgetPattern.setToolTipText("Compress exclude pattern. Use * and ? as wildcards.");
 
       button = Widgets.newButton(composite,IMAGE_DIRECTORY);
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
@@ -8191,6 +8197,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         Widgets.layout(label,0,0,TableLayoutData.W);
 
         widgetFileName = Widgets.newCanvas(composite,SWT.BORDER);
+        widgetFileName.setToolTipText(BARControl.tr("Drag to trashcan icon to the right to remove name part."));
         widgetFileName.setBackground(composite.getDisplay().getSystemColor(SWT.COLOR_WHITE));
         Widgets.layout(widgetFileName,0,1,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,Widgets.getTextHeight(widgetFileName)+5);
         widgetFileName.addMouseTrackListener(new MouseTrackListener()
@@ -8228,7 +8235,6 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
           {
           }
         });
-        widgetFileName.setToolTipText("Drag to trashcan icon to the right to remove name part.");
         dragSource = new DragSource(widgetFileName,DND.DROP_MOVE);
         dragSource.setTransfer(new Transfer[]{StorageNamePartTransfer.getInstance()});
         dragSource.addDragListener(new DragSourceListener()
@@ -8313,8 +8319,8 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         });
 
         control = Widgets.newImage(composite,IMAGE_TRASHCAN,SWT.BORDER);
+        control.setToolTipText(BARControl.tr("Use drag&drop to remove name parts."));
         Widgets.layout(control,0,2,TableLayoutData.NONE);
-        control.setToolTipText("Use drag&drop to remove name parts.");
         dropTarget = new DropTarget(control,DND.DROP_MOVE);
         dropTarget.setTransfer(new Transfer[]{TextTransfer.getInstance(),StorageNamePartTransfer.getInstance()});
         dropTarget.addDropListener(new DropTargetAdapter()
@@ -8357,9 +8363,9 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
       }
 
       composite = Widgets.newComposite(parentComposite,SWT.NONE);
+      composite.setToolTipText(BARControl.tr("Use drag&drop to add name parts."));
       composite.setLayout(new TableLayout(0.0,new double[]{0.0,0.4,0.0,0.4,0.0,0.2}));
       Widgets.layout(composite,1,0,TableLayoutData.NSWE);
-      composite.setToolTipText("Use drag&drop to add name parts.");
       {
         // column 1
         addDragAndDrop(composite,"-","text '-'",                                       0, 0);
@@ -9043,23 +9049,23 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
       Widgets.layout(subComposite,0,1,TableLayoutData.WE);
       {
         widgetYear = Widgets.newOptionMenu(subComposite);
+        widgetYear.setToolTipText(BARControl.tr("Year to execute job. Leave to '*' for each year."));
         widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020"});
         widgetYear.setText(scheduleData.getYear()); if (widgetYear.getText().equals("")) widgetYear.setText("*");
         if (widgetYear.getText().equals("")) widgetYear.setText("*");
         Widgets.layout(widgetYear,0,0,TableLayoutData.W);
-        widgetYear.setToolTipText("Year to execute job. Leave to '*' for each year.");
 
         widgetMonth = Widgets.newOptionMenu(subComposite);
+        widgetMonth.setToolTipText(BARControl.tr("Month to execute job. Leave to '*' for each month."));
         widgetMonth.setItems(new String[]{"*","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
         widgetMonth.setText(scheduleData.getMonth()); if (widgetMonth.getText().equals("")) widgetMonth.setText("*");
         Widgets.layout(widgetMonth,0,1,TableLayoutData.W);
-        widgetMonth.setToolTipText("Month to execute job. Leave to '*' for each month.");
 
         widgetDay = Widgets.newOptionMenu(subComposite);
+        widgetDay.setToolTipText(BARControl.tr("Day to execute job. Leave to '*' for each day."));
         widgetDay.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"});
         widgetDay.setText(scheduleData.getDay()); if (widgetDay.getText().equals("")) widgetDay.setText("*");
         Widgets.layout(widgetDay,0,2,TableLayoutData.W);
-        widgetDay.setToolTipText("Day to execute job. Leave to '*' for each day.");
       }
 
       label = Widgets.newLabel(composite,"Week days:");
@@ -9069,43 +9075,43 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
       Widgets.layout(subComposite,1,1,TableLayoutData.WE);
       {
         widgetWeekDays[ScheduleData.MON] = Widgets.newCheckbox(subComposite,"Mon");
+        widgetWeekDays[ScheduleData.MON].setToolTipText(BARControl.tr("Week days to execute job."));
         Widgets.layout(widgetWeekDays[ScheduleData.MON],0,0,TableLayoutData.W);
         widgetWeekDays[ScheduleData.MON].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.MON));
-        widgetWeekDays[ScheduleData.MON].setToolTipText("Week days to execute job.");
 
         widgetWeekDays[ScheduleData.TUE] = Widgets.newCheckbox(subComposite,"Tue");
+        widgetWeekDays[ScheduleData.TUE].setToolTipText(BARControl.tr("Week days to execute job."));
         Widgets.layout(widgetWeekDays[ScheduleData.TUE],0,1,TableLayoutData.W);
         widgetWeekDays[ScheduleData.TUE].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.TUE));
-        widgetWeekDays[ScheduleData.TUE].setToolTipText("Week days to execute job.");
 
         widgetWeekDays[ScheduleData.WED] = Widgets.newCheckbox(subComposite,"Wed");
+        widgetWeekDays[ScheduleData.WED].setToolTipText(BARControl.tr("Week days to execute job."));
         Widgets.layout(widgetWeekDays[ScheduleData.WED],0,2,TableLayoutData.W);
         widgetWeekDays[ScheduleData.WED].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.WED));
-        widgetWeekDays[ScheduleData.WED].setToolTipText("Week days to execute job.");
 
         widgetWeekDays[ScheduleData.THU] = Widgets.newCheckbox(subComposite,"Thu");
+        widgetWeekDays[ScheduleData.THU].setToolTipText(BARControl.tr("Week days to execute job."));
         Widgets.layout(widgetWeekDays[ScheduleData.THU],0,3,TableLayoutData.W);
         widgetWeekDays[ScheduleData.THU].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.THU));
-        widgetWeekDays[ScheduleData.THU].setToolTipText("Week days to execute job.");
 
         widgetWeekDays[ScheduleData.FRI] = Widgets.newCheckbox(subComposite,"Fri");
+        widgetWeekDays[ScheduleData.FRI].setToolTipText(BARControl.tr("Week days to execute job."));
         Widgets.layout(widgetWeekDays[ScheduleData.FRI],0,4,TableLayoutData.W);
         widgetWeekDays[ScheduleData.FRI].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.FRI));
-        widgetWeekDays[ScheduleData.FRI].setToolTipText("Week days to execute job.");
 
         widgetWeekDays[ScheduleData.SAT] = Widgets.newCheckbox(subComposite,"Sat");
+        widgetWeekDays[ScheduleData.SAT].setToolTipText(BARControl.tr("Week days to execute job."));
         Widgets.layout(widgetWeekDays[ScheduleData.SAT],0,5,TableLayoutData.W);
         widgetWeekDays[ScheduleData.SAT].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.SAT));
-        widgetWeekDays[ScheduleData.SAT].setToolTipText("Week days to execute job.");
 
         widgetWeekDays[ScheduleData.SUN] = Widgets.newCheckbox(subComposite,"Sun");
+        widgetWeekDays[ScheduleData.SUN].setToolTipText(BARControl.tr("Week days to execute job."));
         Widgets.layout(widgetWeekDays[ScheduleData.SUN],0,6,TableLayoutData.W);
         widgetWeekDays[ScheduleData.SUN].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.SUN));
-        widgetWeekDays[ScheduleData.SUN].setToolTipText("Week days to execute job.");
 
         button = Widgets.newButton(subComposite,IMAGE_TOGGLE_MARK);
+        button.setToolTipText(BARControl.tr("Toggle week days set."));
         Widgets.layout(button,0,7,TableLayoutData.W);
-        widgetWeekDays[ScheduleData.SUN].setToolTipText("Toggle week days set.");
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -9128,59 +9134,59 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
       Widgets.layout(subComposite,2,1,TableLayoutData.WE);
       {
         widgetHour = Widgets.newOptionMenu(subComposite);
+        widgetHour.setToolTipText(BARControl.tr("Hour to execute job. Leave to '*' for every hour."));
         widgetHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
         widgetHour.setText(scheduleData.getHour()); if (widgetHour.getText().equals("")) widgetHour.setText("*");
         Widgets.layout(widgetHour,0,0,TableLayoutData.W);
-        widgetHour.setToolTipText("Hour to execute job. Leave to '*' for every hour.");
 
         widgetMinute = Widgets.newOptionMenu(subComposite);
+        widgetMinute.setToolTipText(BARControl.tr("Minute to execute job. Leave to '*' for every minute."));
         widgetMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
         widgetMinute.setText(scheduleData.getMinute()); if (widgetMinute.getText().equals("")) widgetMinute.setText("*");
         Widgets.layout(widgetMinute,0,1,TableLayoutData.W);
-        widgetMinute.setToolTipText("Minute to execute job. Leave to '*' for every minute.");
       }
 
-      label = Widgets.newLabel(composite,"Type:");
+      label = Widgets.newLabel(composite,BARControl.tr("Type:"));
       Widgets.layout(label,3,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,3,1,TableLayoutData.WE);
       {
         widgetTypeDefault = Widgets.newRadio(subComposite,"*");
+        widgetTypeDefault.setToolTipText(BARControl.tr("Execute job with default type."));
         Widgets.layout(widgetTypeDefault,0,0,TableLayoutData.W);
         widgetTypeDefault.setSelection(scheduleData.archiveType.equals("*"));
-        widgetTypeDefault.setToolTipText("Execute job with default type.");
 
         widgetTypeNormal = Widgets.newRadio(subComposite,"normal");
+        widgetTypeNormal.setToolTipText(BARControl.tr("Execute job as normal backup (no incremental data)."));
         Widgets.layout(widgetTypeNormal,0,1,TableLayoutData.W);
         widgetTypeNormal.setSelection(scheduleData.archiveType.equals("normal"));
-        widgetTypeNormal.setToolTipText("Execute job as normal backup (no incremental data).");
 
         widgetTypeFull = Widgets.newRadio(subComposite,"full");
+        widgetTypeFull.setToolTipText(BARControl.tr("Execute job as full backup."));
         Widgets.layout(widgetTypeFull,0,2,TableLayoutData.W);
         widgetTypeFull.setSelection(scheduleData.archiveType.equals("full"));
-        widgetTypeFull.setToolTipText("Execute job as full backup.");
 
         widgetTypeIncremental = Widgets.newRadio(subComposite,"incremental");
+        widgetTypeIncremental.setToolTipText(BARControl.tr("Execute job as incremental backup."));
         Widgets.layout(widgetTypeIncremental,0,3,TableLayoutData.W);
         widgetTypeIncremental.setSelection(scheduleData.archiveType.equals("incremental"));
-        widgetTypeIncremental.setToolTipText("Execute job as incremental backup.");
 
         widgetTypeDifferential = Widgets.newRadio(subComposite,"differential");
+        widgetTypeDifferential.setToolTipText(BARControl.tr("Execute job as differential backup."));
         Widgets.layout(widgetTypeDifferential,0,4,TableLayoutData.W);
         widgetTypeDifferential.setSelection(scheduleData.archiveType.equals("differential"));
-        widgetTypeDifferential.setToolTipText("Execute job as differential backup.");
       }
 
-      label = Widgets.newLabel(composite,"Custom text:");
+      label = Widgets.newLabel(composite,BARControl.tr("Custom text:"));
       Widgets.layout(label,4,0,TableLayoutData.W);
 
       widgetCustomText = Widgets.newText(composite);
+      widgetCustomText.setToolTipText(BARControl.tr("Custom text."));
       widgetCustomText.setText(scheduleData.customText);
       Widgets.layout(widgetCustomText,4,1,TableLayoutData.WE);
-      widgetCustomText.setToolTipText("Custom text.");
 
-      label = Widgets.newLabel(composite,"Options:");
+      label = Widgets.newLabel(composite,BARControl.tr("Options:"));
       Widgets.layout(label,5,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
