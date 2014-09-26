@@ -59,6 +59,7 @@ import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Device;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
@@ -978,7 +979,7 @@ public class BARControl
   };
 
   // --------------------------- variables --------------------------------
-  public  static I18n i18n;
+  private static I18n i18n;
 
   private Display    display;
   private Shell      shell;
@@ -990,6 +991,15 @@ public class BARControl
   // ------------------------ native functions ----------------------------
 
   // ---------------------------- methods ---------------------------------
+
+  /** get internationalized text
+   * @param text text
+   * @return internationalized text
+   */
+  static String tr(String text)
+  {
+    return i18n.tr(text);
+  }
 
   /** print error to stderr
    * @param format format string
@@ -2162,6 +2172,10 @@ System.exit(1);
         // interactive mode
 
         // init display
+        if (Settings.debugFlag)
+        {
+          Device.DEBUG=true;
+        }
         display = new Display();
 
         // connect to server
