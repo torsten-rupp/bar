@@ -22,7 +22,7 @@ build-stamp:
 	# Add here commands to compile the package.
 	ln -s packages/zlib-1.2.7 zlib
 	ln -s packages/bzip2-1.0.5 bzip2
-	ln -s packages/xz-5.0.5 xz
+	ln -s packages/xz-5.0.7 xz
 	ln -s packages/xdelta3.0.0 xdelta3
 	ln -s packages/ftplib-3.1 ftplib
 	ln -s packages/libgpg-error-1.10 libgpg-error
@@ -37,6 +37,8 @@ build-stamp:
 	ln -s packages/mxml-2.7 mxml
 	ln -s packages/libcdio-0.92 libcdio
 	ln -s packages/pcre-8.34 pcre
+	ls -la
+	ls -la packages
 	./configure --enable-package-check
 	make all
 	# --- end custom part for compiling

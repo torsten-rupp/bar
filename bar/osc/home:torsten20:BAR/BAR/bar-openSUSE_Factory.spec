@@ -1,7 +1,7 @@
 # norootforbuild
 
 Name:          bar
-Version:       0.18b
+Version:       0.18c
 Release:       53.1
 Summary:       Backup ARchiver
 Source:        http://www.kigen.de/projects/bar/bar-%{version}.tar.bz2
@@ -43,9 +43,9 @@ mkdir packages
   ln -s packages/bzip2-1.0.5 bzip2
 )
 (
-  cp %{_sourcedir}/xz-5.0.5.tar.gz packages
-  (cd packages; tar xzf xz-5.0.5.tar.gz)
-  ln -s packages/xz-5.0.5 xz
+  cp %{_sourcedir}/xz-5.0.7.tar.gz packages
+  (cd packages; tar xzf xz-5.0.7.tar.gz)
+  ln -s packages/xz-5.0.7 xz
 )
 (
   cp %{_sourcedir}/xdelta3.0.0.tar.gz packages
