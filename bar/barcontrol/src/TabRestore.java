@@ -1269,12 +1269,13 @@ class TabRestore
     waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
 
     // create tab
-    widgetTab = Widgets.addTab(parentTabFolder,BARControl.i18n.tr("Restore")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
+    widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Restore")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
     widgetTab.setLayout(new TableLayout(new double[]{0.5,0.5,0.0},new double[]{0.0,1.0},2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
 
     // connector button
     button = Widgets.newCheckbox(widgetTab,IMAGE_CONNECT0,IMAGE_CONNECT1);
+    button.setToolTipText(BARControl.tr("When this connector is in state 'closed', only tagged storage archives are used for list entries."));
     Widgets.layout(button,0,0,TableLayoutData.W,2,0);
     button.addSelectionListener(new SelectionListener()
     {
@@ -1288,7 +1289,6 @@ class TabRestore
         updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
       }
     });
-    button.setToolTipText("When this connector is in state 'closed', only tagged storage archives are used for list entries.");
 
     // storage list
     group = Widgets.newGroup(widgetTab,"Storage");
@@ -1314,17 +1314,17 @@ class TabRestore
         }
       };
       tableColumn = Widgets.addTableColumn(widgetStorageList,0,"Name",    SWT.LEFT, 450,true);
+      tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       tableColumn.addSelectionListener(storageListColumnSelectionListener);
-      tableColumn.setToolTipText("Click to sort for name.");
       tableColumn = Widgets.addTableColumn(widgetStorageList,1,"Size",    SWT.RIGHT,100,true);
+      tableColumn.setToolTipText(BARControl.tr("Click to sort for size."));
       tableColumn.addSelectionListener(storageListColumnSelectionListener);
-      tableColumn.setToolTipText("Click to sort for size.");
       tableColumn = Widgets.addTableColumn(widgetStorageList,2,"Modified",SWT.LEFT, 150,true);
+      tableColumn.setToolTipText(BARControl.tr("Click to sort for modification date/time."));
       tableColumn.addSelectionListener(storageListColumnSelectionListener);
-      tableColumn.setToolTipText("Click to sort for modification date/time.");
       tableColumn = Widgets.addTableColumn(widgetStorageList,3,"State",   SWT.LEFT,  60,true);
+      tableColumn.setToolTipText(BARControl.tr("Click to sort for state."));
       tableColumn.addSelectionListener(storageListColumnSelectionListener);
-      tableColumn.setToolTipText("Click to sort for state.");
       widgetStorageList.addListener(SWT.MouseDoubleClick,new Listener()
       {
         public void handleEvent(final Event event)
@@ -1657,12 +1657,12 @@ class TabRestore
             if (checkStorageChecked())
             {
               button.setImage(IMAGE_UNMARK_ALL);
-              button.setToolTipText("Unmark all entries in list.");
+              button.setToolTipText(BARControl.tr("Unmark all entries in list."));
             }
             else
             {
               button.setImage(IMAGE_MARK_ALL);
-              button.setToolTipText("Mark all entries in list.");
+              button.setToolTipText(BARControl.tr("Mark all entries in list."));
             }
           }
         });
@@ -1678,22 +1678,22 @@ class TabRestore
             {
               setCheckedStorage(false);
               button.setImage(IMAGE_MARK_ALL);
-              button.setToolTipText("Mark all entries in list.");
+              button.setToolTipText(BARControl.tr("Mark all entries in list."));
             }
             else
             {
               setCheckedStorage(true);
               button.setImage(IMAGE_UNMARK_ALL);
-              button.setToolTipText("Unmark all entries in list.");
+              button.setToolTipText(BARControl.tr("Unmark all entries in list."));
             }
           }
         });
-        button.setToolTipText("Mark all entries in list.");
 
         label = Widgets.newLabel(composite,"Filter:");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
         widgetStoragePattern = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
+        widgetStoragePattern.setToolTipText(BARControl.tr("Enter filter pattern for storage list. Wildcards: * and ?."));
         widgetStoragePattern.setMessage("Enter text to filter storage list");
         Widgets.layout(widgetStoragePattern,0,2,TableLayoutData.WE);
         widgetStoragePattern.addSelectionListener(new SelectionListener()
@@ -1732,12 +1732,12 @@ class TabRestore
 //            setStoragePattern(widget.getText());
           }
         });
-        widgetStoragePattern.setToolTipText("Enter filter pattern for storage list. Wildcards: * and ?.");
 
         label = Widgets.newLabel(composite,"State:");
         Widgets.layout(label,0,3,TableLayoutData.W);
 
         widgetStorageStateFilter = Widgets.newOptionMenu(composite);
+        widgetStorageStateFilter.setToolTipText(BARControl.tr("Storage states filter."));
         widgetStorageStateFilter.setItems(new String[]{"*","ok","error","update","update requested","update/update requested","error/update/update requested"});
         widgetStorageStateFilter.setText("*");
         Widgets.layout(widgetStorageStateFilter,0,4,TableLayoutData.W);
@@ -1764,12 +1764,12 @@ class TabRestore
             updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
           }
         });
-        widgetStorageStateFilter.setToolTipText("Storage states filter.");
 
         label = Widgets.newLabel(composite,"Max:");
         Widgets.layout(label,0,5,TableLayoutData.W);
 
         widgetStorageMaxCount = Widgets.newOptionMenu(composite);
+        widgetStorageMaxCount.setToolTipText(BARControl.tr("Max. number of entries in list."));
         widgetStorageMaxCount.setItems(new String[]{"10","50","100","500","1000"});
         widgetStorageMaxCount.setText("100");
         Widgets.layout(widgetStorageMaxCount,0,6,TableLayoutData.W);
@@ -1785,9 +1785,9 @@ class TabRestore
             updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
           }
         });
-        widgetStorageMaxCount.setToolTipText("Max. number of entries in list.");
 
         button = Widgets.newButton(composite,"Restore");
+        button.setToolTipText(BARControl.tr("Start restoring selected archives."));
         button.setEnabled(false);
         Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedStorageEvent)
@@ -1811,7 +1811,6 @@ class TabRestore
                            );
           }
         });
-        button.setToolTipText("Start restoring selected archives.");
       }
     }
 
@@ -1841,20 +1840,20 @@ class TabRestore
         }
       };
       tableColumn = Widgets.addTableColumn(widgetEntryList,0,"Archive",       SWT.LEFT, 200,true );
+      tableColumn.setToolTipText(BARControl.tr("Click to sort for archive name."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn.setToolTipText("Click to sort for archive name.");
       tableColumn = Widgets.addTableColumn(widgetEntryList,1,"Name",          SWT.LEFT, 300,true );
+      tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn.setToolTipText("Click to sort for name.");
       tableColumn = Widgets.addTableColumn(widgetEntryList,2,"Type",          SWT.LEFT,  60,true );
+      tableColumn.setToolTipText(BARControl.tr("Click to sort for type."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn.setToolTipText("Click to sort for type.");
       tableColumn = Widgets.addTableColumn(widgetEntryList,3,"Size",          SWT.RIGHT, 60,true );
+      tableColumn.setToolTipText(BARControl.tr("Click to sort for size."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn.setToolTipText("Click to sort for size.");
       tableColumn = Widgets.addTableColumn(widgetEntryList,4,"Date",          SWT.LEFT, 140,true );
+      tableColumn.setToolTipText(BARControl.tr("Click to sort for date."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn.setToolTipText("Click to sort for date.");
       widgetEntryList.addListener(SWT.MouseDoubleClick,new Listener()
       {
         public void handleEvent(final Event event)
@@ -2082,12 +2081,12 @@ class TabRestore
             if (checkEntriesChecked())
             {
               button.setImage(IMAGE_UNMARK_ALL);
-              button.setToolTipText("Unmark all entries in list.");
+              button.setToolTipText(BARControl.tr("Unmark all entries in list."));
             }
             else
             {
               button.setImage(IMAGE_MARK_ALL);
-              button.setToolTipText("Mark all entries in list.");
+              button.setToolTipText(BARControl.tr("Mark all entries in list."));
             }
           }
         });
@@ -2103,22 +2102,22 @@ class TabRestore
             {
               setCheckedEntries(false);
               button.setImage(IMAGE_MARK_ALL);
-              button.setToolTipText("Mark all entries in list.");
+              button.setToolTipText(BARControl.tr("Mark all entries in list."));
             }
             else
             {
               setCheckedEntries(true);
               button.setImage(IMAGE_UNMARK_ALL);
-              button.setToolTipText("Unmark all entries in list.");
+              button.setToolTipText(BARControl.tr("Unmark all entries in list."));
             }
           }
         });
-        button.setToolTipText("Mark all entries in list.");
 
         label = Widgets.newLabel(composite,"Filter:");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
         text = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
+        text.setToolTipText(BARControl.tr("Enter filter pattern for entry list. Wildcards: * and ?."));
         text.setMessage("Enter text to filter entry list");
         Widgets.layout(text,0,2,TableLayoutData.WE);
         text.addSelectionListener(new SelectionListener()
@@ -2157,9 +2156,9 @@ class TabRestore
 //            setEntryPattern(widget.getText());
           }
         });
-        text.setToolTipText("Enter filter pattern for entry list. Wildcards: * and ?.");
 
         button = Widgets.newCheckbox(composite,"newest entries only");
+        button.setToolTipText(BARControl.tr("When this checkbox is enabled, only show newest entry instances and hide all older entry instances."));
         Widgets.layout(button,0,3,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
@@ -2173,12 +2172,12 @@ class TabRestore
             updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
           }
         });
-        button.setToolTipText("When this checkbox is enabled, only show newest entry instances and hide all older entry instances.");
 
         label = Widgets.newLabel(composite,"Max:");
         Widgets.layout(label,0,4,TableLayoutData.W);
 
         combo = Widgets.newOptionMenu(composite);
+        combo.setToolTipText(BARControl.tr("Max. number of entries in list."));
         combo.setItems(new String[]{"10","50","100","500","1000"});
         combo.setText("100");
         Widgets.layout(combo,0,5,TableLayoutData.W);
@@ -2194,9 +2193,9 @@ class TabRestore
             updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
           }
         });
-        combo.setToolTipText("Max. number of entries in list.");
 
         button = Widgets.newButton(composite,"Restore");
+        button.setToolTipText(BARControl.tr("Start restoring selected entries."));
         button.setEnabled(false);
         Widgets.layout(button,0,6,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedEntryEvent)
@@ -2220,7 +2219,6 @@ class TabRestore
                           );
           }
         });
-        button.setToolTipText("Start restoring selected entries.");
       }
     }
 
@@ -2230,6 +2228,7 @@ class TabRestore
     Widgets.layout(group,2,0,TableLayoutData.WE,0,2);
     {
       widgetRestoreTo = Widgets.newCheckbox(group,"to");
+      widgetRestoreTo.setToolTipText(BARControl.tr("Enable this checkbox and select a directory to restore entries to different location."));
       Widgets.layout(widgetRestoreTo,0,0,TableLayoutData.W);
       widgetRestoreTo.addSelectionListener(new SelectionListener()
       {
@@ -2244,7 +2243,6 @@ class TabRestore
           selectRestoreToEvent.trigger();
         }
       });
-      widgetRestoreTo.setToolTipText("Enable this checkbox and select a directory to restore entries to different location.");
 
       widgetRestoreToDirectory = Widgets.newText(group);
       widgetRestoreToDirectory.setEnabled(false);
@@ -2303,8 +2301,8 @@ class TabRestore
       });
 
       widgetOverwriteEntries = Widgets.newCheckbox(group,"overwrite existing entries");
+      widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
       Widgets.layout(widgetOverwriteEntries,0,3,TableLayoutData.W);
-      widgetOverwriteEntries.setToolTipText("Enable this checkbox when existing entries in destination should be overwritten.");
     }
 
     // start storage list update thread
@@ -2691,10 +2689,11 @@ class TabRestore
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetStorageName = Widgets.newText(composite);
+      widgetStorageName.setToolTipText(BARControl.tr("Enter local or remote storage name."));
       Widgets.layout(widgetStorageName,0,1,TableLayoutData.WE);
-      widgetStorageName.setToolTipText("Enter local or remote storage name.");
 
       button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+      button.setToolTipText(BARControl.tr("Select local storage file."));
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -2717,7 +2716,6 @@ class TabRestore
           }
         }
       });
-      button.setToolTipText("Select local storage file.");
     }
 
     // buttons

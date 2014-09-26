@@ -424,7 +424,7 @@ class TabStatus
     display = shell.getDisplay();
 
     // create tab
-    widgetTab = Widgets.addTab(parentTabFolder,BARControl.i18n.tr("Status")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
+    widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Status")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
     widgetTab.setLayout(new TableLayout(new double[]{1.0,0.0,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
     widgetTab.addListener(SWT.Show,new Listener()
@@ -438,6 +438,7 @@ class TabStatus
 
     // list with jobs
     widgetJobList = Widgets.newTable(widgetTab,SWT.NONE);
+    widgetJobList.setToolTipText(BARControl.tr("List with job entries.\nClick to select job, right-click to open context menu."));
     widgetJobList.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}));
     Widgets.layout(widgetJobList,0,0,TableLayoutData.NSWE);
     widgetJobList.addSelectionListener(new SelectionListener()
@@ -451,7 +452,7 @@ class TabStatus
         TabStatus tabStatus = (TabStatus)widget.getData();
         selectedJobData = (JobData)selectionEvent.item.getData();
         if (tabJobs != null) tabJobs.selectJob(selectedJobData.name);
-        widgetSelectedJob.setText(BARControl.i18n.tr("Selected")+" '"+selectedJobData.name+"'");
+        widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+selectedJobData.name+"'");
       }
     });
     SelectionListener jobListColumnSelectionListener = new SelectionListener()
@@ -469,34 +470,34 @@ class TabStatus
         }
       }
     };
-    tableColumn = Widgets.addTableColumn(widgetJobList,0,BARControl.i18n.tr("Name"),          SWT.LEFT, 110,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,0,BARControl.tr("Name"),          SWT.LEFT, 110,true );
+    tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn.setToolTipText(BARControl.i18n.tr("Click to sort for name."));
-    tableColumn = Widgets.addTableColumn(widgetJobList,1,BARControl.i18n.tr("State"),         SWT.LEFT,  90,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,1,BARControl.tr("State"),         SWT.LEFT,  90,true );
+    tableColumn.setToolTipText(BARControl.tr("Click to sort for state."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn.setToolTipText(BARControl.i18n.tr("Click to sort for state."));
-    tableColumn = Widgets.addTableColumn(widgetJobList,2,BARControl.i18n.tr("Type"),          SWT.LEFT,  90,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,2,BARControl.tr("Type"),          SWT.LEFT,  90,true );
+    tableColumn.setToolTipText(BARControl.tr("Click to sort for type."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn.setToolTipText(BARControl.i18n.tr("Click to sort for type."));
-    tableColumn = Widgets.addTableColumn(widgetJobList,3,BARControl.i18n.tr("Part size"),     SWT.RIGHT, 80,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,3,BARControl.tr("Part size"),     SWT.RIGHT, 80,true );
+    tableColumn.setToolTipText(BARControl.tr("Click to sort for part size."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn.setToolTipText(BARControl.i18n.tr("Click to sort for part size."));
-    tableColumn = Widgets.addTableColumn(widgetJobList,4,BARControl.i18n.tr("Compress"),      SWT.LEFT,  80,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,4,BARControl.tr("Compress"),      SWT.LEFT,  80,true );
+    tableColumn.setToolTipText(BARControl.tr("Click to sort for used compress algorithm."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn.setToolTipText(BARControl.i18n.tr("Click to sort for used compress algorithm."));
-    tableColumn = Widgets.addTableColumn(widgetJobList,5,BARControl.i18n.tr("Crypt"),         SWT.LEFT, 100,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,5,BARControl.tr("Crypt"),         SWT.LEFT, 100,true );
+    tableColumn.setToolTipText(BARControl.tr("Click to sort for used encryption algorithm."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn.setToolTipText(BARControl.i18n.tr("Click to sort for used encryption algorithm."));
-    tableColumn = Widgets.addTableColumn(widgetJobList,6,BARControl.i18n.tr("Last executed"), SWT.LEFT, 150,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,6,BARControl.tr("Last executed"), SWT.LEFT, 150,true );
+    tableColumn.setToolTipText(BARControl.tr("Click to sort for last date/time job was executed."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn.setToolTipText(BARControl.i18n.tr("Click to sort for last date/time job was executed."));
-    tableColumn = Widgets.addTableColumn(widgetJobList,7,BARControl.i18n.tr("Estimated time"),SWT.LEFT, 120,false);
+    tableColumn = Widgets.addTableColumn(widgetJobList,7,BARControl.tr("Estimated time"),SWT.LEFT, 120,false);
+    tableColumn.setToolTipText(BARControl.tr("Click to sort for estimated rest time to execute job."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn.setToolTipText(BARControl.i18n.tr("Click to sort for estimated rest time to execute job."));
 
     menu = Widgets.newPopupMenu(shell);
     {
-      menuItem = Widgets.addMenuItem(menu,BARControl.i18n.tr("Start")+"\u2026");
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Start")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -509,7 +510,7 @@ class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.i18n.tr("Abort")+"\u2026");
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Abort")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -522,7 +523,7 @@ class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.i18n.tr("Pause"));
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Pause"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -535,7 +536,7 @@ class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.i18n.tr("Continue"));
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Continue"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -548,7 +549,7 @@ class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.i18n.tr("Volume"));
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Volume"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -562,25 +563,24 @@ class TabStatus
       });
     }
     widgetJobList.setMenu(menu);
-    widgetJobList.setToolTipText(BARControl.i18n.tr("List with job entries.\nClick to select job, right-click to open context menu."));
 
     // selected job group
-    widgetSelectedJob = Widgets.newGroup(widgetTab,BARControl.i18n.tr("Selected")+" ''",SWT.NONE);
+    widgetSelectedJob = Widgets.newGroup(widgetTab,BARControl.tr("Selected")+" ''",SWT.NONE);
     widgetSelectedJob.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0,1.0,0.0,0.0,1.0,0.0,1.0,1.0},4));
     Widgets.layout(widgetSelectedJob,1,0,TableLayoutData.WE);
     {
       // done files/bytes, files/s, bytes/s
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("Done")+":");
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Done")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,0,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,doneEntries));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("files"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("files"));
       Widgets.layout(label,0,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,0,3,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,doneBytes));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("bytes"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,0,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,0,5,TableLayoutData.W);
@@ -593,7 +593,7 @@ class TabStatus
           return Units.getByteSize(variable.getLong());
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("bytes"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,0,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetModifyListener(label,doneBytes)
       {
@@ -633,7 +633,7 @@ class TabStatus
             return Units.getByteSize(variable.getDouble());
           }
         });
-        label = Widgets.newLabel(composite,BARControl.i18n.tr("bytes/s"));
+        label = Widgets.newLabel(composite,BARControl.tr("bytes/s"));
         Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
         Widgets.addModifyListener(new WidgetModifyListener(label,bytesPerSecond)
         {
@@ -645,12 +645,12 @@ class TabStatus
       }
 
       // stored files/bytes
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("Stored")+":");
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Stored")+":");
       Widgets.layout(label,1,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,1,3,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalBytes));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("bytes"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,1,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,1,5,TableLayoutData.W);
@@ -663,7 +663,7 @@ class TabStatus
           return Units.getByteSize(variable.getLong());
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("bytes"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,1,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalBytes)
       {
@@ -677,7 +677,7 @@ class TabStatus
       composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0}));
       Widgets.layout(composite,1,8,TableLayoutData.WE);
       {
-        label = Widgets.newLabel(composite,BARControl.i18n.tr("Ratio"));
+        label = Widgets.newLabel(composite,BARControl.tr("Ratio"));
         Widgets.layout(label,0,0,TableLayoutData.W);
         label = Widgets.newNumberView(composite);
         Widgets.layout(label,0,1,TableLayoutData.WE);
@@ -717,17 +717,17 @@ class TabStatus
       }
 
       // skipped files/bytes
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("Skipped")+":");
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Skipped")+":");
       Widgets.layout(label,2,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,2,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntries));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("files"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("files"));
       Widgets.layout(label,2,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,2,3,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,skippedBytes));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("bytes"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,2,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,2,5,TableLayoutData.W);
@@ -740,7 +740,7 @@ class TabStatus
           return Units.getByteSize(variable.getLong());
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("bytes"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,2,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetModifyListener(label,skippedBytes)
       {
@@ -751,17 +751,17 @@ class TabStatus
       });
 
       // error files/bytes
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("Errors")+":");
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Errors")+":");
       Widgets.layout(label,3,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,3,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,errorEntries));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("files"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("files"));
       Widgets.layout(label,3,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,3,3,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,errorBytes));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("bytes"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,3,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,3,5,TableLayoutData.W);
@@ -774,7 +774,7 @@ class TabStatus
           return Units.getByteSize(variable.getLong());
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("bytes"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,3,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetModifyListener(label,errorBytes)
       {
@@ -785,7 +785,7 @@ class TabStatus
       });
 
       // total files/bytes
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("Total:")+":");
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Total:")+":");
       Widgets.layout(label,4,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,4,1,TableLayoutData.WE);
@@ -798,7 +798,7 @@ class TabStatus
           control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("files"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("files"));
       Widgets.layout(label,4,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,4,3,TableLayoutData.WE);
@@ -811,7 +811,7 @@ class TabStatus
           control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("bytes"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,4,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,4,5,TableLayoutData.W);
@@ -832,7 +832,7 @@ class TabStatus
           control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("bytes"));
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,4,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
       Widgets.addModifyListener(new WidgetModifyListener(label,totalBytes)
       {
@@ -843,7 +843,7 @@ class TabStatus
       });
 
       // current file, file percentage
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("File")+":");
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("File")+":");
       Widgets.layout(label,5,0,TableLayoutData.W);
       label = Widgets.newView(widgetSelectedJob);
       Widgets.layout(label,5,1,TableLayoutData.WE,0,9);
@@ -853,7 +853,7 @@ class TabStatus
       Widgets.addModifyListener(new WidgetModifyListener(progressBar,fileProgress));
 
       // storage file, storage percentage
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("Storage")+":");
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Storage")+":");
       Widgets.layout(label,7,0,TableLayoutData.W);
       label = Widgets.newView(widgetSelectedJob);
       Widgets.layout(label,7,1,TableLayoutData.WE,0,9);
@@ -863,7 +863,7 @@ class TabStatus
       Widgets.addModifyListener(new WidgetModifyListener(progressBar,storageProgress));
 
       // volume percentage
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("Volume")+":");
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Volume")+":");
       Widgets.layout(label,9,0,TableLayoutData.W);
       progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,9,1,TableLayoutData.WE,0,9);
@@ -877,14 +877,14 @@ class TabStatus
       Widgets.addModifyListener(new WidgetModifyListener(progressBar,totalEntriesProgress));
 
       // total bytes percentage
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("Total bytes")+":");
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Total bytes")+":");
       Widgets.layout(label,11,0,TableLayoutData.W);
       progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,11,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetModifyListener(progressBar,totalBytesProgress));
 
       // message
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.i18n.tr("Message")+":");
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Message")+":");
       Widgets.layout(label,12,0,TableLayoutData.W);
       label = Widgets.newView(widgetSelectedJob);
       Widgets.layout(label,12,1,TableLayoutData.WE,0,9);
@@ -958,7 +958,8 @@ class TabStatus
     composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0}));
     Widgets.layout(composite,2,0,TableLayoutData.WE);
     {
-      widgetButtonStart = Widgets.newButton(composite,null,BARControl.i18n.tr("Start")+"\u2026");
+      widgetButtonStart = Widgets.newButton(composite,null,BARControl.tr("Start")+"\u2026");
+      widgetButtonStart.setToolTipText(BARControl.tr("Start selected job."));
       Widgets.layout(widgetButtonStart,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonStart.setEnabled(false);
       widgetButtonStart.addSelectionListener(new SelectionListener()
@@ -972,9 +973,9 @@ class TabStatus
           jobStart();
         }
       });
-      widgetButtonStart.setToolTipText("Start selected job.");
 
-      widgetButtonAbort = Widgets.newButton(composite,null,BARControl.i18n.tr("Abort")+"\u2026");
+      widgetButtonAbort = Widgets.newButton(composite,null,BARControl.tr("Abort")+"\u2026");
+      widgetButtonAbort.setToolTipText(BARControl.tr("Abort selected job."));
       Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonAbort.setEnabled(false);
       widgetButtonAbort.addSelectionListener(new SelectionListener()
@@ -988,9 +989,9 @@ class TabStatus
           jobAbort();
         }
       });
-      widgetButtonAbort.setToolTipText(BARControl.i18n.tr("Abort selected job."));
 
-      widgetButtonPause = Widgets.newButton(composite,null,BARControl.i18n.tr("Pause"));
+      widgetButtonPause = Widgets.newButton(composite,null,BARControl.tr("Pause"));
+      widgetButtonPause.setToolTipText(BARControl.tr("Pause selected job for a specific time."));
       Widgets.layout(widgetButtonPause,0,2,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{"Puase [xxxxs]"}));
       widgetButtonPause.addSelectionListener(new SelectionListener()
       {
@@ -1003,10 +1004,10 @@ class TabStatus
           jobPause(60*60);
         }
       });
-      widgetButtonPause.setToolTipText(BARControl.i18n.tr("Pause selected job for a specific time."));
 
-      widgetButtonSuspendContinue = Widgets.newButton(composite,null,BARControl.i18n.tr("Continue"));
-      Widgets.layout(widgetButtonSuspendContinue,0,3,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{BARControl.i18n.tr("Suspend"),BARControl.i18n.tr("Continue")}));
+      widgetButtonSuspendContinue = Widgets.newButton(composite,null,BARControl.tr("Continue"));
+      widgetButtonSuspendContinue.setToolTipText(BARControl.tr("Suspend selected job for an infinite time."));
+      Widgets.layout(widgetButtonSuspendContinue,0,3,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{BARControl.tr("Suspend"),BARControl.tr("Continue")}));
       widgetButtonSuspendContinue.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1018,9 +1019,9 @@ class TabStatus
           jobSuspendContinue();
         }
       });
-      widgetButtonSuspendContinue.setToolTipText(BARControl.i18n.tr("Suspend selected job for an infinite time."));
 
-      widgetButtonVolume = Widgets.newButton(composite,null,BARControl.i18n.tr("Volume"));
+      widgetButtonVolume = Widgets.newButton(composite,null,BARControl.tr("Volume"));
+      widgetButtonVolume.setToolTipText(BARControl.tr("Click when a new volume is available in drive."));
       Widgets.layout(widgetButtonVolume,0,4,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonVolume.setEnabled(false);
       widgetButtonVolume.addSelectionListener(new SelectionListener()
@@ -1034,9 +1035,9 @@ class TabStatus
           volume();
         }
       });
-      widgetButtonVolume.setToolTipText(BARControl.i18n.tr("Click when a new volume is available in drive."));
 
-      widgetButtonQuit = Widgets.newButton(composite,null,BARControl.i18n.tr("Quit"));
+      widgetButtonQuit = Widgets.newButton(composite,null,BARControl.tr("Quit"));
+      widgetButtonQuit.setToolTipText(BARControl.tr("Quit BARControl program."));
       Widgets.layout(widgetButtonQuit,0,5,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonQuit.addSelectionListener(new SelectionListener()
       {
@@ -1052,7 +1053,6 @@ class TabStatus
           shell.notifyListeners(SWT.Close,event);
         }
       });
-      widgetButtonQuit.setToolTipText(BARControl.i18n.tr("Quit BARControl program."));
     }
 
     // start status update thread
@@ -1080,7 +1080,7 @@ class TabStatus
     synchronized(jobList)
     {
       selectedJobData = jobList.get(name);
-      widgetSelectedJob.setText(BARControl.i18n.tr("Selected")+" '"+((selectedJobData != null) ? selectedJobData.name : "")+"'");
+      widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+((selectedJobData != null) ? selectedJobData.name : "")+"'");
     }
   }
 
@@ -1121,8 +1121,8 @@ class TabStatus
       {
         public void run()
         {
-          widgetButtonPause.setText(String.format(BARControl.i18n.tr("Pause [%3dmin]"),(pauseTime > 0) ? (pauseTime+59)/60:1));
-          widgetButtonSuspendContinue.setText(BARControl.i18n.tr("Continue"));
+          widgetButtonPause.setText(String.format(BARControl.tr("Pause [%3dmin]"),(pauseTime > 0) ? (pauseTime+59)/60:1));
+          widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
         }
       });
     }
@@ -1133,8 +1133,8 @@ class TabStatus
       {
         public void run()
         {
-          widgetButtonPause.setText(BARControl.i18n.tr("Pause"));
-          widgetButtonSuspendContinue.setText(BARControl.i18n.tr("Continue"));
+          widgetButtonPause.setText(BARControl.tr("Pause"));
+          widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
         }
       });
     }
@@ -1145,8 +1145,8 @@ class TabStatus
       {
         public void run()
         {
-          widgetButtonPause.setText(BARControl.i18n.tr("Pause"));
-          widgetButtonSuspendContinue.setText(BARControl.i18n.tr("Suspend"));
+          widgetButtonPause.setText(BARControl.tr("Pause"));
+          widgetButtonSuspendContinue.setText(BARControl.tr("Suspend"));
         }
       });
     }
@@ -1277,9 +1277,9 @@ class TabStatus
 
               jobList.put(name,jobData);
               tableItem.setText(0,jobData.name);
-              tableItem.setText(1,(status == States.RUNNING) ? jobData.state : BARControl.i18n.tr("suspended"));
+              tableItem.setText(1,(status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"));
               tableItem.setText(2,jobData.archiveType);
-              tableItem.setText(3,(jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.i18n.tr("unlimited"));
+              tableItem.setText(3,(jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"));
               tableItem.setText(4,jobData.formatCompressAlgorithm());
               tableItem.setText(5,jobData.formatCryptAlgorithm());
               tableItem.setText(6,jobData.formatLastExecutedDateTime());
@@ -1390,20 +1390,20 @@ class TabStatus
 
     // get job mode
     mode = Dialogs.select(shell,
-                          BARControl.i18n.tr("Confirmation"),
-                          BARControl.i18n.tr("Start job")+" '"+selectedJobData.name+"'?",
-                          new String[]{BARControl.i18n.tr("Normal"),
-                                       BARControl.i18n.tr("Full"),
-                                       BARControl.i18n.tr("Incremental"),
-                                       BARControl.i18n.tr("Differential"),
-                                       BARControl.i18n.tr("Dry-run"),
-                                       BARControl.i18n.tr("Cancel")
+                          BARControl.tr("Confirmation"),
+                          BARControl.tr("Start job")+" '"+selectedJobData.name+"'?",
+                          new String[]{BARControl.tr("Normal"),
+                                       BARControl.tr("Full"),
+                                       BARControl.tr("Incremental"),
+                                       BARControl.tr("Differential"),
+                                       BARControl.tr("Dry-run"),
+                                       BARControl.tr("Cancel")
                                       },
-                          new String[]{BARControl.i18n.tr("Store all files."),
-                                       BARControl.i18n.tr("Store all files and create incremental data file."),
-                                       BARControl.i18n.tr("Store changed files since last incremental or full storage and update incremental data file."),
-                                       BARControl.i18n.tr("Store changed files since last full storage."),
-                                       BARControl.i18n.tr("Collect and process all files, but do not create archives.")
+                          new String[]{BARControl.tr("Store all files."),
+                                       BARControl.tr("Store all files and create incremental data file."),
+                                       BARControl.tr("Store changed files since last incremental or full storage and update incremental data file."),
+                                       BARControl.tr("Store changed files since last full storage."),
+                                       BARControl.tr("Collect and process all files, but do not create archives.")
                                       },
                           4
                          );
@@ -1416,9 +1416,9 @@ class TabStatus
     {
       // get crypt password
       String password = Dialogs.password(shell,
-                                         BARControl.i18n.tr("Crypt password"),
+                                         BARControl.tr("Crypt password"),
                                          null,
-                                         BARControl.i18n.tr("Crypt password")+":",
+                                         BARControl.tr("Crypt password")+":",
                                          "Verify:"
                                         );
       if (password == null)
@@ -1437,7 +1437,7 @@ class TabStatus
                                           );
       if (error != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.i18n.tr("Cannot start job (error: %s)"),resultErrorMessage[0]);
+        Dialogs.error(shell,BARControl.tr("Cannot start job (error: %s)"),resultErrorMessage[0]);
         return;
       }
     }
@@ -1471,9 +1471,9 @@ class TabStatus
   {
     assert selectedJobData != null;
 
-    if (!selectedJobData.state.equals("running") || Dialogs.confirm(shell,BARControl.i18n.tr("Abort running job")+" '"+selectedJobData.name+"'?",false))
+    if (!selectedJobData.state.equals("running") || Dialogs.confirm(shell,BARControl.tr("Abort running job")+" '"+selectedJobData.name+"'?",false))
     {
-      final BusyDialog busyDialog = new BusyDialog(shell,BARControl.i18n.tr("Abort"),300,100,BARControl.i18n.tr("Abort job")+" '"+selectedJobData.name+"'...",BusyDialog.TEXT0);
+      final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Abort"),300,100,BARControl.tr("Abort job")+" '"+selectedJobData.name+"'...",BusyDialog.TEXT0);
       busyDialog.autoAnimate();
 
       new BackgroundTask(busyDialog)
@@ -1504,7 +1504,7 @@ class TabStatus
                 public void run()
                 {
                   busyDialog.close();
-                  Dialogs.error(shell,BARControl.i18n.tr("Cannot abort job (error: %s)"),resultErrorMessage[0]);
+                  Dialogs.error(shell,BARControl.tr("Cannot abort job (error: %s)"),resultErrorMessage[0]);
                 }
               });
             }
@@ -1517,7 +1517,7 @@ class TabStatus
               public void run()
               {
                 busyDialog.close();
-                Dialogs.error(shell,BARControl.i18n.tr("Communication error while deleting storage")+" (error: "+errorMessage+")");
+                Dialogs.error(shell,BARControl.tr("Communication error while deleting storage")+" (error: "+errorMessage+")");
                }
             });
           }
@@ -1555,7 +1555,7 @@ class TabStatus
                                           );
       if (error != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.i18n.tr("Cannot pause job (error: %s)"),resultErrorMessage[0]);
+        Dialogs.error(shell,BARControl.tr("Cannot pause job (error: %s)"),resultErrorMessage[0]);
       }
     }
   }
@@ -1574,7 +1574,7 @@ class TabStatus
     }
     if (error != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.i18n.tr("Cannot suspend job (error: %s)"),errorMessage[0]);
+      Dialogs.error(shell,BARControl.tr("Cannot suspend job (error: %s)"),errorMessage[0]);
     }
   }
 
@@ -1587,7 +1587,7 @@ class TabStatus
     long     volumeNumber = requestedVolumeNumber.getLong();
     String[] resultErrorMessage = new String[1];
     int      error              = Errors.NONE;
-    switch (Dialogs.select(shell,BARControl.i18n.tr("Volume request"),BARControl.i18n.tr("Load volume number")+" "+volumeNumber+".",new String[]{BARControl.i18n.tr("OK"),BARControl.i18n.tr("Unload tray"),BARControl.i18n.tr("Cancel")},0))
+    switch (Dialogs.select(shell,BARControl.tr("Volume request"),BARControl.tr("Load volume number")+" "+volumeNumber+".",new String[]{BARControl.tr("OK"),BARControl.tr("Unload tray"),BARControl.tr("Cancel")},0))
     {
       case 0:
         error = BARServer.executeCommand(StringParser.format("VOLUME_LOAD jobId=%d volumeNumber=%d",selectedJobData.id,volumeNumber),resultErrorMessage);
@@ -1600,7 +1600,7 @@ class TabStatus
     }
     if (error != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.i18n.tr("Cannot change volume job (error: %s)"),resultErrorMessage[0]);
+      Dialogs.error(shell,BARControl.tr("Cannot change volume job (error: %s)"),resultErrorMessage[0]);
     }
   }
 }
