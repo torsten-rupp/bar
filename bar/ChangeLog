@@ -1,6 +1,15 @@
 2014-??-?? 0.19
   * added LZO compression
 
+2014-09-26 0.18c
+  * fixed server network connection wait time in pselect();
+    may caused network trouble on some Linux systems.
+    Thanks to Daniel Webb for his help to find this bug!
+  * BARControl: upgraded to SWT 4.4 to fix a crash on
+    close when a combo widget is disposed.
+    (https://bugs.eclipse.org/bugs/show_bug.cgi?id=372560)
+    Thanks to Daniel Webb for his help to find this bug!
+
 2014-05-09 0.18b
   * fixed server start script barserver for Debian
   * do not download epm, breakpad by default
