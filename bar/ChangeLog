@@ -9,6 +9,7 @@
     close when a combo widget is disposed.
     (https://bugs.eclipse.org/bugs/show_bug.cgi?id=372560)
     Thanks to Daniel Webb for his help to find this bug!
+  * Upgraded LZMA library to version 5.0.7
 
 2014-05-09 0.18b
   * fixed server start script barserver for Debian
