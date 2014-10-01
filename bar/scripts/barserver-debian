@@ -13,7 +13,7 @@
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 DESC="barserver"
 NAME=bar
-DAEMON=/usr/local/bin/$NAME
+DAEMON=/usr/bin/$NAME
 CONFIGFILE=/etc/bar/bar.cfg
 DAEMON_ARGS="-f $CONFIGFILE --daemon"
 PIDFILE=/var/run/$NAME.pid

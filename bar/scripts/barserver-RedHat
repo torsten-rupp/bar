@@ -12,6 +12,12 @@
 # Description:       Start BAR server for backup/restore
 ### END INIT INFO
  
+# source LSB init functions
+#. /lib/lsb/init-functions
+
+# shell functions sourced from /etc/rc.status:
+. /etc/rc.status
+
 # check for binaries
 BAR_BIN=/usr/bin/bar
 if test ! -x $BAR_BIN; then
@@ -25,12 +31,6 @@ if test ! -r $BAR_CONFIG; then
   echo "$BAR_CONFIG cannot be read"
   exit 6
 fi
-
-# source LSB init functions
-#. /lib/lsb/init-functions
-
-# shell functions sourced from /etc/rc.status:
-. /etc/rc.status
 
 case "$1" in
     start)
