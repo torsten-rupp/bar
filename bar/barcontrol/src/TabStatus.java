@@ -571,7 +571,7 @@ class TabStatus
     {
       // done files/bytes, files/s, bytes/s
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Done")+":");
-      Widgets.layout(label,0,0,TableLayoutData.W);
+      Widgets.layout(label,0,0,TableLayoutData.W,0,5);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,0,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,doneEntries));
@@ -616,7 +616,7 @@ class TabStatus
             return String.format("%.1f",variable.getDouble());
           }
         });
-        label = Widgets.newLabel(composite,"files/s");
+        label = Widgets.newLabel(composite,BARControl.tr("files/s"));
         Widgets.layout(label,0,1,TableLayoutData.W);
       }
 
@@ -705,7 +705,7 @@ class TabStatus
             return Units.getByteSize(variable.getDouble());
           }
         });
-        label = Widgets.newLabel(composite,"bytes/s");
+        label = Widgets.newLabel(composite,BARControl.tr("bytes/s"));
         Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
         Widgets.addModifyListener(new WidgetModifyListener(label,storageBytesPerSecond)
         {
@@ -870,7 +870,7 @@ class TabStatus
       Widgets.addModifyListener(new WidgetModifyListener(progressBar,volumeProgress));
 
       // total files percentage
-      label = Widgets.newLabel(widgetSelectedJob,"Total files:");
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Total files")+":");
       Widgets.layout(label,10,0,TableLayoutData.W);
       progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,10,1,TableLayoutData.WE,0,9);

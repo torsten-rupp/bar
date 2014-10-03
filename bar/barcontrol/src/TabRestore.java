@@ -1291,7 +1291,7 @@ class TabRestore
     });
 
     // storage list
-    group = Widgets.newGroup(widgetTab,"Storage");
+    group = Widgets.newGroup(widgetTab,BARControl.tr("Storage"));
     group.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,4));
     Widgets.layout(group,0,1,TableLayoutData.NSWE);
     {
@@ -1419,7 +1419,7 @@ class TabRestore
               }
             });
 
-            label = Widgets.newLabel(widgetStorageListToolTip,"Name:");
+            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Name")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,0,TableLayoutData.W);
@@ -1429,7 +1429,7 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,"Created:");
+            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Created")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,0,TableLayoutData.W);
@@ -1439,17 +1439,17 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,"Size:");
+            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Size")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,2,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,String.format("%d bytes (%s)",storageData.size,Units.formatByteSize(storageData.size)));
+            label = Widgets.newLabel(widgetStorageListToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageData.size,Units.formatByteSize(storageData.size)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,2,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,"State:");
+            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("State")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,0,TableLayoutData.W);
@@ -1459,7 +1459,7 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,"Last checked:");
+            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Last checked")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,0,TableLayoutData.W);
@@ -1469,7 +1469,7 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,"Error:");
+            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Error")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,5,0,TableLayoutData.W);
@@ -1689,7 +1689,7 @@ class TabRestore
           }
         });
 
-        label = Widgets.newLabel(composite,"Filter:");
+        label = Widgets.newLabel(composite,BARControl.tr("Filter")+":");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
         widgetStoragePattern = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
@@ -1733,7 +1733,7 @@ class TabRestore
           }
         });
 
-        label = Widgets.newLabel(composite,"State:");
+        label = Widgets.newLabel(composite,BARControl.tr("State")+":");
         Widgets.layout(label,0,3,TableLayoutData.W);
 
         widgetStorageStateFilter = Widgets.newOptionMenu(composite);
@@ -1765,7 +1765,7 @@ class TabRestore
           }
         });
 
-        label = Widgets.newLabel(composite,"Max:");
+        label = Widgets.newLabel(composite,BARControl.tr("Max")+":");
         Widgets.layout(label,0,5,TableLayoutData.W);
 
         widgetStorageMaxCount = Widgets.newOptionMenu(composite);
@@ -1786,7 +1786,7 @@ class TabRestore
           }
         });
 
-        button = Widgets.newButton(composite,"Restore");
+        button = Widgets.newButton(composite,BARControl.tr("Restore"));
         button.setToolTipText(BARControl.tr("Start restoring selected archives."));
         button.setEnabled(false);
         Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
@@ -1815,7 +1815,7 @@ class TabRestore
     }
 
     // entries list
-    group = Widgets.newGroup(widgetTab,"Entries");
+    group = Widgets.newGroup(widgetTab,BARControl.tr("Entries"));
     group.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,4));
     Widgets.layout(group,1,1,TableLayoutData.NSWE);
     {
@@ -1839,19 +1839,19 @@ class TabRestore
           }
         }
       };
-      tableColumn = Widgets.addTableColumn(widgetEntryList,0,"Archive",       SWT.LEFT, 200,true );
+      tableColumn = Widgets.addTableColumn(widgetEntryList,0,BARControl.tr("Archive"),SWT.LEFT, 200,true );
       tableColumn.setToolTipText(BARControl.tr("Click to sort for archive name."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryList,1,"Name",          SWT.LEFT, 300,true );
+      tableColumn = Widgets.addTableColumn(widgetEntryList,1,BARControl.tr("Name"),   SWT.LEFT, 300,true );
       tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryList,2,"Type",          SWT.LEFT,  60,true );
+      tableColumn = Widgets.addTableColumn(widgetEntryList,2,BARControl.tr("Type"),   SWT.LEFT,  60,true );
       tableColumn.setToolTipText(BARControl.tr("Click to sort for type."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryList,3,"Size",          SWT.RIGHT, 60,true );
+      tableColumn = Widgets.addTableColumn(widgetEntryList,3,BARControl.tr("Size"),   SWT.RIGHT, 60,true );
       tableColumn.setToolTipText(BARControl.tr("Click to sort for size."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryList,4,"Date",          SWT.LEFT, 140,true );
+      tableColumn = Widgets.addTableColumn(widgetEntryList,4,BARControl.tr("Date"),   SWT.LEFT, 140,true );
       tableColumn.setToolTipText(BARControl.tr("Click to sort for date."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
       widgetEntryList.addListener(SWT.MouseDoubleClick,new Listener()
@@ -1938,7 +1938,7 @@ class TabRestore
               }
             });
 
-            label = Widgets.newLabel(widgetEntryListToolTip,"Storage:");
+            label = Widgets.newLabel(widgetEntryListToolTip,BARControl.tr("Storage")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,0,TableLayoutData.W);
@@ -1948,7 +1948,7 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,"Created:");
+            label = Widgets.newLabel(widgetEntryListToolTip,BARControl.tr("Created")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,0,TableLayoutData.W);
@@ -1961,7 +1961,7 @@ class TabRestore
             control = Widgets.newSpacer(widgetEntryListToolTip);
             Widgets.layout(control,2,0,TableLayoutData.WE,0,2,0,0,SWT.DEFAULT,1,SWT.DEFAULT,1,SWT.DEFAULT,1);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,"Type:");
+            label = Widgets.newLabel(widgetEntryListToolTip,BARControl.tr("Type")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,0,TableLayoutData.W);
@@ -1971,7 +1971,7 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,"Name:");
+            label = Widgets.newLabel(widgetEntryListToolTip,BARControl.tr("Name")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,0,TableLayoutData.W);
@@ -1981,17 +1981,17 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,"Size:");
+            label = Widgets.newLabel(widgetEntryListToolTip,BARControl.tr("Size")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,5,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,String.format("%d bytes (%s)",entryData.size,Units.formatByteSize(entryData.size)));
+            label = Widgets.newLabel(widgetEntryListToolTip,String.format(BARControl.tr("%d bytes (%s)"),entryData.size,Units.formatByteSize(entryData.size)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,5,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,"Date:");
+            label = Widgets.newLabel(widgetEntryListToolTip,BARControl.tr("Date")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,6,0,TableLayoutData.W);
@@ -2113,7 +2113,7 @@ class TabRestore
           }
         });
 
-        label = Widgets.newLabel(composite,"Filter:");
+        label = Widgets.newLabel(composite,BARControl.tr("Filter")+":");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
         text = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
@@ -2173,7 +2173,7 @@ class TabRestore
           }
         });
 
-        label = Widgets.newLabel(composite,"Max:");
+        label = Widgets.newLabel(composite,BARControl.tr("Max")+":");
         Widgets.layout(label,0,4,TableLayoutData.W);
 
         combo = Widgets.newOptionMenu(composite);
@@ -2194,7 +2194,7 @@ class TabRestore
           }
         });
 
-        button = Widgets.newButton(composite,"Restore");
+        button = Widgets.newButton(composite,BARControl.tr("Restore"));
         button.setToolTipText(BARControl.tr("Start restoring selected entries."));
         button.setEnabled(false);
         Widgets.layout(button,0,6,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
@@ -2223,11 +2223,11 @@ class TabRestore
     }
 
     // destination
-    group = Widgets.newGroup(widgetTab,"Destination");
+    group = Widgets.newGroup(widgetTab,BARControl.tr("Destination"));
     group.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0},4));
     Widgets.layout(group,2,0,TableLayoutData.WE,0,2);
     {
-      widgetRestoreTo = Widgets.newCheckbox(group,"to");
+      widgetRestoreTo = Widgets.newCheckbox(group,BARControl.tr("to"));
       widgetRestoreTo.setToolTipText(BARControl.tr("Enable this checkbox and select a directory to restore entries to different location."));
       Widgets.layout(widgetRestoreTo,0,0,TableLayoutData.W);
       widgetRestoreTo.addSelectionListener(new SelectionListener()
@@ -2300,7 +2300,7 @@ class TabRestore
         }
       });
 
-      widgetOverwriteEntries = Widgets.newCheckbox(group,"overwrite existing entries");
+      widgetOverwriteEntries = Widgets.newCheckbox(group,BARControl.tr("overwrite existing entries"));
       widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
       Widgets.layout(widgetOverwriteEntries,0,3,TableLayoutData.W);
     }
@@ -2685,7 +2685,7 @@ class TabRestore
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
-      label = Widgets.newLabel(composite,"Storage name:");
+      label = Widgets.newLabel(composite,BARControl.tr("Storage name")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetStorageName = Widgets.newText(composite);
@@ -2723,10 +2723,10 @@ class TabRestore
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,1,0,TableLayoutData.WE);
     {
-      widgetAdd = Widgets.newButton(composite,"Add");
+      widgetAdd = Widgets.newButton(composite,BARControl.tr("Add"));
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
 
-      button = Widgets.newButton(composite,"Cancel");
+      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
