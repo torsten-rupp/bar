@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-08-31 13:23+0200\n"
+"POT-Creation-Date: 2014-10-03 09:01+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,137 +17,1132 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/BARControl.java:1387
+#: src/BARControl.java:1247 src/TabJobs.java:4336 src/TabJobs.java:4754
+msgid "Server"
+msgstr ""
+
+#: src/BARControl.java:1255 src/TabJobs.java:4220 src/TabRestore.java:3190
+#: src/TabRestore.java:3579 src/TabRestore.java:3612 src/TabRestore.java:3645
+#: src/TabRestore.java:3678
+msgid "Password"
+msgstr ""
+
+#: src/BARControl.java:1397
 msgid "Program"
 msgstr ""
 
-#: src/BARControl.java:1389 src/TabStatus.java:499 src/TabStatus.java:961
+#: src/BARControl.java:1399 src/TabStatus.java:500 src/TabStatus.java:961
 msgid "Start"
 msgstr ""
 
-#: src/BARControl.java:1402 src/TabStatus.java:512 src/TabStatus.java:977
+#: src/BARControl.java:1412 src/TabStatus.java:513 src/TabStatus.java:977
 #: src/TabStatus.java:1476
 msgid "Abort"
 msgstr ""
 
-#: src/BARControl.java:1415 src/TabStatus.java:525 src/TabStatus.java:993
+#: src/BARControl.java:1425 src/TabStatus.java:526 src/TabStatus.java:993
 #: src/TabStatus.java:1136 src/TabStatus.java:1148
 msgid "Pause"
 msgstr ""
 
-#: src/BARControl.java:1417
+#: src/BARControl.java:1427
 msgid "10min"
 msgstr ""
 
-#: src/BARControl.java:1430
+#: src/BARControl.java:1440
 msgid "60min"
 msgstr ""
 
-#: src/BARControl.java:1443
+#: src/BARControl.java:1453
 msgid "120min"
 msgstr ""
 
-#: src/BARControl.java:1458
+#: src/BARControl.java:1468
 msgid "Create operation"
 msgstr ""
 
-#: src/BARControl.java:1472
+#: src/BARControl.java:1482
 msgid "Storage operation"
 msgstr ""
 
-#: src/BARControl.java:1499
+#: src/BARControl.java:1509
 msgid "Index update operation"
 msgstr ""
 
-#: src/BARControl.java:1513
+#: src/BARControl.java:1523
 msgid "Toggle suspend/continue"
 msgstr ""
 
-#: src/BARControl.java:1526
+#: src/BARControl.java:1536
 msgid "Clear stored passwords on server"
 msgstr ""
 
-#: src/BARControl.java:1544 src/TabStatus.java:1039
+#: src/BARControl.java:1554 src/TabStatus.java:1039
 msgid "Quit"
 msgstr ""
 
-#: src/BARControl.java:1559
+#: src/BARControl.java:1569
 msgid "Help"
 msgstr ""
 
-#: src/BARControl.java:1561 src/BARControl.java:1570
+#: src/BARControl.java:1571 src/BARControl.java:1580
 msgid "About"
 msgstr ""
 
-#: src/BARControl.java:1570
+#: src/BARControl.java:1580
 msgid "Written by Torsten Rupp"
 msgstr ""
 
-#: src/TabJobs.java:1402
+#: src/TabJobs.java:1411
 msgid "Jobs"
 msgstr ""
 
-#: src/TabRestore.java:1272
+#: src/TabJobs.java:1420 src/TabJobs.java:6075 src/TabJobs.java:6181
+#: src/TabRestore.java:1422 src/TabRestore.java:1845 src/TabRestore.java:1974
+#: src/TabStatus.java:473
+msgid "Name"
+msgstr ""
+
+#: src/TabJobs.java:1424
+msgid "Existing job entries."
+msgstr ""
+
+#: src/TabJobs.java:1445
+msgid "New"
+msgstr ""
+
+#: src/TabJobs.java:1446
+msgid "Create new job entry."
+msgstr ""
+
+#: src/TabJobs.java:1459 src/TabJobs.java:2266 src/TabJobs.java:2451
+#: src/TabJobs.java:5796 src/TabJobs.java:6194
+msgid "Clone"
+msgstr ""
+
+#: src/TabJobs.java:1460
+msgid "Clone an existing job entry."
+msgstr ""
+
+#: src/TabJobs.java:1484 src/TabJobs.java:6306
+msgid "Rename"
+msgstr ""
+
+#: src/TabJobs.java:1485
+msgid "Rename a job entry."
+msgstr ""
+
+#: src/TabJobs.java:1509
+msgid "Delete"
+msgstr ""
+
+#: src/TabJobs.java:1510
+msgid "Delete a job entry."
+msgstr ""
+
+#: src/TabJobs.java:1540
+msgid "Files"
+msgstr ""
+
+#: src/TabJobs.java:1564 src/TabRestore.java:1317 src/TabRestore.java:1846
+#: src/TabStatus.java:474
+msgid "Click to sort for name."
+msgstr ""
+
+#: src/TabJobs.java:1567 src/TabRestore.java:1849 src/TabStatus.java:480
+msgid "Click to sort for type."
+msgstr ""
+
+#: src/TabJobs.java:1570 src/TabRestore.java:1320 src/TabRestore.java:1852
+msgid "Click to sort for size."
+msgstr ""
+
+#: src/TabJobs.java:1573
+msgid "Click to sort for modified time."
+msgstr ""
+
+#: src/TabJobs.java:1682
+msgid ""
+"Tree representation of files, directories, links and special entries.\n"
+"Double-click to open sub-directories, right-click to open context menu.\n"
+"Note size column: numbers in red color indicates size update is still in "
+"progress."
+msgstr ""
+
+#: src/TabJobs.java:1836 src/TabJobs.java:2046
+msgid "Include"
+msgstr ""
+
+#: src/TabJobs.java:1837
+msgid "Include entry in archive."
+msgstr ""
+
+#: src/TabJobs.java:1864 src/TabJobs.java:2067
+msgid "Exclude"
+msgstr ""
+
+#: src/TabJobs.java:1865
+msgid "Exclude entry from archive."
+msgstr ""
+
+#: src/TabJobs.java:1891 src/TabJobs.java:2087
+msgid "None"
+msgstr ""
+
+#: src/TabJobs.java:1892
+msgid "Do not include/exclude entry in/from archive."
+msgstr ""
+
+#: src/TabJobs.java:1922
+msgid "Open all included directories."
+msgstr ""
+
+#: src/TabJobs.java:1936
+msgid "directory size"
+msgstr ""
+
+#: src/TabJobs.java:1937
+msgid "Show directory sizes (sum of file sizes)."
+msgstr ""
+
+#: src/TabJobs.java:1953
+msgid "Images"
+msgstr ""
+
+#: src/TabJobs.java:1959
+msgid ""
+"List of existing devices for image storage.\n"
+"Right-click to open context menu."
+msgstr ""
+
+#: src/TabJobs.java:2047
+msgid "Include selected device for image storage."
+msgstr ""
+
+#: src/TabJobs.java:2068
+msgid "Exclude selected device from image storage."
+msgstr ""
+
+#: src/TabJobs.java:2088
+msgid "Remove selected device from image storage."
+msgstr ""
+
+#: src/TabJobs.java:2109
+msgid "Filters"
+msgstr ""
+
+#: src/TabJobs.java:2114
+msgid "Included"
+msgstr ""
+
+#: src/TabJobs.java:2117
+msgid "List with include patterns, right-click for context menu."
+msgstr ""
+
+#: src/TabJobs.java:2230 src/TabJobs.java:2415 src/TabJobs.java:3031
+#: src/TabJobs.java:5766 src/TabJobs.java:6087 src/TabRestore.java:2726
+msgid "Add"
+msgstr ""
+
+#: src/TabJobs.java:2231
+msgid "Add entry to included list."
+msgstr ""
+
+#: src/TabJobs.java:2248 src/TabJobs.java:2433 src/TabJobs.java:3056
+#: src/TabJobs.java:5781
+msgid "Edit"
+msgstr ""
+
+#: src/TabJobs.java:2249
+msgid "Edit entry in included list."
+msgstr ""
+
+#: src/TabJobs.java:2267
+msgid "Clone entry in included list."
+msgstr ""
+
+#: src/TabJobs.java:2284 src/TabJobs.java:2469 src/TabJobs.java:3081
+#: src/TabJobs.java:5811
+msgid "Remove"
+msgstr ""
+
+#: src/TabJobs.java:2285
+msgid "Remove entry from included list."
+msgstr ""
+
+#: src/TabJobs.java:2303
+msgid "Excluded"
+msgstr ""
+
+#: src/TabJobs.java:2306
+msgid "List with exclude patterns, right-click for context menu."
+msgstr ""
+
+#: src/TabJobs.java:2416
+msgid "Add entry to excluded list."
+msgstr ""
+
+#: src/TabJobs.java:2434
+msgid "Edit entry in excluded list."
+msgstr ""
+
+#: src/TabJobs.java:2452
+msgid "Clone entry in excluded list."
+msgstr ""
+
+#: src/TabJobs.java:2470
+msgid "Remove entry from excluded list."
+msgstr ""
+
+#: src/TabJobs.java:2489 src/TabJobs.java:5383 src/TabJobs.java:9189
+msgid "Options"
+msgstr ""
+
+#: src/TabJobs.java:2494
+msgid "skip unreadable entries"
+msgstr ""
+
+#: src/TabJobs.java:2495
+msgid ""
+"If enabled skip not readable entries (write information to log file).\n"
+"If disabled stop job with an error."
+msgstr ""
+
+#: src/TabJobs.java:2512
+msgid "raw images"
+msgstr ""
+
+#: src/TabJobs.java:2513
+msgid ""
+"If enabled store all data of a device into an image.\n"
+"If disabled try to detect file system and only store used blocks to image."
+msgstr ""
+
+#: src/TabJobs.java:2532 src/TabRestore.java:1294 src/TabRestore.java:1941
+#: src/TabStatus.java:856
+msgid "Storage"
+msgstr ""
+
+#: src/TabJobs.java:2537 src/TabStatus.java:482
+msgid "Part size"
+msgstr ""
+
+#: src/TabJobs.java:2542 src/TabStatus.java:1282
+msgid "unlimited"
+msgstr ""
+
+#: src/TabJobs.java:2543
+msgid ""
+"Create storage files with an unlimited size. Do not split storage files."
+msgstr ""
+
+#: src/TabJobs.java:2565
+msgid ""
+"When writing to a CD/DVD/BD without splitting enabled\n"
+"the resulting archive file may not fit on medium."
+msgstr ""
+
+#: src/TabJobs.java:2577
+msgid "limit to"
+msgstr ""
+
+#: src/TabJobs.java:2578
+msgid "Limit size of storage files to specified value."
+msgstr ""
+
+#: src/TabJobs.java:2600
+msgid "Size limit for one storage file part."
+msgstr ""
+
+#: src/TabJobs.java:2648 src/TabJobs.java:2670 src/TabJobs.java:2700
+msgid ""
+"'%s' is not valid size!\n"
+"\n"
+"Enter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB."
+msgstr ""
+
+#: src/TabJobs.java:2714 src/TabJobs.java:5379 src/TabJobs.java:5626
+#: src/TabStatus.java:583 src/TabStatus.java:596 src/TabStatus.java:653
+#: src/TabStatus.java:666 src/TabStatus.java:730 src/TabStatus.java:743
+#: src/TabStatus.java:764 src/TabStatus.java:777 src/TabStatus.java:814
+#: src/TabStatus.java:835
+msgid "bytes"
+msgstr ""
+
+#: src/TabJobs.java:2719 src/TabStatus.java:485
+msgid "Compress"
+msgstr ""
+
+#: src/TabJobs.java:2725
+msgid "Delta"
+msgstr ""
+
+#: src/TabJobs.java:2729
+msgid "Delta compression method to use."
+msgstr ""
+
+#: src/TabJobs.java:2747
+msgid "Byte"
+msgstr ""
+
+#: src/TabJobs.java:2751
+msgid "Byte compression method to use."
+msgstr ""
+
+#: src/TabJobs.java:2781
+msgid "Source"
+msgstr ""
+
+#: src/TabJobs.java:2864
+msgid "Compress exclude"
+msgstr ""
+
+#: src/TabJobs.java:2872
+msgid ""
+"List with compress exclude patterns. Entries which match to one of these "
+"patterns will not be compressed.\n"
+"Right-click for context menu."
+msgstr ""
+
+#: src/TabJobs.java:3032
+msgid "Add entry to compress exclude list."
+msgstr ""
+
+#: src/TabJobs.java:3057
+msgid "Edit entry in compress exclude list."
+msgstr ""
+
+#: src/TabJobs.java:3082
+msgid "Remove entry from compress exclude list."
+msgstr ""
+
+#: src/TabJobs.java:3109 src/TabStatus.java:488
+msgid "Crypt"
+msgstr ""
+
+#: src/TabJobs.java:3115
+msgid "Encryption method to use."
+msgstr ""
+
+#: src/TabJobs.java:3138
+msgid "symmetric"
+msgstr ""
+
+#: src/TabJobs.java:3139
+msgid "Use symmetric encryption with pass-phrase."
+msgstr ""
+
+#: src/TabJobs.java:3169
+msgid "asymmetric"
+msgstr ""
+
+#: src/TabJobs.java:3170
+msgid ""
+"Use asymmetric hyprid-encryption with pass-phrase and public/private key."
+msgstr ""
+
+#: src/TabJobs.java:3203
+msgid "Public key"
+msgstr ""
+
+#: src/TabJobs.java:3206
+msgid "Public key file used for asymmetric encryption."
+msgstr ""
+
+#: src/TabJobs.java:3300 src/TabStatus.java:1419 src/TabStatus.java:1421
+msgid "Crypt password"
+msgstr ""
+
+#: src/TabJobs.java:3306
+msgid "default"
+msgstr ""
+
+#: src/TabJobs.java:3307
+msgid "Use default password from configuration file for encryption."
+msgstr ""
+
+#: src/TabJobs.java:3339
+msgid "ask"
+msgstr ""
+
+#: src/TabJobs.java:3340
+msgid "Input password for encryption."
+msgstr ""
+
+#: src/TabJobs.java:3372
+msgid "this"
+msgstr ""
+
+#: src/TabJobs.java:3373
+msgid "Use specified password for encryption."
+msgstr ""
+
+#: src/TabJobs.java:3406 src/TabJobs.java:3468
+msgid "Password used for encryption."
+msgstr ""
+
+#: src/TabJobs.java:3464
+msgid "Repeat"
+msgstr ""
+
+#: src/TabJobs.java:3532
+msgid "Mode"
+msgstr ""
+
+#: src/TabJobs.java:3538 src/TabJobs.java:9160
+msgid "normal"
+msgstr ""
+
+#: src/TabJobs.java:3539
+msgid "Normal mode: do not create incremental data files."
+msgstr ""
+
+#: src/TabJobs.java:3561 src/TabJobs.java:9165
+msgid "full"
+msgstr ""
+
+#: src/TabJobs.java:3562
+msgid "Full mode: store all entries and create incremental data files."
+msgstr ""
+
+#: src/TabJobs.java:3584 src/TabJobs.java:9170
+msgid "incremental"
+msgstr ""
+
+#: src/TabJobs.java:3585
+msgid ""
+"Incremental mode: store only modified entries since last full or incremental "
+"storage."
+msgstr ""
+
+#: src/TabJobs.java:3607 src/TabJobs.java:9175
+msgid "differential"
+msgstr ""
+
+#: src/TabJobs.java:3608
+msgid "Differential mode: store only modified entries since last full storage."
+msgstr ""
+
+#: src/TabJobs.java:3632 src/TabJobs.java:8196
+msgid "File name"
+msgstr ""
+
+#: src/TabJobs.java:3639
+msgid ""
+"Name of storage files to create. Several macros are supported. Click on "
+"button to the right to open storage file name editor."
+msgstr ""
+
+#: src/TabJobs.java:3726
+msgid "Incremental file name"
+msgstr ""
+
+#: src/TabJobs.java:3733
+msgid ""
+"Name of incremental data file. If no file name is given a name is derived "
+"automatically from the storage file name."
+msgstr ""
+
+#: src/TabJobs.java:3800 src/TabRestore.java:2226
+msgid "Destination"
+msgstr ""
+
+#: src/TabJobs.java:3805
+msgid "file system"
+msgstr ""
+
+#: src/TabJobs.java:3806
+msgid "Store created storage files into file system destination."
+msgstr ""
+
+#: src/TabJobs.java:3828
+msgid "ftp"
+msgstr ""
+
+#: src/TabJobs.java:3829
+msgid "Store created storage files on FTP server."
+msgstr ""
+
+#: src/TabJobs.java:3851
+msgid "scp"
+msgstr ""
+
+#: src/TabJobs.java:3852
+msgid "Store created storage files on SSH server via SCP protocol."
+msgstr ""
+
+#: src/TabJobs.java:3874
+msgid "sftp"
+msgstr ""
+
+#: src/TabJobs.java:3875
+msgid "Store created storage files on SSH server via SFTP protocol."
+msgstr ""
+
+#: src/TabJobs.java:3897
+msgid "webdav"
+msgstr ""
+
+#: src/TabJobs.java:3898
+msgid "Store created storage files on Webdav server."
+msgstr ""
+
+#: src/TabJobs.java:3920
+msgid "CD"
+msgstr ""
+
+#: src/TabJobs.java:3921
+msgid "Store created storage files on CD."
+msgstr ""
+
+#: src/TabJobs.java:3967
+msgid "DVD"
+msgstr ""
+
+#: src/TabJobs.java:3968
+msgid "Store created storage files on DVD."
+msgstr ""
+
+#: src/TabJobs.java:4014
+msgid "BD"
+msgstr ""
+
+#: src/TabJobs.java:4015
+msgid "Store created storage files on BD."
+msgstr ""
+
+#: src/TabJobs.java:4061
+msgid "device"
+msgstr ""
+
+#: src/TabJobs.java:4062
+msgid "Store created storage files on device."
+msgstr ""
+
+#: src/TabJobs.java:4098
+msgid "overwrite archive files"
+msgstr ""
+
+#: src/TabJobs.java:4099
+msgid ""
+"If enabled overwrite existing archive files. If disabled do not overwrite "
+"existing files and stop with an error."
+msgstr ""
+
+#: src/TabJobs.java:4134
+msgid "User"
+msgstr ""
+
+#: src/TabJobs.java:4138
+msgid ""
+"FTP server user login name. Leave it empty to use the default name from the "
+"configuration file."
+msgstr ""
+
+#: src/TabJobs.java:4177 src/TabJobs.java:4385 src/TabJobs.java:4803
+msgid "Host"
+msgstr ""
+
+#: src/TabJobs.java:4181
+msgid "FTP server name."
+msgstr ""
+
+#: src/TabJobs.java:4224
+msgid ""
+"FTP server login password. Leave it empty to use the default password from "
+"the configuration file."
+msgstr ""
+
+#: src/TabJobs.java:4342 src/TabJobs.java:4760
+msgid "Login"
+msgstr ""
+
+#: src/TabJobs.java:4346 src/TabJobs.java:4764
+msgid ""
+"SSH login name. Leave it empty to use the default login name from the "
+"configuration file."
+msgstr ""
+
+#: src/TabJobs.java:4389 src/TabJobs.java:4807
+msgid "SSH login host name."
+msgstr ""
+
+#: src/TabJobs.java:4428 src/TabJobs.java:4846
+msgid "Port"
+msgstr ""
+
+#: src/TabJobs.java:4432 src/TabJobs.java:4850
+msgid ""
+"SSH login port number. Set to 0 to use default port number from "
+"configuration file."
+msgstr ""
+
+#: src/TabJobs.java:4535 src/TabJobs.java:4953
+msgid "SSH public key"
+msgstr ""
+
+#: src/TabJobs.java:4542 src/TabJobs.java:4960
+msgid ""
+"SSH public key file name. Leave it empty to use the default key file from "
+"the configuration file."
+msgstr ""
+
+#: src/TabJobs.java:4608 src/TabJobs.java:5026
+msgid "SSH private key"
+msgstr ""
+
+#: src/TabJobs.java:4615 src/TabJobs.java:5033
+msgid ""
+"SSH private key file name. Leave it empty to use the default key file from "
+"the configuration file."
+msgstr ""
+
+#: src/TabJobs.java:5172 src/TabJobs.java:5449
+msgid "Device"
+msgstr ""
+
+#: src/TabJobs.java:5179
+msgid "Device name. Leave it empty to use system default device name."
+msgstr ""
+
+#: src/TabJobs.java:5242 src/TabJobs.java:5519 src/TabRestore.java:1442
+#: src/TabRestore.java:1851 src/TabRestore.java:1984
+msgid "Size"
+msgstr ""
+
+#: src/TabJobs.java:5248
+msgid ""
+"Size of medium. You may specify a smaller value than the real physical size "
+"to leave some free space for error-correction codes."
+msgstr ""
+
+#: src/TabJobs.java:5388
+msgid "add error-correction codes"
+msgstr ""
+
+#: src/TabJobs.java:5389
+msgid ""
+"Add error-correction codes to CD/DVD/BD image (require dvdisaster tool)."
+msgstr ""
+
+#: src/TabJobs.java:5416
+msgid "wait for first volume"
+msgstr ""
+
+#: src/TabJobs.java:5417
+msgid "Wait until first volume is loaded."
+msgstr ""
+
+#: src/TabJobs.java:5456
+msgid "Device name."
+msgstr ""
+
+#: src/TabJobs.java:5525
+msgid "Size of medium for device."
+msgstr ""
+
+#: src/TabJobs.java:5632
+msgid "Schedule"
+msgstr ""
+
+#: src/TabJobs.java:5638
+msgid ""
+"List with schedule entries.\n"
+"Double-click to edit entry, right-click to open context menu."
+msgstr ""
+
+#: src/TabJobs.java:5689 src/TabJobs.java:9045 src/TabRestore.java:1854
+#: src/TabRestore.java:1994
+msgid "Date"
+msgstr ""
+
+#: src/TabJobs.java:5691
+msgid "Week day"
+msgstr ""
+
+#: src/TabJobs.java:5697 src/TabJobs.java:9130
+msgid "Time"
+msgstr ""
+
+#: src/TabJobs.java:5699
+msgid "Archive type"
+msgstr ""
+
+#: src/TabJobs.java:5701 src/TabJobs.java:9181
+msgid "Custom text"
+msgstr ""
+
+#: src/TabJobs.java:5703
+msgid "Enabled"
+msgstr ""
+
+#: src/TabJobs.java:5767
+msgid "Add new schedule entry."
+msgstr ""
+
+#: src/TabJobs.java:5782
+msgid "Edit schedule entry."
+msgstr ""
+
+#: src/TabJobs.java:5797
+msgid "Clone schedule entry."
+msgstr ""
+
+#: src/TabJobs.java:5812
+msgid "Remove schedule entry."
+msgstr ""
+
+#: src/TabJobs.java:6090 src/TabJobs.java:6197 src/TabJobs.java:6309
+#: src/TabJobs.java:7219 src/TabJobs.java:7506 src/TabJobs.java:7770
+#: src/TabJobs.java:8894 src/TabJobs.java:9209 src/TabRestore.java:2729
+#: src/TabStatus.java:1400 src/TabStatus.java:1590
+msgid "Cancel"
+msgstr ""
+
+#: src/TabJobs.java:6287
+msgid "Old name"
+msgstr ""
+
+#: src/TabJobs.java:6293
+msgid "New name"
+msgstr ""
+
+#: src/TabJobs.java:7129 src/TabJobs.java:7458 src/TabJobs.java:7733
+msgid "Pattern"
+msgstr ""
+
+#: src/TabJobs.java:7137
+msgid "Include pattern. Use * and ? as wildcards."
+msgstr ""
+
+#: src/TabJobs.java:7162 src/TabJobs.java:9149 src/TabRestore.java:1848
+#: src/TabRestore.java:1964 src/TabStatus.java:479
+msgid "Type"
+msgstr ""
+
+#: src/TabJobs.java:7169
+msgid "file"
+msgstr ""
+
+#: src/TabJobs.java:7183
+msgid "image"
+msgstr ""
+
+#: src/TabJobs.java:7462
+msgid "Exclude pattern. Use * and ? as wildcards."
+msgstr ""
+
+#: src/TabJobs.java:7737
+msgid "Compress exclude pattern. Use * and ? as wildcards."
+msgstr ""
+
+#: src/TabJobs.java:8200
+msgid "Drag to trashcan icon to the right to remove name part."
+msgstr ""
+
+#: src/TabJobs.java:8322
+msgid "Use drag&drop to remove name parts."
+msgstr ""
+
+#: src/TabJobs.java:8358
+msgid "Example"
+msgstr ""
+
+#: src/TabJobs.java:8366
+msgid "Use drag&drop to add name parts."
+msgstr ""
+
+#: src/TabJobs.java:8891
+msgid "Save"
+msgstr ""
+
+#: src/TabJobs.java:9052
+msgid "Year to execute job. Leave to '*' for each year."
+msgstr ""
+
+#: src/TabJobs.java:9059
+msgid "Month to execute job. Leave to '*' for each month."
+msgstr ""
+
+#: src/TabJobs.java:9065
+msgid "Day to execute job. Leave to '*' for each day."
+msgstr ""
+
+#: src/TabJobs.java:9071
+msgid "Week days"
+msgstr ""
+
+#: src/TabJobs.java:9077
+msgid "Mon"
+msgstr ""
+
+#: src/TabJobs.java:9078 src/TabJobs.java:9083 src/TabJobs.java:9088
+#: src/TabJobs.java:9093 src/TabJobs.java:9098 src/TabJobs.java:9103
+#: src/TabJobs.java:9108
+msgid "Week days to execute job."
+msgstr ""
+
+#: src/TabJobs.java:9082
+msgid "Tue"
+msgstr ""
+
+#: src/TabJobs.java:9087
+msgid "Wed"
+msgstr ""
+
+#: src/TabJobs.java:9092
+msgid "Thu"
+msgstr ""
+
+#: src/TabJobs.java:9097
+msgid "Fri"
+msgstr ""
+
+#: src/TabJobs.java:9102
+msgid "Sat"
+msgstr ""
+
+#: src/TabJobs.java:9107
+msgid "Sun"
+msgstr ""
+
+#: src/TabJobs.java:9113
+msgid "Toggle week days set."
+msgstr ""
+
+#: src/TabJobs.java:9137
+msgid "Hour to execute job. Leave to '*' for every hour."
+msgstr ""
+
+#: src/TabJobs.java:9143
+msgid "Minute to execute job. Leave to '*' for every minute."
+msgstr ""
+
+#: src/TabJobs.java:9155
+msgid "*"
+msgstr ""
+
+#: src/TabJobs.java:9156
+msgid "Execute job with default type."
+msgstr ""
+
+#: src/TabJobs.java:9161
+msgid "Execute job as normal backup (no incremental data)."
+msgstr ""
+
+#: src/TabJobs.java:9166
+msgid "Execute job as full backup."
+msgstr ""
+
+#: src/TabJobs.java:9171
+msgid "Execute job as incremental backup."
+msgstr ""
+
+#: src/TabJobs.java:9176
+msgid "Execute job as differential backup."
+msgstr ""
+
+#: src/TabJobs.java:9185
+msgid "Custom text."
+msgstr ""
+
+#: src/TabJobs.java:9195
+msgid "enabled"
+msgstr ""
+
+#: src/TabRestore.java:1272 src/TabRestore.java:1789 src/TabRestore.java:2197
 msgid "Restore"
+msgstr ""
+
+#: src/TabRestore.java:1278
+msgid ""
+"When this connector is in state 'closed', only tagged storage archives are "
+"used for list entries."
+msgstr ""
+
+#: src/TabRestore.java:1323
+msgid "Click to sort for modification date/time."
+msgstr ""
+
+#: src/TabRestore.java:1326 src/TabStatus.java:477
+msgid "Click to sort for state."
+msgstr ""
+
+#: src/TabRestore.java:1432 src/TabRestore.java:1951
+msgid "Created"
+msgstr ""
+
+#: src/TabRestore.java:1447 src/TabRestore.java:1989
+msgid "%d bytes (%s)"
+msgstr ""
+
+#: src/TabRestore.java:1452 src/TabRestore.java:1736 src/TabStatus.java:476
+msgid "State"
+msgstr ""
+
+#: src/TabRestore.java:1462
+msgid "Last checked"
+msgstr ""
+
+#: src/TabRestore.java:1472
+msgid "Error"
+msgstr ""
+
+#: src/TabRestore.java:1660 src/TabRestore.java:1687 src/TabRestore.java:2084
+#: src/TabRestore.java:2111
+msgid "Unmark all entries in list."
+msgstr ""
+
+#: src/TabRestore.java:1665 src/TabRestore.java:1681 src/TabRestore.java:2089
+#: src/TabRestore.java:2105
+msgid "Mark all entries in list."
+msgstr ""
+
+#: src/TabRestore.java:1692 src/TabRestore.java:2116
+msgid "Filter"
+msgstr ""
+
+#: src/TabRestore.java:1696
+msgid "Enter filter pattern for storage list. Wildcards: * and ?."
+msgstr ""
+
+#: src/TabRestore.java:1740
+msgid "Storage states filter."
+msgstr ""
+
+#: src/TabRestore.java:1768 src/TabRestore.java:2176
+msgid "Max"
+msgstr ""
+
+#: src/TabRestore.java:1772 src/TabRestore.java:2180
+msgid "Max. number of entries in list."
+msgstr ""
+
+#: src/TabRestore.java:1790
+msgid "Start restoring selected archives."
+msgstr ""
+
+#: src/TabRestore.java:1818
+msgid "Entries"
+msgstr ""
+
+#: src/TabRestore.java:1842
+msgid "Archive"
+msgstr ""
+
+#: src/TabRestore.java:1843
+msgid "Click to sort for archive name."
+msgstr ""
+
+#: src/TabRestore.java:1855
+msgid "Click to sort for date."
+msgstr ""
+
+#: src/TabRestore.java:2120
+msgid "Enter filter pattern for entry list. Wildcards: * and ?."
+msgstr ""
+
+#: src/TabRestore.java:2161
+msgid ""
+"When this checkbox is enabled, only show newest entry instances and hide all "
+"older entry instances."
+msgstr ""
+
+#: src/TabRestore.java:2198
+msgid "Start restoring selected entries."
+msgstr ""
+
+#: src/TabRestore.java:2230
+msgid "to"
+msgstr ""
+
+#: src/TabRestore.java:2231
+msgid ""
+"Enable this checkbox and select a directory to restore entries to different "
+"location."
+msgstr ""
+
+#: src/TabRestore.java:2303
+msgid "overwrite existing entries"
+msgstr ""
+
+#: src/TabRestore.java:2304
+msgid ""
+"Enable this checkbox when existing entries in destination should be "
+"overwritten."
+msgstr ""
+
+#: src/TabRestore.java:2688
+msgid "Storage name"
+msgstr ""
+
+#: src/TabRestore.java:2692
+msgid "Enter local or remote storage name."
+msgstr ""
+
+#: src/TabRestore.java:2696
+msgid "Select local storage file."
+msgstr ""
+
+#: src/TabRestore.java:3189 src/TabRestore.java:3676
+msgid "Decrypt password"
+msgstr ""
+
+#: src/TabRestore.java:3577
+msgid "FTP login password"
+msgstr ""
+
+#: src/TabRestore.java:3578
+msgid "Please enter FTP login password for"
+msgstr ""
+
+#: src/TabRestore.java:3610
+msgid "SSH (TLS) login password"
+msgstr ""
+
+#: src/TabRestore.java:3611
+msgid "Please enter SSH (TLS) login password for"
+msgstr ""
+
+#: src/TabRestore.java:3643
+msgid "Webdav login password"
+msgstr ""
+
+#: src/TabRestore.java:3644
+msgid "Please enter Webdav login password for"
+msgstr ""
+
+#: src/TabRestore.java:3677
+msgid "Please enter decrypt password for"
 msgstr ""
 
 #: src/TabStatus.java:427
 msgid "Status"
 msgstr ""
 
-#: src/TabStatus.java:454 src/TabStatus.java:568 src/TabStatus.java:1083
+#: src/TabStatus.java:441
+msgid ""
+"List with job entries.\n"
+"Click to select job, right-click to open context menu."
+msgstr ""
+
+#: src/TabStatus.java:455 src/TabStatus.java:568 src/TabStatus.java:1083
 msgid "Selected"
-msgstr ""
-
-#: src/TabStatus.java:472
-msgid "Name"
-msgstr ""
-
-#: src/TabStatus.java:474
-msgid "Click to sort for name."
-msgstr ""
-
-#: src/TabStatus.java:475
-msgid "State"
-msgstr ""
-
-#: src/TabStatus.java:477
-msgid "Click to sort for state."
-msgstr ""
-
-#: src/TabStatus.java:478
-msgid "Type"
-msgstr ""
-
-#: src/TabStatus.java:480
-msgid "Click to sort for type."
-msgstr ""
-
-#: src/TabStatus.java:481
-msgid "Part size"
 msgstr ""
 
 #: src/TabStatus.java:483
 msgid "Click to sort for part size."
 msgstr ""
 
-#: src/TabStatus.java:484
-msgid "Compress"
-msgstr ""
-
 #: src/TabStatus.java:486
 msgid "Click to sort for used compress algorithm."
-msgstr ""
-
-#: src/TabStatus.java:487
-msgid "Crypt"
 msgstr ""
 
 #: src/TabStatus.java:489
 msgid "Click to sort for used encryption algorithm."
 msgstr ""
 
-#: src/TabStatus.java:490
+#: src/TabStatus.java:491
 msgid "Last executed"
 msgstr ""
 
@@ -155,7 +1150,7 @@ msgstr ""
 msgid "Click to sort for last date/time job was executed."
 msgstr ""
 
-#: src/TabStatus.java:493
+#: src/TabStatus.java:494
 msgid "Estimated time"
 msgstr ""
 
@@ -163,19 +1158,13 @@ msgstr ""
 msgid "Click to sort for estimated rest time to execute job."
 msgstr ""
 
-#: src/TabStatus.java:538 src/TabStatus.java:1008 src/TabStatus.java:1125
+#: src/TabStatus.java:539 src/TabStatus.java:1008 src/TabStatus.java:1125
 #: src/TabStatus.java:1137
 msgid "Continue"
 msgstr ""
 
-#: src/TabStatus.java:551 src/TabStatus.java:866 src/TabStatus.java:1023
+#: src/TabStatus.java:552 src/TabStatus.java:866 src/TabStatus.java:1023
 msgid "Volume"
-msgstr ""
-
-#: src/TabStatus.java:565
-msgid ""
-"List with job entries.\n"
-"Click to select job, right-click to open context menu."
 msgstr ""
 
 #: src/TabStatus.java:573
@@ -187,14 +1176,11 @@ msgstr ""
 msgid "files"
 msgstr ""
 
-#: src/TabStatus.java:583 src/TabStatus.java:596 src/TabStatus.java:653
-#: src/TabStatus.java:666 src/TabStatus.java:730 src/TabStatus.java:743
-#: src/TabStatus.java:764 src/TabStatus.java:777 src/TabStatus.java:814
-#: src/TabStatus.java:835
-msgid "bytes"
+#: src/TabStatus.java:619
+msgid "files/s"
 msgstr ""
 
-#: src/TabStatus.java:636
+#: src/TabStatus.java:636 src/TabStatus.java:708
 msgid "bytes/s"
 msgstr ""
 
@@ -215,15 +1201,15 @@ msgid "Errors"
 msgstr ""
 
 #: src/TabStatus.java:788
-msgid "Total:"
+msgid "Total"
 msgstr ""
 
 #: src/TabStatus.java:846
 msgid "File"
 msgstr ""
 
-#: src/TabStatus.java:856
-msgid "Storage"
+#: src/TabStatus.java:873
+msgid "Total files"
 msgstr ""
 
 #: src/TabStatus.java:880
@@ -234,23 +1220,27 @@ msgstr ""
 msgid "Message"
 msgstr ""
 
-#: src/TabStatus.java:991
+#: src/TabStatus.java:962
+msgid "Start selected job."
+msgstr ""
+
+#: src/TabStatus.java:978
 msgid "Abort selected job."
 msgstr ""
 
-#: src/TabStatus.java:1006
+#: src/TabStatus.java:994
 msgid "Pause selected job for a specific time."
 msgstr ""
 
-#: src/TabStatus.java:1021
+#: src/TabStatus.java:1009
 msgid "Suspend selected job for an infinite time."
 msgstr ""
 
-#: src/TabStatus.java:1037
+#: src/TabStatus.java:1024
 msgid "Click when a new volume is available in drive."
 msgstr ""
 
-#: src/TabStatus.java:1055
+#: src/TabStatus.java:1040
 msgid "Quit BARControl program."
 msgstr ""
 
@@ -264,10 +1254,6 @@ msgstr ""
 
 #: src/TabStatus.java:1280
 msgid "suspended"
-msgstr ""
-
-#: src/TabStatus.java:1282
-msgid "unlimited"
 msgstr ""
 
 #: src/TabStatus.java:1393
@@ -298,10 +1284,6 @@ msgstr ""
 msgid "Dry-run"
 msgstr ""
 
-#: src/TabStatus.java:1400 src/TabStatus.java:1590
-msgid "Cancel"
-msgstr ""
-
 #: src/TabStatus.java:1402
 msgid "Store all files."
 msgstr ""
@@ -324,8 +1306,8 @@ msgstr ""
 msgid "Collect and process all files, but do not create archives."
 msgstr ""
 
-#: src/TabStatus.java:1419 src/TabStatus.java:1421
-msgid "Crypt password"
+#: src/TabStatus.java:1422
+msgid "Verify"
 msgstr ""
 
 #: src/TabStatus.java:1440
