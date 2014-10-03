@@ -1698,7 +1698,7 @@ class TabRestore
 
         widgetStoragePattern = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
         widgetStoragePattern.setToolTipText(BARControl.tr("Enter filter pattern for storage list. Wildcards: * and ?."));
-        widgetStoragePattern.setMessage("Enter text to filter storage list");
+        widgetStoragePattern.setMessage(BARControl.tr("Enter text to filter storage list"));
         Widgets.layout(widgetStoragePattern,0,2,TableLayoutData.WE);
         widgetStoragePattern.addSelectionListener(new SelectionListener()
         {
@@ -2077,7 +2077,7 @@ class TabRestore
       // entry list filter
       composite = Widgets.newComposite(group);
       composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0}));
-      Widgets.layout(composite,1,0,TableLayoutData.WE);
+      Widgets.layout(composite,2,0,TableLayoutData.WE);
       {
         button = Widgets.newButton(composite,IMAGE_MARK_ALL);
         Widgets.layout(button,0,0,TableLayoutData.E);
@@ -2126,7 +2126,7 @@ class TabRestore
 
         text = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
         text.setToolTipText(BARControl.tr("Enter filter pattern for entry list. Wildcards: * and ?."));
-        text.setMessage("Enter text to filter entry list");
+        text.setMessage(BARControl.tr("Enter text to filter entry list"));
         Widgets.layout(text,0,2,TableLayoutData.WE);
         text.addSelectionListener(new SelectionListener()
         {
@@ -2165,7 +2165,7 @@ class TabRestore
           }
         });
 
-        button = Widgets.newCheckbox(composite,"newest entries only");
+        button = Widgets.newCheckbox(composite,BARControl.tr("newest entries only"));
         button.setToolTipText(BARControl.tr("When this checkbox is enabled, only show newest entry instances and hide all older entry instances."));
         Widgets.layout(button,0,3,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
