@@ -40,13 +40,13 @@ XGETTEXT_FLAGS     = -L java -k -ktr
 MSGMERGE           = @MSGMERGE@
 MSGFMT             = @MSGFMT@
 
-SWT_JAR_LINUX      = $(SOURCE_DIR)/jars/linux/swt-3.6.1.jar
-SWT_JAR_LINUX_64   = $(SOURCE_DIR)/jars/linux/swt-3.6.1_64.jar
-SWT_JAR_SOLARIS    = $(SOURCE_DIR)/jars/solaris/swt-3.6.1.jar
-SWT_JAR_MACOSX     = $(SOURCE_DIR)/jars/macosx/swt-3.6.1.jar
-SWT_JAR_MACOSX_64  = $(SOURCE_DIR)/jars/macosx/swt-3.6.1_64.jar
-SWT_JAR_WINDOWS    = $(SOURCE_DIR)/jars/windows/swt-3.6.1.jar
-SWT_JAR_WINDOWS_64 = $(SOURCE_DIR)/jars/windows/swt-3.6.1_64.jar
+SWT_JAR_LINUX      = $(SOURCE_DIR)/jars/linux/swt-4.4.jar
+SWT_JAR_LINUX_64   = $(SOURCE_DIR)/jars/linux/swt-4.4_64.jar
+SWT_JAR_SOLARIS    = $(SOURCE_DIR)/jars/solaris/swt-4.4.jar
+SWT_JAR_MACOSX     = $(SOURCE_DIR)/jars/macosx/swt-4.4.jar
+SWT_JAR_MACOSX_64  = $(SOURCE_DIR)/jars/macosx/swt-4.4_64.jar
+SWT_JAR_WINDOWS    = $(SOURCE_DIR)/jars/windows/swt-4.4.jar
+SWT_JAR_WINDOWS_64 = $(SOURCE_DIR)/jars/windows/swt-4.4_64.jar
 
 ifneq ($(SWT_DIR),)
 SWT_JAR          = $(SWT_DIR)/swt.jar
