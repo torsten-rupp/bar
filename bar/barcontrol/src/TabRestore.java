@@ -3186,8 +3186,8 @@ Dprintf.dprintf("");
                   public void run()
                   {
                     String password = Dialogs.password(shell,
-                                                       "Decrypt password",
-                                                       "Password:"
+                                                       BARControl.tr("Decrypt password"),
+                                                       BARControl.tr("Password")+":"
                                                       );
                     if (password != null)
                     {
@@ -3574,9 +3574,9 @@ Dprintf.dprintf("");
                   public void run()
                   {
                     String password = Dialogs.password(shell,
-                                                       "FTP login password",
-                                                       "Please enter FTP login password for: "+entryData.storageName+".",
-                                                       "Password:"
+                                                       BARControl.tr("FTP login password"),
+                                                       BARControl.tr("Please enter FTP login password for")+": "+entryData.storageName+".",
+                                                       BARControl.tr("Password")+":"
                                                       );
                     if (password != null)
                     {
@@ -3607,9 +3607,9 @@ Dprintf.dprintf("");
                   public void run()
                   {
                     String password = Dialogs.password(shell,
-                                                       "SSH (TLS) login password",
-                                                       "Please enter SSH (TLS) login password for: "+entryData.storageName+".",
-                                                       "Password:"
+                                                       BARControl.tr("SSH (TLS) login password"),
+                                                       BARControl.tr("Please enter SSH (TLS) login password for")+": "+entryData.storageName+".",
+                                                       BARControl.tr("Password")+":"
                                                       );
                     if (password != null)
                     {
@@ -3640,9 +3640,9 @@ Dprintf.dprintf("");
                   public void run()
                   {
                     String password = Dialogs.password(shell,
-                                                       "Webdav login password",
-                                                       "Please enter Webdav login password for: "+entryData.storageName+".",
-                                                       "Password:"
+                                                       BARControl.tr("Webdav login password"),
+                                                       BARControl.tr("Please enter Webdav login password for")+": "+entryData.storageName+".",
+                                                       BARControl.tr("Password")+":"
                                                       );
                     if (password != null)
                     {
@@ -3673,9 +3673,9 @@ Dprintf.dprintf("");
                   public void run()
                   {
                     String password = Dialogs.password(shell,
-                                                       "Decrypt password",
-                                                       "Please enter decrypt password for: "+entryData.storageName+".",
-                                                       "Password:"
+                                                       BARControl.tr("Decrypt password"),
+                                                       BARControl.tr("Please enter decrypt password for")+": "+entryData.storageName+".",
+                                                       BARControl.tr("Password")+":"
                                                       );
                     if (password != null)
                     {

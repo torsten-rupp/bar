@@ -1417,7 +1417,7 @@ class TabJobs
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0,0.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Name:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetJobList = Widgets.newOptionMenu(composite);
@@ -1950,7 +1950,7 @@ class TabJobs
         }
       }
 
-      tab = Widgets.addTab(widgetTabFolder,"Images");
+      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Images"));
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
@@ -2106,12 +2106,12 @@ class TabJobs
         }
       }
 
-      tab = Widgets.addTab(widgetTabFolder,"Filters");
+      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Filters"));
       tab.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // included table
-        label = Widgets.newLabel(tab,BARControl.tr("Included:"));
+        label = Widgets.newLabel(tab,BARControl.tr("Included")+":");
         Widgets.layout(label,0,0,TableLayoutData.NS);
         widgetIncludeTable = Widgets.newTable(tab);
         widgetIncludeTable.setToolTipText(BARControl.tr("List with include patterns, right-click for context menu."));
@@ -2300,7 +2300,7 @@ class TabJobs
         }
 
         // excluded list
-        label = Widgets.newLabel(tab,BARControl.tr("Excluded:"));
+        label = Widgets.newLabel(tab,BARControl.tr("Excluded")+":");
         Widgets.layout(label,2,0,TableLayoutData.NS);
         widgetExcludeList = Widgets.newList(tab);
         widgetExcludeList.setToolTipText(BARControl.tr("List with exclude patterns, right-click for context menu."));
@@ -2486,7 +2486,7 @@ class TabJobs
         }
 
         // options
-        label = Widgets.newLabel(tab,BARControl.tr("Options:"));
+        label = Widgets.newLabel(tab,BARControl.tr("Options")+":");
         Widgets.layout(label,4,0,TableLayoutData.N);
         composite = Widgets.newComposite(tab);
         Widgets.layout(composite,4,1,TableLayoutData.WE);
@@ -2534,7 +2534,7 @@ class TabJobs
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // part size
-        label = Widgets.newLabel(tab,BARControl.tr("Part size:"));
+        label = Widgets.newLabel(tab,BARControl.tr("Part size")+":");
         Widgets.layout(label,0,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         Widgets.layout(composite,0,1,TableLayoutData.WE);
@@ -2716,13 +2716,13 @@ class TabJobs
         }
 
         // compress
-        label = Widgets.newLabel(tab,BARControl.tr("Compress:"));
+        label = Widgets.newLabel(tab,BARControl.tr("Compress")+":");
         Widgets.layout(label,1,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(1.0,0.0));
         Widgets.layout(composite,1,1,TableLayoutData.W);
         {
-          label = Widgets.newLabel(composite,BARControl.tr("Delta:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Delta")+":");
           Widgets.layout(label,0,0,TableLayoutData.NONE);
 
           combo = Widgets.newOptionMenu(composite);
@@ -2744,7 +2744,7 @@ class TabJobs
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,deltaCompressAlgorithm));
 
-          label = Widgets.newLabel(composite,BARControl.tr("Byte:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Byte")+":");
           Widgets.layout(label,0,2,TableLayoutData.NONE);
 
           combo = Widgets.newOptionMenu(composite);
@@ -2778,7 +2778,7 @@ class TabJobs
         composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0}));
         Widgets.layout(composite,2,1,TableLayoutData.WE);
         {
-          label = Widgets.newLabel(composite,BARControl.tr("Source:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Source")+":");
           Widgets.layout(label,0,0,TableLayoutData.NONE);
 
           text = Widgets.newText(composite);
@@ -2861,7 +2861,7 @@ class TabJobs
           });
         }
 
-        label = Widgets.newLabel(tab,BARControl.tr("Compress exclude:"));
+        label = Widgets.newLabel(tab,BARControl.tr("Compress exclude")+":");
         Widgets.layout(label,3,0,TableLayoutData.NW);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
@@ -3106,7 +3106,7 @@ class TabJobs
         }
 
         // crypt
-        label = Widgets.newLabel(tab,BARControl.tr("Crypt:"));
+        label = Widgets.newLabel(tab,BARControl.tr("Crypt")+":");
         Widgets.layout(label,4,0,TableLayoutData.NW);
         composite = Widgets.newComposite(tab);
         Widgets.layout(composite,4,1,TableLayoutData.WE);
@@ -3200,7 +3200,7 @@ class TabJobs
           control = Widgets.newSpacer(composite);
           Widgets.layout(control,0,2,TableLayoutData.NONE,0,0,5,0);
 
-          label = Widgets.newLabel(composite,BARControl.tr("Public key:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Public key")+":");
           Widgets.layout(label,0,3,TableLayoutData.W);
           text = Widgets.newText(composite);
           text.setToolTipText(BARControl.tr("Public key file used for asymmetric encryption."));
@@ -3297,7 +3297,7 @@ class TabJobs
         }
 
         // crypt password
-        label = Widgets.newLabel(tab,BARControl.tr("Crypt password:"));
+        label = Widgets.newLabel(tab,BARControl.tr("Crypt password")+":");
         Widgets.layout(label,6,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(1.0,new double[]{0.0,0.0,0.0,1.0,0.0,1.0}));
@@ -3461,7 +3461,7 @@ class TabJobs
           });
           Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword1,cryptPassword));
 
-          label = Widgets.newLabel(composite,BARControl.tr("Repeat:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Repeat")+":");
           Widgets.layout(label,0,4,TableLayoutData.W);
 
           widgetCryptPassword2 = Widgets.newPassword(composite);
@@ -3529,7 +3529,7 @@ class TabJobs
         }
 
         // archive type
-        label = Widgets.newLabel(tab,BARControl.tr("Mode:"));
+        label = Widgets.newLabel(tab,BARControl.tr("Mode")+":");
         Widgets.layout(label,7,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(1.0,new double[]{0.0,0.0,0.0,0.0,0.0,1.0,0.0}));
@@ -3629,7 +3629,7 @@ class TabJobs
         }
 
         // file name
-        label = Widgets.newLabel(tab,BARControl.tr("File name:"));
+        label = Widgets.newLabel(tab,BARControl.tr("File name")+":");
         Widgets.layout(label,8,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
@@ -3723,7 +3723,7 @@ class TabJobs
         }
 
         // incremental file name
-        label = Widgets.newLabel(tab,BARControl.tr("Incremental file name:"));
+        label = Widgets.newLabel(tab,BARControl.tr("Incremental file name")+":");
         Widgets.layout(label,9,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
@@ -3797,7 +3797,7 @@ class TabJobs
         }
 
         // destination
-        label = Widgets.newLabel(tab,BARControl.tr("Destination:"));
+        label = Widgets.newLabel(tab,BARControl.tr("Destination")+":");
         Widgets.layout(label,10,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         Widgets.layout(composite,10,1,TableLayoutData.WE);
@@ -4131,7 +4131,7 @@ class TabJobs
           composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0,1.0,0.0,1.0}));
           Widgets.layout(composite,0,0,TableLayoutData.WE);
           {
-            label = Widgets.newLabel(composite,BARControl.tr("User:"));
+            label = Widgets.newLabel(composite,BARControl.tr("User")+":");
             Widgets.layout(label,0,0,TableLayoutData.W);
 
             text = Widgets.newText(composite);
@@ -4174,7 +4174,7 @@ class TabJobs
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
 
-            label = Widgets.newLabel(composite,BARControl.tr("Host:"));
+            label = Widgets.newLabel(composite,BARControl.tr("Host")+":");
             Widgets.layout(label,0,2,TableLayoutData.W);
 
             text = Widgets.newText(composite);
@@ -4217,7 +4217,7 @@ class TabJobs
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
 
-            label = Widgets.newLabel(composite,BARControl.tr("Password:"));
+            label = Widgets.newLabel(composite,BARControl.tr("Password")+":");
             Widgets.layout(label,0,4,TableLayoutData.W);
 
             text = Widgets.newPassword(composite);
@@ -4262,7 +4262,7 @@ class TabJobs
           }
 
 /*
-          label = Widgets.newLabel(composite,BARControl.tr("Max. band width:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Max. band width")+":");
           Widgets.layout(label,1,0,TableLayoutData.W);
           composite = Widgets.newComposite(composite,SWT.NONE);
           Widgets.layout(composite,1,1,TableLayoutData.WE);
@@ -4339,7 +4339,7 @@ class TabJobs
           subComposite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0,1.0,0.0,1.0}));
           Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
-            label = Widgets.newLabel(subComposite,BARControl.tr("Login:"));
+            label = Widgets.newLabel(subComposite,BARControl.tr("Login")+":");
             Widgets.layout(label,0,0,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
@@ -4382,7 +4382,7 @@ class TabJobs
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
 
-            label = Widgets.newLabel(subComposite,BARControl.tr("Host:"));
+            label = Widgets.newLabel(subComposite,BARControl.tr("Host")+":");
             Widgets.layout(label,0,2,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
@@ -4425,7 +4425,7 @@ class TabJobs
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
 
-            label = Widgets.newLabel(subComposite,BARControl.tr("Port:"));
+            label = Widgets.newLabel(subComposite,BARControl.tr("Port")+":");
             Widgets.layout(label,0,4,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
@@ -4532,7 +4532,7 @@ class TabJobs
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostPort));
           }
 
-          label = Widgets.newLabel(composite,BARControl.tr("SSH public key:"));
+          label = Widgets.newLabel(composite,BARControl.tr("SSH public key")+":");
           Widgets.layout(label,1,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
@@ -4605,7 +4605,7 @@ class TabJobs
             });
           }
 
-          label = Widgets.newLabel(composite,BARControl.tr("SSH private key:"));
+          label = Widgets.newLabel(composite,BARControl.tr("SSH private key")+":");
           Widgets.layout(label,2,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
@@ -4678,7 +4678,7 @@ class TabJobs
           }
 
 /*
-          label = Widgets.newLabel(composite,BARControl.tr("Max. band width:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Max. band width")+":");
           Widgets.layout(label,3,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           Widgets.layout(subComposite,3,1,TableLayoutData.WE);
@@ -4757,7 +4757,7 @@ class TabJobs
           subComposite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0,1.0,0.0,1.0}));
           Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
-            label = Widgets.newLabel(subComposite,BARControl.tr("Login:"));
+            label = Widgets.newLabel(subComposite,BARControl.tr("Login")+":");
             Widgets.layout(label,0,0,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
@@ -4800,7 +4800,7 @@ class TabJobs
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
 
-            label = Widgets.newLabel(subComposite,BARControl.tr("Host:"));
+            label = Widgets.newLabel(subComposite,BARControl.tr("Host")+":");
             Widgets.layout(label,0,2,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
@@ -4843,7 +4843,7 @@ class TabJobs
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
 
-            label = Widgets.newLabel(subComposite,BARControl.tr("Port:"));
+            label = Widgets.newLabel(subComposite,BARControl.tr("Port")+":");
             Widgets.layout(label,0,4,TableLayoutData.W);
 
             text = Widgets.newText(subComposite);
@@ -4950,7 +4950,7 @@ class TabJobs
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostPort));
           }
 
-          label = Widgets.newLabel(composite,BARControl.tr("SSH public key:"));
+          label = Widgets.newLabel(composite,BARControl.tr("SSH public key")+":");
           Widgets.layout(label,1,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
@@ -5023,7 +5023,7 @@ class TabJobs
             });
           }
 
-          label = Widgets.newLabel(composite,BARControl.tr("SSH private key:"));
+          label = Widgets.newLabel(composite,BARControl.tr("SSH private key")+":");
           Widgets.layout(label,2,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
@@ -5096,7 +5096,7 @@ class TabJobs
           }
 
 /*
-          label = Widgets.newLabel(composite,BARControl.tr("Max. band width:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Max. band width")+":");
           Widgets.layout(label,3,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           Widgets.layout(subComposite,3,1,TableLayoutData.WE);
@@ -5169,7 +5169,7 @@ class TabJobs
         });
         Widgets.setVisible(composite,false);
         {
-          label = Widgets.newLabel(composite,BARControl.tr("Device:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Device")+":");
           Widgets.layout(label,0,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
@@ -5239,7 +5239,7 @@ class TabJobs
             });
           }
 
-          label = Widgets.newLabel(composite,BARControl.tr("Size:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Size")+":");
           Widgets.layout(label,1,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           Widgets.layout(subComposite,1,1,TableLayoutData.WE);
@@ -5380,7 +5380,7 @@ class TabJobs
             Widgets.layout(label,0,1,TableLayoutData.W);
           }
 
-          label = Widgets.newLabel(composite,BARControl.tr("Options:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Options")+":");
           Widgets.layout(label,3,0,TableLayoutData.NW);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           Widgets.layout(subComposite,3,1,TableLayoutData.WE);
@@ -5446,7 +5446,7 @@ class TabJobs
         });
         Widgets.setVisible(composite,false);
         {
-          label = Widgets.newLabel(composite,BARControl.tr("Device:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Device")+":");
           Widgets.layout(label,0,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
@@ -5516,7 +5516,7 @@ class TabJobs
             });
           }
 
-          label = Widgets.newLabel(composite,BARControl.tr("Size:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Size")+":");
           Widgets.layout(label,1,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           Widgets.layout(subComposite,1,1,TableLayoutData.WE);
@@ -5629,7 +5629,7 @@ class TabJobs
         }
       }
 
-      tab = Widgets.addTab(widgetTabFolder,"Schedule");
+      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Schedule"));
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
@@ -5686,21 +5686,21 @@ class TabJobs
             }
           }
         };
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,0,"Date",        SWT.LEFT,100,false);
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,0,BARControl.tr("Date"),        SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,1,"Week day",    SWT.LEFT,250,true );
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,1,BARControl.tr("Week day"),    SWT.LEFT,250,true );
         synchronized(scheduleList)
         {
           Widgets.sortTableColumn(widgetScheduleList,tableColumn,new ScheduleDataComparator(widgetScheduleList,tableColumn));
         }
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,2,"Time",        SWT.LEFT,100,false);
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,2,BARControl.tr("Time"),        SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,3,"Archive type",SWT.LEFT, 80,true );
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,3,BARControl.tr("Archive type"),SWT.LEFT, 80,true );
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,4,"Custom text", SWT.LEFT, 90,true );
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,4,BARControl.tr("Custom text"), SWT.LEFT, 90,true );
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,5,"Enabled",     SWT.LEFT, 60,false);
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,5,BARControl.tr("Enabled"),     SWT.LEFT, 60,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
 
         menu = Widgets.newPopupMenu(shell);
@@ -6072,7 +6072,7 @@ class TabJobs
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Name:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetJobName = Widgets.newText(composite);
@@ -6178,7 +6178,7 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Name:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetJobName = Widgets.newText(composite);
@@ -6284,13 +6284,13 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Old name:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Old name")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       label = Widgets.newLabel(composite,selectedJobName);
       Widgets.layout(label,0,1,TableLayoutData.W);
 
-      label = Widgets.newLabel(composite,BARControl.tr("New name:"));
+      label = Widgets.newLabel(composite,BARControl.tr("New name")+":");
       Widgets.layout(label,1,0,TableLayoutData.W);
 
       widgetNewJobName = Widgets.newText(composite);
@@ -7126,7 +7126,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Pattern:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Pattern")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite);
@@ -7159,7 +7159,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
         });
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("Type:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Type")+":");
       Widgets.layout(label,1,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite);
@@ -7455,7 +7455,7 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Pattern:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Pattern")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetPattern = Widgets.newText(composite);
@@ -7730,7 +7730,7 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Pattern:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Pattern")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetPattern = Widgets.newText(composite);
@@ -8193,7 +8193,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
       composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0}));
       Widgets.layout(composite,0,0,TableLayoutData.WE);
       {
-        label = Widgets.newLabel(composite,BARControl.tr("File name:"));
+        label = Widgets.newLabel(composite,BARControl.tr("File name")+":");
         Widgets.layout(label,0,0,TableLayoutData.W);
 
         widgetFileName = Widgets.newCanvas(composite,SWT.BORDER);
@@ -8355,7 +8355,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
           }
         });
 
-        label = Widgets.newLabel(composite,BARControl.tr("Example:"));
+        label = Widgets.newLabel(composite,BARControl.tr("Example")+":");
         Widgets.layout(label,1,0,TableLayoutData.W);
 
         widgetExample = Widgets.newView(composite);
@@ -9042,7 +9042,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Date:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Date")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
@@ -9068,7 +9068,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         Widgets.layout(widgetDay,0,2,TableLayoutData.W);
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("Week days:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Week days")+":");
       Widgets.layout(label,1,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
@@ -9127,7 +9127,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         });
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("Time:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Time")+":");
       Widgets.layout(label,2,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
@@ -9146,7 +9146,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         Widgets.layout(widgetMinute,0,1,TableLayoutData.W);
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("Type:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Type")+":");
       Widgets.layout(label,3,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
@@ -9178,7 +9178,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         widgetTypeDifferential.setSelection(scheduleData.archiveType.equals("differential"));
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("Custom text:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Custom text")+":");
       Widgets.layout(label,4,0,TableLayoutData.W);
 
       widgetCustomText = Widgets.newText(composite);
@@ -9186,7 +9186,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
       widgetCustomText.setText(scheduleData.customText);
       Widgets.layout(widgetCustomText,4,1,TableLayoutData.WE);
 
-      label = Widgets.newLabel(composite,BARControl.tr("Options:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Options")+":");
       Widgets.layout(label,5,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);

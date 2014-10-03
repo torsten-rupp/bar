@@ -785,7 +785,7 @@ class TabStatus
       });
 
       // total files/bytes
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Total:")+":");
+      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Total")+":");
       Widgets.layout(label,4,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,4,1,TableLayoutData.WE);
@@ -1419,7 +1419,7 @@ class TabStatus
                                          BARControl.tr("Crypt password"),
                                          null,
                                          BARControl.tr("Crypt password")+":",
-                                         "Verify:"
+                                         BARControl.tr("Verify")+":"
                                         );
       if (password == null)
       {
