@@ -1292,12 +1292,16 @@ class TabRestore
 
     // storage list
     group = Widgets.newGroup(widgetTab,BARControl.tr("Storage"));
-    group.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,4));
+    group.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,4));
     Widgets.layout(group,0,1,TableLayoutData.NSWE);
     {
+      // fix layout
+      control = Widgets.newSpacer(group);
+      Widgets.layout(control,0,0,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,1);
+
       widgetStorageList = Widgets.newTable(group,SWT.CHECK);
       widgetStorageList.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0}));
-      Widgets.layout(widgetStorageList,0,0,TableLayoutData.NSWE);
+      Widgets.layout(widgetStorageList,1,0,TableLayoutData.NSWE);
       SelectionListener storageListColumnSelectionListener = new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1645,7 +1649,7 @@ class TabRestore
       // storage list filter
       composite = Widgets.newComposite(group);
       composite.setLayout(new TableLayout(0.0,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0}));
-      Widgets.layout(composite,1,0,TableLayoutData.WE);
+      Widgets.layout(composite,2,0,TableLayoutData.WE);
       {
         button = Widgets.newButton(composite,IMAGE_MARK_ALL);
         Widgets.layout(button,0,0,TableLayoutData.W);
@@ -1816,12 +1820,16 @@ class TabRestore
 
     // entries list
     group = Widgets.newGroup(widgetTab,BARControl.tr("Entries"));
-    group.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,4));
+    group.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,4));
     Widgets.layout(group,1,1,TableLayoutData.NSWE);
     {
+      // fix layout
+      control = Widgets.newSpacer(group);
+      Widgets.layout(control,0,0,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,1);
+
       widgetEntryList = Widgets.newTable(group,SWT.CHECK);
       widgetEntryList.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0,0.0}));
-      Widgets.layout(widgetEntryList,0,0,TableLayoutData.NSWE);
+      Widgets.layout(widgetEntryList,1,0,TableLayoutData.NSWE);
       SelectionListener entryListColumnSelectionListener = new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2227,9 +2235,13 @@ class TabRestore
     group.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0},4));
     Widgets.layout(group,2,0,TableLayoutData.WE,0,2);
     {
+      // fix layout
+      control = Widgets.newSpacer(group);
+      Widgets.layout(control,0,0,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,1);
+
       widgetRestoreTo = Widgets.newCheckbox(group,BARControl.tr("to"));
       widgetRestoreTo.setToolTipText(BARControl.tr("Enable this checkbox and select a directory to restore entries to different location."));
-      Widgets.layout(widgetRestoreTo,0,0,TableLayoutData.W);
+      Widgets.layout(widgetRestoreTo,1,0,TableLayoutData.W);
       widgetRestoreTo.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2246,7 +2258,7 @@ class TabRestore
 
       widgetRestoreToDirectory = Widgets.newText(group);
       widgetRestoreToDirectory.setEnabled(false);
-      Widgets.layout(widgetRestoreToDirectory,0,1,TableLayoutData.WE);
+      Widgets.layout(widgetRestoreToDirectory,1,1,TableLayoutData.WE);
       Widgets.addEventListener(new WidgetEventListener(widgetRestoreToDirectory,selectRestoreToEvent)
       {
         public void trigger(Control control)
@@ -2278,7 +2290,7 @@ class TabRestore
       });
 
       button = Widgets.newButton(group,IMAGE_DIRECTORY);
-      Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
+      Widgets.layout(button,1,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2302,7 +2314,7 @@ class TabRestore
 
       widgetOverwriteEntries = Widgets.newCheckbox(group,BARControl.tr("overwrite existing entries"));
       widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
-      Widgets.layout(widgetOverwriteEntries,0,3,TableLayoutData.W);
+      Widgets.layout(widgetOverwriteEntries,1,3,TableLayoutData.W);
     }
 
     // start storage list update thread
