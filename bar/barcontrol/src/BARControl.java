@@ -1244,7 +1244,7 @@ public class BARControl
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
     {
       label = new Label(composite,SWT.LEFT);
-      label.setText("Server:");
+      label.setText(tr("Server")+":");
       label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
 
       widgetServerName = new Text(composite,SWT.LEFT|SWT.BORDER);
@@ -1252,7 +1252,7 @@ public class BARControl
       widgetServerName.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
 
       label = new Label(composite,SWT.LEFT);
-      label.setText("Password:");
+      label.setText(tr("Password")+":");
       label.setLayoutData(new TableLayoutData(1,0,TableLayoutData.W));
 
       widgetPassword = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);

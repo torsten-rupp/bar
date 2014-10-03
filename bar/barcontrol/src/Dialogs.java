@@ -1337,6 +1337,7 @@ class Dialogs
           if (extendedMessage != null)
           {
             label = new Label(composite,SWT.LEFT);
+//TODO
             label.setText("Extended error:");
             label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4)); row++;
 
@@ -2536,6 +2537,7 @@ class Dialogs
    */
   public static String password(Shell parentShell, String title)
   {
+//TODO
     return password(parentShell,title,"Password:");
   }
 
