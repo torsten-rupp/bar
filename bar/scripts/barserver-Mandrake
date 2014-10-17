@@ -35,7 +35,7 @@ fi
 case "$1" in
     start)
 	echo -n "Starting BAR server "
-	startproc -n 20 $BAR_BIN --daemon --verbose=3
+	startproc $BAR_BIN --daemon --verbose=3
 	rc_status -v
 	;;
     stop)

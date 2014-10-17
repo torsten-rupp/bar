@@ -30,7 +30,7 @@ fi
 
 start() {
 	echo -n "Starting BAR server: "
-	daemon -20 $BAR_BIN --daemon --verbose=3
+	daemon $BAR_BIN --daemon --verbose=3
         RETVAL=$?
 	touch /var/lock/subsys/barserver
 	return $RETVAL
