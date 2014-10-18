@@ -307,7 +307,7 @@ Errors Command_compare(const StringList                *storageNameList,
               }
 
               // open file
-              error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
+              error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
               if (error != ERROR_NONE)
               {
                 printInfo(1,"FAIL!\n");
@@ -506,6 +506,7 @@ Errors Command_compare(const StringList                *storageNameList,
                                            NULL,  // cryptType
                                            deviceName,
                                            &deviceInfo,
+                                           NULL,  // fileSystemType
                                            NULL,  // deltaSourceName
                                            NULL,  // deltaSourceSize
                                            &blockOffset,
@@ -1167,7 +1168,7 @@ Errors Command_compare(const StringList                *storageNameList,
                   }
 
                   // open file
-                  error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
+                  error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
                   if (error != ERROR_NONE)
                   {
                     printInfo(1,"FAIL!\n");

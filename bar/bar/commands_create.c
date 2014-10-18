@@ -3025,7 +3025,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
                                     STORAGE_TYPE_ANY,
-                                    NULL,
+                                    NULL, // storageName
                                     createInfo->storageSpecifier->hostName,
                                     createInfo->storageSpecifier->loginName,
                                     createInfo->storageSpecifier->deviceName,
@@ -3330,7 +3330,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
 //FileExtendedAttributeNode *fileExtendedAttributeNode; LIST_ITERATE(&fileExtendedAttributeList,fileExtendedAttributeNode) { fprintf(stderr,"%s, %d: fileExtendedAttributeNode=%s\n",__FILE__,__LINE__,String_cString(fileExtendedAttributeNode->name)); }
 
   // open file
-  error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_CACHE);
+  error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -3506,9 +3506,6 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
     // unlock status name info
     if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
 
-    // close file
-    (void)File_close(&fileHandle);
-
     // get final compression ratio
     if (archiveEntryInfo.file.chunkFileData.fragmentSize > 0LL)
     {
@@ -3540,6 +3537,9 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
   {
     printInfo(1,"ok (%llu bytes, not stored)\n",fileInfo.size);
   }
+
+  // close file
+  (void)File_close(&fileHandle);
 
   // free resources
   File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -3695,6 +3695,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
                                   &createInfo->archiveInfo,
                                   deviceName,
                                   &deviceInfo,
+                                  fileSystemHandle.type,
                                   deltaCompressFlag,
                                   byteCompressFlag
                                  );
@@ -4316,7 +4317,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // open file
-  error = File_open(&fileHandle,StringList_first(nameList,NULL),FILE_OPEN_READ|FILE_OPEN_NO_CACHE);
+  error = File_open(&fileHandle,StringList_first(nameList,NULL),FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -4485,9 +4486,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     // unlock status name info
     if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
 
-    // close file
-    (void)File_close(&fileHandle);
-
     // get final compression ratio
     if (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL)
     {
@@ -4522,6 +4520,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   {
     printInfo(1,"ok (%llu bytes, not stored)\n",fileInfo.size);
   }
+
+  // close file
+  (void)File_close(&fileHandle);
 
   // free resources
   File_doneExtendedAttributes(&fileExtendedAttributeList);
