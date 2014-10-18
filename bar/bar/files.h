@@ -81,6 +81,7 @@ typedef enum
 
 // additional file open flags
 #define FILE_OPEN_NO_CACHE (1 << 16)
+#define FILE_OPEN_NO_ATIME (1 << 17)
 
 // special file types
 typedef enum
@@ -184,7 +185,7 @@ typedef enum
 typedef struct
 {
   String     name;
-  ulong      mode;
+  FileModes  mode;
   FILE       *file;
   uint64     index;
   uint64     size;
@@ -192,6 +193,10 @@ typedef struct
     bool deleteOnCloseFlag;
   #endif /* not NDEBUG */
   StringList lineBufferList;
+  #ifndef HAVE_O_NOATIME
+    int             handle;
+    struct timespec atime;
+  #endif /* not HAVE_O_NOATIME */
 } FileHandle;
 
 // directory list handle
@@ -200,6 +205,12 @@ typedef struct
   String        name;
   DIR           *dir;
   struct dirent *entry;
+  #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
+    #ifndef HAVE_O_NOATIME
+      int             handle;
+      struct timespec atime;
+    #endif /* not HAVE_O_NOATIME */
+  #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
 } DirectoryListHandle;
 
 // file permission

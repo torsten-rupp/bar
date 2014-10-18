@@ -225,6 +225,30 @@ LOCAL void fileCheckValid(const char *fileName,
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : setAccessTime
+* Purpose: set atime
+* Input  : handle - file handle
+*          ts     - time
+* Output : -
+* Return : TRUE if set, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+#ifndef HAVE_O_NOATIME
+LOCAL bool setAccessTime(int handle, const struct timespec *ts)
+{
+  struct timespec times[2];
+
+  times[0].tv_sec  = ts->tv_sec;
+  times[0].tv_nsec = ts->tv_nsec;
+  times[1].tv_sec  = 0;
+  times[1].tv_nsec = UTIME_OMIT;
+
+  return futimens(handle,times) == 0;
+}
+#endif /* not HAVE_O_NOATIME */
+
+/***********************************************************************\
 * Name   : getAttributes
 * Purpose: get file attributes
 * Input  : fileName - file name
@@ -240,24 +264,69 @@ LOCAL Errors getAttributes(const String fileName, FileAttributes *fileAttributes
     int    handle;
     Errors error;
   #endif /* FS_IOC_GETFLAGS */
+  #ifndef HAVE_O_NOATIME
+    struct stat stat;
+    bool   atimeFlag;
+    struct timespec atime;
+  #endif /* not HAVE_O_NOATIME */
 
   assert(fileName != NULL);
   assert(fileAttributes != NULL);
 
   attributes = 0LL;
   #ifdef FS_IOC_GETFLAGS
-    // get file attributes
-    handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
+    // open file
+    #ifdef HAVE_O_NOATIME
+      handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK|O_NOATIME);
+    #else /* not HAVE_O_NOATIME */
+      handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
+    #endif /* HAVE_O_NOATIME */
     if (handle == -1)
     {
       return ERRORX_(IO_ERROR,errno,String_cString(fileName));
     }
+
+    #ifndef HAVE_O_NOATIME
+      // store atime
+      if (fstat(handle,&stat) == 0)
+      {
+        atime.tv_sec    = stat.st_atime;
+        #ifdef HAVE_STAT_ATIM_TV_NSEC
+          atime.tv_nsec = stat.st_atim.tv_nsec;
+        #else
+          atime.tv_nsec = 0;
+        #endif
+        atimeFlag = TRUE;
+      }
+      else
+      {
+        atimeFlag = FALSE;
+      }
+    #endif /* not HAVE_O_NOATIME */
+
+    // get attributes
     if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
     {
       error = ERRORX_(IO_ERROR,errno,String_cString(fileName));
+      #ifndef HAVE_O_NOATIME
+        if (atimeFlag)
+        {
+          (void)setAccessTime(handle,&atime);
+        }
+      #endif /* not HAVE_O_NOATIME */
       close(handle);
       return error;
     }
+
+    #ifndef HAVE_O_NOATIME
+      // restore atime
+      if (atimeFlag)
+      {
+        (void)setAccessTime(handle,&atime);
+      }
+    #endif /* not HAVE_O_NOATIME */
+
+    // close file
     close(handle);
   #else /* FS_IOC_GETFLAGS */
     UNUSED_VARIABLE(fileName);
@@ -952,6 +1021,12 @@ Errors __File_openCString(const char *__fileName__,
   off_t  n;
   Errors error;
   String pathName;
+  #ifdef HAVE_O_NOATIME
+    int    flags;
+    int    handle;
+  #else /* not HAVE_O_NOATIME */
+    struct stat stat;
+  #endif /* HAVE_O_NOATIME */
   #ifndef NDEBUG
     DebugFileNode *debugFileNode;
   #endif /* not NDEBUG */
@@ -963,6 +1038,9 @@ Errors __File_openCString(const char *__fileName__,
   {
     case FILE_OPEN_CREATE:
       // create file
+// TODO: use fd?
+//      fd = open(fileName,O_RDWR|O_CREAT|O_TRUNC|O_LARGEFILE,0666);
+//      fileHandle->file = fdopen(fd,"w+b");
       fileHandle->file = fopen(fileName,"w+b");
       if (fileHandle->file == NULL)
       {
@@ -977,17 +1055,76 @@ Errors __File_openCString(const char *__fileName__,
       #endif /* not NDEBUG */
       break;
     case FILE_OPEN_READ:
-      // open file for reading
-      fileHandle->file = fopen(fileName,"rb");
-      if (fileHandle->file == NULL)
-      {
-        return ERRORX_(OPEN_FILE,errno,fileName);
-      }
+      // open file for reading with support of NO_ATIME
+      #ifdef HAVE_O_NOATIME
+        // open file
+        flags = O_RDONLY|O_LARGEFILE;
+        if ((fileMode & FILE_OPEN_NO_ATIME) != 0) flags |= O_NOATIME;
+        handle = open(fileName,flags,0);
+        if (handle == -1)
+        {
+          return ERRORX_(OPEN_FILE,errno,fileName);
+        }
+
+        // create stream
+        fileHandle->file = fdopen(handle,"rb");
+        if (fileHandle->file == NULL)
+        {
+          error = ERRORX_(OPEN_FILE,errno,fileName);
+          close(handle);
+          return error;
+        }
+      #else /* not HAVE_O_NOATIME */
+        // open file
+        fileHandle->handle = open(fileName,O_RDONLY|O_LARGEFILE,0);
+        if (fileHandle->handle == -1)
+        {
+          return ERRORX_(OPEN_FILE,errno,fileName);
+        }
+
+        // store atime
+        if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
+        {
+          if (fstat(fileHandle->handle,&stat) == 0)
+          {
+            fileHandle->atime.tv_sec  = stat.st_atime;
+            #ifdef HAVE_STAT_ATIM_TV_NSEC
+              fileHandle->atime.tv_nsec = stat.st_atim.tv_nsec;
+            #else
+              fileHandle->atime.tv_nsec = 0;
+            #endif
+          }
+          else
+          {
+            fileHandle->atime.tv_sec  = 0;
+            fileHandle->atime.tv_nsec = UTIME_OMIT;
+          }
+        }
+
+        // create stream
+        fileHandle->file = fdopen(fileHandle->handle,"rb");
+        if (fileHandle->file == NULL)
+        {
+          error = ERRORX_(OPEN_FILE,errno,fileName);
+          if ((fileHandle->mode & FILE_OPEN_NO_ATIME) != 0)
+          {
+            (void)setAccessTime(fileHandle->handle,&fileHandle->atime);
+          }
+          close(fileHandle->handle);
+          return error;
+        }
+      #endif /* HAVE_O_NOATIME */
 
       // get file size
       if (FSEEK(fileHandle->file,(off_t)0,SEEK_END) == -1)
       {
         error = ERRORX_(IO_ERROR,errno,fileName);
+        #ifndef HAVE_O_NOATIME
+          if ((fileHandle->mode & FILE_OPEN_NO_ATIME) != 0)
+          {
+            (void)setAccessTime(fileHandle->handle,&fileHandle->atime);
+          }
+        #endif /* not HAVE_O_NOATIME */
         fclose(fileHandle->file);
         return error;
       }
@@ -995,12 +1132,24 @@ Errors __File_openCString(const char *__fileName__,
       if (n == (off_t)(-1))
       {
         error = ERRORX_(IO_ERROR,errno,fileName);
+        #ifndef HAVE_O_NOATIME
+          if ((fileHandle->mode & FILE_OPEN_NO_ATIME) != 0)
+          {
+            (void)setAccessTime(fileHandle->handle,&fileHandle->atime);
+          }
+        #endif /* not HAVE_O_NOATIME */
         fclose(fileHandle->file);
         return error;
       }
       if (FSEEK(fileHandle->file,(off_t)0,SEEK_SET) == -1)
       {
         error = ERRORX_(IO_ERROR,errno,fileName);
+        #ifndef HAVE_O_NOATIME
+          if ((fileHandle->mode & FILE_OPEN_NO_ATIME) != 0)
+          {
+            (void)setAccessTime(fileHandle->handle,&fileHandle->atime);
+          }
+        #endif /* not HAVE_O_NOATIME */
         fclose(fileHandle->file);
         return error;
       }
@@ -1031,6 +1180,9 @@ Errors __File_openCString(const char *__fileName__,
       File_deleteFileName(pathName);
 
       // open existing file for writing
+// TODO: use fd?
+//      fd = open(fileName,O_WRONLY|O_LARGEFILE,0);
+//      fileHandle->file = fdopen(fd,"r+b");
       fileHandle->file = fopen(fileName,"r+b");
       if (fileHandle->file == NULL)
       {
@@ -1074,6 +1226,9 @@ Errors __File_openCString(const char *__fileName__,
       File_deleteFileName(pathName);
 
       // open existing file for writing
+// TODO: use fd?
+//      fd = open(fileName,O_RDWR|O_APPEND|O_LARGEFILE,0);
+//      fileHandle->file = fdopen(fd,"ab");
       fileHandle->file = fopen(fileName,"ab");
       if (fileHandle->file == NULL)
       {
@@ -1361,8 +1516,18 @@ Errors __File_close(const char *__fileName__,
     File_dropCaches(fileHandle,0LL,0LL,FALSE);
   }
 
+  #ifndef HAVE_O_NOATIME
+    if ((fileHandle->mode & FILE_OPEN_NO_ATIME) != 0)
+    {
+      if (!setAccessTime(fileHandle->handle, &fileHandle->atime))
+      {
+        return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
+      }
+    }
+  #endif /* not HAVE_O_NOATIME */
+
   // close file
-  fclose(fileHandle->file);
+  (void)fclose(fileHandle->file);
 
   // free resources
   StringList_done(&fileHandle->lineBufferList);
@@ -1457,7 +1622,6 @@ Errors File_read(FileHandle *fileHandle,
   {
     // read as much data as possible
     n = fread(buffer,1,bufferLength,fileHandle->file);
-//fprintf(stderr,"%s, %d: much %x bufferLength=%lu n=%ld %d\n",__FILE__,__LINE__,fileHandle->file,bufferLength,n,ferror(fileHandle->file));
     if ((n <= 0) && (ferror(fileHandle->file) != 0))
     {
       return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
@@ -1471,7 +1635,6 @@ Errors File_read(FileHandle *fileHandle,
     while (bufferLength > 0L)
     {
       n = fread(buffer,1,bufferLength,fileHandle->file);
-//fprintf(stderr,"%s, %d: all bufferLength=%lu n=%ld %d\n",__FILE__,__LINE__,bufferLength,n,ferror(fileHandle->file));
       if (n <= 0)
       {
         return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
@@ -1504,7 +1667,6 @@ Errors File_write(FileHandle *fileHandle,
 
   n = fwrite(buffer,1,bufferLength,fileHandle->file);
   if (n > 0) fileHandle->index += n;
-//fprintf(stderr,"%s, %d: write %x bufferLength=%lu n=%ld %d fileHandle->index=%llu\n",__FILE__,__LINE__,fileHandle->file,bufferLength,n,ferror(fileHandle->file),fileHandle->index);
   if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   if (n != (ssize_t)bufferLength)
   {
@@ -1887,28 +2049,70 @@ Errors File_openDirectoryList(DirectoryListHandle *directoryListHandle,
   assert(directoryListHandle != NULL);
   assert(pathName != NULL);
 
-  directoryListHandle->dir = opendir(String_cString(pathName));
-  if (directoryListHandle->dir == NULL)
-  {
-    return ERRORX_(OPEN_DIRECTORY,errno,String_cString(pathName));
-  }
-
-  directoryListHandle->name  = String_duplicate(pathName);
-  directoryListHandle->entry = NULL;
-
-  return ERROR_NONE;
+  return File_openDirectoryListCString(directoryListHandle,String_cString(pathName));
 }
 
 Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
                                      const char          *pathName
                                     )
 {
+  #ifdef HAVE_O_NOATIME
+    int    handle;
+  #else /* not HAVE_O_NOATIME */
+    struct stat stat;
+  #endif /* HAVE_O_NOATIME */
+
   assert(directoryListHandle != NULL);
   assert(pathName != NULL);
 
-  directoryListHandle->dir = opendir(pathName);
+  #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
+    #ifdef HAVE_O_NOATIME
+      // open directory
+      handle = open(String_cString(pathName),O_RDONLY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
+      if (handle == -1)
+      {
+        return ERRORX_(OPEN_DIRECTORY,errno,pathName);
+      }
+
+      // create directory handle
+      directoryListHandle->dir = fdopendir(handle);
+    #else /* not HAVE_O_NOATIME */
+      // open directory
+      directoryListHandle->handle = open(pathName,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
+      if (directoryListHandle->handle == -1)
+      {
+        return ERRORX_(OPEN_DIRECTORY,errno,pathName);
+      }
+
+      // store atime
+      if (fstat(directoryListHandle->handle,&stat) == 0)
+      {
+        directoryListHandle->atime.tv_sec  = stat.st_atime;
+        #ifdef HAVE_STAT_ATIM_TV_NSEC
+          directoryListHandle->atime.tv_nsec = stat.st_atim.tv_nsec;
+        #else
+          directoryListHandle->atime.tv_nsec = 0;
+        #endif
+      }
+      else
+      {
+        directoryListHandle->atime.tv_sec  = 0;
+        directoryListHandle->atime.tv_nsec = UTIME_OMIT;
+      }
+
+      // create directory handle
+      directoryListHandle->dir = fdopendir(directoryListHandle->handle);
+    #endif /* HAVE_O_NOATIME */
+  #else /* not HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
+    directoryListHandle->dir = opendir(pathName);
+  #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
   if (directoryListHandle->dir == NULL)
   {
+    #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
+      #ifndef HAVE_O_NOATIME
+        (void)setAccessTime(directoryListHandle->handle,&directoryListHandle->atime);
+      #endif /* not HAVE_O_NOATIME */
+    #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
     return ERRORX_(OPEN_DIRECTORY,errno,pathName);
   }
 
@@ -1923,6 +2127,12 @@ void File_closeDirectoryList(DirectoryListHandle *directoryListHandle)
   assert(directoryListHandle != NULL);
   assert(directoryListHandle->name != NULL);
   assert(directoryListHandle->dir != NULL);
+
+  #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
+    #ifndef HAVE_O_NOATIME
+      (void)setAccessTime(directoryListHandle->handle,&directoryListHandle->atime);
+    #endif /* not HAVE_O_NOATIME */
+  #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
 
   closedir(directoryListHandle->dir);
   File_deleteFileName(directoryListHandle->name);
