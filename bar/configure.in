@@ -2703,6 +2703,7 @@ AC_CHECK_CONSTANT(FS_NOCOMP_FL,   AC_DEFINE(HAVE_FS_NOCOMP_FL,   1,[FS_NOCOMP_FL
 AC_CHECK_CONSTANT(FS_NODUMP_FL,   AC_DEFINE(HAVE_FS_NODUMP_FL,   1,[FS_NODUMP_FL available]),   ,linux/fs.h)
 AC_CHECK_CONSTANT(BLKSSZGET,      AC_DEFINE(HAVE_BLKSSZGET,      1,[BLKSSZGET available]),      ,sys/mount.h)
 AC_CHECK_CONSTANT(BLKGETSIZE,     AC_DEFINE(HAVE_BLKGETSIZE,     1,[BLKGETSIZE available]),     ,sys/mount.h)
+AC_CHECK_CONSTANT(O_DIRECTORY,    AC_DEFINE(HAVE_O_DIRECTORY,    1,[O_DIRECTORY available]),    ,sys/types.h sys/stat.h fcntl.h)
 AC_CHECK_CONSTANT(O_NOATIME,      AC_DEFINE(HAVE_O_NOATIME,      1,[O_NOATIME available]),      ,sys/types.h sys/stat.h fcntl.h)
 
 AC_CHECK_CONSTANT(SIGPIPE,AC_DEFINE(HAVE_SIGPIPE,1,[SIGPIPE available]),,signal.h)
@@ -2760,7 +2761,8 @@ AC_CHECK_FUNCTION(stat,         AC_DEFINE(HAVE_STAT,         1,[stat() available
 AC_CHECK_FUNCTION(_stati64,     AC_DEFINE(HAVE__STATI64,     1,[_stati64() available]))
 AC_CHECK_FUNCTION(statvfs,      AC_DEFINE(HAVE_STATVFS,      1,[statvfs() available]))
 AC_CHECK_FUNCTION(symlink,      AC_DEFINE(HAVE_SYMLINK,      1,[symlink() available]))
-
+AC_CHECK_FUNCTION(futimens,     AC_DEFINE(HAVE_FUTIMENSK,    1,[futimens() available]))
+AC_CHECK_FUNCTION(fdopendir,    AC_DEFINE(HAVE_FDOPENDIR,    1,[fdopendir() available]),sys/types.h dirent.h)
 AC_CHECK_FUNCTION(mkdtemp,      AC_DEFINE(HAVE_MKDTEMP,      1,[mkdtemp() available]),,io.h)
 AC_CHECK_FUNCTION(mkstemp,      AC_DEFINE(HAVE_MKSTEMP,      1,[mkstemp() available]),,io.h)
 AC_CHECK_FUNCTION(mktemp,       AC_DEFINE(HAVE_MKTEMP,       1,[mktemp() available]) ,,io.h)
