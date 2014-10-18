@@ -623,7 +623,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
 
           // get name
           j = 0;
-          while ((value[i] != '\0') && (value[i] != ','))
+          while ((value[i] != '\0') && (value[i] != ',') && !isspace(value[i]))
           {
             if (j < sizeof(setName)-1) { setName[j] = value[i]; j++; }
             i++;
