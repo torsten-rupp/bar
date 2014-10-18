@@ -2528,7 +2528,7 @@ CXX_WARN_FLAGS=""
 CC_OPTIMIZE=""
 CC_OPTIMIZE_RELEASE=""
 CC_OPTIMIZE_DEBUG=""
-CC_DEFINES=""
+CC_DEFINES="_GNU_SOURCE"
 CC_DEFINES_RELEASE=""
 CC_DEFINES_DEBUG=""
 CC_INCLUDES=""
@@ -13241,6 +13241,43 @@ fi
 $as_echo "$ac_cv_const_BLKGETSIZE" >&6; }
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant O_NOATIME is available" >&5
+$as_echo_n "checking if constant O_NOATIME is available... " >&6; }
+if ${ac_cv_const_O_NOATIME+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/types.h sys/stat.h fcntl.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+int i = (int)O_NOATIME;
+                                          return 0;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_O_NOATIME=yes;
+$as_echo "#define HAVE_O_NOATIME 1" >>confdefs.h
+
+else
+  ac_cv_const_O_NOATIME=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_O_NOATIME" >&5
+$as_echo "$ac_cv_const_O_NOATIME" >&6; }
+
+
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant SIGPIPE is available" >&5
 $as_echo_n "checking if constant SIGPIPE is available... " >&6; }
@@ -13416,6 +13453,121 @@ $as_echo "#define HAVE__STATI64 1" >>confdefs.h
 
 fi
 
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if struct stat.st_atim.tv_nsec is available" >&5
+$as_echo_n "checking if struct stat.st_atim.tv_nsec is available... " >&6; }
+if { as_var=ac_cv_member_`echo struct stat_st_atim.tv_nsec|tr -c -d a-zA-Z0-9_`; eval \${$as_var+:} false; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/types.h sys/stat.h fcntl.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+int i = &((struct stat*)0)->st_atim.tv_nsec;
+                                          return 0;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  eval "ac_cv_member_`echo struct stat_st_atim.tv_nsec|tr -c -d a-zA-Z0-9_`=yes";
+$as_echo "#define HAVE_STAT_ATIM_TV_NSEC 1" >>confdefs.h
+
+else
+  eval "ac_cv_member_`echo struct stat_st_atim.tv_nsec|tr -c -d a-zA-Z0-9_`=no";
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+eval ac_res=\$ac_cv_member_`echo struct stat_st_atim.tv_nsec|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if struct stat.st_mtim.tv_nsec is available" >&5
+$as_echo_n "checking if struct stat.st_mtim.tv_nsec is available... " >&6; }
+if { as_var=ac_cv_member_`echo struct stat_st_mtim.tv_nsec|tr -c -d a-zA-Z0-9_`; eval \${$as_var+:} false; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/types.h sys/stat.h fcntl.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+int i = &((struct stat*)0)->st_mtim.tv_nsec;
+                                          return 0;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  eval "ac_cv_member_`echo struct stat_st_mtim.tv_nsec|tr -c -d a-zA-Z0-9_`=yes";
+$as_echo "#define HAVE_STAT_MTIM_TV_NSEC 1" >>confdefs.h
+
+else
+  eval "ac_cv_member_`echo struct stat_st_mtim.tv_nsec|tr -c -d a-zA-Z0-9_`=no";
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+eval ac_res=\$ac_cv_member_`echo struct stat_st_mtim.tv_nsec|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if struct stat.st_ctim.tv_nsec is available" >&5
+$as_echo_n "checking if struct stat.st_ctim.tv_nsec is available... " >&6; }
+if { as_var=ac_cv_member_`echo struct stat_st_ctim.tv_nsec|tr -c -d a-zA-Z0-9_`; eval \${$as_var+:} false; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/types.h sys/stat.h fcntl.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+int i = &((struct stat*)0)->st_ctim.tv_nsec;
+                                          return 0;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  eval "ac_cv_member_`echo struct stat_st_ctim.tv_nsec|tr -c -d a-zA-Z0-9_`=yes";
+$as_echo "#define HAVE_STAT_CTIM_TV_NSEC 1" >>confdefs.h
+
+else
+  eval "ac_cv_member_`echo struct stat_st_ctim.tv_nsec|tr -c -d a-zA-Z0-9_`=no";
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+eval ac_res=\$ac_cv_member_`echo struct stat_st_ctim.tv_nsec|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
 
 # check functions
 

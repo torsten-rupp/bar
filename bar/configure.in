@@ -156,6 +156,29 @@ AC_DEFUN([AC_CHECK_CONSTANT],
   )dnl
   AC_PROVIDE([$0])dnl
 ])
+dnl &(($1*)NULL).$2
+dnl --- check if struct member is available
+dnl usage: AC_CHECK_STRUCT_MEMBER(<type>,<member>,<if found>,<if not found>,<headers>)
+AC_DEFUN([AC_CHECK_STRUCT_MEMBER],
+[
+  AC_REQUIRE([AC_PROG_CC])
+  AC_CACHE_CHECK(
+    [if $1.$2 is available],
+    ac_cv_member_`echo $1_$2|tr -c -d a-zA-Z0-9_`,
+    [
+      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([`echo $5|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
+                                         [int i = &(($1*)0)->$2;
+                                          return 0;
+                                         ]
+                                        )
+                        ],
+                        [AS_VAR_SET([ac_cv_member_`echo $1_$2|tr -c -d a-zA-Z0-9_`],[yes]); $3],
+                        [AS_VAR_SET([ac_cv_member_`echo $1_$2|tr -c -d a-zA-Z0-9_`],[no]); $4]
+                       )
+    ]
+  )dnl
+  AC_PROVIDE([$0])dnl
+])
 
 dnl --- check if function is available
 dnl usage: AC_CHECK_FUNCTION(<function>,<if found>,<if not found>,<headers>)
@@ -666,7 +689,7 @@ CXX_WARN_FLAGS=""
 CC_OPTIMIZE=""
 CC_OPTIMIZE_RELEASE=""
 CC_OPTIMIZE_DEBUG=""
-CC_DEFINES=""
+CC_DEFINES="_GNU_SOURCE"
 CC_DEFINES_RELEASE=""
 CC_DEFINES_DEBUG=""
 CC_INCLUDES=""
@@ -2675,6 +2698,7 @@ AC_CHECK_CONSTANT(FS_NOCOMP_FL,   AC_DEFINE(HAVE_FS_NOCOMP_FL,   1,[FS_NOCOMP_FL
 AC_CHECK_CONSTANT(FS_NODUMP_FL,   AC_DEFINE(HAVE_FS_NODUMP_FL,   1,[FS_NODUMP_FL available]),   ,linux/fs.h)
 AC_CHECK_CONSTANT(BLKSSZGET,      AC_DEFINE(HAVE_BLKSSZGET,      1,[BLKSSZGET available]),      ,sys/mount.h)
 AC_CHECK_CONSTANT(BLKGETSIZE,     AC_DEFINE(HAVE_BLKGETSIZE,     1,[BLKGETSIZE available]),     ,sys/mount.h)
+AC_CHECK_CONSTANT(O_NOATIME,      AC_DEFINE(HAVE_O_NOATIME,      1,[O_NOATIME available]),      ,sys/types.h sys/stat.h fcntl.h)
 
 AC_CHECK_CONSTANT(SIGPIPE,AC_DEFINE(HAVE_SIGPIPE,1,[SIGPIPE available]),,signal.h)
 
@@ -2689,6 +2713,10 @@ fi
 AC_CHECK_TYPE(struct stat64,  AC_DEFINE(HAVE_STAT64,  1,[defined if struct stat64 is available]),  ,[#include <sys/stat.h>])
 AC_CHECK_TYPE(struct __stat64,AC_DEFINE(HAVE___STAT64,1,[defined if struct __stat64 is available]),,[#include <sys/stat.h>])
 AC_CHECK_TYPE(struct _stati64,AC_DEFINE(HAVE__STATI64,1,[defined if struct _stati64 is available]),,[#include <sys/stat.h>])
+
+AC_CHECK_STRUCT_MEMBER(struct stat,st_atim.tv_nsec,AC_DEFINE(HAVE_STAT_ATIM_TV_NSEC,1,[defined if struct stat.st_atim.tv_nsec is available]),,[sys/types.h sys/stat.h fcntl.h])
+AC_CHECK_STRUCT_MEMBER(struct stat,st_mtim.tv_nsec,AC_DEFINE(HAVE_STAT_MTIM_TV_NSEC,1,[defined if struct stat.st_mtim.tv_nsec is available]),,[sys/types.h sys/stat.h fcntl.h])
+AC_CHECK_STRUCT_MEMBER(struct stat,st_ctim.tv_nsec,AC_DEFINE(HAVE_STAT_CTIM_TV_NSEC,1,[defined if struct stat.st_ctim.tv_nsec is available]),,[sys/types.h sys/stat.h fcntl.h])
 
 # check functions
 AC_CHECK_FUNCTION(pthread_attr_setname,AC_DEFINE(HAVE_PTHREAD_ATTR_SETNAME,1,[pthread_attr_setname() available]))
