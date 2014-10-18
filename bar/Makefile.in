@@ -111,6 +111,7 @@ SCRIPTS              = scripts/barserver-SuSE \
                        scripts/barserver-RedHat \
                        scripts/barserver-Mandrake \
                        scripts/barserver-debian \
+                       scripts/barserver-CentOS \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -197,11 +198,21 @@ help:
 # ----------------------------------------------------------------------------
 # create main
 
+.PHONY: all
+all: \
+  bar \
+  bar-debug \
+  bar-keygen \
+  barcontrol
+
 # create bar
-.PHONY: bar
+.PHONY: bar bar-debug
 
 bar bar/bar@EXEEXT@:
 	$(MAKE) -C bar bar@EXEEXT@
+
+bar-debug bar/bar-debug@EXEEXT@:
+	$(MAKE) -C bar bar-debug@EXEEXT@
 
 # create bar-keygen
 .PHONY: bar-keygen
@@ -341,7 +352,7 @@ install_base: \
           elif test "$(SYSTEM)" = "RedHat" -o -f $(ETC_DIR)/redhat-release; then \
             $(INSTALL) -m 755 scripts/barserver-RedHat "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
           elif test "$(SYSTEM)" = "CentOS" -o -f $(ETC_DIR)/redhat-release; then \
-            $(INSTALL) -m 755 scripts/barserver-RedHat "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
+            $(INSTALL) -m 755 scripts/barserver-CentOS "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
           elif test "$(SYSTEM)" = "Mandrake" -o -f $(ETC_DIR)/mandrake-release; then \
             $(INSTALL) -m 755 scripts/barserver-Mandrake "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
           elif test "$(SYSTEM)" = "Ubuntu" -o -f $(ETC_DIR)/lsb-release; then \
