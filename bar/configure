@@ -776,6 +776,7 @@ enable_curl
 enable_ssh
 enable_tls
 enable_iso9660
+enable_crashdump
 enable_gui
 enable_gui_i18n
 enable_package_compile
@@ -1418,6 +1419,7 @@ Optional Features:
   --disable-ssh           disable SSH support
   --disable-tls           disable TLS support
   --disable-iso9660       disable ISO 9660 support (barcontrol)
+  --disable-crashdump     disable crash dump support
   --disable-gui           disable GUI support (barcontrol)
   --disable-gui-i18n      disable GUI localization support (barcontrol)
   --disable-package-compile
@@ -2713,6 +2715,12 @@ fi
 # Check whether --enable-iso9660 was given.
 if test "${enable_iso9660+set}" = set; then :
   enableval=$enable_iso9660; ENABLE_ISO9660=$enableval
+
+fi
+
+# Check whether --enable-crashdump was given.
+if test "${enable_crashdump+set}" = set; then :
+  enableval=$enable_crashdump; ENABLE_BREAKPAD=$enableval
 
 fi
 
