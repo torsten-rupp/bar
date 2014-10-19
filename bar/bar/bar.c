@@ -19,7 +19,9 @@
 #ifdef HAVE_SYS_RESOURCE_H
   #include <sys/resource.h>
 #endif
+#include <libintl.h>
 #include <errno.h>
+#include <locale.h>
 #include <assert.h>
 
 #if   defined(PLATFORM_LINUX)
@@ -61,8 +63,6 @@
 #include "server.h"
 
 #include "bar.h"
-
-#include <signal.h>
 
 /****************** Conditional compilation switches *******************/
 
@@ -336,6 +336,19 @@ LOCAL const struct
     {"lzo4",COMPRESS_ALGORITHM_LZO_4},
     {"lzo5",COMPRESS_ALGORITHM_LZO_5},
   #endif /* HAVE_LZO */
+
+  #ifdef HAVE_LZ4
+    {"lz4-0",COMPRESS_ALGORITHM_LZ4_0},
+    {"lz4-1",COMPRESS_ALGORITHM_LZ4_1},
+    {"lz4-2",COMPRESS_ALGORITHM_LZ4_2},
+    {"lz4-3",COMPRESS_ALGORITHM_LZ4_3},
+    {"lz4-4",COMPRESS_ALGORITHM_LZ4_4},
+    {"lz4-5",COMPRESS_ALGORITHM_LZ4_5},
+    {"lz4-6",COMPRESS_ALGORITHM_LZ4_6},
+    {"lz4-7",COMPRESS_ALGORITHM_LZ4_7},
+    {"lz4-8",COMPRESS_ALGORITHM_LZ4_8},
+    {"lz4-9",COMPRESS_ALGORITHM_LZ4_9},
+  #endif /* HAVE_LZO */
 };
 
 #if 0
@@ -529,6 +542,10 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
                                                                                                                                                                            #ifdef HAVE_LZO
                                                                                                                                                                            "\n"
                                                                                                                                                                            "  lzo1..lzo5  : LZO compression level 1..5"
+                                                                                                                                                                           #endif
+                                                                                                                                                                           #ifdef HAVE_LZ4
+                                                                                                                                                                           "\n"
+                                                                                                                                                                           "  lz4-0..lz4-9: LZ4 compression level 0..9"
                                                                                                                                                                            #endif
                                                                                                                                                                            #ifdef HAVE_XDELTA
                                                                                                                                                                            "\n"
@@ -1432,7 +1449,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   {
     if ((fileInfo.permission & (FILE_PERMISSION_GROUP_READ|FILE_PERMISSION_OTHER_READ)) != 0)
     {
-      printWarning("Configuration file '%s' has wrong file permission %03o. Please make sure read permissions are limited to file owner (mode 600).\n",
+      printWarning(_("Configuration file '%s' has wrong file permission %03o. Please make sure read permissions are limited to file owner (mode 600).\n"),
                    String_cString(fileName),
                    fileInfo.permission & FILE_PERMISSION_MASK
                   );
@@ -1440,7 +1457,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   }
   else
   {
-    printWarning("Cannot get file info for configuration file '%s' (error: %s)\n",
+    printWarning(_("Cannot get file info for configuration file '%s' (error: %s)\n"),
                  String_cString(fileName),
                  Error_getText(error)
                 );
@@ -1450,7 +1467,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    printError("Cannot open configuration file '%s' (error: %s)!\n",
+    printError(_("Cannot open configuration file '%s' (error: %s)!\n"),
                String_cString(fileName),
                Error_getText(error)
               );
@@ -2523,18 +2540,32 @@ LOCAL Errors initAll(void)
 {
   AutoFreeList autoFreeList;
   Errors       error;
+  const char   *localePath;
   String       fileName;
 
   // initialize crash dump handler
   #if HAVE_BREAKPAD
     if (!MiniDump_init())
     {
-      fprintf(stderr,"Warning: Cannot initialize crash dump handler. No crash dumps will be created.\n");
+      (void)fprintf(stderr,"Warning: Cannot initialize crash dump handler. No crash dumps will be created.\n");
     }
   #endif /* HAVE_BREAKPAD */
 
   // initialize variables
   AutoFree_init(&autoFreeList);
+
+  // initialize i18n
+  #if defined(HAVE_SETLOCALE) && defined(HAVE_TEXTDOMAIN)
+    setlocale(LC_ALL,"");
+    #ifdef HAVE_BINDTEXTDOMAIN
+      localePath = getenv("__BAR_LOCALE__");
+      if (localePath != NULL)
+      {
+        bindtextdomain("bar",localePath);
+      }
+    #endif /* HAVE_BINDTEXTDOMAIN */
+    textdomain("bar");
+  #endif /* HAVE_SETLOCAL && HAVE_TEXTDOMAIN */
 
   // initialize modules
   error = Password_initAll();
@@ -2906,7 +2937,7 @@ void vlogMessage(ulong logType, const char *prefix, const char *text, va_list ar
         if (prefix != NULL)
         {
           (void)fputs(prefix,tmpLogFile);
-          fprintf(tmpLogFile,": ");
+          (void)fprintf(tmpLogFile,": ");
         }
         va_copy(tmpArguments,arguments);
         (void)vfprintf(tmpLogFile,text,tmpArguments);
@@ -2921,7 +2952,7 @@ void vlogMessage(ulong logType, const char *prefix, const char *text, va_list ar
         if (prefix != NULL)
         {
           (void)fputs(prefix,logFile);
-          fprintf(logFile,": ");
+          (void)fprintf(logFile,": ");
         }
         va_copy(tmpArguments,arguments);
         (void)vfprintf(logFile,text,tmpArguments);
@@ -3040,19 +3071,43 @@ void printError(const char *text, ...)
 }
 
 /***********************************************************************\
+* Name   : executeIOOutput
+* Purpose: process exec stdout, stderr output
+* Input  : userData - string list or NULL
+*          line     - line
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void executeIOOutput(void         *userData,
+                     const String line
+                    )
+{
+  StringList *stringList = (StringList*)userData;
+
+  assert(line != NULL);
+
+  printInfo(4,"%s\n",String_cString(line));
+  if (stringList != NULL) StringList_append(stringList,line);
+}
+
+/***********************************************************************\
 * Name   : executeIOlogPostProcess
 * Purpose: process log-post command stderr output
-* Input  : stringList - strerr string list
-*          line       - line
+* Input  : userData - strerr string list
+*          line     - line
 * Output : -
 * Return : -
 * Notes  : string list will be shortend to last 5 entries
 \***********************************************************************/
 
-LOCAL void executeIOlogPostProcess(StringList   *stringList,
+LOCAL void executeIOlogPostProcess(StringList   *userData,
                                    const String line
                                   )
 {
+  StringList *stringList = (StringList*)userData;
+
   assert(stringList != NULL);
   assert(line != NULL);
 
@@ -3087,9 +3142,8 @@ void logPostProcess(void)
     StringList_init(&stderrList);
     error = Misc_executeCommand(logPostCommand,
                                 textMacros,SIZE_OF_ARRAY(textMacros),
-                                NULL,
-                                (ExecuteIOFunction)executeIOlogPostProcess,
-                                &stderrList
+                                CALLBACK(NULL,NULL),
+                                CALLBACK(executeIOlogPostProcess,&stderrList)
                                );
     if (error != ERROR_NONE)
     {
@@ -5200,7 +5254,7 @@ int main(int argc, const char *argv[])
   error = initAll();
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: Cannot initialize program resources (error: %s)\n",Error_getText(error));
+    (void)fprintf(stderr,"ERROR: Cannot initialize program resources (error: %s)\n",Error_getText(error));
     #ifndef NDEBUG
       debugResourceDone();
       File_debugDone();
