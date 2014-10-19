@@ -2068,7 +2068,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
   #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
     #ifdef HAVE_O_NOATIME
       // open directory
-      handle = open(String_cString(pathName),O_RDONLY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
+      handle = open(pathName,O_RDONLY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
       if (handle == -1)
       {
         return ERRORX_(OPEN_DIRECTORY,errno,pathName);
