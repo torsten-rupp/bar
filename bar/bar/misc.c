@@ -164,29 +164,53 @@ uint64 Misc_getTimestamp(void)
 
 uint64 Misc_getCurrentDateTime(void)
 {
+  uint64 dateTime;
   struct timeval tv;
 
-  gettimeofday(&tv,NULL);
+  if (gettimeofday(&tv,NULL) == 0)
+  {
+    dateTime = (uint64)tv.tv_sec;
+  }
+  else
+  {
+    dateTime = 0LL;
+  }
 
-  return (uint64)tv.tv_sec;
+  return dateTime;
 }
 
 uint64 Misc_getCurrentDate(void)
 {
-  uint64 dateTime;
+  uint64 date;
+  struct timeval tv;
 
-  dateTime = Misc_getCurrentDateTime();
+  if (gettimeofday(&tv,NULL) == 0)
+  {
+    date = (uint64)(tv.tv_sec-tv.tv_sec%(24L*60L*60L));
+  }
+  else
+  {
+    date = 0LL;
+  }
 
-  return dateTime & ~(24*60*60-1);
+  return date;
 }
 
 uint32 Misc_getCurrentTime(void)
 {
-  uint64 dateTime;
+  uint64 time;
+  struct timeval tv;
 
-  dateTime = Misc_getCurrentDateTime();
+  if (gettimeofday(&tv,NULL) == 0)
+  {
+    time = (uint64)(tv.tv_sec%(24L*60L*60L));
+  }
+  else
+  {
+    time = 0LL;
+  }
 
-  return dateTime % (24*60*60);
+  return time;
 }
 
 void Misc_splitDateTime(uint64   dateTime,
@@ -894,7 +918,7 @@ stringNode = stringNode->next;
         execvp(arguments[0],(char**)arguments);
 
         // in case exec() fail, return a default exitcode
-        HALT_INTERNAL_ERROR("execvp() returned");
+        exit(EXITCODE_FAIL);
       }
       else if (pid < 0)
       {
@@ -975,9 +999,13 @@ error = ERROR_NONE;
       if      (WIFEXITED(status))
       {
         exitcode = WEXITSTATUS(status);
-        printInfo(3,"ok (exitcode %d)\n",exitcode);
-        if (exitcode != 0)
+        if (exitcode == 0)
         {
+          printInfo(3,"ok\n");
+        }
+        else
+        {
+          printInfo(3,"FAIL (exitcode %d)\n",exitcode);
           error = ERRORX_(EXEC_FAIL,exitcode,String_cString(commandLine));
           free(arguments);
           StringList_done(&argumentList);
@@ -999,7 +1027,7 @@ error = ERROR_NONE;
       }
       else
       {
-        printInfo(3,"ok (unknown exit)\n");
+        printInfo(3,"FAIL (unknown exit)\n");
       }
     #elif defined(WIN32)
 #if 0
