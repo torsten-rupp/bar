@@ -437,13 +437,13 @@ const char *File_getSystemTmpDirectory(void);
 
 /***********************************************************************\
 * Name   : File_getTmpFile, File_getTmpFileCString
-* Purpose: create and get a temporary file name
+* Purpose: create and open a temporary file
 * Input  : fileName  - variable for temporary file name
 *          pattern   - pattern with XXXXXX or NULL
 *          directory - directory to create temporary file (can be NULL)
 * Output : fileName - temporary file name
 * Return : TRUE iff temporary file created, FALSE otherwise
-* Notes  : -
+* Notes  : File is deleted when closed
 \***********************************************************************/
 
 #ifdef NDEBUG
