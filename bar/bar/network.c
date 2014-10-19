@@ -826,7 +826,7 @@ Errors Network_send(SocketHandle *socketHandle,
             pselect(socketHandle->handle+1,NULL,&fdSetOutput,NULL,&ts,&signalMask);
 
             // send data
-            n = send(socketHandle->handle,((char*)buffer)+sentBytes,length-sentBytes,0);
+            n = send(socketHandle->handle,((byte*)buffer)+sentBytes,length-sentBytes,0);
             if      (n > 0) sentBytes += n;
             else if ((n == -1) && (errno != EAGAIN)) break;
           }
@@ -861,7 +861,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             pselect(socketHandle->handle+1,NULL,&fdSetOutput,NULL,&ts,&signalMask);
 
             // send data
-            n = gnutls_record_send(socketHandle->gnuTLS.session,((char*)buffer)+sentBytes,length-sentBytes);
+            n = gnutls_record_send(socketHandle->gnuTLS.session,((byte*)buffer)+sentBytes,length-sentBytes);
             if      (n > 0) sentBytes += n;
             else if ((n < 0) && (errno != GNUTLS_E_AGAIN)) break;
           }
