@@ -3102,7 +3102,7 @@ void executeIOOutput(void         *userData,
 * Notes  : string list will be shortend to last 5 entries
 \***********************************************************************/
 
-LOCAL void executeIOlogPostProcess(StringList   *userData,
+LOCAL void executeIOlogPostProcess(void         *userData,
                                    const String line
                                   )
 {
