@@ -1338,6 +1338,8 @@ class TabJobs
   private WidgetVariable  skipUnreadable          = new WidgetVariable(false);
   private WidgetVariable  rawImages               = new WidgetVariable(false);
   private WidgetVariable  overwriteFiles          = new WidgetVariable(false);
+  private WidgetVariable  preCommand              = new WidgetVariable("");
+  private WidgetVariable  postCommand             = new WidgetVariable("");
 
   // variables
   private DirectoryInfoThread       directoryInfoThread;
@@ -1727,7 +1729,7 @@ class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuSeparator(menu);
+          Widgets.addMenuSeparator(menu);
 
           menuItem = Widgets.addMenuItem(menu,"Include");
           menuItem.addSelectionListener(new SelectionListener()
@@ -1806,7 +1808,7 @@ class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuSeparator(menu);
+          Widgets.addMenuSeparator(menu);
 
           menuItem = Widgets.addMenuItem(menu,"Directory size");
           menuItem.addSelectionListener(new SelectionListener()
@@ -2617,7 +2619,7 @@ class TabJobs
               try
               {
                 long n = Units.parseByteSize(widget.getText());
-                if (archivePartSize.getLong() == n) color = COLOR_WHITE;
+                if (archivePartSize.getLong() == n) color = null;
               }
               catch (NumberFormatException exception)
               {
@@ -2638,7 +2640,7 @@ class TabJobs
                 archivePartSize.set(n);
                 BARServer.setOption(selectedJobId,"archive-part-size",n);
                 widget.setText(Units.formatByteSize(n));
-                widget.setBackground(COLOR_WHITE);
+                widget.setBackground(null);
               }
               catch (NumberFormatException exception)
               {
@@ -2660,7 +2662,7 @@ class TabJobs
                 archivePartSize.set(n);
                 BARServer.setOption(selectedJobId,"archive-part-size",n);
                 widget.setText(Units.formatByteSize(n));
-                widget.setBackground(COLOR_WHITE);
+                widget.setBackground(null);
               }
               catch (NumberFormatException exception)
               {
@@ -2690,7 +2692,7 @@ class TabJobs
                 archivePartSize.set(n);
                 BARServer.setOption(selectedJobId,"archive-part-size",n);
                 widget.setText(Units.formatByteSize(n));
-                widget.setBackground(COLOR_WHITE);
+                widget.setBackground(null);
               }
               catch (NumberFormatException exception)
               {
@@ -2797,7 +2799,7 @@ class TabJobs
               Text  widget = (Text)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
               String s = widget.getText();
-              if (deltaSource.getString().equals(s)) color = COLOR_WHITE;
+              if (deltaSource.getString().equals(s)) color = null;
               widget.setBackground(color);
             }
           });
@@ -2809,6 +2811,7 @@ class TabJobs
               String string = widget.getText();
               deltaSource.set(string);
               BARServer.setOption(selectedJobId,"delta-source",string);
+              widget.setBackground(null);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -2825,6 +2828,7 @@ class TabJobs
               String string = widget.getText();
               deltaSource.set(string);
               BARServer.setOption(selectedJobId,"delta-source",string);
+              widget.setBackground(null);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(text,deltaSource));
@@ -3225,7 +3229,7 @@ class TabJobs
               Text  widget = (Text)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
               String s = widget.getText();
-              if (cryptPublicKeyFileName.getString().equals(s)) color = COLOR_WHITE;
+              if (cryptPublicKeyFileName.getString().equals(s)) color = null;
               widget.setBackground(color);
             }
           });
@@ -3237,6 +3241,7 @@ class TabJobs
               String string = widget.getText();
               cryptPublicKeyFileName.set(string);
               BARServer.setOption(selectedJobId,"crypt-public-key",string);
+              widget.setBackground(null);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -3253,6 +3258,7 @@ class TabJobs
               String string = widget.getText();
               cryptPublicKeyFileName.set(string);
               BARServer.setOption(selectedJobId,"crypt-public-key",string);
+              widget.setBackground(null);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(text,cryptPublicKeyFileName));
@@ -3423,7 +3429,7 @@ class TabJobs
               Text  widget = (Text)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
               String s = widget.getText();
-              if (cryptPassword.getString().equals(s)) color = COLOR_WHITE;
+              if (cryptPassword.getString().equals(s)) color = null;
               widget.setBackground(color);
             }
           });
@@ -3437,6 +3443,8 @@ class TabJobs
               {
                 cryptPassword.set(string1);
                 BARServer.setOption(selectedJobId,"crypt-password",string1);
+                widgetCryptPassword1.setBackground(null);
+                widgetCryptPassword2.setBackground(null);
               }
             }
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -3456,6 +3464,8 @@ class TabJobs
               {
                 cryptPassword.set(string1);
                 BARServer.setOption(selectedJobId,"crypt-password",string1);
+                widgetCryptPassword1.setBackground(null);
+                widgetCryptPassword2.setBackground(null);
               }
             }
           });
@@ -3485,7 +3495,7 @@ class TabJobs
               Text  widget = (Text)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
               String s = widget.getText();
-              if (cryptPassword.getString().equals(s)) color = COLOR_WHITE;
+              if (cryptPassword.getString().equals(s)) color = null;
               widget.setBackground(color);
             }
           });
@@ -3499,6 +3509,8 @@ class TabJobs
               {
                 cryptPassword.set(string1);
                 BARServer.setOption(selectedJobId,"crypt-password",string1);
+                widgetCryptPassword1.setBackground(null);
+                widgetCryptPassword2.setBackground(null);
               }
             }
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -3518,6 +3530,8 @@ class TabJobs
               {
                 cryptPassword.set(string1);
                 BARServer.setOption(selectedJobId,"crypt-password",string1);
+                widgetCryptPassword1.setBackground(null);
+                widgetCryptPassword2.setBackground(null);
               }
               else
               {
@@ -3645,7 +3659,7 @@ class TabJobs
               Text  widget = (Text)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
               String s = widget.getText();
-              if (storageFileName.getString().equals(s)) color = COLOR_WHITE;
+              if (storageFileName.getString().equals(s)) color = null;
               widget.setBackground(color);
             }
           });
@@ -3656,6 +3670,7 @@ class TabJobs
               Text widget = (Text)selectionEvent.widget;
               storageFileName.set(widget.getText());
               BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              widget.setBackground(null);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -3671,6 +3686,7 @@ class TabJobs
               Text widget = (Text)focusEvent.widget;
               storageFileName.set(widget.getText());
               BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              widget.setBackground(null);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(text,storageFileName));
@@ -3715,8 +3731,8 @@ class TabJobs
                 if (fileName != null)
                 {
                   storageFileName.set(fileName);
+                  BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
                 }
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             }
           });
@@ -3739,7 +3755,7 @@ class TabJobs
               Text   widget = (Text)modifyEvent.widget;
               Color  color  = COLOR_MODIFIED;
               String string = widget.getText();
-              if (incrementalListFileName.getString().equals(string)) color = COLOR_WHITE;
+              if (incrementalListFileName.getString().equals(string)) color = null;
               widget.setBackground(color);
             }
           });
@@ -3751,6 +3767,7 @@ class TabJobs
               String string = widget.getText();
               incrementalListFileName.set(string);
               BARServer.setOption(selectedJobId,"incremental-list-file",string);
+              widget.setBackground(null);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -3767,6 +3784,7 @@ class TabJobs
               String string = widget.getText();
               incrementalListFileName.set(string);
               BARServer.setOption(selectedJobId,"incremental-list-file",string);
+              widget.setBackground(null);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(text,incrementalListFileName));
@@ -4144,7 +4162,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (storageLoginName.getString().equals(string)) color = COLOR_WHITE;
+                if (storageLoginName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -4155,6 +4173,7 @@ class TabJobs
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -4170,6 +4189,7 @@ class TabJobs
                 Text widget = (Text)focusEvent.widget;
                 storageLoginName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
@@ -4187,7 +4207,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (storageHostName.getString().equals(string)) color = COLOR_WHITE;
+                if (storageHostName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -4198,6 +4218,7 @@ class TabJobs
                 Text widget = (Text)selectionEvent.widget;
                 storageHostName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -4213,6 +4234,7 @@ class TabJobs
                 Text widget = (Text)focusEvent.widget;
                 storageHostName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
@@ -4230,7 +4252,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (storageLoginPassword.getString().equals(string)) color = COLOR_WHITE;
+                if (storageLoginPassword.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -4241,6 +4263,7 @@ class TabJobs
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginPassword.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -4256,6 +4279,7 @@ class TabJobs
                 Text widget = (Text)focusEvent.widget;
                 storageLoginPassword.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginPassword));
@@ -4352,7 +4376,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (storageLoginName.getString().equals(string)) color = COLOR_WHITE;
+                if (storageLoginName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -4363,6 +4387,7 @@ class TabJobs
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -4378,6 +4403,7 @@ class TabJobs
                 Text widget = (Text)focusEvent.widget;
                 storageLoginName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
@@ -4395,7 +4421,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (storageHostName.getString().equals(string)) color = COLOR_WHITE;
+                if (storageHostName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -4406,6 +4432,7 @@ class TabJobs
                 Text widget = (Text)selectionEvent.widget;
                 storageHostName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -4421,6 +4448,7 @@ class TabJobs
                 Text widget = (Text)focusEvent.widget;
                 storageHostName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
@@ -4442,7 +4470,7 @@ class TabJobs
                 try
                 {
                   long n = !string.equals("") ? Long.parseLong(string) : 0;
-                  if (storageHostPort.getLong() == n) color = COLOR_WHITE;
+                  if (storageHostPort.getLong() == n) color = null;
                 }
                 catch (NumberFormatException exception)
                 {
@@ -4464,6 +4492,7 @@ class TabJobs
                   {
                     storageHostPort.set(n);
                     BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                    widget.setBackground(null);
                   }
                   else
                   {
@@ -4507,6 +4536,7 @@ class TabJobs
                   {
                     storageHostPort.set(n);
                     BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                    widget.setBackground(null);
                   }
                   else
                   {
@@ -4548,7 +4578,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (sshPublicKeyFileName.getString().equals(string)) color = COLOR_WHITE;
+                if (sshPublicKeyFileName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -4560,6 +4590,7 @@ class TabJobs
                 String string = widget.getText();
                 sshPublicKeyFileName.set(string);
                 BARServer.setOption(selectedJobId,"ssh-public-key",string);
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -4576,6 +4607,7 @@ class TabJobs
                 String string = widget.getText();
                 sshPublicKeyFileName.set(string);
                 BARServer.setOption(selectedJobId,"ssh-public-key",string);
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,sshPublicKeyFileName));
@@ -4621,7 +4653,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (sshPrivateKeyFileName.getString().equals(string)) color = COLOR_WHITE;
+                if (sshPrivateKeyFileName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -4633,6 +4665,7 @@ class TabJobs
                 String string = widget.getText();
                 sshPrivateKeyFileName.set(string);
                 BARServer.setOption(selectedJobId,"ssh-private-key",string);
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -4649,6 +4682,7 @@ class TabJobs
                 String string = widget.getText();
                 sshPrivateKeyFileName.set(string);
                 BARServer.setOption(selectedJobId,"ssh-private-key",string);
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,sshPrivateKeyFileName));
@@ -4770,7 +4804,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (storageLoginName.getString().equals(string)) color = COLOR_WHITE;
+                if (storageLoginName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -4781,6 +4815,7 @@ class TabJobs
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -4796,6 +4831,7 @@ class TabJobs
                 Text widget = (Text)focusEvent.widget;
                 storageLoginName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
@@ -4813,7 +4849,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (storageHostName.getString().equals(string)) color = COLOR_WHITE;
+                if (storageHostName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -4824,6 +4860,7 @@ class TabJobs
                 Text widget = (Text)selectionEvent.widget;
                 storageHostName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -4839,6 +4876,7 @@ class TabJobs
                 Text widget = (Text)focusEvent.widget;
                 storageHostName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
@@ -4860,7 +4898,7 @@ class TabJobs
                 try
                 {
                   long n = !string.equals("") ? Long.parseLong(string) : 0;
-                  if (storageHostPort.getLong() == n) color = COLOR_WHITE;
+                  if (storageHostPort.getLong() == n) color = null;
                 }
                 catch (NumberFormatException exception)
                 {
@@ -4882,6 +4920,7 @@ class TabJobs
                   {
                     storageHostPort.set(n);
                     BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                    widget.setBackground(null);
                   }
                   else
                   {
@@ -4925,6 +4964,7 @@ class TabJobs
                   {
                     storageHostPort.set(n);
                     BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                    widget.setBackground(null);
                   }
                   else
                   {
@@ -4966,7 +5006,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (sshPublicKeyFileName.getString().equals(string)) color = COLOR_WHITE;
+                if (sshPublicKeyFileName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -4978,6 +5018,7 @@ class TabJobs
                 String string = widget.getText();
                 sshPublicKeyFileName.set(string);
                 BARServer.setOption(selectedJobId,"ssh-public-key",string);
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -4994,6 +5035,7 @@ class TabJobs
                 String string = widget.getText();
                 sshPublicKeyFileName.set(string);
                 BARServer.setOption(selectedJobId,"ssh-public-key",string);
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,sshPublicKeyFileName));
@@ -5039,7 +5081,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (sshPrivateKeyFileName.getString().equals(string)) color = COLOR_WHITE;
+                if (sshPrivateKeyFileName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -5051,6 +5093,7 @@ class TabJobs
                 String string = widget.getText();
                 sshPrivateKeyFileName.set(string);
                 BARServer.setOption(selectedJobId,"ssh-private-key",string);
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -5067,6 +5110,7 @@ class TabJobs
                 String string = widget.getText();
                 sshPrivateKeyFileName.set(string);
                 BARServer.setOption(selectedJobId,"ssh-private-key",string);
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,sshPrivateKeyFileName));
@@ -5185,7 +5229,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (storageDeviceName.getString().equals(string)) color = COLOR_WHITE;
+                if (storageDeviceName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -5196,6 +5240,7 @@ class TabJobs
                 Text widget = (Text)selectionEvent.widget;
                 storageDeviceName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -5211,6 +5256,7 @@ class TabJobs
                 Text widget = (Text)focusEvent.widget;
                 storageDeviceName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageDeviceName));
@@ -5258,7 +5304,7 @@ class TabJobs
                 try
                 {
                   long n = Units.parseByteSize(widget.getText());
-                  if (volumeSize.getLong() == n) color = COLOR_WHITE;
+                  if (volumeSize.getLong() == n) color = null;
                 }
                 catch (NumberFormatException exception)
                 {
@@ -5278,6 +5324,7 @@ class TabJobs
                   long n = Units.parseByteSize(string);
                   boolean changedFlag = volumeSize.set(n);
                   BARServer.setOption(selectedJobId,"volume-size",n);
+                  widget.setBackground(null);
 
                   if (   changedFlag
                       && archivePartSizeFlag.getBoolean()
@@ -5308,6 +5355,7 @@ class TabJobs
                   long  n = Units.parseByteSize(string);
                   boolean changedFlag = volumeSize.set(n);
                   BARServer.setOption(selectedJobId,"volume-size",n);
+                  widget.setBackground(null);
 
                   if (   changedFlag
                       && archivePartSizeFlag.getBoolean()
@@ -5346,6 +5394,7 @@ class TabJobs
                   long n = Units.parseByteSize(string);
                   boolean changedFlag = volumeSize.set(n);
                   BARServer.setOption(selectedJobId,"volume-size",n);
+                  widget.setBackground(null);
 
                   if (   changedFlag
                       && archivePartSizeFlag.getBoolean()
@@ -5462,7 +5511,7 @@ class TabJobs
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
-                if (storageDeviceName.getString().equals(string)) color = COLOR_WHITE;
+                if (storageDeviceName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
             });
@@ -5473,6 +5522,7 @@ class TabJobs
                 Text widget = (Text)selectionEvent.widget;
                 storageDeviceName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
@@ -5488,6 +5538,7 @@ class TabJobs
                 Text widget = (Text)focusEvent.widget;
                 storageDeviceName.set(widget.getText());
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                widget.setBackground(null);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(text,storageDeviceName));
@@ -5535,7 +5586,7 @@ class TabJobs
                 try
                 {
                   long n = Units.parseByteSize(widget.getText());
-                  if (volumeSize.getLong() == n) color = COLOR_WHITE;
+                  if (volumeSize.getLong() == n) color = null;
                 }
                 catch (NumberFormatException exception)
                 {
@@ -5555,6 +5606,7 @@ class TabJobs
                   long n = Units.parseByteSize(string);
                   volumeSize.set(n);
                   BARServer.setOption(selectedJobId,"volume-size",n);
+                  widget.setBackground(null);
                 }
                 catch (NumberFormatException exception)
                 {
@@ -5575,6 +5627,7 @@ class TabJobs
                   long  n = Units.parseByteSize(string);
                   volumeSize.set(n);
                   BARServer.setOption(selectedJobId,"volume-size",n);
+                  widget.setBackground(null);
                 }
                 catch (NumberFormatException exception)
                 {
@@ -5603,6 +5656,7 @@ class TabJobs
                   long n = Units.parseByteSize(string);
                   volumeSize.set(n);
                   BARServer.setOption(selectedJobId,"volume-size",n);
+                  widget.setBackground(null);
                 }
                 catch (NumberFormatException exception)
                 {
@@ -5629,12 +5683,107 @@ class TabJobs
         }
       }
 
+      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Scripts"));
+      tab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,1.0},1.0));
+      Widgets.layout(tab,0,0,TableLayoutData.NSWE);
+      {
+        // pre-script
+        label = Widgets.newLabel(tab,BARControl.tr("Pre-script")+":");
+        Widgets.layout(label,0,0,TableLayoutData.W);
+        text = Widgets.newText(tab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+        text.setToolTipText(BARControl.tr("Command or script to execute before start of a job."));
+        Widgets.layout(text,1,0,TableLayoutData.NSWE);
+        text.addModifyListener(new ModifyListener()
+        {
+          public void modifyText(ModifyEvent modifyEvent)
+          {
+            Text   widget = (Text)modifyEvent.widget;
+            Color  color  = COLOR_MODIFIED;
+            String string = widget.getText();
+            if (preCommand.equals(string)) color = null;
+            widget.setBackground(color);
+          }
+        });
+        text.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+            Text widget = (Text)selectionEvent.widget;
+            String text = widget.getText();
+            BARServer.setOption(selectedJobId,"pre-command",text);
+            widget.setBackground(null);
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        text.addFocusListener(new FocusListener()
+        {
+          public void focusGained(FocusEvent focusEvent)
+          {
+          }
+          public void focusLost(FocusEvent focusEvent)
+          {
+            Text widget = (Text)focusEvent.widget;
+            String text = widget.getText();
+            BARServer.setOption(selectedJobId,"pre-command",text);
+            widget.setBackground(null);
+          }
+        });
+        Widgets.addModifyListener(new WidgetModifyListener(text,preCommand));
+
+        // post-script
+        label = Widgets.newLabel(tab,BARControl.tr("Post-script")+":");
+        Widgets.layout(label,2,0,TableLayoutData.W);
+        text = Widgets.newText(tab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+        text.setToolTipText(BARControl.tr("Command or script to execute after termination of a job."));
+        Widgets.layout(text,3,0,TableLayoutData.NSWE);
+        text.addModifyListener(new ModifyListener()
+        {
+          public void modifyText(ModifyEvent modifyEvent)
+          {
+            Text   widget = (Text)modifyEvent.widget;
+            Color  color  = COLOR_MODIFIED;
+            String string = widget.getText();
+            if (postCommand.equals(string)) color = null;
+            widget.setBackground(color);
+          }
+        });
+        text.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+            Text widget = (Text)selectionEvent.widget;
+            String text = widget.getText();
+            BARServer.setOption(selectedJobId,"post-command",text);
+            widget.setBackground(null);
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        text.addFocusListener(new FocusListener()
+        {
+          public void focusGained(FocusEvent focusEvent)
+          {
+          }
+          public void focusLost(FocusEvent focusEvent)
+          {
+            Text widget = (Text)focusEvent.widget;
+            String text = widget.getText();
+            BARServer.setOption(selectedJobId,"post-command",text);
+            widget.setBackground(null);
+          }
+        });
+        Widgets.addModifyListener(new WidgetModifyListener(text,postCommand));
+      }
+
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Schedule"));
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // list
-        widgetScheduleList = Widgets.newTable(tab,SWT.NONE);
+        widgetScheduleList = Widgets.newTable(tab);
         widgetScheduleList.setToolTipText(BARControl.tr("List with schedule entries.\nDouble-click to edit entry, right-click to open context menu."));
         Widgets.layout(widgetScheduleList,0,0,TableLayoutData.NSWE);
         widgetScheduleList.addMouseListener(new MouseListener()
@@ -5841,10 +5990,18 @@ class TabJobs
     updateJobList();
   }
 
+  /** set tab status reference
+   * @param tabStatus tab statut object
+   */
+  void setTabStatus(TabStatus tabStatus)
+  {
+    this.tabStatus = tabStatus;
+  }
+
   /** select job by name
    * @param name job name
    */
-  void selectJob(String name)
+  public void selectJob(String name)
   {
     synchronized(widgetJobList)
     {
@@ -5867,12 +6024,391 @@ class TabJobs
     }
   }
 
-  //-----------------------------------------------------------------------
-
-  void setTabStatus(TabStatus tabStatus)
+  /** create new job
+   * @return true iff new job created
+   */
+  public boolean jobNew()
   {
-    this.tabStatus = tabStatus;
+    Composite composite;
+    Label     label;
+    Button    button;
+
+    final Shell dialog = Dialogs.openModal(shell,"New job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+
+    // create widgets
+    final Text   widgetJobName;
+    final Button widgetAdd;
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    {
+      label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+
+      widgetJobName = Widgets.newText(composite);
+      Widgets.layout(widgetJobName,0,1,TableLayoutData.WE);
+    }
+
+    // buttons
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    {
+      widgetAdd = Widgets.newButton(composite,BARControl.tr("Add"));
+      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+
+      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          Dialogs.close(dialog,false);
+        }
+      });
+    }
+
+    // add selection listeners
+    widgetJobName.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        widgetAdd.forceFocus();
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+throw new Error("NYI");
+      }
+    });
+    widgetAdd.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget  = (Button)selectionEvent.widget;
+        String jobName = widgetJobName.getText();
+        if (!jobName.equals(""))
+        {
+          try
+          {
+            String[] errorMessage = new String[1];
+            String[] result = new String[1];
+            int error = BARServer.executeCommand(StringParser.format("JOB_NEW name=%S",jobName),
+                                                 errorMessage
+                                                );
+            if (error == Errors.NONE)
+            {
+              updateJobList();
+              selectJob(jobName);
+            }
+            else
+            {
+              Dialogs.error(shell,"Cannot create new job:\n\n"+result[0]);
+              widgetJobName.forceFocus();
+              return;
+            }
+          }
+          catch (CommunicationError error)
+          {
+            Dialogs.error(shell,"Cannot create new job:\n\n"+error.getMessage());
+            widgetJobName.forceFocus();
+            return;
+          }
+        }
+        Dialogs.close(dialog,true);
+      }
+    });
+
+    return (Boolean)Dialogs.run(dialog,false);
   }
+
+  /** clone job
+   * @param jobId job id
+   * @param jobName job name
+   * @return true iff job cloned
+   */
+  public boolean jobClone(final int jobId, final String jobName)
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+
+    assert jobId != 0;
+    assert jobName != null;
+
+    final Shell dialog = Dialogs.openModal(shell,"Clone job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+
+    // create widgets
+    final Text   widgetJobName;
+    final Button widgetClone;
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    {
+      label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+
+      widgetJobName = Widgets.newText(composite);
+      widgetJobName.setText(jobName);
+      Widgets.layout(widgetJobName,0,1,TableLayoutData.WE);
+    }
+
+    // buttons
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    {
+      widgetClone = Widgets.newButton(composite,BARControl.tr("Clone"));
+      widgetClone.setEnabled(false);
+      Widgets.layout(widgetClone,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+
+      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          Dialogs.close(dialog,false);
+        }
+      });
+    }
+
+    // add selection listeners
+    widgetJobName.addModifyListener(new ModifyListener()
+    {
+      public void modifyText(ModifyEvent modifyEvent)
+      {
+        Text  widget = (Text)modifyEvent.widget;
+        widgetClone.setEnabled(!widget.getText().equals(jobName));
+      }
+    });
+    widgetJobName.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        widgetClone.forceFocus();
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+throw new Error("NYI");
+      }
+    });
+    widgetClone.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget     = (Button)selectionEvent.widget;
+        String newJobName = widgetJobName.getText();
+        if (!newJobName.equals(""))
+        {
+          try
+          {
+            String[] errorMessage = new String[1];
+            int error = BARServer.executeCommand(StringParser.format("JOB_CLONE jobId=%d name=%S",
+                                                                     jobId,
+                                                                     newJobName
+                                                                    ),
+                                                 errorMessage
+                                                );
+            if (error == Errors.NONE)
+            {
+              updateJobList();
+              selectJob(newJobName);
+            }
+            else
+            {
+              Dialogs.error(shell,"Cannot clone job:\n\n"+errorMessage[0]);
+            }
+          }
+          catch (CommunicationError error)
+          {
+            Dialogs.error(shell,"Cannot clone job:\n\n"+error.getMessage());
+          }
+        }
+        Dialogs.close(dialog,true);
+      }
+    });
+
+    Widgets.setFocus(widgetJobName);
+    return (Boolean)Dialogs.run(dialog,false);
+  }
+
+  /** rename job
+   * @param jobId job id
+   * @param jobName job name
+   * @return true iff new job renamed
+   */
+  public boolean jobRename(final int jobId, final String jobName)
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+
+    assert jobId != 0;
+    assert jobName != null;
+
+    final Shell dialog = Dialogs.openModal(shell,"Rename job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+
+    // create widgets
+    final Text   widgetNewJobName;
+    final Button widgetRename;
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    {
+      label = Widgets.newLabel(composite,BARControl.tr("Old name")+":");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+
+      label = Widgets.newLabel(composite,jobName);
+      Widgets.layout(label,0,1,TableLayoutData.W);
+
+      label = Widgets.newLabel(composite,BARControl.tr("New name")+":");
+      Widgets.layout(label,1,0,TableLayoutData.W);
+
+      widgetNewJobName = Widgets.newText(composite);
+      widgetNewJobName.setText(jobName);
+      Widgets.layout(widgetNewJobName,1,1,TableLayoutData.WE);
+    }
+
+    // buttons
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    {
+      widgetRename = Widgets.newButton(composite,BARControl.tr("Rename"));
+      widgetRename.setEnabled(false);
+      Widgets.layout(widgetRename,0,0,TableLayoutData.W);
+
+      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
+      Widgets.layout(button,0,1,TableLayoutData.E);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          Dialogs.close(dialog,false);
+        }
+      });
+    }
+
+    // add selection listeners
+    widgetNewJobName.addModifyListener(new ModifyListener()
+    {
+      public void modifyText(ModifyEvent modifyEvent)
+      {
+        Text  widget = (Text)modifyEvent.widget;
+        widgetRename.setEnabled(!widget.getText().equals(jobName));
+      }
+    });
+    widgetNewJobName.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        widgetRename.forceFocus();
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+throw new Error("NYI");
+      }
+    });
+    widgetRename.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget     = (Button)selectionEvent.widget;
+        String newJobName = widgetNewJobName.getText();
+        if (!newJobName.equals(""))
+        {
+          try
+          {
+            String[] errorMessage = new String[1];
+            int error = BARServer.executeCommand(StringParser.format("JOB_RENAME jobId=%d newName=%S",
+                                                                     jobId,
+                                                                     newJobName
+                                                                    ),
+                                                 errorMessage
+                                                );
+            if (error == Errors.NONE)
+            {
+              updateJobList();
+              selectJob(newJobName);
+            }
+            else
+            {
+              Dialogs.error(shell,"Cannot rename job:\n\n"+errorMessage[0]);
+            }
+          }
+          catch (CommunicationError error)
+          {
+            Dialogs.error(shell,"Cannot rename job:\n\n"+error.getMessage());
+          }
+        }
+        Dialogs.close(dialog,true);
+      }
+    });
+
+    Widgets.setFocus(widgetNewJobName);
+    return (Boolean)Dialogs.run(dialog,false);
+  }
+
+  /** delete job
+   * @param jobId job id
+   * @param jobName job name
+   * @return true iff job deleted
+   */
+  public boolean jobDelete(int jobId, String jobName)
+  {
+    assert jobId != 0;
+    assert jobName != null;
+
+    if (Dialogs.confirm(shell,"Delete job '"+jobName+"'?"))
+    {
+      try
+      {
+        String[] result = new String[1];
+        int error = BARServer.executeCommand(StringParser.format("JOB_DELETE jobId=%d",jobId));
+        if (error == Errors.NONE)
+        {
+          updateJobList();
+          selectJobEvent.trigger();
+          clear();
+        }
+        else
+        {
+          Dialogs.error(shell,"Cannot delete job:\n\n"+result[0]);
+          return false;
+        }
+      }
+      catch (CommunicationError error)
+      {
+        Dialogs.error(shell,"Cannot delete job:\n\n"+error.getMessage());
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  //-----------------------------------------------------------------------
 
   /** get archive name
    * @return archive name
@@ -5977,6 +6513,8 @@ class TabJobs
       waitFirstVolume.set(BARServer.getBooleanOption(selectedJobId,"wait-first-volume"));
       skipUnreadable.set(BARServer.getBooleanOption(selectedJobId,"skip-unreadable"));
       overwriteFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-files"));
+      preCommand.set(BARServer.getStringOption(selectedJobId,"pre-command"));
+      postCommand.set(BARServer.getStringOption(selectedJobId,"post-command"));
 
       updateFileTreeImages();
       updateDeviceImages();
@@ -6055,356 +6593,34 @@ class TabJobs
 
   //-----------------------------------------------------------------------
 
-  /** add a new job
-   */
-  private void jobNew()
-  {
-    Composite composite;
-    Label     label;
-    Button    button;
-
-    final Shell dialog = Dialogs.openModal(shell,"New job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
-
-    // create widgets
-    final Text   widgetJobName;
-    final Button widgetAdd;
-    composite = Widgets.newComposite(dialog,SWT.NONE,4);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
-    {
-      label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
-      Widgets.layout(label,0,0,TableLayoutData.W);
-
-      widgetJobName = Widgets.newText(composite);
-      Widgets.layout(widgetJobName,0,1,TableLayoutData.WE);
-    }
-
-    // buttons
-    composite = Widgets.newComposite(dialog,SWT.NONE,4);
-    composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
-    {
-      widgetAdd = Widgets.newButton(composite,BARControl.tr("Add"));
-      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
-
-      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
-      button.addSelectionListener(new SelectionListener()
-      {
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-          widget.getShell().close();
-        }
-      });
-    }
-
-    // add selection listeners
-    widgetJobName.addSelectionListener(new SelectionListener()
-    {
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-        widgetAdd.forceFocus();
-      }
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-throw new Error("NYI");
-      }
-    });
-    widgetAdd.addSelectionListener(new SelectionListener()
-    {
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-        Button widget  = (Button)selectionEvent.widget;
-        String jobName = widgetJobName.getText();
-        if (!jobName.equals(""))
-        {
-          try
-          {
-            String[] errorMessage = new String[1];
-            String[] result = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("JOB_NEW name=%S",jobName),
-                                                 errorMessage
-                                                );
-            if (error == Errors.NONE)
-            {
-              updateJobList();
-              selectJob(jobName);
-            }
-            else
-            {
-              Dialogs.error(shell,"Cannot create new job:\n\n"+result[0]);
-              widgetJobName.forceFocus();
-              return;
-            }
-          }
-          catch (CommunicationError error)
-          {
-            Dialogs.error(shell,"Cannot create new job:\n\n"+error.getMessage());
-            widgetJobName.forceFocus();
-            return;
-          }
-        }
-        widget.getShell().close();
-      }
-    });
-
-    Dialogs.run(dialog);
-  }
-
-  /** clone job
+  /** clone selected job
    */
   private void jobClone()
   {
-    Composite composite;
-    Label     label;
-    Button    button;
-
-    assert selectedJobName != null;
     assert selectedJobId != 0;
+    assert selectedJobName != null;
 
-    final Shell dialog = Dialogs.openModal(shell,"Clone job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
-
-    // create widgets
-    final Text   widgetJobName;
-    final Button widgetCopy;
-    composite = Widgets.newComposite(dialog,SWT.NONE,4);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
-    {
-      label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
-      Widgets.layout(label,0,0,TableLayoutData.W);
-
-      widgetJobName = Widgets.newText(composite);
-      widgetJobName.setText(selectedJobName);
-      Widgets.layout(widgetJobName,0,1,TableLayoutData.WE);
-    }
-
-    // buttons
-    composite = Widgets.newComposite(dialog,SWT.NONE,4);
-    composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
-    {
-      widgetCopy = Widgets.newButton(composite,BARControl.tr("Clone"));
-      Widgets.layout(widgetCopy,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
-
-      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
-      button.addSelectionListener(new SelectionListener()
-      {
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-          widget.getShell().close();
-        }
-      });
-    }
-
-    // add selection listeners
-    widgetJobName.addSelectionListener(new SelectionListener()
-    {
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-        widgetCopy.forceFocus();
-      }
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-throw new Error("NYI");
-      }
-    });
-    widgetCopy.addSelectionListener(new SelectionListener()
-    {
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-        Button widget  = (Button)selectionEvent.widget;
-        String jobName = widgetJobName.getText();
-        if (!jobName.equals(""))
-        {
-          try
-          {
-            String[] errorMessage = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("JOB_CLONE jobId=%d name=%S",
-                                                                     selectedJobId,
-                                                                     jobName
-                                                                    ),
-                                                 errorMessage
-                                                );
-            if (error == Errors.NONE)
-            {
-              updateJobList();
-              selectJob(jobName);
-            }
-            else
-            {
-              Dialogs.error(shell,"Cannot clone job:\n\n"+errorMessage[0]);
-            }
-          }
-          catch (CommunicationError error)
-          {
-            Dialogs.error(shell,"Cannot clone job:\n\n"+error.getMessage());
-          }
-        }
-        widget.getShell().close();
-      }
-    });
-
-    Widgets.setFocus(widgetJobName);
-    Dialogs.run(dialog);
+    jobClone(selectedJobId,selectedJobName);
   }
 
   /** rename selected job
    */
   private void jobRename()
   {
-    Composite composite;
-    Label     label;
-    Button    button;
-
-    assert selectedJobName != null;
     assert selectedJobId != 0;
+    assert selectedJobName != null;
 
-    final Shell dialog = Dialogs.openModal(shell,"Rename job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
-
-    // create widgets
-    final Text   widgetNewJobName;
-    final Button widgetRename;
-    composite = Widgets.newComposite(dialog,SWT.NONE,4);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
-    {
-      label = Widgets.newLabel(composite,BARControl.tr("Old name")+":");
-      Widgets.layout(label,0,0,TableLayoutData.W);
-
-      label = Widgets.newLabel(composite,selectedJobName);
-      Widgets.layout(label,0,1,TableLayoutData.W);
-
-      label = Widgets.newLabel(composite,BARControl.tr("New name")+":");
-      Widgets.layout(label,1,0,TableLayoutData.W);
-
-      widgetNewJobName = Widgets.newText(composite);
-      widgetNewJobName.setText(selectedJobName);
-      Widgets.layout(widgetNewJobName,1,1,TableLayoutData.WE);
-    }
-
-    // buttons
-    composite = Widgets.newComposite(dialog,SWT.NONE,4);
-    composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
-    {
-      widgetRename = Widgets.newButton(composite,BARControl.tr("Rename"));
-      Widgets.layout(widgetRename,0,0,TableLayoutData.W);
-
-      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E);
-      button.addSelectionListener(new SelectionListener()
-      {
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-          widget.getShell().close();
-        }
-      });
-    }
-
-    // add selection listeners
-    widgetNewJobName.addSelectionListener(new SelectionListener()
-    {
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-        widgetRename.forceFocus();
-      }
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-throw new Error("NYI");
-      }
-    });
-    widgetRename.addSelectionListener(new SelectionListener()
-    {
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-        Button widget     = (Button)selectionEvent.widget;
-        String newJobName = widgetNewJobName.getText();
-        if (!newJobName.equals(""))
-        {
-          try
-          {
-            String[] errorMessage = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("JOB_RENAME jobId=%d newName=%S",
-                                                                     selectedJobId,
-                                                                     newJobName
-                                                                    ),
-                                                 errorMessage
-                                                );
-            if (error == Errors.NONE)
-            {
-              updateJobList();
-              selectJob(newJobName);
-            }
-            else
-            {
-              Dialogs.error(shell,"Cannot rename job:\n\n"+errorMessage[0]);
-            }
-          }
-          catch (CommunicationError error)
-          {
-            Dialogs.error(shell,"Cannot rename job:\n\n"+error.getMessage());
-          }
-        }
-        widget.getShell().close();
-      }
-    });
-
-    Widgets.setFocus(widgetNewJobName);
-    Dialogs.run(dialog);
+    jobRename(selectedJobId,selectedJobName);
   }
 
   /** delete selected job
    */
   private void jobDelete()
   {
-    assert selectedJobName != null;
     assert selectedJobId != 0;
+    assert selectedJobName != null;
 
-    if (Dialogs.confirm(shell,"Delete job '"+selectedJobName+"'?"))
-    {
-      try
-      {
-        String[] result = new String[1];
-        int error = BARServer.executeCommand(StringParser.format("JOB_DELETE jobId=%d",selectedJobId));
-        if (error == Errors.NONE)
-        {
-          updateJobList();
-          selectJobEvent.trigger();
-          clear();
-        }
-        else
-        {
-          Dialogs.error(shell,"Cannot delete job:\n\n"+result[0]);
-        }
-      }
-      catch (CommunicationError error)
-      {
-        Dialogs.error(shell,"Cannot delete job:\n\n"+error.getMessage());
-      }
-    }
+    jobDelete(selectedJobId,selectedJobName);
   }
 
   //-----------------------------------------------------------------------

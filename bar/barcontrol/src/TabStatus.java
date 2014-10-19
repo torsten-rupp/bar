@@ -562,6 +562,56 @@ class TabStatus
           volume();
         }
       });
+
+      Widgets.addMenuSeparator(menu);
+
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("New")+"\u2026");
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          jobNew();
+        }
+      });
+
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026");
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          jobClone();
+        }
+      });
+
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Rename")+"\u2026");
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          jobRename();
+        }
+      });
+
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Delete")+"\u2026");
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          jobDelete();
+        }
+      });
     }
     widgetJobList.setMenu(menu);
 
@@ -1606,6 +1656,58 @@ class TabStatus
     if (error != Errors.NONE)
     {
       Dialogs.error(shell,BARControl.tr("Cannot change volume job (error: %s)"),resultErrorMessage[0]);
+    }
+  }
+
+  /** create new job
+   */
+  private void jobNew()
+  {
+    assert selectedJobData != null;
+
+    assert selectedJobData != null;
+
+    tabJobs.jobNew();
+    updateJobList();
+  }
+
+  /** clone selected job
+   */
+  private void jobClone()
+  {
+    assert selectedJobData != null;
+
+    assert selectedJobData != null;
+
+    tabJobs.jobClone(selectedJobData.id,selectedJobData.name);
+    updateJobList();
+  }
+
+  /** rename selected job
+   */
+  private void jobRename()
+  {
+    assert selectedJobData != null;
+
+    assert selectedJobData != null;
+
+    if (tabJobs.jobRename(selectedJobData.id,selectedJobData.name))
+    {
+Dprintf.dprintf("");
+      updateJobList();
+    }
+  }
+
+  /** delete selected job
+   */
+  private void jobDelete()
+  {
+    assert selectedJobData != null;
+
+    if (!selectedJobData.state.equals("running"))
+    {
+      tabJobs.jobDelete(selectedJobData.id,selectedJobData.name);
+      updateJobList();
     }
   }
 }
