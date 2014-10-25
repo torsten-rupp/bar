@@ -314,8 +314,7 @@ TARGETS              = bar@EXEEXT@ \
                        bar-debug@EXEEXT@ \
                        $(if @HAVE_BREAKPAD@,bar.sym bar-debug.sym) \
                        bar-keygen \
-                       destroyer@EXEEXT@ \
-                       po \
+                       destroyer@EXEEXT@
 
 #------------------------------ dependencies ---------------------------------
 
@@ -406,7 +405,7 @@ help:
 .PHONY: depend
 depend: Makefile.depend
 
-Makefile.depend: $(BAR_SOURCES) $(EXTERN_SOURCES) $(INTERMEDIATE)
+Makefile.depend:
 	$(ECHO) > Makefile.depend
 	for z in $(BAR_SOURCES) $(EXTERN_SOURCES); do \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z | \
@@ -2990,6 +2989,13 @@ ifneq ($(DIRECTORY),)
                           bar.cfg \
                    ) \
                    $(DIRECTORY)/bar
+	$(INSTALL) -d $(DIRECTORY)/bar/po
+	$(INSTALL) -m 664 \
+                   $(sort po/Makefile.in \
+                          po/*.pot \
+                          po/*.po \
+                   ) \
+                   $(DIRECTORY)/bar/po
 	$(INSTALL) -d $(DIRECTORY)/bar/test
 	$(INSTALL) -d $(DIRECTORY)/bar/test/data
 	$(INSTALL) -m 664 test/data/zero.dat \
