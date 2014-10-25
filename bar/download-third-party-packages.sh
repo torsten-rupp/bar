@@ -294,12 +294,12 @@ if test $helpFlag -eq 1; then
   $ECHO " libssh2"
   $ECHO " gnutls"
   $ECHO " libcdio"
-  $ECHO " breakpad"
   $ECHO " pcre"
-  $ECHO " epm"
   $ECHO ""
   $ECHO "Additional packages:"
   $ECHO ""
+  $ECHO " epm"
+  $ECHO " breakpad"
   $ECHO " launch4j"
   $ECHO " jre-windows"
   exit 0
@@ -718,7 +718,7 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
+  if test $breakpadFlag -eq 1; then
     # breakpad
     (
      if test -n "$destination"; then
@@ -774,7 +774,7 @@ if test $cleanFlag -eq 0; then
     $LN -f -s $tmpDirectory/pthreads-w32-2-9-1-release pthreads-w32
   fi
 
-  if test $allFlag -eq 1 -o $epmFlag -eq 1; then
+  if test $epmFlag -eq 1; then
     # epm 4.1
     (
      if test -n "$destination"; then
@@ -953,20 +953,20 @@ else
     $RMF libcdio
   fi
 
-  if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
+  if test $breakpadFlag -eq 1; then
     # breakpad
     $RMRF $tmpDirectory/breakpad
     $RMF breakpad
   fi
 
   if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
-    # breakpad
+    # pcre
     $RMRF $tmpDirectory/pcre-*
     $RMF pcre
   fi
 
   if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
-    # breakpad
+    # pthreadW32
     $RMRF $tmpDirectory/pthreads-w32-*
     $RMF pcre
   fi
@@ -985,7 +985,7 @@ else
     $RMF jre_windows jre_windows_64
   fi
 
-  if test $allFlag -eq 1 -o $epmFlag -eq 1; then
+  if test $epmFlag -eq 1; then
     # epm
     $RMF $tmpDirectory/epm-*.tar.bz2
     $RMRF $tmpDirectory/epm-*
