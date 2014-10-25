@@ -291,6 +291,13 @@ DESTROYER_OBJECTS    = $(foreach z,$(DESTROYER_SOURCES),$(patsubst %.c,%.o,$(pat
 
 OTHER_SOURCES        = forward.h \
                        \
+                       compress_zip.c \
+                       compress_bz2.c \
+                       compress_lzma.c \
+                       compress_lzo.c \
+                       compress_lz4.c \
+                       compress_xd3.c \
+                       \
                        filesystems_ext.c \
                        filesystems_fat.c \
                        filesystems_reiserfs.c \
@@ -406,6 +413,7 @@ help:
 depend: Makefile.depend
 
 Makefile.depend:
+	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE)
 	$(ECHO) > Makefile.depend
 	for z in $(BAR_SOURCES) $(EXTERN_SOURCES); do \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z | \
@@ -3025,9 +3033,11 @@ endif
 
 # ----------------------------------------------------------------------------
 
+ifeq ($(NO_DEPEND),)
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),distclean)
 -include Makefile.depend
+endif
 endif
 endif
 
