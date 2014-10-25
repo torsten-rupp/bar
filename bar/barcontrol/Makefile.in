@@ -543,6 +543,10 @@ ifneq ($(DIRECTORY),)
 	$(INSTALL) -m 664 \
                    images/*.png \
                    $(DIRECTORY)/barcontrol/images
+	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars
+	$(INSTALL) -m 664 \
+                   jars/*.jar \
+                   $(DIRECTORY)/barcontrol/jars
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars/linux
 	$(INSTALL) -m 664 \
                    jars/linux/*.jar \
