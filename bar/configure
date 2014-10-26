@@ -6283,6 +6283,7 @@ LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
   done
 
 
+# compile/use zlib
 if test -d zlib -o -d "`readlink zlib`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
@@ -6537,8 +6538,16 @@ fi
 
     fi
   fi
+
+  if test -z "$HAVE_Z"; then
+    if test ! \( -d zlib -o -d "`readlink zlib`" \); then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: zlib not compiled: zlib package missing" >&5
+$as_echo "$as_me: WARNING: zlib not compiled: zlib package missing" >&2;}
+    fi
+  fi
 fi
 
+# compile/use bz2
 if test $ENABLE_BZ2 = "yes"; then
   if test -d bzip2 -o -d "`readlink bzip2`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -6778,9 +6787,17 @@ fi
 
       fi
     fi
+
+    if test -z "$HAVE_BZ2"; then
+      if test ! \( -d bzip2 -o -d "`readlink bzip2`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: bzip2 not compiled: bzip2 package missing" >&5
+$as_echo "$as_me: WARNING: bzip2 not compiled: bzip2 package missing" >&2;}
+      fi
+    fi
   fi
 fi
 
+# compile/use lzma
 if test $ENABLE_LZMA = "yes"; then
   if test -d xz -o -d "`readlink xz`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -7055,9 +7072,17 @@ fi
 
       fi
     fi
+
+    if test -z "$HAVE_LZMA"; then
+      if test ! \( -d xz -o -d "`readlink xz`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: lzma not compiled: xz package missing" >&5
+$as_echo "$as_me: WARNING: lzma not compiled: xz package missing" >&2;}
+      fi
+    fi
   fi
 fi
 
+# compile/use lzo
 if test $ENABLE_LZO = "yes"; then
   if test -d lzo -o -d "`readlink lzo`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -7312,9 +7337,17 @@ fi
 
       fi
     fi
+
+    if test -z "$HAVE_LZO"; then
+      if test ! \( -d lzo -o -d "`readlink lzo`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: lzo not compiled: lzo package missing" >&5
+$as_echo "$as_me: WARNING: lzo not compiled: lzo package missing" >&2;}
+      fi
+    fi
   fi
 fi
 
+# compile/use lz4
 if test $ENABLE_LZ4 = "yes"; then
   if test -d lz4 -o -d "`readlink lz4`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -7554,9 +7587,17 @@ fi
 
       fi
     fi
+
+    if test -z "$HAVE_LZ4"; then
+      if test ! \( -d lz4 -o -d "`readlink lz4`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: lz4 not compiled: lz4 package missing" >&5
+$as_echo "$as_me: WARNING: lz4 not compiled: lz4 package missing" >&2;}
+      fi
+    fi
   fi
 fi
 
+# use xdelta3
 if test $ENABLE_XDELTA3 = "yes"; then
   if test -d xdelta3 -o -d "`readlink xdelta3`"; then
     HAVE_XDELTA=1
@@ -7571,6 +7612,7 @@ $as_echo "#define HAVE_XDELTA3 1" >>confdefs.h
   fi
 fi
 
+# compile/use gcrypt
 if test $ENABLE_GCRYPT = "yes"; then
   if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -8113,9 +8155,21 @@ $as_echo "$as_me: WARNING: no or wrong version of gcrypt. gcrypt version >=1.2.4
 
 fi
 
+
+    if test -z "$HAVE_GCRYPT"; then
+      if test ! \( -d libgpg-error -o -d "`readlink libgpg-error`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libgcrypt not compiled: libgpg-error package missing" >&5
+$as_echo "$as_me: WARNING: libgcrypt not compiled: libgpg-error package missing" >&2;}
+      fi
+      if test ! \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libgcrypt not compiled: libgcrypt package missing" >&5
+$as_echo "$as_me: WARNING: libgcrypt not compiled: libgcrypt package missing" >&2;}
+      fi
+    fi
   fi
 fi
 
+# compile/use gnutls
 if test $ENABLE_TLS = "yes"; then
   if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -8697,250 +8751,25 @@ fi
 
       fi
     fi
-  fi
-fi
 
-if test $ENABLE_FTP = "yes"; then
-  if test -d ftplib -o -d "`readlink ftplib`"; then
-    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-
-
-  $as_echo_n "compile ftplib... " >&6
-
-      if test $result -eq 1; then
-        (cd ftplib/linux; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
-$as_echo "fail (make)" >&6; }
-
-  echo --- error log -------------------------------------------------------------------------
-  cat $tmpFile | while read s; do echo "  $s"; done
-  echo ---------------------------------------------------------------------------------------
-
-          result=0
-        fi
+    if test -z "$HAVE_GNU_TLS"; then
+      if test ! \( -d gmp -o -d "`readlink gmp`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gnutls not compiled: gmp package missing" >&5
+$as_echo "$as_me: WARNING: gnutls not compiled: gmp package missing" >&2;}
       fi
-      if test $result -eq 1; then
-        (cd ftplib/linux; cp ftplib.h $cwd/packages/include && cp libftp.a $cwd/packages/lib) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
-$as_echo "fail (install)" >&6; }
-
-  echo --- error log -------------------------------------------------------------------------
-  cat $tmpFile | while read s; do echo "  $s"; done
-  echo ---------------------------------------------------------------------------------------
-
-          result=0
-        fi
+      if test ! \( -d nettle -o -d "`readlink nettle`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gnutls not compiled: nettle package missing" >&5
+$as_echo "$as_me: WARNING: gnutls not compiled: nettle package missing" >&2;}
       fi
-      if test $result -eq 1; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
-$as_echo "done" >&6; }
-      fi
-    else
-      result=1
-    fi
-
-    if test $result -eq 1; then
-      HAVE_FTP=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES ftp"
-
-$as_echo "#define HAVE_FTP 1" >>confdefs.h
-
-    fi
-  else
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-
-
-    ac_result=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing FtpInit" >&5
-$as_echo_n "checking for library containing FtpInit... " >&6; }
-if ${ac_cv_search_libraries_FtpInit+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-            ac_func_search_libraries_save_LIBS=$LIBS
-
-      for ac_library in ftp ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z ""; then echo "extern void FtpInit();"; fi`
-                                         return (int)FtpInit;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_libraries_FtpInit=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if ${ac_cv_search_libraries_FtpInit+:} false; then :
-
-else
-  ac_cv_search_libraries_FtpInit=no
-fi
-
-            LIBS=$ac_func_search_libraries_save_LIBS
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_FtpInit" >&5
-$as_echo "$ac_cv_search_libraries_FtpInit" >&6; }
-  ac_result=$ac_cv_search_libraries_FtpInit
-  if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";
-$as_echo "#define HAVE_FTP 1" >>confdefs.h
-
-fi
-
-    else
-      if test -z "$HAVE_FTP"; then
-
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing FtpInit" >&5
-$as_echo_n "checking for static library containing FtpInit... " >&6; }
-if ${ac_cv_search_static_FtpInit+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
-
-            CFLAGS="$CFLAGS"
-      for ac_library in ftp ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z ""; then echo "extern void FtpInit();"; fi`
-                                         return (int)FtpInit;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_FtpInit=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if ${ac_cv_search_static_FtpInit+:} false; then :
-
-else
-  ac_cv_search_static_FtpInit=no
-fi
-
-            LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_FtpInit" >&5
-$as_echo "$ac_cv_search_static_FtpInit" >&6; }
-  ac_result=$ac_cv_search_static_FtpInit
-  if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_FTP=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ftp";
-$as_echo "#define HAVE_FTP 1" >>confdefs.h
-
-fi
-
-      fi
-      if test -z "$HAVE_FTP"; then
-
-
-    ac_result=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing FtpInit" >&5
-$as_echo_n "checking for library containing FtpInit... " >&6; }
-if ${ac_cv_search_libraries_FtpInit+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-            ac_func_search_libraries_save_LIBS=$LIBS
-
-      for ac_library in ftp ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z ""; then echo "extern void FtpInit();"; fi`
-                                         return (int)FtpInit;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_libraries_FtpInit=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if ${ac_cv_search_libraries_FtpInit+:} false; then :
-
-else
-  ac_cv_search_libraries_FtpInit=no
-fi
-
-            LIBS=$ac_func_search_libraries_save_LIBS
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_FtpInit" >&5
-$as_echo "$ac_cv_search_libraries_FtpInit" >&6; }
-  ac_result=$ac_cv_search_libraries_FtpInit
-  if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";
-$as_echo "#define HAVE_FTP 1" >>confdefs.h
-
-fi
-
+      if test ! \( -d gnutls -o -d "`readlink gnutls`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gnutls not compiled: gnutls package missing" >&5
+$as_echo "$as_me: WARNING: gnutls not compiled: gnutls package missing" >&2;}
       fi
     fi
   fi
 fi
 
+# compile/use openssl
 if test $ENABLE_SSH = "yes"; then
   if test -d openssl -o -d "`readlink openssl`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -9333,6 +9162,13 @@ fi
 
       fi
     fi
+
+    if test -z "$HAVE_SSH2"; then
+      if test ! \( -d libssh2 -o -d "`readlink libssh2`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libssh2 not compiled: libssh2 package missing" >&5
+$as_echo "$as_me: WARNING: libssh2 not compiled: libssh2 package missing" >&2;}
+      fi
+    fi
   fi
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
@@ -9526,6 +9362,7 @@ fi
   fi
 fi
 
+# compile/use curl
 if test $ENABLE_CURL = "yes"; then
   if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -10379,6 +10216,25 @@ fi
 
       fi
     fi
+
+    if test -z "$HAVE_CURL"; then
+      if test ! \( -d curl -o -d "`readlink curl`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: curl not compiled: curl package missing" >&5
+$as_echo "$as_me: WARNING: curl not compiled: curl package missing" >&2;}
+      fi
+    fi
+    if test -z "$HAVE_CARES"; then
+      if test ! \( -d c-ares -o -d "`readlink c-ares`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libssh2 not compiled: c-ares package missing" >&5
+$as_echo "$as_me: WARNING: libssh2 not compiled: c-ares package missing" >&2;}
+      fi
+    fi
+    if test -z "$HAVE_MXML"; then
+      if test ! \( -d mxml -o -d "`readlink mxml`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libssh2 not compiled: mxml package missing" >&5
+$as_echo "$as_me: WARNING: libssh2 not compiled: mxml package missing" >&2;}
+      fi
+    fi
   fi
 
   if test "$HAVE_CURL"; then
@@ -10510,6 +10366,256 @@ fi
   fi
 fi
 
+# compile/ ftplib (Note: not used if curl is available)
+if test $ENABLE_FTP = "yes" -a -z "$HAVE_CURL"; then
+  if test -d ftplib -o -d "`readlink ftplib`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+
+  $as_echo_n "compile ftplib... " >&6
+
+      if test $result -eq 1; then
+        (cd ftplib/linux; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd ftplib/linux; cp ftplib.h $cwd/packages/include && cp libftp.a $cwd/packages/lib) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+$as_echo "fail (install)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_FTP=1
+      STATIC_LIBRARIES="$STATIC_LIBRARIES ftp"
+
+$as_echo "#define HAVE_FTP 1" >>confdefs.h
+
+    fi
+  else
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing FtpInit" >&5
+$as_echo_n "checking for library containing FtpInit... " >&6; }
+if ${ac_cv_search_libraries_FtpInit+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in ftp ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void FtpInit();"; fi`
+                                         return (int)FtpInit;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_FtpInit=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_FtpInit+:} false; then :
+
+else
+  ac_cv_search_libraries_FtpInit=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_FtpInit" >&5
+$as_echo "$ac_cv_search_libraries_FtpInit" >&6; }
+  ac_result=$ac_cv_search_libraries_FtpInit
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";
+$as_echo "#define HAVE_FTP 1" >>confdefs.h
+
+fi
+
+    else
+      if test -z "$HAVE_FTP"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing FtpInit" >&5
+$as_echo_n "checking for static library containing FtpInit... " >&6; }
+if ${ac_cv_search_static_FtpInit+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in ftp ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void FtpInit();"; fi`
+                                         return (int)FtpInit;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_FtpInit=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_FtpInit+:} false; then :
+
+else
+  ac_cv_search_static_FtpInit=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_FtpInit" >&5
+$as_echo "$ac_cv_search_static_FtpInit" >&6; }
+  ac_result=$ac_cv_search_static_FtpInit
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_FTP=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ftp";
+$as_echo "#define HAVE_FTP 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_FTP"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing FtpInit" >&5
+$as_echo_n "checking for library containing FtpInit... " >&6; }
+if ${ac_cv_search_libraries_FtpInit+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in ftp ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void FtpInit();"; fi`
+                                         return (int)FtpInit;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_FtpInit=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_FtpInit+:} false; then :
+
+else
+  ac_cv_search_libraries_FtpInit=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_FtpInit" >&5
+$as_echo "$ac_cv_search_libraries_FtpInit" >&6; }
+  ac_result=$ac_cv_search_libraries_FtpInit
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";
+$as_echo "#define HAVE_FTP 1" >>confdefs.h
+
+fi
+
+      fi
+    fi
+
+    if test -z "$HAVE_FTP"; then
+      if test ! \( -d ftplib -o -d "`readlink ftplib`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: ftplib not compiled: ftplib package missing" >&5
+$as_echo "$as_me: WARNING: ftplib not compiled: ftplib package missing" >&2;}
+      fi
+    fi
+  fi
+fi
+
+# compile/use cdio
 if test $ENABLE_ISO9660 = "yes"; then
   if test -d libiconv -o -d "`readlink libiconv`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -10840,9 +10946,17 @@ fi
 
       fi
     fi
+
+    if test -z "$HAVE_ISO9660"; then
+      if test ! \( -d libcdio -o -d "`readlink libcdio`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libcdio not compiled: libcdio package missing" >&5
+$as_echo "$as_me: WARNING: libcdio not compiled: libcdio package missing" >&2;}
+      fi
+    fi
   fi
 fi
 
+# compile/use pcre
 if test $ENABLE_PCRE = "yes"; then
   if test -d pcre -o -d "`readlink pcre`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -11128,6 +11242,13 @@ $as_echo "#define HAVE_PCRE 1" >>confdefs.h
 
 fi
 
+      fi
+    fi
+
+    if test -z "$HAVE_PCRE"; then
+      if test ! \( -d pcre -o -d "`readlink pcre`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pcre not compiled: pcre package missing" >&5
+$as_echo "$as_me: WARNING: pcre not compiled: pcre package missing" >&2;}
       fi
     fi
   fi
@@ -11493,6 +11614,13 @@ $as_echo "#define HAVE_BREAKPAD 1" >>confdefs.h
 
 fi
 
+      fi
+    fi
+
+    if test -z "$HAVE_BREAKPAD"; then
+      if test ! \( -d breakpad -o -d "`readlink breakpad`" \); then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: breakpad not compiled: breakpad package missing" >&5
+$as_echo "$as_me: WARNING: breakpad not compiled: breakpad package missing" >&2;}
       fi
     fi
 
@@ -12483,6 +12611,8 @@ _ACEOF
 
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: xxxhost=$host_os" >&5
+$as_echo "$as_me: WARNING: xxxhost=$host_os" >&2;}
 
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing uuid_generate" >&5
