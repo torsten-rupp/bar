@@ -102,7 +102,7 @@ typedef bool(*StringMapParseEnumFunction)(const char*, uint *value);
   #define StringMap_new()                                                                        __StringMap_new(__FILE__,__LINE__)
   #define StringMap_duplicate(stringMap)                                                         __StringMap_duplicate(__FILE__,__LINE__,stringMap)
   #define StringMap_delete(stringMap)                                                            __StringMap_delete(__FILE__,__LINE__,stringMap)
-  #define StringMap_putText(stringMap,name,value)                                                __StringMap_putText(__FILE__,__LINE__,stringMap,name,text)
+  #define StringMap_putText(stringMap,name,value)                                                __StringMap_putText(__FILE__,__LINE__,stringMap,name,value)
   #define StringMap_putTextCString(stringMap,name,value)                                         __StringMap_putTextCString(__FILE__,__LINE__,stringMap,name,text)
   #define StringMap_put(stringMap,name,value)                                                    __StringMap_put(__FILE__,__LINE__,stringMap,name,value)
   #define StringMap_putInt(stringMap,name,data)                                                  __StringMap_putInt(__FILE__,__LINE__,stringMap,name,data)
