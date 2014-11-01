@@ -433,9 +433,12 @@ if test $cleanFlag -eq 0; then
      fi
      fileName=`ls lz4-*.tar.gz 2>/dev/null`
      if test ! -f "$fileName"; then
-       url=`$WGET $WGET_OPTIONS --quiet -O - 'http://code.google.com/p/lz4'|grep -E -e 'lz4-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/lz4-.*\.tar\.gz\)".*|\1|g'`
-       fileName=`echo $URL|sed 's|.*/\(lz4-.*\.tar\.gz\).*|\1|g'`
-       $WGET $WGET_OPTIONS "$url"
+#       url=`$WGET $WGET_OPTIONS --quiet -O - 'http://code.google.com/p/lz4'|grep -E -e 'lz4-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/lz4-.*\.tar\.gz\)".*|\1|g'`
+#
+#       fileName=`echo $URL|sed 's|.*/\(lz4-.*\.tar\.gz\).*|\1|g'`
+#       $WGET $WGET_OPTIONS "$url"
+       fileName="lz4-r123.tar.gz"
+       $WGET $WGET_OPTIONS "https://github.com/Cyan4973/lz4/archive/r123.tar.gz" -O "$fileName"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf $fileName
