@@ -131,6 +131,300 @@ LOCAL bool readProcessIO(int fd, String line)
   return FALSE;
 }
 
+LOCAL Errors execute(const char        *command,
+                     const char const  **arguments,
+                     ExecuteIOFunction stdoutExecuteIOFunction,
+                     void              *stdoutExecuteIOUserData,
+                     ExecuteIOFunction stderrExecuteIOFunction,
+                     void              *stderrExecuteIOUserData
+                    )
+{
+  Errors     error;
+  int        pipeStdin[2],pipeStdout[2],pipeStderr[2];
+  pid_t      pid;
+  int        status;
+  bool       sleepFlag;
+  String     stdoutLine,stderrLine;
+  int        exitcode;
+  int        terminateSignal;
+
+  error = ERROR_NONE;
+
+#if 0
+{
+fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,command);
+
+const char **t = arguments;
+while (*t != NULL)
+{
+fprintf(stderr,"%s,%d: argument %s\n",__FILE__,__LINE__,*t);
+t++;
+}
+}
+#endif /* 0 */
+
+  #if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
+#if 1
+    // create i/o pipes
+    if (pipe(pipeStdin) != 0)
+    {
+      error = ERRORX_(IO_REDIRECT_FAIL,errno,command);
+      return error;
+    }
+    if (pipe(pipeStdout) != 0)
+    {
+      error = ERRORX_(IO_REDIRECT_FAIL,errno,command);
+      close(pipeStdin[0]);
+      close(pipeStdin[1]);
+      return error;
+    }
+    if (pipe(pipeStderr) != 0)
+    {
+      error = ERRORX_(IO_REDIRECT_FAIL,errno,command);
+      close(pipeStdout[0]);
+      close(pipeStdout[1]);
+      close(pipeStdin[0]);
+      close(pipeStdin[1]);
+      return error;
+    }
+
+    // do fork to start separated process
+    pid = fork();
+    if      (pid == 0)
+    {
+      /* Note: do not use any function here which may synchronize (lock)
+               with the main program!
+      */
+
+      // close stdin, stdout, and stderr and reassign them to the pipes
+      close(STDERR_FILENO);
+      close(STDOUT_FILENO);
+      close(STDIN_FILENO);
+
+      // redirect stdin/stdout/stderr to pipe
+      dup2(pipeStdin[0],STDIN_FILENO);
+      dup2(pipeStdout[1],STDOUT_FILENO);
+      dup2(pipeStderr[1],STDERR_FILENO);
+
+      /* close unused pipe handles (the pipes are duplicated by fork(), thus
+         there are two open ends of the pipes)
+      */
+      close(pipeStderr[0]);
+      close(pipeStdout[0]);
+      close(pipeStdin[1]);
+
+      // execute external program
+      execvp(command,(char**)arguments);
+
+      // in case exec() fail, return a default exitcode
+      exit(EXITCODE_FAIL);
+    }
+    else if (pid < 0)
+    {
+      error = ERRORX_(EXEC_FAIL,errno,command);
+
+      close(pipeStderr[0]);
+      close(pipeStderr[1]);
+      close(pipeStdout[0]);
+      close(pipeStdout[1]);
+      close(pipeStdin[0]);
+      close(pipeStdin[1]);
+      return error;
+    }
+
+    // close unused pipe handles (the pipe is duplicated by fork(), thus there are two open ends of the pipe)
+    close(pipeStderr[1]);
+    close(pipeStdout[1]);
+    close(pipeStdin[0]);
+#else /* 0 */
+error = ERROR_NONE;
+#endif /* 0 */
+
+    // read stdout/stderr and wait until process terminate
+    stdoutLine = String_new();
+    stderrLine = String_new();
+    status = 0xFFFFFFFF;
+    while (   (waitpid(pid,&status,WNOHANG) == 0)
+           || (   !WIFEXITED(status)
+               && !WIFSIGNALED(status)
+              )
+          )
+    {
+      sleepFlag = TRUE;
+
+      if (readProcessIO(pipeStdout[0],stdoutLine))
+      {
+        if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(stdoutExecuteIOUserData,stdoutLine);
+        String_clear(stdoutLine);
+        sleepFlag = FALSE;
+      }
+      if (readProcessIO(pipeStderr[0],stderrLine))
+      {
+        if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(stderrExecuteIOUserData,stderrLine);
+        String_clear(stderrLine);
+        sleepFlag = FALSE;
+      }
+
+      if (sleepFlag)
+      {
+        Misc_udelay(1000LL*1000LL);
+      }
+    }
+    while (readProcessIO(pipeStdout[0],stdoutLine))
+    {
+      if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(stdoutExecuteIOUserData,stdoutLine);
+      String_clear(stdoutLine);
+    }
+    while (readProcessIO(pipeStderr[0],stderrLine))
+    {
+      if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(stderrExecuteIOUserData,stderrLine);
+      String_clear(stderrLine);
+    }
+    String_delete(stderrLine);
+    String_delete(stdoutLine);
+
+    // close i/o
+    close(pipeStderr[0]);
+    close(pipeStdout[0]);
+    close(pipeStdin[1]);
+
+    // check exit code
+    exitcode = -1;
+    if      (WIFEXITED(status))
+    {
+      exitcode = WEXITSTATUS(status);
+      if (exitcode == 0)
+      {
+        printInfo(3,"ok\n");
+      }
+      else
+      {
+        printInfo(3,"FAIL (exitcode %d)\n",exitcode);
+        error = ERRORX_(EXEC_FAIL,exitcode,command);
+        return error;
+      }
+    }
+    else if (WIFSIGNALED(status))
+    {
+      terminateSignal = WTERMSIG(status);
+      error = ERRORX_(EXEC_FAIL,terminateSignal,command);
+      printInfo(3,"FAIL (signal %d)\n",terminateSignal);
+      return error;
+    }
+    else
+    {
+      printInfo(3,"FAIL (unknown exit)\n");
+      return ERROR_UNKNOWN;
+    }
+  #elif defined(WIN32)
+#if 0
+HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
+    HANDLE hInputWriteTmp,hInputRead,hInputWrite;
+    HANDLE hErrorWrite;
+    HANDLE hThread;
+    DWORD ThreadId;
+    SECURITY_ATTRIBUTES sa;
+
+
+    // Set up the security attributes struct.
+    sa.nLength= sizeof(SECURITY_ATTRIBUTES);
+    sa.lpSecurityDescriptor = NULL;
+    sa.bInheritHandle = TRUE;
+
+
+    // Create the child output pipe.
+    if (!CreatePipe(&hOutputReadTmp,&hOutputWrite,&sa,0))
+       DisplayError("CreatePipe");
+
+
+    // Create a duplicate of the output write handle for the std error
+    // write handle. This is necessary in case the child application
+    // closes one of its std output handles.
+    if (!DuplicateHandle(GetCurrentProcess(),hOutputWrite,
+                         GetCurrentProcess(),&hErrorWrite,0,
+                         TRUE,DUPLICATE_SAME_ACCESS))
+       DisplayError("DuplicateHandle");
+
+
+    // Create the child input pipe.
+    if (!CreatePipe(&hInputRead,&hInputWriteTmp,&sa,0))
+       DisplayError("CreatePipe");
+
+
+    // Create new output read handle and the input write handles. Set
+    // the Properties to FALSE. Otherwise, the child inherits the
+    // properties and, as a result, non-closeable handles to the pipes
+    // are created.
+    if (!DuplicateHandle(GetCurrentProcess(),hOutputReadTmp,
+                         GetCurrentProcess(),
+                         &hOutputRead, // Address of new handle.
+                         0,FALSE, // Make it uninheritable.
+                         DUPLICATE_SAME_ACCESS))
+       DisplayError("DupliateHandle");
+
+    if (!DuplicateHandle(GetCurrentProcess(),hInputWriteTmp,
+                         GetCurrentProcess(),
+                         &hInputWrite, // Address of new handle.
+                         0,FALSE, // Make it uninheritable.
+                         DUPLICATE_SAME_ACCESS))
+    DisplayError("DupliateHandle");
+
+
+    // Close inheritable copies of the handles you do not want to be
+    // inherited.
+    if (!CloseHandle(hOutputReadTmp)) DisplayError("CloseHandle");
+    if (!CloseHandle(hInputWriteTmp)) DisplayError("CloseHandle");
+
+
+    // Get std input handle so you can close it and force the ReadFile to
+    // fail when you want the input thread to exit.
+    if ( (hStdIn = GetStdHandle(STD_INPUT_HANDLE)) ==
+                                              INVALID_HANDLE_VALUE )
+       DisplayError("GetStdHandle");
+
+    PrepAndLaunchRedirectedChild(hOutputWrite,hInputRead,hErrorWrite);
+
+
+    // Close pipe handles (do not continue to modify the parent).
+    // You need to make sure that no handles to the write end of the
+    // output pipe are maintained in this process or else the pipe will
+    // not close when the child process exits and the ReadFile will hang.
+    if (!CloseHandle(hOutputWrite)) DisplayError("CloseHandle");
+    if (!CloseHandle(hInputRead )) DisplayError("CloseHandle");
+    if (!CloseHandle(hErrorWrite)) DisplayError("CloseHandle");
+
+
+    // Launch the thread that gets the input and sends it to the child.
+    hThread = CreateThread(NULL,0,GetAndSendInputThread,
+                            (LPVOID)hInputWrite,0,&ThreadId);
+    if (hThread == NULL) DisplayError("CreateThread");
+
+
+    // Read the child's output.
+    ReadAndHandleOutput(hOutputRead);
+    // Redirection is complete
+
+
+    // Force the read on the input to return by closing the stdin handle.
+    if (!CloseHandle(hStdIn)) DisplayError("CloseHandle");
+
+
+    // Tell the thread to exit and wait for thread to die.
+    bRunThread = FALSE;
+
+    if (WaitForSingleObject(hThread,INFINITE) == WAIT_FAILED)
+       DisplayError("WaitForSingleObject");
+
+    if (!CloseHandle(hOutputRead)) DisplayError("CloseHandle");
+    if (!CloseHandle(hInputWrite)) DisplayError("CloseHandle");
+#endif
+  #else /* not defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
+    #error pipe()/fork()/waitpid() not available nor Windows system!
+  #endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
+
+  return error;
+}
+
 /*---------------------------------------------------------------------*/
 
 uint64 Misc_getRandom(uint64 min, uint64 max)
@@ -761,17 +1055,9 @@ Errors Misc_executeCommand(const char        *commandTemplate,
   const char      *path;
   String          fileName;
   bool            foundFlag;
-  char const      cCommand;
   char const      **arguments;
-  int             pipeStdin[2],pipeStdout[2],pipeStderr[2];
-  pid_t           pid;
   StringNode      *stringNode;
   uint            n,z;
-  int             status;
-  bool            sleepFlag;
-  String          stdoutLine,stderrLine;
-  int             exitcode;
-  int             terminateSignal;
 
   error = ERROR_NONE;
   if (commandTemplate != NULL)
@@ -780,7 +1066,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
     command     = File_newFileName();
     StringList_init(&argumentList);
 
-    // expand command line
+    // expand command
     Misc_expandMacros(commandLine,commandTemplate,macros,macroCount);
     printInfo(3,"Execute command '%s'...",String_cString(commandLine));
 
@@ -852,294 +1138,129 @@ stringNode = stringNode->next;
     assert(z < n);
     arguments[z] = NULL; z++;
 
-    #if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
-#if 1
-      // create i/o pipes
-      if (pipe(pipeStdin) != 0)
-      {
-        error = ERRORX_(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
-        free(arguments);
-        StringList_done(&argumentList);
-        String_delete(command);
-        String_delete(commandLine);
-        return error;
-      }
-      if (pipe(pipeStdout) != 0)
-      {
-        error = ERRORX_(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
-        close(pipeStdin[0]);
-        close(pipeStdin[1]);
-        free(arguments);
-        StringList_done(&argumentList);
-        String_delete(command);
-        String_delete(commandLine);
-        return error;
-      }
-      if (pipe(pipeStderr) != 0)
-      {
-        error = ERRORX_(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
-        close(pipeStdout[0]);
-        close(pipeStdout[1]);
-        close(pipeStdin[0]);
-        close(pipeStdin[1]);
-        free(arguments);
-        StringList_done(&argumentList);
-        String_delete(command);
-        String_delete(commandLine);
-        return error;
-      }
-
-      // do fork to start separated process
-      pid = fork();
-      if      (pid == 0)
-      {
-        /* Note: do not use any function here which may synchronize (lock)
-                 with the main program!
-        */
-
-        // close stdin, stdout, and stderr and reassign them to the pipes
-        close(STDERR_FILENO);
-        close(STDOUT_FILENO);
-        close(STDIN_FILENO);
-
-        // redirect stdin/stdout/stderr to pipe
-        dup2(pipeStdin[0],STDIN_FILENO);
-        dup2(pipeStdout[1],STDOUT_FILENO);
-        dup2(pipeStderr[1],STDERR_FILENO);
-
-        /* close unused pipe handles (the pipes are duplicated by fork(), thus
-           there are two open ends of the pipes)
-        */
-        close(pipeStderr[0]);
-        close(pipeStdout[0]);
-        close(pipeStdin[1]);
-
-        // execute external program
-        execvp(arguments[0],(char**)arguments);
-
-        // in case exec() fail, return a default exitcode
-        exit(EXITCODE_FAIL);
-      }
-      else if (pid < 0)
-      {
-        error = ERRORX_(EXEC_FAIL,errno,String_cString(commandLine));
-        printInfo(3,"FAIL!\n");
-
-        close(pipeStderr[0]);
-        close(pipeStderr[1]);
-        close(pipeStdout[0]);
-        close(pipeStdout[1]);
-        close(pipeStdin[0]);
-        close(pipeStdin[1]);
-        free(arguments);
-        StringList_done(&argumentList);
-        String_delete(command);
-        String_delete(commandLine);
-        return error;
-      }
-
-      // close unused pipe handles (the pipe is duplicated by fork(), thus there are two open ends of the pipe)
-      close(pipeStderr[1]);
-      close(pipeStdout[1]);
-      close(pipeStdin[0]);
-#else /* 0 */
-error = ERROR_NONE;
-#endif /* 0 */
-
-      // wait until process terminate and read stdout/stderr
-      stdoutLine = String_new();
-      stderrLine = String_new();
-      status = 0xFFFFFFFF;
-      while (   (waitpid(pid,&status,WNOHANG) == 0)
-             || (   !WIFEXITED(status)
-                 && !WIFSIGNALED(status)
-                )
-            )
-      {
-        sleepFlag = TRUE;
-
-        if (readProcessIO(pipeStdout[0],stdoutLine))
-        {
-          if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(stdoutExecuteIOUserData,stdoutLine);
-          String_clear(stdoutLine);
-          sleepFlag = FALSE;
-        }
-        if (readProcessIO(pipeStderr[0],stderrLine))
-        {
-          if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(stderrExecuteIOUserData,stderrLine);
-          String_clear(stderrLine);
-          sleepFlag = FALSE;
-        }
-
-        if (sleepFlag)
-        {
-          Misc_udelay(1000LL*1000LL);
-        }
-      }
-      while (readProcessIO(pipeStdout[0],stdoutLine))
-      {
-        if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(stdoutExecuteIOUserData,stdoutLine);
-        String_clear(stdoutLine);
-      }
-      while (readProcessIO(pipeStderr[0],stderrLine))
-      {
-        if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(stderrExecuteIOUserData,stderrLine);
-        String_clear(stderrLine);
-      }
-      String_delete(stderrLine);
-      String_delete(stdoutLine);
-
-      // close i/o
-      close(pipeStderr[0]);
-      close(pipeStdout[0]);
-      close(pipeStdin[1]);
-
-      // check exit code
-      exitcode = -1;
-      if      (WIFEXITED(status))
-      {
-        exitcode = WEXITSTATUS(status);
-        if (exitcode == 0)
-        {
-          printInfo(3,"ok\n");
-        }
-        else
-        {
-          printInfo(3,"FAIL (exitcode %d)\n",exitcode);
-          error = ERRORX_(EXEC_FAIL,exitcode,String_cString(commandLine));
-          free(arguments);
-          StringList_done(&argumentList);
-          String_delete(command);
-          String_delete(commandLine);
-          return error;
-        }
-      }
-      else if (WIFSIGNALED(status))
-      {
-        terminateSignal = WTERMSIG(status);
-        error = ERRORX_(EXEC_FAIL,terminateSignal,String_cString(commandLine));
-        printInfo(3,"FAIL (signal %d)\n",terminateSignal);
-        free(arguments);
-        StringList_done(&argumentList);
-        String_delete(command);
-        String_delete(commandLine);
-        return error;
-      }
-      else
-      {
-        printInfo(3,"FAIL (unknown exit)\n");
-      }
-    #elif defined(WIN32)
-#if 0
-HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
-      HANDLE hInputWriteTmp,hInputRead,hInputWrite;
-      HANDLE hErrorWrite;
-      HANDLE hThread;
-      DWORD ThreadId;
-      SECURITY_ATTRIBUTES sa;
-
-
-      // Set up the security attributes struct.
-      sa.nLength= sizeof(SECURITY_ATTRIBUTES);
-      sa.lpSecurityDescriptor = NULL;
-      sa.bInheritHandle = TRUE;
-
-
-      // Create the child output pipe.
-      if (!CreatePipe(&hOutputReadTmp,&hOutputWrite,&sa,0))
-         DisplayError("CreatePipe");
-
-
-      // Create a duplicate of the output write handle for the std error
-      // write handle. This is necessary in case the child application
-      // closes one of its std output handles.
-      if (!DuplicateHandle(GetCurrentProcess(),hOutputWrite,
-                           GetCurrentProcess(),&hErrorWrite,0,
-                           TRUE,DUPLICATE_SAME_ACCESS))
-         DisplayError("DuplicateHandle");
-
-
-      // Create the child input pipe.
-      if (!CreatePipe(&hInputRead,&hInputWriteTmp,&sa,0))
-         DisplayError("CreatePipe");
-
-
-      // Create new output read handle and the input write handles. Set
-      // the Properties to FALSE. Otherwise, the child inherits the
-      // properties and, as a result, non-closeable handles to the pipes
-      // are created.
-      if (!DuplicateHandle(GetCurrentProcess(),hOutputReadTmp,
-                           GetCurrentProcess(),
-                           &hOutputRead, // Address of new handle.
-                           0,FALSE, // Make it uninheritable.
-                           DUPLICATE_SAME_ACCESS))
-         DisplayError("DupliateHandle");
-
-      if (!DuplicateHandle(GetCurrentProcess(),hInputWriteTmp,
-                           GetCurrentProcess(),
-                           &hInputWrite, // Address of new handle.
-                           0,FALSE, // Make it uninheritable.
-                           DUPLICATE_SAME_ACCESS))
-      DisplayError("DupliateHandle");
-
-
-      // Close inheritable copies of the handles you do not want to be
-      // inherited.
-      if (!CloseHandle(hOutputReadTmp)) DisplayError("CloseHandle");
-      if (!CloseHandle(hInputWriteTmp)) DisplayError("CloseHandle");
-
-
-      // Get std input handle so you can close it and force the ReadFile to
-      // fail when you want the input thread to exit.
-      if ( (hStdIn = GetStdHandle(STD_INPUT_HANDLE)) ==
-                                                INVALID_HANDLE_VALUE )
-         DisplayError("GetStdHandle");
-
-      PrepAndLaunchRedirectedChild(hOutputWrite,hInputRead,hErrorWrite);
-
-
-      // Close pipe handles (do not continue to modify the parent).
-      // You need to make sure that no handles to the write end of the
-      // output pipe are maintained in this process or else the pipe will
-      // not close when the child process exits and the ReadFile will hang.
-      if (!CloseHandle(hOutputWrite)) DisplayError("CloseHandle");
-      if (!CloseHandle(hInputRead )) DisplayError("CloseHandle");
-      if (!CloseHandle(hErrorWrite)) DisplayError("CloseHandle");
-
-
-      // Launch the thread that gets the input and sends it to the child.
-      hThread = CreateThread(NULL,0,GetAndSendInputThread,
-                              (LPVOID)hInputWrite,0,&ThreadId);
-      if (hThread == NULL) DisplayError("CreateThread");
-
-
-      // Read the child's output.
-      ReadAndHandleOutput(hOutputRead);
-      // Redirection is complete
-
-
-      // Force the read on the input to return by closing the stdin handle.
-      if (!CloseHandle(hStdIn)) DisplayError("CloseHandle");
-
-
-      // Tell the thread to exit and wait for thread to die.
-      bRunThread = FALSE;
-
-      if (WaitForSingleObject(hThread,INFINITE) == WAIT_FAILED)
-         DisplayError("WaitForSingleObject");
-
-      if (!CloseHandle(hOutputRead)) DisplayError("CloseHandle");
-      if (!CloseHandle(hInputWrite)) DisplayError("CloseHandle");
-#endif
-    #else /* not defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
-      #error pipe()/fork()/waitpid() not available nor Windows system!
-    #endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
+    // execute command
+    error = execute(String_cString(command),
+                    arguments,
+                    CALLBACK(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
+                    CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData)
+                   );
 
     // free resources
     free(arguments);
     StringList_done(&argumentList);
     String_delete(command);
     String_delete(commandLine);
+  }
+
+  return error;
+}
+
+Errors Misc_executeScript(const char        *scriptTemplate,
+                          const TextMacro   macros[],
+                          uint              macroCount,
+                          ExecuteIOFunction stdoutExecuteIOFunction,
+                          void              *stdoutExecuteIOUserData,
+                          ExecuteIOFunction stderrExecuteIOFunction,
+                          void              *stderrExecuteIOUserData
+                         )
+{
+  Errors          error;
+  String          script;
+  String          command;
+  StringTokenizer stringTokenizer;
+  String          token;
+  String          tmpFileName;
+  const char      *path;
+  String          fileName;
+  bool            foundFlag;
+  FileHandle      fileHandle;
+  char const      *arguments[3];
+
+  error = ERROR_NONE;
+  if (scriptTemplate != NULL)
+  {
+    script      = String_new();
+    command     = String_new();
+    tmpFileName = String_new();
+
+    // expand script
+    Misc_expandMacros(script,scriptTemplate,macros,macroCount);
+    printInfo(3,"Execute script...");
+
+#if 0
+    // parse script #!-line
+    String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
+    if (!String_getNextToken(&stringTokenizer,&token,NULL))
+    {
+      String_doneTokenizer(&stringTokenizer);
+      String_delete(command);
+      String_delete(script);
+      return ERRORX_PARSE_COMMAND;
+    }
+    File_setFileName(command,token);
+#endif
+String_setCString(command,"/bin/sh");
+
+    // find command in PATH
+    path = getenv("PATH");
+    if (path != NULL)
+    {
+      fileName  = File_newFileName();
+      foundFlag = FALSE;
+      String_initTokenizerCString(&stringTokenizer,path,":","",FALSE);
+      while (String_getNextToken(&stringTokenizer,&token,NULL) && !foundFlag)
+      {
+        File_setFileName(fileName,token);
+        File_appendFileName(fileName,command);
+        if (File_exists(fileName))
+        {
+          File_setFileName(command,fileName);
+          foundFlag = TRUE;
+        }
+      }
+      String_doneTokenizer(&stringTokenizer);
+      File_deleteFileName(fileName);
+    }
+
+    // create temporary script file
+    File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
+    error = File_open(&fileHandle,tmpFileName,FILE_OPEN_WRITE);
+    if (error != ERROR_NONE)
+    {
+      (void)File_delete(tmpFileName,FALSE);
+      String_delete(tmpFileName);
+      String_delete(command);
+      String_delete(script);
+      return ERROR_OPEN_FILE;
+    }
+    error = File_writeLine(&fileHandle,script);
+    if (error != ERROR_NONE)
+    {
+      (void)File_delete(tmpFileName,FALSE);
+      String_delete(tmpFileName);
+      String_delete(command);
+      String_delete(script);
+      return ERROR_OPEN_FILE;
+    }
+    File_close(&fileHandle);
+
+    // get arguments
+    arguments[0] = String_cString(command);
+    arguments[1] = String_cString(tmpFileName);
+    arguments[2] = NULL;
+
+    // execute command
+    error = execute(String_cString(command),
+                    arguments,
+                    CALLBACK(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
+                    CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData)
+                   );
+
+    // free resources
+    (void)File_delete(tmpFileName,FALSE);
+    String_delete(tmpFileName);
+    String_delete(command);
+    String_delete(script);
   }
 
   return error;

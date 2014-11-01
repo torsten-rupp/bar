@@ -370,6 +370,30 @@ Errors Misc_executeCommand(const char        *commandTemplate,
                            void              *stderrExecuteIOUserData
                           );
 
+/***********************************************************************\
+* Name   : Misc_executeScript
+* Purpose: execute external script
+* Input  : scriptTemplate          - script template string
+*          macros                  - macros array
+*          macroCount              - number of macros in array
+*          stdoutExecuteIOFunction - stdout callback or NULL
+*          stdoutExecuteIOUserData - user data for stdoout callback
+*          stderrExecuteIOFunction - stderr callback or NULL
+*          stderrExecuteIOUserData - user data for stderr callback
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Misc_executeScript(const char        *scriptTemplate,
+                          const TextMacro   macros[],
+                          uint              macroCount,
+                          ExecuteIOFunction stdoutExecuteIOFunction,
+                          void              *stdoutExecuteIOUserData,
+                          ExecuteIOFunction stderrExecuteIOFunction,
+                          void              *stderrExecuteIOUserData
+                         );
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
