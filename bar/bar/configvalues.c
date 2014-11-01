@@ -222,6 +222,56 @@ LOCAL bool getInteger64Value(int64                 *value,
 }
 
 /***********************************************************************\
+* Name   : getUnescapedCString
+* Purpose: get unescaped C string value
+* Input  : value  - value variable
+*          string - string
+* Output : value - value
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void getUnescapedCString(char       **value,
+                               const char *string
+                              )
+{
+  String s;
+
+  s = String_newCString(string);
+  String_unescape(value,
+                  STRING_ESCAPE_CHARACTER,
+                  STRING_ESCAPE_CHARACTERS_MAP_TO,
+                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                 );
+  (*value) = strdup(String_cString(s));
+  String_delete(s);
+}
+
+/***********************************************************************\
+* Name   : getUnescapedString
+* Purpose: get unescaped C string value
+* Input  : value  - value variable
+*          string - string
+* Output : value - value
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void getUnescapedString(String     value,
+                              const char *string
+                             )
+{
+  String_setCString(value,string);
+  String_unescape(value,
+                  STRING_ESCAPE_CHARACTER,
+                  STRING_ESCAPE_CHARACTERS_MAP_TO,
+                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                 );
+}
+
+/***********************************************************************\
 * Name   : processValue
 * Purpose: process single config value
 * Input  : configValue       - config value
@@ -691,7 +741,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           if (variable != NULL)
           {
             configVariable.cString = (char**)((byte*)variable+configValue->offset);
-            (*configVariable.cString) = strdup(value);
+            getUnescapedCString(configVariable.cString,value);
           }
           else
           {
@@ -699,14 +749,14 @@ LOCAL bool processValue(const ConfigValue *configValue,
             if ((*configValue->variable.reference) != NULL)
             {
               configVariable.cString = (char**)((byte*)(*configValue->variable.reference)+configValue->offset);
-              (*configVariable.cString) = strdup(value);
+              getUnescapedCString(configVariable.cString,value);
             }
           }
         }
         else
         {
           assert(configValue->variable.cString != NULL);
-          (*configValue->variable.cString) = strdup(value);
+          getUnescapedCString(configValue->variable.cString,value);
         }
       }
       break;
@@ -719,7 +769,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
             configVariable.string = (String*)((byte*)variable+configValue->offset);
             if ((*configVariable.string) == NULL) (*configVariable.string) = String_new();
             assert((*configVariable.string) != NULL);
-            String_setCString(*configVariable.string,value);
+            getUnescapedString(*configVariable.string,value);
           }
           else
           {
@@ -729,7 +779,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
               configVariable.string = (String*)((byte*)(*configValue->variable.reference)+configValue->offset);
               if ((*configVariable.string) == NULL) (*configVariable.string) = String_new();
               assert((*configVariable.string) != NULL);
-              String_setCString(*configVariable.string,value);
+              getUnescapedString(*configVariable.string,value);
             }
           }
         }
@@ -738,7 +788,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           assert(configValue->variable.string != NULL);
           if ((*configValue->variable.string) == NULL) (*configValue->variable.string) = String_new();
           assert((*configValue->variable.string) != NULL);
-          String_setCString(*configValue->variable.string,value);
+          getUnescapedString(*configValue->variable.string,value);
         }
       }
       break;
