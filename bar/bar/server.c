@@ -243,10 +243,11 @@ typedef struct IndexNode
     } file;
     struct
     {
-      uint64 size;
-      uint   blockSize;
-      uint64 blockOffset;
-      uint64 blockCount;
+      FileSystemTypes fileSystemType;
+      uint64          size;
+      uint            blockSize;
+      uint64          blockOffset;
+      uint64          blockCount;
     } image;
     struct
     {
@@ -472,6 +473,19 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
     {"lzo5",COMPRESS_ALGORITHM_LZO_5},
   #endif /* HAVE_LZO */
 
+  #ifdef HAVE_LZ4
+    {"lz4-0",COMPRESS_ALGORITHM_LZ4_0},
+    {"lz4-1",COMPRESS_ALGORITHM_LZ4_1},
+    {"lz4-2",COMPRESS_ALGORITHM_LZ4_2},
+    {"lz4-3",COMPRESS_ALGORITHM_LZ4_3},
+    {"lz4-4",COMPRESS_ALGORITHM_LZ4_4},
+    {"lz4-5",COMPRESS_ALGORITHM_LZ4_5},
+    {"lz4-6",COMPRESS_ALGORITHM_LZ4_6},
+    {"lz4-7",COMPRESS_ALGORITHM_LZ4_7},
+    {"lz4-8",COMPRESS_ALGORITHM_LZ4_8},
+    {"lz4-9",COMPRESS_ALGORITHM_LZ4_9},
+  #endif /* HAVE_LZO */
+
   #ifdef HAVE_XDELTA3
     {"xdelta1",COMPRESS_ALGORITHM_XDELTA_1},
     {"xdelta2",COMPRESS_ALGORITHM_XDELTA_2},
@@ -546,6 +560,9 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-password-mode",     JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("crypt-public-key",        JobNode,jobOptions.cryptPublicKeyFileName       ),
+
+  CONFIG_STRUCT_VALUE_STRING   ("pre-command",             JobNode,jobOptions.preProcessCommand            ),
+  CONFIG_STRUCT_VALUE_STRING   ("post-command",            JobNode,jobOptions.postProcessCommand           ),
 
   CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",          JobNode,jobOptions.ftpServer.loginName          ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
@@ -1074,7 +1091,8 @@ LOCAL void startJob(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  jobNode->state = JOB_STATE_RUNNING;
+  jobNode->state             = JOB_STATE_RUNNING;
+  jobNode->runningInfo.error = ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -1674,6 +1692,8 @@ LOCAL bool readJob(JobNode *jobNode)
   if (jobNode->jobOptions.sshServer.password != NULL) Password_clear(jobNode->jobOptions.sshServer.password);
   String_clear(jobNode->jobOptions.sshServer.publicKeyFileName);
   String_clear(jobNode->jobOptions.sshServer.privateKeyFileName);
+  String_clear(jobNode->jobOptions.preProcessCommand);
+  String_clear(jobNode->jobOptions.postProcessCommand);
   jobNode->jobOptions.device.volumeSize            = 0LL;
   jobNode->jobOptions.waitFirstVolumeFlag          = FALSE;
   jobNode->jobOptions.errorCorrectionCodesFlag     = FALSE;
@@ -1851,7 +1871,10 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
   while (!File_endOfDirectoryList(&directoryListHandle))
   {
     // read directory entry
-    File_readDirectoryList(&directoryListHandle,fileName);
+    if (File_readDirectoryList(&directoryListHandle,fileName) != ERROR_NONE)
+    {
+      continue;
+    }
 
     // get base name
     File_getFileBaseName(baseName,fileName);
@@ -2186,6 +2209,7 @@ LOCAL void jobThreadCode(void)
   JobOptions       jobOptions;
   ArchiveTypes     archiveType;
   StringList       archiveFileNameList;
+  TextMacro        textMacros[1];
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
@@ -2239,44 +2263,76 @@ LOCAL void jobThreadCode(void)
     // unlock (Note: job is now protected by running state)
     Semaphore_unlock(&jobList.lock);
 
+    logMessage(LOG_TYPE_ALWAYS,"------------------------------------------------------------\n");
+
     // parse storage name
-    jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
     if (jobNode->runningInfo.error == ERROR_NONE)
     {
-      // run job
-      #ifdef SIMULATOR
+      jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
+      if (jobNode->runningInfo.error != ERROR_NONE)
       {
-        int z;
-
-        jobNode->runningInfo.estimatedRestTime=120;
-
-        jobNode->runningInfo.totalEntries += 60;
-        jobNode->runningInfo.totalBytes += 6000;
-
-        for (z=0;z<120;z++)
-        {
-          extern void sleep(int);
-          if (jobNode->requestedAbortFlag) break;
-
-          sleep(1);
-
-          if (z==40) {
-            jobNode->runningInfo.totalEntries += 80;
-            jobNode->runningInfo.totalBytes += 8000;
-          }
-
-          jobNode->runningInfo.doneEntries++;
-          jobNode->runningInfo.doneBytes += 100;
-//          jobNode->runningInfo.totalEntries += 3;
-//          jobNode->runningInfo.totalBytes += 181;
-          jobNode->runningInfo.estimatedRestTime=120-z;
-          String_clear(jobNode->runningInfo.fileName);String_format(jobNode->runningInfo.fileName,"file %d",z);
-          String_clear(jobNode->runningInfo.storageName);String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
-        }
+        logMessage(LOG_TYPE_ALWAYS,
+                   "Aborted job '%s': invalid storage '%s' (error: %s)\n",
+                   String_cString(jobNode->name),
+                   Storage_getPrintableNameCString(&storageSpecifier,NULL),
+                   Error_getText(jobNode->runningInfo.error)
+                  );
       }
+    }
+
+    // pre-process command
+    if (jobNode->runningInfo.error == ERROR_NONE)
+    {
+      TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name));
+      jobNode->runningInfo.error = Misc_executeScript(String_cString(jobNode->jobOptions.preProcessCommand),
+                                                      textMacros,SIZE_OF_ARRAY(textMacros),
+                                                      CALLBACK(executeIOOutput,NULL),
+                                                      CALLBACK(executeIOOutput,NULL)
+                                                     );
+      if (jobNode->runningInfo.error != ERROR_NONE)
+      {
+        logMessage(LOG_TYPE_ALWAYS,
+                   "Aborted job '%s': pre-command fail (error: %s)\n",
+                   String_cString(jobNode->name),
+                   Error_getText(jobNode->runningInfo.error)
+                  );
+      }
+    }
+
+    // run job
+    if (jobNode->runningInfo.error == ERROR_NONE)
+    {
+      #ifdef SIMULATOR
+        {
+          int z;
+
+          jobNode->runningInfo.estimatedRestTime=120;
+
+          jobNode->runningInfo.totalEntries += 60;
+          jobNode->runningInfo.totalBytes += 6000;
+
+          for (z=0;z<120;z++)
+          {
+            extern void sleep(int);
+            if (jobNode->requestedAbortFlag) break;
+
+            sleep(1);
+
+            if (z==40) {
+              jobNode->runningInfo.totalEntries += 80;
+              jobNode->runningInfo.totalBytes += 8000;
+            }
+
+            jobNode->runningInfo.doneEntries++;
+            jobNode->runningInfo.doneBytes += 100;
+  //          jobNode->runningInfo.totalEntries += 3;
+  //          jobNode->runningInfo.totalBytes += 181;
+            jobNode->runningInfo.estimatedRestTime=120-z;
+            String_clear(jobNode->runningInfo.fileName);String_format(jobNode->runningInfo.fileName,"file %d",z);
+            String_clear(jobNode->runningInfo.storageName);String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
+          }
+        }
       #else
-        // run job
-        logMessage(LOG_TYPE_ALWAYS,"------------------------------------------------------------\n");
         switch (jobNode->jobType)
         {
           case JOB_TYPE_CREATE:
@@ -2356,17 +2412,28 @@ LOCAL void jobThreadCode(void)
               break;
           #endif /* NDEBUG */
         }
-        logPostProcess();
       #endif /* SIMULATOR */
+
+      logPostProcess();
     }
-    else
+
+    // post-process command
+    if (jobNode->runningInfo.error == ERROR_NONE)
     {
-      logMessage(LOG_TYPE_ALWAYS,
-                 "Aborted job '%s': invalid storage '%s' (error: %s)\n",
-                 String_cString(jobNode->name),
-                 Storage_getPrintableNameCString(&storageSpecifier,NULL),
-                 Error_getText(jobNode->runningInfo.error)
-                );
+      TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name));
+      jobNode->runningInfo.error = Misc_executeScript(String_cString(jobNode->jobOptions.postProcessCommand),
+                                                      textMacros,SIZE_OF_ARRAY(textMacros),
+                                                      CALLBACK(executeIOOutput,NULL),
+                                                      CALLBACK(executeIOOutput,NULL)
+                                                     );
+      if (jobNode->runningInfo.error != ERROR_NONE)
+      {
+        logMessage(LOG_TYPE_ALWAYS,
+                   "Aborted job '%s': post-command fail (error: %s)\n",
+                   String_cString(jobNode->name),
+                   Error_getText(jobNode->runningInfo.error)
+                  );
+      }
     }
 
     // get error message
@@ -2374,7 +2441,6 @@ LOCAL void jobThreadCode(void)
     {
       String_setCString(jobNode->runningInfo.message,Error_getText(jobNode->runningInfo.error));
     }
-
 
     // free resources
     doneJobOptions(&jobOptions);
@@ -2719,11 +2785,11 @@ LOCAL void indexCleanup(void)
     Index_doneList(&indexQueryHandle);
   }
   error = Index_initListImages(&indexQueryHandle,
-                                    indexDatabaseHandle,
-                                    NULL,
-                                    0,
-                                    NULL
-                                   );
+                               indexDatabaseHandle,
+                               NULL,
+                               0,
+                               NULL
+                              );
   if (error == ERROR_NONE)
   {
     while (Index_getNextImage(&indexQueryHandle,
@@ -2731,6 +2797,7 @@ LOCAL void indexCleanup(void)
                               storageName,
                               NULL,  // storageDateTime,
                               NULL,  // imageName,
+                              NULL,  // fileSystemType,
                               NULL,  // size,
                               NULL,  // blockOffset,
                               NULL   // blockCount
@@ -2800,11 +2867,11 @@ LOCAL void indexCleanup(void)
     Index_doneList(&indexQueryHandle);
   }
   error = Index_initListHardLinks(&indexQueryHandle,
-                                    indexDatabaseHandle,
-                                    NULL,
-                                    0,
-                                    NULL
-                                   );
+                                  indexDatabaseHandle,
+                                  NULL,
+                                  0,
+                                  NULL
+                                 );
   if (error == ERROR_NONE)
   {
     while (Index_getNextHardLink(&indexQueryHandle,
@@ -2830,11 +2897,11 @@ LOCAL void indexCleanup(void)
     Index_doneList(&indexQueryHandle);
   }
   error = Index_initListSpecial(&indexQueryHandle,
-                                    indexDatabaseHandle,
-                                    NULL,
-                                    0,
-                                    NULL
-                                   );
+                                indexDatabaseHandle,
+                                NULL,
+                                0,
+                                NULL
+                               );
   if (error == ERROR_NONE)
   {
     while (Index_getNextSpecial(&indexQueryHandle,
@@ -2862,6 +2929,7 @@ LOCAL void indexCleanup(void)
   error = Index_initListStorage(&indexQueryHandle,
                                 indexDatabaseHandle,
                                 STORAGE_TYPE_ANY,
+                                NULL, // storageName
                                 NULL, // hostName
                                 NULL, // loginName
                                 NULL, // deviceName
@@ -2979,6 +3047,7 @@ LOCAL void indexCleanup(void)
   error = Index_initListStorage(&indexQueryHandle1,
                                 indexDatabaseHandle,
                                 STORAGE_TYPE_ANY,
+                                NULL, // storageName
                                 NULL, // hostName
                                 NULL, // loginName
                                 NULL, // deviceName
@@ -3003,6 +3072,7 @@ LOCAL void indexCleanup(void)
       error = Index_initListStorage(&indexQueryHandle2,
                                     indexDatabaseHandle,
                                     STORAGE_TYPE_ANY,
+                                    NULL, // storageName
                                     NULL, // hostName
                                     NULL, // loginName
                                     NULL, // deviceName
@@ -3487,6 +3557,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   STORAGE_TYPE_ANY,
+                                  NULL, // storageName
                                   NULL, // hostName
                                   NULL, // loginName
                                   NULL, // deviceName
@@ -4845,7 +4916,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
               break;
             case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "fileType=SPECIAL name=%'S specialType=DEVICE_BLOCK dateTime=%llu",
+                               "fileType=SPECIAL name=%'S size=%llu specialType=DEVICE_BLOCK dateTime=%llu",
                                name,
                                fileInfo.size,
                                fileInfo.timeModified
@@ -7608,6 +7679,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             CryptTypes         cryptType;
             String             imageName;
             DeviceInfo         deviceInfo;
+            FileSystemTypes    fileSystemType;
             String             deltaSourceName;
             uint64             deltaSourceSize;
             uint64             blockOffset,blockCount;
@@ -7623,6 +7695,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                            &cryptType,
                                            imageName,
                                            &deviceInfo,
+                                           &fileSystemType,
                                            deltaSourceName,
                                            &deltaSourceSize,
                                            &blockOffset,
@@ -7642,7 +7715,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "type=IMAGE name=%'S size=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu blockSize=%u blockOffset=%llu blockCount=%llu",
+                               "type=IMAGE name=%'S size=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fileSystemType=%s blockSize=%u blockOffset=%llu blockCount=%llu",
                                imageName,
                                deviceInfo.size,
                                archiveEntryInfo.image.chunkImageData.info.size,
@@ -7652,6 +7725,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                cryptType,
                                deltaSourceName,
                                deltaSourceSize,
+                               FileSystem_getName(fileSystemType),
                                deviceInfo.blockSize,
                                blockOffset,
                                blockCount
@@ -8324,6 +8398,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   String           printableStorageName;
   String           errorMessage;
   DatabaseId       storageId;
+  String           uuid;
   uint64           storageDateTime;
   uint64           size;
   IndexStates      indexState;
@@ -8357,6 +8432,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     // initialize variables
     Storage_initSpecifier(&storageSpecifier);
     storageName          = String_new();
+    uuid                 = String_new();
     errorMessage         = String_new();
     printableStorageName = String_new();
 
@@ -8364,16 +8440,18 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   STORAGE_TYPE_ANY,
+                                  patternText,
                                   NULL, // hostName
                                   NULL, // loginName
                                   NULL, // deviceName
-                                  patternText,
+                                  NULL, // fileName
                                   indexStateSet
                                  );
     if (error != ERROR_NONE)
     {
       String_delete(printableStorageName);
       String_delete(errorMessage);
+      String_delete(uuid);
       String_delete(storageName);
       Storage_doneSpecifier(&storageSpecifier);
 
@@ -8387,7 +8465,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
            && !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
                                    &storageId,
-                                   NULL, // uuid
+                                   uuid,
                                    storageName,
                                    &storageDateTime,
                                    &size,
@@ -8410,9 +8488,10 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
       }
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "storageId=%llu name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
+                       "storageId=%llu name=%'S uuid=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                        storageId,
                        printableStorageName,
+                       uuid,
                        storageDateTime,
                        size,
                        Index_stateToString(indexState,"unknown"),
@@ -8427,6 +8506,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     // free resources
     String_delete(printableStorageName);
     String_delete(errorMessage);
+    String_delete(uuid);
     String_delete(storageName);
     Storage_doneSpecifier(&storageSpecifier);
 
@@ -8578,6 +8658,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
       error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
                                     STORAGE_TYPE_ANY,
+                                    NULL, // storageName
                                     NULL, // hostName
                                     NULL, // loginName
                                     NULL, // deviceName
@@ -8720,6 +8801,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
       error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
                                     STORAGE_TYPE_ANY,
+                                    NULL, // storageName
                                     NULL, // hostName
                                     NULL, // loginName
                                     NULL, // deviceName
@@ -9022,14 +9104,15 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                       ); \
     } \
     while (0)
-  #define SEND_IMAGE_ENTRY(storageName,storageDateTime,name,size,blockOffset,blockCount) \
+  #define SEND_IMAGE_ENTRY(storageName,storageDateTime,name,fileSystemType,size,blockOffset,blockCount) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=IMAGE storageName=%'S storageDateTime=%llu name=%'S size=%llu blockOffset=%llu blockCount=%llu", \
+                       "entryType=IMAGE storageName=%'S storageDateTime=%llu name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
                        storageName, \
                        storageDateTime, \
                        name, \
+                       FileSystem_getName(fileSystemType), \
                        size, \
                        blockOffset, \
                        blockCount \
@@ -9055,7 +9138,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=LINK storageName=%'S storageDateTime=%llu name=%'S %'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       "entryType=LINK storageName=%'S storageDateTime=%llu name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
                        storageName, \
                        storageDateTime, \
                        name, \
@@ -9109,7 +9192,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   IndexList        indexList;
   IndexNode        *indexNode;
   String           regexpString;
-  DatabaseId       storageId;
   String           storageName;
   uint64           storageDateTime;
   String           name;
@@ -9122,6 +9204,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   uint             userId,groupId;
   uint             permission;
   uint64           fragmentOffset,fragmentSize;
+  FileSystemTypes  fileSystemType;
   uint64           blockOffset,blockCount;
 
   assert(clientInfo != NULL);
@@ -9211,8 +9294,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                  )
             )
       {
-        UNUSED_VARIABLE(storageId);
-
         if (newestEntriesOnlyFlag)
         {
           // find/allocate index node
@@ -9284,14 +9365,13 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                    storageName,
                                    &storageDateTime,
                                    name,
+                                   &fileSystemType,
                                    &size,
                                    &blockOffset,
                                    &blockCount
                                   )
             )
       {
-        UNUSED_VARIABLE(storageId);
-
         if (newestEntriesOnlyFlag)
         {
           // find/allocate index node
@@ -9307,18 +9387,19 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
           if (timeModified >= indexNode->timeModified)
           {
             String_set(indexNode->storageName,storageName);
-            indexNode->storageDateTime   = storageDateTime;
-            indexNode->timeModified      = timeModified;
-            indexNode->image.size        = size;
-            indexNode->image.blockOffset = blockOffset;
-            indexNode->image.blockCount  = blockCount;
+            indexNode->storageDateTime      = storageDateTime;
+            indexNode->timeModified         = timeModified;
+            indexNode->image.fileSystemType = fileSystemType;
+            indexNode->image.size           = size;
+            indexNode->image.blockOffset    = blockOffset;
+            indexNode->image.blockCount     = blockCount;
           }
         }
         else
         {
-          SEND_IMAGE_ENTRY(storageName,storageDateTime,name,size,blockOffset,blockCount);
+          SEND_IMAGE_ENTRY(storageName,storageDateTime,name,fileSystemType,size,blockOffset,blockCount);
           entryCount++;
-      }
+        }
       }
       Index_doneList(&indexQueryHandle);
     }
@@ -9367,8 +9448,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                       )
             )
       {
-        UNUSED_VARIABLE(storageId);
-
         if (newestEntriesOnlyFlag)
         {
           // find/allocate index node
@@ -9446,8 +9525,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                  )
             )
       {
-        UNUSED_VARIABLE(storageId);
-
         if (newestEntriesOnlyFlag)
         {
           // find/allocate index node
@@ -9529,8 +9606,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                      )
             )
       {
-        UNUSED_VARIABLE(storageId);
-
         if (newestEntriesOnlyFlag)
         {
           // find/allocate index node
@@ -9610,8 +9685,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                     )
             )
       {
-        UNUSED_VARIABLE(storageId);
-
         if (newestEntriesOnlyFlag)
         {
           // find/allocate index node
@@ -9670,6 +9743,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
           SEND_IMAGE_ENTRY(indexNode->storageName,
                            indexNode->storageDateTime,
                            indexNode->name,
+                           indexNode->image.fileSystemType,
                            indexNode->image.size,
                            indexNode->image.blockOffset,
                            indexNode->image.blockCount
@@ -10081,7 +10155,7 @@ LOCAL void initSession(ClientInfo *clientInfo)
   #else /* not NO_SESSION_ID */
     memset(clientInfo->sessionId,0,sizeof(SessionId));
   #endif /* NO_SESSION_ID */
-  Crypt_createKeys(&clientInfo->publicKey,&clientInfo->secretKey,SESSION_KEY_SIZE,CRYPT_PADDING_TYPE_PKCS1);
+  (void)Crypt_createKeys(&clientInfo->publicKey,&clientInfo->secretKey,SESSION_KEY_SIZE,CRYPT_PADDING_TYPE_PKCS1);
 }
 
 /***********************************************************************\
@@ -10122,13 +10196,24 @@ LOCAL void sendSessionId(ClientInfo *clientInfo)
   id = encodeHex(String_new(),clientInfo->sessionId,sizeof(SessionId));
   n  = Crypt_getKeyModulus(&clientInfo->publicKey);
   e  = Crypt_getKeyExponent(&clientInfo->publicKey);
-  s  = String_format(String_new(),
-                     "SESSION id=%S encryptTypes=%s n=%S e=%S",
-                     id,
-                     "RSA,NONE",
-                     n,
-                     e
-                    );
+  if ((n !=NULL) && (e != NULL))
+  {
+    s  = String_format(String_new(),
+                       "SESSION id=%S encryptTypes=%s n=%S e=%S",
+                       id,
+                       "RSA,NONE",
+                       n,
+                       e
+                      );
+  }
+  else
+  {
+    s  = String_format(String_new(),
+                       "SESSION id=%S encryptTypes=%s",
+                       id,
+                       "NONE"
+                      );
+  }
   String_appendChar(s,'\n');
 
   // send session data to client
@@ -10142,10 +10227,9 @@ LOCAL void sendSessionId(ClientInfo *clientInfo)
 }
 
 /***********************************************************************\
-* Name   : initBatchClient
+* Name   : initClient
 * Purpose: create batch client with file i/o
 * Input  : clientInfo - client info to initialize
-*          fileHandle - client file handle
 * Output : -
 * Return : -
 * Notes  : -
@@ -10194,8 +10278,8 @@ LOCAL void initBatchClient(ClientInfo *clientInfo,
 }
 
 /***********************************************************************\
-* Name   : newNetworkClient
-* Purpose: create new client with network i/o
+* Name   : initNetworkClient
+* Purpose: init new client with network i/o
 * Input  : clientInfo   - client info to initialize
 *          name         - client name
 *          port         - client port
@@ -10345,8 +10429,8 @@ LOCAL ClientNode *newClient(void)
 }
 
 /***********************************************************************\
-* Name   : newClient
-* Purpose: create new client
+* Name   : newNetworkClient
+* Purpose: create new network client
 * Input  : -
 * Output : -
 * Return : client node
@@ -10565,6 +10649,7 @@ Errors Server_run(uint             port,
   uint64                nowTimestamp,waitTimeout,nextTimestamp;
   bool                  clientOkFlag;
   struct timespec       selectTimeout;
+  int                   n;
   AuthorizationFailNode *authorizationFailNode,*oldestAuthorizationFailNode;
   ClientNode            *clientNode;
   SocketHandle          socketHandle;
@@ -10742,7 +10827,7 @@ Errors Server_run(uint             port,
     if (serverFlag   ) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
     if (serverTLSFlag) FD_SET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet);
     nowTimestamp = Misc_getTimestamp();
-    waitTimeout  = MAX_UINT64;
+    waitTimeout  = 60LL*60LL*1000000LL; // wait for network connection max. 60min [us]
     LIST_ITERATE(&clientList,clientNode)
     {
       clientOkFlag = TRUE;
@@ -10769,7 +10854,12 @@ Errors Server_run(uint             port,
     }
     selectTimeout.tv_sec  = (long)(waitTimeout / 1000000LL);
     selectTimeout.tv_nsec = (long)((waitTimeout % 1000000LL) * 1000LL);
-    pselect(FD_SETSIZE,&selectSet,NULL,NULL,&selectTimeout,&signalMask);
+    n = pselect(FD_SETSIZE,&selectSet,NULL,NULL,&selectTimeout,&signalMask);
+    if (n < 0)
+    {
+      FD_ZERO(&selectSet);
+    }
+    assert(n >= 0);
 
     // connect new clients
     if (serverFlag && FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet))
