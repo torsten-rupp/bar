@@ -52,8 +52,8 @@
 #endif /* not NDEBUG */
 
 /***************************** Constants *******************************/
-const char STRING_ESCAPE_CHARACTERS[] = {'\0','\007','\b','\t','\n','\v','\f','\r','\033'};
-const char STRING_ESCAPE_MAP[]        = {'0', 'a',   'b', 't', 'n', 'v', 'f', 'r', 'e'   };
+const char STRING_ESCAPE_CHARACTERS_MAP_FROM[STRING_ESCAPE_CHARACTER_MAP_LENGTH] = {'\0','\007','\b','\t','\n','\v','\f','\r','\033'};
+const char STRING_ESCAPE_CHARACTERS_MAP_TO[STRING_ESCAPE_CHARACTER_MAP_LENGTH]   = {'0', 'a',   'b', 't', 'n', 'v', 'f', 'r', 'e'   };
 
 struct __String __STRING_EMPTY =
 {
@@ -646,7 +646,7 @@ LOCAL void formatString(struct __String *string,
   const char    *s;
   ulong         i;
   char          ch;
-  int           j;
+  uint          j;
 
   STRING_CHECK_VALID(string);
 
@@ -850,9 +850,6 @@ LOCAL void formatString(struct __String *string,
           }
           break;
         case 's':
-          assert(sizeof(STRING_ESCAPE_CHARACTERS) == STRING_ESCAPE_LENGTH);
-          assert(sizeof(STRING_ESCAPE_MAP) == STRING_ESCAPE_LENGTH);
-
           data.s = va_arg(arguments,const char*);
           assert(data.s != NULL);
 
@@ -865,27 +862,29 @@ LOCAL void formatString(struct __String *string,
             {
               if (ch == formatToken.quoteChar)
               {
-                String_appendChar(string,'\\');
+                String_appendChar(string,STRING_ESCAPE_CHARACTER);
                 String_appendChar(string,ch);
               }
               else
               {
-                // check if escape character
-                j = STRING_ESCAPE_LENGTH-1;
-                while ((j >= 0) && (STRING_ESCAPE_CHARACTERS[j] != ch))
+                // check if mapped character
+                j = 0;
+                while ((j < STRING_ESCAPE_CHARACTER_MAP_LENGTH) && (STRING_ESCAPE_CHARACTERS_MAP_FROM[j] != ch))
                 {
-                  j--;
+                  j++;
                 }
 
-                if (j >= 0)
+                if (j < STRING_ESCAPE_CHARACTER_MAP_LENGTH)
                 {
-                  // escape character
-                  String_appendChar(string,'\\');
-                  String_appendChar(string,STRING_ESCAPE_MAP[j]);
+                  assert(j < SIZE_OF_ARRAY(STRING_ESCAPE_CHARACTERS_MAP_TO));
+
+                  // mapped character
+                  String_appendChar(string,STRING_ESCAPE_CHARACTER);
+                  String_appendChar(string,STRING_ESCAPE_CHARACTERS_MAP_TO[j]);
                 }
                 else
                 {
-                  // other character
+                  // non-mapped character
                   String_appendChar(string,ch);
                 }
               }
@@ -943,30 +942,29 @@ LOCAL void formatString(struct __String *string,
               ch = String_index(data.string,i);
               if (ch == formatToken.quoteChar)
               {
-                String_appendChar(string,'\\');
+                String_appendChar(string,STRING_ESCAPE_CHARACTER);
                 String_appendChar(string,ch);
               }
               else
               {
-                // check if escape character
-                j = SIZE_OF_ARRAY(STRING_ESCAPE_CHARACTERS)-1;
-                while ((j >= 0) && (STRING_ESCAPE_CHARACTERS[j] != ch))
+                // check if mapped character
+                j = 0;
+                while ((j < STRING_ESCAPE_CHARACTER_MAP_LENGTH) && (STRING_ESCAPE_CHARACTERS_MAP_FROM[j] != ch))
                 {
-                  j--;
+                  j++;
                 }
 
-                if (j >= 0)
+                if (j < STRING_ESCAPE_CHARACTER_MAP_LENGTH)
                 {
-                  // escape character
-                  assert(SIZE_OF_ARRAY(STRING_ESCAPE_CHARACTERS) == SIZE_OF_ARRAY(STRING_ESCAPE_MAP));
-                  assert((uint)j < SIZE_OF_ARRAY(STRING_ESCAPE_MAP));
+                  // mapped character
+                  assert(j < SIZE_OF_ARRAY(STRING_ESCAPE_CHARACTERS_MAP_TO));
 
-                  String_appendChar(string,'\\');
-                  String_appendChar(string,STRING_ESCAPE_MAP[j]);
+                  String_appendChar(string,STRING_ESCAPE_CHARACTER);
+                  String_appendChar(string,STRING_ESCAPE_CHARACTERS_MAP_TO[j]);
                 }
                 else
                 {
-                  // other character
+                  // non-mapped character
                   String_appendChar(string,ch);
                 }
               }
@@ -1444,7 +1442,7 @@ LOCAL bool parseString(const char    *string,
                      && (string[index] != (*format))
                     )
               {
-                if (   (string[index] == '\\')
+                if (   (string[index] == STRING_ESCAPE_CHARACTER)
                     && ((index+1) < length)
                     && !formatToken.blankFlag
                    )
@@ -1477,7 +1475,7 @@ LOCAL bool parseString(const char    *string,
                       while ((index < length) && (string[index] != (*stringQuote)))
                       {
                         if (   ((index+1) < length)
-                            && (string[index] == '\\')
+                            && (string[index] == STRING_ESCAPE_CHARACTER)
                             && (string[index+1] == (*stringQuote))
                            )
                         {
@@ -1546,7 +1544,7 @@ LOCAL bool parseString(const char    *string,
                      && (string[index] != (*format))
                     )
               {
-                if (   (string[index] == '\\')
+                if (   (string[index] == STRING_ESCAPE_CHARACTER)
                     && ((index+1) < length)
                     && !formatToken.blankFlag
                    )
@@ -1579,7 +1577,7 @@ LOCAL bool parseString(const char    *string,
                       while ((index < length) && (string[index] != (*stringQuote)))
                       {
                         if (   ((index+1) < length)
-                            && (string[index] == '\\')
+                            && (string[index] == STRING_ESCAPE_CHARACTER)
                             && (string[index+1] == (*stringQuote))
                            )
                         {
@@ -2934,27 +2932,28 @@ String String_mapCString(String string, ulong index, const char* from[], const c
   return string;
 }
 
-String String_mapChar(String string, ulong index, char from[], char to[], uint count)
+String String_mapChar(String string, ulong index, const char from[], const char to[], uint count)
 {
   uint z;
-  bool replaceFlag;
 
   STRING_CHECK_VALID(string);
 
-  while (index < String_length(string))
+  if (string != NULL)
   {
-    replaceFlag = FALSE;
-    for (z = 0; z < count; z++)
+    assert(string->data != NULL);
+
+    while (index < string->length)
     {
-      if (String_subEqualsChar(string,from[z],index))
+      for (z = 0; z < count; z++)
       {
-        String_replaceChar(string,index,1,to[z]);
-        index += 1;
-        replaceFlag = TRUE;
-        break;
+        if (string->data[index] == from[z])
+        {
+          string->data[index] = to[z];
+          break;
+        }
       }
+      index++;
     }
-    if (!replaceFlag) index++;
   }
 
   return string;
@@ -3983,10 +3982,11 @@ String String_escape(String string, const char *chars, char escapeChar)
   return string;
 }
 
-String String_unescape(String string, char escapeChar)
+String String_unescape(String string, char escapeChar, const char from[], const char to[], uint count)
 {
   String s;
-  ulong  z;
+  ulong  index;
+  uint   z;
 
   STRING_CHECK_VALID(string);
 
@@ -3999,22 +3999,45 @@ String String_unescape(String string, char escapeChar)
     #else /* not NDEBUG */
       s = allocTmpString(__FILE__,__LINE__);
     #endif /* NDEBUG */
-    z = 0L;
-    while (z < string->length)
+    index = STRING_BEGIN;
+    while (index < string->length)
     {
-      if (string->data[z] == escapeChar)
+      if (   (string->data[index] == escapeChar)
+          && ((index+1) < string->length)
+         )
       {
-        z++;
-        if (z < string->length)
+        index++;
+
+        if ((from != NULL) && (to != NULL))
         {
-          String_appendChar(s,string->data[z]);
+          // check if mapped character
+          z = 0;
+          while ((z < count) && (string->data[index] != from[z]))
+          {
+            z++;
+          }
+          if (z < count)
+          {
+            // mapped character
+            String_appendChar(s,to[z]);
+          }
+          else
+          {
+            // unescape character
+            String_appendChar(s,string->data[index]);
+          }
+        }
+        else
+        {
+          // unescape character
+          String_appendChar(s,string->data[index]);
         }
       }
       else
       {
-        String_appendChar(s,string->data[z]);
+        String_appendChar(s,string->data[index]);
       }
-      z++;
+      index++;
     }
     assignTmpString(string,s);
   }
@@ -4043,7 +4066,7 @@ String String_quote(String string, char quoteChar)
     {
       if (string->data[z] == quoteChar)
       {
-        String_appendChar(s,'\\');
+        String_appendChar(s,STRING_ESCAPE_CHARACTER);
       }
       String_appendChar(s,string->data[z]);
     }
@@ -4078,15 +4101,16 @@ String String_unquote(String string, const char *quoteChars)
           s = allocTmpString(__FILE__,__LINE__);
         #endif /* NDEBUG */
         z = 1;
-        while (z < string->length-1)
+        while (z < (string->length-1))
         {
-          if (string->data[z] == '\\')
+          if (   (string->data[z] == STRING_ESCAPE_CHARACTER)
+              && ((z+1) < string->length-1)
+              && (string->data[z+1] == (*t0))
+             )
           {
+            // escaped quote character
             z++;
-            if (z < string->length-1)
-            {
-              String_appendChar(s,string->data[z]);
-            }
+            String_appendChar(s,string->data[z]);
           }
           else
           {
@@ -4307,7 +4331,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
               )
         {
           if (   ((stringTokenizer->index+1) < (long)stringTokenizer->length)
-              && (   (stringTokenizer->data[stringTokenizer->index] == '\\')
+              && (   (stringTokenizer->data[stringTokenizer->index] == STRING_ESCAPE_CHARACTER)
                   || (stringTokenizer->data[stringTokenizer->index] == (*s))
                  )
              )
@@ -4654,7 +4678,7 @@ String String_toString(String string, const String convertString, ulong index, l
           // get string
           while ((index < convertString->length) && (convertString->data[index] != (*stringQuote)))
           {
-            if (convertString->data[index] == '\\')
+            if (convertString->data[index] == STRING_ESCAPE_CHARACTER)
             {
               if (index < convertString->length)
               {
@@ -4728,7 +4752,9 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, const St
     checkSum = STRING_CHECKSUM(string);
     if (checkSum != string->checkSum)
     {
-      debugDumpCurrentStackTrace(stderr,"",0);
+      #ifdef HAVE_BACKTRACE
+        debugDumpCurrentStackTrace(stderr,"",0);
+      #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR_AT(__fileName__,
                              __lineNb__,
                              "Invalid checksum 0x%08x in string %p, length %ld (max. %ld) (expected 0x%08x)!",
@@ -4757,7 +4783,9 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, const St
           debugStringNode = debugStringNode->next;
         }
 
-        debugDumpCurrentStackTrace(stderr,"",0);
+        #ifdef HAVE_BACKTRACE
+          debugDumpCurrentStackTrace(stderr,"",0);
+        #endif /* HAVE_BACKTRACE */
         if (debugStringNode != NULL)
         {
           HALT_INTERNAL_ERROR_AT(__fileName__,

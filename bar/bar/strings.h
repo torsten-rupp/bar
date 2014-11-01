@@ -31,12 +31,17 @@
 #define STRING_QUOTE        '\''
 #define STRING_QUOTES       "\"'"
 
-extern const char STRING_ESCAPE_CHARACTERS[];
-extern const char STRING_ESCAPE_MAP[];
-#define STRING_ESCAPE_LENGTH 9
+// string escape character
+#define STRING_ESCAPE_CHARACTER '\\'
+
+// default character mapping with escape
+#define STRING_ESCAPE_CHARACTER_MAP_LENGTH 9
+extern const char STRING_ESCAPE_CHARACTERS_MAP_FROM[STRING_ESCAPE_CHARACTER_MAP_LENGTH];
+extern const char STRING_ESCAPE_CHARACTERS_MAP_TO[STRING_ESCAPE_CHARACTER_MAP_LENGTH];
 
 #define STRING_NO_ASSIGN (void*)(-1)
 
+// empty string
 extern const struct __String* STRING_EMPTY;
 
 /***************************** Datatypes *******************************/
@@ -393,7 +398,7 @@ String String_replaceAllChar(String string, ulong index, char fromCh, char toCh)
 
 String String_map(String string, ulong index, const String from[], const String to[], uint count);
 String String_mapCString(String string, ulong index, const char* from[], const char* to[], uint count);
-String String_mapChar(String string, ulong index, char from[], char to[], uint count);
+String String_mapChar(String string, ulong index, const char from[], const char to[], uint count);
 
 /***********************************************************************\
 * Name   : String_join, String_joinCString, String_joinChar,
@@ -703,12 +708,15 @@ String String_escape(String string, const char *chars, char escapeChar);
 * Purpose: unescape string
 * Input  : string     - string variable
 *          escapeChar - escape char
+*          from       - from map characters or NULL
+*          to         - to map characters or NULL
+*          count      - number of from/to map characters
 * Output : -
 * Return : unescaped string
 * Notes  : -
 \***********************************************************************/
 
-String String_unescape(String string, char escapeChar);
+String String_unescape(String string, char escapeChar, const char from[], const char to[], uint count);
 
 /***********************************************************************\
 * Name   : String_quote, String_unquote
