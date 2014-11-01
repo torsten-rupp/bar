@@ -1118,7 +1118,7 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quot
   const char *quoteChar;
   uint       length;
   String     name;
-  String     text;
+  String     value;
   int        i;
 
   assert(stringMap != NULL);
@@ -1127,7 +1127,7 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quot
   // parse
   length = strlen(s);
   name   = String_new();
-  text   = String_new();
+  value  = String_new();
 
   index = STRING_BEGIN;
   while (index < length)
@@ -1145,7 +1145,7 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quot
        )
     {
       if (nextIndex != NULL) (*nextIndex) = index;
-      String_delete(text);
+      String_delete(value);
       String_delete(name);
       return FALSE;
     }
@@ -1162,23 +1162,23 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quot
     if (   (index >= length) || (s[index] != '='))
     {
       if (nextIndex != NULL) (*nextIndex) = index;
-      String_delete(text);
+      String_delete(value);
       String_delete(name);
       return FALSE;
     }
     index++;
 
     // get value as text
-    String_clear(text);
+    String_clear(value);
     while ((index < length) && !isspace(s[index]))
     {
-      if (   (s[index] == '\\')
+      if (   (s[index] == STRING_ESCAPE_CHARACTER)
           && ((index+1) < length)
           && (strchr(quoteChars,s[index+1]) != NULL)
          )
       {
         // quoted quote
-        String_appendChar(text, s[index+1]);
+        String_appendChar(value, s[index+1]);
         index += 2;
       }
       else
@@ -1194,7 +1194,7 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quot
           while ((index < length) && (s[index] != (*quoteChar)))
           {
             if (   ((index+1) < length)
-                && (s[index] == '\\')
+                && (s[index] == STRING_ESCAPE_CHARACTER)
                )
             {
               index++;
@@ -1202,32 +1202,32 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quot
               if      (strchr(quoteChars,s[index]) != NULL)
               {
                 // quoted quote
-                String_appendChar(text,s[index]);
+                String_appendChar(value,s[index]);
               }
               else
               {
-                // search for known escaped character
-                i = STRING_ESCAPE_LENGTH-1;
-                while ((i >= 0) && (STRING_ESCAPE_MAP[i] != s[index]))
+                // search for known mapped character
+                i = 0;
+                while ((i < STRING_ESCAPE_CHARACTER_MAP_LENGTH) && (STRING_ESCAPE_CHARACTERS_MAP_TO[i] != s[index]))
                 {
-                  i--;
+                  i++;
                 }
 
-                if (i >= 0)
+                if (i < STRING_ESCAPE_CHARACTER_MAP_LENGTH)
                 {
-                  // escaped characater
-                  String_appendChar(text,STRING_ESCAPE_CHARACTERS[i]);
+                  // mapped character
+                  String_appendChar(value,STRING_ESCAPE_CHARACTERS_MAP_FROM[i]);
                 }
                 else
                 {
-                  // other escaped character
-                  String_appendChar(text,s[index]);
+                  // non-mapped character
+                  String_appendChar(value,s[index]);
                 }
               }
             }
             else
             {
-              String_appendChar(text,s[index]);
+              String_appendChar(value,s[index]);
             }
             index++;
           }
@@ -1240,14 +1240,14 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quot
         }
         else
         {
-          String_appendChar(text,s[index]);
+          String_appendChar(value,s[index]);
           index++;
         }
       }
     }
 
     // store value
-    StringMap_putText(stringMap,name->data,text);
+    StringMap_putText(stringMap,name->data,value);
   }
 
   if (nextIndex != NULL)
@@ -1256,7 +1256,7 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quot
   }
 
   // free resources
-  String_delete(text);
+  String_delete(value);
   String_delete(name);
 
   return TRUE;
