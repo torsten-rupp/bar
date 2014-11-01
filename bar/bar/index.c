@@ -18,6 +18,8 @@
 #include "global.h"
 #include "strings.h"
 #include "database.h"
+#include "files.h"
+#include "filesystems.h"
 #include "errors.h"
 
 #include "bar.h"
@@ -1437,6 +1439,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                                    storage.name, \
                                    STRFTIME('%%s',storage.created), \
                                    images.name, \
+                                   images.fileSystemType, \
                                    images.size, \
                                    images.blockOffset, \
                                    images.blockCount \
@@ -1460,6 +1463,7 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
                         String           storageName,
                         uint64           *storageDateTime,
                         String           imageName,
+                        FileSystemTypes  *fileSystemType,
                         uint64           *size,
                         uint64           *blockOffset,
                         uint64           *blockCount
@@ -1468,11 +1472,12 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%lld %S %llu %S %llu %llu %llu",
+                             "%lld %S %llu %S %u %llu %llu %llu",
                              databaseId,
                              storageName,
                              storageDateTime,
                              imageName,
+                             fileSystemType,
                              size,
                              blockOffset,
                              blockCount
@@ -1968,13 +1973,14 @@ Errors Index_addFile(DatabaseHandle *databaseHandle,
                          );
 }
 
-Errors Index_addImage(DatabaseHandle *databaseHandle,
-                      DatabaseId     storageId,
-                      const String   imageName,
-                      int64          size,
-                      ulong          blockSize,
-                      uint64         blockOffset,
-                      uint64         blockCount
+Errors Index_addImage(DatabaseHandle  *databaseHandle,
+                      DatabaseId      storageId,
+                      const String    imageName,
+                      FileSystemTypes fileSystemType,
+                      int64           size,
+                      ulong           blockSize,
+                      uint64          blockOffset,
+                      uint64          blockCount
                      )
 {
   assert(databaseHandle != NULL);
@@ -2006,6 +2012,7 @@ Errors Index_addImage(DatabaseHandle *databaseHandle,
                           ",
                           storageId,
                           imageName,
+                          fileSystemType,
                           size,
                           blockSize,
                           blockOffset,

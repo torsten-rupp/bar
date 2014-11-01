@@ -20,8 +20,9 @@
 
 #include "global.h"
 #include "strings.h"
-#include "files.h"
 #include "database.h"
+#include "files.h"
+#include "filesystems.h"
 #include "errors.h"
 
 #include "bar.h"
@@ -578,6 +579,7 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
                         String           storageName,
                         uint64           *storageDateTime,
                         String           imageName,
+                        FileSystemTypes  *fileSystemType,
                         uint64           *size,
                         uint64           *blockOffset,
                         uint64           *blockCount
@@ -880,6 +882,7 @@ Errors Index_addFile(DatabaseHandle *databaseHandle,
 * Input  : databaseHandle - database handle
 *          storageId      - database id of index
 *          imageName      - image name
+*          fileSystemType - file system type
 *          size           - size [bytes]
 *          blockSize      - block size [bytes]
 *          blockOffset    - block offset [blocks]
@@ -889,13 +892,14 @@ Errors Index_addFile(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_addImage(DatabaseHandle *databaseHandle,
-                      DatabaseId     storageId,
-                      const String   imageName,
-                      int64          size,
-                      ulong          blockSize,
-                      uint64         blockOffset,
-                      uint64         blockCount
+Errors Index_addImage(DatabaseHandle  *databaseHandle,
+                      DatabaseId      storageId,
+                      const String    imageName,
+                      FileSystemTypes fileSystemType,
+                      int64           size,
+                      ulong           blockSize,
+                      uint64          blockOffset,
+                      uint64          blockCount
                      );
 
 /***********************************************************************\
