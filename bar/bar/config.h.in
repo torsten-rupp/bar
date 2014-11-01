@@ -61,6 +61,9 @@
 /* fdatasync() available */
 #undef HAVE_FDATASYNC
 
+/* fdopendir() available */
+#undef HAVE_FDOPENDIR
+
 /* fork() available */
 #undef HAVE_FORK
 
@@ -90,6 +93,9 @@
 
 /* FTP installed */
 #undef HAVE_FTP
+
+/* futimens() available */
+#undef HAVE_FUTIMENSK
 
 /* gcrypt installed */
 #undef HAVE_GCRYPT
@@ -232,6 +238,12 @@
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
 
+/* O_DIRECTORY available */
+#undef HAVE_O_DIRECTORY
+
+/* O_NOATIME available */
+#undef HAVE_O_NOATIME
+
 /* pcre installed */
 #undef HAVE_PCRE
 
@@ -294,6 +306,15 @@
 
 /* statvfs() available */
 #undef HAVE_STATVFS
+
+/* defined if struct stat.st_atim.tv_nsec is available */
+#undef HAVE_STAT_ATIM_TV_NSEC
+
+/* defined if struct stat.st_ctim.tv_nsec is available */
+#undef HAVE_STAT_CTIM_TV_NSEC
+
+/* defined if struct stat.st_mtim.tv_nsec is available */
+#undef HAVE_STAT_MTIM_TV_NSEC
 
 /* Define to 1 if you have the <stdbool.h> header file. */
 #undef HAVE_STDBOOL_H
