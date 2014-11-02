@@ -157,6 +157,11 @@ typedef enum
   PASSWORD_MODE_CONFIG                                   // use password from config
 } PasswordModes;
 
+// File settings
+typedef struct
+{
+} FileServer;
+
 // FTP server settings
 typedef struct
 {
@@ -234,12 +239,40 @@ typedef struct
   LIST_HEADER(ServerNode);
 } ServerList;
 
-// file/FTP/SCP/SFTP/WebDAV settings
+// file settings
 typedef struct
 {
   String writePreProcessCommand;                         // command to execute before writing
   String writePostProcessCommand;                        // command to execute after writing
 } File;
+
+// FTP settings
+typedef struct
+{
+  String writePreProcessCommand;                         // command to execute before writing
+  String writePostProcessCommand;                        // command to execute after writing
+} FTP;
+
+// SCP settings
+typedef struct
+{
+  String writePreProcessCommand;                         // command to execute before writing
+  String writePostProcessCommand;                        // command to execute after writing
+} SCP;
+
+// SFTP settings
+typedef struct
+{
+  String writePreProcessCommand;                         // command to execute before writing
+  String writePostProcessCommand;                        // command to execute after writing
+} SFTP;
+
+// WebDAV settings
+typedef struct
+{
+  String writePreProcessCommand;                         // command to execute before writing
+  String writePostProcessCommand;                        // command to execute after writing
+} WebDAV;
 
 // optical disk settings
 typedef struct
@@ -328,10 +361,10 @@ typedef struct
   String                 remoteBARExecutable;
 
   File                   file;                           // file settings
-  File                   ftp;                            // ftp settings
-  File                   scp;                            // scp settings
-  File                   sftp;                           // sftp settings
-  File                   webdav;                         // WebDAV settings
+  FTP                    ftp;                            // ftp settings
+  SCP                    scp;                            // scp settings
+  SFTP                   sftp;                           // sftp settings
+  WebDAV                 webdav;                         // WebDAV settings
   OpticalDisk            cd;                             // CD settings
   OpticalDisk            dvd;                            // DVD settings
   OpticalDisk            bd;                             // BD settings
@@ -434,16 +467,18 @@ struct JobOptions
   String                      cryptPublicKeyFileName;
   String                      cryptPrivateKeyFileName;
 
+  String                      mountDeviceName;           // device to mount/unmount
   FTPServer                   ftpServer;                 // job specific FTP server settings
   SSHServer                   sshServer;                 // job specific SSH server settings
   WebDAVServer                webDAVServer;              // job specific WebDAV server settings
-
   OpticalDisk                 opticalDisk;               // job specific optical disk settings
-
   String                      deviceName;                // device name to use
   Device                      device;                    // job specific device settings
 
   uint64                      volumeSize;                // volume size or 0LL for default [bytes]
+
+  String                      preProcessCommand;         // command to execute before start of job
+  String                      postProcessCommand;        // command to execute after after termination of job
 
   bool                        skipUnreadableFlag;        // TRUE for skipping unreadable files
   bool                        forceDeltaCompressionFlag; // TRUE to force delta compression of files
@@ -623,6 +658,21 @@ void printError(const char *text, ...);
 \***********************************************************************/
 
 void logPostProcess(void);
+
+/***********************************************************************\
+* Name   : executeIOOutput
+* Purpose: process exec output
+* Input  : userData - string list or NULL
+*          line     - line to output and to append to strin glist (if
+*                     userData is not NULL)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void executeIOOutput(void         *userData,
+                     const String line
+                    );
 
 /***********************************************************************\
 * Name   : initJobOptions
