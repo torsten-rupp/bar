@@ -155,6 +155,12 @@ LOCAL Errors execute(const char *command, const char *arguments[])
   pid = fork();
   if      (pid == 0)
   {
+    // suppress output/input on stdout/stderr/stdin
+    close(STDERR_FILENO);
+    close(STDOUT_FILENO);
+    close(STDIN_FILENO);
+
+    // execute command
     execvp(command,(char**)arguments);
 
     // in case exec() fail, return a default exitcode
@@ -473,7 +479,6 @@ bool Device_isMounted(const String deviceName)
     }
     endmntent(mtab);
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return mountedFlag;
 }
