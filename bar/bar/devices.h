@@ -219,11 +219,46 @@ Errors Device_seek(DeviceHandle *deviceHandle,
 * Notes  : -
 \***********************************************************************/
 
+#if 0
 bool Device_getUsedBlocks(DeviceHandle *deviceHandle,
                           uint64       blockOffset,
                           uint64       blockCount,
                           Bitmap       *usedBlocksBitmap
                          );
+#endif
+
+/***********************************************************************\
+* Name   : Device_mount
+* Purpose: mount device
+* Input  : deviceName - device name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Device_mount(const String deviceName);
+
+/***********************************************************************\
+* Name   : Device_umount
+* Purpose: unmount device
+* Input  : deviceName - device name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Device_umount(const String deviceName);
+
+/***********************************************************************\
+* Name   : Device_isMounted
+* Purpose: check if device is mounted
+* Input  : deviceName - device name
+* Output : -
+* Return : TRUE iff device is currently mounted
+* Notes  : -
+\***********************************************************************/
+
+bool Device_isMounted(const String deviceName);
 
 /*---------------------------------------------------------------------*/
 

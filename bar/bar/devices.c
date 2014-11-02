@@ -16,6 +16,7 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <utime.h>
@@ -96,6 +97,101 @@
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : findCommandInPath
+* Purpose: find command in PATH
+* Input  : command - command variable
+*          name    - command name
+* Output : command - command (if found)
+* Return : TRUE if command found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool findCommandInPath(String command, const char *name)
+{
+  bool            foundFlag;
+  const char      *path;
+  StringTokenizer stringTokenizer;
+  String          token;
+
+  assert(command != NULL);
+  assert(name != NULL);
+
+  foundFlag = FALSE;
+
+  path = getenv("PATH");
+  if (path != NULL)
+  {
+    String_initTokenizerCString(&stringTokenizer,path,":","",FALSE);
+    while (String_getNextToken(&stringTokenizer,&token,NULL) && !foundFlag)
+    {
+      File_setFileName(command,token);
+      File_appendFileNameCString(command,name);
+      foundFlag = File_exists(command);
+    }
+    String_doneTokenizer(&stringTokenizer);
+  }
+
+  return foundFlag;
+}
+
+/***********************************************************************\
+* Name   : execute
+* Purpose: execute command
+* Input  : command   - command
+*          arguments - arguments
+* Output : -
+* Return : ERROR_NONE or eror code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors execute(const char *command, const char *arguments[])
+{
+  pid_t  pid;
+  Errors error;
+  int    status;
+
+  pid = fork();
+  if      (pid == 0)
+  {
+    execvp(command,(char**)arguments);
+
+    // in case exec() fail, return a default exitcode
+    exit(1);
+  }
+  else if (pid < 0)
+  {
+    error = ERRORX_(EXEC_FAIL,errno,command);
+    return error;
+  }
+
+  if (waitpid(pid,&status,0) == -1)
+  {
+    error = ERRORX_(EXEC_FAIL,errno,command);
+  }
+  if      (WIFEXITED(status))
+  {
+    if (WEXITSTATUS(status) == 0)
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX_(EXEC_FAIL,WEXITSTATUS(status),command);
+    }
+  }
+  else if (WIFSIGNALED(status))
+  {
+    error = ERRORX_(EXEC_FAIL,WTERMSIG(status),command);
+  }
+  else
+  {
+    error = ERROR_UNKNOWN;
+  }
+
+  return error;
+}
 
 /*---------------------------------------------------------------------*/
 
@@ -289,6 +385,97 @@ Errors Device_seek(DeviceHandle *deviceHandle,
   deviceHandle->index = offset;
 
   return ERROR_NONE;
+}
+
+Errors Device_mount(const String deviceName)
+{
+  String     command;
+  const char *arguments[3];
+  Errors     error;
+
+  assert(deviceName != NULL);
+
+  // init variables
+  command = String_new();
+
+  // find mount command
+  if (!findCommandInPath(command,"mount"))
+  {
+    String_delete(command);
+    return ERROR_MOUNT;
+  }
+
+  // mount
+  arguments[0] = String_cString(command);
+  arguments[1] = String_cString(deviceName);
+  arguments[2] = NULL;
+  error = execute(String_cString(command),arguments);
+
+  // free resources
+  String_delete(command);
+
+  return error;
+}
+
+Errors Device_umount(const String deviceName)
+{
+  String     command;
+  const char *arguments[3];
+  Errors     error;
+
+  assert(deviceName != NULL);
+
+  // init variables
+  command = String_new();
+
+  // find mount command
+  if (!findCommandInPath(command,"umount"))
+  {
+    String_delete(command);
+    return ERROR_MOUNT;
+  }
+
+  // mount
+  arguments[0] = String_cString(command);
+  arguments[1] = String_cString(deviceName);
+  arguments[2] = NULL;
+  error = execute(String_cString(command),arguments);
+
+  // free resources
+  String_delete(command);
+
+  return error;
+}
+
+bool Device_isMounted(const String deviceName)
+{
+  bool          mountedFlag;
+  FILE          *mtab;
+  struct mntent mountEntry;
+  char          buffer[4096];
+
+  assert(deviceName != NULL);
+
+  mountedFlag = FALSE;
+
+  mtab = setmntent("/etc/mtab","r");
+  if (mtab != NULL)
+  {
+    while (getmntent_r(mtab,&mountEntry,buffer,sizeof(buffer)) != NULL)
+    {
+      if (   String_equalsCString(deviceName,mountEntry.mnt_fsname)
+          || String_equalsCString(deviceName,mountEntry.mnt_dir)
+         )
+      {
+        mountedFlag = TRUE;
+        break;
+      }
+    }
+    endmntent(mtab);
+  }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  return mountedFlag;
 }
 
 /*---------------------------------------------------------------------*/
