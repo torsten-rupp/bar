@@ -247,8 +247,9 @@ class TabRestore
    */
   class StorageData
   {
-    long        id;                       // storage id
+    long        id;                       // database id
     String      name;                     // storage name
+    String      uuid;                     // storage uuid
     long        size;                     // storage size [bytes]
     long        dateTime;                 // date/time when storage was created
     String      title;                    // title to show
@@ -261,6 +262,7 @@ class TabRestore
     /** create storage data
      * @param id database id
      * @param name name of storage
+     * @param uuid uuid
      * @param size size of storage [bytes]
      * @param dateTime date/time (timestamp) when storage was created
      * @param title title to show
@@ -269,10 +271,11 @@ class TabRestore
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    StorageData(long id, String name, long size, long dateTime, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    StorageData(long id, String name, String uuid, long size, long dateTime, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       this.id                  = id;
       this.name                = name;
+      this.uuid                = uuid;
       this.size                = size;
       this.dateTime            = dateTime;
       this.title               = title;
@@ -281,29 +284,30 @@ class TabRestore
       this.lastCheckedDateTime = lastCheckedDateTime;
       this.errorMessage        = errorMessage;
       this.checked             = false;
-
     }
 
     /** create storage data
      * @param id database id
      * @param name name of storage
+     * @param uuid uuid
      * @param dateTime date/time (timestamp) when storage was created
      * @param title title to show
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
-    StorageData(long id, String name, long dateTime, String title, long lastCheckedDateTime)
+    StorageData(long id, String name, String uuid, long dateTime, String title, long lastCheckedDateTime)
     {
-      this(id,name,0,dateTime,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+      this(id,name,uuid,0,dateTime,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
     }
 
     /** create storage data
      * @param id database id
      * @param name name of storage
+     * @param uuid uuid
      * @param title title to show
      */
-    StorageData(long id, String name, String title)
+    StorageData(long id, String name, String uuid, String title)
     {
-      this(id,name,0,title,0);
+      this(id,name,uuid,0,title,0);
     }
 
     /** check if checked
@@ -348,7 +352,7 @@ class TabRestore
     }
 
     /** get storage data from map
-     * @param id storage id
+     * @param storageId database id
      * @return storage data
      */
     public StorageData get(long storageId)
@@ -537,6 +541,7 @@ class TabRestore
                 {
                   long        storageId           = resultMap.getLong  ("storageId"                   );
                   String      name                = resultMap.getString("name"                        );
+                  String      uuid                = resultMap.getString("uuid"                        );
                   long        dateTime            = resultMap.getLong  ("dateTime"                    );
                   long        size                = resultMap.getLong  ("size"                        );
                   IndexStates indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
@@ -551,6 +556,7 @@ class TabRestore
                     if (storageData != null)
                     {
                       storageData.name                = name;
+                      storageData.uuid                = uuid;
                       storageData.size                = size;
                       storageData.dateTime            = dateTime;
                       storageData.indexState          = indexState;
@@ -562,6 +568,7 @@ class TabRestore
                     {
                       storageData = new StorageData(storageId,
                                                     name,
+                                                    uuid,
                                                     size,
                                                     dateTime,
                                                     new File(name).getName(),
@@ -1433,55 +1440,65 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Created")+":");
+            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("UUID")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,simpleDateFormat.format(new Date(storageData.dateTime*1000)));
+            label = Widgets.newLabel(widgetStorageListToolTip,storageData.uuid);
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Size")+":");
+            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Created")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,2,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageData.size,Units.formatByteSize(storageData.size)));
+            label = Widgets.newLabel(widgetStorageListToolTip,simpleDateFormat.format(new Date(storageData.dateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,2,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("State")+":");
+            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Size")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,storageData.indexState.toString());
+            label = Widgets.newLabel(widgetStorageListToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageData.size,Units.formatByteSize(storageData.size)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Last checked")+":");
+            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("State")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,simpleDateFormat.format(new Date(storageData.lastCheckedDateTime*1000)));
+            label = Widgets.newLabel(widgetStorageListToolTip,storageData.indexState.toString());
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Error")+":");
+            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Last checked")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,5,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,storageData.errorMessage);
+            label = Widgets.newLabel(widgetStorageListToolTip,simpleDateFormat.format(new Date(storageData.lastCheckedDateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,5,1,TableLayoutData.WE);
+
+            label = Widgets.newLabel(widgetStorageListToolTip,BARControl.tr("Error")+":");
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,6,0,TableLayoutData.W);
+
+            label = Widgets.newLabel(widgetStorageListToolTip,storageData.errorMessage);
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,6,1,TableLayoutData.WE);
 
             Point size = widgetStorageListToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
             Rectangle bounds = tableItem.getBounds(0);

@@ -31,6 +31,7 @@ import java.util.ListIterator;
 
 // graphics
 import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.dnd.ByteArrayTransfer;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
@@ -1240,6 +1241,7 @@ class TabJobs
   private final Color  COLOR_WHITE;
   private final Color  COLOR_RED;
   private final Color  COLOR_MODIFIED;
+  private final Color  COLOR_MODIFIED2;
 
   // images
   private final Image  IMAGE_DIRECTORY;
@@ -1373,6 +1375,7 @@ class TabJobs
     TreeItem      treeItem;
     Control       control;
     Text          text;
+    StyledText    styledText;
     TableColumn   tableColumn;
 
     // get shell, display
@@ -1384,6 +1387,7 @@ class TabJobs
     COLOR_WHITE    = shell.getDisplay().getSystemColor(SWT.COLOR_WHITE);
     COLOR_RED      = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
     COLOR_MODIFIED = new Color(null,0xFF,0xA0,0xA0);
+COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
 
     // get images
     IMAGE_DIRECTORY          = Widgets.loadImage(display,"directory.png");
@@ -5690,26 +5694,27 @@ class TabJobs
         // pre-script
         label = Widgets.newLabel(tab,BARControl.tr("Pre-script")+":");
         Widgets.layout(label,0,0,TableLayoutData.W);
-        text = Widgets.newText(tab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-        text.setToolTipText(BARControl.tr("Command or script to execute before start of a job."));
-        Widgets.layout(text,1,0,TableLayoutData.NSWE);
-        text.addModifyListener(new ModifyListener()
+
+        styledText = Widgets.newStyledText(tab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+        styledText.setToolTipText(BARControl.tr("Command or script to execute before start of a job."));
+        Widgets.layout(styledText,1,0,TableLayoutData.NSWE);
+        styledText.addModifyListener(new ModifyListener()
         {
           public void modifyText(ModifyEvent modifyEvent)
           {
-            Text   widget = (Text)modifyEvent.widget;
-            Color  color  = COLOR_MODIFIED;
-            String string = widget.getText();
+            StyledText widget = (StyledText)modifyEvent.widget;
+            Color      color  = COLOR_MODIFIED;
+            String     string = widget.getText();
             if (preCommand.equals(string)) color = null;
             widget.setBackground(color);
           }
         });
-        text.addSelectionListener(new SelectionListener()
+        styledText.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
-            Text widget = (Text)selectionEvent.widget;
-            String text = widget.getText();
+            StyledText widget = (StyledText)selectionEvent.widget;
+            String     text   = widget.getText();
             BARServer.setOption(selectedJobId,"pre-command",text);
             widget.setBackground(null);
           }
@@ -5717,44 +5722,44 @@ class TabJobs
           {
           }
         });
-        text.addFocusListener(new FocusListener()
+        styledText.addFocusListener(new FocusListener()
         {
           public void focusGained(FocusEvent focusEvent)
           {
           }
           public void focusLost(FocusEvent focusEvent)
           {
-            Text widget = (Text)focusEvent.widget;
-            String text = widget.getText();
+            StyledText widget = (StyledText)focusEvent.widget;
+            String     text   = widget.getText();
             BARServer.setOption(selectedJobId,"pre-command",text);
             widget.setBackground(null);
           }
         });
-        Widgets.addModifyListener(new WidgetModifyListener(text,preCommand));
+        Widgets.addModifyListener(new WidgetModifyListener(styledText,preCommand));
 
         // post-script
         label = Widgets.newLabel(tab,BARControl.tr("Post-script")+":");
         Widgets.layout(label,2,0,TableLayoutData.W);
-        text = Widgets.newText(tab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-        text.setToolTipText(BARControl.tr("Command or script to execute after termination of a job."));
-        Widgets.layout(text,3,0,TableLayoutData.NSWE);
-        text.addModifyListener(new ModifyListener()
+        styledText = Widgets.newStyledText(tab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+        styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of a job."));
+        Widgets.layout(styledText,3,0,TableLayoutData.NSWE);
+        styledText.addModifyListener(new ModifyListener()
         {
           public void modifyText(ModifyEvent modifyEvent)
           {
-            Text   widget = (Text)modifyEvent.widget;
-            Color  color  = COLOR_MODIFIED;
+            StyledText widget = (StyledText)modifyEvent.widget;
+            Color      color  = COLOR_MODIFIED;
             String string = widget.getText();
             if (postCommand.equals(string)) color = null;
             widget.setBackground(color);
           }
         });
-        text.addSelectionListener(new SelectionListener()
+        styledText.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
-            Text widget = (Text)selectionEvent.widget;
-            String text = widget.getText();
+            StyledText widget = (StyledText)selectionEvent.widget;
+            String     text   = widget.getText();
             BARServer.setOption(selectedJobId,"post-command",text);
             widget.setBackground(null);
           }
@@ -5762,20 +5767,20 @@ class TabJobs
           {
           }
         });
-        text.addFocusListener(new FocusListener()
+        styledText.addFocusListener(new FocusListener()
         {
           public void focusGained(FocusEvent focusEvent)
           {
           }
           public void focusLost(FocusEvent focusEvent)
           {
-            Text widget = (Text)focusEvent.widget;
-            String text = widget.getText();
+            StyledText widget = (StyledText)focusEvent.widget;
+            String     text   = widget.getText();
             BARServer.setOption(selectedJobId,"post-command",text);
             widget.setBackground(null);
           }
         });
-        Widgets.addModifyListener(new WidgetModifyListener(text,postCommand));
+        Widgets.addModifyListener(new WidgetModifyListener(styledText,postCommand));
       }
 
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Schedule"));
