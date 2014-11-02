@@ -564,6 +564,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_STRING   ("pre-command",             JobNode,jobOptions.preProcessCommand            ),
   CONFIG_STRUCT_VALUE_STRING   ("post-command",            JobNode,jobOptions.postProcessCommand           ),
 
+  CONFIG_STRUCT_VALUE_STRING   ("mount-device",            JobNode,jobOptions.mountDeviceName              ),
+
   CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",          JobNode,jobOptions.ftpServer.loginName          ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
 
