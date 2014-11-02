@@ -238,7 +238,7 @@ LOCAL void getUnescapedCString(char       **value,
   String s;
 
   s = String_newCString(string);
-  String_unescape(value,
+  String_unescape(s,
                   STRING_ESCAPE_CHARACTER,
                   STRING_ESCAPE_CHARACTERS_MAP_TO,
                   STRING_ESCAPE_CHARACTERS_MAP_FROM,
