@@ -347,6 +347,20 @@ String Misc_expandMacros(String          string,
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : Misc_findCommandInPath
+* Purpose: find command in PATH
+* Input  : command - command variable
+*          name    - command name
+* Output : command - absolute command file name
+* Return : TRUE iff found
+* Notes  : -
+\***********************************************************************/
+
+bool Misc_findCommandInPath(String     command,
+                            const char *name
+                           );
+
+/***********************************************************************\
 * Name   : Misc_executeCommand
 * Purpose: execute external command
 * Input  : commandTemplate         - command template string

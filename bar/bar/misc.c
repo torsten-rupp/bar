@@ -1037,6 +1037,36 @@ String Misc_expandMacros(String          string,
 
 /*---------------------------------------------------------------------*/
 
+bool Misc_findCommandInPath(String     command,
+                            const char *name
+                           )
+{
+  bool            foundFlag;
+  const char      *path;
+  StringTokenizer stringTokenizer;
+  String          token;
+
+  assert(command != NULL);
+  assert(name != NULL);
+
+  foundFlag = FALSE;
+
+  path = getenv("PATH");
+  if (path != NULL)
+  {
+    String_initTokenizerCString(&stringTokenizer,path,":","",FALSE);
+    while (String_getNextToken(&stringTokenizer,&token,NULL) && !foundFlag)
+    {
+      File_setFileName(command,token);
+      File_appendFileName(command,name);
+      foundFlag = File_exists(command);
+    }
+    String_doneTokenizer(&stringTokenizer);
+  }
+
+  return foundFlag;
+}
+
 Errors Misc_executeCommand(const char        *commandTemplate,
                            const TextMacro   macros[],
                            uint              macroCount,
@@ -1051,10 +1081,8 @@ Errors Misc_executeCommand(const char        *commandTemplate,
   StringTokenizer stringTokenizer;
   String          token;
   String          command;
+  String          name;
   StringList      argumentList;
-  const char      *path;
-  String          fileName;
-  bool            foundFlag;
   char const      **arguments;
   StringNode      *stringNode;
   uint            n,z;
@@ -1063,24 +1091,26 @@ Errors Misc_executeCommand(const char        *commandTemplate,
   if (commandTemplate != NULL)
   {
     commandLine = String_new();
+    name        = String_new();
     command     = File_newFileName();
     StringList_init(&argumentList);
 
-    // expand command
+    // expand command line
     Misc_expandMacros(commandLine,commandTemplate,macros,macroCount);
     printInfo(3,"Execute command '%s'...",String_cString(commandLine));
 
-    // parse command
+    // parse command line
     String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
     if (!String_getNextToken(&stringTokenizer,&token,NULL))
     {
       String_doneTokenizer(&stringTokenizer);
       StringList_done(&argumentList);
       String_delete(command);
+      String_delete(name);
       String_delete(commandLine);
       return ERRORX_(PARSE_COMMAND,0,String_cString(commandLine));
     }
-    File_setFileName(command,token);
+    File_setFileName(name,token);
 
     // parse arguments
     while (String_getNextToken(&stringTokenizer,&token,NULL))
@@ -1098,25 +1128,10 @@ stringNode = stringNode->next;
 }
 #endif /* 0 */
 
-    // find command in PATH
-    path = getenv("PATH");
-    if (path != NULL)
+    // find command in PATH if possible
+    if (!Misc_findCommandInPath(command,String_cString(name)))
     {
-      fileName  = File_newFileName();
-      foundFlag = FALSE;
-      String_initTokenizerCString(&stringTokenizer,path,":","",FALSE);
-      while (String_getNextToken(&stringTokenizer,&token,NULL) && !foundFlag)
-      {
-        File_setFileName(fileName,token);
-        File_appendFileName(fileName,command);
-        if (File_exists(fileName))
-        {
-          File_setFileName(command,fileName);
-          foundFlag = TRUE;
-        }
-      }
-      String_doneTokenizer(&stringTokenizer);
-      File_deleteFileName(fileName);
+      File_setFileName(command,name);
     }
 
     // get arguments
@@ -1149,6 +1164,7 @@ stringNode = stringNode->next;
     free(arguments);
     StringList_done(&argumentList);
     String_delete(command);
+    String_delete(name);
     String_delete(commandLine);
   }
 
