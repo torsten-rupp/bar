@@ -58,6 +58,11 @@ LD_STATIC_LIBRARIES    = @STATIC_LIBRARIES@
 LD_STATIC_PREFIX       = -Wl,-Bstatic
 LD_DYNAMIC_PREFIX      = -Wl,-Bdynamic
 
+XGETTEXT               = @XGETTEXT@
+XGETTEXT_FLAGS         = -L C -k -ktr
+MSGMERGE               = @MSGMERGE@
+MSGFMT                 = @MSGFMT@
+
 #---------------------------------- commands----------------------------------
 
 ATTR          = @ATTR@
@@ -90,6 +95,7 @@ SORT          = sort
 STAT          = stat
 TAR           = tar
 TIME          = @TIME@
+TOUCH         = touch
 
 # for tests only (create test devices)
 FSCK          = fsck
@@ -317,8 +323,12 @@ INTERMEDIATE         = errors.c \
                        archive_format_const.h \
                        index_definition.h \
 
+LANGUAGE_FILES       = po/de/LC_MESSAGES/bar.mo \
+                       po/ja/LC_MESSAGES/bar.mo
+
 TARGETS              = bar@EXEEXT@ \
                        bar-debug@EXEEXT@ \
+                       $(LANGUAGE_FILES) \
                        $(if @HAVE_BREAKPAD@,bar.sym bar-debug.sym) \
                        bar-keygen \
                        destroyer@EXEEXT@
@@ -439,6 +449,34 @@ bar-debug@EXEEXT@: \
 bar-valgrind@EXEEXT@: \
   $(BAR_OBJECTS_VALGRIND) \
   $(EXTERN_OBJECTS)
+
+# i18n
+.PHONY: i18n po
+i18n po: \
+  po/german.po \
+  po/japanese.po
+
+po/bar.pot: $(SOURCE_DIR)/*.c
+	$(INSTALL) -d $(@D)
+	$(XGETTEXT) $(XGETTEXT_FLAGS) -o $@ *.c
+
+po/german.po: po/bar.pot
+	$(INSTALL) -d $(@D)
+	$(MSGMERGE) -U $@ po/bar.pot
+	$(TOUCH) $@
+
+po/japanese.po: po/bar.pot
+	$(INSTALL) -d $(@D)
+	$(MSGMERGE) -U $@ po/bar.pot
+	$(TOUCH) $@
+
+po/de/LC_MESSAGES/bar.mo: po/german.po
+	$(INSTALL) -d $(@D)
+	$(MSGFMT) -o po/de/LC_MESSAGES/bar.mo po/german.po
+
+po/ja/LC_MESSAGES/bar.mo: po/japanese.po
+	$(INSTALL) -d $(@D)
+	$(MSGFMT) -o po/ja/LC_MESSAGES/bar.mo po/japanese.po
 
 # create BAR symbol files
 ifeq (@HAVE_BREAKPAD@,1)
