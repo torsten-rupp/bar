@@ -170,6 +170,9 @@ ifeq (@HAVE_GCRYPT@,1)
 TEST_COMBINED_CRYPT_NAMES += AES256
 endif
 
+# languages
+LANGUAGES = de jp
+
 #---------------------------------- rules ------------------------------------
 
 # source search paths
@@ -323,12 +326,9 @@ INTERMEDIATE         = errors.c \
                        archive_format_const.h \
                        index_definition.h \
 
-LANGUAGE_FILES       = po/de/LC_MESSAGES/bar.mo \
-                       po/ja/LC_MESSAGES/bar.mo
-
 TARGETS              = bar@EXEEXT@ \
                        bar-debug@EXEEXT@ \
-                       $(LANGUAGE_FILES) \
+                       $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
                        $(if @HAVE_BREAKPAD@,bar.sym bar-debug.sym) \
                        bar-keygen \
                        destroyer@EXEEXT@
@@ -472,11 +472,11 @@ po/japanese.po: po/bar.pot
 
 po/de/LC_MESSAGES/bar.mo: po/german.po
 	$(INSTALL) -d $(@D)
-	$(MSGFMT) -o po/de/LC_MESSAGES/bar.mo po/german.po
+	$(MSGFMT) -o $@ po/german.po
 
-po/ja/LC_MESSAGES/bar.mo: po/japanese.po
+po/jp/LC_MESSAGES/bar.mo: po/japanese.po
 	$(INSTALL) -d $(@D)
-	$(MSGFMT) -o po/ja/LC_MESSAGES/bar.mo po/japanese.po
+	$(MSGFMT) -o $@ po/japanese.po
 
 # create BAR symbol files
 ifeq (@HAVE_BREAKPAD@,1)
@@ -549,11 +549,6 @@ showchunks@EXEEXT@: showchunks.o
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
-
-# i18n
-.PHONY: po
-po:
-	$(MAKE) -C po
 
 # ----------------------------------------------------------------------------
 
@@ -3013,6 +3008,53 @@ testcode_diff:
 	$(SORT) < testcode.done > testcode.done.sorted
 	$(DIFF) testcode.list.sorted testcode.done.sorted | $(GREP) '<' | $(SED) 's/<\s*/  /g'
 	$(RMF) testcode.list.sorted testcode.done.sorted
+
+# ----------------------------------------------------------------------------
+# install/uninstall
+# Note: prefix is used for temporary installations
+
+.PHONY: install uninstall
+
+install: \
+  $(TARGETS) \
+  $(SCRIPTS) \
+  $(DOC)
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar-debug@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar-keygen@SHELLEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
+	if test ! -f "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; then \
+          $(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(INSTALL_CONFIG_DIR)"; \
+        else \
+          echo "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg NOT installed - file already exists!"; \
+        fi
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)/jobs"
+	for language in $(LANGUAGES); do \
+          $(INSTALL) -d "$(DESTDIR)$(INSTALL_LOCALE_DIR)/$$language/LC_MESSAGES"; \
+          $(INSTALL) po/$$language/LC_MESSAGES/bar.mo "$(DESTDIR)$(INSTALL_LOCALE_DIR)/$$language/LC_MESSAGES/bar.mo"; \
+        done
+
+# uninstall all
+uninstall:
+	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"
+	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-keygen@SHELLEXT@"
+	$(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
+                                                    "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
+                                                    "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
+        )
+	$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"
+	$(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-ca.pem"
+	$(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-server-cert.pem"
+	$(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/private/bar-server-key.pem"
+	$(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.jks" \
+        )
+	$(RMF) "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"
+	$(RMF) "$(DESTDIR)$(INSTALL_MAN_DIR)/man7/bar.7"
+	$(RMDIR) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/jobs"
+	for language in $(LANGUAGES); do \
+          $(RMF) "$(DESTDIR)$(INSTALL_LOCALE_DIR)/$$language/LC_MESSAGES/bar.mo"; \
+        done
 
 # ----------------------------------------------------------------------------
 
