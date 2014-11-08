@@ -88,6 +88,9 @@ DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 #--------------------------------- objects -----------------------------------
 
 TARGETS              = bar/bar@EXEEXT@ \
+                       bar/bar-debug@EXEEXT@ \
+                       bar/po/de/LC_MESSAGES/bar.mo \
+                       bar/po/ja/LC_MESSAGES/bar.mo \
                        bar/bar-keygen@SHELLEXT@ \
                        $(if $(findstring $(ENABLE_GUI),yes),\
                          barcontrol/barcontrol@SHELLEXT@ \
@@ -317,32 +320,22 @@ endif
 
 # ----------------------------------------------------------------------------
 # install/uninstall
+# Note: prefix is used for temporary installations
 
 .PHONY: install install_base install_man install_keys uninstall install_dist
 
 install: \
   install_base \
-  install_gui \
   install_man \
   $(if $(DIST),,install_keys)
+	-$(MAKE) -C bar install DESTDIR=$(DESTDIR)
+	-$(MAKE) -C barcontrol install DESTDIR=$(DESTDIR)
 
 # install base files
 # Note: prefix is used for temporary installations
 install_base: \
-  $(TARGETS) \
   $(SCRIPTS) \
   $(DOC)
-	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
-	$(INSTALL) bar/bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
-	$(INSTALL) bar/bar-debug@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
-	$(INSTALL) bar/bar-keygen@SHELLEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
-	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
-	if test ! -f "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; then \
-          $(INSTALL) -m 600 bar/bar.cfg "$(DESTDIR)$(INSTALL_CONFIG_DIR)"; \
-        else \
-          echo "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg NOT installed - file already exists!"; \
-        fi
-	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)/jobs"
 	if test ! -f $(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver; then \
           $(INSTALL) -d "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d"; \
           if   test "$(SYSTEM)" = "SuSE"   -o -f $(ETC_DIR)/SuSE-release -o -d $(INSTALL_ETC_DIR)/SuSEconfig; then \
@@ -365,46 +358,6 @@ install_base: \
         else \
           echo "$(INSTALL_ETC_DIR)/init.d/barserver NOT installed - file already exists!"; \
         fi
-	for language in de ja; do \
-          $(INSTALL) bar/po/$$language/LC_MESSAGES/bar.mo "$(DESTDIR)$(INSTALL_LOCALE_DIR)/$$language/LC_MESSAGES/bar.mo"; \
-        done
-
-# install GUI files
-# Note: prefix is used for temporary installations
-install_gui: \
-  $(TARGETS) \
-  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),LINUX),barcontrol/barcontrol-linux.jar barcontrol/barcontrol-linux_64.jar) \
-                                       $(if $(findstring $(PLATFORM),WINDOWS),$(if $(LAUNCH4J),barcontrol/barcontrol.exe) barcontrol/barcontrol-windows.jar barcontrol/barcontrol-windows_64.jar) \
-                                       $(if $(findstring $(PLATFORM),SOLARIS),barcontrol/barcontrol-solaris.jar) \
-                                       $(if $(findstring $(PLATFORM),MAC_OSX),barcontrol/barcontrol-macosx.jar barcontrol/barcontrol-macosx_64.jar) \
-  )
-	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
-ifeq ($(ENABLE_GUI),yes)
-ifeq ($(PLATFORM),LINUX)
-	$(INSTALL) barcontrol/barcontrol \
-                   barcontrol/barcontrol-linux.jar \
-                   barcontrol/barcontrol-linux_64.jar \
-                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
-endif
-ifeq ($(PLATFORM),WINDOWS)
-	$(INSTALL) $(if $(LAUNCH4J),barcontrol/barcontrol.exe,\
-                                    barcontrol/barcontrol.cmd barcontrol/barcontrol-windows.jar \
-                                    barcontrol/barcontrol.cmd barcontrol/barcontrol-windows_64.jar \
-                    ) \
-                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
-endif
-ifeq ($(PLATFORM),SOLARIS)
-	$(INSTALL) barcontrol/barcontrol \
-                   barcontrol/barcontrol-solaris.jar \
-                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
-endif
-ifeq ($(PLATFORM),MAC_OSX)
-	$(INSTALL) barcontrol/barcontrol \
-                   barcontrol/barcontrol-macosx.jar \
-                   barcontrol/barcontrol-macosx_64.jar \
-                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
-endif
-endif
 
 # install man-page
 # Note: prefix is used for temporary installations
