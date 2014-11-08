@@ -107,6 +107,9 @@ UNZIP      = unzip
 VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 
+# languages
+LANGUAGES = de jp
+
 #---------------------------------- rules ------------------------------------
 
 # source search paths
@@ -156,8 +159,7 @@ OBJECTS        = $(foreach z,$(SOURCES),$(basename $(subst src/,classes/,$z)).cl
                  classes/Errors.class \
                  classes/Config.class \
                  \
-                 classes/app/i18n/Messages_de.class \
-                 classes/app/i18n/Messages_jp.class \
+                 $(foreach z,$(LANGUAGES),classes/app/i18n/Messages_$z.class) \
 
 INTERMEDIATE   = src/Errors.java \
                  barcontrol.jar \
@@ -167,7 +169,7 @@ INTERMEDIATE   = src/Errors.java \
                  barcontrol-macos.jar \
                  barcontrol-macos_64.jar \
                  barcontrol-windows.jar \
-                 barcontrol-windows_64.jar
+                 barcontrol-windows_64.jar \
 
 TARGETS        = barcontrol \
                  $(if $(LAUNCH4J),barcontrol@EXEEXT@,barcontrol@SHELLEXT@) \
@@ -236,7 +238,8 @@ endif
 # i18n
 .PHONY: i18n po
 i18n po: \
-  po/german.po
+  po/german.po \
+  po/japanese.po
 
 po/barcontrol.pot: $(SOURCE_DIR)/src/*.java
 	$(INSTALL) -d $(@D)
@@ -285,12 +288,12 @@ barcontrol.jar: \
   $(SOURCE_DIR)/jar.txt \
   $(OBJECTS) $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
-	$(INSTALL) -d tmp/jar
-	$(CP) classes/*.class tmp/jar
-	$(INSTALL) -d tmp/jar/images
-	$(CP) $(SOURCE_DIR)/images/*.png tmp/jar/images
-	($(CD) tmp/jar; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
-	$(RMRF) tmp/jar
+	$(INSTALL) -d tmp/$@
+	$(CP) classes/*.class tmp/$@
+	$(INSTALL) -d tmp/$@/images
+	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
+	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
@@ -302,14 +305,14 @@ barcontrol-linux.jar: \
   $(GETTEXT_JAR) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
-	$(INSTALL) -d tmp/jar
-	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_LINUX) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/jar; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/jar
-	$(INSTALL) -d tmp/jar/images
-	$(CP) $(SOURCE_DIR)/images/*.png tmp/jar/images
-	($(CD) tmp/jar; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
-	$(RMRF) tmp/jar
+	$(INSTALL) -d tmp/$@
+	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_LINUX) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	$(CP) classes/*.class tmp/$@
+	$(INSTALL) -d tmp/$@/images
+	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
+	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
@@ -321,14 +324,14 @@ barcontrol-linux_64.jar: \
   $(GETTEXT_JAR) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
-	$(INSTALL) -d tmp/jar
-	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_LINUX_64) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/jar; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/jar
-	$(INSTALL) -d tmp/jar/images
-	$(CP) $(SOURCE_DIR)/images/*.png tmp/jar/images
-	($(CD) tmp/jar; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
-	$(RMRF) tmp/jar
+	$(INSTALL) -d tmp/$@
+	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_LINUX_64) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	$(CP) classes/*.class tmp/$@
+	$(INSTALL) -d tmp/$@/images
+	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
+	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
@@ -340,14 +343,14 @@ barcontrol-solaris.jar: \
   $(GETTEXT_JAR) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
-	$(INSTALL) -d tmp/jar
-	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_SOLARIS) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/jar; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/jar
-	$(INSTALL) -d tmp/jar/images
-	$(CP) $(SOURCE_DIR)/images/*.png tmp/jar/images
-	($(CD) tmp/jar; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
-	$(RMRF) tmp/jar
+	$(INSTALL) -d tmp/$@
+	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_SOLARIS) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	$(CP) classes/*.class tmp/$@
+	$(INSTALL) -d tmp/$@/images
+	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
+	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
@@ -359,14 +362,14 @@ barcontrol-macosx.jar: \
   $(GETTEXT_JAR) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
-	$(INSTALL) -d tmp/jar
-	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_MACOSX) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/jar; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/jar
-	$(INSTALL) -d tmp/jar/images
-	$(CP) $(SOURCE_DIR)/images/*.png tmp/jar/images
-	($(CD) tmp/jar; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
-	$(RMRF) tmp/jar
+	$(INSTALL) -d tmp/$@
+	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_MACOSX) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	$(CP) classes/*.class tmp/$@
+	$(INSTALL) -d tmp/$@/images
+	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
+	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
@@ -378,14 +381,14 @@ barcontrol-macosx_64.jar: \
   $(GETTEXT_JAR) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
-	$(INSTALL) -d tmp/jar
-	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_MACOSX_64) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/jar; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/jar
-	$(INSTALL) -d tmp/jar/images
-	$(CP) $(SOURCE_DIR)/images/*.png tmp/jar/images
-	($(CD) tmp/jar; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
-	$(RMRF) tmp/jar
+	$(INSTALL) -d tmp/$@
+	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_MACOSX_64) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	$(CP) classes/*.class tmp/$@
+	$(INSTALL) -d tmp/$@/images
+	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
+	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
@@ -397,14 +400,14 @@ barcontrol-windows.jar: \
   $(GETTEXT_JAR) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
-	$(INSTALL) -d tmp/jar
-	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_WINDOWS) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/jar; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/jar
-	$(INSTALL) -d tmp/jar/images
-	$(CP) $(SOURCE_DIR)/images/*.png tmp/jar/images
-	($(CD) tmp/jar; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
-	$(RMRF) tmp/jar
+	$(INSTALL) -d tmp/$@
+	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_WINDOWS) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	$(CP) classes/*.class tmp/$@
+	$(INSTALL) -d tmp/$@/images
+	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
+	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
@@ -416,14 +419,14 @@ barcontrol-windows_64.jar: \
   $(GETTEXT_JAR) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
-	$(INSTALL) -d tmp/jar
-	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_WINDOWS_64) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/jar; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/jar
-	$(INSTALL) -d tmp/jar/images
-	$(CP) $(SOURCE_DIR)/images/*.png tmp/jar/images
-	($(CD) tmp/jar; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
-	$(RMRF) tmp/jar
+	$(INSTALL) -d tmp/$@
+	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_WINDOWS_64) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	$(CP) classes/*.class tmp/$@
+	$(INSTALL) -d tmp/$@/images
+	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
+	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
@@ -521,6 +524,56 @@ else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 
+# ----------------------------------------------------------------------------
+# install/uninstall
+# Note: prefix is used for temporary installations
+
+.PHONY: install uninstall
+
+install: \
+  $(TARGETS) \
+  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),LINUX),barcontrol-linux.jar barcontrol-linux_64.jar) \
+                                       $(if $(findstring $(PLATFORM),WINDOWS),$(if $(LAUNCH4J),barcontrol.exe) barcontrol-windows.jar barcontrol/barcontrol-windows_64.jar) \
+                                       $(if $(findstring $(PLATFORM),SOLARIS),barcontrol-solaris.jar) \
+                                       $(if $(findstring $(PLATFORM),MAC_OSX),barcontrol-macosx.jar barcontrol-macosx_64.jar) \
+  )
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
+ifeq ($(ENABLE_GUI),yes)
+ifeq ($(PLATFORM),LINUX)
+	$(INSTALL) barcontrol \
+                   barcontrol-linux.jar \
+                   barcontrol-linux_64.jar \
+                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(if $(LAUNCH4J),barcontrol.exe,\
+                                    barcontrol.cmd barcontrol-windows.jar \
+                                    barcontrol.cmd barcontrol-windows_64.jar \
+                    ) \
+                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
+ifeq ($(PLATFORM),SOLARIS)
+	$(INSTALL) barcontrol \
+                   barcontrol-solaris.jar \
+                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
+ifeq ($(PLATFORM),MAC_OSX)
+	$(INSTALL) barcontrol \
+                   barcontrol-macosx.jar \
+                   barcontrol-macosx_64.jar \
+                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
+endif
+
+# uninstall all
+uninstall:
+	$(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
+                                                    "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
+                                                    "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
+        ) \
+
+# ----------------------------------------------------------------------------
+
 # copy distribution files
 .PHONY: dist
 dist:
@@ -536,13 +589,23 @@ ifneq ($(DIRECTORY),)
                    src/Config.java.in \
                    $(DIRECTORY)/barcontrol/src
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/classes
+	#
 	$(INSTALL) -m 664 \
                    $(sort $(OTHER_SOURCES)) \
                    $(DIRECTORY)/barcontrol
+	#
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/images
 	$(INSTALL) -m 664 \
                    images/*.png \
                    $(DIRECTORY)/barcontrol/images
+	#
+	$(INSTALL) -d $(DIRECTORY)/barcontrol/po
+	$(INSTALL) -m 664 \
+                   $(sort po/*.pot \
+                          po/*.po \
+                   ) \
+                   $(DIRECTORY)/barcontrol/po
+	#
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars
 	$(INSTALL) -m 664 \
                    jars/*.jar \
