@@ -3159,7 +3159,7 @@ Dprintf.dprintf("");
               retryFlag = false;
 
               // start restore
-              command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destinationDirectory=%'S overwriteFlag=%y",
+              command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destination=%'S overwriteFilesFlag=%y",
                                                                  storageName,
                                                                  directory,
                                                                  overwriteEntries
@@ -3543,7 +3543,7 @@ Dprintf.dprintf("");
               retryFlag = false;
 
               // start restore
-              command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destinationDirectory=%'S overwriteFlag=%y name=%'S",
+              command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destination=%'S overwriteFilesFlag=%y name=%'S",
                                                                  entryData.storageName,
                                                                  directory,
                                                                  overwriteEntries,
