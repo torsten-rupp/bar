@@ -235,7 +235,12 @@ typedef struct
 } FileExtendedAttributeList;
 
 // file cast: change if file is modified in some way
-typedef byte FileCast[FILE_CAST_SIZE];
+//typedef byte FileCast[FILE_CAST_SIZE];
+typedef struct
+{
+  time_t mtime;
+  time_t ctime;
+} FileCast;
 
 // file info data
 typedef struct
@@ -1344,6 +1349,16 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
                               const          String pathName
                              );
 
+
+INLINE bool File_isEqualsCast(const FileCast *fileCast0, const FileCast *fileCast1);
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENATION__)
+INLINE bool File_isEqualsCast(const FileCast *fileCast0, const FileCast *fileCast1)
+{
+  return memcmp(fileCast0,fileCast1,sizeof(FileCast)) == 0;
+}
+#endif /* NDEBUG || __FILES_IMPLEMENATION__ */
+
+String File_castToString(String string, const FileCast *fileCast);
 
 /***********************************************************************\
 * Name   : File_getDescriptor

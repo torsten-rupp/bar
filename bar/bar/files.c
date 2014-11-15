@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <time.h>
 #ifdef HAVE_SYS_IOCTL_H
   #include <sys/ioctl.h>
 #endif
@@ -275,9 +276,13 @@ LOCAL Errors getAttributes(const String fileName, FileAttributes *fileAttributes
 
   attributes = 0LL;
   #ifdef FS_IOC_GETFLAGS
-    // open file
+    // open file (first try with O_NOATIME)
     #ifdef HAVE_O_NOATIME
       handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK|O_NOATIME);
+      if (handle == -1)
+      {
+        handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
+      }
     #else /* not HAVE_O_NOATIME */
       handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
     #endif /* HAVE_O_NOATIME */
@@ -1022,7 +1027,6 @@ Errors __File_openCString(const char *__fileName__,
   Errors error;
   String pathName;
   #ifdef HAVE_O_NOATIME
-    int    flags;
     int    handle;
   #else /* not HAVE_O_NOATIME */
     struct stat stat;
@@ -1058,9 +1062,19 @@ Errors __File_openCString(const char *__fileName__,
       // open file for reading with support of NO_ATIME
       #ifdef HAVE_O_NOATIME
         // open file
-        flags = O_RDONLY|O_LARGEFILE;
-        if ((fileMode & FILE_OPEN_NO_ATIME) != 0) flags |= O_NOATIME;
-        handle = open(fileName,flags,0);
+        if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
+        {
+          // first try with O_NOATIME
+          handle = open(fileName,O_RDONLY|O_LARGEFILE|O_NOATIME,0);
+          if (handle == -1)
+          {
+            handle = open(fileName,O_RDONLY|O_LARGEFILE,0);
+          }
+        }
+        else
+        {
+          handle = open(fileName,O_RDONLY|O_LARGEFILE,0);
+        }
         if (handle == -1)
         {
           return ERRORX_(OPEN_FILE,errno,fileName);
@@ -2067,8 +2081,12 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
 
   #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
     #ifdef HAVE_O_NOATIME
-      // open directory
+      // open directory (try first with O_NOATIME)
       handle = open(pathName,O_RDONLY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
+      if (handle == -1)
+      {
+        handle = open(pathName,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
+      }
       if (handle == -1)
       {
         return ERRORX_(OPEN_DIRECTORY,errno,pathName);
@@ -2874,11 +2892,6 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
 {
   FileStat   fileStat;
   DeviceInfo deviceInfo;
-  struct
-  {
-    time_t d0;
-    time_t d1;
-  } cast;
 
   assert(fileName != NULL);
   assert(fileInfo != NULL);
@@ -2907,9 +2920,8 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
   fileInfo->attributes      = FILE_ATTRIBUTE_NONE;
   fileInfo->id              = (uint64)fileStat.st_ino;
   fileInfo->linkCount       = (uint)fileStat.st_nlink;
-  cast.d0 = fileStat.st_mtime;
-  cast.d1 = fileStat.st_ctime;
-  memcpy(fileInfo->cast,&cast,sizeof(FileCast));
+  fileInfo->cast.mtime      = fileStat.st_mtime;
+  fileInfo->cast.ctime      = fileStat.st_ctime;
 
   // store specific meta data
   if      (S_ISREG(fileStat.st_mode))
@@ -3698,6 +3710,29 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
   #endif /* HAVE_STATVFS */
 
   return ERROR_NONE;
+}
+
+String File_castToString(String string, const FileCast *fileCast)
+{
+  char s[64];
+  struct tm tm;
+
+  assert(s != NULL);
+  assert(fileCast != NULL);
+
+  String_clear(string);
+
+  localtime_r(&fileCast->mtime,&tm);
+  strftime(s,sizeof(s),"%F %T",&tm);
+  String_format(string,"mtime=%s",s);
+
+  String_appendChar(string,' ');
+
+  localtime_r(&fileCast->ctime,&tm);
+  strftime(s,sizeof(s),"%F %T",&tm);
+  String_format(string,"ctime=%s",s);
+
+  return string;
 }
 
 bool File_isTerminal(FILE *file)
