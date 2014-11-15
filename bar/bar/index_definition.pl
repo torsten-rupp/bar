@@ -68,7 +68,7 @@ while ($line=<STDIN>)
         }
       }
     }
-    elsif ($line =~ /\s*CREATE\s+TABLE\s+(.*)\s*\(/)
+    elsif ($line =~ /\s*CREATE\s+TABLE\s+.*?(\S+)\s*\(/)
     {
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
       $databaseTableDefinitionName=$1;
