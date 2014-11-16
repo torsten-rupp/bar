@@ -851,51 +851,76 @@ LOCAL void formatString(struct __String *string,
           break;
         case 's':
           data.s = va_arg(arguments,const char*);
-          assert(data.s != NULL);
 
           if (formatToken.quoteChar != '\0')
           {
             // quoted string
             String_appendChar(string,formatToken.quoteChar);
-            s = data.s;
-            while ((ch = (*s)) != '\0')
+            if (data.s != NULL)
             {
-              if (ch == formatToken.quoteChar)
+              s = data.s;
+              while ((ch = (*s)) != '\0')
               {
-                String_appendChar(string,STRING_ESCAPE_CHARACTER);
-                String_appendChar(string,ch);
-              }
-              else
-              {
-                // check if mapped character
-                j = 0;
-                while ((j < STRING_ESCAPE_CHARACTER_MAP_LENGTH) && (STRING_ESCAPE_CHARACTERS_MAP_FROM[j] != ch))
+                if (ch == formatToken.quoteChar)
                 {
-                  j++;
-                }
-
-                if (j < STRING_ESCAPE_CHARACTER_MAP_LENGTH)
-                {
-                  assert(j < SIZE_OF_ARRAY(STRING_ESCAPE_CHARACTERS_MAP_TO));
-
-                  // mapped character
                   String_appendChar(string,STRING_ESCAPE_CHARACTER);
-                  String_appendChar(string,STRING_ESCAPE_CHARACTERS_MAP_TO[j]);
+                  String_appendChar(string,ch);
                 }
                 else
                 {
-                  // non-mapped character
-                  String_appendChar(string,ch);
+                  // check if mapped character
+                  j = 0;
+                  while ((j < STRING_ESCAPE_CHARACTER_MAP_LENGTH) && (STRING_ESCAPE_CHARACTERS_MAP_FROM[j] != ch))
+                  {
+                    j++;
+                  }
+
+                  if (j < STRING_ESCAPE_CHARACTER_MAP_LENGTH)
+                  {
+                    assert(j < SIZE_OF_ARRAY(STRING_ESCAPE_CHARACTERS_MAP_TO));
+
+                    // mapped character
+                    String_appendChar(string,STRING_ESCAPE_CHARACTER);
+                    String_appendChar(string,STRING_ESCAPE_CHARACTERS_MAP_TO[j]);
+                  }
+                  else
+                  {
+                    // non-mapped character
+                    String_appendChar(string,ch);
+                  }
                 }
+                s++;
               }
-              s++;
             }
             String_appendChar(string,formatToken.quoteChar);
           }
           else
           {
             // non quoted string
-            length = snprintf(buffer,sizeof(buffer),formatToken.token,data.s);
+            if (data.s != NULL)
+            {
+              length = snprintf(buffer,sizeof(buffer),formatToken.token,data.s);
+              if (length < sizeof(buffer))
+              {
+                String_appendCString(string,buffer);
+              }
+              else
+              {
+                ensureStringLength(string,string->length+length);
+                snprintf(&string->data[string->length],length+1,formatToken.token,data.s);
+                string->length += length;
+                STRING_UPDATE_VALID(string);
+              }
+            }
+          }
+          break;
+        case 'p':
+        case 'n':
+          data.p = va_arg(arguments,void*);
+
+          if (data.p != NULL)
+          {
+            length = snprintf(buffer,sizeof(buffer),formatToken.token,data.p);
             if (length < sizeof(buffer))
             {
               String_appendCString(string,buffer);
@@ -903,28 +928,10 @@ LOCAL void formatString(struct __String *string,
             else
             {
               ensureStringLength(string,string->length+length);
-              snprintf(&string->data[string->length],length+1,formatToken.token,data.s);
+              snprintf(&string->data[string->length],length+1,formatToken.token,data.p);
               string->length += length;
               STRING_UPDATE_VALID(string);
-           }
-          }
-          break;
-        case 'p':
-        case 'n':
-          data.p = va_arg(arguments,void*);
-          assert(data.p != NULL);
-
-          length = snprintf(buffer,sizeof(buffer),formatToken.token,data.p);
-          if (length < sizeof(buffer))
-          {
-            String_appendCString(string,buffer);
-          }
-          else
-          {
-            ensureStringLength(string,string->length+length);
-            snprintf(&string->data[string->length],length+1,formatToken.token,data.p);
-            string->length += length;
-            STRING_UPDATE_VALID(string);
+            }
           }
           break;
         case 'S':
