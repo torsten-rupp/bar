@@ -1373,7 +1373,8 @@ void __halt(const char *__fileName__,
             int        exitcode,
             const char *format,
             ...
-           );
+           ) __attribute__((noreturn))
+             __attribute__((format(printf,4,5)));
 
 /***********************************************************************\
 * Name   : __abort
@@ -1393,7 +1394,8 @@ void __abort(const char *__fileName__,
              const char *prefix,
              const char *format,
              ...
-            );
+            ) __attribute__((noreturn))
+              __attribute__((format(printf,4,5)));
 
 #ifndef NDEBUG
 
