@@ -254,7 +254,7 @@ INLINE void Semaphore_forceLock(Semaphore          *semaphore,
 
   if (!Semaphore_lock(semaphore,semaphoreLockType,SEMAPHORE_WAIT_FOREVER))
   {
-    HALT_INTERNAL_ERROR("Cannot lock semaphore at %s, %lu",__FILE__,__LINE__);
+    HALT_INTERNAL_ERROR("Cannot lock semaphore at %s, %u",__FILE__,__LINE__);
   }
 }
 #endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
