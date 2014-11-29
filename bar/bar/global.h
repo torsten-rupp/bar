@@ -253,6 +253,9 @@ typedef struct
 // mask and shift value
 #define MASKSHIFT(n,maskShift) (((n) & maskShift.mask) >> maskShift.shift)
 
+// debugging
+#define __BP() asm(" int3");
+
 /***********************************************************************\
 * Name   : CALLBACK_INLINE
 * Purpose: define an inline call-back function
@@ -354,7 +357,7 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define ALIGN(n,alignment) (((alignment)>0)?(((n)+(alignment)-1) & ~((alignment)-1)):(n))
+#define ALIGN(n,alignment) (((alignment)>0) ? (((n)+(alignment)-1) & ~((alignment)-1)) : (n))
 
 /***********************************************************************\
 * Name   : SET_CLEAR, SET_VALUE, SET_ADD, SET_REM
@@ -1055,7 +1058,7 @@ extern "C" {
 
 #ifndef NDEBUG
 /***********************************************************************\
-* Name   : __dprintf
+* Name   : __dprintf__
 * Purpose: debug printf
 * Input  : __fileName__ - file name
 *          __lineNb__   - line number
@@ -1066,11 +1069,11 @@ extern "C" {
 * Notes  : -
 \***********************************************************************/
 
-void __dprintf(const char *__fileName__,
-               uint       __lineNb__,
-               const char *format,
-               ...
-              );
+void __dprintf__(const char *__fileName__,
+                 uint       __lineNb__,
+                 const char *format,
+                 ...
+                );
 #endif /* NDEBUG */
 
 #ifdef __cplusplus
