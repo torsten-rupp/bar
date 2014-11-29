@@ -583,7 +583,7 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
 }
 #endif /* 0 */
 
-    error = File_write(&fileHandle,incrementalListInfo->cast,sizeof(incrementalListInfo->cast));
+    error = File_write(&fileHandle,&incrementalListInfo->cast,sizeof(incrementalListInfo->cast));
     if (error != ERROR_NONE) break;
     n = (uint16)keyLength;
     error = File_write(&fileHandle,&n,sizeof(n));
@@ -720,13 +720,59 @@ LOCAL bool isFileChanged(Dictionary     *namesDictionary,
   assert(length == sizeof(IncrementalListInfo));
 
   // check if modified
-  if (memcmp(data.incrementalListInfo->cast,&fileInfo->cast,sizeof(FileCast)) != 0)
+  if (!File_isEqualsCast(&data.incrementalListInfo->cast,&fileInfo->cast))
   {
     return TRUE;
   }
 
   return FALSE;
 }
+
+/***********************************************************************\
+* Name   : printIncrementalInfo
+* Purpose: print incremental info for file
+* Input  : dictionary - incremental dictionary
+*          name       - name
+*          fileCast   - file cast data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printIncrementalInfo(Dictionary     *dictionary,
+                                const String   name,
+                                const FileCast *fileCast
+                               )
+{
+  union
+  {
+    void                *value;
+    IncrementalListInfo *incrementalListInfo;
+  } data;
+  ulong length;
+
+  String s = String_new();
+
+  printInfo(2,"Include '%s':\n",String_cString(name));
+  printInfo(2,"  new: %s\n",String_cString(File_castToString(String_clear(s),fileCast)));
+  if (Dictionary_find(dictionary,
+                      String_cString(name),
+                      String_length(name),
+                      &data.value,
+                      &length
+                     )
+      )
+  {
+    printInfo(2,"  old: %s\n",String_cString(File_castToString(String_clear(s),&data.incrementalListInfo->cast)));
+  }
+  else
+  {
+    printInfo(2,"  old: not exists\n");
+  }
+
+  String_delete(s);
+}
+
 
 /***********************************************************************\
 * Name   : addIncrementalList
@@ -751,7 +797,7 @@ LOCAL void addIncrementalList(Dictionary     *namesDictionary,
   assert(fileInfo != NULL);
 
   incrementalListInfo.state = INCREMENTAL_FILE_STATE_ADDED;
-  memcpy(incrementalListInfo.cast,fileInfo->cast,sizeof(FileCast));
+  memcpy(&incrementalListInfo.cast,&fileInfo->cast,sizeof(FileCast));
 
   Dictionary_add(namesDictionary,
                  String_cString(fileName),
@@ -2025,6 +2071,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                        )
                     {
                       // add to entry list
+                      if (createInfo->partialFlag && isPrintInfo(2))
+                      {
+                        printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
+                      }
                       appendFileToEntryList(&createInfo->entryMsgQueue,
                                             ENTRY_TYPE_FILE,
                                             name
@@ -2052,6 +2102,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                          )
                       {
                         // add to entry list
+                        if (createInfo->partialFlag && isPrintInfo(2))
+                        {
+                          printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
+                        }
                         appendDirectoryToEntryList(&createInfo->entryMsgQueue,
                                                    ENTRY_TYPE_FILE,
                                                    name
@@ -2128,6 +2182,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                        )
                                     {
                                       // add to entry list
+                                      if (createInfo->partialFlag && isPrintInfo(2))
+                                      {
+                                        printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
+                                      }
                                       appendFileToEntryList(&createInfo->entryMsgQueue,
                                                             ENTRY_TYPE_FILE,
                                                             fileName
@@ -2156,6 +2214,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                        )
                                     {
                                       // add to entry list
+                                      if (createInfo->partialFlag && isPrintInfo(2))
+                                      {
+                                        printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
+                                      }
                                       appendLinkToEntryList(&createInfo->entryMsgQueue,
                                                             ENTRY_TYPE_FILE,
                                                             fileName
@@ -2214,6 +2276,14 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                         else
                                         {
                                           // create hard link name list
+                                          if (createInfo->partialFlag && isPrintInfo(2))
+                                          {
+                                            printIncrementalInfo(&createInfo->namesDictionary,
+                                                                 fileName,
+                                                                 &fileInfo.cast
+                                                                );
+                                          }
+
                                           hardLinkInfo.count = fileInfo.linkCount;
                                           StringList_init(&hardLinkInfo.nameList);
                                           StringList_append(&hardLinkInfo.nameList,fileName);
@@ -2250,6 +2320,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                        )
                                     {
                                       // add to entry list
+                                      if (createInfo->partialFlag && isPrintInfo(2))
+                                      {
+                                        printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
+                                      }
                                       appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                                ENTRY_TYPE_FILE,
                                                                fileName
@@ -2342,6 +2416,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       )
                     {
                       // add to entry list
+                      if (createInfo->partialFlag && isPrintInfo(2))
+                      {
+                        printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
+                      }
                       appendLinkToEntryList(&createInfo->entryMsgQueue,
                                             ENTRY_TYPE_FILE,
                                             name
@@ -2404,6 +2482,14 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                         else
                         {
                           // create hard link name list
+                          if (createInfo->partialFlag && isPrintInfo(2))
+                          {
+                            printIncrementalInfo(&createInfo->namesDictionary,
+                                                 name,
+                                                 &fileInfo.cast
+                                                );
+                          }
+
                           hardLinkInfo.count = fileInfo.linkCount;
                           StringList_init(&hardLinkInfo.nameList);
                           StringList_append(&hardLinkInfo.nameList,name);
@@ -2441,6 +2527,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                        )
                     {
                       // add to entry list
+                      if (createInfo->partialFlag && isPrintInfo(2))
+                      {
+                        printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
+                      }
                       appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                ENTRY_TYPE_FILE,
                                                name
@@ -3024,6 +3114,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       oldStorageName = String_new();
       error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
+                                    DATABASE_ID_NONE,
                                     STORAGE_TYPE_ANY,
                                     NULL, // storageName
                                     createInfo->storageSpecifier->hostName,
@@ -3034,7 +3125,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                    );
       while (Index_getNextStorage(&indexQueryHandle,
                                   &oldStorageId,
-                                  NULL, // uuid
+                                  NULL, // jobId
                                   oldStorageName,
                                   NULL, // createdDateTime
                                   NULL, // size
