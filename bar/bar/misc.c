@@ -1058,7 +1058,7 @@ bool Misc_findCommandInPath(String     command,
     while (String_getNextToken(&stringTokenizer,&token,NULL) && !foundFlag)
     {
       File_setFileName(command,token);
-      File_appendFileName(command,name);
+      File_appendFileNameCString(command,name);
       foundFlag = File_exists(command);
     }
     String_doneTokenizer(&stringTokenizer);
