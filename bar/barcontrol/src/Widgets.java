@@ -12,8 +12,12 @@
 // base
 import java.io.File;
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+
 import java.lang.reflect.Array;
+
 import java.net.URL;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -26,6 +30,8 @@ import java.util.LinkedList;
 import java.util.Scanner;
 
 // graphics
+import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.custom.StyledText;
@@ -42,12 +48,16 @@ import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.events.TraverseEvent;
+import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Cursor;
+import org.eclipse.swt.graphics.Device;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.SWT;
@@ -79,6 +89,10 @@ import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.swt.widgets.Widget;
+
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.events.PaintListener;
+import org.eclipse.swt.events.PaintEvent;
 
 /****************************** Classes ********************************/
 
@@ -1017,9 +1031,113 @@ class Widgets
 {
   //-----------------------------------------------------------------------
 
-  /** list of widgets listeners
-   */
+  // list of widgets listeners
   private static ArrayList<WidgetModifyListener> listenersList = new ArrayList<WidgetModifyListener>();
+
+  // images
+  private static ImageData IMAGE_CLOSE_DATA;
+
+  static
+  {
+    // create: hexdump -v -e '1/1 "(byte)0x%02x" "\n"' images/close.png | awk 'BEGIN {n=0;); if (n > 8) { printf("\n"); n=0; }; f=1; printf("%s",$1); n++; }'
+    final byte[] IMAGE_CLOSE_DATA_ARRAY =
+    {
+      (byte)0x89, (byte)0x50, (byte)0x4e, (byte)0x47, (byte)0x0d, (byte)0x0a, (byte)0x1a, (byte)0x0a, (byte)0x00,
+      (byte)0x00, (byte)0x00, (byte)0x0d, (byte)0x49, (byte)0x48, (byte)0x44, (byte)0x52, (byte)0x00, (byte)0x00,
+      (byte)0x00, (byte)0x10, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x10, (byte)0x08, (byte)0x06, (byte)0x00,
+      (byte)0x00, (byte)0x00, (byte)0x1f, (byte)0xf3, (byte)0xff, (byte)0x61, (byte)0x00, (byte)0x00, (byte)0x02,
+      (byte)0xa3, (byte)0x49, (byte)0x44, (byte)0x41, (byte)0x54, (byte)0x78, (byte)0xda, (byte)0x85, (byte)0xcd,
+      (byte)0x7f, (byte)0x4c, (byte)0xcc, (byte)0x71, (byte)0x1c, (byte)0xc7, (byte)0xf1, (byte)0x67, (byte)0xdf,
+      (byte)0x13, (byte)0x92, (byte)0xb8, (byte)0x42, (byte)0xb3, (byte)0xa5, (byte)0xd6, (byte)0xbf, (byte)0x19,
+      (byte)0x33, (byte)0x6d, (byte)0xca, (byte)0xfc, (byte)0xe1, (byte)0x47, (byte)0xcb, (byte)0x10, (byte)0xfe,
+      (byte)0xb0, (byte)0x65, (byte)0xcb, (byte)0xd6, (byte)0x94, (byte)0x26, (byte)0x63, (byte)0xc3, (byte)0x1f,
+      (byte)0xcc, (byte)0xfa, (byte)0x31, (byte)0x69, (byte)0x38, (byte)0x5c, (byte)0x6e, (byte)0x61, (byte)0xc9,
+      (byte)0xac, (byte)0x6c, (byte)0x66, (byte)0x23, (byte)0x67, (byte)0x5d, (byte)0xe9, (byte)0xae, (byte)0xf4,
+      (byte)0x9b, (byte)0x52, (byte)0x43, (byte)0x43, (byte)0x45, (byte)0xba, (byte)0x65, (byte)0xbb, (byte)0x6b,
+      (byte)0x2c, (byte)0xe6, (byte)0xc7, (byte)0x2c, (byte)0xcd, (byte)0x8f, (byte)0xc6, (byte)0x30, (byte)0x5e,
+      (byte)0xee, (byte)0x3b, (byte)0xda, (byte)0xac, (byte)0xb5, (byte)0x79, (byte)0x6c, (byte)0xaf, (byte)0x7d,
+      (byte)0xf6, (byte)0xfe, (byte)0xe3, (byte)0xf5, (byte)0xfa, (byte)0x30, (byte)0x11, (byte)0x1b, (byte)0xcc,
+      (byte)0x38, (byte)0x05, (byte)0x9b, (byte)0xce, (byte)0x42, (byte)0x5e, (byte)0x29, (byte)0x14, (byte)0x9c,
+      (byte)0x81, (byte)0x0c, (byte)0x07, (byte)0x44, (byte)0xf3, (byte)0x3f, (byte)0x05, (byte)0x10, (byte)0xea,
+      (byte)0x80, (byte)0xa2, (byte)0x52, (byte)0xc3, (byte)0x18, (byte)0x75, (byte)0x2f, (byte)0x59, (byte)0xa2,
+      (byte)0xbb, (byte)0x99, (byte)0x99, (byte)0xea, (byte)0xca, (byte)0xce, (byte)0x56, (byte)0x63, (byte)0x72,
+      (byte)0xb2, (byte)0xca, (byte)0x42, (byte)0x42, (byte)0x7e, (byte)0x16, (byte)0x83, (byte)0xeb, (byte)0x38,
+      (byte)0xc4, (byte)0x30, (byte)0x91, (byte)0x43, (byte)0x10, (byte)0x79, (byte)0x0a, (byte)0x7a, (byte)0x2b,
+      (byte)0xa3, (byte)0xa3, (byte)0xe5, (byte)0x2f, (byte)0x2a, (byte)0xd2, (byte)0x1b, (byte)0xa7, (byte)0x53,
+      (byte)0x6f, (byte)0xff, (byte)0xc9, (byte)0x8b, (byte)0xf2, (byte)0x72, (byte)0x35, (byte)0x06, (byte)0x46,
+      (byte)0x4b, (byte)0x60, (byte)0xd8, (byte)0x0e, (byte)0x89, (byte)0xfc, (byte)0x6b, (byte)0x03, (byte)0x4c,
+      (byte)0x2a, (byte)0x86, (byte)0x4e, (byte)0x57, (byte)0x78, (byte)0xb8, (byte)0x7c, (byte)0x05, (byte)0xf9,
+      (byte)0x7a, (byte)0x56, (byte)0x74, (byte)0x44, (byte)0x43, (byte)0x8e, (byte)0xa3, (byte)0x1a, (byte)0x3a,
+      (byte)0x69, (byte)0xd3, (byte)0xd0, (byte)0x09, (byte)0x9b, (byte)0x9e, (byte)0xdb, (byte)0x6c, (byte)0xf2,
+      (byte)0x1f, (byte)0x3e, (byte)0xac, (byte)0xc1, (byte)0x40, (byte)0x9a, (byte)0xe2, (byte)0xe2, (byte)0xcc,
+      (byte)0x91, (byte)0x77, (byte)0x47, (byte)0x21, (byte)0x8a, (byte)0x31, (byte)0xc7, (byte)0x20, (byte)0xfb,
+      (byte)0x22, (byte)0xe8, (byte)0xc1, (byte)0xda, (byte)0x24, (byte)0xf5, (byte)0x15, (byte)0xee, (byte)0xd5,
+      (byte)0x97, (byte)0x57, (byte)0x2f, (byte)0xe4, (byte)0x75, (byte)0xe4, (byte)0xc8, (byte)0x7f, (byte)0x30,
+      (byte)0x43, (byte)0x83, (byte)0xb9, (byte)0x99, (byte)0xea, (byte)0xde, (byte)0x93, (byte)0xa5, (byte)0x4f,
+      (byte)0x7e, (byte)0xbf, (byte)0xbc, (byte)0x76, (byte)0xbb, (byte)0x7a, (byte)0x52, (byte)0x53, (byte)0xe5,
+      (byte)0xb4, (byte)0x58, (byte)0xe4, (byte)0x80, (byte)0xcb, (byte)0x40, (byte)0x10, (byte)0x80, (byte)0xe5,
+      (byte)0x34, (byte)0xf4, (byte)0xd6, (byte)0x58, (byte)0x0c, (byte)0x3d, (byte)0x4a, (byte)0x5b, (byte)0xa6,
+      (byte)0xee, (byte)0x92, (byte)0x42, (byte)0x99, (byte)0xbe, (byte)0x7d, (byte)0xfe, (byte)0xa8, (byte)0x3b,
+      (byte)0x79, (byte)0x69, (byte)0x6a, (byte)0xdb, (byte)0xbe, (byte)0x42, (byte)0x23, (byte)0xfe, (byte)0x01,
+      (byte)0x99, (byte)0x06, (byte)0xeb, (byte)0x6b, (byte)0xd5, (byte)0xb6, (byte)0x34, (byte)0x51, (byte)0xcd,
+      (byte)0x56, (byte)0xab, (byte)0xce, (byte)0xc1, (byte)0xb7, (byte)0x3c, (byte)0x98, (byte)0x4d, (byte)0x26,
+      (byte)0x44, (byte)0x96, (byte)0xc1, (byte)0xaf, (byte)0xe6, (byte)0x10, (byte)0xd4, (byte)0x97, (byte)0x3c,
+      (byte)0x45, (byte)0xf7, (byte)0x36, (byte)0x87, (byte)0xeb, (byte)0x4e, (byte)0x49, (byte)0x9e, (byte)0x4c,
+      (byte)0x5f, (byte)0x3f, (byte)0x8e, (byte)0xe8, (byte)0x9d, (byte)0xcf, (byte)0x2b, (byte)0xd3, (byte)0xd3,
+      (byte)0x26, (byte)0xb7, (byte)0x3c, (byte)0x09, (byte)0x73, (byte)0x74, (byte)0x37, (byte)0x76, (byte)0xba,
+      (byte)0x5a, (byte)0x0d, (byte)0x74, (byte)0x09, (byte)0x74, (byte)0x12, (byte)0x36, (byte)0x91, (byte)0x0f,
+      (byte)0x8b, (byte)0xcd, (byte)0xe3, (byte)0x96, (byte)0x15, (byte)0x3d, (byte)0x59, (byte)0x8d, (byte)0x7c,
+      (byte)0x19, (byte)0xa8, (byte)0x23, (byte)0x1d, (byte)0x35, (byte)0x14, (byte)0x17, (byte)0x6a, (byte)0x4c,
+      (byte)0x7f, (byte)0x5b, (byte)0xb3, (byte)0x2a, (byte)0x56, (byte)0x06, (byte)0xeb, (byte)0x49, (byte)0x0a,
+      (byte)0x7a, (byte)0xb8, (byte)0x08, (byte)0xb5, (byte)0x87, (byte)0x21, (byte)0x27, (byte)0xe8, (byte)0x0c,
+      (byte)0xec, (byte)0x61, (byte)0x3f, (byte)0x2c, (byte)0xbc, (byte)0x0a, (byte)0x6a, (byte)0x0b, (byte)0x43,
+      (byte)0x8f, (byte)0x57, (byte)0xa1, (byte)0x81, (byte)0x40, (byte)0xd9, (byte)0x93, (byte)0x16, (byte)0xa1,
+      (byte)0x97, (byte)0xfd, (byte)0x3d, (byte)0x1a, (byte)0x33, (byte)0x3a, (byte)0xf2, (byte)0x5e, (byte)0xd5,
+      (byte)0x59, (byte)0xf1, (byte)0xea, (byte)0xdb, (byte)0x82, (byte)0xfa, (byte)0x92, (byte)0x50, (byte)0x67,
+      (byte)0x24, (byte)0xaa, (byte)0x02, (byte)0x9d, (byte)0x83, (byte)0x9d, (byte)0xcc, (byte)0x03, (byte)0xeb,
+      (byte)0x35, (byte)0x18, (byte)0x6d, (byte)0x9c, (byte)0x84, (byte)0xba, (byte)0x16, (byte)0xa3, (byte)0xfa,
+      (byte)0x75, (byte)0x11, (byte)0x7a, (byte)0x3b, (byte)0xf0, (byte)0xa7, (byte)0x3c, (byte)0xd4, (byte)0x55,
+      (byte)0xad, (byte)0x9e, (byte)0x2b, (byte)0x39, (byte)0x32, (byte)0x7d, (byte)0xf9, (byte)0xf0, (byte)0x5e,
+      (byte)0xad, (byte)0x3b, (byte)0xe3, (byte)0xd5, (byte)0x9d, (byte)0x82, (byte)0x6e, (byte)0x85, (byte)0xa3,
+      (byte)0x6a, (byte)0x90, (byte)0x03, (byte)0x56, (byte)0x00, (byte)0x4c, (byte)0xbe, (byte)0x04, (byte)0xb5,
+      (byte)0x1e, (byte)0x50, (byte)0xdd, (byte)0x1c, (byte)0xd4, (byte)0xed, (byte)0xc8, (byte)0x95, (byte)0xe9,
+      (byte)0xf5, (byte)0xbd, (byte)0x6a, (byte)0xdd, (byte)0xdf, (byte)0x1b, (byte)0x2c, (byte)0xef, (byte)0x41,
+      (byte)0xe4, (byte)0xab, (byte)0xdc, (byte)0x2f, (byte)0xd3, (byte)0x9b, (byte)0x07, (byte)0x4d, (byte)0x6a,
+      (byte)0x4e, (byte)0x44, (byte)0x75, (byte)0x16, (byte)0xe4, (byte)0x82, (byte)0x57, (byte)0xb1, (byte)0x10,
+      (byte)0x0a, (byte)0x10, (byte)0xb4, (byte)0x0f, (byte)0x92, (byte)0xea, (byte)0xe1, (byte)0xc7, (byte)0x75,
+      (byte)0x03, (byte)0x55, (byte)0x45, (byte)0x05, (byte)0xe9, (byte)0xf1, (byte)0x91, (byte)0x1d, (byte)0x6a,
+      (byte)0xdf, (byte)0x18, (byte)0xac, (byte)0xde, (byte)0x6d, (byte)0xc8, (byte)0xbb, (byte)0x1b, (byte)0xf5,
+      (byte)0xee, (byte)0x42, (byte)0xbe, (byte)0xf3, (byte)0xe9, (byte)0xea, (byte)0x4c, (byte)0xb5, (byte)0xca,
+      (byte)0x63, (byte)0x45, (byte)0x37, (byte)0x40, (byte)0x17, (byte)0xe0, (byte)0x00, (byte)0x60, (byte)0xf0,
+      (byte)0xd7, (byte)0xd4, (byte)0x32, (byte)0xb0, (byte)0xb7, (byte)0x80, (byte)0x5c, (byte)0x06, (byte)0xaa,
+      (byte)0x9c, (byte)0x85, (byte)0xea, (byte)0x16, (byte)0xa0, (byte)0xd6, (byte)0xe5, (byte)0xe8, (byte)0x76,
+      (byte)0x0a, (byte)0xea, (byte)0x58, (byte)0x8f, (byte)0x9a, (byte)0x12, (byte)0x02, (byte)0xe3, (byte)0xa1,
+      (byte)0xa8, (byte)0x01, (byte)0xe4, (byte)0x86, (byte)0x16, (byte)0x2b, (byte)0x84, (byte)0x31, (byte)0xce,
+      (byte)0x8c, (byte)0x72, (byte)0xb0, (byte)0xdf, (byte)0x86, (byte)0xef, (byte)0xb5, (byte)0x20, (byte)0xa7,
+      (byte)0x81, (byte)0x2a, (byte)0x42, (byte)0x02, (byte)0x09, (byte)0x94, (byte)0x9c, (byte)0x93, (byte)0x51,
+      (byte)0x0d, (byte)0xa8, (byte)0x1d, (byte)0xe4, (byte)0x01, (byte)0x77, (byte)0x3c, (byte)0xcc, (byte)0x05,
+      (byte)0x82, (byte)0x98, (byte)0xc0, (byte)0xb4, (byte)0x6c, (byte)0x58, (byte)0xe3, (byte)0x02, (byte)0x77,
+      (byte)0x0b, (byte)0x0c, (byte)0xb7, (byte)0x82, (byte)0x02, (byte)0xaf, (byte)0x6e, (byte)0xc2, (byte)0x68,
+      (byte)0x1d, (byte)0x74, (byte)0xd8, (byte)0x61, (byte)0xab, (byte)0xf9, (byte)0xd1, (byte)0xf8, (byte)0xf2,
+      (byte)0x78, (byte)0x06, (byte)0x30, (byte)0x1d, (byte)0x88, (byte)0x99, (byte)0x0f, (byte)0xf1, (byte)0x89,
+      (byte)0x90, (byte)0x60, (byte)0x40, (byte)0x2c, (byte)0x30, (byte)0x13, (byte)0xb0, (byte)0x30, (byte)0xce,
+      (byte)0x6f, (byte)0x32, (byte)0x90, (byte)0x99, (byte)0xe7, (byte)0x97, (byte)0x18, (byte)0x51, (byte)0x1c,
+      (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x49, (byte)0x45, (byte)0x4e, (byte)0x44, (byte)0xae,
+      (byte)0x42, (byte)0x60, (byte)0x82
+    };
+
+    // load image data
+    try
+    {
+      ByteArrayInputStream inputStream = new ByteArrayInputStream(IMAGE_CLOSE_DATA_ARRAY);
+      IMAGE_CLOSE_DATA = new ImageData(inputStream);
+      inputStream.close();
+    }
+    catch (Exception exception)
+    {
+      throw new Error(exception);
+    }
+  }
 
   //-----------------------------------------------------------------------
 
@@ -1161,7 +1279,7 @@ class Widgets
 
   /** get text size
    * @param control control
-   * @return size of text
+   * @return size [w,h] of text
    */
   public static Point getTextSize(Control control, String text)
   {
@@ -1176,7 +1294,7 @@ class Widgets
 
   /** get max. text size
    * @param control control
-   * @return max. size of all texts
+   * @return max. size [w,h] of all texts
    */
   public static Point getTextSize(GC gc, String[] texts)
   {
@@ -1196,7 +1314,7 @@ class Widgets
 
   /** get max. text size
    * @param control control
-   * @return max. size of all texts
+   * @return max. size [w,h] of all texts
    */
   public static Point getTextSize(Control control, String[] texts)
   {
@@ -1293,6 +1411,19 @@ class Widgets
 
     // try to load from file
     return new Image(display,"images"+File.separator+fileName);
+  }
+
+  /** render text into an image
+   * @param
+   */
+  public static void textToImage(Image image, GC fromGC, String text, int x, int y)
+  {
+    GC gc = new GC(image);
+
+    gc.drawText(text,x,y,true);
+    gc.setForeground(fromGC.getForeground());
+    gc.setBackground(fromGC.getBackground());
+    gc.dispose();
   }
 
   /** create new font
@@ -1723,7 +1854,11 @@ class Widgets
       else if (control instanceof Combo)
       {
         Combo widget = (Combo)control;
-        widget.setSelection(new Point(0,65536));
+        String text  = widget.getText();
+        widget.setSelection(new Point(0,text.length()));
+      }
+      else if (control instanceof List)
+      {
       }
       else if (control instanceof Spinner)
       {
@@ -1813,6 +1948,18 @@ class Widgets
         {
           throw new Error("Internal error: unknown control in setNextFocus(): "+controls[i]);
         }
+
+        /*
+does not work on Windows? Even cursor keys trigger traversal event?
+        controls[i].addTraverseListener(new TraverseListener()
+        {
+          public void keyTraversed(TraverseEvent traverseEvent)
+          {
+            Widgets.setFocus(nextControl);
+            traverseEvent.doit = false;
+          }
+        });
+        */
       }
     }
 
@@ -2174,7 +2321,7 @@ class Widgets
    */
   public static Label newNumberView(Composite composite)
   {
-    return newNumberView(composite,SWT.RIGHT);
+    return newNumberView(composite,SWT.RIGHT|SWT.BORDER);
   }
 
   //-----------------------------------------------------------------------
@@ -3127,23 +3274,23 @@ e composite widget
     return index;
   }
 
-  /** insert list entry
+  /** insert list item
    * @param list table
-   * @param comparator list entry comperator
-   * @param list entry data
+   * @param comparator list item comperator
+   * @param list item data
    * @param text list text
    */
-  public static void insertListEntry(final List list, final int index, final Object data, final String text)
+  public static ListItem insertListItem(final List list, final int index, final Object data, final String text)
   {
     if (!list.isDisposed())
     {
+      final ListItem listItem = new ListItem(text,data);
       list.getDisplay().syncExec(new Runnable()
       {
         public void run()
         {
           ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
 
-          ListItem listItem = new ListItem(text,data);
           if (index >= 0)
           {
             list.add(text,index);
@@ -3156,19 +3303,28 @@ e composite widget
           }
         }
       });
+      return listItem;
     }
+    else
+    {
+      return null;
+    }
+
   }
 
-  /** insert list entry
+  /** insert list item
    * @param list list
-   * @param comparator list entry comperator
-   * @param list entry data
+   * @param comparator list item comperator
+   * @param list item data
    * @param text list text
+   * @return list item
+   * @return list item
    */
-  public static void insertListEntry(final List list, final Comparator comparator, final Object data, final String text)
+  public static ListItem insertListItem(final List list, final Comparator comparator, final Object data, final String text)
   {
     if (!list.isDisposed())
     {
+      final ListItem listItem = new ListItem(text,data);
       list.getDisplay().syncExec(new Runnable()
       {
         public void run()
@@ -3177,29 +3333,35 @@ e composite widget
 
           int index = getListIndex(list,comparator,data);
           list.add(text,index);
-          listItems.add(index,new ListItem(text,data));
+          listItems.add(index,listItem);
         }
       });
+
+      return listItem;
+    }
+    else
+    {
+      return null;
     }
   }
 
-  /** add list entry
+  /** add list item
    * @param list list
-   * @param list entry data
+   * @param list item data
    * @param text list text
    */
-  public static void addListEntry(List list, Object data, String text)
+  public static ListItem addListItem(List list, Object data, String text)
   {
-    insertListEntry(list,-1,data,text);
+    return insertListItem(list,-1,data,text);
   }
 
-  /** update list entry
+  /** update list item
    * @param list list
-   * @param data entry data
-   * @param text entry text
+   * @param data item data
+   * @param text item text
    * @param true if updated, false if not found
    */
-  public static boolean updateListEntry(final List list, final Object data, final String text)
+  public static boolean updateListItem(final List list, final Object data, final String text)
   {
     /** list update runnable
      */
@@ -3263,12 +3425,12 @@ e composite widget
 
   }
 
-  /** move list entry
+  /** move list item
    * @param list list
-   * @param data entry data
+   * @param data item data
    * @param offset move offset
    */
-  public static void moveListEntry(final List list, final int index, final int offset)
+  public static void moveListItem(final List list, final int index, final int offset)
   {
     if (!list.isDisposed())
     {
@@ -3304,12 +3466,12 @@ e composite widget
     }
   }
 
-  /** move list entry
+  /** move list item
    * @param list list
-   * @param data entry data
+   * @param data item data
    * @param offset move offset
    */
-  public static void moveListEntry(List list, Object data, int offset)
+  public static void moveListItem(List list, Object data, int offset)
   {
     ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
     int                 i         = 0;
@@ -3320,33 +3482,33 @@ e composite widget
 
     if (i >= 0)
     {
-      moveListEntry(list,i,offset);
+      moveListItem(list,i,offset);
     }
   }
 
-  /** move list entry
+  /** move list item
    * @param list list
-   * @param data entry data
+   * @param data item data
    * @param offset move offset
    */
-  public static void moveListEntry(List list, ListItem listItem, int offset)
+  public static void moveListItem(List list, ListItem listItem, int offset)
   {
     ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
     for (int i = 0; i < listItems.size(); i++)
     {
       if (listItems.get(i) == listItem)
       {
-        moveListEntry(list,i,offset);
+        moveListItem(list,i,offset);
         break;
       }
     }
   }
 
-  /** remove list entry
+  /** remove list item
    * @param list list
-   * @param list entry data
+   * @param list item data
    */
-  public static void removeListEntry(final List list, final int index)
+  public static void removeListItem(final List list, final int index)
   {
     if (!list.isDisposed())
     {
@@ -3365,35 +3527,35 @@ e composite widget
     }
   }
 
-  /** remove list entry
+  /** remove list item
    * @param list list
-   * @param list entry data
+   * @param list item data
    */
-  public static void removeListEntry(final List list, final Object data)
+  public static void removeListItem(final List list, final Object data)
   {
     ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
     for (int i = 0; i < listItems.size(); i++)
     {
       if (listItems.get(i).data == data)
       {
-        removeListEntry(list,i);
+        removeListItem(list,i);
         break;
       }
     }
   }
 
-  /** remove list entry
+  /** remove list item
    * @param list list
    * @param listItem list item to remove
    */
-  public static void removeListEntry(final List list, final ListItem listItem)
+  public static void removeListItem(final List list, final ListItem listItem)
   {
     ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
     for (int i = 0; i < listItems.size(); i++)
     {
       if (listItems.get(i) == listItem)
       {
-        removeListEntry(list,i);
+        removeListItem(list,i);
         break;
       }
     }
@@ -3407,7 +3569,7 @@ e composite widget
   {
     for (ListItem listItem : listItems)
     {
-      removeListEntry(list,listItem);
+      removeListItem(list,listItem);
     }
   }
 
@@ -3432,12 +3594,12 @@ e composite widget
     }
   }
 
-  /** get list entry
+  /** get list item
    * @param list list
    * @param index index
-   * @return entry
+   * @return item data
    */
-  public static Object getListEntry(List list, int index)
+  public static Object getListItem(List list, int index)
   {
     ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
     if ((index < 0) || (index >= listItems.size()))
@@ -3845,22 +4007,13 @@ e composite widget
    * @param composite composite widget
    * @return new combo widget
    */
-  public static Combo newOptionMenu(Composite composite, int style)
+  public static Combo newOptionMenu(Composite composite)
   {
     Combo combo;
 
-    combo = new Combo(composite,style|SWT.READ_ONLY);
+    combo = new Combo(composite,SWT.RIGHT|SWT.READ_ONLY);
 
     return combo;
-  }
-
-  /** create new option menu
-   * @param composite composite widget
-   * @return new combo widget
-   */
-  public static Combo newOptionMenu(Composite composite)
-  {
-    return newOptionMenu(composite,SWT.NONE);
   }
 
   //-----------------------------------------------------------------------
@@ -4404,14 +4557,14 @@ e composite widget
     return index;
   }
 
-  /** add table entry
+  /** insert table item
    * @param table table
    * @param index insert before this index in table [0..n-1] or -1
-   * @param table entry data
+   * @param table item data
    * @param values values list
    * @return insert index
    */
-  public static TableItem insertTableEntry(final Table table, final int index, final Object data, final Object... values)
+  public static TableItem insertTableItem(final Table table, final int index, final Object data, final Object... values)
   {
     /** table insert runnable
      */
@@ -4460,14 +4613,14 @@ e composite widget
     return tableRunnable.tableItem;
   }
 
-  /** insert table entry
+  /** insert table item
    * @param table table
-   * @param comparator table entry comperator
-   * @param table entry data
+   * @param comparator table item comperator
+   * @param table item data
    * @param values values list
    * @return table item
    */
-  public static TableItem insertTableEntry(final Table table, final Comparator comparator, final Object data, final Object... values)
+  public static TableItem insertTableItem(final Table table, final Comparator comparator, final Object data, final Object... values)
   {
     /** table insert runnable
      */
@@ -4496,6 +4649,10 @@ e composite widget
               {
                 tableItem.setImage(i,(Image)values[i]);
               }
+              else
+              {
+                tableItem.setText(i,values[i].toString());
+              }
             }
           }
         }
@@ -4511,33 +4668,31 @@ e composite widget
     return tableRunnable.tableItem;
   }
 
-  /** add table entry
+  /** add table item
    * @param table table
-   * @param table entry data
+   * @param table item data
    * @param values values list
    * @return table item
    */
-  public static TableItem addTableEntry(Table table, Object data, Object... values)
+  public static TableItem addTableItem(Table table, Object data, Object... values)
   {
-    return insertTableEntry(table,-1,data,values);
+    return insertTableItem(table,-1,data,values);
   }
 
-  /** update table entry
-   * @param table table
+  /** update table item
    * @param tableItem table item to update
-   * @param data entry data
+   * @param data item data
    * @param values values list
-   * @param true if updated, false if not found
    */
-  public static void updateTableEntry(final Table table, final TableItem tableItem, final Object data, final Object... values)
+  public static void updateTableItem(final TableItem tableItem, final Object data, final Object... values)
   {
-    if (!table.isDisposed())
+    if (!tableItem.isDisposed())
     {
-      table.getDisplay().syncExec(new Runnable()
+      tableItem.getDisplay().syncExec(new Runnable()
       {
         public void run()
         {
-          if (!table.isDisposed())
+          if (!tableItem.isDisposed())
           {
             tableItem.setData(data);
             for (int i = 0; i < values.length; i++)
@@ -4552,6 +4707,10 @@ e composite widget
                 {
                   tableItem.setImage(i,(Image)values[i]);
                 }
+                else
+                {
+                  tableItem.setText(i,values[i].toString());
+                }
               }
             }
           }
@@ -4560,13 +4719,13 @@ e composite widget
     }
   }
 
-  /** update table entry
+  /** update table item
    * @param table table
-   * @param data entry data
+   * @param data item data
    * @param values values list
    * @return true if updated, false if not found
    */
-  public static boolean updateTableEntry(final Table table, final Object data, final Object... values)
+  public static boolean updateTableItem(final Table table, final Object data, final Object... values)
   {
     /** table update runnable
      */
@@ -4594,6 +4753,10 @@ e composite widget
                   {
                     tableItem.setImage(i,(Image)values[i]);
                   }
+                  else
+                  {
+                    tableItem.setText(i,values[i].toString());
+                  }
                 }
               }
               updatedFlag = true;
@@ -4613,12 +4776,12 @@ e composite widget
     return tableRunnable.updatedFlag;
   }
 
-  /** move table entry
+  /** move table item
    * @param table table
-   * @param data entry data
+   * @param data item data
    * @param offset move offset
    */
-  public static void moveTableEntry(final Table table, final int index, final int offset)
+  public static void moveTableItem(final Table table, final int index, final int offset)
   {
     if (!table.isDisposed())
     {
@@ -4655,12 +4818,12 @@ e composite widget
     }
   }
 
-  /** move table entry
+  /** move table item
    * @param table table
-   * @param data entry data
+   * @param data item data
    * @param offset move offset
    */
-  public static void moveTableEntry(Table table, Object data, int offset)
+  public static void moveTableItem(Table table, Object data, int offset)
   {
     // find index of item
     TableItem[] tableItems = table.getItems();
@@ -4672,27 +4835,27 @@ e composite widget
 
     if (i >= 0)
     {
-      moveTableEntry(table,i,offset);
+      moveTableItem(table,i,offset);
     }
   }
 
-  /** move table entry
+  /** move table item
    * @param table table
-   * @param data entry data
+   * @param data item data
    * @param offset move offset
    */
-  public static void moveTableEntry(Table table, TableItem tableItem, int offset)
+  public static void moveTableItem(Table table, TableItem tableItem, int offset)
   {
-    moveTableEntry(table,table.indexOf(tableItem),offset);
+    moveTableItem(table,table.indexOf(tableItem),offset);
   }
 
-  /** set table entry color
+  /** set table item color
    * @param table table
-   * @param table entry data
+   * @param table item data
    * @param foregroundColor foregound color
    * @param backgroundColor background color
    */
-  public static void setTableEntryColor(final Table table, final Object data, final Color foregroundColor, final Color backgroundColor)
+  public static void setTableItemColor(final Table table, final Object data, final Color foregroundColor, final Color backgroundColor)
   {
     if (!table.isDisposed())
     {
@@ -4717,24 +4880,24 @@ e composite widget
     }
   }
 
-  /** set table entry color
+  /** set table item color
    * @param table table
-   * @param table entry data
+   * @param table item data
    * @param backgroundColor background color
    */
-  public static void setTableEntryColor(Table table, Object data, Color backgroundColor)
+  public static void setTableItemColor(Table table, Object data, Color backgroundColor)
   {
-    setTableEntryColor(table,data,null,backgroundColor);
+    setTableItemColor(table,data,null,backgroundColor);
   }
 
-  /** set table entry color
+  /** set table item color
    * @param table table
-   * @param table entry data
+   * @param table item data
    * @param columnNb column (0..n-1)
    * @param foregroundColor foregound color
    * @param backgroundColor background color
    */
-  public static void setTableEntryColor(final Table table, final Object data, final int columnNb, final Color foregroundColor, final Color backgroundColor)
+  public static void setTableItemColor(final Table table, final Object data, final int columnNb, final Color foregroundColor, final Color backgroundColor)
   {
     if (!table.isDisposed())
     {
@@ -4759,23 +4922,23 @@ e composite widget
     }
   }
 
-  /** set table entry color
+  /** set table item color
    * @param table table
-   * @param table entry data
+   * @param table item data
    * @param columnNb column (0..n-1)
    * @param backgroundColor background color
    */
-  public static void setTableEntryColor(Table table, Object data, int columnNb, Color backgroundColor)
+  public static void setTableItemColor(Table table, Object data, int columnNb, Color backgroundColor)
   {
-    setTableEntryColor(table,data,columnNb,null,backgroundColor);
+    setTableItemColor(table,data,columnNb,null,backgroundColor);
   }
 
-  /** set table entry font
+  /** set table item font
    * @param table table
-   * @param table entry data
+   * @param table item data
    * @param font font
    */
-  public static void setTableEntryFont(final Table table, final Object data, final Font font)
+  public static void setTableItemFont(final Table table, final Object data, final Font font)
   {
     if (!table.isDisposed())
     {
@@ -4799,23 +4962,23 @@ e composite widget
     }
   }
 
-  /** set table entry font
+  /** set table item font
    * @param table table
-   * @param table entry data
+   * @param table item data
    * @param fontData font data
    */
-  public static void setTableEntryFont(final Table table, final Object data, final FontData fontData)
+  public static void setTableItemFont(final Table table, final Object data, final FontData fontData)
   {
-    setTableEntryFont(table,data,new Font(table.getDisplay(),fontData));
+    setTableItemFont(table,data,new Font(table.getDisplay(),fontData));
   }
 
-  /** set table entry font
+  /** set table item font
    * @param table table
-   * @param table entry data
+   * @param table item data
    * @param columnNb column (0..n-1)
    * @param font font
    */
-  public static void setTableEntryFont(final Table table, final Object data, final int columnNb, final Font font)
+  public static void setTableItemFont(final Table table, final Object data, final int columnNb, final Font font)
   {
     if (!table.isDisposed())
     {
@@ -4839,23 +5002,23 @@ e composite widget
     }
   }
 
-  /** set table entry font
+  /** set table item font
    * @param table table
-   * @param table entry data
+   * @param table item data
    * @param columnNb column (0..n-1)
    * @param fontData font data
    */
-  public static void setTableEntryFont(final Table table, final Object data, final int columnNb, final FontData fontData)
+  public static void setTableItemFont(final Table table, final Object data, final int columnNb, final FontData fontData)
   {
-    setTableEntryFont(table,data,columnNb,new Font(table.getDisplay(),fontData));
+    setTableItemFont(table,data,columnNb,new Font(table.getDisplay(),fontData));
   }
 
-  /** set table entry checked
+  /** set table item checked
    * @param table table
-   * @param table entry data
+   * @param table item data
    * @param checked checked flag
    */
-  public static void setTableEntryChecked(final Table table, final Object data, final boolean checked)
+  public static void setTableItemChecked(final Table table, final Object data, final boolean checked)
   {
     if (!table.isDisposed())
     {
@@ -4879,11 +5042,11 @@ e composite widget
     }
   }
 
-  /** remove table entry
+  /** remove table item
    * @param table table
-   * @param data entry data
+   * @param data item data
    */
-  public static void removeTableEntry(final Table table, final Object data)
+  public static void removeTableItem(final Table table, final Object data)
   {
     if (!table.isDisposed())
     {
@@ -4907,11 +5070,11 @@ e composite widget
     }
   }
 
-  /** remove table entry
+  /** remove table item
    * @param table table
    * @param tableItem table item to remove
    */
-  public static void removeTableEntry(final Table table, final TableItem tableItem)
+  public static void removeTableItem(final Table table, final TableItem tableItem)
   {
     if (!table.isDisposed())
     {
@@ -4936,7 +5099,7 @@ e composite widget
   {
     for (TableItem tableItem : tableItems)
     {
-      removeTableEntry(table,tableItem);
+      removeTableItem(table,tableItem);
     }
   }
 
@@ -5053,20 +5216,64 @@ e composite widget
     return treeColumn;
   }
 
-  /** add tree item
+  /** insert tree item
    * @param tree tree widget
    * @param index index (0..n)
    * @param data data
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem addTreeItem(Tree tree, int index, Object data, boolean folderFlag)
+  public static TreeItem insertTreeItem(final Tree tree, final int index, final Object data, final boolean folderFlag, final Object... values)
   {
-    TreeItem treeItem = new TreeItem(tree,SWT.CHECK,index);
-    treeItem.setData(data);
-    if (folderFlag) new TreeItem(treeItem,SWT.NONE);
+    /** tree insert runnable
+     */
+    class TreeRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
 
-    return treeItem;
+      public void run()
+      {
+        if (!tree.isDisposed())
+        {
+          if (index >= 0)
+          {
+            treeItem = new TreeItem(tree,SWT.CHECK,index);
+          }
+          else
+          {
+            treeItem = new TreeItem(tree,SWT.CHECK);
+          }
+          treeItem.setData(data);
+          if (folderFlag) new TreeItem(treeItem,SWT.NONE);
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                treeItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Image)
+              {
+                treeItem.setImage(i,(Image)values[i]);
+              }
+              else
+              {
+                treeItem.setText(i,values[i].toString());
+              }
+            }
+          }
+        }
+      }
+    };
+
+    TreeRunnable treeRunnable = new TreeRunnable();
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(treeRunnable);
+    }
+
+    return treeRunnable.treeItem;
   }
 
   /** add tree item at end
@@ -5075,9 +5282,9 @@ e composite widget
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem addTreeItem(Tree tree, Object data, boolean folderFlag)
+  public static TreeItem addTreeItem(Tree tree, Object data, boolean folderFlag, Object... values)
   {
-    return addTreeItem(tree,0,data,folderFlag);
+    return insertTreeItem(tree,-1,data,folderFlag,values);
   }
 
   /** add sub-tree item
@@ -5087,13 +5294,50 @@ e composite widget
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem addTreeItem(TreeItem parentTreeItem, int index, Object data, boolean folderFlag)
+  public static TreeItem addTreeItem(final TreeItem parentTreeItem, final int index, final Object data, final boolean folderFlag, final Object... values)
   {
-    TreeItem treeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
-    treeItem.setData(data);
-    if (folderFlag) new TreeItem(treeItem,SWT.NONE);
+    /** tree insert runnable
+     */
+    class TreeRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
 
-    return treeItem;
+      public void run()
+      {
+        if (!parentTreeItem.isDisposed())
+        {
+          TreeItem treeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
+          treeItem.setData(data);
+          if (folderFlag) new TreeItem(treeItem,SWT.NONE);
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                treeItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Image)
+              {
+                treeItem.setImage(i,(Image)values[i]);
+              }
+              else
+              {
+                treeItem.setText(i,values[i].toString());
+              }
+            }
+          }
+        }
+      }
+    };
+
+    TreeRunnable treeRunnable = new TreeRunnable();
+    if (!parentTreeItem.isDisposed())
+    {
+      parentTreeItem.getDisplay().syncExec(treeRunnable);
+    }
+
+    return treeRunnable.treeItem;
   }
 
   /** add sub-tree item at end
@@ -5102,16 +5346,142 @@ e composite widget
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, boolean folderFlag)
+  public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, boolean folderFlag, Object... values)
   {
     return addTreeItem(parentTreeItem,0,data,folderFlag);
   }
 
-  /** remove sub-tree item
-   * @param tree tree
-   * @param data entry data
+  /** set table item checked
+   * @param table table
+   * @param table item data
+   * @param checked checked flag
    */
-  public static void removeTreeEntry(final Tree tree, final Object data)
+  public static void setTreeItemChecked(final Tree tree, final Object data, final boolean checked)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            for (TreeItem treeItem : tree.getItems())
+            {
+              if (treeItem.getData() == data)
+              {
+                treeItem.setChecked(checked);
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** update tree item
+   * @param treeItem tree item to update
+   * @param data item data
+   * @param values values list
+   */
+  public static void updateTreeItem(final TreeItem treeItem, final Object data, final Object... values)
+  {
+    if (!treeItem.isDisposed())
+    {
+      treeItem.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!treeItem.isDisposed())
+          {
+            treeItem.setData(data);
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  treeItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Image)
+                {
+                  treeItem.setImage(i,(Image)values[i]);
+                }
+                else
+                {
+                  treeItem.setText(i,values[i].toString());
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** update tree item
+   * @param tree tree
+   * @param data item data
+   * @param values values list
+   * @return true if updated, false if not found
+   */
+  public static boolean updateTreeItem(final Tree tree, final Object data, final Object... values)
+  {
+    /** table update runnable
+     */
+    class TreeRunnable implements Runnable
+    {
+      boolean updatedFlag = false;
+
+      public void run()
+      {
+        if (!tree.isDisposed())
+        {
+          for (TreeItem treeItem : tree.getItems())
+          {
+            if (treeItem.getData() == data)
+            {
+              for (int i = 0; i < values.length; i++)
+              {
+                if (values[i] != null)
+                {
+                  if      (values[i] instanceof String)
+                  {
+                    treeItem.setText(i,(String)values[i]);
+                  }
+                  else if (values[i] instanceof Image)
+                  {
+                    treeItem.setImage(i,(Image)values[i]);
+                  }
+                  else
+                  {
+                    treeItem.setText(i,values[i].toString());
+                  }
+                }
+              }
+              updatedFlag = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    TreeRunnable treeRunnable = new TreeRunnable();
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(treeRunnable);
+    }
+
+    return treeRunnable.updatedFlag;
+  }
+
+  /** remove tree item
+   * @param tree tree
+   * @param data item data
+   */
+  public static void removeTreeItem(final Tree tree, final Object data)
   {
     if (!tree.isDisposed())
     {
@@ -5141,11 +5511,11 @@ e composite widget
     }
   }
 
-  /** remove sub-tree item
+  /** remove tree item
    * @param tree tree
    * @param treeItem tree item to remove
    */
-  public static void removeTreeEntry(final Tree tree, final TreeItem treeItem)
+  public static void removeTreeItem(final Tree tree, final TreeItem treeItem)
   {
     if (!tree.isDisposed())
     {
@@ -5168,22 +5538,22 @@ e composite widget
     }
   }
 
-  /** remove tree entries
+  /** remove tree items
    * @param tree tree
    * @param treeItems tree items to remove
    */
-  public static void removeTableEntries(Tree tree, TreeItem[] treeItems)
+  public static void removeTreeItems(Tree tree, TreeItem[] treeItems)
   {
     for (TreeItem treeItem : treeItems)
     {
-      removeTreeEntry(tree,treeItem);
+      removeTreeItem(tree,treeItem);
     }
   }
 
-  /** remove all tree entries
+  /** remove all tree items
    * @param tree tree
    */
-  public static void removeAllTreeEntries(final Tree tree, final TreeItem treeItem)
+  public static void removeAllTreeItems(final Tree tree, final TreeItem treeItem)
   {
     if (!tree.isDisposed())
     {
@@ -5470,17 +5840,17 @@ private static void printTree(Tree tree)
   }
 
   /** re-expand entries
-   * @param expandedEntrySet data entries to re-expand
+   * @param expandedItemSet data entries to re-expand
    * @return treeItem tree item to start
    */
-  private static void reExpandTreeItems(HashSet expandedEntrySet, TreeItem treeItem)
+  private static void reExpandTreeItems(HashSet expandedItemSet, TreeItem treeItem)
   {
     if (!treeItem.isDisposed())
     {
-      treeItem.setExpanded(expandedEntrySet.contains(treeItem.getData()));
+      treeItem.setExpanded(expandedItemSet.contains(treeItem.getData()));
       for (TreeItem subTreeItem : treeItem.getItems())
       {
-        reExpandTreeItems(expandedEntrySet,subTreeItem);
+        reExpandTreeItems(expandedItemSet,subTreeItem);
       }
     }
   }
@@ -5513,10 +5883,10 @@ private static void printTree(Tree tree)
       // parent is not expanded. Because for sort the tree entries are copied
       // (recreated) the state of the expanded sub-trees are stored here and will
       // later be restored when the complete new tree is created.
-      HashSet expandedEntrySet = new HashSet();
+      HashSet expandedItemSet = new HashSet();
       for (TreeItem treeItem : tree.getItems())
       {
-        getExpandedTreeData(expandedEntrySet,treeItem);
+        getExpandedTreeData(expandedItemSet,treeItem);
       }
 
       // sort column
@@ -5526,7 +5896,7 @@ private static void printTree(Tree tree)
       // restore expanded sub-trees
       for (TreeItem treeItem : tree.getItems())
       {
-        reExpandTreeItems(expandedEntrySet,treeItem);
+        reExpandTreeItems(expandedItemSet,treeItem);
       }
 
       // set column sort indicators
@@ -5570,6 +5940,7 @@ private static void printTree(Tree tree)
 
   /** create new sash widget (pane)
    * @param composite composite widget
+   * @param style style
    * @return new sash widget
    */
   public static Sash newSash(Composite composite, int style)
@@ -5621,14 +5992,54 @@ private static void printTree(Tree tree)
 
   /** create new tab folder
    * @param compositet composite
+   * @param style style
+   * @return new tab folder widget
+   */
+  public static TabFolder newTabFolder(Composite composite, int style)
+  {
+    final Image IMAGE_CLOSE = new Image(Display.getDefault(),IMAGE_CLOSE_DATA);
+
+    TabFolder tabFolder = new TabFolder(composite,style|SWT.TOP|SWT.NONE);
+    tabFolder.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE));
+
+    tabFolder.addMouseListener(new MouseListener()
+    {
+      public void mouseDoubleClick(MouseEvent mouseEvent)
+      {
+      }
+      public void mouseDown(final MouseEvent mouseEvent)
+      {
+      }
+      public void mouseUp(final MouseEvent mouseEvent)
+      {
+        TabFolder tabFolder          = (TabFolder)mouseEvent.widget;
+        TabItem   selectedTabItems[] = tabFolder.getSelection();
+        if (selectedTabItems != null)
+        {
+          if (selectedTabItems[0].getImage() != null)
+          {
+            Rectangle bounds = selectedTabItems[0].getBounds();
+            if ((mouseEvent.x > bounds.x) && (mouseEvent.x < bounds.x+IMAGE_CLOSE.getBounds().width))
+            {
+              Event event = new Event();
+              event.item = selectedTabItems[0];
+              tabFolder.notifyListeners(SWT.Close,event);
+            }
+          }
+        }
+      }
+    });
+
+    return tabFolder;
+  }
+
+  /** create new tab folder
+   * @param compositet composite
    * @return new tab folder widget
    */
   public static TabFolder newTabFolder(Composite composite)
   {
-    TabFolder tabFolder = new TabFolder(composite,SWT.NONE);
-    tabFolder.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE));
-
-    return tabFolder;
+    return newTabFolder(composite,SWT.NONE);
   }
 
   /** insert tab widget
@@ -5658,7 +6069,7 @@ private static void printTree(Tree tree)
     tabItem.setText(title);
 
     // create composite
-    Composite composite = new Composite(tabFolder,SWT.NONE);
+    Composite composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
     TableLayout tableLayout = new TableLayout();
     tableLayout.marginTop    = 2;
     tableLayout.marginBottom = 2;
@@ -5671,6 +6082,90 @@ private static void printTree(Tree tree)
     return composite;
   }
 
+  /** insert tab widget
+   * @param tabFolder tab folder
+   * @param leftComposite left tab item composite or null
+   * @param title title of tab
+   * @param titleImage title image of tab
+   * @param data data element
+   * @param style style
+   * @return new composite widget
+   */
+  public static Composite insertTab(TabFolder tabFolder, Composite leftComposite, String title, Object data, int style)
+  {
+    final Image IMAGE_CLOSE = new Image(Display.getDefault(),IMAGE_CLOSE_DATA);
+
+    // get tab item index
+    int index = 0;
+    TabItem[] tabItems = tabFolder.getItems();
+    while(index < tabItems.length)
+    {
+      if (tabItems[index].getControl() == leftComposite)
+      {
+        index++;
+        break;
+      }
+      index++;
+    }
+
+    // create tab
+/*
+    if ((style & SWT.CLOSE) == SWT.CLOSE)
+    {
+      titleImage = getCloseImage();
+    }
+    TabItem tabItem = new TabItem(tabFolder,SWT.NONE,index);
+    tabItem.setData(data);
+    if (titleImage != null)
+    {
+      Point     titleSize        = Widgets.getTextSize(tabFolder,title);
+      Rectangle titleImageBounds = titleImage.getBounds();
+      int       w                = titleSize.x + 4 + titleImageBounds.width;
+      int       h                = Math.max(titleSize.y,titleImageBounds.height);
+
+      Image image = new Image(tabFolder.getDisplay(),w,h);
+      GC gc = new GC(image);
+      gc.setForeground(tabFolder.getForeground());
+      gc.setBackground(tabFolder.getBackground());
+      gc.fillRectangle(0,0,w,h);
+      gc.drawText(title,0,0,true);
+      gc.drawImage(titleImage,titleSize.x + 4,(titleSize.y - titleImageBounds.height) / 2);
+      gc.dispose();
+    }
+    else
+    {
+      tabItem.setText(title);
+    }
+*/
+    TabItem tabItem = new TabItem(tabFolder,SWT.NONE,index);
+    tabItem.setData(data);
+    tabItem.setText(title);
+    if ((style & SWT.CLOSE) == SWT.CLOSE)
+    {
+      tabItem.setImage(IMAGE_CLOSE);
+    }
+
+    // create composite
+    Composite composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
+    composite.setLayout(new TableLayout(1.0,1.0,2));
+
+    tabItem.setControl(composite);
+
+    return composite;
+  }
+
+  /** add tab widget
+   * @param tabFolder tab folder
+   * @param title title of tab
+   * @param data data element
+   * @param style style
+   * @return new composite widget
+   */
+  public static Composite addTab(TabFolder tabFolder, String title, Object data, int style)
+  {
+    return insertTab(tabFolder,null,title,data,style);
+  }
+
   /** add tab widget
    * @param tabFolder tab folder
    * @param title title of tab
@@ -5679,7 +6174,17 @@ private static void printTree(Tree tree)
    */
   public static Composite addTab(TabFolder tabFolder, String title, Object data)
   {
-    return insertTab(tabFolder,null,title,data);
+    return addTab(tabFolder,title,data,SWT.NONE);
+  }
+
+  /** add tab widget
+   * @param tabFolder tab folder
+   * @param title title of tab
+   * @return new composite widget
+   */
+  public static Composite addTab(TabFolder tabFolder, String title, int style)
+  {
+    return addTab(tabFolder,title,null,style);
   }
 
   /** add tab widget
@@ -5689,7 +6194,7 @@ private static void printTree(Tree tree)
    */
   public static Composite addTab(TabFolder tabFolder, String title)
   {
-    return addTab(tabFolder,title,null);
+    return addTab(tabFolder,title,SWT.NONE);
   }
 
   /** set tab widget
@@ -5835,6 +6340,227 @@ private static void printTree(Tree tree)
     if (tabItem != null)
     {
       tabFolder.setSelection(tabItem);
+    }
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** create new c-tab folder
+   * @param compositet composite
+   * @return new tab folder widget
+   */
+  public static CTabFolder newCTabFolder(Composite composite, int style)
+  {
+    CTabFolder cTabFolder = new CTabFolder(composite,style|SWT.TOP|SWT.FLAT);
+    cTabFolder.setSimple(true);
+    cTabFolder.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE));
+
+    return cTabFolder;
+  }
+
+  /** create new c-tab folder
+   * @param compositet composite
+   * @return new tab folder widget
+   */
+  public static CTabFolder newCTabFolder(Composite composite)
+  {
+    return newCTabFolder(composite,SWT.NONE);
+  }
+
+  /** insert tab widget
+   * @param cTabFolder c-tab folder
+   * @param leftComposite left tab item composite or null
+   * @param title title of tab
+   * @param data data element
+   * @return new composite widget
+   */
+  public static Composite insertTab(CTabFolder cTabFolder, Composite leftComposite, String title, Object data)
+  {
+    // get tab item index
+    int index = 0;
+    CTabItem[] cTabItems = cTabFolder.getItems();
+    for (index = 0; index < cTabItems.length; index++)
+    {
+      if (cTabItems[index].getControl() == leftComposite)
+      {
+        index++;
+        break;
+      }
+    }
+
+    // create tab
+    CTabItem cTabItem = new CTabItem(cTabFolder,SWT.NONE,index);
+    cTabItem.setData(data);
+    cTabItem.setText(title);
+
+    // create composite
+    Composite composite = new Composite(cTabFolder,SWT.BORDER|SWT.NONE);
+    TableLayout tableLayout = new TableLayout();
+    tableLayout.marginTop    = 20;
+    tableLayout.marginBottom = 20;
+    tableLayout.marginLeft   = 20;
+    tableLayout.marginRight  = 20;
+    composite.setLayout(tableLayout);
+
+    cTabItem.setControl(composite);
+
+    return composite;
+  }
+
+  /** add tab widget
+   * @param cTabFolder c-tab folder
+   * @param title title of tab
+   * @param data data element
+   * @return new composite widget
+   */
+  public static Composite addTab(CTabFolder cTabFolder, String title, Object data)
+  {
+    return insertTab(cTabFolder,null,title,data);
+  }
+
+  /** add tab widget
+   * @param cTabFolder c-tab folder
+   * @param title title of tab
+   * @return new composite widget
+   */
+  public static Composite addTab(CTabFolder cTabFolder, String title)
+  {
+    return addTab(cTabFolder,title,null);
+  }
+
+  /** set tab widget
+   * @param tabItem tab item
+   * @param composite tab to set
+   * @param title title of tab
+   * @param data data element
+   */
+  public static void setTab(CTabItem cTabItem, Composite composite, String title, Object data)
+  {
+    cTabItem.setData(data);
+    cTabItem.setText(title);
+    cTabItem.setControl(composite);
+  }
+
+  /** set tab widget
+   * @param tabItem tab item
+   * @param composite tab to set
+   * @param title title of tab
+   */
+  public static void setTab(CTabItem cTabItem, Composite composite, String title)
+  {
+    setTab(cTabItem,composite,title,null);
+  }
+
+  /** remove tab widget
+   * @param tabFolder tab folder
+   * @param composite tab to remove
+   */
+  public static void removeTab(CTabFolder cTabFolder, Composite composite)
+  {
+    CTabItem cTabItem = getTabItem(cTabFolder,composite);
+    if (cTabItem != null)
+    {
+      composite.dispose();
+      cTabItem.dispose();
+    }
+  }
+
+  /** get tab composite array
+   * @param tabFolder tab folder
+   * @param title title of tab
+   * @return tab composites array
+   */
+  public static Composite[] getTabList(CTabFolder cTabFolder)
+  {
+    CTabItem[] cTabItems = cTabFolder.getItems();
+    Composite[] tabList = new Composite[cTabItems.length];
+    for (int z = 0; z < cTabItems.length; z++)
+    {
+      tabList[z] = (Composite)cTabItems[z].getControl();
+    }
+    return tabList;
+  }
+
+  /** get tab item
+   * @param tabFolder tab folder
+   * @param composite tab to find
+   * @param tab item or null if not found
+   */
+  public static CTabItem getTabItem(CTabFolder cTabFolder, Composite composite)
+  {
+    for (CTabItem cTabItem : cTabFolder.getItems())
+    {
+      if (cTabItem.getControl() == composite)
+      {
+        return cTabItem;
+      }
+    }
+    return null;
+  }
+
+  /** move tab
+   * @param tabFolder tab folder
+   * @param tabItem tab item
+   * @param newIndex new tab index (0..n)
+   */
+  public static void moveTab(CTabFolder cTabFolder, CTabItem cTabItem, int newIndex)
+  {
+    // save data
+    int     style       = cTabItem.getStyle();
+    String  title       = cTabItem.getText();
+    Object  data        = cTabItem.getData();
+    Control control     = cTabItem.getControl();
+    String  toolTipText = cTabItem.getToolTipText();
+    boolean selected    = (cTabFolder.getSelection() == cTabItem);
+
+    // remove old tab
+    cTabItem.dispose();
+
+    // create tab a new position
+    cTabItem = new CTabItem(cTabFolder,style,newIndex);
+
+    // restore data
+    cTabItem.setText(title);
+    cTabItem.setData(data);
+    cTabItem.setControl(control);
+    cTabItem.setToolTipText(toolTipText);
+    if (selected) cTabFolder.setSelection(cTabItem);
+  }
+
+  /** move tab
+   * @param tabFolder tab folder
+   * @param composite tab item
+   * @param newIndex new tab index (0..n)
+   */
+  public static void moveTab(CTabFolder cTabFolder, Composite composite, int newIndex)
+  {
+    moveTab(cTabFolder,getTabItem(cTabFolder,composite),newIndex);
+  }
+
+  /** set tab widget title
+   * @param tabFolder tab folder
+   * @param composite tab item
+   * @param title title to set
+   */
+  public static void setTabTitle(CTabFolder cTabFolder, Composite composite, String title)
+  {
+    CTabItem cTabItem = getTabItem(cTabFolder,composite);
+    if (cTabItem != null)
+    {
+      cTabItem.setText(title);
+    }
+  }
+
+  /** show tab
+   * @param tabFolder tab folder
+   * @param composite tab to show
+   */
+  public static void showTab(CTabFolder cTabFolder, Composite composite)
+  {
+    CTabItem cTabItem = getTabItem(cTabFolder,composite);
+    if (cTabItem != null)
+    {
+      cTabFolder.setSelection(cTabItem);
     }
   }
 
@@ -6089,7 +6815,7 @@ private static void printTree(Tree tree)
   /** add new menu item
    * @param menu menu
    * @param text menu item text
-   * @param selected true iff checkbox menu entry is selected
+   * @param selected true iff checkbox menu item is selected
    * @return new menu item
    */
   public static MenuItem addMenuCheckbox(Menu menu, String text, boolean selected)
@@ -6183,7 +6909,7 @@ private static void printTree(Tree tree)
   /** add new menu item
    * @param menu menu
    * @param text menu item text
-   * @param selected true iff radio menu entry is selected
+   * @param selected true iff radio menu item is selected
    * @return new menu item
    */
   public static MenuItem addMenuRadio(Menu menu, String text, boolean selected)
