@@ -22,6 +22,14 @@ SOURCE_DIR         = @srcdir@
 SWT_DIR            = @SWT_DIR@
 LAUNCH4J_DIR       = @LAUNCH4J_DIR@
 
+INSTALL_DIR        = $(if $(prefix),$(prefix),@INSTALL_DIR@)
+INSTALL_BIN_DIR    = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
+INSTALL_LOCALE_DIR = $(if $(datadir),$(datadir)/locale,@LOCALE_DIR@)
+INSTALL_ETC_DIR    = $(if $(sysconfdir),$(sysconfdir),/etc)
+INSTALL_CONFIG_DIR = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
+INSTALL_MAN_DIR    = $(if $(mandir),$(mandir),@MAN_DIR@)
+INSTALL_TLS_DIR    = @TLS_DIR@
+
 #--------------------------------- tool chain --------------------------------
 
 JAVA_DATA_MODEL    = @JAVA_DATA_MODEL@
