@@ -632,7 +632,7 @@ class TabRestore
           // store new storage map
           storageDataMap = newStorageDataMap;
 
-          // referesh tree
+          // referesh tree/list
           display.syncExec(new Runnable()
           {
             public void run()
@@ -3454,6 +3454,7 @@ Dprintf.dprintf("");
             }
           }
 
+          // refresh tree/list
           refreshStorageTree();
           refreshStorageList();
         }

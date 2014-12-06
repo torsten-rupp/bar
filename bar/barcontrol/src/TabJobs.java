@@ -6723,9 +6723,12 @@ throw new Error("NYI");
    */
   private void addDirectoryRootDevices()
   {
-    TreeItem treeItem = Widgets.addTreeItem(widgetFileTree,new FileTreeData("/",FileTypes.DIRECTORY,"/"),true);
-    treeItem.setText("/");
-    treeItem.setImage(IMAGE_DIRECTORY);
+    TreeItem treeItem = Widgets.addTreeItem(widgetFileTree,
+                                            new FileTreeData("/",FileTypes.DIRECTORY,"/"),
+                                            IMAGE_DIRECTORY,
+                                            true,
+                                            "/"//
+                                           );
   }
 
   /** clear file tree, close all sub-directories
@@ -6873,15 +6876,15 @@ throw new Error("NYI");
                 else
                   image = IMAGE_FILE;
 
-                subTreeItem = Widgets.addTreeItem(treeItem,
-                                                  findFilesTreeIndex(treeItem,fileTreeData),
-                                                  fileTreeData,
-                                                  false,
-                fileTreeData.title,
-                "FILE",
-                Units.formatByteSize(size),
-                simpleDateFormat.format(new Date(dateTime*1000)));
-                subTreeItem.setImage(image);
+                Widgets.addTreeItem(treeItem,
+                                    findFilesTreeIndex(treeItem,fileTreeData),
+                                    fileTreeData,
+                                    image,
+                                    false,
+                                    fileTreeData.title,
+                                    "FILE",
+                                    Units.formatByteSize(size),
+                                    simpleDateFormat.format(new Date(dateTime*1000)));
               }
               break;
             case DIRECTORY:
@@ -6902,11 +6905,16 @@ throw new Error("NYI");
                 else
                   image = IMAGE_DIRECTORY;
 
-                subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,true);
-                subTreeItem.setText(0,fileTreeData.title);
-                subTreeItem.setText(1,"DIR");
-                subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
-                subTreeItem.setImage(image);
+                subTreeItem = Widgets.addTreeItem(treeItem,
+                                                  findFilesTreeIndex(treeItem,fileTreeData),
+                                                  fileTreeData,
+                                                  image,
+                                                  true,
+                                                  fileTreeData.title,
+                                                  "DIR",
+                                                  null,
+                                                  simpleDateFormat.format(new Date(dateTime*1000))
+                                                 );
 
                 // request directory info
                 directoryInfoThread.add(name,subTreeItem);
@@ -6930,11 +6938,16 @@ throw new Error("NYI");
                 else
                   image = IMAGE_LINK;
 
-                subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                subTreeItem.setText(0,fileTreeData.title);
-                subTreeItem.setText(1,"LINK");
-                subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
-                subTreeItem.setImage(image);
+                Widgets.addTreeItem(treeItem,
+                                    findFilesTreeIndex(treeItem,fileTreeData),
+                                    fileTreeData,
+                                    image,
+                                    false,
+                                    fileTreeData.title,
+                                    "LINK",
+                                    null,
+                                    simpleDateFormat.format(new Date(dateTime*1000))
+                                   );
               }
               break;
             case HARDLINK:
@@ -6956,12 +6969,16 @@ throw new Error("NYI");
                 else
                   image = IMAGE_FILE;
 
-                subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                subTreeItem.setText(0,fileTreeData.title);
-                subTreeItem.setText(1,"HARDLINK");
-                subTreeItem.setText(2,Units.formatByteSize(size));
-                subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
-                subTreeItem.setImage(image);
+                Widgets.addTreeItem(treeItem,
+                                    findFilesTreeIndex(treeItem,fileTreeData),
+                                    fileTreeData,
+                                    image,
+                                    false,
+                                    fileTreeData.title,
+                                    "HARDLINK",
+                                    Units.formatByteSize(size),
+                                    simpleDateFormat.format(new Date(dateTime*1000))
+                                   );
               }
               break;
             case SPECIAL:
@@ -6978,51 +6995,77 @@ throw new Error("NYI");
                     fileTreeData = new FileTreeData(name,SpecialTypes.CHARACTER_DEVICE,dateTime,name);
 
                     // add entry
-                    subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                    subTreeItem.setText(0,fileTreeData.title);
-                    subTreeItem.setText(1,"CHARACTER DEVICE");
-                    subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                    Widgets.addTreeItem(treeItem,
+                                        findFilesTreeIndex(treeItem,fileTreeData),
+                                        fileTreeData,
+//                                        image,
+                                        false,
+                                        fileTreeData.title,
+                                        "CHARACTER DEVICE",
+                                        simpleDateFormat.format(new Date(dateTime*1000))
+                                       );
                     break;
                   case BLOCK_DEVICE:
                     // create file tree data
                     fileTreeData = new FileTreeData(name,SpecialTypes.BLOCK_DEVICE,size,dateTime,name);
 
                     // add entry
-                    subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                    subTreeItem.setText(0,fileTreeData.title);
-                    subTreeItem.setText(1,"BLOCK DEVICE");
-                    if (size >= 0) subTreeItem.setText(2,Units.formatByteSize(size));
-                    subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                    Widgets.addTreeItem(treeItem,
+                                        findFilesTreeIndex(treeItem,fileTreeData),
+                                        fileTreeData,
+//                                        image,
+                                        false,
+                                        fileTreeData.title,
+                                        "BLOCK DEVICE",
+                                        (size > 0) ? Units.formatByteSize(size) : null,
+                                        simpleDateFormat.format(new Date(dateTime*1000))
+                                       );
                     break;
                   case FIFO:
                     // create file tree data
                     fileTreeData = new FileTreeData(name,SpecialTypes.FIFO,dateTime,name);
 
                     // add entry
-                    subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                    subTreeItem.setText(0,fileTreeData.title);
-                    subTreeItem.setText(1,"FIFO");
-                    subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                    Widgets.addTreeItem(treeItem,
+                                        findFilesTreeIndex(treeItem,fileTreeData),
+                                        fileTreeData,
+//                                        image,
+                                        false,
+                                        fileTreeData.title,
+                                        "FIFO",
+                                        null,
+                                        simpleDateFormat.format(new Date(dateTime*1000))
+                                       );
                     break;
                   case SOCKET:
                     // create file tree data
                     fileTreeData = new FileTreeData(name,SpecialTypes.SOCKET,dateTime,name);
 
                     // add entry
-                    subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                    subTreeItem.setText(0,fileTreeData.title);
-                    subTreeItem.setText(1,"SOCKET");
-                    subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                    Widgets.addTreeItem(treeItem,
+                                        findFilesTreeIndex(treeItem,fileTreeData),
+                                        fileTreeData,
+//                                        image,
+                                        false,
+                                        fileTreeData.title,
+                                        "SOCKET",
+                                        simpleDateFormat.format(new Date(dateTime*1000))
+                                       );
                     break;
                   case OTHER:
                     // create file tree data
                     fileTreeData = new FileTreeData(name,SpecialTypes.OTHER,dateTime,name);
 
                     // add entry
-                    subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                    subTreeItem.setText(0,fileTreeData.title);
-                    subTreeItem.setText(1,"SPECIAL");
-                    subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                    Widgets.addTreeItem(treeItem,
+                                        findFilesTreeIndex(treeItem,fileTreeData),
+                                        fileTreeData,
+//                                        image,
+                                        false,
+                                        fileTreeData.title,
+                                        "SPECIAL",
+                                        simpleDateFormat.format(new Date(dateTime*1000))
+                                       );
                     break;
                 }
               }
@@ -7148,10 +7191,14 @@ throw new Error("NYI");
           TreeItem treeItem = Widgets.insertTreeItem(widgetDeviceTree,
                                                      findDeviceIndex(widgetDeviceTree,deviceTreeData),
                                                      deviceTreeData,
-                                                     false);
-          treeItem.setText(0,name);
-          treeItem.setText(1,Units.formatByteSize(size));
-          treeItem.setImage(IMAGE_DEVICE);
+                                                     false,
+                                                     name,
+                                                     Units.formatByteSize(size),
+                                                     IMAGE_DEVICE
+                                                    );
+//          treeItem.setText(0,name);
+//          treeItem.setText(1,Units.formatByteSize(size));
+//          treeItem.setImage(IMAGE_DEVICE);
         }
         catch (IllegalArgumentException exception)
         {

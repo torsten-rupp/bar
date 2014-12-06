@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-12-06 13:45+0100\n"
+"POT-Creation-Date: 2014-12-06 14:20+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -21,9 +21,9 @@ msgstr ""
 msgid "Server"
 msgstr ""
 
-#: src/BARControl.java:1255 src/TabJobs.java:4328 src/TabRestore.java:3599
-#: src/TabRestore.java:3988 src/TabRestore.java:4021 src/TabRestore.java:4054
-#: src/TabRestore.java:4087
+#: src/BARControl.java:1255 src/TabJobs.java:4328 src/TabRestore.java:3600
+#: src/TabRestore.java:3989 src/TabRestore.java:4022 src/TabRestore.java:4055
+#: src/TabRestore.java:4088
 msgid "Password"
 msgstr ""
 
@@ -295,7 +295,7 @@ msgstr ""
 msgid "Remove entry from excluded list."
 msgstr ""
 
-#: src/TabJobs.java:2496 src/TabJobs.java:5523 src/TabJobs.java:9505
+#: src/TabJobs.java:2496 src/TabJobs.java:5523 src/TabJobs.java:9552
 msgid "Options"
 msgstr ""
 
@@ -490,7 +490,7 @@ msgstr ""
 msgid "Mode"
 msgstr ""
 
-#: src/TabJobs.java:3558 src/TabJobs.java:9476
+#: src/TabJobs.java:3558 src/TabJobs.java:9523
 msgid "normal"
 msgstr ""
 
@@ -498,7 +498,7 @@ msgstr ""
 msgid "Normal mode: do not create incremental data files."
 msgstr ""
 
-#: src/TabJobs.java:3581 src/TabJobs.java:9481
+#: src/TabJobs.java:3581 src/TabJobs.java:9528
 msgid "full"
 msgstr ""
 
@@ -506,7 +506,7 @@ msgstr ""
 msgid "Full mode: store all entries and create incremental data files."
 msgstr ""
 
-#: src/TabJobs.java:3604 src/TabJobs.java:9486
+#: src/TabJobs.java:3604 src/TabJobs.java:9533
 msgid "incremental"
 msgstr ""
 
@@ -516,7 +516,7 @@ msgid ""
 "storage."
 msgstr ""
 
-#: src/TabJobs.java:3627 src/TabJobs.java:9491
+#: src/TabJobs.java:3627 src/TabJobs.java:9538
 msgid "differential"
 msgstr ""
 
@@ -524,7 +524,7 @@ msgstr ""
 msgid "Differential mode: store only modified entries since last full storage."
 msgstr ""
 
-#: src/TabJobs.java:3652 src/TabJobs.java:8512
+#: src/TabJobs.java:3652 src/TabJobs.java:8559
 msgid "File name"
 msgstr ""
 
@@ -780,7 +780,7 @@ msgid ""
 "Double-click to edit entry, right-click to open context menu."
 msgstr ""
 
-#: src/TabJobs.java:5931 src/TabJobs.java:9361 src/TabRestore.java:2142
+#: src/TabJobs.java:5931 src/TabJobs.java:9408 src/TabRestore.java:2142
 #: src/TabRestore.java:2282
 msgid "Date"
 msgstr ""
@@ -789,7 +789,7 @@ msgstr ""
 msgid "Week day"
 msgstr ""
 
-#: src/TabJobs.java:5939 src/TabJobs.java:9446
+#: src/TabJobs.java:5939 src/TabJobs.java:9493
 msgid "Time"
 msgstr ""
 
@@ -797,7 +797,7 @@ msgstr ""
 msgid "Archive type"
 msgstr ""
 
-#: src/TabJobs.java:5943 src/TabJobs.java:9497
+#: src/TabJobs.java:5943 src/TabJobs.java:9544
 msgid "Custom text"
 msgstr ""
 
@@ -822,8 +822,8 @@ msgid "Remove schedule entry."
 msgstr ""
 
 #: src/TabJobs.java:6153 src/TabJobs.java:6264 src/TabJobs.java:6388
-#: src/TabJobs.java:7535 src/TabJobs.java:7822 src/TabJobs.java:8086
-#: src/TabJobs.java:9210 src/TabJobs.java:9525 src/TabRestore.java:3137
+#: src/TabJobs.java:7582 src/TabJobs.java:7869 src/TabJobs.java:8133
+#: src/TabJobs.java:9257 src/TabJobs.java:9572 src/TabRestore.java:3137
 #: src/TabStatus.java:1455 src/TabStatus.java:1645
 msgid "Cancel"
 msgstr ""
@@ -836,146 +836,146 @@ msgstr ""
 msgid "New name"
 msgstr ""
 
-#: src/TabJobs.java:7445 src/TabJobs.java:7774 src/TabJobs.java:8049
+#: src/TabJobs.java:7492 src/TabJobs.java:7821 src/TabJobs.java:8096
 msgid "Pattern"
 msgstr ""
 
-#: src/TabJobs.java:7453
+#: src/TabJobs.java:7500
 msgid "Include pattern. Use * and ? as wildcards."
 msgstr ""
 
-#: src/TabJobs.java:7478 src/TabJobs.java:9465 src/TabRestore.java:2136
+#: src/TabJobs.java:7525 src/TabJobs.java:9512 src/TabRestore.java:2136
 #: src/TabRestore.java:2252 src/TabStatus.java:480
 msgid "Type"
 msgstr ""
 
-#: src/TabJobs.java:7485
+#: src/TabJobs.java:7532
 msgid "file"
 msgstr ""
 
-#: src/TabJobs.java:7499
+#: src/TabJobs.java:7546
 msgid "image"
 msgstr ""
 
-#: src/TabJobs.java:7778
+#: src/TabJobs.java:7825
 msgid "Exclude pattern. Use * and ? as wildcards."
 msgstr ""
 
-#: src/TabJobs.java:8053
+#: src/TabJobs.java:8100
 msgid "Compress exclude pattern. Use * and ? as wildcards."
 msgstr ""
 
-#: src/TabJobs.java:8516
+#: src/TabJobs.java:8563
 msgid "Drag to trashcan icon to the right to remove name part."
 msgstr ""
 
-#: src/TabJobs.java:8638
+#: src/TabJobs.java:8685
 msgid "Use drag&drop to remove name parts."
 msgstr ""
 
-#: src/TabJobs.java:8674
+#: src/TabJobs.java:8721
 msgid "Example"
 msgstr ""
 
-#: src/TabJobs.java:8682
+#: src/TabJobs.java:8729
 msgid "Use drag&drop to add name parts."
 msgstr ""
 
-#: src/TabJobs.java:9207
+#: src/TabJobs.java:9254
 msgid "Save"
 msgstr ""
 
-#: src/TabJobs.java:9368
+#: src/TabJobs.java:9415
 msgid "Year to execute job. Leave to '*' for each year."
 msgstr ""
 
-#: src/TabJobs.java:9375
+#: src/TabJobs.java:9422
 msgid "Month to execute job. Leave to '*' for each month."
 msgstr ""
 
-#: src/TabJobs.java:9381
+#: src/TabJobs.java:9428
 msgid "Day to execute job. Leave to '*' for each day."
 msgstr ""
 
-#: src/TabJobs.java:9387
+#: src/TabJobs.java:9434
 msgid "Week days"
 msgstr ""
 
-#: src/TabJobs.java:9393
+#: src/TabJobs.java:9440
 msgid "Mon"
 msgstr ""
 
-#: src/TabJobs.java:9394 src/TabJobs.java:9399 src/TabJobs.java:9404
-#: src/TabJobs.java:9409 src/TabJobs.java:9414 src/TabJobs.java:9419
-#: src/TabJobs.java:9424
+#: src/TabJobs.java:9441 src/TabJobs.java:9446 src/TabJobs.java:9451
+#: src/TabJobs.java:9456 src/TabJobs.java:9461 src/TabJobs.java:9466
+#: src/TabJobs.java:9471
 msgid "Week days to execute job."
 msgstr ""
 
-#: src/TabJobs.java:9398
+#: src/TabJobs.java:9445
 msgid "Tue"
 msgstr ""
 
-#: src/TabJobs.java:9403
+#: src/TabJobs.java:9450
 msgid "Wed"
 msgstr ""
 
-#: src/TabJobs.java:9408
+#: src/TabJobs.java:9455
 msgid "Thu"
 msgstr ""
 
-#: src/TabJobs.java:9413
+#: src/TabJobs.java:9460
 msgid "Fri"
 msgstr ""
 
-#: src/TabJobs.java:9418
+#: src/TabJobs.java:9465
 msgid "Sat"
 msgstr ""
 
-#: src/TabJobs.java:9423
+#: src/TabJobs.java:9470
 msgid "Sun"
 msgstr ""
 
-#: src/TabJobs.java:9429
+#: src/TabJobs.java:9476
 msgid "Toggle week days set."
 msgstr ""
 
-#: src/TabJobs.java:9453
+#: src/TabJobs.java:9500
 msgid "Hour to execute job. Leave to '*' for every hour."
 msgstr ""
 
-#: src/TabJobs.java:9459
+#: src/TabJobs.java:9506
 msgid "Minute to execute job. Leave to '*' for every minute."
 msgstr ""
 
-#: src/TabJobs.java:9471
+#: src/TabJobs.java:9518
 msgid "*"
 msgstr ""
 
-#: src/TabJobs.java:9472
+#: src/TabJobs.java:9519
 msgid "Execute job with default type."
 msgstr ""
 
-#: src/TabJobs.java:9477
+#: src/TabJobs.java:9524
 msgid "Execute job as normal backup (no incremental data)."
 msgstr ""
 
-#: src/TabJobs.java:9482
+#: src/TabJobs.java:9529
 msgid "Execute job as full backup."
 msgstr ""
 
-#: src/TabJobs.java:9487
+#: src/TabJobs.java:9534
 msgid "Execute job as incremental backup."
 msgstr ""
 
-#: src/TabJobs.java:9492
+#: src/TabJobs.java:9539
 msgid "Execute job as differential backup."
 msgstr ""
 
-#: src/TabJobs.java:9501
+#: src/TabJobs.java:9548
 msgid "Custom text."
 msgstr ""
 
-#: src/TabJobs.java:9511
+#: src/TabJobs.java:9558
 msgid "enabled"
 msgstr ""
 
@@ -1134,35 +1134,35 @@ msgstr ""
 msgid "Select local storage file."
 msgstr ""
 
-#: src/TabRestore.java:3598 src/TabRestore.java:4085
+#: src/TabRestore.java:3599 src/TabRestore.java:4086
 msgid "Decrypt password"
 msgstr ""
 
-#: src/TabRestore.java:3986
+#: src/TabRestore.java:3987
 msgid "FTP login password"
 msgstr ""
 
-#: src/TabRestore.java:3987
+#: src/TabRestore.java:3988
 msgid "Please enter FTP login password for"
 msgstr ""
 
-#: src/TabRestore.java:4019
+#: src/TabRestore.java:4020
 msgid "SSH (TLS) login password"
 msgstr ""
 
-#: src/TabRestore.java:4020
+#: src/TabRestore.java:4021
 msgid "Please enter SSH (TLS) login password for"
 msgstr ""
 
-#: src/TabRestore.java:4052
+#: src/TabRestore.java:4053
 msgid "Webdav login password"
 msgstr ""
 
-#: src/TabRestore.java:4053
+#: src/TabRestore.java:4054
 msgid "Please enter Webdav login password for"
 msgstr ""
 
-#: src/TabRestore.java:4086
+#: src/TabRestore.java:4087
 msgid "Please enter decrypt password for"
 msgstr ""
 

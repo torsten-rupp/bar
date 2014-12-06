@@ -5220,10 +5220,11 @@ e composite widget
    * @param tree tree widget
    * @param index index (0..n)
    * @param data data
+   * @param image image
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(final Tree tree, final int index, final Object data, final boolean folderFlag, final Object... values)
+  public static TreeItem insertTreeItem(final Tree tree, final int index, final Object data, final Image image, final boolean folderFlag, final Object... values)
   {
     /** tree insert runnable
      */
@@ -5244,6 +5245,7 @@ e composite widget
             treeItem = new TreeItem(tree,SWT.CHECK);
           }
           treeItem.setData(data);
+          treeItem.setImage(image);
           if (folderFlag) new TreeItem(treeItem,SWT.NONE);
           for (int i = 0; i < values.length; i++)
           {
@@ -5276,6 +5278,30 @@ e composite widget
     return treeRunnable.treeItem;
   }
 
+  /** insert tree item
+   * @param tree tree widget
+   * @param index index (0..n)
+   * @param data data
+   * @param folderFlag TRUE iff foler
+   * @return new tree item
+   */
+  public static TreeItem insertTreeItem(final Tree tree, final int index, final Object data, final boolean folderFlag, final Object... values)
+  {
+    return insertTreeItem(tree,index,data,null,folderFlag,values);
+  }
+
+  /** add tree item at end
+   * @param tree tree widget
+   * @param data data
+   * @param image image
+   * @param folderFlag TRUE iff foler
+   * @return new tree item
+   */
+  public static TreeItem addTreeItem(Tree tree, Object data, Image image, boolean folderFlag, Object... values)
+  {
+    return insertTreeItem(tree,-1,data,image,folderFlag,values);
+  }
+
   /** add tree item at end
    * @param tree tree widget
    * @param data data
@@ -5291,10 +5317,12 @@ e composite widget
    * @param parentTreeItem parent tree item
    * @param index index (0..n)
    * @param data data
+   * @param image image
    * @param folderFlag TRUE iff foler
+   * @param values values list
    * @return new tree item
    */
-  public static TreeItem addTreeItem(final TreeItem parentTreeItem, final int index, final Object data, final boolean folderFlag, final Object... values)
+  public static TreeItem addTreeItem(final TreeItem parentTreeItem, final int index, final Object data, final Image image, final boolean folderFlag, final Object... values)
   {
     /** tree insert runnable
      */
@@ -5306,8 +5334,16 @@ e composite widget
       {
         if (!parentTreeItem.isDisposed())
         {
-          treeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
+          if (index >= 0)
+          {
+            treeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
+          }
+          else
+          {
+            treeItem = new TreeItem(parentTreeItem,SWT.NONE);
+          }
           treeItem.setData(data);
+          treeItem.setImage(image);
           if (folderFlag) new TreeItem(treeItem,SWT.NONE);
           for (int i = 0; i < values.length; i++)
           {
@@ -5340,15 +5376,42 @@ e composite widget
     return treeRunnable.treeItem;
   }
 
+  /** add sub-tree item
+   * @param parentTreeItem parent tree item
+   * @param index index (0..n)
+   * @param data data
+   * @param folderFlag TRUE iff foler
+   * @param values values list
+   * @return new tree item
+   */
+  public static TreeItem addTreeItem(final TreeItem parentTreeItem, final int index, final Object data, final boolean folderFlag, final Object... values)
+  {
+    return addTreeItem(parentTreeItem,index,data,null,folderFlag,values);
+  }
+
+  /** add sub-tree item at end
+   * @param parentTreeItem parent tree item
+   * @param data data
+   * @param image image
+   * @param folderFlag TRUE iff foler
+   * @param values values list
+   * @return new tree item
+   */
+  public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, Image image, boolean folderFlag, Object... values)
+  {
+    return addTreeItem(parentTreeItem,-1,data,image,folderFlag);
+  }
+
   /** add sub-tree item at end
    * @param parentTreeItem parent tree item
    * @param data data
    * @param folderFlag TRUE iff foler
+   * @param values values list
    * @return new tree item
    */
   public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, boolean folderFlag, Object... values)
   {
-    return addTreeItem(parentTreeItem,0,data,folderFlag);
+    return addTreeItem(parentTreeItem,data,null,folderFlag,values);
   }
 
   /** set table item checked
