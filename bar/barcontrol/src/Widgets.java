@@ -5306,7 +5306,7 @@ e composite widget
       {
         if (!parentTreeItem.isDisposed())
         {
-          TreeItem treeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
+          treeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
           treeItem.setData(data);
           if (folderFlag) new TreeItem(treeItem,SWT.NONE);
           for (int i = 0; i < values.length; i++)

@@ -1329,6 +1329,7 @@ class TabJobs
   private WidgetVariable  storageLoginPassword    = new WidgetVariable("");
   private WidgetVariable  storageDeviceName       = new WidgetVariable("");
   private WidgetVariable  storageFileName         = new WidgetVariable("");
+  private WidgetVariable  mountDeviceName         = new WidgetVariable("");
   private WidgetVariable  overwriteArchiveFiles   = new WidgetVariable(false);
   private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable("");
   private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable("");
@@ -1584,7 +1585,7 @@ COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
           public void handleEvent(final Event event)
           {
             final TreeItem treeItem = (TreeItem)event.item;
-            addFileTree(treeItem);
+            updateFileTree(treeItem);
           }
         });
         widgetFileTree.addListener(SWT.Collapse,new Listener()
@@ -1935,7 +1936,7 @@ COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              openIncludedDirectories();
+              openAllIncludedDirectories();
             }
           });
 
@@ -2864,6 +2865,7 @@ COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
               if (fileName != null)
               {
                 deltaSource.set(fileName);
+                BARServer.setOption(selectedJobId,"delta-source",fileName);
               }
             }
           });
@@ -3813,6 +3815,7 @@ COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
               if (fileName != null)
               {
                 incrementalListFileName.set(fileName);
+                BARServer.setOption(selectedJobId,"incremental-list-file",fileName);
               }
             }
           });
@@ -4117,23 +4120,102 @@ COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
         });
         Widgets.setVisible(composite,false);
         {
-          button = Widgets.newCheckbox(composite,BARControl.tr("overwrite archive files"));
-          button.setToolTipText(BARControl.tr("If enabled overwrite existing archive files. If disabled do not overwrite existing files and stop with an error."));
-          Widgets.layout(button,0,0,TableLayoutData.W);
-          button.addSelectionListener(new SelectionListener()
+          composite = Widgets.newComposite(composite,SWT.NONE);
+          composite.setLayout(new TableLayout(1.0,1.0));
+          Widgets.layout(composite,0,0,TableLayoutData.WE);
           {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            subComposite = Widgets.newComposite(composite,SWT.NONE);
+            subComposite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
+            Widgets.layout(subComposite,0,0,TableLayoutData.WE);
             {
+              label = Widgets.newLabel(subComposite,BARControl.tr("Mount device")+":");
+              Widgets.layout(label,0,0,TableLayoutData.W);
+
+              text = Widgets.newText(subComposite);
+              text.setToolTipText(BARControl.tr("Device to mount/unmount before/after job is executed."));
+              Widgets.layout(text,0,1,TableLayoutData.WE);
+              text.addModifyListener(new ModifyListener()
+              {
+                public void modifyText(ModifyEvent modifyEvent)
+                {
+                  Text   widget = (Text)modifyEvent.widget;
+                  Color  color  = COLOR_MODIFIED;
+                  String string = widget.getText();
+                  if (mountDeviceName.getString().equals(string)) color = null;
+                  widget.setBackground(color);
+                }
+              });
+              text.addSelectionListener(new SelectionListener()
+              {
+                public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                {
+                  Text widget   = (Text)selectionEvent.widget;
+                  String string = widget.getText();
+                  mountDeviceName.set(string);
+                  BARServer.setOption(selectedJobId,"mount-device",string);
+                  widget.setBackground(null);
+                }
+                public void widgetSelected(SelectionEvent selectionEvent)
+                {
+                }
+              });
+              text.addFocusListener(new FocusListener()
+              {
+                public void focusGained(FocusEvent focusEvent)
+                {
+                }
+                public void focusLost(FocusEvent focusEvent)
+                {
+                  Text widget   = (Text)focusEvent.widget;
+                  String string = widget.getText();
+                  mountDeviceName.set(string);
+                  BARServer.setOption(selectedJobId,"mount-device",string);
+                  widget.setBackground(null);
+                }
+              });
+              Widgets.addModifyListener(new WidgetModifyListener(text,mountDeviceName));
+
+              button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+              Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
+              button.addSelectionListener(new SelectionListener()
+              {
+                public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                {
+                }
+                public void widgetSelected(SelectionEvent selectionEvent)
+                {
+                  Button widget   = (Button)selectionEvent.widget;
+                  String fileName = Dialogs.directory(shell,
+                                                      "Mount device name",
+                                                      mountDeviceName.getString()
+                                                     );
+                  if (fileName != null)
+                  {
+                    mountDeviceName.set(fileName);
+                    BARServer.setOption(selectedJobId,"mount-device",fileName);
+                  }
+                }
+              });
             }
-            public void widgetSelected(SelectionEvent selectionEvent)
+
+            button = Widgets.newCheckbox(composite,BARControl.tr("overwrite archive files"));
+            button.setToolTipText(BARControl.tr("If enabled overwrite existing archive files. If disabled do not overwrite existing files and stop with an error."));
+            Widgets.layout(button,1,0,TableLayoutData.W);
+            button.addSelectionListener(new SelectionListener()
             {
-              Button  widget      = (Button)selectionEvent.widget;
-              boolean checkedFlag = widget.getSelection();
-              overwriteArchiveFiles.set(checkedFlag);
-              BARServer.setOption(selectedJobId,"overwrite-archive-files",checkedFlag);
-            }
-          });
-          Widgets.addModifyListener(new WidgetModifyListener(button,overwriteArchiveFiles));
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button  widget      = (Button)selectionEvent.widget;
+                boolean checkedFlag = widget.getSelection();
+                overwriteArchiveFiles.set(checkedFlag);
+                BARServer.setOption(selectedJobId,"overwrite-archive-files",checkedFlag);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(button,overwriteArchiveFiles));
+          }
         }
 
         // destination ftp
@@ -4309,7 +4391,7 @@ COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
                 maxBandWidth.set(0);
                 BARServer.setOption(selectedJobId,"max-band-width",0);
               }
-            });
+            });BARServer.setOption
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
             {
               public void modified(Control control, WidgetVariable archivePartSizeFlag)
@@ -4636,6 +4718,7 @@ COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
                 if (fileName != null)
                 {
                   sshPublicKeyFileName.set(fileName);
+                  BARServer.setOption(selectedJobId,"ssh-public-key",fileName);
                 }
               }
             });
@@ -4710,6 +4793,7 @@ COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
                 if (fileName != null)
                 {
                   sshPrivateKeyFileName.set(fileName);
+                  BARServer.setOption(selectedJobId,"ssh-private-key",fileName);
                 }
               }
             });
@@ -5064,6 +5148,7 @@ COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
                 if (fileName != null)
                 {
                   sshPublicKeyFileName.set(fileName);
+                  BARServer.setOption(selectedJobId,"ssh-public-key",fileName);
                 }
               }
             });
@@ -5138,6 +5223,7 @@ COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
                 if (fileName != null)
                 {
                   sshPrivateKeyFileName.set(fileName);
+                  BARServer.setOption(selectedJobId,"ssh-private-key",fileName);
                 }
               }
             });
@@ -5284,6 +5370,7 @@ COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
                 if (fileName != null)
                 {
                   storageDeviceName.set(fileName);
+                  BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
                 }
               }
             });
@@ -5566,6 +5653,7 @@ COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
                 if (fileName != null)
                 {
                   storageDeviceName.set(fileName);
+                  BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
                 }
               }
             });
@@ -6520,6 +6608,7 @@ throw new Error("NYI");
       overwriteFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-files"));
       preCommand.set(BARServer.getStringOption(selectedJobId,"pre-command"));
       postCommand.set(BARServer.getStringOption(selectedJobId,"post-command"));
+      mountDeviceName.set(BARServer.getStringOption(selectedJobId,"mount-device"));
 
       updateFileTreeImages();
       updateDeviceImages();
@@ -6675,7 +6764,7 @@ throw new Error("NYI");
 
   /** open all included sub-directories
    */
-  private void openIncludedDirectories()
+  private void openAllIncludedDirectories()
   {
     // open all included directories
     for (TableItem tableItem : widgetIncludeTable.getItems())
@@ -6739,7 +6828,7 @@ throw new Error("NYI");
   /** update file list of tree item
    * @param treeItem tree item to update
    */
-  private void addFileTree(TreeItem treeItem)
+  private void updateFileTree(TreeItem treeItem)
   {
     FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
     TreeItem     subTreeItem;
@@ -6784,11 +6873,14 @@ throw new Error("NYI");
                 else
                   image = IMAGE_FILE;
 
-                subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-                subTreeItem.setText(0,fileTreeData.title);
-                subTreeItem.setText(1,"FILE");
-                subTreeItem.setText(2,Units.formatByteSize(size));
-                subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                subTreeItem = Widgets.addTreeItem(treeItem,
+                                                  findFilesTreeIndex(treeItem,fileTreeData),
+                                                  fileTreeData,
+                                                  false,
+                fileTreeData.title,
+                "FILE",
+                Units.formatByteSize(size),
+                simpleDateFormat.format(new Date(dateTime*1000)));
                 subTreeItem.setImage(image);
               }
               break;
@@ -7053,7 +7145,10 @@ throw new Error("NYI");
           // create device data
           DeviceTreeData deviceTreeData = new DeviceTreeData(name,size);
 
-          TreeItem treeItem = Widgets.addTreeItem(widgetDeviceTree,findDeviceIndex(widgetDeviceTree,deviceTreeData),deviceTreeData,false);
+          TreeItem treeItem = Widgets.insertTreeItem(widgetDeviceTree,
+                                                     findDeviceIndex(widgetDeviceTree,deviceTreeData),
+                                                     deviceTreeData,
+                                                     false);
           treeItem.setText(0,name);
           treeItem.setText(1,Units.formatByteSize(size));
           treeItem.setImage(IMAGE_DEVICE);
@@ -7204,12 +7299,12 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
 */
 
           includeHashMap.put(pattern,entryData);
-          Widgets.insertTableEntry(widgetIncludeTable,
-                                   findTableIndex(widgetIncludeTable,pattern),
-                                   (Object)entryData,
-                                   entryData.getImage(),
-                                   entryData.pattern
-                                  );
+          Widgets.insertTableItem(widgetIncludeTable,
+                                  findTableIndex(widgetIncludeTable,pattern),
+                                  (Object)entryData,
+                                  entryData.getImage(),
+                                  entryData.pattern
+                                 );
         }
       }
       catch (IllegalArgumentException exception)
@@ -7255,11 +7350,11 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
         if (!pattern.equals(""))
         {
           excludeHashSet.add(pattern);
-          Widgets.insertListEntry(widgetExcludeList,
-                            findListIndex(widgetExcludeList,pattern),
-                            (Object)pattern,
-                            pattern
-                           );
+          Widgets.insertListItem(widgetExcludeList,
+                                 findListIndex(widgetExcludeList,pattern),
+                                 (Object)pattern,
+                                 pattern
+                                );
         }
       }
       catch (IllegalArgumentException exception)
@@ -7305,11 +7400,11 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
         if (!pattern.equals(""))
         {
            compressExcludeHashSet.add(pattern);
-           Widgets.insertListEntry(widgetCompressExcludeList,
-                                   findListIndex(widgetCompressExcludeList,pattern),
-                                   (Object)pattern,
-                                   pattern
-                                  );
+           Widgets.insertListItem(widgetCompressExcludeList,
+                                  findListIndex(widgetCompressExcludeList,pattern),
+                                  (Object)pattern,
+                                  pattern
+                                 );
         }
       }
       catch (IllegalArgumentException exception)
@@ -7497,12 +7592,12 @@ throw new Error("NYI");
     includeHashMap.put(entryData.pattern,entryData);
 
     // update table widget
-    Widgets.insertTableEntry(widgetIncludeTable,
-                             findTableIndex(widgetIncludeTable,entryData.pattern),
-                             (Object)entryData,
-                             entryData.getImage(),
-                             entryData.pattern
-                            );
+    Widgets.insertTableItem(widgetIncludeTable,
+                            findTableIndex(widgetIncludeTable,entryData.pattern),
+                            (Object)entryData,
+                            entryData.getImage(),
+                            entryData.pattern
+                           );
 
     // update file tree/device images
     updateFileTreeImages();
@@ -7545,12 +7640,12 @@ throw new Error("NYI");
     Widgets.removeAllTableEntries(widgetIncludeTable);
     for (EntryData entryData : includeHashMap.values())
     {
-      Widgets.insertTableEntry(widgetIncludeTable,
-                               findTableIndex(widgetIncludeTable,entryData.pattern),
-                               (Object)entryData,
-                               entryData.getImage(),
-                               entryData.pattern
-                              );
+      Widgets.insertTableItem(widgetIncludeTable,
+                              findTableIndex(widgetIncludeTable,entryData.pattern),
+                              (Object)entryData,
+                              entryData.getImage(),
+                              entryData.pattern
+                             );
     }
 
     // update file tree/device images
@@ -7784,11 +7879,11 @@ throw new Error("NYI");
     excludeHashSet.add(pattern);
 
     // update list
-    Widgets.insertListEntry(widgetExcludeList,
-                            findListIndex(widgetExcludeList,pattern),
-                            (Object)pattern,
-                            pattern
-                           );
+    Widgets.insertListItem(widgetExcludeList,
+                           findListIndex(widgetExcludeList,pattern),
+                           (Object)pattern,
+                           pattern
+                          );
 
     // update file tree/device images
     updateFileTreeImages();
@@ -7830,11 +7925,11 @@ throw new Error("NYI");
     Widgets.removeAllListEntries(widgetExcludeList);
     for (String pattern : excludeHashSet)
     {
-      Widgets.insertListEntry(widgetExcludeList,
-                              findListIndex(widgetExcludeList,pattern),
-                              (Object)pattern,
-                              pattern
-                             );
+      Widgets.insertListItem(widgetExcludeList,
+                             findListIndex(widgetExcludeList,pattern),
+                             (Object)pattern,
+                             pattern
+                            );
     }
 
     // update file tree/device images
@@ -8056,11 +8151,11 @@ throw new Error("NYI");
 
       compressExcludeHashSet.add(pattern);
 Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
-      Widgets.insertListEntry(widgetCompressExcludeList,
-                              findListIndex(widgetCompressExcludeList,pattern),
-                              (Object)pattern,
-                              pattern
-                             );
+      Widgets.insertListItem(widgetCompressExcludeList,
+                             findListIndex(widgetCompressExcludeList,pattern),
+                             (Object)pattern,
+                             pattern
+                            );
     }
 
     // update file tree/device images
@@ -8094,11 +8189,11 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         }
 
         compressExcludeHashSet.add(pattern);
-        Widgets.insertListEntry(widgetCompressExcludeList,
-                                findListIndex(widgetCompressExcludeList,pattern),
-                                (Object)pattern,
-                                pattern
-                               );
+        Widgets.insertListItem(widgetCompressExcludeList,
+                               findListIndex(widgetCompressExcludeList,pattern),
+                               (Object)pattern,
+                               pattern
+                              );
       }
     }
 
@@ -8173,11 +8268,11 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
                                                   ),
                                resultErrorMessage
                               );
-      Widgets.insertListEntry(widgetCompressExcludeList,
-                              findListIndex(widgetCompressExcludeList,pattern),
-                              (Object)pattern,
-                              pattern
-                             );
+      Widgets.insertListItem(widgetCompressExcludeList,
+                             findListIndex(widgetCompressExcludeList,pattern),
+                             (Object)pattern,
+                             pattern
+                            );
     }
 
     // update file tree/device images

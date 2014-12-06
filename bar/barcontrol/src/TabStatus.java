@@ -1344,7 +1344,7 @@ class TabStatus
             // remove not existing entries
             for (int z = 0; z < tableItems.length; z++)
             {
-              if (!tableItemFlags[z]) Widgets.removeTableEntry(widgetJobList,tableItems[z]);
+              if (!tableItemFlags[z]) Widgets.removeTableItem(widgetJobList,tableItems[z]);
             }
           }
         }

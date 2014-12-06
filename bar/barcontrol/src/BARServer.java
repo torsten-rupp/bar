@@ -140,6 +140,7 @@ abstract class ProcessResult
 class Command
 {
   // --------------------------- constants --------------------------------
+  public final static int TIMEOUT = 5*1000;
 
   // --------------------------- variables --------------------------------
   public  ProcessResult      processResult;
