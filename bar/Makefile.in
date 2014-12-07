@@ -22,13 +22,13 @@ PLATFORM        = @PLATFORM@
 
 #------------------------------------ paths ----------------------------------
 
-SOURCE_DIR          = @srcdir@
+SOURCE_DIR         = @srcdir@
 
 ETC_DIR            = /etc
 
 INSTALL_DIR        = $(if $(prefix),$(prefix),@INSTALL_DIR@)
 INSTALL_BIN_DIR    = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
-INSTALL_LOCALE_DIR = $(if $(localedir),$(localedir),@LOCALE_DIR@)
+INSTALL_LOCALE_DIR = $(if $(datadir),$(datadir)/locale,@LOCALE_DIR@)
 INSTALL_ETC_DIR    = $(if $(sysconfdir),$(sysconfdir),/etc)
 INSTALL_CONFIG_DIR = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
 INSTALL_MAN_DIR    = $(if $(mandir),$(mandir),@MAN_DIR@)
@@ -89,8 +89,6 @@ DISTRIBUTION_NAME = bar-$(VERSION_MAJOR).$(VERSION_MINOR)
 
 TARGETS              = bar/bar@EXEEXT@ \
                        bar/bar-debug@EXEEXT@ \
-                       bar/po/de/LC_MESSAGES/bar.mo \
-                       bar/po/ja/LC_MESSAGES/bar.mo \
                        bar/bar-keygen@SHELLEXT@ \
                        $(if $(findstring $(ENABLE_GUI),yes),\
                          barcontrol/barcontrol@SHELLEXT@ \
@@ -320,22 +318,52 @@ endif
 
 # ----------------------------------------------------------------------------
 # install/uninstall
-# Note: prefix is used for temporary installations
+# Note: prefix DESTDIR is used for temporary installations
 
-.PHONY: install install_base install_man install_keys uninstall install_dist
+.PHONY: install install_bar install_barcontrol install_scripts install_man install_keys uninstall install_dist
 
 install: \
-  install_base \
+  install_bar \
+  install_barcontrol \
+  install_scripts \
   install_man \
   $(if $(DIST),,install_keys)
-	-$(MAKE) -C bar install DESTDIR=$(DESTDIR)
-	-$(MAKE) -C barcontrol install DESTDIR=$(DESTDIR)
 
-# install base files
-# Note: prefix is used for temporary installations
-install_base: \
-  $(SCRIPTS) \
-  $(DOC)
+install_bar:
+	echo $(MAKE) -C bar install \
+          prefix=$(prefix) \
+          bindir=$(bindir) \
+          datadir=$(datadir) \
+          sysconfdir=$(sysconfdir) \
+          mandir=$(mandir) \
+          DESTDIR=$(DESTDIR)
+	$(MAKE) -C bar install \
+          prefix=$(prefix) \
+          bindir=$(bindir) \
+          datadir=$(datadir) \
+          sysconfdir=$(sysconfdir) \
+          mandir=$(mandir) \
+          DESTDIR=$(DESTDIR)
+
+install_barcontrol:
+	echo $(MAKE) -C barcontrol install \
+          prefix=$(prefix) \
+          bindir=$(bindir) \
+          datadir=$(datadir) \
+          sysconfdir=$(sysconfdir) \
+          mandir=$(mandir) \
+          DESTDIR=$(DESTDIR)
+	$(MAKE) -C barcontrol install \
+          prefix=$(prefix) \
+          bindir=$(bindir) \
+          datadir=$(datadir) \
+          sysconfdir=$(sysconfdir) \
+          mandir=$(mandir) \
+          DESTDIR=$(DESTDIR)
+
+# install script files
+install_scripts: \
+  $(SCRIPTS)
 	if test ! -f $(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver; then \
           $(INSTALL) -d "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d"; \
           if   test "$(SYSTEM)" = "SuSE"   -o -f $(ETC_DIR)/SuSE-release -o -d $(INSTALL_ETC_DIR)/SuSEconfig; then \
@@ -360,7 +388,6 @@ install_base: \
         fi
 
 # install man-page
-# Note: prefix is used for temporary installations
 install_man: \
   doc/bar.7
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_MAN_DIR)/man7"
