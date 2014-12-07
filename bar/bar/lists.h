@@ -34,9 +34,6 @@
   type          *tail; \
   unsigned long count
 
-// delete list node function
-typedef void(*ListNodeFreeFunction)(void *node, void *userData);
-
 // list node
 typedef struct Node
 {
@@ -48,6 +45,17 @@ typedef struct
 {
   LIST_HEADER(Node);
 } List;
+
+/***********************************************************************\
+* Name   : ListNodeFreeFunction
+* Purpose: delete list node function
+* Input  : node     - node
+*          userData - user data
+* Output : -
+* Return : duplicated list node
+* Notes  : -
+\***********************************************************************/
+typedef void(*ListNodeFreeFunction)(void *node, void *userData);
 
 /***********************************************************************\
 * Name   : ListNodeCopyFunction
