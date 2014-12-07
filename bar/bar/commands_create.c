@@ -2712,8 +2712,37 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 }
 
 /***********************************************************************\
+* Name   : newArchiveFile
+* Purpose: call back for archive
+* Input  : userData       - user data
+*          databaseHandle - database handle or NULL if no database
+*          storageId      - database id of storage
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors newArchiveFile(void           *userData,
+                            DatabaseHandle *databaseHandle,
+                            int64          storageId
+                           )
+{
+  CreateInfo    *createInfo = (CreateInfo*)userData;
+  Errors        error;
+
+  assert(createInfo != NULL);
+
+  // set database storage name and uuid
+  if (storageId != DATABASE_ID_NONE)
+  {
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : storeArchiveFile
-* Purpose: call back to store archive
+* Purpose: call back to store created archive
 * Input  : userData       - user data
 *          databaseHandle - database handle or NULL if no database
 *          storageId      - database id of storage
@@ -5141,6 +5170,7 @@ Errors Command_create(const String                    storageName,
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
                          jobOptions,
+                         CALLBACK(newArchiveFile,&createInfo),
                          CALLBACK(storeArchiveFile,&createInfo),
                          CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData),
                          indexDatabaseHandle
