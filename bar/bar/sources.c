@@ -539,6 +539,7 @@ LOCAL Errors restoreFile(const String                    storageName,
                                          NULL,  // cryptType
                                          imageName,
                                          &deviceInfo,
+                                         NULL,  // fileSystemType
                                          NULL,  // deltaSourceName
                                          NULL,  // deltaSourceSize
                                          &blockOffset,
