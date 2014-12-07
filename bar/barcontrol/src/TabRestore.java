@@ -223,6 +223,8 @@ class TabRestore
    */
   enum IndexModes
   {
+    NONE,
+
     MANUAL,
     AUTO,
 
@@ -243,177 +245,15 @@ class TabRestore
     }
   };
 
-  /** job data
-   */
-  class JobData
-  {
-    public long        id;                       // database id
-    public String      name;                     // storage name
-    public String      uuid;                     // uuid
-    public long        lastDateTime;             // last date/time when some storage was created
-    public long        totalSize;                // total size [byte]
-    public String      lastErrorMessage;         // error message when some storage was created
-
-    private boolean    checked;                  // true iff storage entry is tagged
-
-    /** create job data
-     * @param id database id
-     * @param name name of job
-     * @param uuid uuid of job
-     */
-    JobData(long id, String name, String uuid, long lastDateTime, long totalSize, String lastErrorMessage)
-    {
-      this.id               = id;
-      this.name             = name;
-      this.uuid             = uuid;
-      this.lastDateTime     = lastDateTime;
-      this.totalSize        = totalSize;
-      this.lastErrorMessage = lastErrorMessage;
-    }
-
-    /** check if checked
-     * @return true if entry is checked, false otherwise
-     */
-    public boolean isChecked()
-    {
-      return checked;
-    }
-
-    /** set checked state
-     * @param checked checked state
-     */
-    public void setChecked(boolean checked)
-    {
-      this.checked = checked;
-    }
-
-    /** convert data to string
-     * @return string
-     */
-    public String toString()
-    {
-      return "Job {"+name+", uuid="+uuid+", lastDateTime="+lastDateTime+", totalSize="+totalSize+", checked="+checked+"}";
-    }
-  };
-
-  /** job data map
-   */
-  class JobDataMap extends HashMap<Long,JobData>
-  {
-    /** remove not checked entries
-     */
-    public void clearNotChecked()
-    {
-      String[] keys = keySet().toArray(new String[0]);
-      for (String key : keys)
-      {
-        JobData jobData = get(key);
-        if (!jobData.isChecked()) remove(key);
-      }
-    }
-
-    /** get job data from map
-     * @param jobId database id
-     * @return job data
-     */
-    public JobData get(long jobId)
-    {
-      return super.get(jobId);
-    }
-
-    /** get job data from map
-     * @param jobName job name
-     * @return job data
-     */
-    public JobData get(String jobName)
-    {
-      for (JobData jobData : values())
-      {
-        if (jobData.name.equals(jobName)) return jobData;
-      }
-
-      return null;
-    }
-
-    /** put job data into map
-     * @param jobData job data
-     */
-    public void put(JobData jobData)
-    {
-      put(jobData.id,jobData);
-    }
-
-    /** remove job data from map
-     * @param jobData job data
-     */
-    public void remove(JobData jobData)
-    {
-      remove(jobData.id);
-    }
-  }
-
-  /** job data comparator
-   */
-  class JobDataComparator implements Comparator<JobData>
-  {
-    // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_NAME = 0;
-
-    private int sortMode;
-
-    /** create job data comparator
-     * @param tree job tree
-     * @param sortColumn sort column
-     */
-    JobDataComparator(Tree tree, TreeColumn sortColumn)
-    {
-      if      (tree.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else                                      sortMode = SORTMODE_NAME;
-    }
-
-    /** create job data comparator
-     * @param tree job tree
-     */
-    JobDataComparator(Tree tree)
-    {
-      this(tree,tree.getSortColumn());
-    }
-
-    /** compare job data
-     * @param jobData1, jobData2 job data to compare
-     * @return -1 iff jobData1 < jobData2,
-                0 iff jobData1 = jobData2,
-                1 iff jobData1 > jobData2
-     */
-    public int compare(JobData jobData1, JobData jobData2)
-    {
-      switch (sortMode)
-      {
-        case SORTMODE_NAME:
-          return jobData1.name.compareTo(jobData2.name);
-        default:
-          return 0;
-      }
-    }
-
-    /** convert data to string
-     * @return string
-     */
-    public String toString()
-    {
-      return "JobComparator {"+sortMode+"}";
-    }
-  }
-
   /** storage data
    */
   class StorageData
   {
     public long        id;                       // database id
-    public long        jobId;                    // jop id
+    public String      uuid;                     // uuid
     public String      name;                     // storage name
-    public long        size;                     // storage size [bytes]
-    public long        dateTime;                 // date/time when storage was created
+    public long        dateTime;                 // date/time when storage was created or last time some storage was created
+    public long        size;                     // storage size or total size [bytes]
     public String      title;                    // title to show
     public IndexStates indexState;               // state of index
     public IndexModes  indexMode;                // mode of index
@@ -426,23 +266,23 @@ class TabRestore
 
     /** create storage data
      * @param id database id
-     * @param jobId job id
+     * @param uuid uuid
      * @param name name of storage
-     * @param size size of storage [bytes]
      * @param dateTime date/time (timestamp) when storage was created
+     * @param size size of storage [byte]
      * @param title title to show
      * @param indexState storage index state
      * @param indexMode storage index mode
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    StorageData(long id, long jobId, String name, long size, long dateTime, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    StorageData(long id, String uuid, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       this.id                  = id;
-      this.jobId               = jobId;
+      this.uuid                = uuid;
       this.name                = name;
-      this.size                = size;
       this.dateTime            = dateTime;
+      this.size                = size;
       this.title               = title;
       this.indexState          = indexState;
       this.indexMode           = indexMode;
@@ -455,28 +295,27 @@ class TabRestore
 
     /** create storage data
      * @param id database id
-     * @param jobId job id
-     * @param name name of storage
      * @param uuid uuid
+     * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
      * @param title title to show
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
-    StorageData(long id, long jobId, String name, long dateTime, String title, long lastCheckedDateTime)
+    StorageData(long id, String uuid, String name, long dateTime, String title, long lastCheckedDateTime)
     {
-      this(id,jobId,name,0,dateTime,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+      this(id,uuid,name,dateTime,0L,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
     }
 
     /** create storage data
      * @param id database id
-     * @param jobId job id
+     * @param uuid uuid
      * @param name name of storage
      * @param uuid uuid
      * @param title title to show
      */
-    StorageData(long id, long jobId, String name, String title)
+    StorageData(long id, String uuid, String name, String title)
     {
-      this(id,jobId,name,0,title,0);
+      this(id,uuid,name,0L,title,0L);
     }
 
     /** set tree item reference
@@ -516,7 +355,7 @@ class TabRestore
      */
     public String toString()
     {
-      return "Storage {"+name+", "+size+" bytes, created="+dateTime+", title="+title+", state="+indexState+", last checked="+lastCheckedDateTime+", checked="+checked+"}";
+      return "Storage {"+uuid+", name="+name+", created="+dateTime+", size="+size+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+", checked="+checked+"}";
     }
   };
 
@@ -662,7 +501,80 @@ class TabRestore
      */
     public String toString()
     {
-      return "StorageComparator {"+sortMode+"}";
+      return "StorageDataComparator {"+sortMode+"}";
+    }
+  }
+
+  /** job data
+   */
+  class JobData extends StorageData
+  {
+    /** create job data
+     * @param uuid uuid
+     * @param name name of storage
+     * @param lastDateTime last date/time (timestamp) when storage was created
+     * @param totalSize total size of storage [byte]
+     * @param lastErrorMessage last error message text
+     */
+    JobData(String uuid, String name, long lastDateTime, long totalSize, String lastErrorMessage)
+    {
+      super(0,uuid,name,lastDateTime,totalSize,name,IndexStates.OK,IndexModes.MANUAL,0L,lastErrorMessage);
+    }
+  }
+
+  /** job data map
+   */
+  class JobDataMap extends HashMap<String,JobData>
+  {
+    /** remove not checked entries
+     */
+    public void clearNotChecked()
+    {
+      String[] keys = keySet().toArray(new String[0]);
+      for (String key : keys)
+      {
+        JobData jobData = get(key);
+        if (!jobData.isChecked()) remove(key);
+      }
+    }
+
+    /** get job data from map
+     * @param jobId database id
+     * @return job data
+     */
+    public JobData get(long jobId)
+    {
+      return super.get(jobId);
+    }
+
+    /** get job data from map
+     * @param jobName job name
+     * @return job data
+     */
+    public JobData get(String jobName)
+    {
+      for (JobData jobData : values())
+      {
+        if (jobData.name.equals(jobName)) return jobData;
+      }
+
+      return null;
+    }
+
+    /** put job data into map
+     * @param jobData job data
+     */
+    public void put(JobData jobData)
+    {
+      put(jobData.uuid,jobData);
+    }
+
+    /** remove job data from map
+     * @param jobData job data
+     */
+    public void remove(JobData jobData)
+    {
+      remove(jobData.uuid);
     }
   }
 
@@ -675,7 +587,7 @@ class TabRestore
     private int           storageMaxCount            = 100;
     private String        storagePattern             = null;
     private IndexStateSet storageIndexStateSetFilter = INDEX_STATE_SET_ALL;
-    private boolean       setColorFlag               = false;          // true to set color at update
+    private boolean       setUpdateIndicator         = false;          // true to set color/cursor at update
 
     /** create update storage list thread
      */
@@ -693,9 +605,9 @@ class TabRestore
       {
         for (;;)
         {
-          if (setColorFlag)
+          if (setUpdateIndicator)
           {
-            // set busy cursor, foreground color to inform about update
+            // set busy cursor and foreground color to inform about update
             display.syncExec(new Runnable()
             {
               public void run()
@@ -712,6 +624,16 @@ class TabRestore
           StorageDataMap newStorageDataMap = new StorageDataMap();
 
           // save marked entries
+          synchronized(jobDataMap)
+          {
+            for (JobData jobData : jobDataMap.values())
+            {
+              if (jobData.isChecked())
+              {
+                newJobDataMap.put(jobData);
+              }
+            }
+          }
           synchronized(storageDataMap)
           {
             for (StorageData storageData : storageDataMap.values())
@@ -745,20 +667,33 @@ class TabRestore
               {
                 try
                 {
-                  long   jobId             = resultMap.getLong  ("jobId"            );
-                  String name              = resultMap.getString("name"             );
-                  String uuid              = resultMap.getString("uuid"             );
-                  long   lastDateTime      = resultMap.getLong  ("lastDateTime"     );
-                  long   totalSize         = resultMap.getLong  ("totalSize"        );
-                  String lastErrorMessage  = resultMap.getString("lastErrorMessage" );
+                  String uuid             = resultMap.getString("uuid"             );
+                  String name             = resultMap.getString("name"             );
+                  long   lastDateTime     = resultMap.getLong  ("lastDateTime"     );
+                  long   totalSize        = resultMap.getLong  ("totalSize"        );
+                  String lastErrorMessage = resultMap.getString("lastErrorMessage" );
 
-                  JobData jobData = new JobData(jobId,
-                                                name,
-                                                uuid,
-                                                lastDateTime,
-                                                totalSize,
-                                                lastErrorMessage
-                                               );
+                  JobData jobData;
+                  synchronized(jobDataMap)
+                  {
+                    jobData = jobDataMap.get(uuid);
+                    if (jobData != null)
+                    {
+                      jobData.name         = name;
+                      jobData.dateTime     = lastDateTime;
+                      jobData.size         = totalSize;
+                      jobData.errorMessage = lastErrorMessage;
+                    }
+                    else
+                    {
+                      jobData = new JobData(uuid,
+                                            name,
+                                            lastDateTime,
+                                            totalSize,
+                                            lastErrorMessage
+                                           );
+                    }
+                  }
                   newJobDataMap.put(jobData);
                 }
                 catch (IllegalArgumentException exception)
@@ -772,7 +707,7 @@ class TabRestore
             }
 
             // get storage list
-            command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST jobId=* maxCount=%d indexState=%s indexMode=%s pattern=%'S",
+            command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST uuid=* maxCount=%d indexState=%s indexMode=%s pattern=%'S",
                                                                storageMaxCount,
                                                                storageIndexStateSetFilter.nameList("|"),
                                                                "*",
@@ -790,7 +725,7 @@ class TabRestore
                 try
                 {
                   long        storageId           = resultMap.getLong  ("storageId"                   );
-                  long        jobId               = resultMap.getLong  ("jobId"                       );
+                  String      uuid                = resultMap.getString("uuid"                        );
                   String      name                = resultMap.getString("name"                        );
                   long        dateTime            = resultMap.getLong  ("dateTime"                    );
                   long        size                = resultMap.getLong  ("size"                        );
@@ -805,10 +740,10 @@ class TabRestore
                     storageData = storageDataMap.get(storageId);
                     if (storageData != null)
                     {
-                      storageData.jobId               = jobId;
+                      storageData.uuid                = uuid;
                       storageData.name                = name;
-                      storageData.size                = size;
                       storageData.dateTime            = dateTime;
+                      storageData.size                = size;
                       storageData.indexState          = indexState;
                       storageData.indexMode           = indexMode;
                       storageData.lastCheckedDateTime = lastCheckedDateTime;
@@ -817,10 +752,10 @@ class TabRestore
                     else
                     {
                       storageData = new StorageData(storageId,
-                                                    jobId,
+                                                    uuid,
                                                     name,
-                                                    size,
                                                     dateTime,
+                                                    size,
                                                     new File(name).getName(),
                                                     indexState,
                                                     indexMode,
@@ -866,17 +801,18 @@ class TabRestore
             public void run()
             {
               refreshStorageTree();
-              refreshStorageList();
+              refreshStorageTable();
             }
           });
 
-          if (setColorFlag)
+          if (setUpdateIndicator)
           {
-            // reset cursor, foreground color
+            // reset cursor and foreground color
             display.syncExec(new Runnable()
             {
               public void run()
               {
+                widgetStorageTable.setForeground(null);
                 widgetStorageTree.setForeground(null);
                 shell.setCursor(null);
               }
@@ -890,7 +826,7 @@ class TabRestore
             try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
 
             // if not triggered (timeout occurred) update is done invisible (color is not set)
-            if (!triggeredFlag) setColorFlag = false;
+            if (!triggeredFlag) setUpdateIndicator = false;
 
             triggeredFlag = false;
           }
@@ -920,7 +856,7 @@ class TabRestore
         this.storagePattern          = storagePattern;
         this.storageIndexStateSetFilter = storageIndexStateSetFilter;
         this.storageMaxCount         = storageMaxCount;
-        this.setColorFlag            = true;
+        this.setUpdateIndicator      = true;
 
         triggeredFlag = true;
         trigger.notify();
@@ -959,8 +895,8 @@ class TabRestore
     long          storageDateTime;
     String        name;
     EntryTypes    type;
-    long          size;
     long          dateTime;
+    long          size;
     boolean       checked;
     RestoreStates restoreState;
 
@@ -969,17 +905,17 @@ class TabRestore
      * @param storageDateTime archive date/time (timestamp)
      * @param name entry name
      * @param type entry type
-     * @param size size [bytes]
      * @param dateTime date/time (timestamp)
+     * @param size size [bytes]
      */
-    EntryData(String storageName, long storageDateTime, String name, EntryTypes type, long size, long dateTime)
+    EntryData(String storageName, long storageDateTime, String name, EntryTypes type, long dateTime, long size)
     {
       this.storageName     = storageName;
       this.storageDateTime = storageDateTime;
       this.name            = name;
       this.type            = type;
-      this.size            = size;
       this.dateTime        = dateTime;
+      this.size            = size;
       this.checked         = false;
       this.restoreState    = RestoreStates.UNKNOWN;
     }
@@ -993,7 +929,7 @@ class TabRestore
      */
     EntryData(String storageName, long storageDateTime, String name, EntryTypes type, long dateTime)
     {
-      this(storageName,storageDateTime,name,type,0L,dateTime);
+      this(storageName,storageDateTime,name,type,dateTime,0L);
     }
 
     /** set restore state of entry
@@ -1025,7 +961,7 @@ class TabRestore
      */
     public String toString()
     {
-      return "Entry {"+storageName+", "+name+", "+type+", "+size+" bytes, dateTime="+dateTime+", checked="+checked+", state="+restoreState+"}";
+      return "Entry {"+storageName+", "+name+", "+type+", dateTime="+dateTime+", "+size+" bytes, checked="+checked+", state="+restoreState+"}";
     }
   };
 
@@ -1184,7 +1120,7 @@ class TabRestore
             public void run()
             {
               shell.setCursor(waitCursor);
-              widgetEntryList.setForeground(COLOR_MODIFIED);
+              widgetEntryTable.setForeground(COLOR_MODIFIED);
             }
           });
 
@@ -1226,20 +1162,20 @@ class TabRestore
                           String storageName     = resultMap.getString("storageName"    );
                           long   storageDateTime = resultMap.getLong  ("storageDateTime");
                           String fileName        = resultMap.getString("name"           );
-                          long   size            = resultMap.getLong  ("size"           );
                           long   dateTime        = resultMap.getLong  ("dateTime"       );
+                          long   size            = resultMap.getLong  ("size"           );
                           long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
                           long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
 
                           EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.FILE);
                           if (entryData != null)
                           {
-                            entryData.size     = size;
                             entryData.dateTime = dateTime;
+                            entryData.size     = size;
                           }
                           else
                           {
-                            entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.FILE,size,dateTime);
+                            entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.FILE,dateTime,size);
                             entryDataMap.put(entryData);
                           }
                         }
@@ -1260,7 +1196,7 @@ class TabRestore
                           }
                           else
                           {
-                            entryData = new EntryData(storageName,storageDateTime,imageName,EntryTypes.IMAGE,size,0L);
+                            entryData = new EntryData(storageName,storageDateTime,imageName,EntryTypes.IMAGE,0L,size);
                             entryDataMap.put(entryData);
                           }
                         }
@@ -1309,8 +1245,8 @@ class TabRestore
                           String storageName     = resultMap.getString("storageName"    );
                           long   storageDateTime = resultMap.getLong  ("storageDateTime");
                           String fileName        = resultMap.getString("name"           );
-                          long   size            = resultMap.getLong  ("size"           );
                           long   dateTime        = resultMap.getLong  ("dateTime"       );
+                          long   size            = resultMap.getLong  ("size"           );
                           long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
                           long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
 
@@ -1373,7 +1309,7 @@ class TabRestore
           {
             public void run()
             {
-              widgetEntryList.setForeground(null);
+              widgetEntryTable.setForeground(null);
               shell.setCursor(null);
             }
           });
@@ -1463,8 +1399,8 @@ class TabRestore
   private Combo           widgetStorageMaxCount;
   private WidgetEvent     checkedStorageEvent = new WidgetEvent();
 
-  private Table           widgetEntryList;
-  private Shell           widgetEntryListToolTip = null;
+  private Table           widgetEntryTable;
+  private Shell           widgetEntryTableToolTip = null;
   private WidgetEvent     checkedEntryEvent = new WidgetEvent();
 
   private Button          widgetRestoreTo;
@@ -1581,7 +1517,7 @@ class TabRestore
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          TreeColumn             treeColumn           = (TreeColumn)selectionEvent.widget;
+          TreeColumn            treeColumn            = (TreeColumn)selectionEvent.widget;
           StorageDataComparator storageDataComparator = new StorageDataComparator(widgetStorageTree,treeColumn);
           synchronized(widgetStorageTree)
           {
@@ -1628,18 +1564,18 @@ class TabRestore
           {
             if      (treeItem.getData() instanceof JobData)
             {
-                Event treeEvent = new Event();
-                treeEvent.item = treeItem;
-                if (treeItem.getExpanded())
-                {
-                  widgetStorageTree.notifyListeners(SWT.Collapse,treeEvent);
-                  treeItem.setExpanded(false);
-                }
-                else
-                {
-                  widgetStorageTree.notifyListeners(SWT.Expand,treeEvent);
-                  treeItem.setExpanded(true);
-                }
+              Event treeEvent = new Event();
+              treeEvent.item = treeItem;
+              if (treeItem.getExpanded())
+              {
+                widgetStorageTree.notifyListeners(SWT.Collapse,treeEvent);
+                treeItem.setExpanded(false);
+              }
+              else
+              {
+                widgetStorageTree.notifyListeners(SWT.Expand,treeEvent);
+                treeItem.setExpanded(true);
+              }
             }
             else if (treeItem.getData() instanceof StorageData)
             {
@@ -1661,21 +1597,21 @@ class TabRestore
           TreeItem treeItem = (TreeItem)selectionEvent.item;
           if (treeItem != null)
           {
-            if      (treeItem.getData() instanceof JobData)
-            {
-              ((JobData)treeItem.getData()).setChecked(treeItem.getChecked());
-            }
-            else if (treeItem.getData() instanceof StorageData)
-            {
-              ((StorageData)treeItem.getData()).setChecked(treeItem.getChecked());
-            }
+            ((StorageData)treeItem.getData()).setChecked(treeItem.getChecked());
 
             BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"));
+            for (JobData jobData : jobDataMap.values())
+            {
+              if (jobData.isChecked())
+              {
+                BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD uuid=%'S",jobData.uuid));
+              }
+            }
             for (StorageData storageData : storageDataMap.values())
             {
               if (storageData.isChecked())
               {
-                BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD jobId=%d",storageData.id));
+                BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageId=%d",storageData.id));
               }
             }
           }
@@ -1765,7 +1701,7 @@ class TabRestore
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(jobData.lastDateTime*1000)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(jobData.dateTime*1000)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,1,TableLayoutData.WE);
@@ -1775,7 +1711,7 @@ class TabRestore
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,3,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),jobData.totalSize,Units.formatByteSize(jobData.totalSize)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),jobData.size,Units.formatByteSize(jobData.size)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,3,1,TableLayoutData.WE);
@@ -1785,7 +1721,7 @@ class TabRestore
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,4,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,jobData.lastErrorMessage);
+              label = Widgets.newLabel(widgetStorageTreeToolTip,jobData.errorMessage);
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,4,1,TableLayoutData.WE);
@@ -1840,11 +1776,10 @@ class TabRestore
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,1,0,TableLayoutData.W);
 
-  //TODO
-  //            label = Widgets.newLabel(widgetStorageTreeToolTip,storageData.uuid);
-  //            label.setForeground(COLOR_FORGROUND);
-  //            label.setBackground(COLOR_BACKGROUND);
-  //            Widgets.layout(label,1,1,TableLayoutData.WE);
+              label = Widgets.newLabel(widgetStorageTreeToolTip,storageData.uuid);
+              label.setForeground(COLOR_FORGROUND);
+              label.setBackground(COLOR_BACKGROUND);
+              Widgets.layout(label,1,1,TableLayoutData.WE);
 
               label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Created")+":");
               label.setForeground(COLOR_FORGROUND);
@@ -1989,7 +1924,7 @@ class TabRestore
             {
               if (storageData.isChecked())
               {
-                BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD jobId=%d",storageData.id));
+                BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageId=%d",storageData.id));
               }
             }
           }
@@ -2067,11 +2002,10 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,0,TableLayoutData.W);
 
-//TODO
-//            label = Widgets.newLabel(widgetStorageTableToolTip,storageData.uuid);
-//            label.setForeground(COLOR_FORGROUND);
-//            label.setBackground(COLOR_BACKGROUND);
-//            Widgets.layout(label,1,1,TableLayoutData.WE);
+            label = Widgets.newLabel(widgetStorageTableToolTip,storageData.uuid);
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,1,1,TableLayoutData.WE);
 
             label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Created")+":");
             label.setForeground(COLOR_FORGROUND);
@@ -2468,9 +2402,9 @@ class TabRestore
       control = Widgets.newSpacer(group);
       Widgets.layout(control,0,0,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,1);
 
-      widgetEntryList = Widgets.newTable(group,SWT.CHECK);
-      widgetEntryList.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0,0.0}));
-      Widgets.layout(widgetEntryList,1,0,TableLayoutData.NSWE);
+      widgetEntryTable = Widgets.newTable(group,SWT.CHECK);
+      widgetEntryTable.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0,0.0}));
+      Widgets.layout(widgetEntryTable,1,0,TableLayoutData.NSWE);
       SelectionListener entryListColumnSelectionListener = new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2479,35 +2413,35 @@ class TabRestore
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TableColumn         tableColumn         = (TableColumn)selectionEvent.widget;
-          EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryList,tableColumn);
-          synchronized(widgetEntryList)
+          EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryTable,tableColumn);
+          synchronized(widgetEntryTable)
           {
             shell.setCursor(waitCursor);
-            Widgets.sortTableColumn(widgetEntryList,tableColumn,entryDataComparator);
+            Widgets.sortTableColumn(widgetEntryTable,tableColumn,entryDataComparator);
             shell.setCursor(null);
           }
         }
       };
-      tableColumn = Widgets.addTableColumn(widgetEntryList,0,BARControl.tr("Archive"),SWT.LEFT, 200,true );
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,0,BARControl.tr("Archive"),SWT.LEFT, 200,true );
       tableColumn.setToolTipText(BARControl.tr("Click to sort for archive name."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryList,1,BARControl.tr("Name"),   SWT.LEFT, 300,true );
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,1,BARControl.tr("Name"),   SWT.LEFT, 300,true );
       tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryList,2,BARControl.tr("Type"),   SWT.LEFT,  60,true );
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,2,BARControl.tr("Type"),   SWT.LEFT,  60,true );
       tableColumn.setToolTipText(BARControl.tr("Click to sort for type."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryList,3,BARControl.tr("Size"),   SWT.RIGHT, 60,true );
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,3,BARControl.tr("Size"),   SWT.RIGHT, 60,true );
       tableColumn.setToolTipText(BARControl.tr("Click to sort for size."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryList,4,BARControl.tr("Date"),   SWT.LEFT, 140,true );
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,4,BARControl.tr("Date"),   SWT.LEFT, 140,true );
       tableColumn.setToolTipText(BARControl.tr("Click to sort for date."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      widgetEntryList.addListener(SWT.MouseDoubleClick,new Listener()
+      widgetEntryTable.addListener(SWT.MouseDoubleClick,new Listener()
       {
         public void handleEvent(final Event event)
         {
-          TableItem tableItem = widgetEntryList.getItem(new Point(event.x,event.y));
+          TableItem tableItem = widgetEntryTable.getItem(new Point(event.x,event.y));
           if (tableItem != null)
           {
             tableItem.setChecked(!tableItem.getChecked());
@@ -2519,7 +2453,7 @@ class TabRestore
           }
         }
       });
-      widgetEntryList.addSelectionListener(new SelectionListener()
+      widgetEntryTable.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -2536,7 +2470,7 @@ class TabRestore
           checkedEntryEvent.trigger();
         }
       });
-      widgetEntryList.addMouseTrackListener(new MouseTrackListener()
+      widgetEntryTable.addMouseTrackListener(new MouseTrackListener()
       {
         public void mouseEnter(MouseEvent mouseEvent)
         {
@@ -2551,10 +2485,10 @@ class TabRestore
           Table     table     = (Table)mouseEvent.widget;
           TableItem tableItem = table.getItem(new Point(mouseEvent.x,mouseEvent.y));
 
-          if (widgetEntryListToolTip != null)
+          if (widgetEntryTableToolTip != null)
           {
-            widgetEntryListToolTip.dispose();
-            widgetEntryListToolTip = null;
+            widgetEntryTableToolTip.dispose();
+            widgetEntryTableToolTip = null;
           }
 
           if ((tableItem != null) && (mouseEvent.x < 64))
@@ -2566,11 +2500,11 @@ class TabRestore
             final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
             final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 
-            widgetEntryListToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
-            widgetEntryListToolTip.setBackground(COLOR_BACKGROUND);
-            widgetEntryListToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
-            Widgets.layout(widgetEntryListToolTip,0,0,TableLayoutData.NSWE);
-            widgetEntryListToolTip.addMouseTrackListener(new MouseTrackListener()
+            widgetEntryTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+            widgetEntryTableToolTip.setBackground(COLOR_BACKGROUND);
+            widgetEntryTableToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
+            Widgets.layout(widgetEntryTableToolTip,0,0,TableLayoutData.NSWE);
+            widgetEntryTableToolTip.addMouseTrackListener(new MouseTrackListener()
             {
               public void mouseEnter(MouseEvent mouseEvent)
               {
@@ -2578,8 +2512,8 @@ class TabRestore
 
               public void mouseExit(MouseEvent mouseEvent)
               {
-                widgetEntryListToolTip.dispose();
-                widgetEntryListToolTip = null;
+                widgetEntryTableToolTip.dispose();
+                widgetEntryTableToolTip = null;
               }
 
               public void mouseHover(MouseEvent mouseEvent)
@@ -2587,74 +2521,74 @@ class TabRestore
               }
             });
 
-            label = Widgets.newLabel(widgetEntryListToolTip,BARControl.tr("Storage")+":");
+            label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Storage")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,entryData.storageName);
+            label = Widgets.newLabel(widgetEntryTableToolTip,entryData.storageName);
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,BARControl.tr("Created")+":");
+            label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Created")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,simpleDateFormat.format(new Date(entryData.storageDateTime*1000)));
+            label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryData.storageDateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,1,TableLayoutData.WE);
 
-            control = Widgets.newSpacer(widgetEntryListToolTip);
+            control = Widgets.newSpacer(widgetEntryTableToolTip);
             Widgets.layout(control,2,0,TableLayoutData.WE,0,2,0,0,SWT.DEFAULT,1,SWT.DEFAULT,1,SWT.DEFAULT,1);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,BARControl.tr("Type")+":");
+            label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Type")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,entryData.type.toString());
+            label = Widgets.newLabel(widgetEntryTableToolTip,entryData.type.toString());
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,BARControl.tr("Name")+":");
+            label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Name")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,entryData.name);
+            label = Widgets.newLabel(widgetEntryTableToolTip,entryData.name);
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,BARControl.tr("Size")+":");
+            label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Size")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,5,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,String.format(BARControl.tr("%d bytes (%s)"),entryData.size,Units.formatByteSize(entryData.size)));
+            label = Widgets.newLabel(widgetEntryTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),entryData.size,Units.formatByteSize(entryData.size)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,5,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,BARControl.tr("Date")+":");
+            label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Date")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,6,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,simpleDateFormat.format(new Date(entryData.dateTime*1000)));
+            label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryData.dateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,6,1,TableLayoutData.WE);
 
-            Point size = widgetEntryListToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+            Point size = widgetEntryTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
             Rectangle bounds = tableItem.getBounds(0);
             Point point = table.toDisplay(mouseEvent.x+16,bounds.y);
-            widgetEntryListToolTip.setBounds(point.x,point.y,size.x,size.y);
-            widgetEntryListToolTip.setVisible(true);
+            widgetEntryTableToolTip.setBounds(point.x,point.y,size.x,size.y);
+            widgetEntryTableToolTip.setVisible(true);
           }
         }
       });
@@ -2713,7 +2647,7 @@ class TabRestore
           }
         });
       }
-      widgetEntryList.setMenu(menu);
+      widgetEntryTable.setMenu(menu);
 
       // entry list filter
       composite = Widgets.newComposite(group);
@@ -2978,15 +2912,19 @@ class TabRestore
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
-        for (TreeItem treeItem : widgetStorageTree.getItems())
+        for (TreeItem treeItem : Widgets.getTreeItems(widgetStorageTree))
+        {
+          treeItem.setChecked(false);
+        }
+        for (TreeItem treeItem : Widgets.getTreeItems(widgetStorageTree,true))
         {
           treeItem.setChecked(checked);
 
-          StorageData storageData = (StorageData)treeItem.getData();
-          storageData.setChecked(checked);
+          JobData jobData = (JobData)treeItem.getData();
+          jobData.setChecked(checked);
           if (checked)
           {
-            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD jobId=%d",storageData.id));
+            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD uuid=%'S",jobData.uuid));
           }
         }
         break;
@@ -2999,7 +2937,7 @@ class TabRestore
           storageData.setChecked(checked);
           if (checked)
           {
-            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD jobId=%d",storageData.id));
+            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageId=%d",storageData.id));
           }
         }
         break;
@@ -3170,14 +3108,14 @@ class TabRestore
    * @param jobData data of tree item
    * @return index in tree
    */
-  private int findStorageTreeIndex(JobData jobData)
+  private int findStorageTreeIndex(StorageData storageData)
   {
-    TreeItem          treeItems[]       = widgetStorageTree.getItems();
-    JobDataComparator jobDataComparator = new JobDataComparator(widgetStorageTree);
+    TreeItem              treeItems[]           = widgetStorageTree.getItems();
+    StorageDataComparator storageDataComparator = new StorageDataComparator(widgetStorageTree);
 
     int index = 0;
     while (   (index < treeItems.length)
-           && (jobDataComparator.compare(jobData,(JobData)treeItems[index].getData()) > 0)
+           && (storageDataComparator.compare(storageData,(StorageData)treeItems[index].getData()) > 0)
           )
     {
       index++;
@@ -3203,9 +3141,9 @@ class TabRestore
         if (!Widgets.updateTreeItem(widgetStorageTree,
                                     (Object)jobData,
                                     jobData.name,
-                                    Units.formatByteSize(jobData.totalSize),
-                                    simpleDateFormat.format(new Date(jobData.lastDateTime*1000)),
-                                    jobData.lastErrorMessage
+                                    Units.formatByteSize(jobData.size),
+                                    simpleDateFormat.format(new Date(jobData.dateTime*1000)),
+                                    jobData.errorMessage
                                    )
            )
         {
@@ -3214,13 +3152,13 @@ class TabRestore
                                                      (Object)jobData,
                                                      true,
                                                      jobData.name,
-                                                     Units.formatByteSize(jobData.totalSize),
-                                                     simpleDateFormat.format(new Date(jobData.lastDateTime*1000)),
-                                                     jobData.lastErrorMessage
+                                                     Units.formatByteSize(jobData.size),
+                                                     simpleDateFormat.format(new Date(jobData.dateTime*1000)),
+                                                     jobData.errorMessage
                                                     );
 
           // store tree item reference
-//          jobData.setTreeItem(treeItem);
+          jobData.setTreeItem(treeItem);
         }
 
         // update checkbox
@@ -3237,7 +3175,7 @@ class TabRestore
         if (!jobDataMap.containsValue(jobData))
         {
           Widgets.removeTreeItem(widgetStorageTree,jobData);
-//          storageData.setTreeItem(null);
+          jobData.setTreeItem(null);
         }
       }
     }
@@ -3276,22 +3214,10 @@ class TabRestore
 
     try
     {
-      long id = 0;
-      if      (treeItem.getData() instanceof JobData)
-      {
-        id = ((JobData)treeItem.getData()).id;
-      }
-      else if (treeItem.getData() instanceof StorageData)
-      {
-        id = ((StorageData)treeItem.getData()).jobId;
-      }
-      assert id != 0;
-
       String[] resultErrorMessage = new String[1];
       ValueMap resultMap          = new ValueMap();
-Dprintf.dprintf("-----------------------------------------------------");
-      Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST jobId=%d maxCount=%d indexState=%s indexMode=%s pattern=%'S",
-                                                                 id,
+      Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST uuid=%s maxCount=%d indexState=%s indexMode=%s pattern=%'S",
+                                                                 ((StorageData)treeItem.getData()).uuid,
                                                                  -1,
                                                                  "*",
                                                                  "*",
@@ -3309,7 +3235,7 @@ Dprintf.dprintf("-----------------------------------------------------");
           try
           {
             long        storageId           = resultMap.getLong  ("storageId"                   );
-            long        jobId               = resultMap.getLong  ("jobId"                       );
+            String      uuid                = resultMap.getString("uuid"                        );
             String      name                = resultMap.getString("name"                        );
             long        dateTime            = resultMap.getLong  ("dateTime"                    );
             long        size                = resultMap.getLong  ("size"                        );
@@ -3325,10 +3251,10 @@ Dprintf.dprintf("-----------------------------------------------------");
               storageData = storageDataMap.get(storageId);
               if (storageData != null)
               {
-                storageData.jobId               = jobId;
+                storageData.uuid                = uuid;
                 storageData.name                = name;
-                storageData.size                = size;
                 storageData.dateTime            = dateTime;
+                storageData.size                = size;
                 storageData.indexState          = indexState;
                 storageData.indexMode           = indexMode;
                 storageData.lastCheckedDateTime = lastCheckedDateTime;
@@ -3337,10 +3263,10 @@ Dprintf.dprintf("-----------------------------------------------------");
               else
               {
                 storageData = new StorageData(storageId,
-                                              jobId,
+                                              uuid,
                                               name,
-                                              size,
                                               dateTime,
+                                              size,
                                               new File(name).getName(),
                                               indexState,
                                               indexMode,
@@ -3412,7 +3338,7 @@ Dprintf.dprintf("-----------------------------------------------------");
 
   /** refresh storage list display
    */
-  private void refreshStorageList()
+  private void refreshStorageTable()
   {
 //??? instead of findStorageListIndex
     StorageDataComparator storageDataComparator = new StorageDataComparator(widgetStorageTable);
@@ -4009,7 +3935,7 @@ Dprintf.dprintf("");
 
           // refresh tree/list
           refreshStorageTree();
-          refreshStorageList();
+          refreshStorageTable();
         }
       }
     }
@@ -4234,7 +4160,7 @@ Dprintf.dprintf("");
    */
   private void setCheckedEntries(boolean checked)
   {
-    for (TableItem tableItem : widgetEntryList.getItems())
+    for (TableItem tableItem : widgetEntryTable.getItems())
     {
       tableItem.setChecked(checked);
 
@@ -4285,8 +4211,8 @@ Dprintf.dprintf("");
    */
   private int findEntryListIndex(EntryData entryData)
   {
-    TableItem           tableItems[]        = widgetEntryList.getItems();
-    EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryList);
+    TableItem           tableItems[]        = widgetEntryTable.getItems();
+    EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryTable);
 
     int index = 0;
     while (   (index < tableItems.length)
@@ -4304,10 +4230,10 @@ Dprintf.dprintf("");
   private void refreshEntryList()
   {
 // ??? statt findFileListIndex
-    EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryList);
+    EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryTable);
 
     // update
-    widgetEntryList.removeAll();
+    widgetEntryTable.removeAll();
     synchronized(entryDataMap)
     {
       for (EntryData entryData : entryDataMap.values())
@@ -4315,7 +4241,7 @@ Dprintf.dprintf("");
         switch (entryData.type)
         {
           case FILE:
-            Widgets.insertTableItem(widgetEntryList,
+            Widgets.insertTableItem(widgetEntryTable,
                                     findEntryListIndex(entryData),
                                     (Object)entryData,
                                     entryData.storageName,
@@ -4326,7 +4252,7 @@ Dprintf.dprintf("");
                                    );
             break;
           case IMAGE:
-            Widgets.insertTableItem(widgetEntryList,
+            Widgets.insertTableItem(widgetEntryTable,
                                     findEntryListIndex(entryData),
                                     (Object)entryData,
                                     entryData.storageName,
@@ -4337,7 +4263,7 @@ Dprintf.dprintf("");
                                    );
             break;
           case DIRECTORY:
-            Widgets.insertTableItem(widgetEntryList,
+            Widgets.insertTableItem(widgetEntryTable,
                                     findEntryListIndex(entryData),
                                     (Object)entryData,
                                     entryData.storageName,
@@ -4348,7 +4274,7 @@ Dprintf.dprintf("");
                                    );
             break;
           case LINK:
-            Widgets.insertTableItem(widgetEntryList,
+            Widgets.insertTableItem(widgetEntryTable,
                                     findEntryListIndex(entryData),
                                     (Object)entryData,
                                     entryData.storageName,
@@ -4359,7 +4285,7 @@ Dprintf.dprintf("");
                                    );
             break;
           case SPECIAL:
-            Widgets.insertTableItem(widgetEntryList,
+            Widgets.insertTableItem(widgetEntryTable,
                                     findEntryListIndex(entryData),
                                     (Object)entryData,
                                     entryData.storageName,
@@ -4370,7 +4296,7 @@ Dprintf.dprintf("");
                                    );
             break;
           case DEVICE:
-            Widgets.insertTableItem(widgetEntryList,
+            Widgets.insertTableItem(widgetEntryTable,
                                     findEntryListIndex(entryData),
                                     (Object)entryData,
                                     entryData.storageName,
@@ -4381,7 +4307,7 @@ Dprintf.dprintf("");
                                    );
             break;
           case SOCKET:
-            Widgets.insertTableItem(widgetEntryList,
+            Widgets.insertTableItem(widgetEntryTable,
                                     findEntryListIndex(entryData),
                                     (Object)entryData,
                                     entryData.storageName,
@@ -4393,7 +4319,7 @@ Dprintf.dprintf("");
             break;
         }
 
-        Widgets.setTableItemChecked(widgetEntryList,
+        Widgets.setTableItemChecked(widgetEntryTable,
                                     (Object)entryData,
                                     entryData.isChecked()
                                    );
