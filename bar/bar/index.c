@@ -57,7 +57,7 @@ LOCAL const struct
 };
 
 // current index database version
-#define CURRENT_INDEX_VERSION 3
+#define CURRENT_INDEX_VERSION 4
 
 /***************************** Datatypes *******************************/
 
@@ -73,19 +73,210 @@ LOCAL const struct
   extern "C" {
 #endif
 
+LOCAL Errors upgradeToVersion2(DatabaseHandle *indexDatabaseHandle)
+{
+  Errors error;
+
+  // add table hardlinks
+  error = Database_execute(indexDatabaseHandle,
+                           NULL,
+                           NULL,
+                           INDEX_TABLE_DEFINITION_HARDLINKS
+                          );
+  if (error != ERROR_NONE) return error;
+
+  return ERROR_NONE;
+}
+
+LOCAL Errors upgradeToVersion3(DatabaseHandle *indexDatabaseHandle)
+{
+  Errors error;
+
+  // add uuid to storage
+  error = Database_execute(indexDatabaseHandle,
+                           NULL,
+                           NULL,
+                           "ALTER TABLE storage ADD COLUMN uuid TEXT"
+                          );
+  if (error != ERROR_NONE) return error;
+
+  return ERROR_NONE;
+}
+
+LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          storageId;
+  String              uuid,created;
+  DatabaseId          jobId;
+
+  // init variables
+  uuid    = String_new();
+  created = String_new();
+
+  // fill jobs table
+  error = Database_prepare(&databaseQueryHandle,
+                           indexDatabaseHandle,
+                           "SELECT id, \
+                                   uuid, \
+                                   created \
+                            FROM storage \
+                            GROUP BY uuid; \
+                           "
+                          );
+  if (error != ERROR_NONE)
+  {
+    String_delete(created);
+    String_delete(uuid);
+    return error;
+  }
+  while (Database_getNextRow(&databaseQueryHandle,
+                             "%lld %S %S",
+                             &storageId,
+                             uuid,
+                             created
+                            )
+        )
+  {
+    error = Database_execute(indexDatabaseHandle,
+                             NULL,
+                             NULL,
+                             "INSERT INTO jobs \
+                                (\
+                                 name,\
+                                 uuid,\
+                                 created,\
+                                 type,\
+                                 bidFlag\
+                                ) \
+                              VALUES \
+                               (\
+                                '',\
+                                %'S,\
+                                %'S,\
+                                0,\
+                                0\
+                               ); \
+                             ",
+                             uuid,
+                             created
+                            );
+    if (error != ERROR_NONE)
+    {
+      String_delete(created);
+      String_delete(uuid);
+      Database_finalize(&databaseQueryHandle);
+      return error;
+    }
+  }
+  Database_finalize(&databaseQueryHandle);
+
+  // add jobId to storage
+  error = Database_addColumn(indexDatabaseHandle,
+                             "storage",
+                             "jobId",
+                             DATABASE_TYPE_FOREIGN_KEY
+                            );
+  if (error != ERROR_NONE)
+  {
+    String_delete(created);
+    String_delete(uuid);
+    return error;
+  }
+
+  // set jobId in storage entries
+  error = Database_prepare(&databaseQueryHandle,
+                           indexDatabaseHandle,
+                           "SELECT id, \
+                                   uuid \
+                            FROM storage \
+                           "
+                          );
+  if (error != ERROR_NONE)
+  {
+    String_delete(created);
+    String_delete(uuid);
+    return error;
+  }
+  while (Database_getNextRow(&databaseQueryHandle,
+                             "%lld %S",
+                             &storageId,
+                             uuid
+                            )
+        )
+  {
+    error = Database_getInteger64(indexDatabaseHandle,
+                                  &jobId,
+                                  "jobs",
+                                  "id",
+                                  "WHERE uuid=%'S",
+                                  uuid
+                                 );
+    if (error != ERROR_NONE)
+    {
+      String_delete(created);
+      String_delete(uuid);
+      Database_finalize(&databaseQueryHandle);
+      return error;
+    }
+    error = Database_execute(indexDatabaseHandle,
+                             NULL,
+                             NULL,
+                             "UPDATE storage \
+                              SET jobId=%llu \
+                              WHERE id=%llu; \
+                             ",
+                             jobId,
+                             storageId
+                            );
+    if (error != ERROR_NONE)
+    {
+      String_delete(created);
+      String_delete(uuid);
+      Database_finalize(&databaseQueryHandle);
+      return error;
+    }
+  }
+  Database_finalize(&databaseQueryHandle);
+
+#warning remove #if 0
+#if 0
+  // remove uuid from storage
+  error = Database_removeColumn(indexDatabaseHandle,
+                                "storage",
+                                "uuid"
+                               );
+  if (error != ERROR_NONE)
+  {
+    String_delete(created);
+    String_delete(uuid);
+    return error;
+  }
+#endif
+
+  // free resources
+  String_delete(created);
+  String_delete(uuid);
+
+  return error;
+}
+
 /***********************************************************************\
 * Name   : initIndexQueryHandle
 * Purpose: init index query handle
 * Input  : indexQueryHandle - index query handle
+*          databaseHandle   - database handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initIndexQueryHandle(IndexQueryHandle *indexQueryHandle)
+LOCAL void initIndexQueryHandle(IndexQueryHandle *indexQueryHandle, DatabaseHandle *databaseHandle)
 {
   assert(indexQueryHandle != NULL);
 
+  indexQueryHandle->databaseHandle             = databaseHandle;
   indexQueryHandle->storage.type               = STORAGE_TYPE_NONE;
   indexQueryHandle->storage.storageNamePattern = NULL;
   indexQueryHandle->storage.hostNamePattern    = NULL;
@@ -374,7 +565,7 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
   Errors error;
   int64  indexVersion;
 
-  // open/create datbase
+  // open/create database
   if (File_existsCString(indexDatabaseFileName))
   {
     // open index database
@@ -400,20 +591,20 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
     {
       return error;
     }
-    error = Database_execute(indexDatabaseHandle,
-                             NULL,
-                             NULL,
-                             INDEX_TABLE_DEFINITION
-                            );
-    if (error != ERROR_NONE)
-    {
-      #ifdef NDEBUG
-        Database_close(indexDatabaseHandle);
-      #else /* not NDEBUG */
-        __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
-      #endif /* NDEBUG */
-      return error;
-    }
+  }
+  error = Database_execute(indexDatabaseHandle,
+                           NULL,
+                           NULL,
+                           INDEX_TABLE_DEFINITION
+                          );
+  if (error != ERROR_NONE)
+  {
+    #ifdef NDEBUG
+      Database_close(indexDatabaseHandle);
+    #else /* not NDEBUG */
+      __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+    #endif /* NDEBUG */
+    return error;
   }
 
   // disable synchronous mode and journal to increase transaction speed
@@ -451,47 +642,30 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
     switch (indexVersion)
     {
       case 1:
-        // add table hardlinks
-        error = Database_execute(indexDatabaseHandle,
-                                 NULL,
-                                 NULL,
-                                 INDEX_TABLE_DEFINITION_HARDLINKS
-                                );
-        if (error != ERROR_NONE)
-        {
-          #ifdef NDEBUG
-            Database_close(indexDatabaseHandle);
-          #else /* not NDEBUG */
-            __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
-          #endif /* NDEBUG */
-          return error;
-        }
-
+        error = upgradeToVersion2(indexDatabaseHandle);
         indexVersion = 2;
       case 2:
-        // add UUID to storage
-        error = Database_execute(indexDatabaseHandle,
-                                 NULL,
-                                 NULL,
-                                 "ALTER TABLE storage ADD COLUMN uuid TEXT"
-                                );
-        if (error != ERROR_NONE)
-        {
-          #ifdef NDEBUG
-            Database_close(indexDatabaseHandle);
-          #else /* not NDEBUG */
-            __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
-          #endif /* NDEBUG */
-          return error;
-        }
-
+        error = upgradeToVersion3(indexDatabaseHandle);
         indexVersion = 3;
+        break;
+      case 3:
+        error = upgradeToVersion4(indexDatabaseHandle);
+        indexVersion = 4;
         break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           break;
       #endif
+    }
+    if (error != ERROR_NONE)
+    {
+      #ifdef NDEBUG
+        Database_close(indexDatabaseHandle);
+      #else /* not NDEBUG */
+        __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+      #endif /* NDEBUG */
+      return error;
     }
 
     // update version
@@ -603,6 +777,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                                    state, \
                                    STRFTIME('%%s',lastChecked) \
                             FROM storage \
+                            WHERE id!=0 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -721,7 +896,8 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
                                    uuid, \
                                    STRFTIME('%%s',lastChecked) \
                             FROM storage \
-                            WHERE state IN (%S) \
+                            WHERE     id!=0 \
+                                  AND state IN (%S) \
                            ",
                            getIndexStateSetString(indexStateSetString,indexStateSet)
                           );
@@ -1131,8 +1307,57 @@ long Index_countState(DatabaseHandle *databaseHandle,
   return count;
 }
 
+Errors Index_initListJobs(IndexQueryHandle *indexQueryHandle,
+                          DatabaseHandle   *databaseHandle
+                         )
+{
+  Errors error;
+
+  assert(indexQueryHandle != NULL);
+  assert(databaseHandle != NULL);
+
+  initIndexQueryHandle(indexQueryHandle,databaseHandle);
+
+  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                           databaseHandle,
+                           "SELECT jobs.id, \
+                                   jobs.uuid, \
+                                   STRFTIME('%%s',(SELECT created FROM storage WHERE jobId=jobs.id ORDER BY created DESC LIMIT 0,1)), \
+                                   (SELECT SUM(size) FROM storage WHERE jobId=jobs.id), \
+                                   (SELECT errorMessage FROM storage WHERE jobId=jobs.id ORDER BY created DESC LIMIT 0,1) \
+                            FROM jobs \
+                            GROUP BY uuid; \
+                           "
+                          );
+
+  return error;
+}
+
+bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
+                      DatabaseId       *databaseId,
+                      String           uuid,
+                      uint64           *lastCreatedDateTime,
+                      uint64           *totalSize,
+                      String           lastErrorMessage
+                     )
+{
+  DatabaseQueryHandle databaseQueryHandle;
+
+  assert(indexQueryHandle != NULL);
+
+  return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
+                             "%lld %S %lld %lld %S",
+                             databaseId,
+                             uuid,
+                             lastCreatedDateTime,
+                             totalSize,
+                             lastErrorMessage
+                            );
+}
+
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
+                             DatabaseId       jobId,
                              StorageTypes     storageType,
                              const String     storageName,
                              const String     hostName,
@@ -1148,7 +1373,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  initIndexQueryHandle(indexQueryHandle);
+  initIndexQueryHandle(indexQueryHandle,databaseHandle);
   indexQueryHandle->storage.type = storageType;
   if (storageName != NULL) indexQueryHandle->storage.storageNamePattern = Pattern_new(storageName,PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
   if (hostName    != NULL) indexQueryHandle->storage.hostNamePattern    = Pattern_new(hostName,   PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
@@ -1160,7 +1385,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
                            "SELECT id, \
-                                   uuid, \
+                                   jobId, \
                                    name, \
                                    STRFTIME('%%s',created), \
                                    size, \
@@ -1169,9 +1394,11 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                                    STRFTIME('%%s',lastChecked), \
                                    errorMessage \
                             FROM storage \
-                            WHERE state IN (%S) \
+                            WHERE (%d OR (jobId=%lld)) AND state IN (%S) \
                             ORDER BY created DESC \
                            ",
+                           (jobId == DATABASE_ID_NONE) ? 1 : 0,
+                           jobId,
                            getIndexStateSetString(indexStateSetString,indexStateSet)
                           );
   String_delete(indexStateSetString);
@@ -1181,9 +1408,9 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           DatabaseId       *databaseId,
-                          String           uuid,
+                          DatabaseId       *jobId,
                           String           storageName,
-                          uint64           *createDateTime,
+                          uint64           *createdDateTime,
                           uint64           *size,
                           IndexStates      *indexState,
                           IndexModes       *indexMode,
@@ -1200,11 +1427,11 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   foundFlag = FALSE;
   while (   !foundFlag
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                                "%lld %S %S %llu %llu %d %d %llu %S",
+                                "%lld %lld %S %llu %llu %d %d %llu %S",
                                 databaseId,
-                                uuid,
+                                jobId,
                                 storageName,
-                                createDateTime,
+                                createdDateTime,
                                 size,
                                 indexState,
                                 indexMode,
@@ -1308,7 +1535,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  initIndexQueryHandle(indexQueryHandle);
+  initIndexQueryHandle(indexQueryHandle,databaseHandle);
 
   regexpString = getREGEXPString(String_new(),"files.name",pattern);
 
@@ -1415,7 +1642,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  initIndexQueryHandle(indexQueryHandle);
+  initIndexQueryHandle(indexQueryHandle,databaseHandle);
 
   regexpString = getREGEXPString(String_new(),"images.name",pattern);
 
@@ -1513,7 +1740,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  initIndexQueryHandle(indexQueryHandle);
+  initIndexQueryHandle(indexQueryHandle,databaseHandle);
 
   regexpString = getREGEXPString(String_new(),"directories.name",pattern);
 
@@ -1611,7 +1838,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  initIndexQueryHandle(indexQueryHandle);
+  initIndexQueryHandle(indexQueryHandle,databaseHandle);
 
   regexpString = getREGEXPString(String_new(),"links.name",pattern);
 
@@ -1712,7 +1939,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  initIndexQueryHandle(indexQueryHandle);
+  initIndexQueryHandle(indexQueryHandle,databaseHandle);
 
   regexpString = getREGEXPString(String_new(),"hardlinks.name",pattern);
 
@@ -1819,7 +2046,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  initIndexQueryHandle(indexQueryHandle);
+  initIndexQueryHandle(indexQueryHandle,databaseHandle);
 
   regexpString = getREGEXPString(String_new(),"special.name",pattern);
 

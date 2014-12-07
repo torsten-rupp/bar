@@ -70,6 +70,7 @@ typedef uint64 IndexModeSet;
 // index query handle
 typedef struct
 {
+  DatabaseHandle      *databaseHandle;
   DatabaseQueryHandle databaseQueryHandle;
   struct
   {
@@ -306,7 +307,8 @@ Errors Index_create(DatabaseHandle *databaseHandle,
 
 /***********************************************************************\
 * Name   : Index_delete
-* Purpose: delete index
+* Purpose: delete index including attached files, image,
+*          directories, link, hard link, special entries
 * Input  : databaseHandle - database handle
 *          storageId      - database id of index
 * Output : -
@@ -397,7 +399,7 @@ Errors Index_setState(DatabaseHandle *databaseHandle,
 
 /***********************************************************************\
 * Name   : Index_countState
-* Purpose: get number of storage entries
+* Purpose: get number of storage entries with specific state
 * Input  : databaseHandle - database handle
 *          indexState     - index state; see IndexStates
 * Output : -
@@ -410,10 +412,47 @@ long Index_countState(DatabaseHandle *databaseHandle,
                      );
 
 /***********************************************************************\
+* Name   : Index_initListJobs
+* Purpose: list job entries
+* Input  : IndexQueryHandle - index query handle variable
+*          databaseHandle   - database handle
+*          name             - name pattern (glob) or NULL
+* Output : IndexQueryHandle - index query handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_initListJobs(IndexQueryHandle *indexQueryHandle,
+                          DatabaseHandle   *databaseHandle
+                         );
+
+/***********************************************************************\
+* Name   : Index_getNextJob
+* Purpose: get next index job entry
+* Input  : IndexQueryHandle - index query handle
+* Output : databaseId          - database id of entry
+*          uuid                - unique id (can be NULL)
+*          lastCreatedDateTime - date/time stamp [s] (can be NULL)
+*          totalSize           - total size [bytes] (can be NULL)
+*          lastErrorMessage    - last error message (can be NULL)
+* Return : TRUE if entry read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
+                      DatabaseId       *databaseId,
+                      String           uuid,
+                      uint64           *lastCreatedDateTime,
+                      uint64           *totalSize,
+                      String           lastErrorMessage
+                     );
+
+/***********************************************************************\
 * Name   : Index_initListStorage
 * Purpose: list storage entries
 * Input  : IndexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
+*          jobId            - job id or DATABASE_ID_NONE
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
 *          storageName      - storage name pattern (glob) or NULL
 *          hostName         - host name pattern (glob) or NULL
@@ -428,6 +467,7 @@ long Index_countState(DatabaseHandle *databaseHandle,
 
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
+                             DatabaseId       jobId,
                              StorageTypes     storageType,
                              const String     storageName,
                              const String     hostName,
@@ -442,8 +482,8 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 * Purpose: get next index storage entry
 * Input  : IndexQueryHandle    - index query handle
 * Output : databaseId          - database id of entry
+*          jobId               - job id (can be NULL)
 *          storageName         - storage name (can be NULL)
-*          uuid                - unique id (can be NULL)
 *          createdDateTime     - date/time stamp [s]
 *          size                - size [bytes]
 *          indexState          - index state (can be NULL)
@@ -456,8 +496,8 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           DatabaseId       *databaseId,
+                          DatabaseId       *jobId,
                           String           storageName,
-                          String           uuid,
                           uint64           *createdDateTime,
                           uint64           *size,
                           IndexStates      *indexState,
