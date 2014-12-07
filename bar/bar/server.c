@@ -2959,7 +2959,7 @@ LOCAL void indexCleanup(void)
   // delete storage entries without name
   error = Index_initListStorage(&indexQueryHandle,
                                 indexDatabaseHandle,
-                                DATABASE_ID_NONE,
+                                NULL, // uuid
                                 STORAGE_TYPE_ANY,
                                 NULL, // storageName
                                 NULL, // hostName
@@ -3078,7 +3078,7 @@ LOCAL void indexCleanup(void)
   duplicateStorageName = String_new();
   error = Index_initListStorage(&indexQueryHandle1,
                                 indexDatabaseHandle,
-                                DATABASE_ID_NONE,
+                                NULL, // uuid
                                 STORAGE_TYPE_ANY,
                                 NULL, // storageName
                                 NULL, // hostName
@@ -3104,7 +3104,7 @@ LOCAL void indexCleanup(void)
     {
       error = Index_initListStorage(&indexQueryHandle2,
                                     indexDatabaseHandle,
-                                    DATABASE_ID_NONE,
+                                    NULL, // uuid
                                     STORAGE_TYPE_ANY,
                                     NULL, // storageName
                                     NULL, // hostName
@@ -3590,7 +3590,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
     // delete not existing indizes
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
-                                  DATABASE_ID_NONE,
+                                  NULL, // uuid
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -8073,26 +8073,71 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <storage id>
+*            uuid=<uuid> and/or storageId=<storage id>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  DatabaseId storageId;
+  String           uuid;
+  DatabaseId       storageId;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get storage id
-  if (!StringMap_getInt64(argumentMap,"jobId",&storageId,0))
+  // get uuid or storage id
+  uuid = String_new();
+  if (   !StringMap_getString(argumentMap,"uuid",uuid,0)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,0)
+     )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<storage id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid>");
+    String_delete(uuid);
     return;
   }
 
-  // add to storage id array
-  Array_append(clientInfo->storageIdArray,&storageId);
+  if (!String_isEmpty(uuid))
+  {
+    // add all storage ids with specified uuid
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  uuid,
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error == ERROR_NONE)
+    {
+      while (Index_getNextStorage(&indexQueryHandle,
+                                  &storageId,
+                                  NULL, // uuid
+                                  NULL, // storageName
+                                  NULL, // createdDateTime
+                                  NULL, // size
+                                  NULL, // indexState
+                                  NULL, // indexMode
+                                  NULL, // lastCheckedDateTime
+                                  NULL  // errorMessage
+                                 )
+            )
+      {
+        Array_append(clientInfo->storageIdArray,&storageId);
+      }
+      Index_doneList(&indexQueryHandle);
+    }
+  }
+
+  if (storageId != DATABASE_ID_NONE)
+  {
+    // add to storage id array
+    Array_append(clientInfo->storageIdArray,&storageId);
+  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -8355,12 +8400,11 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
   {
     LIST_NODE_HEADER(struct JobDataNode);
 
-    DatabaseId id;
-    String     name;
-    String     uuid;
-    uint64     lastCreatedDateTime;
-    uint64     totalSize;
-    String     lastErrorMessage;
+    String uuid;
+    String name;
+    uint64 lastCreatedDateTime;
+    uint64 totalSize;
+    String lastErrorMessage;
   } JobDataNode;
 
   typedef struct
@@ -8372,15 +8416,15 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
   void freeJobDataNode(JobDataNode *jobDataNode, void *userData)
   {
     assert(jobDataNode != NULL);
-    assert(jobDataNode->name != NULL);
     assert(jobDataNode->uuid != NULL);
+    assert(jobDataNode->name != NULL);
     assert(jobDataNode->lastErrorMessage != NULL);
 
     UNUSED_VARIABLE(userData);
 
+    String_delete(jobDataNode->lastErrorMessage);
     String_delete(jobDataNode->name);
     String_delete(jobDataNode->uuid);
-    String_delete(jobDataNode->lastErrorMessage);
   }
 
   // compare job data nodes
@@ -8400,7 +8444,6 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
   JobDataList      jobDataList;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
-  DatabaseId       jobId;
   String           uuid;
   uint64           lastCreatedDateTime;
   uint64           totalSize;
@@ -8427,10 +8470,10 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
     uuid             = String_new();
     lastErrorMessage = String_new();
 
-    // list index
-    error = Index_initListJobs(&indexQueryHandle,
-                               indexDatabaseHandle
-                              );
+    // get uuids
+    error = Index_initListUUIDs(&indexQueryHandle,
+                                indexDatabaseHandle
+                               );
     if (error != ERROR_NONE)
     {
       String_delete(lastErrorMessage);
@@ -8442,14 +8485,13 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
       String_delete(patternText);
       return;
     }
-    while (   !isCommandAborted(clientInfo,id)
-           && Index_getNextJob(&indexQueryHandle,
-                               &jobId,
-                               uuid,
-                               &lastCreatedDateTime,
-                               &totalSize,
-                               lastErrorMessage
-                              )
+    while (   1//!isCommandAborted(clientInfo,id)
+           && Index_getNextUUID(&indexQueryHandle,
+                                uuid,
+                                &lastCreatedDateTime,
+                                &totalSize,
+                                lastErrorMessage
+                               )
           )
     {
       jobDataNode = LIST_NEW_NODE(JobDataNode);
@@ -8466,9 +8508,8 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
         return;
       }
 
-      jobDataNode->id                  = jobId;
-      jobDataNode->name                = String_duplicate(uuid);
       jobDataNode->uuid                = String_duplicate(uuid);
+      jobDataNode->name                = String_duplicate(uuid);
       jobDataNode->lastCreatedDateTime = lastCreatedDateTime;
       jobDataNode->totalSize           = totalSize;
       jobDataNode->lastErrorMessage    = String_duplicate(lastErrorMessage);
@@ -8495,10 +8536,9 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
     LIST_ITERATE(&jobDataList,jobDataNode)
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "jobId=%llu name=%'S uuid=%'S lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
-                       jobDataNode->id,
-                       jobDataNode->name,
+                       "uuid=%'S name=%'S lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
                        jobDataNode->uuid,
+                       jobDataNode->name,
                        jobDataNode->lastCreatedDateTime,
                        jobDataNode->totalSize,
                        jobDataNode->lastErrorMessage
@@ -8615,7 +8655,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  DatabaseId       jobId;
+  String           uuidText;
   uint             maxCount;
   IndexStateSet    indexStateSet;
   IndexModeSet     indexModeSet;
@@ -8639,15 +8679,17 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   assert(argumentMap != NULL);
 
   // get job id, max. count, status pattern, filter pattern,
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"jobId","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"uuid","*"),"*"))
   {
-    jobId = DATABASE_ID_NONE;
+    uuidText = NULL;
   }
   else
   {
-    if (!StringMap_getInt64(argumentMap,"jobId",&jobId,0))
+    uuidText = String_new();
+    if (!StringMap_getString(argumentMap,"uuid",uuidText,0))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<job id>");
+      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid>");
+      String_delete(uuidText);
       return;
     }
   }
@@ -8655,17 +8697,20 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   if (!StringMap_getEnumSet(argumentMap,"indexState",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    String_delete(uuidText);
     return;
   }
   if (!StringMap_getEnumSet(argumentMap,"indexMode",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_ALL,"|",0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO|*");
+    String_delete(uuidText);
     return;
   }
   patternText = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternText,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
+    String_delete(uuidText);
     return;
   }
 
@@ -8681,7 +8726,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     // list index
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
-                                  jobId,
+                                  uuidText,
                                   STORAGE_TYPE_ANY,
                                   patternText,
                                   NULL, // hostName
@@ -8701,6 +8746,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
 
       String_delete(patternText);
+      String_delete(uuidText);
       return;
     }
     n = 0L;
@@ -8708,7 +8754,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
            && !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
                                    &storageId,
-                                   &jobId,
+                                   uuid,
                                    storageName,
                                    &storageDateTime,
                                    &size,
@@ -8731,9 +8777,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
       }
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "storageId=%llu jobId=%llu name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
+                       "storageId=%llu uuid=%'S name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                        storageId,
-                       jobId,
+                       uuid,
                        printableStorageName,
                        storageDateTime,
                        size,
@@ -8762,6 +8808,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 
   // free resources
   String_delete(patternText);
+  String_delete(uuidText);
 }
 
 /***********************************************************************\
@@ -8800,8 +8847,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
   {
     // create index
     error = Index_create(indexDatabaseHandle,
-                         storageName,
                          NULL, // uuid
+                         storageName,
                          INDEX_STATE_UPDATE_REQUESTED,
                          INDEX_MODE_MANUAL,
                          &storageId
@@ -8900,7 +8947,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
       // delete indizes
       error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
-                                    DATABASE_ID_NONE,
+                                    NULL, // uuid
                                     STORAGE_TYPE_ANY,
                                     NULL, // storageName
                                     NULL, // hostName
@@ -9044,7 +9091,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     {
       error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
-                                    DATABASE_ID_NONE,
+                                    NULL, // uuid
                                     STORAGE_TYPE_ANY,
                                     NULL, // storageName
                                     NULL, // hostName
@@ -10620,7 +10667,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       break;
   }
 
-  Array_delete(clientInfo->storageIdArray,NULL,NULL);
+  Array_delete(clientInfo->storageIdArray,CALLBACK(NULL,NULL));
   List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
   doneJobOptions(&clientInfo->jobOptions);
   PatternList_done(&clientInfo->compressExcludePatternList);
