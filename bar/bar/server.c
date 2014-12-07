@@ -561,10 +561,10 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("crypt-public-key",        JobNode,jobOptions.cryptPublicKeyFileName       ),
 
+  CONFIG_STRUCT_VALUE_STRING   ("mount-device",            JobNode,jobOptions.mountDeviceName              ),
+
   CONFIG_STRUCT_VALUE_STRING   ("pre-command",             JobNode,jobOptions.preProcessCommand            ),
   CONFIG_STRUCT_VALUE_STRING   ("post-command",            JobNode,jobOptions.postProcessCommand           ),
-
-  CONFIG_STRUCT_VALUE_STRING   ("mount-device",            JobNode,jobOptions.mountDeviceName              ),
 
   CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",          JobNode,jobOptions.ftpServer.loginName          ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
@@ -1168,7 +1168,7 @@ LOCAL JobNode *findJobById(uint jobId)
 /***********************************************************************\
 * Name   : findJobByName
 * Purpose: find job by name
-* Input  : naem - job name
+* Input  : name - job name
 * Output : -
 * Return : job node or NULL if not found
 * Notes  : -
@@ -1180,6 +1180,28 @@ LOCAL JobNode *findJobByName(const String name)
 
   jobNode = jobList.head;
   while ((jobNode != NULL) && !String_equals(jobNode->name,name))
+  {
+    jobNode = jobNode->next;
+  }
+
+  return jobNode;
+}
+
+/***********************************************************************\
+* Name   : findJobByUUID
+* Purpose: find job by uuid
+* Input  : uuid - job uuid
+* Output : -
+* Return : job node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL JobNode *findJobByUUID(const String uuid)
+{
+  JobNode *jobNode;
+
+  jobNode = jobList.head;
+  while ((jobNode != NULL) && !String_equals(jobNode->uuid,uuid))
   {
     jobNode = jobNode->next;
   }
@@ -1694,6 +1716,7 @@ LOCAL bool readJob(JobNode *jobNode)
   if (jobNode->jobOptions.sshServer.password != NULL) Password_clear(jobNode->jobOptions.sshServer.password);
   String_clear(jobNode->jobOptions.sshServer.publicKeyFileName);
   String_clear(jobNode->jobOptions.sshServer.privateKeyFileName);
+  String_clear(jobNode->jobOptions.mountDeviceName);
   String_clear(jobNode->jobOptions.preProcessCommand);
   String_clear(jobNode->jobOptions.postProcessCommand);
   jobNode->jobOptions.device.volumeSize            = 0LL;
@@ -2286,18 +2309,21 @@ LOCAL void jobThreadCode(void)
     if (jobNode->runningInfo.error == ERROR_NONE)
     {
       TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name));
-      jobNode->runningInfo.error = Misc_executeScript(String_cString(jobNode->jobOptions.preProcessCommand),
-                                                      textMacros,SIZE_OF_ARRAY(textMacros),
-                                                      CALLBACK(executeIOOutput,NULL),
-                                                      CALLBACK(executeIOOutput,NULL)
-                                                     );
-      if (jobNode->runningInfo.error != ERROR_NONE)
+      if (jobNode->jobOptions.preProcessCommand != NULL)
       {
-        logMessage(LOG_TYPE_ALWAYS,
-                   "Aborted job '%s': pre-command fail (error: %s)\n",
-                   String_cString(jobNode->name),
-                   Error_getText(jobNode->runningInfo.error)
-                  );
+        jobNode->runningInfo.error = Misc_executeScript(String_cString(jobNode->jobOptions.preProcessCommand),
+                                                        textMacros,SIZE_OF_ARRAY(textMacros),
+                                                        CALLBACK(executeIOOutput,NULL),
+                                                        CALLBACK(executeIOOutput,NULL)
+                                                       );
+        if (jobNode->runningInfo.error != ERROR_NONE)
+        {
+          logMessage(LOG_TYPE_ALWAYS,
+                     "Aborted job '%s': pre-command fail (error: %s)\n",
+                     String_cString(jobNode->name),
+                     Error_getText(jobNode->runningInfo.error)
+                    );
+        }
       }
     }
 
@@ -2423,18 +2449,21 @@ LOCAL void jobThreadCode(void)
     if (jobNode->runningInfo.error == ERROR_NONE)
     {
       TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name));
-      jobNode->runningInfo.error = Misc_executeScript(String_cString(jobNode->jobOptions.postProcessCommand),
-                                                      textMacros,SIZE_OF_ARRAY(textMacros),
-                                                      CALLBACK(executeIOOutput,NULL),
-                                                      CALLBACK(executeIOOutput,NULL)
-                                                     );
-      if (jobNode->runningInfo.error != ERROR_NONE)
+      if (jobNode->jobOptions.postProcessCommand != NULL)
       {
-        logMessage(LOG_TYPE_ALWAYS,
-                   "Aborted job '%s': post-command fail (error: %s)\n",
-                   String_cString(jobNode->name),
-                   Error_getText(jobNode->runningInfo.error)
-                  );
+        jobNode->runningInfo.error = Misc_executeScript(String_cString(jobNode->jobOptions.postProcessCommand),
+                                                        textMacros,SIZE_OF_ARRAY(textMacros),
+                                                        CALLBACK(executeIOOutput,NULL),
+                                                        CALLBACK(executeIOOutput,NULL)
+                                                       );
+        if (jobNode->runningInfo.error != ERROR_NONE)
+        {
+          logMessage(LOG_TYPE_ALWAYS,
+                     "Aborted job '%s': post-command fail (error: %s)\n",
+                     String_cString(jobNode->name),
+                     Error_getText(jobNode->runningInfo.error)
+                    );
+        }
       }
     }
 
@@ -2930,6 +2959,7 @@ LOCAL void indexCleanup(void)
   // delete storage entries without name
   error = Index_initListStorage(&indexQueryHandle,
                                 indexDatabaseHandle,
+                                DATABASE_ID_NONE,
                                 STORAGE_TYPE_ANY,
                                 NULL, // storageName
                                 NULL, // hostName
@@ -2942,7 +2972,7 @@ LOCAL void indexCleanup(void)
   {
     while (Index_getNextStorage(&indexQueryHandle,
                                 &storageId,
-                                NULL, // uuid
+                                NULL, // jobId
                                 storageName,
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -3048,6 +3078,7 @@ LOCAL void indexCleanup(void)
   duplicateStorageName = String_new();
   error = Index_initListStorage(&indexQueryHandle1,
                                 indexDatabaseHandle,
+                                DATABASE_ID_NONE,
                                 STORAGE_TYPE_ANY,
                                 NULL, // storageName
                                 NULL, // hostName
@@ -3060,7 +3091,7 @@ LOCAL void indexCleanup(void)
   {
     while (Index_getNextStorage(&indexQueryHandle1,
                                 &storageId,
-                                NULL, // uuid
+                                NULL, // jobId
                                 storageName,
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -3073,6 +3104,7 @@ LOCAL void indexCleanup(void)
     {
       error = Index_initListStorage(&indexQueryHandle2,
                                     indexDatabaseHandle,
+                                    DATABASE_ID_NONE,
                                     STORAGE_TYPE_ANY,
                                     NULL, // storageName
                                     NULL, // hostName
@@ -3085,7 +3117,7 @@ LOCAL void indexCleanup(void)
       {
         while (Index_getNextStorage(&indexQueryHandle2,
                                     &duplicateStorageId,
-                                    NULL, // uuid
+                                    NULL, // jobId
                                     duplicateStorageName,
                                     NULL, // createdDateTime
                                     NULL, // size
@@ -3558,6 +3590,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
     // delete not existing indizes
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
+                                  DATABASE_ID_NONE,
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -3572,7 +3605,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
       dateTime = String_new();
       while (Index_getNextStorage(&indexQueryHandle,
                                   &storageId,
-                                  NULL, // uuid
+                                  NULL, // jobId
                                   storageName,
                                   &createdDateTime,
                                   NULL, // size
@@ -8295,6 +8328,200 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 }
 
 /***********************************************************************\
+* Name   : serverCommand_indexJobList
+* Purpose: get index database job list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            pattern=<pattern>
+*          Result:
+*            storageId=<storage id>
+*            name=<name>
+*            uuid=<uuid>
+*            lastDateTime=<created time stamp>
+*            totalSize=<size>
+*            lastErrorMessage=<error message>
+*            ...
+\***********************************************************************/
+
+LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  // job data list
+  typedef struct JobDataNode
+  {
+    LIST_NODE_HEADER(struct JobDataNode);
+
+    DatabaseId id;
+    String     name;
+    String     uuid;
+    uint64     lastCreatedDateTime;
+    uint64     totalSize;
+    String     lastErrorMessage;
+  } JobDataNode;
+
+  typedef struct
+  {
+    LIST_HEADER(JobDataNode);
+  } JobDataList;
+
+  // free job data node
+  void freeJobDataNode(JobDataNode *jobDataNode, void *userData)
+  {
+    assert(jobDataNode != NULL);
+    assert(jobDataNode->name != NULL);
+    assert(jobDataNode->uuid != NULL);
+    assert(jobDataNode->lastErrorMessage != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    String_delete(jobDataNode->name);
+    String_delete(jobDataNode->uuid);
+    String_delete(jobDataNode->lastErrorMessage);
+  }
+
+  // compare job data nodes
+  int compareJobDataNode(JobDataNode *jobDataNode1, JobDataNode *jobDataNode2, void *userData)
+  {
+    assert(jobDataNode1 != NULL);
+    assert(jobDataNode2 != NULL);
+    assert(jobDataNode1->name != NULL);
+    assert(jobDataNode2->name != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    return String_compare(jobDataNode1->name,jobDataNode2->name,CALLBACK(NULL,NULL));
+  }
+
+  String           patternText;
+  JobDataList      jobDataList;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       jobId;
+  String           uuid;
+  uint64           lastCreatedDateTime;
+  uint64           totalSize;
+  String           lastErrorMessage;
+  SemaphoreLock    semaphoreLock;
+  JobNode          *jobNode;
+  JobDataNode      *jobDataNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // filter pattern,
+  patternText = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternText,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
+    return;
+  }
+
+  if (indexDatabaseHandle != NULL)
+  {
+    // initialize variables
+    List_init(&jobDataList);
+    uuid             = String_new();
+    lastErrorMessage = String_new();
+
+    // list index
+    error = Index_initListJobs(&indexQueryHandle,
+                               indexDatabaseHandle
+                              );
+    if (error != ERROR_NONE)
+    {
+      String_delete(lastErrorMessage);
+      String_delete(uuid);
+      List_done(&jobDataList,CALLBACK((ListNodeFreeFunction)freeJobDataNode,NULL));
+
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init job list fail: %s",Error_getText(error));
+
+      String_delete(patternText);
+      return;
+    }
+    while (   !isCommandAborted(clientInfo,id)
+           && Index_getNextJob(&indexQueryHandle,
+                               &jobId,
+                               uuid,
+                               &lastCreatedDateTime,
+                               &totalSize,
+                               lastErrorMessage
+                              )
+          )
+    {
+      jobDataNode = LIST_NEW_NODE(JobDataNode);
+      if (jobDataNode == NULL)
+      {
+        Index_doneList(&indexQueryHandle);
+        String_delete(lastErrorMessage);
+        String_delete(uuid);
+        List_done(&jobDataList,CALLBACK((ListNodeFreeFunction)freeJobDataNode,NULL));
+
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get job list fail: insufficient memory");
+
+        String_delete(patternText);
+        return;
+      }
+
+      jobDataNode->id                  = jobId;
+      jobDataNode->name                = String_duplicate(uuid);
+      jobDataNode->uuid                = String_duplicate(uuid);
+      jobDataNode->lastCreatedDateTime = lastCreatedDateTime;
+      jobDataNode->totalSize           = totalSize;
+      jobDataNode->lastErrorMessage    = String_duplicate(lastErrorMessage);
+
+      List_append(&jobDataList,jobDataNode);
+    }
+    Index_doneList(&indexQueryHandle);
+
+    // fill in current job names, sort list by names
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+    {
+      LIST_ITERATE(&jobDataList,jobDataNode)
+      {
+        jobNode = findJobByUUID(jobDataNode->uuid);
+        if (jobNode != NULL)
+        {
+          String_set(jobDataNode->name,jobNode->name);
+        }
+      }
+    }
+    List_sort(&jobDataList,CALLBACK((ListNodeCompareFunction)compareJobDataNode,NULL));
+
+    // send results
+    LIST_ITERATE(&jobDataList,jobDataNode)
+    {
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                       "jobId=%llu name=%'S uuid=%'S lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
+                       jobDataNode->id,
+                       jobDataNode->name,
+                       jobDataNode->uuid,
+                       jobDataNode->lastCreatedDateTime,
+                       jobDataNode->totalSize,
+                       jobDataNode->lastErrorMessage
+                      );
+    }
+
+    // free resources
+    String_delete(lastErrorMessage);
+    String_delete(uuid);
+    List_done(&jobDataList,CALLBACK((ListNodeFreeFunction)freeJobDataNode,NULL));
+
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+  }
+
+  // free resources
+  String_delete(patternText);
+}
+
+/***********************************************************************\
 * Name   : serverCommand_indexStorageInfo
 * Purpose: get index database storage info
 * Input  : clientInfo    - client info
@@ -8377,7 +8604,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 *          Result:
 *            storageId=<storage id>
 *            name=<name>
-*            dateTime=<created date/time>
+*            dateTime=<created time stamp>
 *            size=<size>
 *            indexState=<state>
 *            indexMode=<mode>
@@ -8388,6 +8615,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
+  DatabaseId       jobId;
   uint             maxCount;
   IndexStateSet    indexStateSet;
   IndexModeSet     indexModeSet;
@@ -8410,7 +8638,19 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get max. count, status pattern, filter pattern,
+  // get job id, max. count, status pattern, filter pattern,
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"jobId","*"),"*"))
+  {
+    jobId = DATABASE_ID_NONE;
+  }
+  else
+  {
+    if (!StringMap_getInt64(argumentMap,"jobId",&jobId,0))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<job id>");
+      return;
+    }
+  }
   StringMap_getUInt(argumentMap,"maxCount",&maxCount,0);
   if (!StringMap_getEnumSet(argumentMap,"indexState",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",0))
   {
@@ -8441,6 +8681,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     // list index
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
+                                  jobId,
                                   STORAGE_TYPE_ANY,
                                   patternText,
                                   NULL, // hostName
@@ -8467,7 +8708,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
            && !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
                                    &storageId,
-                                   uuid,
+                                   &jobId,
                                    storageName,
                                    &storageDateTime,
                                    &size,
@@ -8490,10 +8731,10 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
       }
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "storageId=%llu name=%'S uuid=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
+                       "storageId=%llu jobId=%llu name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                        storageId,
+                       jobId,
                        printableStorageName,
-                       uuid,
                        storageDateTime,
                        size,
                        Index_stateToString(indexState,"unknown"),
@@ -8659,6 +8900,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
       // delete indizes
       error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
+                                    DATABASE_ID_NONE,
                                     STORAGE_TYPE_ANY,
                                     NULL, // storageName
                                     NULL, // hostName
@@ -8678,7 +8920,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
       while (   !isCommandAborted(clientInfo,id)
              && Index_getNextStorage(&indexQueryHandle,
                                      &storageId,
-                                     NULL, // uuid
+                                     NULL, // jobId
                                      storageName,
                                      NULL, // createdDateTime
                                      NULL, // size
@@ -8802,6 +9044,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     {
       error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
+                                    DATABASE_ID_NONE,
                                     STORAGE_TYPE_ANY,
                                     NULL, // storageName
                                     NULL, // hostName
@@ -8818,7 +9061,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
       while (   !isCommandAborted(clientInfo,id)
              && Index_getNextStorage(&indexQueryHandle,
                                      &storageId,
-                                     NULL, // uuid
+                                     NULL, // jobId
                                      NULL, // storageName
                                      NULL, // createdDateTime
                                      NULL, // size
@@ -9987,6 +10230,7 @@ SERVER_COMMANDS[] =
 //  { "RESTORE_LIST_ADD",           serverCommand_restoreListAdd,          AUTHORIZATION_STATE_OK      },
   { "RESTORE",                    serverCommand_restore,                 AUTHORIZATION_STATE_OK      },
 
+  { "INDEX_JOB_LIST",             serverCommand_indexJobList,            AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_INFO",         serverCommand_indexStorageInfo,        AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_LIST",         serverCommand_indexStorageList,        AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_ADD",          serverCommand_indexStorageAdd,         AUTHORIZATION_STATE_OK      },
