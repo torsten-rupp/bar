@@ -276,8 +276,8 @@ download()
   downloadPackage "$OSC_URL/$OSC_PATH/RedHat_RHEL-6/i686"     'bar-.*\.rpm'     bar-$version-redhat6_i686.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/RedHat_RHEL-6/x86_64"   'bar-.*\.rpm'     bar-$version-redhat6_x86_64.rpm
 
-  downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP2/i586"        'bar-.*\.rpm'     bar-$version-sle11_i586.rpm
-  downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP2/x86_64"      'bar-.*\.rpm'     bar-$version-sle11_x86_64.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP3/i586"        'bar-.*\.rpm'     bar-$version-sle11_i586.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP3/x86_64"      'bar-.*\.rpm'     bar-$version-sle11_x86_64.rpm
 
   downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_12.2/i586"     'bar-.*\.rpm'     bar-$version-opensuse12.2_i586.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_12.2/x86_64"   'bar-.*\.rpm'     bar-$version-opensuse12.2_x86_64.rpm
