@@ -65,14 +65,31 @@ typedef enum
 } ArchiveEntryTypes;
 
 /***********************************************************************\
+* Name   : ArchiveNewFunction
+* Purpose: call back when archive file is created/written
+* Input  : userData          - user data
+*          databaseHandle    - database handle or NULL if no database
+*          databaseStorageId - database id of storage
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+typedef Errors(*ArchiveNewFunction)(void           *userData,
+                                    DatabaseHandle *databaseHandle,
+                                    DatabaseId     databaseStorageId
+                                   );
+
+/***********************************************************************\
 * Name   : ArchiveCreatedFunction
 * Purpose: call back when archive file is created/written
-* Input  : userData       - user data
-*          databaseHandle - database handle or NULL if no database
-*          storageId      - database id of storage
-*          fileName       - archive file name
-*          partNumber     - part number or -1 if no parts
-*          lastPartFlag   - TRUE iff last archive part, FALSE otherwise
+* Input  : userData          - user data
+*          databaseHandle    - database handle or NULL if no database
+*          databaseStorageId - database id of storage
+*          fileName          - archive file name
+*          partNumber        - part number or -1 if no parts
+*          lastPartFlag      - TRUE iff last archive part, FALSE
+*                              otherwise
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -80,7 +97,7 @@ typedef enum
 
 typedef Errors(*ArchiveCreatedFunction)(void           *userData,
                                         DatabaseHandle *databaseHandle,
-                                        int64          storageId,
+                                        DatabaseId     databaseStorageId,
                                         String         fileName,
                                         int            partNumber,
                                         bool           lastPartFlag
@@ -113,6 +130,8 @@ typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
 typedef struct
 {
   const JobOptions                *jobOptions;
+  ArchiveNewFunction              archiveNewFunction;                  // call back for new archive file
+  void                            *archiveNewUserData;                 // user data for call back for new archive file
   ArchiveCreatedFunction          archiveCreatedFunction;              // call back for created archive file
   void                            *archiveCreatedUserData;             // user data for call back for created archive file
   ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;     // call back to get crypt password
@@ -151,7 +170,8 @@ typedef struct
   void                            *chunkIOUserData;                    // chunk i/o functions data
 
   DatabaseHandle                  *databaseHandle;                     // database handle
-  int64                           storageId;                           // index storage id in database
+  DatabaseId                      databaseJobId;                       // index job id in database
+  DatabaseId                      databaseStorageId;                   // index storage id in database
 
   uint                            partNumber;                          // file part number
 
@@ -170,7 +190,7 @@ typedef struct
 typedef struct ArchiveEntryInfo
 {
   LIST_NODE_HEADER(struct ArchiveEntryInfo);
-
+\
   ArchiveInfo                         *archiveInfo;                    // archive info
 
   enum
@@ -417,9 +437,12 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 * Purpose: create archive
 * Input  : archiveInfo                     - archive info data
 *          jobOptions                      - job option settings
-*          archiveCreatedFunction          - call back for creating new
+*          archiveNewFunction              - call back for new archive
+*                                            file
+*          archiveNewUserData              - user data for call back
+*          archiveCreatedFunction          - call back for created
 *                                            archive file
-*          archiveNewFileUserData          - user data for call back
+*          archiveCreatedUserData          - user data for call back
 *          archiveGetCryptPasswordFunction - get password call back (can
 *                                            be NULL)
 *          archiveGetCryptPasswordData     - user data for get password
@@ -432,8 +455,10 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 #ifdef NDEBUG
   Errors Archive_create(ArchiveInfo                     *archiveInfo,
                         const JobOptions                *jobOptions,
+                        ArchiveNewFunction              archiveNewFunction,
+                        void                            *archiveNewUserData,
                         ArchiveCreatedFunction          archiveCreatedFunction,
-                        void                            *archiveNewFileUserData,
+                        void                            *archiveCreatedUserData,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData,
                         DatabaseHandle                  *databaseHandle
@@ -443,8 +468,10 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                           ulong                           __lineNb__,
                           ArchiveInfo                     *archiveInfo,
                           const JobOptions                *jobOptions,
+                          ArchiveNewFunction              archiveNewFunction,
+                          void                            *archiveNewUserData,
                           ArchiveCreatedFunction          archiveCreatedFunction,
-                          void                            *archiveNewFileUserData,
+                          void                            *archiveCreatedUserData,
                           ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                           void                            *archiveGetCryptPasswordUserData,
                           DatabaseHandle                  *databaseHandle
@@ -1209,7 +1236,7 @@ Errors Archive_addToIndex(DatabaseHandle    *databaseHandle,
 * Name   : Archive_updateIndex
 * Purpose: update storage index
 * Input  : databaseHandle          - database handle
-*          storageId               - storage id
+*          databaseStorageId       - database storage id
 *          storageHandle           - storage handle
 *          storageName             - storage name
 *          cryptPassword           - encryption password
@@ -1224,7 +1251,7 @@ Errors Archive_addToIndex(DatabaseHandle    *databaseHandle,
 \***********************************************************************/
 
 Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
-                           int64                        storageId,
+                           DatabaseId                   databaseStorageId,
                            StorageHandle                *storageHandle,
                            const String                 storageName,
                            const JobOptions             *jobOptions,
@@ -1245,7 +1272,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 \***********************************************************************/
 
 Errors Archive_remIndex(DatabaseHandle *databaseHandle,
-                        int64          storageId
+                        DatabaseId     databaseStorageId
                        );
 
 #if 0
