@@ -1921,6 +1921,7 @@ remoteBarFlag=FALSE;
                 CryptTypes         cryptType;
                 String             deviceName;
                 DeviceInfo         deviceInfo;
+                FileSystemTypes    fileSystemType;
                 String             deltaSourceName;
                 uint64             deltaSourceSize;
                 uint64             blockOffset,blockCount;
@@ -1936,6 +1937,7 @@ remoteBarFlag=FALSE;
                                                &cryptType,
                                                deviceName,
                                                &deviceInfo,
+                                               &fileSystemType,
                                                deltaSourceName,
                                                &deltaSourceSize,
                                                &blockOffset,
@@ -3257,6 +3259,11 @@ Errors Command_list(StringList                      *storageNameList,
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
+
+#warning XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
+//jobOptions=NULL;
+//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,jobOptions->archivePartSize);
+
 
   // init variables
   AutoFree_init(&autoFreeList);

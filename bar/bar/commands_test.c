@@ -339,6 +339,7 @@ Errors Command_test(const StringList                *storageNameList,
                                            NULL,  // cryptType
                                            deviceName,
                                            &deviceInfo,
+                                           NULL,  // fileSystemType
                                            NULL,  // deltaSourceName
                                            NULL,  // deltaSourceSize
                                            &blockOffset,
