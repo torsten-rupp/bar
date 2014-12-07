@@ -114,6 +114,8 @@ LOCAL PasswordList decryptPasswordList;
 
 /****************************** Macros *********************************/
 
+#define FILE_SYSTEM_CONSTANT_TO_TYPE(n) ((FileSystemTypes)(n))
+
 // debug only: store xdelta encoded data in file encoded.testdata
 #define _DEBUG_XDELTA_ENCODED_DATA
 #ifdef DEBUG_XDELTA_ENCODED_DATA
@@ -527,9 +529,8 @@ LOCAL bool isNewPartNeeded(ArchiveInfo *archiveInfo,
                            ulong       minBytes
                           )
 {
-  SemaphoreLock semaphoreLock;
-  bool          newPartFlag;
-  uint64        archiveFileSize;
+  bool   newPartFlag;
+  uint64 archiveFileSize;
 
   assert(archiveInfo != NULL);
   assert(archiveInfo->chunkIO != NULL);
@@ -1283,14 +1284,13 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                  bool             allowNewPartFlag
                                 )
 {
-  uint          blockCount;
-  ulong         byteLength;
-  ulong         minBytes;
-  bool          newPartFlag;
-  Errors        error;
-  bool          eofDelta;
-  ulong         deltaLength;
-  SemaphoreLock semaphoreLock;
+  uint   blockCount;
+  ulong  byteLength;
+  ulong  minBytes;
+  bool   newPartFlag;
+  Errors error;
+  bool   eofDelta;
+  ulong  deltaLength;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
@@ -1575,7 +1575,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   Errors error;
   ulong  maxBytes;
   ulong  bytesRead;
-  uint   blockCount;
+  ulong  n;
 
   assert(archiveEntryInfo != NULL);
 
@@ -1632,15 +1632,14 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   else
   {
     // check for end-of-compressed byte-data
-    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.byteCompressInfo,
-                                                  COMPRESS_BLOCK_TYPE_ANY,
-                                                  &blockCount
-                                                 );
+    error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->file.byteCompressInfo,
+                                                   &n
+                                                  );
     if (error != ERROR_NONE)
     {
       return error;
     }
-    if (blockCount <= 0)
+    if (n <= 0)
     {
       return ERROR_COMPRESS_EOF;
     }
@@ -1731,7 +1730,6 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
-  assert(Semaphore_isOwned(&archiveEntryInfo->archiveInfo->chunkIOLock));
 
   do
   {
@@ -1812,14 +1810,13 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                   bool             allowNewPartFlag
                                  )
 {
-  uint          blockCount;
-  ulong         byteLength;
-  ulong         minBytes;
-  bool          newPartFlag;
-  Errors        error;
-  bool          eofDelta;
-  ulong         deltaLength;
-  SemaphoreLock semaphoreLock;
+  uint   blockCount;
+  ulong  byteLength;
+  ulong  minBytes;
+  bool   newPartFlag;
+  Errors error;
+  bool   eofDelta;
+  ulong  deltaLength;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
@@ -2098,7 +2095,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   Errors error;
   ulong  maxBytes;
   ulong  bytesRead;
-  uint   blockCount;
+  ulong  n;
 
   assert(archiveEntryInfo != NULL);
 
@@ -2155,15 +2152,14 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   else
   {
     // check for end-of-compressed byte-data
-    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.byteCompressInfo,
-                                                  COMPRESS_BLOCK_TYPE_ANY,
-                                                  &blockCount
-                                                 );
+    error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->image.byteCompressInfo,
+                                                   &n
+                                                  );
     if (error != ERROR_NONE)
     {
       return error;
     }
-    if (blockCount <= 0)
+    if (n <= 0)
     {
       return ERROR_COMPRESS_EOF;
     }
@@ -2374,14 +2370,13 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                      bool             allowNewPartFlag
                                     )
 {
-  uint          blockCount;
-  ulong         byteLength;
-  ulong         minBytes;
-  bool          newPartFlag;
-  Errors        error;
-  bool          eofDelta;
-  ulong         deltaLength;
-  SemaphoreLock semaphoreLock;
+  uint   blockCount;
+  ulong  byteLength;
+  ulong  minBytes;
+  bool   newPartFlag;
+  Errors error;
+  bool   eofDelta;
+  ulong  deltaLength;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
@@ -2659,7 +2654,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   Errors error;
   ulong  maxBytes;
   ulong  bytesRead;
-  uint   blockCount;
+  ulong  n;
 
   assert(archiveEntryInfo != NULL);
 
@@ -2716,15 +2711,14 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   else
   {
     // check for end-of-compressed byte-data
-    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.byteCompressInfo,
-                                                  COMPRESS_BLOCK_TYPE_ANY,
-                                                  &blockCount
-                                                 );
+    error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->hardLink.byteCompressInfo,
+                                                   &n
+                                                  );
     if (error != ERROR_NONE)
     {
       return error;
     }
-    if (blockCount <= 0)
+    if (n <= 0)
     {
       return ERROR_COMPRESS_EOF;
     }
@@ -3806,6 +3800,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                ArchiveInfo      *archiveInfo,
                                const String     deviceName,
                                const DeviceInfo *deviceInfo,
+                               FileSystemTypes  fileSystemType,
                                const bool       deltaCompressFlag,
                                const bool       byteCompressFlag
                               )
@@ -3816,6 +3811,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                  ArchiveInfo      *archiveInfo,
                                  const String     deviceName,
                                  const DeviceInfo *deviceInfo,
+                                 FileSystemTypes  fileSystemType,
                                  const bool       deltaCompressFlag,
                                  const bool       byteCompressFlag
                                 )
@@ -4017,8 +4013,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     return error;
   }
   DEBUG_TESTCODE("Archive_newImageEntry7") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  archiveEntryInfo->image.chunkImageEntry.size      = deviceInfo->size;
-  archiveEntryInfo->image.chunkImageEntry.blockSize = deviceInfo->blockSize;
+  archiveEntryInfo->image.chunkImageEntry.fileSystemType = fileSystemType;
+  archiveEntryInfo->image.chunkImageEntry.size           = deviceInfo->size;
+  archiveEntryInfo->image.chunkImageEntry.blockSize      = deviceInfo->blockSize;
   String_set(archiveEntryInfo->image.chunkImageEntry.name,deviceName);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageEntry.info,{ Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info); });
 
@@ -5988,6 +5985,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                                 CryptTypes         *cryptType,
                                 String             deviceName,
                                 DeviceInfo         *deviceInfo,
+                                FileSystemTypes    *fileSystemType,
                                 String             deltaSourceName,
                                 uint64             *deltaSourceSize,
                                 uint64             *blockOffset,
@@ -6004,6 +6002,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                                   CryptTypes         *cryptType,
                                   String             deviceName,
                                   DeviceInfo         *deviceInfo,
+                                  FileSystemTypes    *fileSystemType,
                                   String             deltaSourceName,
                                   uint64             *deltaSourceSize,
                                   uint64             *blockOffset,
@@ -6324,6 +6323,10 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
             // get image meta data
             String_set(deviceName,archiveEntryInfo->image.chunkImageEntry.name);
+            if (fileSystemType != NULL)
+            {
+              (*fileSystemType) = FILE_SYSTEM_CONSTANT_TO_TYPE(archiveEntryInfo->image.chunkImageEntry.fileSystemType);
+            }
             if (deviceInfo != NULL)
             {
               deviceInfo->size      = archiveEntryInfo->image.chunkImageEntry.size;
@@ -8472,9 +8475,15 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 // store in index database
                 if (error == ERROR_NONE)
                 {
+fprintf(stderr,"%s, %d: %s %llu %u\n",__FILE__,__LINE__,
+String_cString(archiveEntryInfo->image.chunkImageEntry.name),
+archiveEntryInfo->image.chunkImageEntry.size,
+archiveEntryInfo->image.chunkImageEntry.blockSize
+);
                   error = Index_addImage(archiveEntryInfo->archiveInfo->databaseHandle,
                                          archiveEntryInfo->archiveInfo->storageId,
                                          archiveEntryInfo->image.chunkImageEntry.name,
+                                         archiveEntryInfo->image.chunkImageEntry.fileSystemType,
                                          archiveEntryInfo->image.chunkImageEntry.size,
                                          archiveEntryInfo->image.chunkImageEntry.blockSize,
                                          archiveEntryInfo->image.chunkImageData.blockOffset,
@@ -8491,7 +8500,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
             Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
             Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
-            Chunk_done(&archiveEntryInfo->image.chunkImage.info);
 
             Crypt_done(&archiveEntryInfo->image.cryptInfo);
             Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
@@ -10166,6 +10174,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             String           imageName;
             ArchiveEntryInfo archiveEntryInfo;
             DeviceInfo       deviceInfo;
+            FileSystemTypes  fileSystemType;
             uint64           blockOffset,blockCount;
 
             // open archive file
@@ -10178,6 +10187,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                                            NULL,  // cryptType
                                            imageName,
                                            &deviceInfo,
+                                           &fileSystemType,
                                            NULL,  // deltaSourceName
                                            NULL,  // deltaSourceSize
                                            &blockOffset,
@@ -10193,6 +10203,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             error = Index_addImage(databaseHandle,
                                    storageId,
                                    imageName,
+                                   fileSystemType,
                                    deviceInfo.size,
                                    deviceInfo.blockSize,
                                    blockOffset,

@@ -604,6 +604,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                ArchiveInfo      *archiveInfo,
                                const String     deviceName,
                                const DeviceInfo *deviceInfo,
+                               FileSystemTypes  fileSystemType,
                                const bool       deltaCompressFlag,
                                const bool       byteCompressFlag
                               );
@@ -614,6 +615,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                  ArchiveInfo      *archiveInfo,
                                  const String     deviceName,
                                  const DeviceInfo *deviceInfo,
+                                 FileSystemTypes  fileSystemType,
                                  const bool       deltaCompressFlag,
                                  const bool       byteCompressFlag
                                 );
@@ -854,6 +856,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 *          cryptType              - used crypt type (can be NULL)
 *          deviceName             - image name
 *          deviceInfo             - device info (can be NULL)
+*          fileSystemType         - file system type (can be NULL)
 *          deltaSourceName        - delta source name (can be NULL)
 *          deltaSourceSize        - delta source size [bytes] (can be
 *                                   NULL)
@@ -872,6 +875,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
                                 CryptTypes         *cryptType,
                                 String             deviceName,
                                 DeviceInfo         *deviceInfo,
+                                FileSystemTypes    *fileSystemType,
                                 String             deltaSourceName,
                                 uint64             *deltaSourceSize,
                                 uint64             *blockOffset,
@@ -888,6 +892,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
                                   CryptTypes         *cryptType,
                                   String             deviceName,
                                   DeviceInfo         *deviceInfo,
+                                  FileSystemTypes    *fileSystemType,
                                   String             deltaSourceName,
                                   uint64             *deltaSourceSize,
                                   uint64             *blockOffset,
