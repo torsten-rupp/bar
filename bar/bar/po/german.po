@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-06-01 09:10+0200\n"
+"POT-Creation-Date: 2014-11-05 22:58+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,17 +17,17 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: bar.c:1460
+#: bar.c:1470
 #, c-format
 msgid "Cannot get file info for configuration file '%s' (error: %s)\n"
 msgstr "Die Konfigurationsdatei '%s' kann nicht gelesen werden (Fehler: %s)!\n"
 
-#: bar.c:1470
+#: bar.c:1480
 #, c-format
 msgid "Cannot open configuration file '%s' (error: %s)!\n"
 msgstr "Die Konfigurationsdatei '%s' kann nicht göffnet werden (Fehler: %s)!\n"
 
-#: bar.c:1452
+#: bar.c:1462
 #, c-format
 msgid ""
 "Configuration file '%s' has wrong file permission %03o. Please make sure "
