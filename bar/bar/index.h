@@ -288,8 +288,8 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
 * Name   : Index_create
 * Purpose: create new index
 * Input  : databaseHandle - database handle
-*          storageName    - storage name
 *          uuid           - unique id
+*          storageName    - storage name
 *          indexState     - index state
 *          indexMode      - index mode
 * Output : storageId - database id of index
@@ -298,8 +298,8 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_create(DatabaseHandle *databaseHandle,
-                    const String   storageName,
                     const String   uuid,
+                    const String   storageName,
                     IndexStates    indexState,
                     IndexModes     indexMode,
                     DatabaseId     *storageId
@@ -412,8 +412,8 @@ long Index_countState(DatabaseHandle *databaseHandle,
                      );
 
 /***********************************************************************\
-* Name   : Index_initListJobs
-* Purpose: list job entries
+* Name   : Index_initListUUIDs
+* Purpose: list uuid of entries
 * Input  : IndexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
 *          name             - name pattern (glob) or NULL
@@ -422,16 +422,15 @@ long Index_countState(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListJobs(IndexQueryHandle *indexQueryHandle,
-                          DatabaseHandle   *databaseHandle
-                         );
+Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
+                           DatabaseHandle   *databaseHandle
+                          );
 
 /***********************************************************************\
-* Name   : Index_getNextJob
-* Purpose: get next index job entry
+* Name   : Index_getNextUUID
+* Purpose: get next index uuid entry
 * Input  : IndexQueryHandle - index query handle
-* Output : databaseId          - database id of entry
-*          uuid                - unique id (can be NULL)
+* Output : uuid                - unique id (can be NULL)
 *          lastCreatedDateTime - date/time stamp [s] (can be NULL)
 *          totalSize           - total size [bytes] (can be NULL)
 *          lastErrorMessage    - last error message (can be NULL)
@@ -439,20 +438,19 @@ Errors Index_initListJobs(IndexQueryHandle *indexQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
-                      DatabaseId       *databaseId,
-                      String           uuid,
-                      uint64           *lastCreatedDateTime,
-                      uint64           *totalSize,
-                      String           lastErrorMessage
-                     );
+bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
+                       String           uuid,
+                       uint64           *lastCreatedDateTime,
+                       uint64           *totalSize,
+                       String           lastErrorMessage
+                      );
 
 /***********************************************************************\
 * Name   : Index_initListStorage
 * Purpose: list storage entries
 * Input  : IndexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
-*          jobId            - job id or DATABASE_ID_NONE
+*          uuid             - uuid or NULL
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
 *          storageName      - storage name pattern (glob) or NULL
 *          hostName         - host name pattern (glob) or NULL
@@ -467,7 +465,7 @@ bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
-                             DatabaseId       jobId,
+                             const String     uuid,
                              StorageTypes     storageType,
                              const String     storageName,
                              const String     hostName,
@@ -482,7 +480,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 * Purpose: get next index storage entry
 * Input  : IndexQueryHandle    - index query handle
 * Output : databaseId          - database id of entry
-*          jobId               - job id (can be NULL)
+*          uuid                - uuid (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s]
 *          size                - size [bytes]
@@ -496,7 +494,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           DatabaseId       *databaseId,
-                          DatabaseId       *jobId,
+                          String           uuid,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,

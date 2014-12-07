@@ -57,7 +57,7 @@ LOCAL const struct
 };
 
 // current index database version
-#define CURRENT_INDEX_VERSION 4
+#define CURRENT_INDEX_VERSION 3
 
 /***************************** Datatypes *******************************/
 
@@ -103,6 +103,7 @@ LOCAL Errors upgradeToVersion3(DatabaseHandle *indexDatabaseHandle)
   return ERROR_NONE;
 }
 
+#if 0
 LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
 {
   Errors              error;
@@ -261,6 +262,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
 
   return error;
 }
+#endif
 
 /***********************************************************************\
 * Name   : initIndexQueryHandle
@@ -648,9 +650,9 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
         error = upgradeToVersion3(indexDatabaseHandle);
         indexVersion = 3;
         break;
-      case 3:
-        error = upgradeToVersion4(indexDatabaseHandle);
-        indexVersion = 4;
+//      case 3:
+//        error = upgradeToVersion4(indexDatabaseHandle);
+//        indexVersion = 4;
         break;
       #ifndef NDEBUG
         default:
@@ -920,8 +922,8 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_create(DatabaseHandle *databaseHandle,
-                    const String   storageName,
                     String         uuid,
+                    const String   storageName,
                     IndexStates    indexState,
                     IndexModes     indexMode,
                     DatabaseId     *storageId
@@ -1307,9 +1309,9 @@ long Index_countState(DatabaseHandle *databaseHandle,
   return count;
 }
 
-Errors Index_initListJobs(IndexQueryHandle *indexQueryHandle,
-                          DatabaseHandle   *databaseHandle
-                         )
+Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
+                           DatabaseHandle   *databaseHandle
+                          )
 {
   Errors error;
 
@@ -1320,34 +1322,30 @@ Errors Index_initListJobs(IndexQueryHandle *indexQueryHandle,
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
-                           "SELECT jobs.id, \
-                                   jobs.uuid, \
-                                   STRFTIME('%%s',(SELECT created FROM storage WHERE jobId=jobs.id ORDER BY created DESC LIMIT 0,1)), \
-                                   (SELECT SUM(size) FROM storage WHERE jobId=jobs.id), \
-                                   (SELECT errorMessage FROM storage WHERE jobId=jobs.id ORDER BY created DESC LIMIT 0,1) \
-                            FROM jobs \
+                           "SELECT storage1.uuid, \
+                                   STRFTIME('%%s',(SELECT created FROM storage AS storage2 WHERE storage2.uuid=storage1.uuid ORDER BY created DESC LIMIT 0,1)), \
+                                   (SELECT SUM(size) FROM storage AS storage2 WHERE storage2.uuid=storage1.uuid), \
+                                   (SELECT errorMessage FROM storage AS storage2 WHERE storage2.uuid=storage1.uuid ORDER BY created DESC LIMIT 0,1) \
+                            FROM storage AS storage1 \
                             GROUP BY uuid; \
                            "
                           );
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
 
   return error;
 }
 
-bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
-                      DatabaseId       *databaseId,
-                      String           uuid,
-                      uint64           *lastCreatedDateTime,
-                      uint64           *totalSize,
-                      String           lastErrorMessage
-                     )
+bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
+                       String           uuid,
+                       uint64           *lastCreatedDateTime,
+                       uint64           *totalSize,
+                       String           lastErrorMessage
+                      )
 {
-  DatabaseQueryHandle databaseQueryHandle;
-
   assert(indexQueryHandle != NULL);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%lld %S %lld %lld %S",
-                             databaseId,
+                             "%S %lld %lld %S",
                              uuid,
                              lastCreatedDateTime,
                              totalSize,
@@ -1357,7 +1355,7 @@ bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
-                             DatabaseId       jobId,
+                             const String     uuid,
                              StorageTypes     storageType,
                              const String     storageName,
                              const String     hostName,
@@ -1385,7 +1383,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
                            "SELECT id, \
-                                   jobId, \
+                                   uuid, \
                                    name, \
                                    STRFTIME('%%s',created), \
                                    size, \
@@ -1394,11 +1392,11 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                                    STRFTIME('%%s',lastChecked), \
                                    errorMessage \
                             FROM storage \
-                            WHERE (%d OR (jobId=%lld)) AND state IN (%S) \
+                            WHERE (%d OR (uuid='%S')) AND state IN (%S) \
                             ORDER BY created DESC \
                            ",
-                           (jobId == DATABASE_ID_NONE) ? 1 : 0,
-                           jobId,
+                           (uuid == NULL) ? 1 : 0,
+                           uuid,
                            getIndexStateSetString(indexStateSetString,indexStateSet)
                           );
   String_delete(indexStateSetString);
@@ -1408,7 +1406,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           DatabaseId       *databaseId,
-                          DatabaseId       *jobId,
+                          String           uuid,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
@@ -1427,9 +1425,9 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   foundFlag = FALSE;
   while (   !foundFlag
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                                "%lld %lld %S %llu %llu %d %d %llu %S",
+                                "%lld %S %S %llu %llu %d %d %llu %S",
                                 databaseId,
-                                jobId,
+                                uuid,
                                 storageName,
                                 createdDateTime,
                                 size,
