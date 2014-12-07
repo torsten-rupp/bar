@@ -4849,9 +4849,27 @@ e composite widget
     moveTableItem(table,table.indexOf(tableItem),offset);
   }
 
+  /** get table item
+   * @param table table
+   * @param data table item data
+   * @return table item or null if not found
+   */
+  public static TableItem getTableItem(Table table, Object data)
+  {
+    for (TableItem tableItem : table.getItems())
+    {
+      if (tableItem.getData() == data)
+      {
+        return tableItem;
+      }
+    }
+
+    return null;
+  }
+
   /** set table item color
    * @param table table
-   * @param table item data
+   * @param data table item data
    * @param foregroundColor foregound color
    * @param backgroundColor background color
    */
@@ -5635,6 +5653,24 @@ e composite widget
     }
   }
 
+  /** get tree item
+   * @param tree tree
+   * @param data tree item data
+   * @return tree item or null if not found
+   */
+  public static TreeItem getTreeItem(Tree tree, Object data)
+  {
+    for (TreeItem treeItem : tree.getItems())
+    {
+      if (treeItem.getData() == data)
+      {
+        return treeItem;
+      }
+    }
+
+    return null;
+  }
+
 /*
 static int rr = 0;
 static String indent(int n)
@@ -5844,22 +5880,6 @@ private static void printTree(Tree tree)
     }
   }
 
-  /** get expanded (open) data entries in tree
-   * @param expandedDataSet hash-set for expanded data entries
-   * @param treeItem tree item to start
-   */
-  private static void getExpandedTreeData(HashSet expandedDataSet, TreeItem treeItem)
-  {
-    if (!treeItem.isDisposed())
-    {
-      if (treeItem.getExpanded()) expandedDataSet.add(treeItem.getData());
-      for (TreeItem subTreeItem : treeItem.getItems())
-      {
-        getExpandedTreeData(expandedDataSet,subTreeItem);
-      }
-    }
-  }
-
   /** get expanded (open) tree items in tree
    * @param treeItemSet hash-set for expanded tree items
    * @param treeItem tree item to start
@@ -5914,6 +5934,22 @@ private static void printTree(Tree tree)
       for (TreeItem subTreeItem : treeItem.getItems())
       {
         reExpandTreeItems(expandedItemSet,subTreeItem);
+      }
+    }
+  }
+
+  /** get expanded (open) data entries in tree
+   * @param expandedDataSet hash-set for expanded data entries
+   * @param treeItem tree item to start
+   */
+  private static void getExpandedTreeData(HashSet expandedDataSet, TreeItem treeItem)
+  {
+    if (!treeItem.isDisposed())
+    {
+      if (treeItem.getExpanded()) expandedDataSet.add(treeItem.getData());
+      for (TreeItem subTreeItem : treeItem.getItems())
+      {
+        getExpandedTreeData(expandedDataSet,subTreeItem);
       }
     }
   }

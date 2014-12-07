@@ -1241,7 +1241,6 @@ class TabJobs
   private final Color  COLOR_WHITE;
   private final Color  COLOR_RED;
   private final Color  COLOR_MODIFIED;
-  private final Color  COLOR_MODIFIED2;
 
   // images
   private final Image  IMAGE_DIRECTORY;
@@ -1388,7 +1387,6 @@ class TabJobs
     COLOR_WHITE    = shell.getDisplay().getSystemColor(SWT.COLOR_WHITE);
     COLOR_RED      = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
     COLOR_MODIFIED = new Color(null,0xFF,0xA0,0xA0);
-COLOR_MODIFIED2 = new Color(null,0xF0,0xF0,0xF0);
 
     // get images
     IMAGE_DIRECTORY          = Widgets.loadImage(display,"directory.png");
