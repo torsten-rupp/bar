@@ -4,17 +4,28 @@
 
 */
 
-CREATE TABLE meta(
+CREATE TABLE IF NOT EXISTS meta(
   name  TEXT,
   value TEXT
 );
-INSERT INTO meta (name,value) VALUES ('version',3);
+INSERT INTO meta (name,value) VALUES ('version',4);
 INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
-CREATE TABLE storage(
+CREATE TABLE IF NOT EXISTS jobs(
   id              INTEGER PRIMARY KEY,
   name            TEXT,
   uuid            TEXT,
+  created         INTEGER,
+  type            INTEGER,
+  parentJobId     INTEGER,
+  bidFlag         INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS storage(
+  id              INTEGER PRIMARY KEY,
+  jobId           INTEGER,
+//uuid TEXT,
+  name            TEXT,
   created         INTEGER,
   size            INTEGER,
   state           INTEGER,
@@ -23,7 +34,7 @@ CREATE TABLE storage(
   errorMessage    TEXT
 );
 
-CREATE TABLE files(
+CREATE TABLE IF NOT EXISTS files(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER,
   name            TEXT,
@@ -38,7 +49,7 @@ CREATE TABLE files(
   fragmentSize    INTEGER
 );
 
-CREATE TABLE images(
+CREATE TABLE IF NOT EXISTS images(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER,
   name            TEXT,
@@ -49,7 +60,7 @@ CREATE TABLE images(
   blockCount      INTEGER
 );
 
-CREATE TABLE directories(
+CREATE TABLE IF NOT EXISTS directories(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER,
   name            TEXT,
@@ -61,7 +72,7 @@ CREATE TABLE directories(
   permission      INTEGER
 );
 
-CREATE TABLE links(
+CREATE TABLE IF NOT EXISTS links(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER,
   name            TEXT,
@@ -74,7 +85,7 @@ CREATE TABLE links(
   permission      INTEGER
 );
 
-CREATE TABLE hardlinks(
+CREATE TABLE IF NOT EXISTS hardlinks(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER,
   name            TEXT,
@@ -89,7 +100,7 @@ CREATE TABLE hardlinks(
   fragmentSize    INTEGER
 );
 
-CREATE TABLE special(
+CREATE TABLE IF NOT EXISTS special(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER,
   name            TEXT,
