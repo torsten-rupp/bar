@@ -1549,27 +1549,6 @@ xtime  += transmissionTime;
 #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) || defined(HAVE_SSH2) */
 
 /***********************************************************************\
-* Name   : executeIOOutput
-* Purpose: process exec stdout, stderr output
-* Input  : userData - user data (not used)
-*          line     - line
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void executeIOOutput(void         *userData,
-                           const String line
-                          )
-{
-  assert(line != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  printInfo(4,"%s\n",String_cString(line));
-}
-
-/***********************************************************************\
 * Name   : requestNewMedium
 * Purpose: request new cd/dvd/bd medium
 * Input  : storageHandle - storage file handle
@@ -1597,9 +1576,8 @@ LOCAL Errors requestNewMedium(StorageHandle *storageHandle, bool waitFlag)
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
     Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.unloadVolumeCommand),
                         textMacros,SIZE_OF_ARRAY(textMacros),
-                        (ExecuteIOFunction)executeIOOutput,
-                        (ExecuteIOFunction)executeIOOutput,
-                        NULL
+                        CALLBACK(executeIOOutput,NULL),
+                        CALLBACK(executeIOOutput,NULL)
                        );
     printInfo(0,"ok\n");
 
@@ -1625,9 +1603,8 @@ LOCAL Errors requestNewMedium(StorageHandle *storageHandle, bool waitFlag)
         printInfo(0,"Unload medium...");
         Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.unloadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            (ExecuteIOFunction)executeIOOutput,
-                            (ExecuteIOFunction)executeIOOutput,
-                            NULL
+                            CALLBACK(executeIOOutput,NULL),
+                            CALLBACK(executeIOOutput,NULL)
                            );
         printInfo(0,"ok\n");
       }
@@ -1644,9 +1621,8 @@ LOCAL Errors requestNewMedium(StorageHandle *storageHandle, bool waitFlag)
     printInfo(0,"Request new medium #%d...",storageHandle->requestedVolumeNumber);
     if (Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.requestVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            (ExecuteIOFunction)executeIOOutput,
-                            (ExecuteIOFunction)executeIOOutput,
-                            NULL
+                            CALLBACK(executeIOOutput,NULL),
+                            CALLBACK(executeIOOutput,NULL)
                            ) == ERROR_NONE
        )
     {
@@ -1704,9 +1680,8 @@ LOCAL Errors requestNewMedium(StorageHandle *storageHandle, bool waitFlag)
         printInfo(0,"Load medium #%d...",storageHandle->requestedVolumeNumber);
         Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            (ExecuteIOFunction)executeIOOutput,
-                            (ExecuteIOFunction)executeIOOutput,
-                            NULL
+                            CALLBACK(executeIOOutput,NULL),
+                            CALLBACK(executeIOOutput,NULL)
                            );
         Misc_udelay(LOAD_VOLUME_DELAY_TIME);
         printInfo(0,"ok\n");
@@ -1763,9 +1738,8 @@ LOCAL Errors requestNewVolume(StorageHandle *storageHandle, bool waitFlag)
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
     Misc_executeCommand(String_cString(storageHandle->device.unloadVolumeCommand),
                         textMacros,SIZE_OF_ARRAY(textMacros),
-                        (ExecuteIOFunction)executeIOOutput,
-                        (ExecuteIOFunction)executeIOOutput,
-                        NULL
+                        CALLBACK(executeIOOutput,NULL),
+                        CALLBACK(executeIOOutput,NULL)
                        );
     printInfo(0,"ok\n");
 
@@ -1792,9 +1766,8 @@ LOCAL Errors requestNewVolume(StorageHandle *storageHandle, bool waitFlag)
         Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
         Misc_executeCommand(String_cString(storageHandle->device.unloadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            (ExecuteIOFunction)executeIOOutput,
-                            (ExecuteIOFunction)executeIOOutput,
-                            NULL
+                            CALLBACK(executeIOOutput,NULL),
+                            CALLBACK(executeIOOutput,NULL)
                            );
         printInfo(0,"ok\n");
       }
@@ -1811,9 +1784,8 @@ LOCAL Errors requestNewVolume(StorageHandle *storageHandle, bool waitFlag)
     printInfo(0,"Request new volume #%d...",storageHandle->requestedVolumeNumber);
     if (Misc_executeCommand(String_cString(storageHandle->device.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            (ExecuteIOFunction)executeIOOutput,
-                            (ExecuteIOFunction)executeIOOutput,
-                            NULL
+                            CALLBACK(executeIOOutput,NULL),
+                            CALLBACK(executeIOOutput,NULL)
                            ) == ERROR_NONE
        )
     {
@@ -1871,9 +1843,8 @@ LOCAL Errors requestNewVolume(StorageHandle *storageHandle, bool waitFlag)
         printInfo(0,"Load volume #%d...",storageHandle->requestedVolumeNumber);
         Misc_executeCommand(String_cString(storageHandle->device.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            (ExecuteIOFunction)executeIOOutput,
-                            (ExecuteIOFunction)executeIOOutput,
-                            NULL
+                            CALLBACK(executeIOOutput,NULL),
+                            CALLBACK(executeIOOutput,NULL)
                            );
         Misc_udelay(LOAD_VOLUME_DELAY_TIME);
         printInfo(0,"ok\n");
@@ -1905,21 +1876,23 @@ LOCAL Errors requestNewVolume(StorageHandle *storageHandle, bool waitFlag)
 /***********************************************************************\
 * Name   : executeIOmkisofs
 * Purpose: process mkisofs output
-* Input  : storageHandle - storage file handle variable
-*          line              - line
+* Input  : userData - storage file handle variable
+*          line    - line
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOmkisofs(StorageHandle *storageHandle,
-                            const String  line
+LOCAL void executeIOmkisofs(void         *userData,
+                            const String line
                            )
 {
-  String s;
-  double p;
+  StorageHandle *storageHandle = (StorageHandle*)userData;
+  String        s;
+  double        p;
 
   assert(storageHandle != NULL);
+  assert(line != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
 //fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
@@ -1946,14 +1919,16 @@ LOCAL void executeIOmkisofs(StorageHandle *storageHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOdvdisaster(StorageHandle *storageHandle,
-                               const String  line
+LOCAL void executeIOdvdisaster(void         *userData,
+                               const String line
                               )
 {
-  String s;
-  double p;
+  StorageHandle *storageHandle = (StorageHandle*)userData;
+  String        s;
+  double        p;
 
   assert(storageHandle != NULL);
+  assert(line != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   s = String_new();
@@ -1984,14 +1959,16 @@ LOCAL void executeIOdvdisaster(StorageHandle *storageHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOgrowisofs(StorageHandle *storageHandle,
-                              const String  line
+LOCAL void executeIOgrowisofs(void         *userData,
+                              const String line
                              )
 {
-  String s;
-  double p;
+  StorageHandle *storageHandle = (StorageHandle*)userData;
+  String        s;
+  double        p;
 
   assert(storageHandle != NULL);
+  assert(line != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   s = String_new();
@@ -3096,6 +3073,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   storageHandle->mode                      = STORAGE_MODE_UNKNOWN;
   Storage_duplicateSpecifier(&storageHandle->storageSpecifier,storageSpecifier);
   storageHandle->jobOptions                = jobOptions;
+  storageHandle->mountedDeviceFlag         = FALSE;
   storageHandle->requestVolumeFunction     = storageRequestVolumeFunction;
   storageHandle->requestVolumeUserData     = storageRequestVolumeUserData;
   if (jobOptions->waitFirstVolumeFlag)
@@ -3121,6 +3099,20 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  // mount device if needed
+  if (!String_isEmpty(storageHandle->jobOptions->mountDeviceName))
+  {
+    if (!Device_isMounted(storageHandle->jobOptions->mountDeviceName))
+    {
+      error = Device_mount(storageHandle->jobOptions->mountDeviceName);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      storageHandle->mountedDeviceFlag = TRUE;
+    }
+  }
+
   // init protocol specific values
   switch (storageHandle->storageSpecifier.type)
   {
@@ -3130,8 +3122,6 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
       break;
     case STORAGE_TYPE_FILESYSTEM:
       UNUSED_VARIABLE(maxBandWidthList);
-
-      // init variables
       break;
     case STORAGE_TYPE_FTP:
       #if   defined(HAVE_CURL)
@@ -3948,6 +3938,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
 #endif /* NDEBUG */
 {
   Errors error;
+  Errors tmpError;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
@@ -4008,7 +3999,6 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_BD:
       {
         String fileName;
-        Errors tmpError;
 
         // delete files
         fileName = String_new();
@@ -4038,7 +4028,6 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_DEVICE:
       {
         String fileName;
-        Errors tmpError;
 
         // delete files
         fileName = String_new();
@@ -4068,6 +4057,17 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
       #endif /* NDEBUG */
       break;
   }
+
+  // unmount device if mounted before
+  if (storageHandle->mountedDeviceFlag)
+  {
+    tmpError = Device_umount(storageHandle->jobOptions->mountDeviceName);
+    if (tmpError != ERROR_NONE)
+    {
+      if (error == ERROR_NONE) error = tmpError;
+    }
+  }
+
   Storage_doneSpecifier(&storageHandle->storageSpecifier);
 
   return error;
@@ -4179,9 +4179,8 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
                 error = Misc_executeCommand(String_cString(globalOptions.file.writePreProcessCommand),
                                             textMacros,
                                             SIZE_OF_ARRAY(textMacros),
-                                            (ExecuteIOFunction)executeIOOutput,
-                                            (ExecuteIOFunction)executeIOOutput,
-                                            NULL
+                                            CALLBACK(executeIOOutput,NULL),
+                                            CALLBACK(executeIOOutput,NULL)
                                            );
                 printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
               }
@@ -4215,9 +4214,8 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
                   error = Misc_executeCommand(String_cString(globalOptions.ftp.writePreProcessCommand),
                                               textMacros,
                                               SIZE_OF_ARRAY(textMacros),
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              NULL
+                                              CALLBACK(executeIOOutput,NULL),
+                                              CALLBACK(executeIOOutput,NULL)
                                              );
                   printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
@@ -4256,9 +4254,8 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
                   error = Misc_executeCommand(String_cString(globalOptions.scp.writePreProcessCommand),
                                               textMacros,
                                               SIZE_OF_ARRAY(textMacros),
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              NULL
+                                              CALLBACK(executeIOOutput,NULL),
+                                              CALLBACK(executeIOOutput,NULL)
                                              );
                   printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
@@ -4295,9 +4292,8 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
                   error = Misc_executeCommand(String_cString(globalOptions.sftp.writePreProcessCommand),
                                               textMacros,
                                               SIZE_OF_ARRAY(textMacros),
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              NULL
+                                              CALLBACK(executeIOOutput,NULL),
+                                              CALLBACK(executeIOOutput,NULL)
                                              );
                   printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
@@ -4334,9 +4330,8 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
                   error = Misc_executeCommand(String_cString(globalOptions.webdav.writePreProcessCommand),
                                               textMacros,
                                               SIZE_OF_ARRAY(textMacros),
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              NULL
+                                              CALLBACK(executeIOOutput,NULL),
+                                              CALLBACK(executeIOOutput,NULL)
                                              );
                   printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
@@ -4439,9 +4434,8 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
                 error = Misc_executeCommand(String_cString(globalOptions.file.writePostProcessCommand),
                                             textMacros,
                                             SIZE_OF_ARRAY(textMacros),
-                                            (ExecuteIOFunction)executeIOOutput,
-                                            (ExecuteIOFunction)executeIOOutput,
-                                            NULL
+                                            CALLBACK(executeIOOutput,NULL),
+                                            CALLBACK(executeIOOutput,NULL)
                                            );
                 printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
               }
@@ -4475,9 +4469,8 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
                   error = Misc_executeCommand(String_cString(globalOptions.ftp.writePostProcessCommand),
                                               textMacros,
                                               SIZE_OF_ARRAY(textMacros),
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              NULL
+                                              CALLBACK(executeIOOutput,NULL),
+                                              CALLBACK(executeIOOutput,NULL)
                                              );
                   printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
@@ -4516,9 +4509,8 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
                   error = Misc_executeCommand(String_cString(globalOptions.scp.writePostProcessCommand),
                                               textMacros,
                                               SIZE_OF_ARRAY(textMacros),
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              NULL
+                                              CALLBACK(executeIOOutput,NULL),
+                                              CALLBACK(executeIOOutput,NULL)
                                              );
                   printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
@@ -4555,9 +4547,8 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
                   error = Misc_executeCommand(String_cString(globalOptions.sftp.writePostProcessCommand),
                                               textMacros,
                                               SIZE_OF_ARRAY(textMacros),
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              NULL
+                                              CALLBACK(executeIOOutput,NULL),
+                                              CALLBACK(executeIOOutput,NULL)
                                              );
                   printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
@@ -4594,9 +4585,8 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
                   error = Misc_executeCommand(String_cString(globalOptions.webdav.writePostProcessCommand),
                                               textMacros,
                                               SIZE_OF_ARRAY(textMacros),
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              (ExecuteIOFunction)executeIOOutput,
-                                              NULL
+                                              CALLBACK(executeIOOutput,NULL),
+                                              CALLBACK(executeIOOutput,NULL)
                                              );
                   printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
@@ -4616,11 +4606,12 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
       {
-        String    imageFileName;
-        TextMacro textMacros[5];
-        String    fileName;
-        FileInfo  fileInfo;
-        bool      retryFlag;
+        StringList stderrList;
+        String     imageFileName;
+        TextMacro  textMacros[5];
+        String     fileName;
+        FileInfo   fileInfo;
+        bool       retryFlag;
 
         if (!storageHandle->jobOptions->dryRunFlag)
         {
@@ -4629,6 +4620,9 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
              )
           {
             // medium size limit reached or final medium -> create medium and request new volume
+
+            // init variables
+            StringList_init(&stderrList);
 
             // update info
             storageHandle->runningInfo.volumeProgress = 0.0;
@@ -4639,6 +4633,7 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
             error = File_getTmpFileName(imageFileName,NULL,tmpDirectory);
             if (error != ERROR_NONE)
             {
+              StringList_done(&stderrList);
               break;
             }
 
@@ -4654,17 +4649,18 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
               // create medium image
               printInfo(0,"Make medium image #%d with %d part(s)...",storageHandle->opticalDisk.write.number,StringList_count(&storageHandle->opticalDisk.write.fileNameList));
               storageHandle->opticalDisk.write.step = 0;
+              StringList_clear(&stderrList);
               error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.imageCommand),
                                           textMacros,SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)executeIOmkisofs,
-                                          (ExecuteIOFunction)executeIOmkisofs,
-                                          storageHandle
+                                          CALLBACK(executeIOmkisofs,storageHandle),
+                                          CALLBACK(executeIOOutput,&stderrList)
                                          );
               if (error != ERROR_NONE)
               {
                 printInfo(0,"FAIL\n");
                 File_delete(imageFileName,FALSE);
                 String_delete(imageFileName);
+                StringList_done(&stderrList);
                 break;
               }
               File_getFileInfo(&fileInfo,imageFileName);
@@ -4675,17 +4671,18 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
                 // add error-correction codes to medium image
                 printInfo(0,"Add ECC to image #%d...",storageHandle->opticalDisk.write.number);
                 storageHandle->opticalDisk.write.step = 1;
+                StringList_clear(&stderrList);
                 error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.eccCommand),
                                             textMacros,SIZE_OF_ARRAY(textMacros),
-                                            (ExecuteIOFunction)executeIOdvdisaster,
-                                            (ExecuteIOFunction)executeIOdvdisaster,
-                                            storageHandle
+                                            CALLBACK(executeIOdvdisaster,storageHandle),
+                                            CALLBACK(executeIOOutput,&stderrList)
                                            );
                 if (error != ERROR_NONE)
                 {
                   printInfo(0,"FAIL\n");
                   File_delete(imageFileName,FALSE);
                   String_delete(imageFileName);
+                  StringList_done(&stderrList);
                   break;
                 }
                 File_getFileInfo(&fileInfo,imageFileName);
@@ -4702,12 +4699,12 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
               if (storageHandle->volumeNumber != storageHandle->requestedVolumeNumber)
               {
                 // request load new medium
-fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandle->volumeNumber,storageHandle->requestedVolumeNumber);
                 error = requestNewMedium(storageHandle,TRUE);
                 if (error != ERROR_NONE)
                 {
                   File_delete(imageFileName,FALSE);
                   String_delete(imageFileName);
+                  StringList_done(&stderrList);
                   break;
                 }
                 updateStatusInfo(storageHandle);
@@ -4721,11 +4718,11 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
                 // write image to medium
                 printInfo(0,"Write image to medium #%d...",storageHandle->opticalDisk.write.number);
                 storageHandle->opticalDisk.write.step = 3;
+                StringList_clear(&stderrList);
                 error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.writeImageCommand),
                                             textMacros,SIZE_OF_ARRAY(textMacros),
-                                            (ExecuteIOFunction)executeIOgrowisofs,
-                                            (ExecuteIOFunction)executeIOgrowisofs,
-                                            storageHandle
+                                            CALLBACK(executeIOgrowisofs,storageHandle),
+                                            CALLBACK(executeIOOutput,&stderrList)
                                            );
                 if (error == ERROR_NONE)
                 {
@@ -4746,6 +4743,7 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
               {
                 File_delete(imageFileName,FALSE);
                 String_delete(imageFileName);
+                StringList_done(&stderrList);
                 break;
               }
             }
@@ -4760,6 +4758,7 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
                 {
                   File_delete(imageFileName,FALSE);
                   String_delete(imageFileName);
+                  StringList_done(&stderrList);
                   break;
                 }
                 updateStatusInfo(storageHandle);
@@ -4773,11 +4772,11 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
                 // write to medium
                 printInfo(0,"Write medium #%d with %d part(s)...",storageHandle->opticalDisk.write.number,StringList_count(&storageHandle->opticalDisk.write.fileNameList));
                 storageHandle->opticalDisk.write.step = 0;
+                StringList_clear(&stderrList);
                 error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.writeCommand),
                                             textMacros,SIZE_OF_ARRAY(textMacros),
-                                            (ExecuteIOFunction)executeIOgrowisofs,
-                                            (ExecuteIOFunction)executeIOOutput,
-                                            storageHandle
+                                            CALLBACK(executeIOgrowisofs,storageHandle),
+                                            CALLBACK(executeIOOutput,&stderrList)
                                            );
                 if (error == ERROR_NONE)
                 {
@@ -4797,6 +4796,7 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
               {
                 File_delete(imageFileName,FALSE);
                 String_delete(imageFileName);
+                StringList_done(&stderrList);
                 break;
               }
             }
@@ -4829,6 +4829,9 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
             // reset
             storageHandle->opticalDisk.write.newVolumeFlag = TRUE;
             storageHandle->opticalDisk.write.totalSize     = 0;
+
+            // free resources
+            StringList_done(&stderrList);
           }
         }
         else
@@ -4891,9 +4894,8 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
               error = Misc_executeCommand(String_cString(storageHandle->device.imagePreProcessCommand ),
                                           textMacros,
                                           SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)executeIOOutput,
-                                          (ExecuteIOFunction)executeIOOutput,
-                                          NULL
+                                          CALLBACK(executeIOOutput,NULL),
+                                          CALLBACK(executeIOOutput,NULL)
                                          );
               printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
@@ -4903,9 +4905,8 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
               error = Misc_executeCommand(String_cString(storageHandle->device.imageCommand),
                                           textMacros,
                                           SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)executeIOOutput,
-                                          (ExecuteIOFunction)executeIOOutput,
-                                          NULL
+                                          CALLBACK(executeIOOutput,NULL),
+                                          CALLBACK(executeIOOutput,NULL)
                                          );
               printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
@@ -4915,9 +4916,8 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
               error = Misc_executeCommand(String_cString(storageHandle->device.imagePostProcessCommand),
                                           textMacros,
                                           SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)executeIOOutput,
-                                          (ExecuteIOFunction)executeIOOutput,
-                                          NULL
+                                          CALLBACK(executeIOOutput,NULL),
+                                          CALLBACK(executeIOOutput,NULL)
                                          );
               printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
@@ -4929,9 +4929,8 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
               error = Misc_executeCommand(String_cString(storageHandle->device.writePreProcessCommand),
                                           textMacros,
                                           SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)executeIOOutput,
-                                          (ExecuteIOFunction)executeIOOutput,
-                                          NULL
+                                          CALLBACK(executeIOOutput,NULL),
+                                          CALLBACK(executeIOOutput,NULL)
                                          );
               printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
@@ -4941,9 +4940,8 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
               error = Misc_executeCommand(String_cString(storageHandle->device.writeCommand),
                                           textMacros,
                                           SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)executeIOOutput,
-                                          (ExecuteIOFunction)executeIOOutput,
-                                          NULL
+                                          CALLBACK(executeIOOutput,NULL),
+                                          CALLBACK(executeIOOutput,NULL)
                                          );
               printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
@@ -4953,9 +4951,8 @@ fprintf(stderr,"%s, %d: requestNewMedium %d %d\n",__FILE__,__LINE__,storageHandl
               error = Misc_executeCommand(String_cString(storageHandle->device.writePostProcessCommand),
                                           textMacros,
                                           SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)executeIOOutput,
-                                          (ExecuteIOFunction)executeIOOutput,
-                                          NULL
+                                          CALLBACK(executeIOOutput,NULL),
+                                          CALLBACK(executeIOOutput,NULL)
                                          );
               printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
@@ -5053,9 +5050,8 @@ Errors Storage_unloadVolume(StorageHandle *storageHandle)
         TEXT_MACRO_N_STRING(textMacros[0],"%device",storageHandle->storageSpecifier.deviceName);
         error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.unloadVolumeCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
-                                    (ExecuteIOFunction)executeIOOutput,
-                                    (ExecuteIOFunction)executeIOOutput,
-                                    NULL
+                                    CALLBACK(executeIOOutput,NULL),
+                                    CALLBACK(executeIOOutput,NULL)
                                    );
       }
       break;
@@ -5066,9 +5062,8 @@ Errors Storage_unloadVolume(StorageHandle *storageHandle)
         TEXT_MACRO_N_STRING(textMacros[0],"%device",storageHandle->storageSpecifier.deviceName);
         error = Misc_executeCommand(String_cString(storageHandle->device.unloadVolumeCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
-                                    (ExecuteIOFunction)executeIOOutput,
-                                    (ExecuteIOFunction)executeIOOutput,
-                                    NULL
+                                    CALLBACK(executeIOOutput,NULL),
+                                    CALLBACK(executeIOOutput,NULL)
                                    );
       }
       break;
@@ -10644,7 +10639,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
               fileInfo->permission      = storageDirectoryListHandle->sftp.attributes.permissions;
               fileInfo->major           = 0;
               fileInfo->minor           = 0;
-              memset(fileInfo->cast,0,sizeof(FileCast));
+              memset(&fileInfo->cast,0,sizeof(FileCast));
             }
 
             storageDirectoryListHandle->sftp.entryReadFlag = FALSE;
@@ -10790,7 +10785,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
               fileInfo->permission      = iso9660Stat->xa.attributes;
               fileInfo->major           = 0;
               fileInfo->minor           = 0;
-              memset(fileInfo->cast,0,sizeof(FileCast));
+              memset(&fileInfo->cast,0,sizeof(FileCast));
             }
 
             storageDirectoryListHandle->opticalDisk.cdioNextNode = _cdio_list_node_next(storageDirectoryListHandle->opticalDisk.cdioNextNode);

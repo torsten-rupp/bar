@@ -194,6 +194,8 @@ typedef struct
   StorageSpecifier             storageSpecifier;           // storage specifier data
   const JobOptions             *jobOptions;
 
+  bool                         mountedDeviceFlag;          // true iff device was mounted
+
   StorageRequestVolumeFunction requestVolumeFunction;      // call back for request new volume
   void                         *requestVolumeUserData;
   uint                         volumeNumber;               // current loaded volume number
