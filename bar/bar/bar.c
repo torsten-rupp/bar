@@ -603,9 +603,10 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("batch",                        0,  2,0,batchFlag,                                                                                              "run in batch mode"                                                        ),
   CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,0,&globalOptions.remoteBARExecutable,              cmdOptionParseString,NULL,                             "remote BAR executable","file name"                                        ),
 
+  CMD_OPTION_STRING       ("mount-device",                 0,  1,1,jobOptions.mountDeviceName,                                                                             "device to mount/unmount","name"                                           ),
+
   CMD_OPTION_STRING       ("pre-command",                  0,  1,0,jobOptions.preProcessCommand,                                                                           "pre-process command","command"                                            ),
   CMD_OPTION_STRING       ("post-command",                 0,  1,0,jobOptions.postProcessCommand,                                                                          "post-process command","command"                                           ),
-  CMD_OPTION_STRING       ("mount-device",                 0,  1,1,jobOptions.mountDeviceName,                                                                             "device to mount/unmount","name"                                           ),
 
   CMD_OPTION_STRING       ("file-write-pre-command",       0,  1,0,globalOptions.file.writePreProcessCommand,                                                              "write file pre-process command","command"                                 ),
   CMD_OPTION_STRING       ("file-write-post-command",      0,  1,0,globalOptions.file.writePostProcessCommand,                                                             "write file post-process command","command"                                ),
@@ -972,9 +973,10 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_END_SECTION(),
 
   // commands
+  CONFIG_VALUE_STRING   ("mount-device",                 &jobOptions.mountDeviceName,-1                                 ),
+
   CONFIG_VALUE_STRING   ("pre-command",                  &jobOptions.preProcessCommand,-1                               ),
   CONFIG_VALUE_STRING   ("post-command",                 &jobOptions.postProcessCommand,-1                              ),
-  CONFIG_VALUE_STRING   ("mount-device",                 &jobOptions.mountDeviceName,-1                                 ),
 
   CONFIG_VALUE_STRING   ("file-write-pre-command",       &globalOptions.file.writePreProcessCommand,-1                  ),
   CONFIG_VALUE_STRING   ("file-write-post-command",      &globalOptions.file.writePostProcessCommand,-1                 ),
@@ -3191,9 +3193,9 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->cryptPublicKeyFileName          = NULL;
   jobOptions->cryptPrivateKeyFileName         = NULL;
   jobOptions->mountDeviceName                 = NULL;
-  jobOptions->volumeSize                      = 0LL;
   jobOptions->preProcessCommand               = NULL;
   jobOptions->postProcessCommand              = NULL;
+  jobOptions->volumeSize                      = 0LL;
   jobOptions->skipUnreadableFlag              = TRUE;
   jobOptions->forceDeltaCompressionFlag       = FALSE;
   jobOptions->ignoreNoDumpAttributeFlag       = FALSE;

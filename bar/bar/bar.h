@@ -467,6 +467,9 @@ struct JobOptions
   String                      cryptPublicKeyFileName;
   String                      cryptPrivateKeyFileName;
 
+  String                      preProcessCommand;         // command to execute before start of job
+  String                      postProcessCommand;        // command to execute after after termination of job
+
   String                      mountDeviceName;           // device to mount/unmount
   FTPServer                   ftpServer;                 // job specific FTP server settings
   SSHServer                   sshServer;                 // job specific SSH server settings
@@ -476,9 +479,6 @@ struct JobOptions
   Device                      device;                    // job specific device settings
 
   uint64                      volumeSize;                // volume size or 0LL for default [bytes]
-
-  String                      preProcessCommand;         // command to execute before start of job
-  String                      postProcessCommand;        // command to execute after after termination of job
 
   bool                        skipUnreadableFlag;        // TRUE for skipping unreadable files
   bool                        forceDeltaCompressionFlag; // TRUE to force delta compression of files
