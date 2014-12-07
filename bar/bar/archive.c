@@ -932,7 +932,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
       // call back to create new archive
       if (archiveInfo->archiveCreatedFunction != NULL)
       {
-        error = archiveInfo->archiveCreatedFunction(archiveInfo->archiveNewFileUserData,
+        error = archiveInfo->archiveCreatedFunction(archiveInfo->archiveCreatedUserData,
                                                     archiveInfo->databaseHandle,
                                                     archiveInfo->storageId,
                                                     archiveInfo->file.fileName,
@@ -2808,7 +2808,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   Errors Archive_create(ArchiveInfo                     *archiveInfo,
                         const JobOptions                *jobOptions,
                         ArchiveCreatedFunction          archiveCreatedFunction,
-                        void                            *archiveNewFileUserData,
+                        void                            *archiveCreatedUserData,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData,
                         DatabaseHandle                  *databaseHandle
@@ -2819,7 +2819,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
                           ArchiveInfo                     *archiveInfo,
                           const JobOptions                *jobOptions,
                           ArchiveCreatedFunction          archiveCreatedFunction,
-                          void                            *archiveNewFileUserData,
+                          void                            *archiveCreatedUserData,
                           ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                           void                            *archiveGetCryptPasswordUserData,
                           DatabaseHandle                  *databaseHandle
@@ -2855,7 +2855,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   // init archive info
   archiveInfo->jobOptions                      = jobOptions;
   archiveInfo->archiveCreatedFunction          = archiveCreatedFunction;
-  archiveInfo->archiveNewFileUserData          = archiveNewFileUserData;
+  archiveInfo->archiveCreatedUserData          = archiveCreatedUserData;
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
 
@@ -3007,7 +3007,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // initstorageSpecifier
   archiveInfo->jobOptions                      = jobOptions;
   archiveInfo->archiveCreatedFunction          = NULL;
-  archiveInfo->archiveNewFileUserData          = NULL;
+  archiveInfo->archiveCreatedUserData          = NULL;
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
 

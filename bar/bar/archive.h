@@ -113,8 +113,8 @@ typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
 typedef struct
 {
   const JobOptions                *jobOptions;
-  ArchiveCreatedFunction          archiveCreatedFunction;              // call back for new archive file
-  void                            *archiveNewFileUserData;             // user data for call back for new archive file
+  ArchiveCreatedFunction          archiveCreatedFunction;              // call back for created archive file
+  void                            *archiveCreatedUserData;             // user data for call back for created archive file
   ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;     // call back to get crypt password
   void                            *archiveGetCryptPasswordUserData;    // user data for call back to get crypt password
 
