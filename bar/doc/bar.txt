@@ -74,8 +74,9 @@ OPTIONS
                                                                      zip0..zip9    ZIP compression level 0..9
                                                                      bzip1..bzip9  BZIP2 compression level 1..9
                                                                      lzma1..lzma9  LZMA compression level 1..9
-                                                                   additional select with '+':
-                                                                     xdelta1..xdelta9: XDELTA compression level 1..9
+
+                                                                     additional select with '+':
+                                                                     xdelta1..xdelta9  XDELTA compression level 1..9
          --compress-min-size=<n>[G|M|K]                            minimal size of file for compression (default: 32)
          --compress-exclude=<pattern>                              exclude compression pattern
          -y|--crypt-algorithm=<name>                               select crypt algorithm to use
@@ -283,7 +284,7 @@ $HOME/.bar/bar.cfg
 
   user specific configuration
 
-/etc/ssl/certs/bar-ca.pem, /etc/ssl/certs/bar-server-cert.pemq
+/etc/ssl/certs/bar-ca.pem, /etc/ssl/certs/bar-server-cert.pem
 
   BAR TLS/SSL certificates and public keys
 
