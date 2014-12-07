@@ -27,6 +27,7 @@
 
 #include "global.h"
 #include "strings.h"
+#include "lists.h"
 #include "files.h"
 #include "errors.h"
 
@@ -40,11 +41,27 @@
 /***************************** Constants *******************************/
 
 /***************************** Datatypes *******************************/
+
+// callback function
 typedef struct
 {
   DatabaseFunction function;
   void             *userData;
 } DatabaseCallback;
+
+// table column definition list
+typedef struct ColumnNode
+{
+  LIST_NODE_HEADER(struct ColumnNode);
+
+  char          *name;
+  DatabaseTypes type;
+} ColumnNode;
+
+typedef struct
+{
+  LIST_HEADER(ColumnNode);
+} ColumnList;
 
 /***************************** Variables *******************************/
 
@@ -400,6 +417,157 @@ LOCAL int busyHandler(void *userData, int n)
   return 1;
 }
 
+/***********************************************************************\
+* Name   : freeColumnNode
+* Purpose: free column node
+* Input  : columnNode - column node
+*          userData   - user data (no used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeColumnNode(ColumnNode *columnNode, void *userData)
+{
+  assert(columnNode != NULL);
+  assert(columnNode->name != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  free(columnNode->name);
+}
+
+/***********************************************************************\
+* Name   : getTableColumnList
+* Purpose: get table column list
+* Input  : columnList     - column list variable
+*          databaseHandle - database handle
+*          tableName      - table name
+* Output : columnList - column list
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors getTableColumnList(ColumnList     *columnList,
+                                DatabaseHandle *databaseHandle,
+                                const char     *tableName
+                               )
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  const char          *name,*type;
+  bool                primaryKey;
+  ColumnNode          *columnNode;
+
+  assert(columnList != NULL);
+
+  List_init(columnList);
+
+  error = Database_prepare(&databaseQueryHandle,
+                           databaseHandle,
+                           "PRAGMA table_info(%s) \
+                           ",
+                           tableName
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  while (Database_getNextRow(&databaseQueryHandle,
+                             "%d %p %p %d %b",
+                             NULL,
+                             &name,
+                             &type,
+                             NULL,
+                             &primaryKey
+                            )
+        )
+  {
+    columnNode = LIST_NEW_NODE(ColumnNode);
+    if (columnNode == NULL)
+    {
+      List_done(columnList,CALLBACK((ListNodeFreeFunction)freeColumnNode,NULL));
+      return ERROR_INSUFFICIENT_MEMORY;
+    }
+
+    columnNode->name = strdup(name);
+
+    if      (stringEqualsIgnoreCase(type,"INTEGER"))
+    {
+      if (primaryKey)
+      {
+        columnNode->type = DATABASE_TYPE_PRIMARY_KEY;
+      }
+      else
+      {
+        columnNode->type = DATABASE_TYPE_INT64;
+      }
+    }
+    else if (stringEqualsIgnoreCase(type,"REAL"))
+    {
+      columnNode->type = DATABASE_TYPE_DOUBLE;
+    }
+    else if (stringEqualsIgnoreCase(type,"TEXT"))
+    {
+      columnNode->type = DATABASE_TYPE_TEXT;
+    }
+    else if (stringEqualsIgnoreCase(type,"BLOB"))
+    {
+      columnNode->type = DATABASE_TYPE_BLOB;
+    }
+    else
+    {
+      HALT_INTERNAL_ERROR("Unknown database data type %s",type);
+    }
+
+    List_append(columnList,columnNode);
+  }
+
+  Database_finalize(&databaseQueryHandle);
+
+  return ERROR_NONE;
+}
+
+LOCAL void freeTableColumnList(ColumnList *columnList)
+{
+  assert(columnList != NULL);
+
+  List_done(columnList,CALLBACK((ListNodeFreeFunction)freeColumnNode,NULL));
+}
+
+LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
+{
+  const char *string;
+
+  switch (type)
+  {
+    case DATABASE_TYPE_PRIMARY_KEY:
+      string = "INTEGER PRIMARY KEY";
+      break;
+    case DATABASE_TYPE_INT64:
+      string = "INTEGER";
+      break;
+    case DATABASE_TYPE_DOUBLE:
+      string = "REAL";
+      break;
+    case DATABASE_TYPE_DATETIME:
+      string = "INTEGER";
+      break;
+    case DATABASE_TYPE_TEXT:
+      string = "TEXT";
+      break;
+    case DATABASE_TYPE_BLOB:
+      string = "BLOB";
+      break;
+    default:
+      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      break; // not reached
+  }
+
+  return string;
+}
+
 /*---------------------------------------------------------------------*/
 
 #ifdef NDEBUG
@@ -513,6 +681,257 @@ sqlite3_busy_handler(databaseHandle->handle,busyHandler,NULL);
   sqlite3_close(databaseHandle->handle);
 }
 
+Errors Database_addColumn(DatabaseHandle *databaseHandle,
+                          const char     *tableName,
+                          const char     *columnName,
+                          DatabaseTypes  columnType
+                         )
+{
+  const char *columnTypeString;
+  Errors     error;
+
+  // get column type name
+  switch (columnType)
+  {
+    case DATABASE_TYPE_PRIMARY_KEY:
+      columnTypeString = "INTEGER PRIMARY KEY";
+      break;
+    case DATABASE_TYPE_FOREIGN_KEY:
+      columnTypeString = "INTEGER";
+      break;
+    case DATABASE_TYPE_INT64:
+      columnTypeString = "INTEGER";
+      break;
+    case DATABASE_TYPE_DOUBLE:
+      columnTypeString = "REAL";
+      break;
+    case DATABASE_TYPE_DATETIME:
+      columnTypeString = "INTEGER";
+      break;
+    case DATABASE_TYPE_TEXT:
+      columnTypeString = "TEXT";
+      break;
+    case DATABASE_TYPE_BLOB:
+      columnTypeString = "BLOB";
+      break;
+    default:
+      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      break; // not reached
+  }
+
+  // execute SQL command
+  error = Database_execute(databaseHandle,
+                           NULL,
+                           NULL,
+                           "ALTER TABLE %s ADD COLUMN %s %s; \
+                           ",
+                           tableName,
+                           columnName,
+                           columnTypeString
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Database_removeColumn(DatabaseHandle *databaseHandle,
+                             const char     *tableName,
+                             const char     *columnName
+                            )
+{
+  Errors           error;
+  ColumnList       columnList;
+  const ColumnNode *columnNode;
+  String           sqlString;
+  sqlite3_stmt     *handle;
+  int              sqliteResult;
+  uint             n;
+  uint             column;
+
+  // get table columns
+  error = getTableColumnList(&columnList,databaseHandle,tableName);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+//__BP();
+  sqlString = String_new();
+  BLOCK_DOX(error,
+            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
+            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+  {
+    // create new table
+    String_format(String_clear(sqlString),"CREATE TABLE IF NOT EXISTS __new__(");
+    n = 0;
+    LIST_ITERATE(&columnList,columnNode)
+    {
+      if (!stringEquals(columnNode->name,columnName))
+      {
+        if (n > 0) String_appendChar(sqlString,',');
+
+        String_format(sqlString,"%s %s",columnNode->name,getDatabaseTypeString(columnNode->type));
+        n++;
+      }
+    }
+    String_appendCString(sqlString,");");
+
+    #ifdef DATABASE_DEBUG
+      fprintf(stderr,"Database debug: execute command: %s\n",String_cString(sqlString));
+    #endif
+    sqliteResult = sqlite3_exec(databaseHandle->handle,
+                                String_cString(sqlString),
+                                NULL,
+                                NULL,
+                                NULL
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    }
+
+    // copy old table -> new table
+    String_format(String_clear(sqlString),"SELECT * FROM %s;",tableName);
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+                                      String_cString(sqlString),
+                                      -1,
+                                      &handle,
+                                      NULL
+                                     );
+    if (sqliteResult != SQLITE_OK)
+    {
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    }
+
+    // copy table rows
+    while (sqlite3_step(handle) == SQLITE_ROW)
+    {
+      // create SQL command string
+      String_setCString(sqlString,"INSERT INTO __new__ (");
+      n = 0;
+      LIST_ITERATE(&columnList,columnNode)
+      {
+        if (!stringEquals(columnNode->name,columnName))
+        {
+          if (n > 0) String_appendChar(sqlString,',');
+
+          String_appendCString(sqlString,columnNode->name);
+          n++;
+        }
+      }
+      String_appendCString(sqlString,")");
+
+      String_appendCString(sqlString," VALUES (");
+      column = 0;
+      n = 0;
+      LIST_ITERATE(&columnList,columnNode)
+      {
+        if (!stringEquals(columnNode->name,columnName))
+        {
+          if (n > 0) String_appendChar(sqlString,',');
+
+          switch (columnNode->type)
+          {
+            case DATABASE_TYPE_PRIMARY_KEY:
+            case DATABASE_TYPE_INT64:
+            case DATABASE_TYPE_DOUBLE:
+            case DATABASE_TYPE_DATETIME:
+            case DATABASE_TYPE_TEXT:
+              String_format(sqlString,"%'s",sqlite3_column_text(handle,column));
+              break;
+            case DATABASE_TYPE_BLOB:
+              HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+              break;
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; // not reached
+          }
+          n++;
+        }
+
+        column++;
+      }
+      String_appendCString(sqlString,");");
+
+      // execute SQL command
+      #ifdef DATABASE_DEBUG
+        fprintf(stderr,"Database debug: execute command: %s\n",String_cString(sqlString));
+      #endif
+      sqliteResult = sqlite3_exec(databaseHandle->handle,
+                                  String_cString(sqlString),
+                                  NULL,
+                                  NULL,
+                                  NULL
+                                 );
+      if (sqliteResult != SQLITE_OK)
+      {
+        return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      }
+    }
+
+    // done table
+    sqlite3_finalize(handle);
+
+    return ERROR_NONE;
+  });
+  String_delete(sqlString);
+
+  // free resources
+  freeTableColumnList(&columnList);
+
+  // rename tables
+  error = Database_execute(databaseHandle,
+                           NULL,
+                           NULL,
+                           "ALTER TABLE %s RENAME TO __old__;",
+                           tableName
+                          );
+  if (error != ERROR_NONE)
+  {
+    (void)Database_execute(databaseHandle,
+                           NULL,
+                           NULL,
+                           "DROP TABLE __new__;"
+                          );
+    return error;
+  }
+  error = Database_execute(databaseHandle,
+                           NULL,
+                           NULL,
+                           "ALTER TABLE __new__ RENAME TO %s;",
+                           tableName
+                          );
+  if (error != ERROR_NONE)
+  {
+    (void)Database_execute(databaseHandle,
+                           NULL,
+                           NULL,
+                           "ALTER TABLE __old__ RENAME TO %s;",
+                           tableName
+                          );
+    (void)Database_execute(databaseHandle,
+                           NULL,
+                           NULL,
+                           "DROP TABLE __new__;"
+                          );
+    return error;
+  }
+  error = Database_execute(databaseHandle,
+                           NULL,
+                           NULL,
+                           "DROP TABLE __old__;"
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
 Errors Database_execute(DatabaseHandle   *databaseHandle,
                         DatabaseFunction databaseFunction,
                         void             *databaseUserData,
@@ -607,6 +1026,9 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
                               arguments
                              );
   va_end(arguments);
+  #ifndef NDEBUG
+    databaseQueryHandle->sqlString = String_duplicate(sqlString);
+  #endif /* not NDEBUG */
 
   // prepare SQL command execution
   error = ERROR_NONE;
@@ -655,6 +1077,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   int     maxLength;
   union
   {
+    bool   *b;
     int    *i;
     uint   *ui;
     long   *l;
@@ -665,6 +1088,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
     double *d;
     char   *ch;
     char   *s;
+    void   **p;
     String string;
   }       value;
 
@@ -740,6 +1164,16 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
           // handle format type
           switch (*format)
           {
+            case 'b':
+              // bool
+              format++;
+
+              value.b = va_arg(arguments,bool*);
+              if (value.b != NULL)
+              {
+                (*value.b) = (sqlite3_column_int(databaseQueryHandle->handle,column) == 1);
+              }
+              break;
             case 'd':
               // integer
               format++;
@@ -799,7 +1233,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
               }
               break;
             case 'f':
-              // float
+              // float/double
               format++;
 
               if (longFlag)
@@ -857,6 +1291,16 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
                 String_setCString(value.string,(const char*)sqlite3_column_text(databaseQueryHandle->handle,column));
               }
               break;
+            case 'p':
+              // text via pointer
+              format++;
+
+              value.p = va_arg(arguments,void*);
+              if (value.p != NULL)
+              {
+                (*value.p) = (void*)sqlite3_column_text(databaseQueryHandle->handle,column);
+              }
+              break;
             default:
               return FALSE;
               break; /* not reached */
@@ -889,6 +1333,9 @@ void Database_finalize(DatabaseQueryHandle *databaseQueryHandle)
   {
     sqlite3_finalize(databaseQueryHandle->handle);
   });
+  #ifndef NDEBUG
+    String_delete(databaseQueryHandle->sqlString);
+  #endif /* not NDEBUG */
 }
 
 Errors Database_getInteger64(DatabaseHandle *databaseHandle,
@@ -1236,6 +1683,17 @@ int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
 
   return databaseId;
 }
+
+#ifndef NDEBUG
+
+void Database_debugPrintQueryInfo(DatabaseQueryHandle *databaseQueryHandle)
+{
+  assert(databaseQueryHandle != NULL);
+
+  fprintf(stderr,"DEBUG: SQL command string: %s\n",String_cString(databaseQueryHandle->sqlString));
+}
+
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }

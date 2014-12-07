@@ -37,6 +37,18 @@ typedef enum
   DATABASE_OPENMODE_READWRITE,
 } DatabaseOpenModes;
 
+// database types
+typedef enum
+{
+  DATABASE_TYPE_PRIMARY_KEY,
+  DATABASE_TYPE_FOREIGN_KEY,
+  DATABASE_TYPE_INT64,
+  DATABASE_TYPE_DOUBLE,
+  DATABASE_TYPE_DATETIME,
+  DATABASE_TYPE_TEXT,
+  DATABASE_TYPE_BLOB
+} DatabaseTypes;
+
 // no id
 #define DATABASE_ID_NONE -1LL
 
@@ -53,6 +65,9 @@ typedef struct
 {
   DatabaseHandle *databaseHandle;
   sqlite3_stmt   *handle;
+  #ifndef NDEBUG
+    String sqlString;
+  #endif /* not NDEBUG */
 } DatabaseQueryHandle;
 
 // execute callback function
@@ -120,6 +135,40 @@ typedef int64 DatabaseId;
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Database_addColumn
+* Purpose: add column to table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          columnType     - column data type
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_addColumn(DatabaseHandle *databaseHandle,
+                          const char     *tableName,
+                          const char     *columnName,
+                          DatabaseTypes  columnType
+                         );
+
+/***********************************************************************\
+* Name   : Database_addColumn
+* Purpose: remove column from table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_removeColumn(DatabaseHandle *databaseHandle,
+                             const char     *tableName,
+                             const char     *columnName
+                            );
+
+/***********************************************************************\
 * Name   : Database_execute
 * Purpose: execute SQL statement
 * Input  : databaseHandle - database handle
@@ -165,9 +214,18 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
 * Name   : Database_getNextRow
 * Purpose: get next row from query result
 * Input  : databaseQueryHandle - database query handle
-* Output : format - format string with %[l]d, %[l]f, %s, %s, %S
+*          format - format string
+* Output : ... - variables
 * Return : TRUE if row read, FALSE if not more rows
-* Notes  : -
+* Notes  : Support format types:
+*            %b              - bool
+*            %[<n>][(ll|l)\d - int
+*            %[<n>][(ll|l)\u - unsigned int
+*            %[<n>][l\f      - float/double
+*            %c              - char
+*            %[<n>]s         - char*
+*            %S              - string
+*            %p              - pointer
 \***********************************************************************/
 
 bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
@@ -286,6 +344,21 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 int64 Database_getLastRowId(DatabaseHandle *databaseHandle);
+
+#ifndef NDEBUG
+
+/***********************************************************************\
+* Name   : Database_debugPrintQueryInfo
+* Purpose: print query info
+* Input  : databaseQueryHandle - database query handle
+* Output : -
+* Return : -
+* Notes  : For debugging only!
+\***********************************************************************/
+
+void Database_debugPrintQueryInfo(DatabaseQueryHandle *databaseQueryHandle);
+
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }
