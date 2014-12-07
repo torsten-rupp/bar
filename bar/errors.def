@@ -409,6 +409,28 @@ ERROR READ_DEVICE                    "read device fail"
 ERROR WRITE_DEVICE                   "write device fail"
 ERROR PARSE_DEVICE_LIST              "error parsing device list"
 
+ERROR MOUNT
+  if (ERROR_TEXT != NULL)
+  {
+    snprintf(errorText,sizeof(errorText)-1,"mount '%s' fail",ERROR_TEXT);
+  }
+  else
+  {
+    strncpy(errorText,"mount fail",sizeof(errorText)-1);
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR UMOUNT
+  if (ERROR_TEXT != NULL)
+  {
+    snprintf(errorText,sizeof(errorText)-1,"unmount '%s' fail",ERROR_TEXT);
+  }
+  else
+  {
+    strncpy(errorText,"unmount fail",sizeof(errorText)-1);
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
 // --- archive ----------------------------------------------------------
 ERROR NO_ARCHIVE_FILE_NAME           "no archive file name given"
 ERROR NOT_AN_ARCHIVE_FILE            "not an archive file"
