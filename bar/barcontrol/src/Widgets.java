@@ -5519,7 +5519,7 @@ e composite widget
       {
         if (!tree.isDisposed())
         {
-          for (TreeItem treeItem : tree.getItems())
+          for (TreeItem treeItem : Widgets.getTreeItems(tree))
           {
             if (treeItem.getData() == data)
             {
@@ -5885,12 +5885,12 @@ private static void printTree(Tree tree)
    * @param treeItem tree item to start
    * @param rootItemsOnly true to collect expanded sub-tree root items only
    */
-  private static void getTreeItems(HashSet<TreeItem> treeItemSet, TreeItem treeItem, boolean rootItemsOnly)
+  private static void getSubTreeItems(HashSet<TreeItem> treeItemSet, TreeItem treeItem)
   {
-    if (!rootItemsOnly || treeItem.getExpanded()) treeItemSet.add(treeItem);
     for (TreeItem subTreeItem : treeItem.getItems())
     {
-      getTreeItems(treeItemSet,subTreeItem,rootItemsOnly);
+      treeItemSet.add(subTreeItem);
+      getSubTreeItems(treeItemSet,subTreeItem);
     }
   }
 
@@ -5906,7 +5906,11 @@ private static void printTree(Tree tree)
     {
       for (TreeItem treeItem : tree.getItems())
       {
-        getTreeItems(treeItemSet,treeItem,rootItemsOnly);
+        treeItemSet.add(treeItem);
+        if (!rootItemsOnly)
+        {
+          getSubTreeItems(treeItemSet,treeItem);
+        }
       }
     }
 
