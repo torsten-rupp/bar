@@ -449,7 +449,7 @@ void __StringMap_remove(const char *__fileName__, ulong __lineNb__, StringMap st
 StringMapEntry *StringMap_find(const StringMap stringMap, const char *name);
 
 /***********************************************************************\
-* Name   : StringMap_contain
+* Name   : StringMap_contains
 * Purpose: check if string map contain string
 * Input  : stringMap - string map
 *          string,s   - string to find
@@ -458,7 +458,7 @@ StringMapEntry *StringMap_find(const StringMap stringMap, const char *name);
 * Notes  : -
 \***********************************************************************/
 
-bool StringMap_contain(const StringMap stringMap, const char *name);
+bool StringMap_contains(const StringMap stringMap, const char *name);
 
 /***********************************************************************\
 * Name   : StringMap_parse

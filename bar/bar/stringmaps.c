@@ -1096,7 +1096,7 @@ StringMapEntry *StringMap_find(const StringMap stringMap, const char *name)
   return findStringMapEntry(stringMap,name);
 }
 
-bool StringMap_contain(const StringMap stringMap, const char *name)
+bool StringMap_contains(const StringMap stringMap, const char *name)
 {
   assert(stringMap != NULL);
   assert(name != NULL);
