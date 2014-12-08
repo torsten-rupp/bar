@@ -614,7 +614,7 @@ class TabStatus
 
     // selected job group
     widgetSelectedJob = Widgets.newGroup(widgetTab,BARControl.tr("Selected")+" ''",SWT.NONE);
-    widgetSelectedJob.setLayout(new TableLayout(0.0,new double[]{0.0,0.0,1.0,0.0,1.0,0.0,0.0,1.0,0.0,1.0,1.0},4));
+    widgetSelectedJob.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0,1.0,0.0,0.0,1.0,0.0,1.0,1.0},4));
     Widgets.layout(widgetSelectedJob,1,0,TableLayoutData.WE);
     {
       // fix layout
