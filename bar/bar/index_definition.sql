@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS meta(
 INSERT INTO meta (name,value) VALUES ('version',4);
 INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
+/*
 CREATE TABLE IF NOT EXISTS jobs(
   id              INTEGER PRIMARY KEY,
   name            TEXT,
@@ -20,11 +21,12 @@ CREATE TABLE IF NOT EXISTS jobs(
   parentJobId     INTEGER,
   bidFlag         INTEGER
 );
+*/
 
 CREATE TABLE IF NOT EXISTS storage(
   id              INTEGER PRIMARY KEY,
-  jobId           INTEGER,
-//uuid TEXT,
+#  jobId           INTEGER,
+  uuid            TEXT,
   name            TEXT,
   created         INTEGER,
   size            INTEGER,
