@@ -652,125 +652,131 @@ class TabRestore
             String[] resultErrorMessage = new String[1];
             ValueMap resultMap          = new ValueMap();
 
-            // get job list
-            command = BARServer.runCommand(StringParser.format("INDEX_JOB_LIST pattern=%'S",
-                                                               (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
-                                                              )
-                                          );
-            while (!command.endOfData())
+            if (!triggeredFlag)
             {
-              if (command.getNextResult(resultErrorMessage,
-                                        resultMap,
-                                        Command.TIMEOUT
-                                       ) == Errors.NONE
-                 )
+              // get job list
+              command = BARServer.runCommand(StringParser.format("INDEX_JOB_LIST pattern=%'S",
+                                                                 (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
+                                                                )
+                                            );
+              while (!command.endOfData() && !triggeredFlag)
               {
-                try
+                if (command.getNextResult(resultErrorMessage,
+                                          resultMap,
+                                          Command.TIMEOUT
+                                         ) == Errors.NONE
+                   )
                 {
-                  String uuid             = resultMap.getString("uuid"             );
-                  String name             = resultMap.getString("name"             );
-                  long   lastDateTime     = resultMap.getLong  ("lastDateTime"     );
-                  long   totalSize        = resultMap.getLong  ("totalSize"        );
-                  String lastErrorMessage = resultMap.getString("lastErrorMessage" );
+                  try
+                  {
+                    String uuid             = resultMap.getString("uuid"             );
+                    String name             = resultMap.getString("name"             );
+                    long   lastDateTime     = resultMap.getLong  ("lastDateTime"     );
+                    long   totalSize        = resultMap.getLong  ("totalSize"        );
+                    String lastErrorMessage = resultMap.getString("lastErrorMessage" );
 
-                  JobData jobData;
-                  synchronized(jobDataMap)
-                  {
-                    jobData = jobDataMap.get(uuid);
-                    if (jobData != null)
+                    JobData jobData;
+                    synchronized(jobDataMap)
                     {
-                      jobData.name         = name;
-                      jobData.dateTime     = lastDateTime;
-                      jobData.size         = totalSize;
-                      jobData.errorMessage = lastErrorMessage;
+                      jobData = jobDataMap.get(uuid);
+                      if (jobData != null)
+                      {
+                        jobData.name         = name;
+                        jobData.dateTime     = lastDateTime;
+                        jobData.size         = totalSize;
+                        jobData.errorMessage = lastErrorMessage;
+                      }
+                      else
+                      {
+                        jobData = new JobData(uuid,
+                                              name,
+                                              lastDateTime,
+                                              totalSize,
+                                              lastErrorMessage
+                                             );
+                      }
                     }
-                    else
-                    {
-                      jobData = new JobData(uuid,
-                                            name,
-                                            lastDateTime,
-                                            totalSize,
-                                            lastErrorMessage
-                                           );
-                    }
+                    newJobDataMap.put(jobData);
                   }
-                  newJobDataMap.put(jobData);
-                }
-                catch (IllegalArgumentException exception)
-                {
-                  if (Settings.debugFlag)
+                  catch (IllegalArgumentException exception)
                   {
-                    System.err.println("ERROR: "+exception.getMessage());
+                    if (Settings.debugFlag)
+                    {
+                      System.err.println("ERROR: "+exception.getMessage());
+                    }
                   }
                 }
               }
             }
 
-            // get storage list
-            command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST uuid=* maxCount=%d indexState=%s indexMode=%s pattern=%'S",
-                                                               storageMaxCount,
-                                                               storageIndexStateSetFilter.nameList("|"),
-                                                               "*",
-                                                               (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
-                                                              )
-                                          );
-            while (!command.endOfData())
+            if (!triggeredFlag)
             {
-              if (command.getNextResult(resultErrorMessage,
-                                        resultMap,
-                                        Command.TIMEOUT
-                                       ) == Errors.NONE
-                 )
+              // get storage list
+              command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST uuid=* maxCount=%d indexState=%s indexMode=%s pattern=%'S",
+                                                                 storageMaxCount,
+                                                                 storageIndexStateSetFilter.nameList("|"),
+                                                                 "*",
+                                                                 (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
+                                                                )
+                                            );
+              while (!command.endOfData() && !triggeredFlag)
               {
-                try
+                if (command.getNextResult(resultErrorMessage,
+                                          resultMap,
+                                          Command.TIMEOUT
+                                         ) == Errors.NONE
+                   )
                 {
-                  long        storageId           = resultMap.getLong  ("storageId"                   );
-                  String      uuid                = resultMap.getString("uuid"                        );
-                  String      name                = resultMap.getString("name"                        );
-                  long        dateTime            = resultMap.getLong  ("dateTime"                    );
-                  long        size                = resultMap.getLong  ("size"                        );
-                  IndexStates indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
-                  IndexModes  indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class  );
-                  long        lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"         );
-                  String      errorMessage        = resultMap.getString("errorMessage"                );
+                  try
+                  {
+                    long        storageId           = resultMap.getLong  ("storageId"                   );
+                    String      uuid                = resultMap.getString("uuid"                        );
+                    String      name                = resultMap.getString("name"                        );
+                    long        dateTime            = resultMap.getLong  ("dateTime"                    );
+                    long        size                = resultMap.getLong  ("size"                        );
+                    IndexStates indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
+                    IndexModes  indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class  );
+                    long        lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"         );
+                    String      errorMessage        = resultMap.getString("errorMessage"                );
 
-                  StorageData storageData;
-                  synchronized(storageDataMap)
-                  {
-                    storageData = storageDataMap.get(storageId);
-                    if (storageData != null)
+                    StorageData storageData;
+                    synchronized(storageDataMap)
                     {
-                      storageData.uuid                = uuid;
-                      storageData.name                = name;
-                      storageData.dateTime            = dateTime;
-                      storageData.size                = size;
-                      storageData.indexState          = indexState;
-                      storageData.indexMode           = indexMode;
-                      storageData.lastCheckedDateTime = lastCheckedDateTime;
-                      storageData.errorMessage        = errorMessage;
+                      storageData = storageDataMap.get(storageId);
+                      if (storageData != null)
+                      {
+                        storageData.uuid                = uuid;
+                        storageData.name                = name;
+                        storageData.dateTime            = dateTime;
+                        storageData.size                = size;
+                        storageData.indexState          = indexState;
+                        storageData.indexMode           = indexMode;
+                        storageData.lastCheckedDateTime = lastCheckedDateTime;
+                        storageData.errorMessage        = errorMessage;
+                      }
+                      else
+                      {
+                        storageData = new StorageData(storageId,
+                                                      uuid,
+                                                      name,
+                                                      dateTime,
+                                                      size,
+                                                      new File(name).getName(),
+                                                      indexState,
+                                                      indexMode,
+                                                      lastCheckedDateTime,
+                                                      errorMessage
+                                                     );
+                      }
                     }
-                    else
-                    {
-                      storageData = new StorageData(storageId,
-                                                    uuid,
-                                                    name,
-                                                    dateTime,
-                                                    size,
-                                                    new File(name).getName(),
-                                                    indexState,
-                                                    indexMode,
-                                                    lastCheckedDateTime,
-                                                    errorMessage
-                                                   );
-                    }
+                    newStorageDataMap.put(storageData);
                   }
-                  newStorageDataMap.put(storageData);
-                }
-                catch (IllegalArgumentException exception)
-                {
-                  if (Settings.debugFlag)
+                  catch (IllegalArgumentException exception)
                   {
-                    System.err.println("ERROR: "+exception.getMessage());
+                    if (Settings.debugFlag)
+                    {
+                      System.err.println("ERROR: "+exception.getMessage());
+                    }
                   }
                 }
               }
@@ -822,8 +828,11 @@ class TabRestore
           // sleep a short time or get new pattern
           synchronized(trigger)
           {
-            // wait for refresh request or timeout
-            try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
+            if (!triggeredFlag)
+            {
+              // wait for refresh request or timeout
+              try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
+            }
 
             // if not triggered (timeout occurred) update is done invisible (color is not set)
             if (!triggeredFlag) setUpdateIndicator = false;
@@ -853,10 +862,10 @@ class TabRestore
     {
       synchronized(trigger)
       {
-        this.storagePattern          = storagePattern;
+        this.storagePattern             = storagePattern;
         this.storageIndexStateSetFilter = storageIndexStateSetFilter;
-        this.storageMaxCount         = storageMaxCount;
-        this.setUpdateIndicator      = true;
+        this.storageMaxCount            = storageMaxCount;
+        this.setUpdateIndicator         = true;
 
         triggeredFlag = true;
         trigger.notify();
@@ -1145,7 +1154,7 @@ class TabRestore
               // read results, update/add data
               String[] resultErrorMessage = new String[1];
               ValueMap resultMap          = new ValueMap();
-              while (!command.endOfData())
+              while (!command.endOfData() && !triggeredFlag)
               {
                 if (command.getNextResult(resultErrorMessage,
                                           resultMap,
@@ -1595,10 +1604,12 @@ class TabRestore
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TreeItem treeItem = (TreeItem)selectionEvent.item;
-          if (treeItem != null)
+          if ((treeItem != null) && (selectionEvent.detail == SWT.NONE))
           {
+            // set checked
             ((StorageData)treeItem.getData()).setChecked(treeItem.getChecked());
 
+            // set storage list
             BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"));
             for (JobData jobData : jobDataMap.values())
             {
@@ -1614,12 +1625,13 @@ class TabRestore
                 BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageId=%d",storageData.id));
               }
             }
-          }
 
-          checkedStorageEvent.trigger();
-          if (checkedStorageOnlyFlag)
-          {
-            updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
+            // trigger update list update
+            checkedStorageEvent.trigger();
+            if (checkedStorageOnlyFlag)
+            {
+              updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
+            }
           }
         }
       });
@@ -1686,45 +1698,35 @@ class TabRestore
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,0,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("UUID")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last created")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,1,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,jobData.uuid);
+              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(jobData.dateTime*1000)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,1,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last created")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(jobData.dateTime*1000)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),jobData.size,Units.formatByteSize(jobData.size)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,3,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),jobData.size,Units.formatByteSize(jobData.size)));
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,3,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,4,0,TableLayoutData.W);
-
               label = Widgets.newLabel(widgetStorageTreeToolTip,jobData.errorMessage);
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,4,1,TableLayoutData.WE);
+              Widgets.layout(label,3,1,TableLayoutData.WE);
 
               Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
               Rectangle bounds = treeItem.getBounds(0);
@@ -1771,65 +1773,55 @@ class TabRestore
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,0,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("UUID")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Created")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,1,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,storageData.uuid);
+              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageData.dateTime*1000)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,1,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Created")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Size")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageData.dateTime*1000)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageData.size,Units.formatByteSize(storageData.size)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Size")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("State")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,3,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageData.size,Units.formatByteSize(storageData.size)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,storageData.indexState.toString());
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,3,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("State")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last checked")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,4,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,storageData.indexState.toString());
+              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageData.lastCheckedDateTime*1000)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,4,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last checked")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Error")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,5,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageData.lastCheckedDateTime*1000)));
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,5,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Error")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,6,0,TableLayoutData.W);
-
               label = Widgets.newLabel(widgetStorageTreeToolTip,storageData.errorMessage);
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,6,1,TableLayoutData.WE);
+              Widgets.layout(label,5,1,TableLayoutData.WE);
 
               Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
               Rectangle bounds = treeItem.getBounds(0);
@@ -1915,10 +1907,12 @@ class TabRestore
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TableItem tabletem = (TableItem)selectionEvent.item;
-          if (tabletem != null)
+          if ((tabletem != null) && (selectionEvent.detail == SWT.NONE))
           {
+            // set checked
             ((StorageData)tabletem.getData()).setChecked(tabletem.getChecked());
 
+            // set storage list
             BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"));
             for (StorageData storageData : storageDataMap.values())
             {
@@ -1927,12 +1921,13 @@ class TabRestore
                 BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageId=%d",storageData.id));
               }
             }
-          }
 
-          checkedStorageEvent.trigger();
-          if (checkedStorageOnlyFlag)
-          {
-            updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
+            // trigger update list update
+            checkedStorageEvent.trigger();
+            if (checkedStorageOnlyFlag)
+            {
+              updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
+            }
           }
         }
       });
@@ -1997,65 +1992,55 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("UUID")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Created")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,storageData.uuid);
+            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageData.dateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Created")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Size")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,2,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageData.dateTime*1000)));
+            label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageData.size,Units.formatByteSize(storageData.size)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,2,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Size")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("State")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageData.size,Units.formatByteSize(storageData.size)));
+            label = Widgets.newLabel(widgetStorageTableToolTip,storageData.indexState.toString());
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("State")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Last checked")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,storageData.indexState.toString());
+            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageData.lastCheckedDateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Last checked")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Error")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,5,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageData.lastCheckedDateTime*1000)));
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,5,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Error")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,6,0,TableLayoutData.W);
-
             label = Widgets.newLabel(widgetStorageTableToolTip,storageData.errorMessage);
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,6,1,TableLayoutData.WE);
+            Widgets.layout(label,5,1,TableLayoutData.WE);
 
             Point size = widgetStorageTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
             Rectangle bounds = tableItem.getBounds(0);
@@ -3047,7 +3032,7 @@ class TabRestore
         }
         break;
       case 1:
-        for (TableItem tableItem : widgetStorageTable.getItems())
+        for (TableItem tableItem : widgetStorageTable.getSelection())
         {
           StorageData storageData = (StorageData)tableItem.getData();
           if ((storageData != null) && !tableItem.getGrayed())
@@ -3143,7 +3128,7 @@ class TabRestore
                                     jobData.name,
                                     Units.formatByteSize(jobData.size),
                                     simpleDateFormat.format(new Date(jobData.dateTime*1000)),
-                                    jobData.errorMessage
+                                    ""
                                    )
            )
         {
@@ -3154,7 +3139,7 @@ class TabRestore
                                                      jobData.name,
                                                      Units.formatByteSize(jobData.size),
                                                      simpleDateFormat.format(new Date(jobData.dateTime*1000)),
-                                                     jobData.errorMessage
+                                                     ""
                                                     );
 
           // store tree item reference
