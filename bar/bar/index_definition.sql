@@ -3,37 +3,39 @@
  Note: SQLite3 require syntax "CREATE TABLE foo(" in a single line!
 
 */
+VERSION = 4;
+
+PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS meta(
-  name  TEXT,
+  name  TEXT UNIQUE,
   value TEXT
 );
-INSERT INTO meta (name,value) VALUES ('version',4);
-INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
+INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$version);
+INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
-/*
 CREATE TABLE IF NOT EXISTS jobs(
   id              INTEGER PRIMARY KEY,
-  name            TEXT,
-  uuid            TEXT,
+  uuid            TEXT NOT NULL,
   created         INTEGER,
   type            INTEGER,
   parentJobId     INTEGER,
   bidFlag         INTEGER
 );
-*/
 
 CREATE TABLE IF NOT EXISTS storage(
   id              INTEGER PRIMARY KEY,
-#  jobId           INTEGER,
-  uuid            TEXT,
-  name            TEXT,
+  jobId           INTEGER,
+uuid            TEXT NOT NULL,
+  name            TEXT NOT NULL,
   created         INTEGER,
   size            INTEGER,
   state           INTEGER,
   mode            INTEGER,
   lastChecked     INTEGER,
-  errorMessage    TEXT
+  errorMessage    TEXT,
+
+  FOREIGN KEY(jobId) REFERENCES jobs(id)
 );
 
 CREATE TABLE IF NOT EXISTS files(
@@ -48,7 +50,9 @@ CREATE TABLE IF NOT EXISTS files(
   groupId         INTEGER,
   permission      INTEGER,
   fragmentOffset  INTEGER,
-  fragmentSize    INTEGER
+  fragmentSize    INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 
 CREATE TABLE IF NOT EXISTS images(
@@ -59,7 +63,9 @@ CREATE TABLE IF NOT EXISTS images(
   size            INTEGER,
   blockSize       INTEGER,
   blockOffset     INTEGER,
-  blockCount      INTEGER
+  blockCount      INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 
 CREATE TABLE IF NOT EXISTS directories(
@@ -71,7 +77,9 @@ CREATE TABLE IF NOT EXISTS directories(
   timeLastChanged INTEGER,
   userId          INTEGER,
   groupId         INTEGER,
-  permission      INTEGER
+  permission      INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 
 CREATE TABLE IF NOT EXISTS links(
@@ -84,7 +92,9 @@ CREATE TABLE IF NOT EXISTS links(
   timeLastChanged INTEGER,
   userId          INTEGER,
   groupId         INTEGER,
-  permission      INTEGER
+  permission      INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 
 CREATE TABLE IF NOT EXISTS hardlinks(
@@ -99,7 +109,9 @@ CREATE TABLE IF NOT EXISTS hardlinks(
   groupId         INTEGER,
   permission      INTEGER,
   fragmentOffset  INTEGER,
-  fragmentSize    INTEGER
+  fragmentSize    INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 
 CREATE TABLE IF NOT EXISTS special(
@@ -114,5 +126,7 @@ CREATE TABLE IF NOT EXISTS special(
   groupId         INTEGER,
   permission      INTEGER,
   major           INTEGER,
-  minor           INTEGER
+  minor           INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
 );

@@ -29,6 +29,7 @@ use Getopt::Long;
 # ------------------------------ main program  -------------------------------
 
 my $commentFlag=0;
+my $version=0;
 my $allDatabaseTableDefinitions = "";
 my $databaseTableDefinitionName="";
 my $databaseTableDefinition="";
@@ -45,6 +46,8 @@ while ($line=<STDIN>)
 
       if ($1 ne "")
       {
+        $1 =~ s/\$version/$version/g;
+
         $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$1\\\n";
         if ($databaseTableDefinitionName ne "")
         {
@@ -61,6 +64,8 @@ while ($line=<STDIN>)
 
       if ($1 ne "")
       {
+        $1 =~ s/\$version/$version/g;
+
         $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$1\\\n";
         if ($databaseTableDefinitionName ne "")
         {
@@ -71,14 +76,24 @@ while ($line=<STDIN>)
     elsif ($line =~ /^\s*\#.*/)
     {
     }
+    elsif ($line =~ /\s*VERSION\s*=\s*(\d+)\s*;\s*$/)
+    {
+      $version=$1;
+
+      print "#define INDEX_VERSION ".$version."\n\n";
+    }
     elsif ($line =~ /\s*CREATE\s+TABLE\s+.*?(\S+)\s*\(/)
     {
+      $line =~ s/\$version/$version/g;
+
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
       $databaseTableDefinitionName=$1;
       $databaseTableDefinition=$line;
     }
     elsif ($line =~ /\);/)
     {
+      $line =~ s/\$version/$version/g;
+
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
       if ($databaseTableDefinitionName ne "")
       {
@@ -94,6 +109,8 @@ while ($line=<STDIN>)
     }
     else
     {
+      $line =~ s/\$version/$version/g;
+
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
       if ($databaseTableDefinitionName ne "")
       {

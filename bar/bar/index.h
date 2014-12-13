@@ -285,42 +285,6 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
                       );
 
 /***********************************************************************\
-* Name   : Index_create
-* Purpose: create new index
-* Input  : databaseHandle - database handle
-*          uuid           - unique id
-*          storageName    - storage name
-*          indexState     - index state
-*          indexMode      - index mode
-* Output : storageId - database id of index
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_create(DatabaseHandle *databaseHandle,
-                    const String   uuid,
-                    const String   storageName,
-                    IndexStates    indexState,
-                    IndexModes     indexMode,
-                    DatabaseId     *storageId
-                   );
-
-/***********************************************************************\
-* Name   : Index_delete
-* Purpose: delete index including attached files, image,
-*          directories, link, hard link, special entries
-* Input  : databaseHandle - database handle
-*          storageId      - database id of index
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_delete(DatabaseHandle *databaseHandle,
-                    DatabaseId     storageId
-                   );
-
-/***********************************************************************\
 * Name   : Index_clear
 * Purpose: clear index content
 * Input  : databaseHandle - database handle
@@ -413,7 +377,7 @@ long Index_countState(DatabaseHandle *databaseHandle,
 
 /***********************************************************************\
 * Name   : Index_initListUUIDs
-* Purpose: list uuid of entries
+* Purpose: list uuid entries and aggregated data of jobs
 * Input  : IndexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
 *          name             - name pattern (glob) or NULL
@@ -431,9 +395,9 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 * Purpose: get next index uuid entry
 * Input  : IndexQueryHandle - index query handle
 * Output : uuid                - unique id (can be NULL)
-*          lastCreatedDateTime - date/time stamp [s] (can be NULL)
-*          totalSize           - total size [bytes] (can be NULL)
-*          lastErrorMessage    - last error message (can be NULL)
+*          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
+*          totalSize           - total storage size [bytes] (can be NULL)
+*          lastErrorMessage    - last storage error message (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -446,11 +410,48 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                       );
 
 /***********************************************************************\
+* Name   : Index_initListJobs
+* Purpose: list job entries and aggregated data of storage
+* Input  : IndexQueryHandle - index query handle variable
+*          databaseHandle   - database handle
+*          uuid             - uuid or NULL
+* Output : IndexQueryHandle - index query handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_initListJobs(IndexQueryHandle *indexQueryHandle,
+                          DatabaseHandle   *databaseHandle,
+                          const String     uuid
+                         );
+
+/***********************************************************************\
+* Name   : Index_getNextJob
+* Purpose: get next index job entry
+* Input  : IndexQueryHandle - index query handle
+* Output : databaseId          - database id of entry
+*          uuid                - unique id (can be NULL)
+*          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
+*          totalSize           - total storage size [bytes] (can be NULL)
+*          lastErrorMessage    - last storage error message (can be NULL)
+* Return : TRUE if entry read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
+                      DatabaseId       *databaseId,
+                      String           uuid,
+                      uint64           *lastCreatedDateTime,
+                      uint64           *totalSize,
+                      String           lastErrorMessage
+                     );
+
+/***********************************************************************\
 * Name   : Index_initListStorage
 * Purpose: list storage entries
 * Input  : IndexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
-*          uuid             - uuid or NULL
+*          jobId            - job id or DATABASE_ID_NONE
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
 *          storageName      - storage name pattern (glob) or NULL
 *          hostName         - host name pattern (glob) or NULL
@@ -465,7 +466,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
-                             const String     uuid,
+                             DatabaseId       jobId,
                              StorageTypes     storageType,
                              const String     storageName,
                              const String     hostName,
@@ -505,18 +506,39 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                          );
 
 /***********************************************************************\
-* Name   : Index_deleteStorage
-* Purpose: delete storage entry including attached files, image,
-*          directories, link, hard link, special entries
-* Input  : indexQueryHandle - index query handle
-*          databaseId       - database id of entry
+* Name   : Index_newStorage
+* Purpose: create new storage index
+* Input  : databaseHandle - database handle
+*          uuid           - unique id
+*          storageName    - storage name
+*          indexState     - index state
+*          indexMode      - index mode
+* Output : databaseId - database id of new storage index
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-bool Index_deleteStorage(IndexQueryHandle *indexQueryHandle,
-                         DatabaseId       *databaseId
-                        );
+Errors Index_newStorage(DatabaseHandle *databaseHandle,
+                        const String   uuid,
+                        const String   storageName,
+                        IndexStates    indexState,
+                        IndexModes     indexMode,
+                        DatabaseId     *databaseId
+                       );
+
+/***********************************************************************\
+* Name   : Index_deleteStorage
+* Purpose: delete storage index including entries for attached files,
+*          image, directories, link, hard link, special entries
+* Input  : indexQueryHandle - index query handle
+*          databaseId       - database id of storage index
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteStorage(DatabaseHandle *databaseHandle,
+                           DatabaseId     databaseId
+                          );
 
 /***********************************************************************\
 * Name   : Index_initListFiles
