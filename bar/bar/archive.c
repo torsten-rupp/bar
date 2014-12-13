@@ -880,20 +880,20 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
          )
       {
         // create index
-        error = Index_create(archiveInfo->databaseHandle,
-                             NULL, // uuid
-                             NULL, // storageName
-                             INDEX_STATE_CREATE,
-                             INDEX_MODE_MANUAL,
-                             &archiveInfo->databaseStorageId
-                            );
+        error = Index_newStorage(archiveInfo->databaseHandle,
+                                 NULL, // uuid
+                                 NULL, // storageName
+                                 INDEX_STATE_CREATE,
+                                 INDEX_MODE_MANUAL,
+                                 &archiveInfo->databaseStorageId
+                                );
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveInfo->chunkIOLock);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        AUTOFREE_ADD(&autoFreeList,&archiveInfo->databaseStorageId,{ Index_delete(archiveInfo->databaseHandle,archiveInfo->databaseStorageId); });
+        AUTOFREE_ADD(&autoFreeList,&archiveInfo->databaseStorageId,{ Index_deleteStorage(archiveInfo->databaseHandle,archiveInfo->databaseStorageId); });
         DEBUG_TESTCODE("createArchiveFile5") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
       }
       else
@@ -9958,13 +9958,13 @@ Errors Archive_addToIndex(DatabaseHandle   *databaseHandle,
   assert(storageName != NULL);
 
   // create new index
-  error = Index_create(databaseHandle,
-                       storageName,
-                       NULL, // uuid
-                       INDEX_STATE_UPDATE,
-                       indexMode,
-                       &databaseStorageId
-                      );
+  error = Index_newStorage(databaseHandle,
+                           storageName,
+                           NULL, // uuid
+                           INDEX_STATE_UPDATE,
+                           indexMode,
+                           &databaseStorageId
+                          );
   if (error != ERROR_NONE)
   {
     return error;
@@ -10594,7 +10594,7 @@ Errors Archive_remIndex(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
 
-  error = Index_delete(databaseHandle,databaseStorageId);
+  error = Index_deleteStorage(databaseHandle,databaseStorageId);
   if (error != ERROR_NONE)
   {
     return error;
