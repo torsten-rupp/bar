@@ -253,13 +253,13 @@ void Database_finalize(DatabaseQueryHandle *databaseQueryHandle);
 *          additional     - additional string (e. g. WHERE...)
 *                           special functions:
 *                             REGEXP(pattern,case-flag,text)
-* Output : l - int64 value or DATABASE_ID_NONE if not found
+* Output : value - int64 value or DATABASE_ID_NONE if not found
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Database_getInteger64(DatabaseHandle *databaseHandle,
-                             int64          *l,
+                             int64          *value,
                              const char     *tableName,
                              const char     *columnName,
                              const char     *additional,
@@ -275,13 +275,13 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 *          additional     - additional string (e. g. WHERE...)
 *                           special functions:
 *                             REGEXP(pattern,case-flag,text)
-* Output : string - string value or empty if not found
+* Output : value - string value or empty if not found
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Database_getString(DatabaseHandle *databaseHandle,
-                          String         string,
+                          String         value,
                           const char     *tableName,
                           const char     *columnName,
                           const char     *additional,
@@ -290,9 +290,9 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 
 /***********************************************************************\
 * Name   : Database_setInteger64
-* Purpose: get int64 value from database table
+* Purpose: isnert or update int64 value in database table
 * Input  : databaseHandle - database handle
-*          l              - int64 value
+*          value          - int64 value
 *          tableName      - table name
 *          columnName     - column name
 *          additional     - additional string (e. g. WHERE...)
@@ -304,7 +304,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Database_setInteger64(DatabaseHandle *databaseHandle,
-                             int64          l,
+                             int64          value,
                              const char     *tableName,
                              const char     *columnName,
                              const char     *additional,
@@ -313,7 +313,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
 
 /***********************************************************************\
 * Name   : Database_setString
-* Purpose: set string value from database table
+* Purpose: insert or update string value in database table
 * Input  : databaseHandle - database handle
 *          string         - string value
 *          tableName      - table name

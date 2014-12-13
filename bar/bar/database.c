@@ -697,19 +697,19 @@ Errors Database_addColumn(DatabaseHandle *databaseHandle,
       columnTypeString = "INTEGER PRIMARY KEY";
       break;
     case DATABASE_TYPE_FOREIGN_KEY:
-      columnTypeString = "INTEGER";
+      columnTypeString = "INTEGER DEFAULT 0";
       break;
     case DATABASE_TYPE_INT64:
-      columnTypeString = "INTEGER";
+      columnTypeString = "INTEGER DEFAULT 0";
       break;
     case DATABASE_TYPE_DOUBLE:
-      columnTypeString = "REAL";
+      columnTypeString = "REAL DEFAULT 0.0";
       break;
     case DATABASE_TYPE_DATETIME:
-      columnTypeString = "INTEGER";
+      columnTypeString = "INTEGER DEFAULT 0";
       break;
     case DATABASE_TYPE_TEXT:
-      columnTypeString = "TEXT";
+      columnTypeString = "TEXT DEFAULT ''";
       break;
     case DATABASE_TYPE_BLOB:
       columnTypeString = "BLOB";
@@ -1339,7 +1339,7 @@ void Database_finalize(DatabaseQueryHandle *databaseQueryHandle)
 }
 
 Errors Database_getInteger64(DatabaseHandle *databaseHandle,
-                             int64          *l,
+                             int64          *value,
                              const char     *tableName,
                              const char     *columnName,
                              const char     *additional,
@@ -1353,12 +1353,9 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   int          sqliteResult;
 
   assert(databaseHandle != NULL);
-  assert(l != NULL);
+  assert(value != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
-
-  // init variables
-  (*l) = DATABASE_ID_NONE;
 
   // format SQL command string
   sqlString = String_format(String_new(),
@@ -1405,7 +1402,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 
     if (sqlite3_step(handle) == SQLITE_ROW)
     {
-      (*l) = (int64)sqlite3_column_int64(handle,0);
+      (*value) = (int64)sqlite3_column_int64(handle,0);
     }
 
     sqlite3_finalize(handle);
@@ -1425,7 +1422,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 }
 
 Errors Database_getString(DatabaseHandle *databaseHandle,
-                          String         string,
+                          String         value,
                           const char     *tableName,
                           const char     *columnName,
                           const char     *additional,
@@ -1439,12 +1436,9 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
   int          sqliteResult;
 
   assert(databaseHandle != NULL);
-  assert(string != NULL);
+  assert(value != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
-
-  // init variables
-  String_clear(string);
 
   // format SQL command string
   sqlString = String_format(String_new(),
@@ -1491,7 +1485,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 
     if (sqlite3_step(handle) == SQLITE_ROW)
     {
-      String_setCString(string,(const char*)sqlite3_column_text(handle,0));
+      String_setCString(value,(const char*)sqlite3_column_text(handle,0));
     }
 
     sqlite3_finalize(handle);
@@ -1511,7 +1505,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 }
 
 Errors Database_setInteger64(DatabaseHandle *databaseHandle,
-                             int64          l,
+                             int64          value,
                              const char     *tableName,
                              const char     *columnName,
                              const char     *additional,
@@ -1528,15 +1522,18 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  // format SQL command string
-  sqlString = String_format(String_new(),
-                            "UPDATE %s \
-                             SET %s=%ld \
-                            ",
-                            tableName,
-                            columnName,
-                            l
-                           );
+  sqlString = String_new();
+
+  // try update
+  String_clear(sqlString);
+  String_format(sqlString,
+                "UPDATE %s \
+                 SET %s=%ld \
+                ",
+                tableName,
+                columnName,
+                value
+               );
   if (additional != NULL)
   {
     String_appendChar(sqlString,' ');
@@ -1547,8 +1544,6 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
                    );
     va_end(arguments);
   }
-
-  // execute SQL command
   BLOCK_DOX(error,
             sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
             sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
@@ -1579,7 +1574,47 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
   });
   if (error != ERROR_NONE)
   {
+    // insert
+    String_clear(sqlString);
+    String_format(sqlString,
+                  "INSERT INTO %s \
+                   (%s) VALUES (%ld) \
+                  ",
+                  tableName,
+                  columnName,
+                  value
+                 );
+    BLOCK_DOX(error,
+              sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
+              sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+    {
+      #ifdef DATABASE_DEBUG
+        fprintf(stderr,"Database debug: set integer 64: %s\n",String_cString(sqlString));
+      #endif
+      sqliteResult = sqlite3_exec(databaseHandle->handle,
+                                  String_cString(sqlString),
+                                  NULL,
+                                  NULL,
+                                  NULL
+                                 );
+      if      (sqliteResult == SQLITE_OK)
+      {
+        error = ERROR_NONE;
+      }
+      else if (sqliteResult == SQLITE_MISUSE)
+      {
+        HALT_INTERNAL_ERROR("SQLite library reported misuse");
+      }
+      else
+      {
+        error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      }
+
+      return error;
+    });
+
     String_delete(sqlString);
+
     return error;
   }
 
@@ -1590,7 +1625,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
 }
 
 Errors Database_setString(DatabaseHandle *databaseHandle,
-                          const String   string,
+                          const String   value,
                           const char     *tableName,
                           const char     *columnName,
                           const char     *additional,
@@ -1614,7 +1649,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
                             ",
                             tableName,
                             columnName,
-                            string
+                            value
                            );
   if (additional != NULL)
   {
