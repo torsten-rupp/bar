@@ -2985,7 +2985,7 @@ LOCAL void indexCleanup(void)
     {
       if (String_isEmpty(storageName))
       {
-        error = Index_delete(indexDatabaseHandle,storageId);
+        error = Index_deleteStorage(indexDatabaseHandle,storageId);
         if (error == ERROR_NONE)
         {
           plogMessage(LOG_TYPE_INDEX,
@@ -3060,9 +3060,7 @@ LOCAL void indexCleanup(void)
       String_set(printableStorageName,storageName);
     }
 
-    error = Index_delete(indexDatabaseHandle,
-                         storageId
-                        );
+    error = Index_deleteStorage(indexDatabaseHandle,storageId);
     if (error == ERROR_NONE)
     {
       plogMessage(LOG_TYPE_INDEX,
@@ -3143,7 +3141,7 @@ LOCAL void indexCleanup(void)
               String_set(printableStorageName,storageName);
             }
 
-            error = Index_delete(indexDatabaseHandle,duplicateStorageId);
+            error = Index_deleteStorage(indexDatabaseHandle,duplicateStorageId);
             if (error == ERROR_NONE)
             {
               plogMessage(LOG_TYPE_INDEX,
@@ -3226,6 +3224,7 @@ LOCAL void indexThreadCode(void)
 
   // clean-up index
   indexCleanup();
+//__BP();
 
   // add/update index database
   while (!quitFlag)
@@ -3251,6 +3250,7 @@ LOCAL void indexThreadCode(void)
     }
 
     // update index entries
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     while (   Index_findByState(indexDatabaseHandle,
                                 INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                                 &storageId,
@@ -3266,8 +3266,10 @@ LOCAL void indexThreadCode(void)
       {
         Misc_udelay(500L*1000L);
       }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
       // parse storage name
+fprintf(stderr,"%s, %d: storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
       error = Storage_parseName(&storageSpecifier,storageName);
       if (error == ERROR_NONE)
       {
@@ -3277,6 +3279,7 @@ LOCAL void indexThreadCode(void)
       {
         String_set(printableStorageName,storageName);
       }
+fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(storageSpecifier.fileName));
 
       // init storage
       initJobOptions(&jobOptions);
@@ -3334,6 +3337,7 @@ LOCAL void indexThreadCode(void)
                        "Cannot initialise storage (error: %s)",
                        Error_getText(error)
                       );
+exit(1);
       }
       doneJobOptions(&jobOptions);
 
@@ -3562,14 +3566,14 @@ LOCAL void autoIndexUpdateThreadCode(void)
               }
               else
               {
-                // add index
-                error = Index_create(indexDatabaseHandle,
-                                     printableStorageName,
-                                     NULL,
-                                     INDEX_STATE_UPDATE_REQUESTED,
-                                     INDEX_MODE_AUTO,
-                                     &storageId
-                                    );
+                // create index
+                error = Index_newStorage(indexDatabaseHandle,
+                                         printableStorageName,
+                                         NULL,
+                                         INDEX_STATE_UPDATE_REQUESTED,
+                                         INDEX_MODE_AUTO,
+                                         &storageId
+                                        );
                 if (error != ERROR_NONE)
                 {
                   continue;
@@ -3634,7 +3638,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
             && (now > (lastCheckedDateTime+globalOptions.indexDatabaseKeepTime))
            )
         {
-          Index_delete(indexDatabaseHandle,storageId);
+          Index_deleteStorage(indexDatabaseHandle,storageId);
 
           Misc_formatDateTime(dateTime,lastCheckedDateTime,NULL);
           plogMessage(LOG_TYPE_INDEX,
@@ -8267,9 +8271,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     Storage_done(&storageHandle);
 
     // delete index
-    error = Index_delete(indexDatabaseHandle,
-                         storageId
-                        );
+    error = Index_deleteStorage(indexDatabaseHandle,storageId);
     if (error != ERROR_NONE)
     {
       Storage_doneSpecifier(&storageSpecifier);
@@ -8373,8 +8375,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 }
 
 /***********************************************************************\
-* Name   : serverCommand_indexJobList
-* Purpose: get index database job list
+* Name   : serverCommand_indexUUIDList
+* Purpose: get index database UUID list
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -8384,16 +8386,15 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 * Notes  : Arguments:
 *            pattern=<pattern>
 *          Result:
-*            storageId=<storage id>
-*            name=<name>
 *            uuid=<uuid>
+*            name=<name>
 *            lastDateTime=<created time stamp>
 *            totalSize=<size>
 *            lastErrorMessage=<error message>
 *            ...
 \***********************************************************************/
 
-LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   // job data list
   typedef struct JobDataNode
@@ -8412,7 +8413,16 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
     LIST_HEADER(JobDataNode);
   } JobDataList;
 
-  // free job data node
+  /***********************************************************************\
+  * Name   : freeJobDataNode
+  * Purpose: free allocated job data node
+  * Input  : indexNode - index node
+  * Input  : userData  - not used
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
   void freeJobDataNode(JobDataNode *jobDataNode, void *userData)
   {
     assert(jobDataNode != NULL);
@@ -8426,6 +8436,18 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
     String_delete(jobDataNode->name);
     String_delete(jobDataNode->uuid);
   }
+
+  /***********************************************************************\
+  * Name   : compareJobDataNode
+  * Purpose: compare job data nodes
+  * Input  : jobDataNode1,jobDataNode2 - job data node 1, job data node2
+  * Input  : userData                 - not used
+  * Output : -
+  * Return : -1 iff jobDataNode1 < jobDataNode2
+  *           0 iff jobDataNode1 = jobDataNode2
+  *           1 iff jobDataNode1 > jobDataNode2
+  * Notes  : -
+  \***********************************************************************/
 
   // compare job data nodes
   int compareJobDataNode(JobDataNode *jobDataNode1, JobDataNode *jobDataNode2, void *userData)
@@ -8455,6 +8477,7 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+//TODO
   // filter pattern,
   patternText = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternText,NULL))
@@ -8485,7 +8508,7 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
       String_delete(patternText);
       return;
     }
-    while (   1//!isCommandAborted(clientInfo,id)
+    while (   !isCommandAborted(clientInfo,id)
            && Index_getNextUUID(&indexQueryHandle,
                                 uuid,
                                 &lastCreatedDateTime,
@@ -8559,6 +8582,101 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
 
   // free resources
   String_delete(patternText);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_indexJobList
+* Purpose: get index database job list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            uuid=<uuid>|*
+*          Result:
+*            jobId=<job id>
+*            name=<name>
+*            lastDateTime=<created time stamp>
+*            totalSize=<size>
+*            lastErrorMessage=<error message>
+*            ...
+\***********************************************************************/
+
+LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  String           uuidText;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       jobId;
+  uint64           lastCreatedDateTime;
+  uint64           totalSize;
+  String           lastErrorMessage;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get uuid
+  uuidText = String_new();
+  if (!StringMap_getString(argumentMap,"uuid",uuidText,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<pattern>");
+    String_delete(uuidText);
+    return;
+  }
+
+  if (indexDatabaseHandle != NULL)
+  {
+    // initialize variables
+    lastErrorMessage = String_new();
+
+    // get jobs
+    error = Index_initListJobs(&indexQueryHandle,
+                               indexDatabaseHandle,
+                               uuidText
+                              );
+    if (error != ERROR_NONE)
+    {
+      String_delete(lastErrorMessage);
+
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init job list fail: %s",Error_getText(error));
+
+      String_delete(uuidText);
+      return;
+    }
+    while (   !isCommandAborted(clientInfo,id)
+           && Index_getNextJob(&indexQueryHandle,
+                                &jobId,
+                                NULL,
+                                &lastCreatedDateTime,
+                                &totalSize,
+                                lastErrorMessage
+                               )
+          )
+    {
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                       "jobId=%lld lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
+                       jobId,
+                       lastCreatedDateTime,
+                       totalSize,
+                       lastErrorMessage
+                      );
+    }
+    Index_doneList(&indexQueryHandle);
+
+    // free resources
+    String_delete(lastErrorMessage);
+
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+  }
+
+  // free resources
+  String_delete(uuidText);
 }
 
 /***********************************************************************\
@@ -8637,6 +8755,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            jobId=<id>|0
 *            pattern=<pattern>
 *            maxCount=<n>|0
 *            indexState=<state>|*
@@ -8655,14 +8774,14 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String           uuidText;
+  uint64           n;
+  DatabaseId       jobId;
   uint             maxCount;
   IndexStateSet    indexStateSet;
   IndexModeSet     indexModeSet;
   String           patternText;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
-  ulong            n;
   StorageSpecifier storageSpecifier;
   String           storageName;
   String           printableStorageName;
@@ -8679,38 +8798,34 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   assert(argumentMap != NULL);
 
   // get job id, max. count, status pattern, filter pattern,
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"uuid","*"),"*"))
+  if   (stringEquals(StringMap_getTextCString(argumentMap,"jobId","*"),"*"))
   {
-    uuidText = NULL;
+    jobId = DATABASE_ID_NONE;
   }
   else
   {
-    uuidText = String_new();
-    if (!StringMap_getString(argumentMap,"uuid",uuidText,0))
+    if (!StringMap_getUInt64(argumentMap,"jobId",&n,0))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid>");
-      String_delete(uuidText);
+      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
       return;
     }
+    jobId = (DatabaseId)n;
   }
   StringMap_getUInt(argumentMap,"maxCount",&maxCount,0);
   if (!StringMap_getEnumSet(argumentMap,"indexState",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
-    String_delete(uuidText);
     return;
   }
   if (!StringMap_getEnumSet(argumentMap,"indexMode",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_ALL,"|",0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO|*");
-    String_delete(uuidText);
     return;
   }
   patternText = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternText,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
-    String_delete(uuidText);
     return;
   }
 
@@ -8726,7 +8841,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     // list index
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
-                                  uuidText,
+                                  jobId,
                                   STORAGE_TYPE_ANY,
                                   patternText,
                                   NULL, // hostName
@@ -8746,7 +8861,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
 
       String_delete(patternText);
-      String_delete(uuidText);
       return;
     }
     n = 0L;
@@ -8808,7 +8922,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 
   // free resources
   String_delete(patternText);
-  String_delete(uuidText);
 }
 
 /***********************************************************************\
@@ -8846,13 +8959,13 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
   if (indexDatabaseHandle != NULL)
   {
     // create index
-    error = Index_create(indexDatabaseHandle,
-                         NULL, // uuid
-                         storageName,
-                         INDEX_STATE_UPDATE_REQUESTED,
-                         INDEX_MODE_MANUAL,
-                         &storageId
-                        );
+    error = Index_newStorage(indexDatabaseHandle,
+                             NULL, // uuid
+                             storageName,
+                             INDEX_STATE_UPDATE_REQUESTED,
+                             INDEX_MODE_MANUAL,
+                             &storageId
+                            );
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,error,"send index add request fail");
@@ -8928,9 +9041,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     if (storageId != 0)
     {
       // delete index
-      error = Index_delete(indexDatabaseHandle,
-                           storageId
-                          );
+      error = Index_deleteStorage(indexDatabaseHandle,storageId);
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
@@ -8967,7 +9078,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
       while (   !isCommandAborted(clientInfo,id)
              && Index_getNextStorage(&indexQueryHandle,
                                      &storageId,
-                                     NULL, // jobId
+                                     NULL, // uuid
                                      storageName,
                                      NULL, // createdDateTime
                                      NULL, // size
@@ -8992,9 +9103,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
           }
 
           // delete index
-          error = Index_delete(indexDatabaseHandle,
-                               storageId
-                              );
+          error = Index_deleteStorage(indexDatabaseHandle,storageId);
           if (error == ERROR_NONE)
           {
             sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
@@ -9108,7 +9217,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
       while (   !isCommandAborted(clientInfo,id)
              && Index_getNextStorage(&indexQueryHandle,
                                      &storageId,
-                                     NULL, // jobId
+                                     NULL, // uuid
                                      NULL, // storageName
                                      NULL, // createdDateTime
                                      NULL, // size
@@ -9140,206 +9249,6 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-}
-
-
-/***********************************************************************\
-* Name   : freeIndexNode
-* Purpose: free allocated index node
-* Input  : indexNode - index node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeIndexNode(IndexNode *indexNode, void *userData)
-{
-  assert(indexNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  switch (indexNode->type)
-  {
-    case ARCHIVE_ENTRY_TYPE_NONE:
-      break;
-    case ARCHIVE_ENTRY_TYPE_FILE:
-      break;
-    case ARCHIVE_ENTRY_TYPE_IMAGE:
-      break;
-    case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-      break;
-    case ARCHIVE_ENTRY_TYPE_LINK:
-      String_delete(indexNode->link.destinationName);
-      break;
-    case ARCHIVE_ENTRY_TYPE_HARDLINK:
-      break;
-    case ARCHIVE_ENTRY_TYPE_SPECIAL:
-      break;
-    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
-    #endif /* NDEBUG */
-  }
-  String_delete(indexNode->name);
-  String_delete(indexNode->storageName);
-}
-
-/***********************************************************************\
-* Name   : newIndexEntryNode
-* Purpose: create new index entry node
-* Input  : indexList        - index list
-*          archiveEntryType - archive entry type
-*          storageName      - storage name
-*          name             - entry name
-*          timeModified     - modification time stamp [s]
-* Output : -
-* Return : index node or NULL
-* Notes  : -
-\***********************************************************************/
-
-LOCAL IndexNode *newIndexEntryNode(IndexList *indexList, ArchiveEntryTypes archiveEntryType, const String storageName, const String name, uint64 timeModified)
-{
-  IndexNode *indexNode;
-  bool       foundFlag;
-  IndexNode *nextIndexNode;
-
-  // allocate node
-  indexNode = LIST_NEW_NODE(IndexNode);
-  if (indexNode == NULL)
-  {
-    return NULL;
-  }
-
-  // initialize
-  indexNode->type         = archiveEntryType;
-  indexNode->storageName  = String_duplicate(storageName);
-  indexNode->name         = String_duplicate(name);
-  indexNode->timeModified = timeModified;
-  switch (indexNode->type)
-  {
-    case ARCHIVE_ENTRY_TYPE_NONE:
-      break;
-    case ARCHIVE_ENTRY_TYPE_FILE:
-      break;
-    case ARCHIVE_ENTRY_TYPE_IMAGE:
-      break;
-    case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-      break;
-    case ARCHIVE_ENTRY_TYPE_LINK:
-      indexNode->link.destinationName = String_new();
-      break;
-    case ARCHIVE_ENTRY_TYPE_HARDLINK:
-      break;
-    case ARCHIVE_ENTRY_TYPE_SPECIAL:
-      break;
-    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
-    #endif /* NDEBUG */
-  }
-
-  // insert into list
-  foundFlag     = FALSE;
-  nextIndexNode = indexList->head;
-  while (   (nextIndexNode != NULL)
-         && !foundFlag
-        )
-  {
-    switch (String_compare(nextIndexNode->storageName,indexNode->storageName,NULL,NULL))
-    {
-      case -1:
-        // next
-        nextIndexNode = nextIndexNode->next;
-        break;
-      case  0:
-      case  1:
-        // compare
-        switch (String_compare(nextIndexNode->name,indexNode->name,NULL,NULL))
-        {
-          case -1:
-            // next
-            nextIndexNode = nextIndexNode->next;
-            break;
-          case  0:
-          case  1:
-            // found
-            foundFlag = TRUE;
-            break;
-        }
-        break;
-    }
-  }
-  List_insert(indexList,indexNode,nextIndexNode);
-
-  return indexNode;
-}
-
-/***********************************************************************\
-* Name   : findIndexEntryNode
-* Purpose: find index entry node
-* Input  : indexList - index list
-*          type      - archive entry type
-*          name      - entry name
-* Output : -
-* Return : index node or NULL
-* Notes  : -
-\***********************************************************************/
-
-LOCAL IndexNode *findIndexEntryNode(IndexList         *indexList,
-                                    ArchiveEntryTypes type,
-                                    const String      name
-                                   )
-{
-  IndexNode *foundIndexNode;
-  IndexNode *indexNode;
-
-  assert(indexList != NULL);
-  assert(name != NULL);
-
-  foundIndexNode = NULL;
-  indexNode = indexList->head;
-  while (   (indexNode != NULL)
-         && (foundIndexNode == NULL)
-        )
-  {
-    if      (indexNode->type < type)
-    {
-      // next
-      indexNode = indexNode->next;
-    }
-    else if (indexNode->type == type)
-    {
-      // compare
-      switch (String_compare(indexNode->name,name,NULL,NULL))
-      {
-        case -1:
-          // next
-          indexNode = indexNode->next;
-          break;
-        case  0:
-          // found
-          foundIndexNode = indexNode;
-          break;
-        case  1:
-          // not found
-          indexNode = NULL;
-          break;
-      }
-    }
-    else
-    {
-      // not found
-      indexNode = NULL;
-    }
-  }
-
-  return foundIndexNode;
 }
 
 /***********************************************************************\
@@ -9475,6 +9384,206 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                       ); \
     } \
     while (0)
+
+  /***********************************************************************\
+  * Name   : freeIndexNode
+  * Purpose: free allocated index node
+  * Input  : indexNode - index node
+  * Input  : userData  - not used
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  void freeIndexNode(IndexNode *indexNode, void *userData)
+  {
+    assert(indexNode != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    switch (indexNode->type)
+    {
+      case ARCHIVE_ENTRY_TYPE_NONE:
+        break;
+      case ARCHIVE_ENTRY_TYPE_FILE:
+        break;
+      case ARCHIVE_ENTRY_TYPE_IMAGE:
+        break;
+      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+        break;
+      case ARCHIVE_ENTRY_TYPE_LINK:
+        String_delete(indexNode->link.destinationName);
+        break;
+      case ARCHIVE_ENTRY_TYPE_HARDLINK:
+        break;
+      case ARCHIVE_ENTRY_TYPE_SPECIAL:
+        break;
+      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+    String_delete(indexNode->name);
+    String_delete(indexNode->storageName);
+  }
+
+  /***********************************************************************\
+  * Name   : newIndexEntryNode
+  * Purpose: create new index entry node
+  * Input  : indexList        - index list
+  *          archiveEntryType - archive entry type
+  *          storageName      - storage name
+  *          name             - entry name
+  *          timeModified     - modification time stamp [s]
+  * Output : -
+  * Return : index node or NULL
+  * Notes  : -
+  \***********************************************************************/
+
+  IndexNode *newIndexEntryNode(IndexList *indexList, ArchiveEntryTypes archiveEntryType, const String storageName, const String name, uint64 timeModified)
+  {
+    IndexNode *indexNode;
+    bool       foundFlag;
+    IndexNode *nextIndexNode;
+
+    // allocate node
+    indexNode = LIST_NEW_NODE(IndexNode);
+    if (indexNode == NULL)
+    {
+      return NULL;
+    }
+
+    // initialize
+    indexNode->type         = archiveEntryType;
+    indexNode->storageName  = String_duplicate(storageName);
+    indexNode->name         = String_duplicate(name);
+    indexNode->timeModified = timeModified;
+    switch (indexNode->type)
+    {
+      case ARCHIVE_ENTRY_TYPE_NONE:
+        break;
+      case ARCHIVE_ENTRY_TYPE_FILE:
+        break;
+      case ARCHIVE_ENTRY_TYPE_IMAGE:
+        break;
+      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+        break;
+      case ARCHIVE_ENTRY_TYPE_LINK:
+        indexNode->link.destinationName = String_new();
+        break;
+      case ARCHIVE_ENTRY_TYPE_HARDLINK:
+        break;
+      case ARCHIVE_ENTRY_TYPE_SPECIAL:
+        break;
+      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+
+    // insert into list
+    foundFlag     = FALSE;
+    nextIndexNode = indexList->head;
+    while (   (nextIndexNode != NULL)
+           && !foundFlag
+          )
+    {
+      switch (String_compare(nextIndexNode->storageName,indexNode->storageName,NULL,NULL))
+      {
+        case -1:
+          // next
+          nextIndexNode = nextIndexNode->next;
+          break;
+        case  0:
+        case  1:
+          // compare
+          switch (String_compare(nextIndexNode->name,indexNode->name,NULL,NULL))
+          {
+            case -1:
+              // next
+              nextIndexNode = nextIndexNode->next;
+              break;
+            case  0:
+            case  1:
+              // found
+              foundFlag = TRUE;
+              break;
+          }
+          break;
+      }
+    }
+    List_insert(indexList,indexNode,nextIndexNode);
+
+    return indexNode;
+  }
+
+  /***********************************************************************\
+  * Name   : findIndexEntryNode
+  * Purpose: find index entry node
+  * Input  : indexList - index list
+  *          type      - archive entry type
+  *          name      - entry name
+  * Output : -
+  * Return : index node or NULL
+  * Notes  : -
+  \***********************************************************************/
+
+  IndexNode *findIndexEntryNode(IndexList         *indexList,
+                                      ArchiveEntryTypes type,
+                                      const String      name
+                                     )
+  {
+    IndexNode *foundIndexNode;
+    IndexNode *indexNode;
+
+    assert(indexList != NULL);
+    assert(name != NULL);
+
+    foundIndexNode = NULL;
+    indexNode = indexList->head;
+    while (   (indexNode != NULL)
+           && (foundIndexNode == NULL)
+          )
+    {
+      if      (indexNode->type < type)
+      {
+        // next
+        indexNode = indexNode->next;
+      }
+      else if (indexNode->type == type)
+      {
+        // compare
+        switch (String_compare(indexNode->name,name,NULL,NULL))
+        {
+          case -1:
+            // next
+            indexNode = indexNode->next;
+            break;
+          case  0:
+            // found
+            foundIndexNode = indexNode;
+            break;
+          case  1:
+            // not found
+            indexNode = NULL;
+            break;
+        }
+      }
+      else
+      {
+        // not found
+        indexNode = NULL;
+      }
+    }
+
+    return foundIndexNode;
+  }
 
   String           entryPattern;
   bool             checkedStorageOnlyFlag;
@@ -10277,6 +10386,7 @@ SERVER_COMMANDS[] =
 //  { "RESTORE_LIST_ADD",           serverCommand_restoreListAdd,          AUTHORIZATION_STATE_OK      },
   { "RESTORE",                    serverCommand_restore,                 AUTHORIZATION_STATE_OK      },
 
+  { "INDEX_UUID_LIST",            serverCommand_indexUUIDList,           AUTHORIZATION_STATE_OK      },
   { "INDEX_JOB_LIST",             serverCommand_indexJobList,            AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_INFO",         serverCommand_indexStorageInfo,        AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_LIST",         serverCommand_indexStorageList,        AUTHORIZATION_STATE_OK      },
