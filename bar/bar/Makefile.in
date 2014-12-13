@@ -543,8 +543,8 @@ archive_format.c: $(SOURCE_DIR)/archive_format.def
 	$(PERL) $(SOURCE_DIR)/archive_format.pl < $^ -c $@ -i archive_format.h
 
 # index database definition
-index_definition.h: $(SOURCE_DIR)/index_definition.sql
-	$(PERL) $(SOURCE_DIR)/index_definition.pl < $^ > $@
+index_definition.h: $(SOURCE_DIR)/index_definition.pl $(SOURCE_DIR)/index_definition.sql
+	$(PERL) $(SOURCE_DIR)/index_definition.pl < $(SOURCE_DIR)/index_definition.sql > $@
 
 # create destroyer (for testing only!)
 destroyer@EXEEXT@: $(DESTROYER_OBJECTS) 
