@@ -5331,7 +5331,7 @@ e composite widget
     return insertTreeItem(tree,-1,data,folderFlag,values);
   }
 
-  /** add sub-tree item
+  /** insert sub-tree item
    * @param parentTreeItem parent tree item
    * @param index index (0..n)
    * @param data data
@@ -5340,7 +5340,7 @@ e composite widget
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem addTreeItem(final TreeItem parentTreeItem, final int index, final Object data, final Image image, final boolean folderFlag, final Object... values)
+  public static TreeItem insertTreeItem(final TreeItem parentTreeItem, final int index, final Object data, final Image image, final boolean folderFlag, final Object... values)
   {
     /** tree insert runnable
      */
@@ -5394,7 +5394,7 @@ e composite widget
     return treeRunnable.treeItem;
   }
 
-  /** add sub-tree item
+  /** insert sub-tree item
    * @param parentTreeItem parent tree item
    * @param index index (0..n)
    * @param data data
@@ -5402,9 +5402,9 @@ e composite widget
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem addTreeItem(final TreeItem parentTreeItem, final int index, final Object data, final boolean folderFlag, final Object... values)
+  public static TreeItem insertTreeItem(final TreeItem parentTreeItem, final int index, final Object data, final boolean folderFlag, final Object... values)
   {
-    return addTreeItem(parentTreeItem,index,data,null,folderFlag,values);
+    return insertTreeItem(parentTreeItem,index,data,null,folderFlag,values);
   }
 
   /** add sub-tree item at end
@@ -5417,7 +5417,7 @@ e composite widget
    */
   public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, Image image, boolean folderFlag, Object... values)
   {
-    return addTreeItem(parentTreeItem,-1,data,image,folderFlag);
+    return insertTreeItem(parentTreeItem,-1,data,image,folderFlag);
   }
 
   /** add sub-tree item at end
@@ -5896,34 +5896,11 @@ private static void printTree(Tree tree)
 
   /** get tree items in tree
    * @param tree tree
-   * @param rootItemsOnly true to collect expanded sub-tree root items only
-   * @return tree items array
-   */
-  public static TreeItem[] getTreeItems(Tree tree, boolean rootItemsOnly)
-  {
-    HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
-    if (!tree.isDisposed())
-    {
-      for (TreeItem treeItem : tree.getItems())
-      {
-        treeItemSet.add(treeItem);
-        if (!rootItemsOnly)
-        {
-          getSubTreeItems(treeItemSet,treeItem);
-        }
-      }
-    }
-
-    return treeItemSet.toArray(new TreeItem[treeItemSet.size()]);
-  }
-
-  /** get tree items in tree
-   * @param tree tree
    * @return tree items array
    */
   public static TreeItem[] getTreeItems(Tree tree)
   {
-    return getTreeItems(tree,false);
+    return tree.getItems();
   }
 
   /** get tree sub-items of tree item
@@ -5933,6 +5910,25 @@ private static void printTree(Tree tree)
   public static TreeItem[] getTreeItems(TreeItem treeItem)
   {
     return treeItem.getItems();
+  }
+
+  /** get all tree items in tree
+   * @param tree tree
+   * @return tree items array
+   */
+  public static TreeItem[] getAllTreeItems(Tree tree)
+  {
+    HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
+    if (!tree.isDisposed())
+    {
+      for (TreeItem treeItem : tree.getItems())
+      {
+        treeItemSet.add(treeItem);
+        getSubTreeItems(treeItemSet,treeItem);
+      }
+    }
+
+    return treeItemSet.toArray(new TreeItem[treeItemSet.size()]);
   }
 
   /** re-expand entries
