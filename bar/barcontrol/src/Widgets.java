@@ -5926,6 +5926,15 @@ private static void printTree(Tree tree)
     return getTreeItems(tree,false);
   }
 
+  /** get tree sub-items of tree item
+   * @param treeItem tree item
+   * @return sub-tree items array
+   */
+  public static TreeItem[] getTreeItems(TreeItem treeItem)
+  {
+    return treeItem.getItems();
+  }
+
   /** re-expand entries
    * @param expandedItemSet data entries to re-expand
    * @return treeItem tree item to start
