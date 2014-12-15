@@ -2929,9 +2929,9 @@ LOCAL void indexCleanup(void)
   }
   error = Index_initListSpecial(&indexQueryHandle,
                                 indexDatabaseHandle,
-                                NULL,
-                                0,
-                                NULL
+                                NULL, // storage ids
+                                0,    // storage id count
+                                NULL  // pattern
                                );
   if (error == ERROR_NONE)
   {
@@ -2960,6 +2960,7 @@ LOCAL void indexCleanup(void)
   error = Index_initListStorage(&indexQueryHandle,
                                 indexDatabaseHandle,
                                 NULL, // uuid
+                                DATABASE_ID_ANY, // job id
                                 STORAGE_TYPE_ANY,
                                 NULL, // storageName
                                 NULL, // hostName
@@ -2972,7 +2973,8 @@ LOCAL void indexCleanup(void)
   {
     while (Index_getNextStorage(&indexQueryHandle,
                                 &storageId,
-                                NULL, // jobId
+                                NULL, // uuid
+                                NULL, // job id
                                 storageName,
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -3077,6 +3079,7 @@ LOCAL void indexCleanup(void)
   error = Index_initListStorage(&indexQueryHandle1,
                                 indexDatabaseHandle,
                                 NULL, // uuid
+                                DATABASE_ID_ANY, // job id
                                 STORAGE_TYPE_ANY,
                                 NULL, // storageName
                                 NULL, // hostName
@@ -3089,7 +3092,8 @@ LOCAL void indexCleanup(void)
   {
     while (Index_getNextStorage(&indexQueryHandle1,
                                 &storageId,
-                                NULL, // jobId
+                                NULL, // uuid
+                                NULL, // job id
                                 storageName,
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -3103,6 +3107,7 @@ LOCAL void indexCleanup(void)
       error = Index_initListStorage(&indexQueryHandle2,
                                     indexDatabaseHandle,
                                     NULL, // uuid
+                                    DATABASE_ID_ANY, // job id
                                     STORAGE_TYPE_ANY,
                                     NULL, // storageName
                                     NULL, // hostName
@@ -3115,6 +3120,7 @@ LOCAL void indexCleanup(void)
       {
         while (Index_getNextStorage(&indexQueryHandle2,
                                     &duplicateStorageId,
+                                    NULL, // uuid
                                     NULL, // jobId
                                     duplicateStorageName,
                                     NULL, // createdDateTime
@@ -3595,6 +3601,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   NULL, // uuid
+                                  DATABASE_ID_ANY, // job id
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -3609,6 +3616,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
       dateTime = String_new();
       while (Index_getNextStorage(&indexQueryHandle,
                                   &storageId,
+                                  NULL, // uuid
                                   NULL, // jobId
                                   storageName,
                                   &createdDateTime,
@@ -4580,7 +4588,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const StringMap 
     return;
   }
   modeMask = String_new();
-  if (!StringMap_getString(argumentMap,"modeMask",modeMask,0))
+  if (!StringMap_getString(argumentMap,"modeMask",modeMask,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE|ALL");
     return;
@@ -4666,7 +4674,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const StringMa
 
   // get mode
   modeMask = String_new();
-  if (!StringMap_getString(argumentMap,"modeMask",modeMask,0))
+  if (!StringMap_getString(argumentMap,"modeMask",modeMask,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE");
     return;
@@ -7997,51 +8005,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   String_delete(storageName);
 }
 
-typedef struct
-{
-  ClientInfo *clientInfo;
-  uint       id;
-} RestoreCommandInfo;
-
-/***********************************************************************\
-* Name   : updateRestoreCommandStatus
-* Purpose: update restore job status
-* Input  : jobNode           - job node
-*          error             - error code
-*          restoreStatusInfo - create status info data
-* Output : -
-* Return : TRUE to continue, FALSE to abort
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInfo,
-                                      Errors                  error,
-                                      const RestoreStatusInfo *restoreStatusInfo
-                                     )
-{
-  assert(restoreCommandInfo != NULL);
-  assert(restoreStatusInfo != NULL);
-  assert(restoreStatusInfo->name != NULL);
-  assert(restoreStatusInfo->storageName != NULL);
-
-  UNUSED_VARIABLE(error);
-
-  sendClientResult(restoreCommandInfo->clientInfo,
-                   restoreCommandInfo->id,
-                   FALSE,
-                   ERROR_NONE,
-                   "name=%'S entryDoneBytes=%llu entryTotalBytes=%llu storageDoneBytes=%llu storageTotalBytes=%llu",
-                   restoreStatusInfo->name,
-                   restoreStatusInfo->entryDoneBytes,
-                   restoreStatusInfo->entryTotalBytes,
-                   restoreStatusInfo->storageDoneBytes,
-                   restoreStatusInfo->storageTotalBytes
-                  );
-
-  return !isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
-}
-
-
 /***********************************************************************\
 * Name   : serverCommand_storageListClear
 * Purpose: clear storage list
@@ -8077,13 +8040,16 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            uuid=<uuid> and/or storageId=<storage id>
+*            uuid=<uuid>|"" and/or
+*            jobId=<job id>|0 and/or
+*            storageId=<storage id>|0
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   String           uuid;
+  DatabaseId       jobId;
   DatabaseId       storageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -8091,23 +8057,34 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get uuid or storage id
+  // get uuid, job id, or storage id
   uuid = String_new();
-  if (   !StringMap_getString(argumentMap,"uuid",uuid,0)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,0)
+  if (   !StringMap_getString(argumentMap,"uuid",uuid,NULL)
+      && !StringMap_getInt64(argumentMap,"jobId",&jobId,DATABASE_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid> or jobId=<job id> or storageId=<storage id>");
+    String_delete(uuid);
+    return;
+  }
+
+  // check if database is available
+  if (indexDatabaseHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
     String_delete(uuid);
     return;
   }
 
   if (!String_isEmpty(uuid))
   {
+//????
     // add all storage ids with specified uuid
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
-                                  uuid,
+                                  NULL, // uuid
+                                  DATABASE_ID_ANY, // job id
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -8116,25 +8093,69 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                   NULL, // fileName
                                   INDEX_STATE_SET_ALL
                                  );
-    if (error == ERROR_NONE)
+    if (error != ERROR_NONE)
     {
-      while (Index_getNextStorage(&indexQueryHandle,
-                                  &storageId,
-                                  NULL, // uuid
-                                  NULL, // storageName
-                                  NULL, // createdDateTime
-                                  NULL, // size
-                                  NULL, // indexState
-                                  NULL, // indexMode
-                                  NULL, // lastCheckedDateTime
-                                  NULL  // errorMessage
-                                 )
-            )
-      {
-        Array_append(clientInfo->storageIdArray,&storageId);
-      }
-      Index_doneList(&indexQueryHandle);
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(uuid);
+      return;
     }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // uuid
+                                NULL, // job id
+                                NULL, // storageName
+                                NULL, // createdDateTime
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+      Array_append(clientInfo->storageIdArray,&storageId);
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  if (jobId != DATABASE_ID_NONE)
+  {
+    // add all storage ids with job id
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  NULL, // uuid
+                                  jobId,
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(uuid);
+      return;
+    }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // uuid
+                                NULL, // job id
+                                NULL, // storageName
+                                NULL, // createdDateTime
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+      Array_append(clientInfo->storageIdArray,&storageId);
+    }
+    Index_doneList(&indexQueryHandle);
   }
 
   if (storageId != DATABASE_ID_NONE)
@@ -8144,6 +8165,9 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(uuid);
 }
 
 /***********************************************************************\
@@ -8156,30 +8180,30 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            storageId=<storage id>
+*            uuid=<uuid>|"" and/or
+*            jobId=<job id>|0 and/or
+*            storageId=<storage id>|0
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  DatabaseId       storageId;
-  String           storageName;
-  StorageSpecifier storageSpecifier;
-  Errors           error;
-  StorageHandle    storageHandle;
+  /***********************************************************************\
+  * Name   : deleteStorage
+  * Purpose: delete storage
+  * Input  : storageId - storage to delete
+  * Output : -
+  * Return : TRUE iff deleted
+  * Notes  : -
+  \***********************************************************************/
 
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  // get storage id
-  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,0))
+  bool deleteStorage(DatabaseId storageId)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<storage id>");
-    return;
-  }
+    String           storageName;
+    StorageSpecifier storageSpecifier;
+    Errors           error;
+    StorageHandle    storageHandle;
 
-  if (indexDatabaseHandle != NULL)
-  {
     // find storage
     storageName = String_new();
     if (!Index_findById(indexDatabaseHandle,
@@ -8190,9 +8214,9 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
                        )
        )
     {
-      String_delete(storageName);
       sendClientResult(clientInfo,id,TRUE,ERROR_ARCHIVE_NOT_FOUND,"storage not found");
-      return;
+      String_delete(storageName);
+      return FALSE;
     }
 
     // parse storage name
@@ -8200,10 +8224,10 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
+      sendClientResult(clientInfo,id,TRUE,ERROR_ARCHIVE_NOT_FOUND,"invalid storage name");
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
-      sendClientResult(clientInfo,id,TRUE,ERROR_ARCHIVE_NOT_FOUND,"invalid storage name");
-      return;
+      return FALSE;
     }
 
 #warning NYI: move this special handling of limited scp into Storage_delete()?
@@ -8248,10 +8272,10 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     }
     if (error != ERROR_NONE)
     {
+      sendClientResult(clientInfo,id,TRUE,error,"init storage: %s",Error_getText(error));
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
-      sendClientResult(clientInfo,id,TRUE,error,"init storage: %s",Error_getText(error));
-      return;
+      return FALSE;
     }
 
     // delete storage
@@ -8260,11 +8284,11 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
                           );
     if (error != ERROR_NONE)
     {
+      sendClientResult(clientInfo,id,TRUE,error,"delete storage file: %s",Error_getText(error));
       Storage_done(&storageHandle);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
-      sendClientResult(clientInfo,id,TRUE,error,"delete storage file: %s",Error_getText(error));
-      return;
+      return FALSE;
     }
 
     // close storage
@@ -8274,23 +8298,149 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     error = Index_deleteStorage(indexDatabaseHandle,storageId);
     if (error != ERROR_NONE)
     {
+      sendClientResult(clientInfo,id,TRUE,error,"remove index: %s",Error_getText(error));
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
-      sendClientResult(clientInfo,id,TRUE,error,"remove index: %s",Error_getText(error));
-      return;
+      return FALSE;
     }
 
-    // free resources
-    Storage_doneSpecifier(&storageSpecifier);
-    String_delete(storageName);
+    return TRUE;
   }
-  else
+
+  String           uuid;
+  DatabaseId       jobId;
+  DatabaseId       storageId;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get uuid, job id, or storage id
+  uuid = String_new();
+  if (   !StringMap_getString(argumentMap,"uuid",uuid,NULL)
+      && !StringMap_getInt64(argumentMap,"jobId",&jobId,DATABASE_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
+     )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid> or jobId=<job id> or storageId=<storage id>");
+    String_delete(uuid);
     return;
   }
 
+  // check if database is available
+  if (indexDatabaseHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    String_delete(uuid);
+    return;
+  }
+
+  if (!String_isEmpty(uuid))
+  {
+//????
+    // delete all storage with specified uuid
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  NULL, // uuid
+                                  DATABASE_ID_ANY, // job id
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(uuid);
+      return;
+    }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // uuid
+                                NULL, // job id
+                                NULL, // storageName
+                                NULL, // createdDateTime
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+      if (!deleteStorage(storageId))
+      {
+        Index_doneList(&indexQueryHandle);
+        String_delete(uuid);
+        return;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  if (jobId != DATABASE_ID_NONE)
+  {
+    // delete all storage with job id
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  NULL, // uuid
+                                  jobId,
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(uuid);
+      return;
+    }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // uuid
+                                NULL, // job id
+                                NULL, // storageName
+                                NULL, // createdDateTime
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+      if (!deleteStorage(storageId))
+      {
+        Index_doneList(&indexQueryHandle);
+        String_delete(uuid);
+        return;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  if (storageId != DATABASE_ID_NONE)
+  {
+    // delete storage
+    if (!deleteStorage(storageId))
+    {
+      String_delete(uuid);
+      return;
+    }
+  }
+
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(uuid);
 }
 
 /***********************************************************************\
@@ -8312,6 +8462,50 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
 LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
+  typedef struct
+  {
+    ClientInfo *clientInfo;
+    uint       id;
+  } RestoreCommandInfo;
+
+  /***********************************************************************\
+  * Name   : updateRestoreCommandStatus
+  * Purpose: update restore job status
+  * Input  : jobNode           - job node
+  *          error             - error code
+  *          restoreStatusInfo - create status info data
+  * Output : -
+  * Return : TRUE to continue, FALSE to abort
+  * Notes  : -
+  \***********************************************************************/
+
+  bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInfo,
+                                  Errors                  error,
+                                  const RestoreStatusInfo *restoreStatusInfo
+                                 )
+  {
+    assert(restoreCommandInfo != NULL);
+    assert(restoreStatusInfo != NULL);
+    assert(restoreStatusInfo->name != NULL);
+    assert(restoreStatusInfo->storageName != NULL);
+
+    UNUSED_VARIABLE(error);
+
+    sendClientResult(restoreCommandInfo->clientInfo,
+                     restoreCommandInfo->id,
+                     FALSE,
+                     ERROR_NONE,
+                     "name=%'S entryDoneBytes=%llu entryTotalBytes=%llu storageDoneBytes=%llu storageTotalBytes=%llu",
+                     restoreStatusInfo->name,
+                     restoreStatusInfo->entryDoneBytes,
+                     restoreStatusInfo->entryTotalBytes,
+                     restoreStatusInfo->storageDoneBytes,
+                     restoreStatusInfo->storageTotalBytes
+                    );
+
+    return !isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
+  }
+
   String             storageName;
   String             name;
   StringList         storageNameList;
@@ -8396,74 +8590,75 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 
 LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  // job data list
-  typedef struct JobDataNode
+  // UUID data list
+  typedef struct UUIDDataNode
   {
-    LIST_NODE_HEADER(struct JobDataNode);
+    LIST_NODE_HEADER(struct UUIDDataNode);
 
     String uuid;
     String name;
     uint64 lastCreatedDateTime;
     uint64 totalSize;
     String lastErrorMessage;
-  } JobDataNode;
+  } UUIDDataNode;
 
   typedef struct
   {
-    LIST_HEADER(JobDataNode);
-  } JobDataList;
+    LIST_HEADER(UUIDDataNode);
+  } UUIDDataList;
 
   /***********************************************************************\
-  * Name   : freeJobDataNode
+  * Name   : freeUUIDDataNode
   * Purpose: free allocated job data node
-  * Input  : indexNode - index node
-  * Input  : userData  - not used
+  * Input  : uuidDataNode - UUID data node
+  * Input  : userData     - not used
   * Output : -
   * Return : -
   * Notes  : -
   \***********************************************************************/
 
-  void freeJobDataNode(JobDataNode *jobDataNode, void *userData)
+  void freeUUIDDataNode(UUIDDataNode *uuidDataNode, void *userData)
   {
-    assert(jobDataNode != NULL);
-    assert(jobDataNode->uuid != NULL);
-    assert(jobDataNode->name != NULL);
-    assert(jobDataNode->lastErrorMessage != NULL);
+    assert(uuidDataNode != NULL);
+    assert(uuidDataNode->uuid != NULL);
+    assert(uuidDataNode->name != NULL);
+    assert(uuidDataNode->lastErrorMessage != NULL);
 
     UNUSED_VARIABLE(userData);
 
-    String_delete(jobDataNode->lastErrorMessage);
-    String_delete(jobDataNode->name);
-    String_delete(jobDataNode->uuid);
+    String_delete(uuidDataNode->lastErrorMessage);
+    String_delete(uuidDataNode->name);
+    String_delete(uuidDataNode->uuid);
   }
 
   /***********************************************************************\
-  * Name   : compareJobDataNode
+  * Name   : compareUUIDDataNode
   * Purpose: compare job data nodes
-  * Input  : jobDataNode1,jobDataNode2 - job data node 1, job data node2
-  * Input  : userData                 - not used
+  * Input  : uuidDataNode1,uuidDataNode2 - UUID data node 1, UUID data
+  *                                        node2
+  * Input  : userData                    - not used
   * Output : -
-  * Return : -1 iff jobDataNode1 < jobDataNode2
-  *           0 iff jobDataNode1 = jobDataNode2
-  *           1 iff jobDataNode1 > jobDataNode2
+  * Return : -1 iff uuidDataNode1 < uuidDataNode2
+  *           0 iff uuidDataNode1 = uuidDataNode2
+  *           1 iff uuidDataNode1 > uuidDataNode2
   * Notes  : -
   \***********************************************************************/
 
   // compare job data nodes
-  int compareJobDataNode(JobDataNode *jobDataNode1, JobDataNode *jobDataNode2, void *userData)
+  int compareUUIDDataNode(UUIDDataNode *uuidDataNode1, UUIDDataNode *uuidDataNode2, void *userData)
   {
-    assert(jobDataNode1 != NULL);
-    assert(jobDataNode2 != NULL);
-    assert(jobDataNode1->name != NULL);
-    assert(jobDataNode2->name != NULL);
+    assert(uuidDataNode1 != NULL);
+    assert(uuidDataNode2 != NULL);
+    assert(uuidDataNode1->name != NULL);
+    assert(uuidDataNode2->name != NULL);
 
     UNUSED_VARIABLE(userData);
 
-    return String_compare(jobDataNode1->name,jobDataNode2->name,CALLBACK(NULL,NULL));
+    return String_compare(uuidDataNode1->name,uuidDataNode2->name,CALLBACK(NULL,NULL));
   }
 
-  String           patternText;
-  JobDataList      jobDataList;
+  String           pattern;
+  UUIDDataList     uuidDataList;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   String           uuid;
@@ -8472,116 +8667,116 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   String           lastErrorMessage;
   SemaphoreLock    semaphoreLock;
   JobNode          *jobNode;
-  JobDataNode      *jobDataNode;
+  UUIDDataNode     *uuidDataNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
 //TODO
   // filter pattern,
-  patternText = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",patternText,NULL))
+  pattern = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
+    String_delete(pattern);
     return;
   }
 
-  if (indexDatabaseHandle != NULL)
-  {
-    // initialize variables
-    List_init(&jobDataList);
-    uuid             = String_new();
-    lastErrorMessage = String_new();
-
-    // get uuids
-    error = Index_initListUUIDs(&indexQueryHandle,
-                                indexDatabaseHandle
-                               );
-    if (error != ERROR_NONE)
-    {
-      String_delete(lastErrorMessage);
-      String_delete(uuid);
-      List_done(&jobDataList,CALLBACK((ListNodeFreeFunction)freeJobDataNode,NULL));
-
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init job list fail: %s",Error_getText(error));
-
-      String_delete(patternText);
-      return;
-    }
-    while (   !isCommandAborted(clientInfo,id)
-           && Index_getNextUUID(&indexQueryHandle,
-                                uuid,
-                                &lastCreatedDateTime,
-                                &totalSize,
-                                lastErrorMessage
-                               )
-          )
-    {
-      jobDataNode = LIST_NEW_NODE(JobDataNode);
-      if (jobDataNode == NULL)
-      {
-        Index_doneList(&indexQueryHandle);
-        String_delete(lastErrorMessage);
-        String_delete(uuid);
-        List_done(&jobDataList,CALLBACK((ListNodeFreeFunction)freeJobDataNode,NULL));
-
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get job list fail: insufficient memory");
-
-        String_delete(patternText);
-        return;
-      }
-
-      jobDataNode->uuid                = String_duplicate(uuid);
-      jobDataNode->name                = String_duplicate(uuid);
-      jobDataNode->lastCreatedDateTime = lastCreatedDateTime;
-      jobDataNode->totalSize           = totalSize;
-      jobDataNode->lastErrorMessage    = String_duplicate(lastErrorMessage);
-
-      List_append(&jobDataList,jobDataNode);
-    }
-    Index_doneList(&indexQueryHandle);
-
-    // fill in current job names, sort list by names
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
-    {
-      LIST_ITERATE(&jobDataList,jobDataNode)
-      {
-        jobNode = findJobByUUID(jobDataNode->uuid);
-        if (jobNode != NULL)
-        {
-          String_set(jobDataNode->name,jobNode->name);
-        }
-      }
-    }
-    List_sort(&jobDataList,CALLBACK((ListNodeCompareFunction)compareJobDataNode,NULL));
-
-    // send results
-    LIST_ITERATE(&jobDataList,jobDataNode)
-    {
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "uuid=%'S name=%'S lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
-                       jobDataNode->uuid,
-                       jobDataNode->name,
-                       jobDataNode->lastCreatedDateTime,
-                       jobDataNode->totalSize,
-                       jobDataNode->lastErrorMessage
-                      );
-    }
-
-    // free resources
-    String_delete(lastErrorMessage);
-    String_delete(uuid);
-    List_done(&jobDataList,CALLBACK((ListNodeFreeFunction)freeJobDataNode,NULL));
-
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-  }
-  else
+  // check if database is available
+  if (indexDatabaseHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    String_delete(pattern);
+    return;
   }
 
+  // initialize variables
+  List_init(&uuidDataList);
+  uuid             = String_new();
+  lastErrorMessage = String_new();
+
+  // get uuids
+  error = Index_initListUUIDs(&indexQueryHandle,
+                              indexDatabaseHandle
+                             );
+  if (error != ERROR_NONE)
+  {
+    String_delete(lastErrorMessage);
+    String_delete(uuid);
+    List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
+
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init uuid list fail: %s",Error_getText(error));
+
+    String_delete(pattern);
+    return;
+  }
+  while (   !isCommandAborted(clientInfo,id)
+         && Index_getNextUUID(&indexQueryHandle,
+                              uuid,
+                              &lastCreatedDateTime,
+                              &totalSize,
+                              lastErrorMessage
+                             )
+        )
+  {
+    uuidDataNode = LIST_NEW_NODE(UUIDDataNode);
+    if (uuidDataNode == NULL)
+    {
+      Index_doneList(&indexQueryHandle);
+      String_delete(lastErrorMessage);
+      String_delete(uuid);
+      List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
+
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get uuid list fail: insufficient memory");
+
+      String_delete(pattern);
+      return;
+    }
+
+    uuidDataNode->uuid                = String_duplicate(uuid);
+    uuidDataNode->name                = String_duplicate(uuid);
+    uuidDataNode->lastCreatedDateTime = lastCreatedDateTime;
+    uuidDataNode->totalSize           = totalSize;
+    uuidDataNode->lastErrorMessage    = String_duplicate(lastErrorMessage);
+
+    List_append(&uuidDataList,uuidDataNode);
+  }
+  Index_doneList(&indexQueryHandle);
+
+  // fill in current job names, sort list by names
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    LIST_ITERATE(&uuidDataList,uuidDataNode)
+    {
+      jobNode = findJobByUUID(uuidDataNode->uuid);
+      if (jobNode != NULL)
+      {
+        String_set(uuidDataNode->name,jobNode->name);
+      }
+    }
+  }
+  List_sort(&uuidDataList,CALLBACK((ListNodeCompareFunction)compareUUIDDataNode,NULL));
+
+  // send results
+  LIST_ITERATE(&uuidDataList,uuidDataNode)
+  {
+    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                     "uuid=%'S name=%'S lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
+                     uuidDataNode->uuid,
+                     uuidDataNode->name,
+                     uuidDataNode->lastCreatedDateTime,
+                     uuidDataNode->totalSize,
+                     uuidDataNode->lastErrorMessage
+                    );
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
   // free resources
-  String_delete(patternText);
+  String_delete(lastErrorMessage);
+  String_delete(uuid);
+  List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
+  String_delete(pattern);
 }
 
 /***********************************************************************\
@@ -8597,6 +8792,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 *            uuid=<uuid>|*
 *          Result:
 *            jobId=<job id>
+*            uuid=<uuid>
 *            name=<name>
 *            lastDateTime=<created time stamp>
 *            totalSize=<size>
@@ -8606,7 +8802,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 
 LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String           uuidText;
+  String           uuid;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   DatabaseId       jobId;
@@ -8618,65 +8814,65 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
   assert(argumentMap != NULL);
 
   // get uuid
-  uuidText = String_new();
-  if (!StringMap_getString(argumentMap,"uuid",uuidText,NULL))
+  uuid = String_new();
+  if (!StringMap_getString(argumentMap,"uuid",uuid,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<pattern>");
-    String_delete(uuidText);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid>");
+    String_delete(uuid);
     return;
   }
 
-  if (indexDatabaseHandle != NULL)
-  {
-    // initialize variables
-    lastErrorMessage = String_new();
-
-    // get jobs
-    error = Index_initListJobs(&indexQueryHandle,
-                               indexDatabaseHandle,
-                               uuidText
-                              );
-    if (error != ERROR_NONE)
-    {
-      String_delete(lastErrorMessage);
-
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init job list fail: %s",Error_getText(error));
-
-      String_delete(uuidText);
-      return;
-    }
-    while (   !isCommandAborted(clientInfo,id)
-           && Index_getNextJob(&indexQueryHandle,
-                                &jobId,
-                                NULL,
-                                &lastCreatedDateTime,
-                                &totalSize,
-                                lastErrorMessage
-                               )
-          )
-    {
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "jobId=%lld lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
-                       jobId,
-                       lastCreatedDateTime,
-                       totalSize,
-                       lastErrorMessage
-                      );
-    }
-    Index_doneList(&indexQueryHandle);
-
-    // free resources
-    String_delete(lastErrorMessage);
-
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-  }
-  else
+  // check if database is available
+  if (indexDatabaseHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    String_delete(uuid);
+    return;
   }
 
+  // initialize variables
+  lastErrorMessage = String_new();
+
+  // get jobs
+  error = Index_initListJobs(&indexQueryHandle,
+                             indexDatabaseHandle,
+                             uuid
+                            );
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init job list fail: %s",Error_getText(error));
+    String_delete(lastErrorMessage);
+    String_delete(uuid);
+    return;
+  }
+  while (   !isCommandAborted(clientInfo,id)
+         && Index_getNextJob(&indexQueryHandle,
+                              &jobId,
+                              uuid,
+                              &lastCreatedDateTime,
+                              &totalSize,
+                              lastErrorMessage
+                             )
+        )
+  {
+    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                     "jobId=%lld uuid=%'S type=%s lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
+                     jobId,
+                     uuid,
+//TODO
+"NONE",
+                     lastCreatedDateTime,
+                     totalSize,
+                     lastErrorMessage
+                    );
+  }
+  Index_doneList(&indexQueryHandle);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
   // free resources
-  String_delete(uuidText);
+  String_delete(lastErrorMessage);
+  String_delete(uuid);
 }
 
 /***********************************************************************\
@@ -8710,38 +8906,38 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 
   UNUSED_VARIABLE(argumentMap);
 
-  if (indexDatabaseHandle != NULL)
+  // check if database is available
+  if (indexDatabaseHandle == NULL)
   {
-    storageEntryOKCount              = Index_countState(indexDatabaseHandle,INDEX_STATE_OK              );
-    storageEntryCreateCount          = Index_countState(indexDatabaseHandle,INDEX_STATE_CREATE          );
-    storageEntryUpdateRequestedCount = Index_countState(indexDatabaseHandle,INDEX_STATE_UPDATE_REQUESTED);
-    storageEntryUpdateCount          = Index_countState(indexDatabaseHandle,INDEX_STATE_UPDATE          );
-    storageEntryErrorCount           = Index_countState(indexDatabaseHandle,INDEX_STATE_ERROR           );
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    return;
+  }
 
-    if (   (storageEntryOKCount              >= 0L)
-        && (storageEntryCreateCount          >= 0L)
-        && (storageEntryUpdateRequestedCount >= 0L)
-        && (storageEntryUpdateCount          >= 0L)
-        && (storageEntryErrorCount           >= 0L)
-       )
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                       "okCount=%ld createCount=%ld updateRequestedCount=%ld updateCount=%ld errorCount=%ld",
-                       storageEntryOKCount,
-                       storageEntryCreateCount,
-                       storageEntryUpdateRequestedCount,
-                       storageEntryUpdateCount,
-                       storageEntryErrorCount
-                      );
-    }
-    else
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get index database fail");
-    }
+  storageEntryOKCount              = Index_countState(indexDatabaseHandle,INDEX_STATE_OK              );
+  storageEntryCreateCount          = Index_countState(indexDatabaseHandle,INDEX_STATE_CREATE          );
+  storageEntryUpdateRequestedCount = Index_countState(indexDatabaseHandle,INDEX_STATE_UPDATE_REQUESTED);
+  storageEntryUpdateCount          = Index_countState(indexDatabaseHandle,INDEX_STATE_UPDATE          );
+  storageEntryErrorCount           = Index_countState(indexDatabaseHandle,INDEX_STATE_ERROR           );
+
+  if (   (storageEntryOKCount              >= 0L)
+      && (storageEntryCreateCount          >= 0L)
+      && (storageEntryUpdateRequestedCount >= 0L)
+      && (storageEntryUpdateCount          >= 0L)
+      && (storageEntryErrorCount           >= 0L)
+     )
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                     "okCount=%ld createCount=%ld updateRequestedCount=%ld updateCount=%ld errorCount=%ld",
+                     storageEntryOKCount,
+                     storageEntryCreateCount,
+                     storageEntryUpdateRequestedCount,
+                     storageEntryUpdateCount,
+                     storageEntryErrorCount
+                    );
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get index database fail");
   }
 }
 
@@ -8762,6 +8958,8 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 *            indexMode=<mode>|*
 *          Result:
 *            storageId=<storage id>
+*            uuid=<uuid>
+*            jobId=<job id>
 *            name=<name>
 *            dateTime=<created time stamp>
 *            size=<size>
@@ -8779,7 +8977,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   uint             maxCount;
   IndexStateSet    indexStateSet;
   IndexModeSet     indexModeSet;
-  String           patternText;
+  String           pattern;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   StorageSpecifier storageSpecifier;
@@ -8800,7 +8998,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   // get job id, max. count, status pattern, filter pattern,
   if   (stringEquals(StringMap_getTextCString(argumentMap,"jobId","*"),"*"))
   {
-    jobId = DATABASE_ID_NONE;
+    jobId = DATABASE_ID_ANY;
   }
   else
   {
@@ -8822,106 +9020,109 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO|*");
     return;
   }
-  patternText = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",patternText,NULL))
+  pattern = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
+    String_delete(pattern);
     return;
   }
 
-  if (indexDatabaseHandle != NULL)
+  // check if database is available
+  if (indexDatabaseHandle == NULL)
   {
-    // initialize variables
-    Storage_initSpecifier(&storageSpecifier);
-    storageName          = String_new();
-    uuid                 = String_new();
-    errorMessage         = String_new();
-    printableStorageName = String_new();
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    String_delete(pattern);
+    return;
+  }
 
-    // list index
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexDatabaseHandle,
-                                  jobId,
-                                  STORAGE_TYPE_ANY,
-                                  patternText,
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  indexStateSet
-                                 );
-    if (error != ERROR_NONE)
-    {
-      String_delete(printableStorageName);
-      String_delete(errorMessage);
-      String_delete(uuid);
-      String_delete(storageName);
-      Storage_doneSpecifier(&storageSpecifier);
+  // initialize variables
+  Storage_initSpecifier(&storageSpecifier);
+  storageName          = String_new();
+  uuid                 = String_new();
+  errorMessage         = String_new();
+  printableStorageName = String_new();
 
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
-
-      String_delete(patternText);
-      return;
-    }
-    n = 0L;
-    while (   ((maxCount == 0) || (n < maxCount))
-           && !isCommandAborted(clientInfo,id)
-           && Index_getNextStorage(&indexQueryHandle,
-                                   &storageId,
-                                   uuid,
-                                   storageName,
-                                   &storageDateTime,
-                                   &size,
-                                   &indexState,
-                                   &indexMode,
-                                   &lastCheckedDateTime,
-                                   errorMessage
-                                  )
-          )
-    {
-      // get printable name (if possible)
-      error = Storage_parseName(&storageSpecifier,storageName);
-      if (error == ERROR_NONE)
-      {
-        String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
-      }
-      else
-      {
-        String_set(printableStorageName,storageName);
-      }
-
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "storageId=%llu uuid=%'S name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
-                       storageId,
-                       uuid,
-                       printableStorageName,
-                       storageDateTime,
-                       size,
-                       Index_stateToString(indexState,"unknown"),
-                       Index_modeToString(indexMode,"unknown"),
-                       lastCheckedDateTime,
-                       errorMessage
-                      );
-      n++;
-    }
-    Index_doneList(&indexQueryHandle);
-
-    // free resources
+  // list index
+  error = Index_initListStorage(&indexQueryHandle,
+                                indexDatabaseHandle,
+                                NULL, // uuid
+                                jobId,
+                                STORAGE_TYPE_ANY,
+                                pattern,
+                                NULL, // hostName
+                                NULL, // loginName
+                                NULL, // deviceName
+                                NULL, // fileName
+                                indexStateSet
+                               );
+  if (error != ERROR_NONE)
+  {
     String_delete(printableStorageName);
     String_delete(errorMessage);
     String_delete(uuid);
     String_delete(storageName);
     Storage_doneSpecifier(&storageSpecifier);
 
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
+
+    String_delete(pattern);
+    return;
   }
-  else
+  n = 0L;
+  while (   ((maxCount == 0) || (n < maxCount))
+         && !isCommandAborted(clientInfo,id)
+         && Index_getNextStorage(&indexQueryHandle,
+                                 &storageId,
+                                 uuid,
+                                 &jobId,
+                                 storageName,
+                                 &storageDateTime,
+                                 &size,
+                                 &indexState,
+                                 &indexMode,
+                                 &lastCheckedDateTime,
+                                 errorMessage
+                                )
+        )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    // get printable name (if possible)
+    error = Storage_parseName(&storageSpecifier,storageName);
+    if (error == ERROR_NONE)
+    {
+      String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+    }
+    else
+    {
+      String_set(printableStorageName,storageName);
+    }
+
+    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                     "storageId=%llu uuid=%'S jobId=%lld name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
+                     storageId,
+                     uuid,
+                     jobId,
+                     printableStorageName,
+                     storageDateTime,
+                     size,
+                     Index_stateToString(indexState,"unknown"),
+                     Index_modeToString(indexMode,"unknown"),
+                     lastCheckedDateTime,
+                     errorMessage
+                    );
+    n++;
   }
+  Index_doneList(&indexQueryHandle);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(patternText);
+  String_delete(printableStorageName);
+  String_delete(errorMessage);
+  String_delete(uuid);
+  String_delete(storageName);
+  Storage_doneSpecifier(&storageSpecifier);
+  String_delete(pattern);
 }
 
 /***********************************************************************\
@@ -8956,26 +9157,25 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
     return;
   }
 
-  if (indexDatabaseHandle != NULL)
-  {
-    // create index
-    error = Index_newStorage(indexDatabaseHandle,
-                             NULL, // uuid
-                             storageName,
-                             INDEX_STATE_UPDATE_REQUESTED,
-                             INDEX_MODE_MANUAL,
-                             &storageId
-                            );
-    if (error != ERROR_NONE)
-    {
-      sendClientResult(clientInfo,id,TRUE,error,"send index add request fail");
-      String_delete(storageName);
-      return;
-    }
-  }
-  else
+  // check if database is available
+  if (indexDatabaseHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    String_delete(storageName);
+    return;
+  }
+
+  // create index
+  error = Index_newStorage(indexDatabaseHandle,
+                           NULL, // uuid
+                           storageName,
+                           INDEX_STATE_UPDATE_REQUESTED,
+                           INDEX_MODE_MANUAL,
+                           &storageId
+                          );
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"send index add request fail");
     String_delete(storageName);
     return;
   }
@@ -8997,7 +9197,9 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
 * Return : -
 * Notes  : Arguments:
 *            <state>|*
-*            <storageId>|0
+*            uuid=<uuid>|"" and/or
+*            jobId=<job id>|0 and/or
+*            storageId=<storage id>|0
 *          Result:
 \***********************************************************************/
 
@@ -9005,6 +9207,8 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 {
   bool             stateAny;
   IndexStates      state;
+  String           uuid;
+  DatabaseId       jobId;
   DatabaseId       storageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -9016,7 +9220,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get state, storageId
+  // get state and uuid, jobId, or storageId
   if      (stringEquals(StringMap_getTextCString(argumentMap,"state","*"),"*"))
   {
     stateAny = TRUE;
@@ -9030,111 +9234,214 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,0))
+  uuid = String_new();
+  if (   !StringMap_getString(argumentMap,"uuid",uuid,NULL)
+      && !StringMap_getInt64(argumentMap,"jobId",&jobId,DATABASE_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
+     )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<storage id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid> or jobId=<job id> or storageId=<storage id>");
+    String_delete(uuid);
     return;
   }
 
-  if (indexDatabaseHandle != NULL)
+  // check if database is available
+  if (indexDatabaseHandle == NULL)
   {
-    if (storageId != 0)
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    String_delete(uuid);
+    return;
+  }
+
+  if (String_isEmpty(uuid) && (storageId == DATABASE_ID_NONE) && (jobId == DATABASE_ID_NONE))
+  {
+    // initialize variables
+    Storage_initSpecifier(&storageSpecifier);
+    storageName          = String_new();
+    printableStorageName = String_new();
+
+    // delete indizes
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  NULL, // uuid
+                                  DATABASE_ID_ANY, // job id
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error != ERROR_NONE)
     {
-      // delete index
-      error = Index_deleteStorage(indexDatabaseHandle,storageId);
-      if (error != ERROR_NONE)
-      {
-        sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
-        return;
-      }
-    }
-    else
-    {
-      // initialize variables
-      Storage_initSpecifier(&storageSpecifier);
-      storageName          = String_new();
-      printableStorageName = String_new();
-
-      // delete indizes
-      error = Index_initListStorage(&indexQueryHandle,
-                                    indexDatabaseHandle,
-                                    NULL, // uuid
-                                    STORAGE_TYPE_ANY,
-                                    NULL, // storageName
-                                    NULL, // hostName
-                                    NULL, // loginName
-                                    NULL, // deviceName
-                                    NULL, // fileName
-                                    INDEX_STATE_SET_ALL
-                                   );
-      if (error != ERROR_NONE)
-      {
-        String_delete(printableStorageName);
-        String_delete(storageName);
-        Storage_doneSpecifier(&storageSpecifier);
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-        return;
-      }
-      while (   !isCommandAborted(clientInfo,id)
-             && Index_getNextStorage(&indexQueryHandle,
-                                     &storageId,
-                                     NULL, // uuid
-                                     storageName,
-                                     NULL, // createdDateTime
-                                     NULL, // size
-                                     &indexState,
-                                     NULL, // indexMode
-                                     NULL, // lastCheckedDateTime
-                                     NULL  // errorMessage
-                                    )
-            )
-      {
-        if (stateAny || (state == indexState))
-        {
-          // get printable name (if possible)
-          error = Storage_parseName(&storageSpecifier,storageName);
-          if (error == ERROR_NONE)
-          {
-            String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
-          }
-          else
-          {
-            String_set(printableStorageName,storageName);
-          }
-
-          // delete index
-          error = Index_deleteStorage(indexDatabaseHandle,storageId);
-          if (error == ERROR_NONE)
-          {
-            sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                             "storageId=%llu name=%'S",
-                             storageId,
-                             printableStorageName
-                            );
-          }
-          else
-          {
-            Index_doneList(&indexQueryHandle);
-            sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
-            return;
-          }
-        }
-      }
-      Index_doneList(&indexQueryHandle);
-
-      // free resources
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
       String_delete(printableStorageName);
       String_delete(storageName);
       Storage_doneSpecifier(&storageSpecifier);
+      String_delete(uuid);
+      return;
+    }
+    while (   !isCommandAborted(clientInfo,id)
+           && Index_getNextStorage(&indexQueryHandle,
+                                   &storageId,
+                                   NULL, // uuid
+                                   NULL, // job id
+                                   storageName,
+                                   NULL, // createdDateTime
+                                   NULL, // size
+                                   &indexState,
+                                   NULL, // indexMode
+                                   NULL, // lastCheckedDateTime
+                                   NULL  // errorMessage
+                                  )
+          )
+    {
+      if (stateAny || (state == indexState))
+      {
+        // get printable name (if possible)
+        error = Storage_parseName(&storageSpecifier,storageName);
+        if (error == ERROR_NONE)
+        {
+          String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+        }
+        else
+        {
+          String_set(printableStorageName,storageName);
+        }
+
+        // delete index
+        error = Index_deleteStorage(indexDatabaseHandle,storageId);
+        if (error == ERROR_NONE)
+        {
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                           "storageId=%llu name=%'S",
+                           storageId,
+                           printableStorageName
+                          );
+        }
+        else
+        {
+          sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
+          Index_doneList(&indexQueryHandle);
+          String_delete(uuid);
+          return;
+        }
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+
+    // free resources
+    String_delete(printableStorageName);
+    String_delete(storageName);
+    Storage_doneSpecifier(&storageSpecifier);
+  }
+
+  if (!String_isEmpty(uuid))
+  {
+//????
+    // add all storage ids with specified uuid
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  NULL, // uuid
+                                  DATABASE_ID_ANY, // job id
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error == ERROR_NONE)
+    {
+      while (Index_getNextStorage(&indexQueryHandle,
+                                  &storageId,
+                                  NULL, // uuid
+                                  NULL, // job id
+                                  NULL, // storageName
+                                  NULL, // createdDateTime
+                                  NULL, // size
+                                  NULL, // indexState
+                                  NULL, // indexMode
+                                  NULL, // lastCheckedDateTime
+                                  NULL  // errorMessage
+                                 )
+            )
+      {
+        // delete index
+        error = Index_deleteStorage(indexDatabaseHandle,storageId);
+        if (error != ERROR_NONE)
+        {
+          sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
+          String_delete(uuid);
+          return;
+        }
+      }
+      Index_doneList(&indexQueryHandle);
     }
   }
-  else
+
+  if (jobId != DATABASE_ID_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
-    return;
+    // add all storage ids with job id
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  NULL, // uuid
+                                  jobId,
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error == ERROR_NONE)
+    {
+      while (Index_getNextStorage(&indexQueryHandle,
+                                  &storageId,
+                                  NULL, // uuid
+                                  NULL, // job id
+                                  NULL, // storageName
+                                  NULL, // createdDateTime
+                                  NULL, // size
+                                  NULL, // indexState
+                                  NULL, // indexMode
+                                  NULL, // lastCheckedDateTime
+                                  NULL  // errorMessage
+                                 )
+            )
+      {
+        // delete index
+        error = Index_deleteStorage(indexDatabaseHandle,storageId);
+        if (error != ERROR_NONE)
+        {
+          sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
+          String_delete(uuid);
+          return;
+        }
+      }
+      Index_doneList(&indexQueryHandle);
+    }
+  }
+
+  if (storageId != DATABASE_ID_NONE)
+  {
+    // delete index
+    error = Index_deleteStorage(indexDatabaseHandle,storageId);
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
+      String_delete(uuid);
+      return;
+    }
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(uuid);
 }
 
 /***********************************************************************\
@@ -9148,7 +9455,9 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 * Return : -
 * Notes  : Arguments:
 *            <state>|*
-*            <storageId>|0
+*            uuid=<uuid>|"" and/or
+*            jobId=<job id>|0 and/or
+*            storageId=<storage id>|0
 *          Result:
 \***********************************************************************/
 
@@ -9156,6 +9465,8 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
 {
   bool             stateAny;
   IndexStates      state;
+  String           uuid;
+  DatabaseId       jobId;
   DatabaseId       storageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -9164,7 +9475,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // state, id
+  // state and uuid, jobId, or storageId
   if      (stringEquals(StringMap_getTextCString(argumentMap,"state","*"),"*"))
   {
     stateAny = TRUE;
@@ -9178,15 +9489,108 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,0))
+  uuid = String_new();
+  if (   !StringMap_getString(argumentMap,"uuid",uuid,NULL)
+      && !StringMap_getInt64(argumentMap,"jobId",&jobId,DATABASE_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
+     )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<storage id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid> or jobId=<job id> or storageId=<storage id>");
+    String_delete(uuid);
     return;
   }
 
-  if (indexDatabaseHandle != NULL)
+  // check if database is available
+  if (indexDatabaseHandle == NULL)
   {
-    if (storageId != 0)
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    String_delete(uuid);
+    return;
+  }
+
+  if (String_isEmpty(uuid) && (storageId == DATABASE_ID_NONE) && (jobId == DATABASE_ID_NONE))
+  {
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  NULL, // uuid
+                                  DATABASE_ID_ANY, // job id
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(uuid);
+      return;
+    }
+    while (   !isCommandAborted(clientInfo,id)
+           && Index_getNextStorage(&indexQueryHandle,
+                                   &storageId,
+                                   NULL, // uuid
+                                   NULL, // job id
+                                   NULL, // storageName
+                                   NULL, // createdDateTime
+                                   NULL, // size
+                                   &indexState,
+                                   NULL, // indexMode
+                                   NULL, // lastCheckedDateTime
+                                   NULL  // errorMessage
+                                  )
+          )
+    {
+      if (stateAny || (state == indexState))
+      {
+        // set state
+        Index_setState(indexDatabaseHandle,
+                       storageId,
+                       INDEX_STATE_UPDATE_REQUESTED,
+                       0LL,
+                       NULL
+                      );
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  if (!String_isEmpty(uuid))
+  {
+    // add all storage ids with specified uuid
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  uuid,
+                                  DATABASE_ID_ANY, // job id
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(uuid);
+      return;
+    }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // uuid
+                                NULL, // job id
+                                NULL, // storageName
+                                NULL, // createdDateTime
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
     {
       // set state
       Index_setState(indexDatabaseHandle,
@@ -9196,59 +9600,70 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
                      NULL
                     );
     }
-    else
-    {
-      error = Index_initListStorage(&indexQueryHandle,
-                                    indexDatabaseHandle,
-                                    NULL, // uuid
-                                    STORAGE_TYPE_ANY,
-                                    NULL, // storageName
-                                    NULL, // hostName
-                                    NULL, // loginName
-                                    NULL, // deviceName
-                                    NULL, // fileName
-                                    INDEX_STATE_SET_ALL
-                                   );
-      if (error != ERROR_NONE)
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-        return;
-      }
-      while (   !isCommandAborted(clientInfo,id)
-             && Index_getNextStorage(&indexQueryHandle,
-                                     &storageId,
-                                     NULL, // uuid
-                                     NULL, // storageName
-                                     NULL, // createdDateTime
-                                     NULL, // size
-                                     &indexState,
-                                     NULL, // indexMode
-                                     NULL, // lastCheckedDateTime
-                                     NULL  // errorMessage
-                                    )
-            )
-      {
-        if (stateAny || (state == indexState))
-        {
-          // set state
-          Index_setState(indexDatabaseHandle,
-                         storageId,
-                         INDEX_STATE_UPDATE_REQUESTED,
-                         0LL,
-                         NULL
-                        );
-        }
-      }
-      Index_doneList(&indexQueryHandle);
-    }
+    Index_doneList(&indexQueryHandle);
   }
-  else
+
+  if (jobId != DATABASE_ID_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
-    return;
+    // add all storage ids with job id
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  NULL, // uuid
+                                  jobId,
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(uuid);
+      return;
+    }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // uuid
+                                NULL, // job id
+                                NULL, // storageName
+                                NULL, // createdDateTime
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+      // set state
+      Index_setState(indexDatabaseHandle,
+                     storageId,
+                     INDEX_STATE_UPDATE_REQUESTED,
+                     0LL,
+                     NULL
+                    );
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  if (storageId != DATABASE_ID_NONE)
+  {
+    // set state
+    Index_setState(indexDatabaseHandle,
+                   storageId,
+                   INDEX_STATE_UPDATE_REQUESTED,
+                   0LL,
+                   NULL
+                  );
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(uuid);
 }
 
 /***********************************************************************\
@@ -9638,443 +10053,212 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     return;
   }
 
-  if (indexDatabaseHandle != NULL)
+  // check if database is available
+  if (indexDatabaseHandle == NULL)
   {
-    // initialize variables
-    entryCount   = 0;
-    List_init(&indexList);
-    regexpString = String_new();
-    storageName  = String_new();
-    name         = String_new();
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    String_delete(entryPattern);
+    return;
+  }
 
-    // collect index data
-    if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  // initialize variables
+  entryCount   = 0;
+  List_init(&indexList);
+  regexpString = String_new();
+  storageName  = String_new();
+  name         = String_new();
+
+  // collect index data
+  if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  {
+    if (checkedStorageOnlyFlag)
     {
-      if (checkedStorageOnlyFlag)
+      error = Index_initListFiles(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  Array_cArray(clientInfo->storageIdArray),
+                                  Array_length(clientInfo->storageIdArray),
+                                  entryPattern
+                                 );
+    }
+    else
+    {
+      error = Index_initListFiles(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  NULL,        // storage ids
+                                  0,           // storage id count
+                                  entryPattern
+                                 );
+    }
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(name);
+      String_delete(storageName);
+      String_delete(regexpString);
+      List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+      String_delete(entryPattern);
+      return;
+    }
+    while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+           && !isCommandAborted(clientInfo,id)
+           && Index_getNextFile(&indexQueryHandle,
+                                &databaseId,
+                                storageName,
+                                &storageDateTime,
+                                name,
+                                &size,
+                                &timeModified,
+                                &userId,
+                                &groupId,
+                                &permission,
+                                &fragmentOffset,
+                                &fragmentSize
+                               )
+          )
+    {
+      if (newestEntriesOnlyFlag)
       {
-        error = Index_initListFiles(&indexQueryHandle,
-                                    indexDatabaseHandle,
-                                    Array_cArray(clientInfo->storageIdArray),
-                                    Array_length(clientInfo->storageIdArray),
-                                    entryPattern
-                                   );
+        // find/allocate index node
+        indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,name);
+        if (indexNode == NULL)
+        {
+          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,storageName,name,timeModified);
+          entryCount++;
+        }
+        if (indexNode == NULL) break;
+
+        // update index node
+        if (timeModified >= indexNode->timeModified)
+        {
+          String_set(indexNode->storageName,storageName);
+          indexNode->storageDateTime     = storageDateTime;
+          indexNode->timeModified        = timeModified;
+          indexNode->file.size           = size;
+          indexNode->file.userId         = userId;
+          indexNode->file.groupId        = groupId;
+          indexNode->file.permission     = permission;
+          indexNode->file.fragmentOffset = fragmentOffset;
+          indexNode->file.fragmentSize   = fragmentSize;
+        }
       }
       else
       {
-        error = Index_initListFiles(&indexQueryHandle,
-                                    indexDatabaseHandle,
-                                    NULL,
-                                    0,
-                                    entryPattern
-                                   );
+        SEND_FILE_ENTRY(storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
+        entryCount++;
       }
-      if (error != ERROR_NONE)
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-        String_delete(name);
-        String_delete(storageName);
-        String_delete(regexpString);
-        List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-        String_delete(entryPattern);
-        return;
-      }
-      while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-             && !isCommandAborted(clientInfo,id)
-             && Index_getNextFile(&indexQueryHandle,
-                                  &databaseId,
-                                  storageName,
-                                  &storageDateTime,
-                                  name,
-                                  &size,
-                                  &timeModified,
-                                  &userId,
-                                  &groupId,
-                                  &permission,
-                                  &fragmentOffset,
-                                  &fragmentSize
-                                 )
-            )
-      {
-        if (newestEntriesOnlyFlag)
-        {
-          // find/allocate index node
-          indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,name);
-          if (indexNode == NULL)
-          {
-            indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,storageName,name,timeModified);
-            entryCount++;
-          }
-          if (indexNode == NULL) break;
+    }
+    Index_doneList(&indexQueryHandle);
+  }
 
-          // update index node
-          if (timeModified >= indexNode->timeModified)
-          {
-            String_set(indexNode->storageName,storageName);
-            indexNode->storageDateTime     = storageDateTime;
-            indexNode->timeModified        = timeModified;
-            indexNode->file.size           = size;
-            indexNode->file.userId         = userId;
-            indexNode->file.groupId        = groupId;
-            indexNode->file.permission     = permission;
-            indexNode->file.fragmentOffset = fragmentOffset;
-            indexNode->file.fragmentSize   = fragmentSize;
-          }
-        }
-        else
+  if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  {
+    if (checkedStorageOnlyFlag)
+    {
+      error = Index_initListImages(&indexQueryHandle,
+                                   indexDatabaseHandle,
+                                   Array_cArray(clientInfo->storageIdArray),
+                                   Array_length(clientInfo->storageIdArray),
+                                   entryPattern
+                                  );
+    }
+    else
+    {
+      error = Index_initListImages(&indexQueryHandle,
+                                   indexDatabaseHandle,
+                                   NULL,        // storage ids
+                                   0,           // storage id count
+                                   entryPattern
+                                  );
+    }
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(name);
+      String_delete(storageName);
+      String_delete(regexpString);
+      List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+      String_delete(entryPattern);
+      return;
+    }
+    while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+           && !isCommandAborted(clientInfo,id)
+           && Index_getNextImage(&indexQueryHandle,
+                                 &databaseId,
+                                 storageName,
+                                 &storageDateTime,
+                                 name,
+                                 &fileSystemType,
+                                 &size,
+                                 &blockOffset,
+                                 &blockCount
+                                )
+          )
+    {
+      if (newestEntriesOnlyFlag)
+      {
+        // find/allocate index node
+        indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,name);
+        if (indexNode == NULL)
         {
-          SEND_FILE_ENTRY(storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
+          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,storageName,name,timeModified);
           entryCount++;
         }
-      }
-      Index_doneList(&indexQueryHandle);
-    }
+        if (indexNode == NULL) break;
 
-    if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-    {
-      if (checkedStorageOnlyFlag)
-      {
-        error = Index_initListImages(&indexQueryHandle,
-                                     indexDatabaseHandle,
-                                     Array_cArray(clientInfo->storageIdArray),
-                                     Array_length(clientInfo->storageIdArray),
-                                     entryPattern
-                                    );
+        // update index node
+        if (timeModified >= indexNode->timeModified)
+        {
+          String_set(indexNode->storageName,storageName);
+          indexNode->storageDateTime      = storageDateTime;
+          indexNode->timeModified         = timeModified;
+          indexNode->image.fileSystemType = fileSystemType;
+          indexNode->image.size           = size;
+          indexNode->image.blockOffset    = blockOffset;
+          indexNode->image.blockCount     = blockCount;
+        }
       }
       else
       {
-        error = Index_initListImages(&indexQueryHandle,
-                                     indexDatabaseHandle,
-                                     NULL,
-                                     0,
-                                     entryPattern
-                                    );
+        SEND_IMAGE_ENTRY(storageName,storageDateTime,name,fileSystemType,size,blockOffset,blockCount);
+        entryCount++;
       }
-      if (error != ERROR_NONE)
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-        String_delete(name);
-        String_delete(storageName);
-        String_delete(regexpString);
-        List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-        String_delete(entryPattern);
-        return;
-      }
-      while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-             && !isCommandAborted(clientInfo,id)
-             && Index_getNextImage(&indexQueryHandle,
-                                   &databaseId,
-                                   storageName,
-                                   &storageDateTime,
-                                   name,
-                                   &fileSystemType,
-                                   &size,
-                                   &blockOffset,
-                                   &blockCount
-                                  )
-            )
-      {
-        if (newestEntriesOnlyFlag)
-        {
-          // find/allocate index node
-          indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,name);
-          if (indexNode == NULL)
-          {
-            indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,storageName,name,timeModified);
-            entryCount++;
-          }
-          if (indexNode == NULL) break;
-
-          // update index node
-          if (timeModified >= indexNode->timeModified)
-          {
-            String_set(indexNode->storageName,storageName);
-            indexNode->storageDateTime      = storageDateTime;
-            indexNode->timeModified         = timeModified;
-            indexNode->image.fileSystemType = fileSystemType;
-            indexNode->image.size           = size;
-            indexNode->image.blockOffset    = blockOffset;
-            indexNode->image.blockCount     = blockCount;
-          }
-        }
-        else
-        {
-          SEND_IMAGE_ENTRY(storageName,storageDateTime,name,fileSystemType,size,blockOffset,blockCount);
-          entryCount++;
-        }
-      }
-      Index_doneList(&indexQueryHandle);
     }
+    Index_doneList(&indexQueryHandle);
+  }
 
-    if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  {
+    if (checkedStorageOnlyFlag)
     {
-      if (checkedStorageOnlyFlag)
-      {
-        error = Index_initListDirectories(&indexQueryHandle,
-                                          indexDatabaseHandle,
-                                          Array_cArray(clientInfo->storageIdArray),
-                                          Array_length(clientInfo->storageIdArray),
-                                          entryPattern
-                                         );
-      }
-      else
-      {
-        error = Index_initListDirectories(&indexQueryHandle,
-                                          indexDatabaseHandle,
-                                          NULL,
-                                          0,
-                                          entryPattern
-                                         );
-      }
-      if (error != ERROR_NONE)
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-        String_delete(name);
-        String_delete(storageName);
-        String_delete(regexpString);
-        List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-        String_delete(entryPattern);
-        return;
-      }
-      while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-             && !isCommandAborted(clientInfo,id)
-             && Index_getNextDirectory(&indexQueryHandle,
-                                       &databaseId,
-                                       storageName,
-                                       &storageDateTime,
-                                       name,
-                                       &timeModified,
-                                       &userId,
-                                       &groupId,
-                                       &permission
-                                      )
-            )
-      {
-        if (newestEntriesOnlyFlag)
-        {
-          // find/allocate index node
-          indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,name);
-          if (indexNode == NULL)
-          {
-            indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,storageName,name,timeModified);
-            entryCount++;
-          }
-          if (indexNode == NULL) break;
-
-          // update index node
-          if (timeModified >= indexNode->timeModified)
-          {
-            String_set(indexNode->storageName,storageName);
-            indexNode->storageDateTime      = storageDateTime;
-            indexNode->timeModified         = timeModified;
-            indexNode->directory.userId     = userId;
-            indexNode->directory.groupId    = groupId;
-            indexNode->directory.permission = permission;
-          }
-        }
-        else
-        {
-          SEND_DIRECTORY_ENTRY(storageName,storageDateTime,name,timeModified,userId,groupId,permission);
-          entryCount++;
-        }
-      }
-      Index_doneList(&indexQueryHandle);
-    }
-
-    if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-    {
-      if (checkedStorageOnlyFlag)
-      {
-        error = Index_initListLinks(&indexQueryHandle,
-                                    indexDatabaseHandle,
-                                    Array_cArray(clientInfo->storageIdArray),
-                                    Array_length(clientInfo->storageIdArray),
-                                    entryPattern
-                                   );
-      }
-      else
-      {
-        error = Index_initListLinks(&indexQueryHandle,
-                                    indexDatabaseHandle,
-                                    NULL,
-                                    0,
-                                    entryPattern
-                                   );
-      }
-      if (error != ERROR_NONE)
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-        String_delete(name);
-        String_delete(storageName);
-        String_delete(regexpString);
-        List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-        String_delete(entryPattern);
-        return;
-      }
-      destinationName = String_new();
-      while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-             && !isCommandAborted(clientInfo,id)
-             && Index_getNextLink(&indexQueryHandle,
-                                  &databaseId,
-                                  storageName,
-                                  &storageDateTime,
-                                  name,
-                                  destinationName,
-                                  &timeModified,
-                                  &userId,
-                                  &groupId,
-                                  &permission
-                                 )
-            )
-      {
-        if (newestEntriesOnlyFlag)
-        {
-          // find/allocate index node
-          indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,name);
-          if (indexNode == NULL)
-          {
-            indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,storageName,name,timeModified);
-            entryCount++;
-          }
-          if (indexNode == NULL) break;
-
-          // update index node
-          if (timeModified >= indexNode->timeModified)
-          {
-            String_set(indexNode->storageName,storageName);
-            indexNode->storageDateTime      = storageDateTime;
-            indexNode->timeModified         = timeModified;
-            String_set(indexNode->link.destinationName,destinationName);
-            indexNode->link.userId          = userId;
-            indexNode->link.groupId         = groupId;
-            indexNode->link.permission      = permission;
-          }
-        }
-        else
-        {
-          SEND_LINK_ENTRY(storageName,storageDateTime,name,destinationName,timeModified,userId,groupId,permission);
-          entryCount++;
-        }
-      }
-      Index_doneList(&indexQueryHandle);
-      String_delete(destinationName);
-    }
-
-    if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-    {
-      if (checkedStorageOnlyFlag)
-      {
-        error = Index_initListHardLinks(&indexQueryHandle,
+      error = Index_initListDirectories(&indexQueryHandle,
                                         indexDatabaseHandle,
                                         Array_cArray(clientInfo->storageIdArray),
                                         Array_length(clientInfo->storageIdArray),
                                         entryPattern
                                        );
-      }
-      else
-      {
-        error = Index_initListHardLinks(&indexQueryHandle,
+    }
+    else
+    {
+      error = Index_initListDirectories(&indexQueryHandle,
                                         indexDatabaseHandle,
-                                        NULL,
-                                        0,
+                                        NULL,        // storage ids
+                                        0,           // storage id count
                                         entryPattern
                                        );
-      }
-      if (error != ERROR_NONE)
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-        String_delete(name);
-        String_delete(storageName);
-        String_delete(regexpString);
-        List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-        String_delete(entryPattern);
-        return;
-      }
-      destinationName = String_new();
-      while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-             && !isCommandAborted(clientInfo,id)
-             && Index_getNextHardLink(&indexQueryHandle,
-                                      &databaseId,
-                                      storageName,
-                                      &storageDateTime,
-                                      name,
-                                      &size,
-                                      &timeModified,
-                                      &userId,
-                                      &groupId,
-                                      &permission,
-                                      &fragmentOffset,
-                                      &fragmentSize
-                                     )
-            )
-      {
-        if (newestEntriesOnlyFlag)
-        {
-          // find/allocate index node
-          indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,name);
-          if (indexNode == NULL)
-          {
-            indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,storageName,name,timeModified);
-            entryCount++;
-          }
-          if (indexNode == NULL) break;
-
-          // update index node
-          if (timeModified >= indexNode->timeModified)
-          {
-            String_set(indexNode->storageName,storageName);
-            indexNode->storageDateTime         = storageDateTime;
-            indexNode->timeModified            = timeModified;
-            indexNode->hardLink.size           = size;
-            indexNode->hardLink.userId         = userId;
-            indexNode->hardLink.groupId        = groupId;
-            indexNode->hardLink.permission     = permission;
-            indexNode->hardLink.fragmentOffset = fragmentOffset;
-            indexNode->hardLink.fragmentSize   = fragmentSize;
-          }
-        }
-        else
-        {
-          SEND_HARDLINK_ENTRY(storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
-          entryCount++;
-        }
-      }
-      Index_doneList(&indexQueryHandle);
-      String_delete(destinationName);
     }
-
-    if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+    if (error != ERROR_NONE)
     {
-      if (checkedStorageOnlyFlag)
-      {
-        error = Index_initListSpecial(&indexQueryHandle,
-                                      indexDatabaseHandle,
-                                      Array_cArray(clientInfo->storageIdArray),
-                                      Array_length(clientInfo->storageIdArray),
-                                      entryPattern
-                                     );
-      }
-      else
-      {
-        error = Index_initListSpecial(&indexQueryHandle,
-                                      indexDatabaseHandle,
-                                      NULL,
-                                      0,
-                                      entryPattern
-                                     );
-      }
-      if (error != ERROR_NONE)
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-        String_delete(name);
-        String_delete(storageName);
-        String_delete(regexpString);
-        List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-        String_delete(entryPattern);
-        return;
-      }
-      while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
-             && !isCommandAborted(clientInfo,id)
-             && Index_getNextSpecial(&indexQueryHandle,
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(name);
+      String_delete(storageName);
+      String_delete(regexpString);
+      List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+      String_delete(entryPattern);
+      return;
+    }
+    while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+           && !isCommandAborted(clientInfo,id)
+           && Index_getNextDirectory(&indexQueryHandle,
                                      &databaseId,
                                      storageName,
                                      &storageDateTime,
@@ -10084,140 +10268,372 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                      &groupId,
                                      &permission
                                     )
-            )
-      {
-        if (newestEntriesOnlyFlag)
-        {
-          // find/allocate index node
-          indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,name);
-          if (indexNode == NULL)
-          {
-            indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,storageName,name,timeModified);
-            entryCount++;
-          }
-          if (indexNode == NULL) break;
-
-          // update index node
-          if (timeModified >= indexNode->timeModified)
-          {
-            String_set(indexNode->storageName,storageName);
-            indexNode->storageDateTime    = storageDateTime;
-            indexNode->timeModified       = timeModified;
-            indexNode->special.userId     = userId;
-            indexNode->special.groupId    = groupId;
-            indexNode->special.permission = permission;
-          }
-        }
-        else
-        {
-          SEND_SPECIAL_ENTRY(storageName,storageDateTime,name,timeModified,userId,groupId,permission);
-          entryCount++;
-        }
-      }
-      Index_doneList(&indexQueryHandle);
-    }
-
-    // send data
-    indexNode = indexList.head;
-    while (   (indexNode != NULL)
-           && !isCommandAborted(clientInfo,id)
           )
     {
-      switch (indexNode->type)
+      if (newestEntriesOnlyFlag)
       {
-        case ARCHIVE_ENTRY_TYPE_NONE:
-          break;
-        case ARCHIVE_ENTRY_TYPE_FILE:
-          SEND_FILE_ENTRY(indexNode->storageName,
-                          indexNode->storageDateTime,
-                          indexNode->name,
-                          indexNode->file.size,
-                          indexNode->timeModified,
-                          indexNode->file.userId,
-                          indexNode->file.groupId,
-                          indexNode->file.permission,
-                          indexNode->file.fragmentOffset,
-                          indexNode->file.fragmentSize
-                         );
-          break;
-        case ARCHIVE_ENTRY_TYPE_IMAGE:
-          SEND_IMAGE_ENTRY(indexNode->storageName,
-                           indexNode->storageDateTime,
-                           indexNode->name,
-                           indexNode->image.fileSystemType,
-                           indexNode->image.size,
-                           indexNode->image.blockOffset,
-                           indexNode->image.blockCount
-                          );
-          break;
-        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-          SEND_DIRECTORY_ENTRY(indexNode->storageName,
-                               indexNode->storageDateTime,
-                               indexNode->name,
-                               indexNode->timeModified,
-                               indexNode->directory.userId,
-                               indexNode->directory.groupId,
-                               indexNode->directory.permission
-                              );
-          break;
-        case ARCHIVE_ENTRY_TYPE_LINK:
-          SEND_LINK_ENTRY(indexNode->storageName,
-                          indexNode->storageDateTime,
-                          indexNode->name,
-                          indexNode->link.destinationName,
-                          indexNode->timeModified,
-                          indexNode->link.userId,
-                          indexNode->link.groupId,
-                          indexNode->link.permission
-                         );
-          break;
-        case ARCHIVE_ENTRY_TYPE_HARDLINK:
-          SEND_HARDLINK_ENTRY(indexNode->storageName,
-                              indexNode->storageDateTime,
-                              indexNode->name,
-                              indexNode->hardLink.size,
-                              indexNode->timeModified,
-                              indexNode->hardLink.userId,
-                              indexNode->hardLink.groupId,
-                              indexNode->hardLink.permission,
-                              indexNode->hardLink.fragmentOffset,
-                              indexNode->hardLink.fragmentSize
-                             );
-          break;
-        case ARCHIVE_ENTRY_TYPE_SPECIAL:
-          SEND_SPECIAL_ENTRY(indexNode->storageName,
+        // find/allocate index node
+        indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,name);
+        if (indexNode == NULL)
+        {
+          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,storageName,name,timeModified);
+          entryCount++;
+        }
+        if (indexNode == NULL) break;
+
+        // update index node
+        if (timeModified >= indexNode->timeModified)
+        {
+          String_set(indexNode->storageName,storageName);
+          indexNode->storageDateTime      = storageDateTime;
+          indexNode->timeModified         = timeModified;
+          indexNode->directory.userId     = userId;
+          indexNode->directory.groupId    = groupId;
+          indexNode->directory.permission = permission;
+        }
+      }
+      else
+      {
+        SEND_DIRECTORY_ENTRY(storageName,storageDateTime,name,timeModified,userId,groupId,permission);
+        entryCount++;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  {
+    if (checkedStorageOnlyFlag)
+    {
+      error = Index_initListLinks(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  Array_cArray(clientInfo->storageIdArray),
+                                  Array_length(clientInfo->storageIdArray),
+                                  entryPattern
+                                 );
+    }
+    else
+    {
+      error = Index_initListLinks(&indexQueryHandle,
+                                  indexDatabaseHandle,
+                                  NULL,        // storage ids
+                                  0,           // storage id count
+                                  entryPattern
+                                 );
+    }
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(name);
+      String_delete(storageName);
+      String_delete(regexpString);
+      List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+      String_delete(entryPattern);
+      return;
+    }
+    destinationName = String_new();
+    while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+           && !isCommandAborted(clientInfo,id)
+           && Index_getNextLink(&indexQueryHandle,
+                                &databaseId,
+                                storageName,
+                                &storageDateTime,
+                                name,
+                                destinationName,
+                                &timeModified,
+                                &userId,
+                                &groupId,
+                                &permission
+                               )
+          )
+    {
+      if (newestEntriesOnlyFlag)
+      {
+        // find/allocate index node
+        indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,name);
+        if (indexNode == NULL)
+        {
+          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,storageName,name,timeModified);
+          entryCount++;
+        }
+        if (indexNode == NULL) break;
+
+        // update index node
+        if (timeModified >= indexNode->timeModified)
+        {
+          String_set(indexNode->storageName,storageName);
+          indexNode->storageDateTime      = storageDateTime;
+          indexNode->timeModified         = timeModified;
+          String_set(indexNode->link.destinationName,destinationName);
+          indexNode->link.userId          = userId;
+          indexNode->link.groupId         = groupId;
+          indexNode->link.permission      = permission;
+        }
+      }
+      else
+      {
+        SEND_LINK_ENTRY(storageName,storageDateTime,name,destinationName,timeModified,userId,groupId,permission);
+        entryCount++;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+    String_delete(destinationName);
+  }
+
+  if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  {
+    if (checkedStorageOnlyFlag)
+    {
+      error = Index_initListHardLinks(&indexQueryHandle,
+                                      indexDatabaseHandle,
+                                      Array_cArray(clientInfo->storageIdArray),
+                                      Array_length(clientInfo->storageIdArray),
+                                      entryPattern
+                                     );
+    }
+    else
+    {
+      error = Index_initListHardLinks(&indexQueryHandle,
+                                      indexDatabaseHandle,
+                                      NULL,        // storage ids
+                                      0,           // storage id count
+                                      entryPattern
+                                     );
+    }
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(name);
+      String_delete(storageName);
+      String_delete(regexpString);
+      List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+      String_delete(entryPattern);
+      return;
+    }
+    destinationName = String_new();
+    while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+           && !isCommandAborted(clientInfo,id)
+           && Index_getNextHardLink(&indexQueryHandle,
+                                    &databaseId,
+                                    storageName,
+                                    &storageDateTime,
+                                    name,
+                                    &size,
+                                    &timeModified,
+                                    &userId,
+                                    &groupId,
+                                    &permission,
+                                    &fragmentOffset,
+                                    &fragmentSize
+                                   )
+          )
+    {
+      if (newestEntriesOnlyFlag)
+      {
+        // find/allocate index node
+        indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,name);
+        if (indexNode == NULL)
+        {
+          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,storageName,name,timeModified);
+          entryCount++;
+        }
+        if (indexNode == NULL) break;
+
+        // update index node
+        if (timeModified >= indexNode->timeModified)
+        {
+          String_set(indexNode->storageName,storageName);
+          indexNode->storageDateTime         = storageDateTime;
+          indexNode->timeModified            = timeModified;
+          indexNode->hardLink.size           = size;
+          indexNode->hardLink.userId         = userId;
+          indexNode->hardLink.groupId        = groupId;
+          indexNode->hardLink.permission     = permission;
+          indexNode->hardLink.fragmentOffset = fragmentOffset;
+          indexNode->hardLink.fragmentSize   = fragmentSize;
+        }
+      }
+      else
+      {
+        SEND_HARDLINK_ENTRY(storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
+        entryCount++;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+    String_delete(destinationName);
+  }
+
+  if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  {
+    if (checkedStorageOnlyFlag)
+    {
+      error = Index_initListSpecial(&indexQueryHandle,
+                                    indexDatabaseHandle,
+                                    Array_cArray(clientInfo->storageIdArray),
+                                    Array_length(clientInfo->storageIdArray),
+                                    entryPattern
+                                   );
+    }
+    else
+    {
+      error = Index_initListSpecial(&indexQueryHandle,
+                                    indexDatabaseHandle,
+                                    NULL,        // storage ids
+                                    0,           // storage id count
+                                    entryPattern
+                                   );
+    }
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(name);
+      String_delete(storageName);
+      String_delete(regexpString);
+      List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+      String_delete(entryPattern);
+      return;
+    }
+    while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+           && !isCommandAborted(clientInfo,id)
+           && Index_getNextSpecial(&indexQueryHandle,
+                                   &databaseId,
+                                   storageName,
+                                   &storageDateTime,
+                                   name,
+                                   &timeModified,
+                                   &userId,
+                                   &groupId,
+                                   &permission
+                                  )
+          )
+    {
+      if (newestEntriesOnlyFlag)
+      {
+        // find/allocate index node
+        indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,name);
+        if (indexNode == NULL)
+        {
+          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,storageName,name,timeModified);
+          entryCount++;
+        }
+        if (indexNode == NULL) break;
+
+        // update index node
+        if (timeModified >= indexNode->timeModified)
+        {
+          String_set(indexNode->storageName,storageName);
+          indexNode->storageDateTime    = storageDateTime;
+          indexNode->timeModified       = timeModified;
+          indexNode->special.userId     = userId;
+          indexNode->special.groupId    = groupId;
+          indexNode->special.permission = permission;
+        }
+      }
+      else
+      {
+        SEND_SPECIAL_ENTRY(storageName,storageDateTime,name,timeModified,userId,groupId,permission);
+        entryCount++;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  // send data
+  indexNode = indexList.head;
+  while (   (indexNode != NULL)
+         && !isCommandAborted(clientInfo,id)
+        )
+  {
+    switch (indexNode->type)
+    {
+      case ARCHIVE_ENTRY_TYPE_NONE:
+        break;
+      case ARCHIVE_ENTRY_TYPE_FILE:
+        SEND_FILE_ENTRY(indexNode->storageName,
+                        indexNode->storageDateTime,
+                        indexNode->name,
+                        indexNode->file.size,
+                        indexNode->timeModified,
+                        indexNode->file.userId,
+                        indexNode->file.groupId,
+                        indexNode->file.permission,
+                        indexNode->file.fragmentOffset,
+                        indexNode->file.fragmentSize
+                       );
+        break;
+      case ARCHIVE_ENTRY_TYPE_IMAGE:
+        SEND_IMAGE_ENTRY(indexNode->storageName,
+                         indexNode->storageDateTime,
+                         indexNode->name,
+                         indexNode->image.fileSystemType,
+                         indexNode->image.size,
+                         indexNode->image.blockOffset,
+                         indexNode->image.blockCount
+                        );
+        break;
+      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+        SEND_DIRECTORY_ENTRY(indexNode->storageName,
                              indexNode->storageDateTime,
                              indexNode->name,
                              indexNode->timeModified,
-                             indexNode->special.userId,
-                             indexNode->special.groupId,
-                             indexNode->special.permission
+                             indexNode->directory.userId,
+                             indexNode->directory.groupId,
+                             indexNode->directory.permission
                             );
+        break;
+      case ARCHIVE_ENTRY_TYPE_LINK:
+        SEND_LINK_ENTRY(indexNode->storageName,
+                        indexNode->storageDateTime,
+                        indexNode->name,
+                        indexNode->link.destinationName,
+                        indexNode->timeModified,
+                        indexNode->link.userId,
+                        indexNode->link.groupId,
+                        indexNode->link.permission
+                       );
+        break;
+      case ARCHIVE_ENTRY_TYPE_HARDLINK:
+        SEND_HARDLINK_ENTRY(indexNode->storageName,
+                            indexNode->storageDateTime,
+                            indexNode->name,
+                            indexNode->hardLink.size,
+                            indexNode->timeModified,
+                            indexNode->hardLink.userId,
+                            indexNode->hardLink.groupId,
+                            indexNode->hardLink.permission,
+                            indexNode->hardLink.fragmentOffset,
+                            indexNode->hardLink.fragmentSize
+                           );
+        break;
+      case ARCHIVE_ENTRY_TYPE_SPECIAL:
+        SEND_SPECIAL_ENTRY(indexNode->storageName,
+                           indexNode->storageDateTime,
+                           indexNode->name,
+                           indexNode->timeModified,
+                           indexNode->special.userId,
+                           indexNode->special.groupId,
+                           indexNode->special.permission
+                          );
+        break;
+      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           break;
-        case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-          break;
-        #ifndef NDEBUG
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break;
-        #endif /* NDEBUG */
-      }
-      indexNode = indexNode->next;
+      #endif /* NDEBUG */
     }
-
-    // free resources
-    String_delete(name);
-    String_delete(storageName);
-    String_delete(regexpString);
-    List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-    String_delete(entryPattern);
-
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    indexNode = indexNode->next;
   }
-  else
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
-  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(name);
+  String_delete(storageName);
+  String_delete(regexpString);
+  List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+  String_delete(entryPattern);
 }
 
 #ifndef NDEBUG
