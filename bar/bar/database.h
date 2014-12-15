@@ -52,6 +52,9 @@ typedef enum
 // no id
 #define DATABASE_ID_NONE -1LL
 
+// any id
+#define DATABASE_ID_ANY 0LL
+
 /***************************** Datatypes *******************************/
 
 // database handle
