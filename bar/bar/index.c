@@ -105,8 +105,8 @@ LOCAL void cleanUp(DatabaseHandle *indexDatabaseHandle)
       (void)Database_execute(indexDatabaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM meta \
-                              WHERE     name='%S' \
-                                    AND rowid NOT IN (SELECT rowid FROM meta WHERE name='%S' ORDER BY rowId DESC LIMIT 0,1); \
+                              WHERE     name=%'S \
+                                    AND rowid NOT IN (SELECT rowid FROM meta WHERE name=%'S ORDER BY rowId DESC LIMIT 0,1); \
                              ",
                              name,
                              name
@@ -263,7 +263,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
                             &storageId,
                             uuid,
                             name1,
-                            createdDateTime
+                            &createdDateTime
                            )
        )
     {
@@ -284,7 +284,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
                                  (\
                                   '',\
                                   %'S,\
-                                  %'S,\
+                                  %d,\
                                   %d,\
                                   %d\
                                  ); \
@@ -306,7 +306,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
                                          name \
                                   FROM storage \
                                   WHERE     jobId=0 \
-                                        AND uuid='%S' \
+                                        AND uuid=%'S \
                                  ",
                                  uuid
                                 );
@@ -1102,7 +1102,7 @@ Errors Index_update(DatabaseHandle *databaseHandle,
     error = Database_execute(databaseHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
-                              SET name='%S' \
+                              SET name=%'S \
                               WHERE id=%ld;\
                              ",
                              storageName,
@@ -1118,7 +1118,7 @@ Errors Index_update(DatabaseHandle *databaseHandle,
     error = Database_execute(databaseHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
-                              SET uuid='%S' \
+                              SET uuid=%'S \
                               WHERE id=%ld;\
                              ",
                              uuid,
@@ -1363,7 +1363,7 @@ Errors Index_initListJobs(IndexQueryHandle *indexQueryHandle,
                                    (SELECT SUM(size) FROM storage WHERE storage.jobId=jobs.id), \
                                    (SELECT errorMessage FROM storage WHERE storage.jobId=jobs.id ORDER BY created DESC LIMIT 0,1) \
                             FROM jobs \
-                            WHERE (%d OR uuid='%S'); \
+                            WHERE (%d OR uuid=%'S); \
                            ",
                            (uuid == NULL) ? 1 : 0,
                            uuid
@@ -1395,6 +1395,7 @@ bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
+                             const String     uuid,
                              DatabaseId       jobId,
                              StorageTypes     storageType,
                              const String     storageName,
@@ -1419,24 +1420,30 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
   if (deviceName  != NULL) indexQueryHandle->storage.deviceNamePattern  = Pattern_new(deviceName, PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
   if (fileName    != NULL) indexQueryHandle->storage.fileNamePattern    = Pattern_new(fileName,   PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
 
+fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(uuid),jobId);
   indexStateSetString = String_new();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
-                           "SELECT id, \
-                                   uuid, \
-                                   name, \
-                                   STRFTIME('%%s',created), \
-                                   size, \
-                                   state, \
-                                   mode, \
-                                   STRFTIME('%%s',lastChecked), \
-                                   errorMessage \
+                           "SELECT storage.id, \
+                                   jobs.uuid, \
+                                   storage.jobId, \
+                                   storage.name, \
+                                   STRFTIME('%%s',storage.created), \
+                                   storage.size, \
+                                   storage.state, \
+                                   storage.mode, \
+                                   STRFTIME('%%s',storage.lastChecked), \
+                                   storage.errorMessage \
                             FROM storage \
-                            WHERE     (%d OR (jobId=%d)) \
-                                  AND state IN (%S) \
-                            ORDER BY created DESC \
+                            LEFT JOIN jobs ON jobs.id=storage.jobId \
+                            WHERE     (%d OR (jobs.uuid='%S')) \
+                                  AND (%d OR (storage.jobId=%d)) \
+                                  AND storage.state IN (%S) \
+                            ORDER BY storage.created DESC \
                            ",
-                           (jobId == DATABASE_ID_NONE) ? 1 : 0,
+                           (uuid == NULL) ? 1 : 0,
+                           uuid,
+                           (jobId == DATABASE_ID_ANY) ? 1 : 0,
                            jobId,
                            getIndexStateSetString(indexStateSetString,indexStateSet)
                           );
@@ -1448,6 +1455,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           DatabaseId       *databaseId,
                           String           uuid,
+                          DatabaseId       *jobId,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
@@ -1466,9 +1474,10 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   foundFlag = FALSE;
   while (   !foundFlag
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                                "%lld %S %S %llu %llu %d %d %llu %S",
+                                "%lld %S %lld %S %llu %llu %d %d %llu %S",
                                 databaseId,
                                 uuid,
+                                jobId,
                                 storageName,
                                 createdDateTime,
                                 size,

@@ -451,6 +451,7 @@ bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
 * Purpose: list storage entries
 * Input  : IndexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
+*          uuid             - unique id or NULL
 *          jobId            - job id or DATABASE_ID_NONE
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
 *          storageName      - storage name pattern (glob) or NULL
@@ -466,6 +467,7 @@ bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
+                             const String     uuid,
                              DatabaseId       jobId,
                              StorageTypes     storageType,
                              const String     storageName,
@@ -482,6 +484,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 * Input  : IndexQueryHandle    - index query handle
 * Output : databaseId          - database id of entry
 *          uuid                - uuid (can be NULL)
+*          jobId               - database job id (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s]
 *          size                - size [bytes]
@@ -496,6 +499,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           DatabaseId       *databaseId,
                           String           uuid,
+                          DatabaseId       *jobId,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
