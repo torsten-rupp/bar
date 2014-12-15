@@ -1,7 +1,7 @@
 # norootforbuild
 
 Name:          bar
-Version:       0.18c
+Version:       0.19
 Release:       53.1
 Summary:       Backup ARchiver
 Source:        http://www.kigen.de/projects/bar/bar-%{version}.tar.bz2
@@ -46,6 +46,16 @@ mkdir packages
   cp %{_sourcedir}/xz-5.0.7.tar.gz packages
   (cd packages; tar xzf xz-5.0.7.tar.gz)
   ln -s packages/xz-5.0.7 xz
+)
+(
+  cp %{_sourcedir}/lzo-2.06.tar.gz packages
+  (cd packages; tar xzf lzo-2.06.tar.gz)
+  ln -s packages/lzo-2.06 lzo
+)
+(
+  cp %{_sourcedir}/lz4-r123.tar.gz packages
+  (cd packages; tar xzf lz4-r123.tar.gz)
+  ln -s packages/lz4-r123 lz4
 )
 (
   cp %{_sourcedir}/xdelta3.0.0.tar.gz packages
@@ -135,6 +145,11 @@ mkdir packages
 %dir %attr(0700,root,root) /etc/bar/jobs
 
 %config(noreplace) %attr(0600,root,root) /etc/bar/bar.cfg
+
+%dir %{_datadir}/locale/jp
+%dir %{_datadir}/locale/jp/LC_MESSAGES
+%{_datadir}/locale/de/LC_MESSAGES/%{name}.mo
+%{_datadir}/locale/jp/LC_MESSAGES/%{name}.mo
 
 %doc ChangeLog doc/README
 %doc doc/bar.pdf

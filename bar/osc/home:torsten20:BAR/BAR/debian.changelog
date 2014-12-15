@@ -1,6 +1,33 @@
+bar (0.18e) stable; urgency=low
+  * removed nice-level in init scripts
+  * barcontrol: fixed selection and storage of
+    file names via file dialog
+  * barcontrol: fixed restore destination directory
+    bug + overwrite flag
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 10 Nov 2015 00:00:00 +0100
+
+bar (0.18d) stable; urgency=low
+  * fix not closed file when --no-storage is specified
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Mon, 29 Sep 2014 00:00:00 +0200
+
+bar (0.18c) stable; urgency=low
+  * fixed server network connection wait time in pselect();
+    may caused network trouble on some Linux systems.
+    Thanks to Daniel Webb for his help to find this bug!
+  * BARControl: upgraded to SWT 4.4 to fix a crash on
+    close when a combo widget is disposed.
+    (https://bugs.eclipse.org/bugs/show_bug.cgi?id=372560)
+    Thanks to Daniel Webb for his help to find this bug!
+  * Upgraded LZMA library to version 5.0.7
+  * Added init script for CentOS
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Fri, 26 Sep 2014 00:00:00 +0200
+
 bar (0.18b) stable; urgency=low
   * fixed server start script barserver for Debian
-  * do not download emp, breakpad by default
+  * do not download epm, breakpad by default
   * fix compilation some third party package: m4 required
 
  -- Torsten Rupp <torsten.rupp@gmx.net>  Fri, 09 May 2014 00:00:00 +0200

@@ -23,6 +23,8 @@ build-stamp:
 	ln -s packages/zlib-1.2.7 zlib
 	ln -s packages/bzip2-1.0.5 bzip2
 	ln -s packages/xz-5.0.7 xz
+	ln -s packages/lzo-2.06 lzo
+	ln -s packages/lz4-r123 lz4
 	ln -s packages/xdelta3.0.0 xdelta3
 	ln -s packages/ftplib-3.1 ftplib
 	ln -s packages/libgpg-error-1.10 libgpg-error
@@ -75,7 +77,7 @@ install-bar: build
 	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
 	make \
           DESTDIR=/usr/src/packages/BUILD/debian/bar DIST=1 SYSTEM=Debian \
-          install_base install_man
+          install_bar install_scripts install_man
 	# --- end custom part for installing
 
 install-bar-gui: build
@@ -88,7 +90,7 @@ install-bar-gui: build
 	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
 	make \
           DESTDIR=/usr/src/packages/BUILD/debian/bar-gui DIST=1 SYSTEM=Debian \
-          install_gui
+          install_barcontrol
 	# --- end custom part for installing
 
 # Build architecture-independent files here.
