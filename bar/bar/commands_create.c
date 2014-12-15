@@ -2948,7 +2948,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                  {
                    storageInfoDecrement(createInfo,storageMsg.fileSize);
                    File_delete(storageMsg.fileName,FALSE);
-                   if (storageMsg.storageId != DATABASE_ID_NONE) Index_delete(indexDatabaseHandle,storageMsg.storageId);
+                   if (storageMsg.storageId != DATABASE_ID_NONE) Index_deleteStorage(indexDatabaseHandle,storageMsg.storageId);
                    freeStorageMsg(&storageMsg,NULL);
                  }
                 );
@@ -3143,7 +3143,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       oldStorageName = String_new();
       error = Index_initListStorage(&indexQueryHandle,
                                     indexDatabaseHandle,
-                                    DATABASE_ID_NONE,
+                                    NULL, // uuid,
+                                    DATABASE_ID_ANY, // jobId
                                     STORAGE_TYPE_ANY,
                                     NULL, // storageName
                                     createInfo->storageSpecifier->hostName,
@@ -3154,7 +3155,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                    );
       while (Index_getNextStorage(&indexQueryHandle,
                                   &oldStorageId,
-                                  NULL, // jobId
+                                  NULL, // uuid
+                                  NULL, // job id
                                   oldStorageName,
                                   NULL, // createdDateTime
                                   NULL, // size
@@ -3167,7 +3169,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         if (oldStorageId != storageMsg.storageId)
         {
-          error = Index_delete(indexDatabaseHandle,oldStorageId);
+          error = Index_deleteStorage(indexDatabaseHandle,oldStorageId);
           if (error != ERROR_NONE)
           {
             printError("Cannot delete old index for storage '%s' (error: %s)!\n",
