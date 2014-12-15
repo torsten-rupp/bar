@@ -6874,15 +6874,15 @@ throw new Error("NYI");
                 else
                   image = IMAGE_FILE;
 
-                Widgets.addTreeItem(treeItem,
-                                    findFilesTreeIndex(treeItem,fileTreeData),
-                                    fileTreeData,
-                                    image,
-                                    false,
-                                    fileTreeData.title,
-                                    "FILE",
-                                    Units.formatByteSize(size),
-                                    simpleDateFormat.format(new Date(dateTime*1000)));
+                Widgets.insertTreeItem(treeItem,
+                                       findFilesTreeIndex(treeItem,fileTreeData),
+                                       fileTreeData,
+                                       image,
+                                       false,
+                                       fileTreeData.title,
+                                       "FILE",
+                                       Units.formatByteSize(size),
+                                       simpleDateFormat.format(new Date(dateTime*1000)));
               }
               break;
             case DIRECTORY:
@@ -6903,16 +6903,16 @@ throw new Error("NYI");
                 else
                   image = IMAGE_DIRECTORY;
 
-                subTreeItem = Widgets.addTreeItem(treeItem,
-                                                  findFilesTreeIndex(treeItem,fileTreeData),
-                                                  fileTreeData,
-                                                  image,
-                                                  true,
-                                                  fileTreeData.title,
-                                                  "DIR",
-                                                  null,
-                                                  simpleDateFormat.format(new Date(dateTime*1000))
-                                                 );
+                subTreeItem = Widgets.insertTreeItem(treeItem,
+                                                     findFilesTreeIndex(treeItem,fileTreeData),
+                                                     fileTreeData,
+                                                     image,
+                                                     true,
+                                                     fileTreeData.title,
+                                                     "DIR",
+                                                     null,
+                                                     simpleDateFormat.format(new Date(dateTime*1000))
+                                                    );
 
                 // request directory info
                 directoryInfoThread.add(name,subTreeItem);
@@ -6936,16 +6936,16 @@ throw new Error("NYI");
                 else
                   image = IMAGE_LINK;
 
-                Widgets.addTreeItem(treeItem,
-                                    findFilesTreeIndex(treeItem,fileTreeData),
-                                    fileTreeData,
-                                    image,
-                                    false,
-                                    fileTreeData.title,
-                                    "LINK",
-                                    null,
-                                    simpleDateFormat.format(new Date(dateTime*1000))
-                                   );
+                Widgets.insertTreeItem(treeItem,
+                                       findFilesTreeIndex(treeItem,fileTreeData),
+                                       fileTreeData,
+                                       image,
+                                       false,
+                                       fileTreeData.title,
+                                       "LINK",
+                                       null,
+                                       simpleDateFormat.format(new Date(dateTime*1000))
+                                      );
               }
               break;
             case HARDLINK:
@@ -6967,16 +6967,16 @@ throw new Error("NYI");
                 else
                   image = IMAGE_FILE;
 
-                Widgets.addTreeItem(treeItem,
-                                    findFilesTreeIndex(treeItem,fileTreeData),
-                                    fileTreeData,
-                                    image,
-                                    false,
-                                    fileTreeData.title,
-                                    "HARDLINK",
-                                    Units.formatByteSize(size),
-                                    simpleDateFormat.format(new Date(dateTime*1000))
-                                   );
+                Widgets.insertTreeItem(treeItem,
+                                       findFilesTreeIndex(treeItem,fileTreeData),
+                                       fileTreeData,
+                                       image,
+                                       false,
+                                       fileTreeData.title,
+                                       "HARDLINK",
+                                       Units.formatByteSize(size),
+                                       simpleDateFormat.format(new Date(dateTime*1000))
+                                      );
               }
               break;
             case SPECIAL:
@@ -6992,78 +6992,78 @@ throw new Error("NYI");
                     // create file tree data
                     fileTreeData = new FileTreeData(name,SpecialTypes.CHARACTER_DEVICE,dateTime,name);
 
-                    // add entry
-                    Widgets.addTreeItem(treeItem,
-                                        findFilesTreeIndex(treeItem,fileTreeData),
-                                        fileTreeData,
-//                                        image,
-                                        false,
-                                        fileTreeData.title,
-                                        "CHARACTER DEVICE",
-                                        simpleDateFormat.format(new Date(dateTime*1000))
-                                       );
+                    // insert entry
+                    Widgets.insertTreeItem(treeItem,
+                                           findFilesTreeIndex(treeItem,fileTreeData),
+                                           fileTreeData,
+//                                           image,
+                                           false,
+                                           fileTreeData.title,
+                                           "CHARACTER DEVICE",
+                                           simpleDateFormat.format(new Date(dateTime*1000))
+                                          );
                     break;
                   case BLOCK_DEVICE:
                     // create file tree data
                     fileTreeData = new FileTreeData(name,SpecialTypes.BLOCK_DEVICE,size,dateTime,name);
 
-                    // add entry
-                    Widgets.addTreeItem(treeItem,
-                                        findFilesTreeIndex(treeItem,fileTreeData),
-                                        fileTreeData,
-//                                        image,
-                                        false,
-                                        fileTreeData.title,
-                                        "BLOCK DEVICE",
-                                        (size > 0) ? Units.formatByteSize(size) : null,
-                                        simpleDateFormat.format(new Date(dateTime*1000))
-                                       );
+                    // insert entry
+                    Widgets.insertTreeItem(treeItem,
+                                           findFilesTreeIndex(treeItem,fileTreeData),
+                                           fileTreeData,
+//                                           image,
+                                           false,
+                                           fileTreeData.title,
+                                           "BLOCK DEVICE",
+                                           (size > 0) ? Units.formatByteSize(size) : null,
+                                           simpleDateFormat.format(new Date(dateTime*1000))
+                                          );
                     break;
                   case FIFO:
                     // create file tree data
                     fileTreeData = new FileTreeData(name,SpecialTypes.FIFO,dateTime,name);
 
-                    // add entry
-                    Widgets.addTreeItem(treeItem,
-                                        findFilesTreeIndex(treeItem,fileTreeData),
-                                        fileTreeData,
-//                                        image,
-                                        false,
-                                        fileTreeData.title,
-                                        "FIFO",
-                                        null,
-                                        simpleDateFormat.format(new Date(dateTime*1000))
-                                       );
+                    // insert entry
+                    Widgets.insertTreeItem(treeItem,
+                                           findFilesTreeIndex(treeItem,fileTreeData),
+                                           fileTreeData,
+//                                           image,
+                                           false,
+                                           fileTreeData.title,
+                                           "FIFO",
+                                           null,
+                                           simpleDateFormat.format(new Date(dateTime*1000))
+                                          );
                     break;
                   case SOCKET:
                     // create file tree data
                     fileTreeData = new FileTreeData(name,SpecialTypes.SOCKET,dateTime,name);
 
-                    // add entry
-                    Widgets.addTreeItem(treeItem,
-                                        findFilesTreeIndex(treeItem,fileTreeData),
-                                        fileTreeData,
-//                                        image,
-                                        false,
-                                        fileTreeData.title,
-                                        "SOCKET",
-                                        simpleDateFormat.format(new Date(dateTime*1000))
-                                       );
+                    // insert entry
+                    Widgets.insertTreeItem(treeItem,
+                                           findFilesTreeIndex(treeItem,fileTreeData),
+                                           fileTreeData,
+//                                           image,
+                                           false,
+                                           fileTreeData.title,
+                                           "SOCKET",
+                                           simpleDateFormat.format(new Date(dateTime*1000))
+                                          );
                     break;
                   case OTHER:
                     // create file tree data
                     fileTreeData = new FileTreeData(name,SpecialTypes.OTHER,dateTime,name);
 
-                    // add entry
-                    Widgets.addTreeItem(treeItem,
-                                        findFilesTreeIndex(treeItem,fileTreeData),
-                                        fileTreeData,
-//                                        image,
-                                        false,
-                                        fileTreeData.title,
-                                        "SPECIAL",
-                                        simpleDateFormat.format(new Date(dateTime*1000))
-                                       );
+                    // insert entry
+                    Widgets.insertTreeItem(treeItem,
+                                           findFilesTreeIndex(treeItem,fileTreeData),
+                                           fileTreeData,
+//                                           image,
+                                           false,
+                                           fileTreeData.title,
+                                           "SPECIAL",
+                                           simpleDateFormat.format(new Date(dateTime*1000))
+                                          );
                     break;
                 }
               }
