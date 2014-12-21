@@ -35,7 +35,7 @@ INSTALL_TLS_DIR    = @TLS_DIR@
 JAVA_DATA_MODEL    = @JAVA_DATA_MODEL@
 
 JAVA               = @JAVA@
-JAVA_FLAGS         = @JAVA_FLAGS@ -Xmx128m
+JAVA_FLAGS         = @JAVA_FLAGS@ -Xmx128m -enableassertions
 
 JAVAC              = @JAVAC@
 JAVAC_FLAGS        = @JAVAC_FLAGS@ -source 1.5
@@ -220,10 +220,12 @@ help:
 	@$(ECHO) "  runjp [O|OPTIONS=<options>]"
 	@$(ECHO) "  rundebug [O|OPTIONS=<options>]"
 	@$(ECHO) "  runxdebug [O|OPTIONS=<options>]"
+	@$(ECHO) "  runxxdebug [O|OPTIONS=<options>]"
 	@$(ECHO) ""
 	@$(ECHO) "  rundev [O|OPTIONS=<options>]"
 	@$(ECHO) "  rundevdebug [O|OPTIONS=<options>]"
 	@$(ECHO) "  rundevxdebug [O|OPTIONS=<options>]"
+	@$(ECHO) "  rundevxxdebug [O|OPTIONS=<options>]"
 	@$(ECHO) ""
 	@$(ECHO) "  runjar  [O|OPTIONS=<options>]"
 	@$(ECHO) ""
@@ -474,6 +476,7 @@ endif
 compile: $(OBJECTS)
 
 # run
+.PHONY: run runde runjp rundebug runxdebug runxxdebug
 run: $(OBJECTS)
 ifneq ($(JAVA),)
 	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(OPTIONS)
@@ -494,17 +497,24 @@ else
 endif
 rundebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug $(OPTIONS)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug=1 $(OPTIONS)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 runxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug --debug-server $(OPTIONS) $(O)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug=2 $(OPTIONS) $(O)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+runxxdebug: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug=3 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 
+.PHONY: rundev rundevdebug rundevxdebug rundevxxdebug
 rundev: $(OBJECTS)
 ifneq ($(JAVA),)
 	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks $(OPTIONS) $(O)
@@ -513,13 +523,19 @@ else
 endif
 rundevdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug $(OPTIONS) $(O)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug=1 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 rundevxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug --debug-server $(OPTIONS) $(O)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug=2 $(OPTIONS) $(O)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+rundevxxdebug: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug=3 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif

@@ -390,7 +390,7 @@ class TabStatus
       }
       catch (Exception exception)
       {
-        if (Settings.debugFlag)
+        if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
           System.err.println("ERROR: "+exception.getMessage());
@@ -1155,6 +1155,7 @@ class TabStatus
     String[] errorMessage = new String[1];
     ValueMap resultMap    = new ValueMap();
     int error = BARServer.executeCommand(StringParser.format("STATUS"),
+                                         2,
                                          errorMessage,
                                          resultMap
                                         );
@@ -1249,6 +1250,7 @@ class TabStatus
       String[]                  resultErrorMessage = new String[1];
       final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
       int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                           2,
                                            resultErrorMessage,
                                            resultMapList
                                           );
@@ -1359,6 +1361,7 @@ class TabStatus
       final String resultErrorMessage[] = new String[1];
       final ValueMap resultMap          = new ValueMap();
       int error = BARServer.executeCommand(StringParser.format("JOB_INFO jobId=%d",selectedJobData.id),
+                                           0,
                                            resultErrorMessage,
                                            resultMap
                                           );
@@ -1485,6 +1488,7 @@ class TabStatus
                                                                BARServer.getPasswordEncryptType(),
                                                                BARServer.encryptPassword(password)
                                                               ),
+                                           0,
                                            resultErrorMessage
                                           );
       if (error != Errors.NONE)
@@ -1498,19 +1502,19 @@ class TabStatus
     switch (mode)
     {
       case 0:
-        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=normal",selectedJobData.id));
+        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=normal",selectedJobData.id),0);
         break;
       case 1:
-        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=full",selectedJobData.id));
+        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=full",selectedJobData.id),0);
         break;
       case 2:
-        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=incremental",selectedJobData.id));
+        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=incremental",selectedJobData.id),0);
         break;
       case 3:
-        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=differential",selectedJobData.id));
+        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=differential",selectedJobData.id),0);
         break;
       case 4:
-        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=dry-run",selectedJobData.id));
+        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=dry-run",selectedJobData.id),0);
         break;
       case 5:
         break;
@@ -1537,6 +1541,7 @@ class TabStatus
             // abort job
             final String[] resultErrorMessage = new String[1];
             int error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobId=%d",selectedJobData.id),
+                                                 0,
                                                  resultErrorMessage
                                                 );
             if (error == Errors.NONE)
@@ -1603,6 +1608,7 @@ class TabStatus
                                                                pauseTime,
                                                                buffer.toString()
                                                               ),
+                                           0,
                                            resultErrorMessage
                                           );
       if (error != Errors.NONE)
@@ -1620,9 +1626,9 @@ class TabStatus
     int      error  = Errors.NONE;
     switch (status)
     {
-      case RUNNING: error = BARServer.executeCommand(StringParser.format("SUSPEND") ,errorMessage); break;
+      case RUNNING: error = BARServer.executeCommand(StringParser.format("SUSPEND") ,0,errorMessage); break;
       case PAUSE:
-      case SUSPEND: error = BARServer.executeCommand(StringParser.format("CONTINUE"),errorMessage); break;
+      case SUSPEND: error = BARServer.executeCommand(StringParser.format("CONTINUE"),0,errorMessage); break;
     }
     if (error != Errors.NONE)
     {
@@ -1642,10 +1648,10 @@ class TabStatus
     switch (Dialogs.select(shell,BARControl.tr("Volume request"),BARControl.tr("Load volume number")+" "+volumeNumber+".",new String[]{BARControl.tr("OK"),BARControl.tr("Unload tray"),BARControl.tr("Cancel")},0))
     {
       case 0:
-        error = BARServer.executeCommand(StringParser.format("VOLUME_LOAD jobId=%d volumeNumber=%d",selectedJobData.id,volumeNumber),resultErrorMessage);
+        error = BARServer.executeCommand(StringParser.format("VOLUME_LOAD jobId=%d volumeNumber=%d",selectedJobData.id,volumeNumber),0,resultErrorMessage);
         break;
       case 1:
-        error = BARServer.executeCommand(StringParser.format("VOLUME_UNLOAD jobId=%d",selectedJobData.id),resultErrorMessage);
+        error = BARServer.executeCommand(StringParser.format("VOLUME_UNLOAD jobId=%d",selectedJobData.id),0,resultErrorMessage);
         break;
       case 2:
         break;

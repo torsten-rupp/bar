@@ -541,6 +541,7 @@ class TabJobs
                                                                      directoryInfoRequest.name,
                                                                      directoryInfoRequest.timeout
                                                                     ),
+                                                 0,
                                                  resultErrorMessage,
                                                  resultMap
                                                 );
@@ -587,7 +588,7 @@ class TabJobs
       }
       catch (Exception exception)
       {
-        if (Settings.debugFlag)
+        if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
           System.err.println("ERROR: "+exception.getMessage());
@@ -6191,6 +6192,7 @@ throw new Error("NYI");
             String[] errorMessage = new String[1];
             String[] result = new String[1];
             int error = BARServer.executeCommand(StringParser.format("JOB_NEW name=%S",jobName),
+                                                 0,
                                                  errorMessage
                                                 );
             if (error == Errors.NONE)
@@ -6312,6 +6314,7 @@ throw new Error("NYI");
                                                                      jobId,
                                                                      newJobName
                                                                     ),
+                                                 0,
                                                  errorMessage
                                                 );
             if (error == Errors.NONE)
@@ -6436,6 +6439,7 @@ throw new Error("NYI");
                                                                      jobId,
                                                                      newJobName
                                                                     ),
+                                                 0,
                                                  errorMessage
                                                 );
             if (error == Errors.NONE)
@@ -6476,7 +6480,7 @@ throw new Error("NYI");
       try
       {
         String[] result = new String[1];
-        int error = BARServer.executeCommand(StringParser.format("JOB_DELETE jobId=%d",jobId));
+        int error = BARServer.executeCommand(StringParser.format("JOB_DELETE jobId=%d",jobId),0);
         if (error == Errors.NONE)
         {
           updateJobList();
@@ -6645,6 +6649,7 @@ throw new Error("NYI");
     String[]            resultErrorMessage = new String[1];
     ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
     int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                         0,
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -6674,7 +6679,7 @@ throw new Error("NYI");
         }
         catch (IllegalArgumentException exception)
         {
-          if (Settings.debugFlag)
+          if (Settings.debugLevel > 0)
           {
             System.err.println("ERROR: "+exception.getMessage());
           }
@@ -6843,9 +6848,10 @@ throw new Error("NYI");
     int error = BARServer.executeCommand(StringParser.format("FILE_LIST storageDirectory=%S",
                                                              "file://"+fileTreeData.name
                                                             ),
-                                                            resultErrorMessage,
-                                                            resultMapList
-                                                    );
+                                         0,
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
     if (error == Errors.NONE)
     {
       for (ValueMap resultMap : resultMapList)
@@ -7072,7 +7078,7 @@ throw new Error("NYI");
         }
         catch (IllegalArgumentException exception)
         {
-          if (Settings.debugFlag)
+          if (Settings.debugLevel > 0)
           {
             System.err.println("ERROR: "+exception.getMessage());
           }
@@ -7170,6 +7176,7 @@ throw new Error("NYI");
     String[]            resultErrorMessage = new String[1];
     ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
     int error = BARServer.executeCommand(StringParser.format("DEVICE_LIST"),
+                                         0,
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -7200,7 +7207,7 @@ throw new Error("NYI");
         }
         catch (IllegalArgumentException exception)
         {
-          if (Settings.debugFlag)
+          if (Settings.debugLevel > 0)
           {
             System.err.println("ERROR: "+exception.getMessage());
           }
@@ -7308,6 +7315,7 @@ throw new Error("NYI");
     int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobId=%d",
                                                              selectedJobId
                                                             ),
+                                         0,
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -7354,7 +7362,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       }
       catch (IllegalArgumentException exception)
       {
-        if (Settings.debugFlag)
+        if (Settings.debugLevel > 0)
         {
           System.err.println("ERROR: "+exception.getMessage());
         }
@@ -7373,6 +7381,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST jobId=%d",
                                                              selectedJobId
                                                             ),
+                                         0,
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -7404,7 +7413,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       }
       catch (IllegalArgumentException exception)
       {
-        if (Settings.debugFlag)
+        if (Settings.debugLevel > 0)
         {
           System.err.println("ERROR: "+exception.getMessage());
         }
@@ -7423,9 +7432,10 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST jobId=%d",
                                                              selectedJobId
                                                             ),
-                                                            resultErrorMessage,
-                                                            resultMapList
-                                                           );
+                                         0,
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
     if (error != Errors.NONE)
     {
       return;
@@ -7454,7 +7464,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       }
       catch (IllegalArgumentException exception)
       {
-        if (Settings.debugFlag)
+        if (Settings.debugLevel > 0)
         {
           System.err.println("ERROR: "+exception.getMessage());
         }
@@ -7625,6 +7635,7 @@ throw new Error("NYI");
                                                              "GLOB",
                                                              entryData.pattern
                                                             ),
+                                         0,
                                          resultErrorMessage
                                         );
     if (error != Errors.NONE)
@@ -7668,7 +7679,7 @@ throw new Error("NYI");
     // update include list
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-    BARServer.executeCommand(StringParser.format("INCLUDE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
+    BARServer.executeCommand(StringParser.format("INCLUDE_LIST_CLEAR jobId=%d",selectedJobId),0,resultErrorMessage);
     for (EntryData entryData : includeHashMap.values())
     {
       BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobId=%d entryType=%s patternType=%s pattern=%'S",
@@ -7677,6 +7688,7 @@ throw new Error("NYI");
                                                    "GLOB",
                                                    entryData.pattern
                                                   ),
+                               0,
                                resultErrorMessage
                               );
     }
@@ -7912,6 +7924,7 @@ throw new Error("NYI");
                                                              "GLOB",
                                                              pattern
                                                             ),
+                                         0,
                                          resultErrorMessage
                                         );
     if (error != Errors.NONE)
@@ -7954,7 +7967,7 @@ throw new Error("NYI");
     // update exclude list
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-    BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
+    BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_CLEAR jobId=%d",selectedJobId),0,resultErrorMessage);
     for (String pattern : excludeHashSet)
     {
       BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_ADD jobId=%d patternType=%s pattern=%'S",
@@ -7962,6 +7975,7 @@ throw new Error("NYI");
                                                    "GLOB",
                                                    pattern
                                                   ),
+                                0,
                                 resultErrorMessage
                                );
     }
@@ -8186,6 +8200,7 @@ throw new Error("NYI");
                                                                "GLOB",
                                                                pattern
                                                               ),
+                                           0,
                                            resultErrorMesage
                                           );
       if (error != Errors.NONE)
@@ -8225,6 +8240,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
                                                                  "GLOB",
                                                                  pattern
                                                                 ),
+                                             0,
                                              resultErrorMessage
                                             );
         if (error != Errors.NONE)
@@ -8302,7 +8318,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
 
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-    BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
+    BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_CLEAR jobId=%d",selectedJobId),0,resultErrorMessage);
     Widgets.removeAllListEntries(widgetCompressExcludeList);
     for (String pattern : compressExcludeHashSet)
     {
@@ -8311,6 +8327,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
                                                    "GLOB",
                                                    pattern
                                                   ),
+                               0,
                                resultErrorMessage
                               );
       Widgets.insertListItem(widgetCompressExcludeList,
@@ -9325,6 +9342,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
     String[]            resultErrorMessage  = new String[1];
     ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
     int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobId=%d",selectedJobId),
+                                         0,
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -9364,7 +9382,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         }
         catch (IllegalArgumentException exception)
         {
-          if (Settings.debugFlag)
+          if (Settings.debugLevel > 0)
           {
             System.err.println("ERROR: "+exception.getMessage());
           }
@@ -9649,6 +9667,7 @@ throw new Error("NYI");
                                                    scheduleData.customText,
                                                    scheduleData.enabled
                                                   ),
+                               0,
                                resultErrorMessage
                               );
 
@@ -9690,7 +9709,7 @@ throw new Error("NYI");
 
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
+        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),0,resultErrorMessage);
         for (ScheduleData scheduleData_ : scheduleList)
         {
           BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S enabledFlag=%y",
@@ -9702,6 +9721,7 @@ throw new Error("NYI");
                                                        scheduleData_.customText,
                                                        scheduleData_.enabled
                                                       ),
+                                   0,
                                    resultErrorMessage
                                   );
         }
@@ -9746,6 +9766,7 @@ throw new Error("NYI");
                                                      newScheduleData.customText,
                                                      newScheduleData.enabled
                                                     ),
+                                 0,
                                  resultErrorMessage
                                 );
       }
@@ -9773,7 +9794,7 @@ throw new Error("NYI");
 
 // TODO result?
           String[] resultErrorMessage = new String[1];
-          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),0,resultErrorMessage);
           for (ScheduleData scheduleData_ : scheduleList)
           {
             BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S enabledFlag=%y",
@@ -9785,6 +9806,7 @@ throw new Error("NYI");
                                                          scheduleData_.customText,
                                                          scheduleData_.enabled
                                                         ),
+                                     0,
                                      resultErrorMessage
                                     );
           }

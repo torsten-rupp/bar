@@ -36,6 +36,7 @@ import java.security.spec.RSAPublicKeySpec;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -149,6 +150,7 @@ class Command
   public  String             errorText;         // error text
   public  boolean            completedFlag;     // true iff command completed
   public  LinkedList<String> result;            // result
+  public  int                debugLevel;        // debug level
 
   private long               timeoutTimestamp;  // timeout timestamp [ms]
 
@@ -159,9 +161,10 @@ class Command
   /** create new command
    * @param id command id
    * @param timeout timeout or 0 [ms]
+   * @param debugLevel debug level (0..n)
    * @param processResult process result handler
    */
-  Command(long id, int timeout, ProcessResult processResult)
+  Command(long id, int timeout, int debugLevel, ProcessResult processResult)
   {
     this.id               = id;
     this.errorCode        = -1;
@@ -169,24 +172,27 @@ class Command
     this.completedFlag    = false;
     this.processResult    = processResult;
     this.result           = new LinkedList<String>();
+    this.debugLevel       = debugLevel;
     this.timeoutTimestamp = (timeout != 0) ? System.currentTimeMillis()+timeout : 0L;
   }
 
   /** create new command
    * @param id command id
    * @param timeout timeout or 0 [ms]
+   * @param debugLevel debug level (0..n)
    */
-  Command(long id, int timeout)
+  Command(long id, int timeout, int debugLevel)
   {
-    this(id,timeout,null);
+    this(id,timeout,debugLevel,null);
   }
 
   /** create new command
    * @param id command id
+   * @param debugLevel debug level (0..n)
    */
-  Command(long id)
+  Command(long id, int debugLevel)
   {
-    this(id,0);
+    this(id,0,debugLevel);
   }
 
   /** check if end of data
@@ -664,7 +670,6 @@ class ReadThread extends Thread
               break;
             }
           }
-          if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
 
           // parse: line format <id> <error code> <completed flag> <data>
           String parts[] = line.split(" ",4);
@@ -675,9 +680,10 @@ class ReadThread extends Thread
 
           // get command id, completed flag, error code
           long    commandId     = Long.parseLong(parts[0]);
-          boolean completedFlag = (Integer.parseInt(parts[1]) != 0);;
+          boolean completedFlag = (Integer.parseInt(parts[1]) != 0);
           int     errorCode     = Integer.parseInt(parts[2]);
           String  data          = parts[3].trim();
+
 
           // store result
           synchronized(commandHashMap)
@@ -685,6 +691,8 @@ class ReadThread extends Thread
             Command command = commandHashMap.get(commandId);
             if (command != null)
             {
+              if (Settings.debugLevel > command.debugLevel) System.err.println("Network: received '"+line+"'");
+
               synchronized(command)
               {
                 if (completedFlag)
@@ -732,9 +740,9 @@ class ReadThread extends Thread
             else
             {
               // result for unknown command -> currently ignored
-//Dprintf.dprintf("not found %d: %s\n",commandId,line);
+              if (Settings.debugLevel > 0) System.err.println("Network: received unknown command result '"+line+"'");
             }
-          }
+          }         
         }
         catch (SocketTimeoutException exception)
         {
@@ -777,37 +785,42 @@ class ReadThread extends Thread
   /** add command
    * @param commandId command id
    * @param timeout timeout or 0 [ms]
+   * @param debugLevel debug level (0..n)
    * @param processResult process result handler
    * @return command
    */
-  public Command commandAdd(long commandId, int timeout, ProcessResult processResult)
+  public Command commandAdd(long commandId, int timeout, int debugLevel, ProcessResult processResult)
   {
+    Command command = new Command(commandId,timeout,debugLevel,processResult);
+
     synchronized(commandHashMap)
     {
-      Command command = new Command(commandId,timeout,processResult);
       commandHashMap.put(commandId,command);
       commandHashMap.notifyAll();
-      return command;
     }
+
+    return command;
   }
 
   /** add command
    * @param commandId command id
    * @param timeout timeout or 0 [ms]
+   * @param debugLevel debug level (0..n)
    * @return command
    */
-  public Command commandAdd(long commandId, int timeout)
+  public Command commandAdd(long commandId, int timeout, int debugLevel)
   {
-    return commandAdd(commandId,timeout,null);
+    return commandAdd(commandId,timeout,debugLevel,null);
   }
 
   /** add command
    * @param commandId command id
+   * @param debugLevel debug level (0..n)
    * @return command
    */
-  public Command commandAdd(long commandId)
+  public Command commandAdd(long commandId, int debugLevel)
   {
-    return commandAdd(commandId,0);
+    return commandAdd(commandId,0,debugLevel);
   }
 
   /** remove command
@@ -819,8 +832,9 @@ class ReadThread extends Thread
     {
       commandHashMap.remove(command.id);
       commandHashMap.notifyAll();
-      return command.errorCode;
     }
+
+    return command.errorCode;
   }
 }
 
@@ -1038,7 +1052,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         throw new CommunicationError("No result from server");
       }
-      if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
+      if (Settings.debugLevel > 1) System.err.println("Network: received '"+line+"'");
       data = line.split(" ",2);
       if ((data.length < 2) || !data[0].equals("SESSION"))
       {
@@ -1083,7 +1097,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
           }
           catch (Exception exception)
           {
-            if (Settings.debugFlag)
+            if (Settings.debugLevel > 0)
             {
               BARControl.printStackTrace(exception);
             }
@@ -1166,7 +1180,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     try
     {
       // flush data (ignore errors)
-      executeCommand("JOB_FLUSH");
+      executeCommand("JOB_FLUSH",0);
 //synchronized(output) { output.write("QUIT"); output.write('\n'); output.flush(); }
 
       // close connection, stop read thread
@@ -1194,7 +1208,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       String line = "QUIT";
       output.write(line); output.write('\n'); output.flush();
-      if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
+      if (Settings.debugLevel > 1) System.err.println("Network: sent '"+line+"'");
     }
     catch (IOException exception)
     {
@@ -1207,10 +1221,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
   /** start running command
    * @param commandString command to start
+   * @param debugLevel debug level (0..n)
    * @param processResult process result handler
    * @return command
    */
-  public static Command runCommand(String commandString, ProcessResult processResult)
+  public static Command runCommand(String commandString, int debugLevel, ProcessResult processResult)
   {
     final int TIMEOUT = 120*1000; // total timeout [ms]
 
@@ -1218,18 +1233,16 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     synchronized(output)
     {
-      // new command
+      // add new command
       commandId++;
-      String line = String.format("%d %s",commandId,commandString);
-
-      // add command
-      command = readThread.commandAdd(commandId,TIMEOUT,processResult);
+      command = readThread.commandAdd(commandId,TIMEOUT,debugLevel,processResult);
 
       // send command
+      String line = String.format("%d %s",commandId,commandString);
       try
       {
         output.write(line); output.write('\n'); output.flush();
-        if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
+        if (Settings.debugLevel > command.debugLevel) System.err.println("Network: sent '"+line+"'");
       }
       catch (IOException exception)
       {
@@ -1243,11 +1256,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
   /** start running command
    * @param commandString command to start
+   * @param debugLevel debug level (0..n)
    * @return command
    */
-  public static Command runCommand(String commandString)
+  public static Command runCommand(String commandString, int debugLevel)
   {
-    return runCommand(commandString,null);
+    return runCommand(commandString,debugLevel,null);
   }
 
   /** abort command execution
@@ -1258,7 +1272,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   static void abortCommand(Command command)
   {
     // send abort command to command
-    executeCommand(StringParser.format("ABORT jobId=%d",command.id));
+    executeCommand(StringParser.format("ABORT jobId=%d",command.id),0);
     readThread.commandRemove(command);
 
     // set abort error
@@ -1276,7 +1290,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   static void timeoutCommand(Command command)
   {
     // send abort command to command
-    executeCommand(StringParser.format("ABORT jobId=%d",command.id));
+    executeCommand(StringParser.format("ABORT jobId=%d",command.id),0);
     readThread.commandRemove(command);
 
     // set abort error
@@ -1287,16 +1301,17 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** execute command
-   * @param command command to send to BAR server
-   * @param typeMap type map
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @param commandResultHandler command result handler
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, final String[] errorMessage, final CommandResultHandler commandResultHandler, BusyIndicator busyIndicator)
+  public static int executeCommand(String commandString, int debugLevel, final String[] errorMessage, final CommandResultHandler commandResultHandler, BusyIndicator busyIndicator)
   {
     return executeCommand(commandString,
+                          debugLevel,
                           busyIndicator,
                           new CommandHandler()
     {
@@ -1315,29 +1330,30 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** execute command
-   * @param command command to send to BAR server
-   * @param typeMap type map
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @param commandResultHandler command result handler
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, final String[] errorMessage, CommandResultHandler commandResultHandler)
+  public static int executeCommand(String commandString, int debugLevel, final String[] errorMessage, CommandResultHandler commandResultHandler)
   {
-    return executeCommand(commandString,errorMessage,commandResultHandler,(BusyIndicator)null);
+    return executeCommand(commandString,debugLevel,errorMessage,commandResultHandler,(BusyIndicator)null);
   }
 
   /** execute command
-   * @param command command to send to BAR server
-   * @param typeMap type map
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @param valueMap value map
    * @param unknownValueMap unknown values map or null
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, final String[] errorMessage, final ValueMap valueMap, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
+  public static int executeCommand(String commandString, int debugLevel, final String[] errorMessage, final ValueMap valueMap, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
   {
     return executeCommand(commandString,
+                          debugLevel,
                           busyIndicator,
                           new CommandHandler()
     {
@@ -1349,61 +1365,64 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** execute command
-   * @param command command to send to BAR server
-   * @param typeMap type map
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @param valueMap value map
    * @param unknownValueMap unknown values map or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap)
+  public static int executeCommand(String commandString, int debugLevel, String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap)
   {
-    return executeCommand(commandString,errorMessage,valueMap,unknownValueMap,(BusyIndicator)null);
+    return executeCommand(commandString,debugLevel,errorMessage,valueMap,unknownValueMap,(BusyIndicator)null);
   }
 
   /** execute command
-   * @param command command to send to BAR server
-   * @param typeMap type map
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @param valueMap value map
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, String[] errorMessage, ValueMap valueMap)
+  public static int executeCommand(String commandString, int debugLevel, String[] errorMessage, ValueMap valueMap)
   {
-    return executeCommand(commandString,errorMessage,valueMap,(ValueMap)null);
+    return executeCommand(commandString,debugLevel,errorMessage,valueMap,(ValueMap)null);
   }
 
   /** execute command
-   * @param command command to send to BAR server
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String command, String[] errorMessage)
+  public static int executeCommand(String commandString, int debugLevel, String[] errorMessage)
   {
-    return executeCommand(command,errorMessage,(ValueMap)null);
+    return executeCommand(commandString,debugLevel,errorMessage,(ValueMap)null);
   }
 
   /** execute command
-   * @param command command to send to BAR server
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String command)
+  public static int executeCommand(String commandString, int debugLevel)
   {
-    return executeCommand(command,(String[])null);
+    return executeCommand(commandString,debugLevel,(String[])null);
   }
 
   /** execute command
-   * @param command command to send to BAR server
-   * @param typeMap type map
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @param valueMapList value map list
    * @param unknownValueMap unknown values map or null
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, final String[] errorMessage, final List<ValueMap> valueMapList, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
+  public static int executeCommand(String commandString, int debugLevel, final String[] errorMessage, final List<ValueMap> valueMapList, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
   {
     return executeCommand(commandString,
+                          debugLevel,
                           busyIndicator,
                           new CommandHandler()
     {
@@ -1416,27 +1435,27 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
   /** execute command
    * @param command command to send to BAR server
-   * @param typeMap type map
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @param valueMapList value map list
    * @param unknownValueMap unknown values map or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, String[] errorMessage, List<ValueMap> valueMapList, ValueMap unknownValueMap)
+  public static int executeCommand(String commandString, int debugLevel, String[] errorMessage, List<ValueMap> valueMapList, ValueMap unknownValueMap)
   {
-    return executeCommand(commandString,errorMessage,valueMapList,unknownValueMap,(BusyIndicator)null);
+    return executeCommand(commandString,debugLevel,errorMessage,valueMapList,unknownValueMap,(BusyIndicator)null);
   }
 
   /** execute command
    * @param command command to send to BAR server
-   * @param typeMap type map
+   * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
    * @param valueMapList value map list
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, String[] errorMessage, List<ValueMap> valueMapList)
+  public static int executeCommand(String commandString, int debugLevel, String[] errorMessage, List<ValueMap> valueMapList)
   {
-    return executeCommand(commandString,errorMessage,valueMapList,(ValueMap)null);
+    return executeCommand(commandString,debugLevel,errorMessage,valueMapList,(ValueMap)null);
   }
 
   /** set boolean value on BAR server
@@ -1446,7 +1465,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static void set(String name, boolean b)
   {
-    executeCommand(StringParser.format("SET name=%s value=%s",name,b ? "yes" : "no"));
+    executeCommand(StringParser.format("SET name=%s value=%s",name,b ? "yes" : "no"),0);
   }
 
   /** set long value on BAR server
@@ -1456,7 +1475,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   static void set(String name, long n)
   {
-    executeCommand(StringParser.format("SET name=%s value=%d",name,n));
+    executeCommand(StringParser.format("SET name=%s value=%d",name,n),0);
   }
 
   /** set string value on BAR server
@@ -1466,7 +1485,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static void set(String name, String s)
   {
-    executeCommand(StringParser.format("SET name=% value=%S",name,s));
+    executeCommand(StringParser.format("SET name=% value=%S",name,s),0);
   }
 
   /** get boolean value from BAR server
@@ -1480,6 +1499,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     ValueMap resultMap    = new ValueMap();
 
     if (executeCommand(StringParser.format("OPTION_GET jobId=%d name=%S",jobId,name),
+                       0,
                        errorMessage,
                        resultMap
                       ) == Errors.NONE
@@ -1504,6 +1524,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     ValueMap resultMap    = new ValueMap();
 
     if (executeCommand(StringParser.format("OPTION_GET jobId=%d name=%S",jobId,name),
+                       0,
                        errorMessage,
                        resultMap
                       ) == Errors.NONE
@@ -1528,6 +1549,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     ValueMap resultMap    = new ValueMap();
 
     if (executeCommand(StringParser.format("OPTION_GET jobId=%d name=%S",jobId,name),
+                       0,
                        errorMessage,
                        resultMap
                       ) == Errors.NONE
@@ -1548,7 +1570,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static void setOption(int jobId, String name, boolean b)
   {
-    executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%s",jobId,name,b ? "yes" : "no"));
+    executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%s",jobId,name,b ? "yes" : "no"),0);
   }
 
   /** set long option value on BAR server
@@ -1558,7 +1580,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static void setOption(int jobId, String name, long n)
   {
-    executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%d",jobId,name,n));
+    executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%d",jobId,name,n),0);
   }
 
   /** set string option value on BAR server
@@ -1568,7 +1590,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static void setOption(int jobId, String name, String s)
   {
-    executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%S",jobId,name,s));
+    executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%S",jobId,name,s),0);
   }
 
   /** get password encrypt type
@@ -1621,21 +1643,21 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       catch (InvalidKeyException exception)
       {
-        if (Settings.debugFlag)
+        if (Settings.debugLevel > 0)
         {
           BARControl.printStackTrace(exception);
         }
       }
       catch (IllegalBlockSizeException exception)
       {
-        if (Settings.debugFlag)
+        if (Settings.debugLevel > 0)
         {
           BARControl.printStackTrace(exception);
         }
       }
       catch (BadPaddingException exception)
       {
-        if (Settings.debugFlag)
+        if (Settings.debugLevel > 0)
         {
           BARControl.printStackTrace(exception);
         }
@@ -1698,11 +1720,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       // new command
       commandId++;
-      String line = String.format("%d %s",commandId,commandString);
 
       // send command
+      String line = String.format("%d %s",commandId,commandString);
       output.write(line); output.write('\n'); output.flush();
-      if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
+      if (Settings.debugLevel > 1) System.err.println("Network: sent '"+line+"'");
 
       // read and parse result
       String[] data;
@@ -1714,7 +1736,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         {
           throw new CommunicationError("No result from server");
         }
-        if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
+        if (Settings.debugLevel > 1) System.err.println("Network: received '"+line+"'");
 
         // parse
         data = line.split(" ",4);
@@ -1778,11 +1800,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
   /** execute command
    * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
    * @param busyIndicator busy indicator or null
    * @param commandHandler command handler
    * @return Errors.NONE or error code
    */
-  private static int executeCommand(String commandString, BusyIndicator busyIndicator, CommandHandler commandHandler)
+  private static int executeCommand(String commandString, int debugLevel, BusyIndicator busyIndicator, CommandHandler commandHandler)
   {
     final int TIMEOUT = 120*1000; // total timeout [ms]
 
@@ -1797,18 +1820,16 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         if (busyIndicator.isAborted()) return -1;
       }
 
-      // new command
+      // add new command
       commandId++;
-      String line = String.format("%d %s",commandId,commandString);
-
-      // add command
-      command = readThread.commandAdd(commandId,TIMEOUT);
+      command = readThread.commandAdd(commandId,TIMEOUT,debugLevel);
 
       // send command
+      String line = String.format("%d %s",commandId,commandString);
       try
       {
         output.write(line); output.write('\n'); output.flush();
-        if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
+        if (Settings.debugLevel > debugLevel) System.err.println("Network: sent '"+line+"'");
       }
       catch (IOException exception)
       {

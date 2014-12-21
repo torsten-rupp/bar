@@ -82,8 +82,7 @@ public class Settings
   public static boolean          listFlag                        = false;
 
   // debug
-  public static boolean          debugFlag                       = false;
-  public static boolean          debugServerFlag                 = false;
+  public static int              debugLevel                      = 0;
   public static boolean          debugQuitServerFlag             = false;
 
   // help

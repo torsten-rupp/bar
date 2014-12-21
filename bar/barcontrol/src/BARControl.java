@@ -968,8 +968,7 @@ public class BARControl
     new Option("--continue",                   "-c",Options.Types.BOOLEAN,    "continueFlag"),
     new Option("--list",                       "-l",Options.Types.BOOLEAN,    "listFlag"),
 
-    new Option("--debug",                      null,Options.Types.BOOLEAN,    "debugFlag"),
-    new Option("--debug-server",               null,Options.Types.BOOLEAN,    "debugServerFlag"),
+    new Option("--debug",                      "-d",Options.Types.INCREMENT,  "debugLevel"),
     new Option("--debug-quit-server",          null,Options.Types.BOOLEAN,    "debugQuitServerFlag"),
 
     new Option("--help",                       "-h",Options.Types.BOOLEAN,    "helpFlag"),
@@ -1191,6 +1190,7 @@ public class BARControl
     String[]            errorMessage  = new String[1];
     ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
     int errorCode = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                             0,
                                              errorMessage,
                                              resultMapList
                                             );
@@ -1209,7 +1209,7 @@ public class BARControl
     }
     else
     {
-      if (Settings.debugFlag)
+      if (Settings.debugLevel > 0)
       {
         printError("cannot get job list (error: %s)",errorMessage[0]);
         BARServer.disconnect();
@@ -1542,7 +1542,7 @@ public class BARControl
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           String[] errorMessage = new String[1];
-          int errorCode = BARServer.executeCommand(StringParser.format("PASSWORDS_CLEAR"),errorMessage);
+          int errorCode = BARServer.executeCommand(StringParser.format("PASSWORDS_CLEAR"),0,errorMessage);
           if (errorCode != Errors.NONE)
           {
             Dialogs.error(shell,"Cannot clear passwords on server:\n\n"+errorMessage[0]);
@@ -1582,7 +1582,7 @@ public class BARControl
       });
     }
 
-    if (Settings.debugFlag)
+    if (Settings.debugLevel > 0)
     {
       menu = Widgets.addMenu(menuBar,"Debug");
       {
@@ -1595,7 +1595,7 @@ public class BARControl
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand(StringParser.format("DEBUG_PRINT_STATISTICS"));
+            BARServer.executeCommand(StringParser.format("DEBUG_PRINT_STATISTICS"),0);
           }
         });
 
@@ -1608,7 +1608,7 @@ public class BARControl
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand(StringParser.format("DEBUG_PRINT_MEMORY_INFO"));
+            BARServer.executeCommand(StringParser.format("DEBUG_PRINT_MEMORY_INFO"),0);
           }
         });
 
@@ -1621,7 +1621,7 @@ public class BARControl
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand(StringParser.format("DEBUG_DUMP_MEMORY_INFO"));
+            BARServer.executeCommand(StringParser.format("DEBUG_DUMP_MEMORY_INFO"),0);
           }
         });
       }
@@ -1740,6 +1740,7 @@ System.exit(1);
                                                                    jobId,
                                                                    Settings.archiveType.toString()
                                                                   ),
+                                               0,
                                                errorMessage
                                               );
           if (errorCode != Errors.NONE)
@@ -1756,6 +1757,7 @@ System.exit(1);
 
           // add index for storage
           errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD name=%S",Settings.indexDatabaseAddStorageName),
+                                               0,
                                                errorMessage
                                               );
           if (errorCode != Errors.NONE)
@@ -1772,6 +1774,7 @@ System.exit(1);
 
           // remote index for storage
           errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE name=%S",Settings.indexDatabaseRemoveStorageName),
+                                               0,
                                                errorMessage
                                               );
           if (errorCode != Errors.NONE)
@@ -1792,7 +1795,7 @@ System.exit(1);
           int                 errorCode;
 
           // list storage index
-          Command command = BARServer.runCommand("INDEX_STORAGE_LIST 0 * * "+StringUtils.escape(Settings.indexDatabaseStorageListPattern));
+          Command command = BARServer.runCommand("INDEX_STORAGE_LIST 0 * * "+StringUtils.escape(Settings.indexDatabaseStorageListPattern),0);
           String   line;
           Object[] data = new Object[8];
           while (!command.endOfData())
@@ -1831,7 +1834,7 @@ System.exit(1);
               }
               else if (!line.isEmpty())
               {
-                if (Settings.debugFlag)
+                if (Settings.debugLevel > 0)
                 {
                   printWarning("unknown server response '%s'",line);
                   BARServer.disconnect();
@@ -1859,6 +1862,7 @@ System.exit(1);
                                                            0,
                                                            false
                                                           ),
+                                       0,
                                        errorMessage,
                                        new CommandResultHandler()
                                        {
@@ -1987,6 +1991,7 @@ System.exit(1);
                                                                    Settings.pauseTime,
                                                                    "ALL"
                                                                   ),
+                                               0,
                                                errorMessage
                                               );
           if (errorCode != Errors.NONE)
@@ -2006,7 +2011,7 @@ System.exit(1);
           int      errorCode;
 
           // suspend
-          errorCode = BARServer.executeCommand(StringParser.format("SUSPEND"),errorMessage);
+          errorCode = BARServer.executeCommand(StringParser.format("SUSPEND"),0,errorMessage);
           if (errorCode != Errors.NONE)
           {
             printError("cannot suspend (error: %s)",Settings.runJobName,errorMessage[0]);
@@ -2020,7 +2025,7 @@ System.exit(1);
           int      errorCode;
 
           // continue
-          errorCode = BARServer.executeCommand(StringParser.format("CONTINUE"),errorMessage);
+          errorCode = BARServer.executeCommand(StringParser.format("CONTINUE"),0,errorMessage);
           if (errorCode != Errors.NONE)
           {
             printError("cannot continue (error: %s)",Settings.runJobName,errorMessage[0]);
@@ -2044,6 +2049,7 @@ System.exit(1);
 
           // abort job
           errorCode = BARServer.executeCommand(StringParser.format("JOB_ABORT jobId=%d",jobId),
+                                               0,
                                                errorMessage
                                               );
           if (errorCode != Errors.NONE)
@@ -2063,6 +2069,7 @@ System.exit(1);
           // get server state
           String serverState = null;
           errorCode = BARServer.executeCommand(StringParser.format("STATUS"),
+                                               0,
                                                errorMessage,
                                                resultMap
                                               );
@@ -2094,6 +2101,7 @@ System.exit(1);
 
           // get joblist
           errorCode = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                               0,
                                                errorMessage,
                                                resultMapList
                                               );
@@ -2172,7 +2180,7 @@ System.exit(1);
         // interactive mode
 
         // init display
-        if (Settings.debugFlag)
+        if (Settings.debugLevel > 0)
         {
           Device.DEBUG=true;
         }
@@ -2277,7 +2285,7 @@ System.exit(1);
     catch (org.eclipse.swt.SWTException exception)
     {
       System.err.println("ERROR graphics: "+exception.getCause());
-      if (Settings.debugFlag)
+      if (Settings.debugLevel > 0)
       {
         printStackTrace(exception);
       }
@@ -2303,7 +2311,7 @@ System.exit(1);
     catch (Error error)
     {
       System.err.println("ERROR: "+error.getMessage());
-      if (Settings.debugFlag)
+      if (Settings.debugLevel > 0)
       {
         printStackTrace(error);
       }
