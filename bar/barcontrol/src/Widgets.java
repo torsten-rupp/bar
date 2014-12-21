@@ -4501,6 +4501,15 @@ e composite widget
     sortTableColumn(table,String.CASE_INSENSITIVE_ORDER);
   }
 
+  /** get table items in tree
+   * @param table table
+   * @return table items array
+   */
+  public static TableItem[] getTableItems(Table table)
+  {
+    return table.getItems();
+  }
+
   /** get insert position in sorted table
    * @param table table
    * @param comparator table data comparator
@@ -5432,6 +5441,24 @@ e composite widget
     return addTreeItem(parentTreeItem,data,null,folderFlag,values);
   }
 
+  /** get tree item
+   * @param tree tree
+   * @param data tree item data
+   * @return tree item or null if not found
+   */
+  public static TreeItem getTreeItem(Tree tree, Object data)
+  {
+    for (TreeItem treeItem : tree.getItems())
+    {
+      if (treeItem.getData() == data)
+      {
+        return treeItem;
+      }
+    }
+
+    return null;
+  }
+
   /** set table item checked
    * @param table table
    * @param table item data
@@ -5651,24 +5678,6 @@ e composite widget
         }
       });
     }
-  }
-
-  /** get tree item
-   * @param tree tree
-   * @param data tree item data
-   * @return tree item or null if not found
-   */
-  public static TreeItem getTreeItem(Tree tree, Object data)
-  {
-    for (TreeItem treeItem : tree.getItems())
-    {
-      if (treeItem.getData() == data)
-      {
-        return treeItem;
-      }
-    }
-
-    return null;
   }
 
 /*
