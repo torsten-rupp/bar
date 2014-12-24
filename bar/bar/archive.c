@@ -362,34 +362,32 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
       }
       else if (   (passwordHandle->passwordMode == PASSWORD_MODE_ASK)
                && !passwordHandle->inputFlag
+               && (passwordHandle->archiveGetCryptPasswordFunction != NULL)
               )
       {
-        if (passwordHandle->archiveGetCryptPasswordFunction != NULL)
+        // input password
+        Password_init(&newPassword);
+        error = passwordHandle->archiveGetCryptPasswordFunction(passwordHandle->archiveGetCryptPasswordUserData,
+                                                                &newPassword,
+                                                                (passwordHandle->archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                                                  ? Storage_getPrintableName(&passwordHandle->archiveInfo->storage.storageSpecifier,NULL)
+                                                                  : NULL,
+                                                                FALSE,
+                                                                FALSE
+                                                               );
+        if (error != ERROR_NONE)
         {
-          // input password
-          Password_init(&newPassword);
-          error = passwordHandle->archiveGetCryptPasswordFunction(passwordHandle->archiveGetCryptPasswordUserData,
-                                                                  &newPassword,
-                                                                  (passwordHandle->archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
-                                                                    ? Storage_getPrintableName(&passwordHandle->archiveInfo->storage.storageSpecifier,NULL)
-                                                                    : NULL,
-                                                                  FALSE,
-                                                                  FALSE
-                                                                 );
-          if (error != ERROR_NONE)
-          {
-            return NULL;
-          }
-
-          // add to password list
-          password = Archive_appendDecryptPassword(&newPassword);
-
-          // free resources
-          Password_done(&newPassword);
-
-          // next password mode is: none
-          passwordHandle->inputFlag = TRUE;
+          return NULL;
         }
+
+        // add to password list
+        password = Archive_appendDecryptPassword(&newPassword);
+
+        // free resources
+        Password_done(&newPassword);
+
+        // next password mode is: none
+        passwordHandle->inputFlag = TRUE;
       }
       else
       {
