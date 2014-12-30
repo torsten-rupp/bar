@@ -1198,7 +1198,6 @@ Errors Index_setState(DatabaseHandle *databaseHandle,
   va_list arguments;
   String  s;
 
-
   assert(databaseHandle != NULL);
 
   error = Database_execute(databaseHandle,
@@ -1420,7 +1419,6 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
   if (deviceName  != NULL) indexQueryHandle->storage.deviceNamePattern  = Pattern_new(deviceName, PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
   if (fileName    != NULL) indexQueryHandle->storage.fileNamePattern    = Pattern_new(fileName,   PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
 
-fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(uuid),jobId);
   indexStateSetString = String_new();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
@@ -1695,12 +1693,13 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(0");
+    storageIdsString = String_newCString("(storage.id IN (");
     for (z = 0; z < storageIdCount; z++)
     {
-      String_format(storageIdsString," OR (storage.id=%d)",storageIds[z]);
+      if (z > 0) String_appendChar(storageIdsString,',');
+      String_format(storageIdsString,"%d",storageIds[z]);
     }
-    String_appendCString(storageIdsString,")");
+    String_appendCString(storageIdsString,"))");
   }
   else
   {
@@ -1801,12 +1800,13 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(0");
+    storageIdsString = String_newCString("(storage.id IN (");
     for (z = 0; z < storageIdCount; z++)
     {
-      String_format(storageIdsString," OR (storage.id=%d)",storageIds[z]);
+      if (z > 0) String_appendChar(storageIdsString,',');
+      String_format(storageIdsString,"%d",storageIds[z]);
     }
-    String_appendCString(storageIdsString,")");
+    String_appendCString(storageIdsString,"))");
   }
   else
   {
@@ -1898,12 +1898,13 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(0");
+    storageIdsString = String_newCString("(storage.id IN (");
     for (z = 0; z < storageIdCount; z++)
     {
-      String_format(storageIdsString," OR (storage.id=%d)",storageIds[z]);
+      if (z > 0) String_appendChar(storageIdsString,',');
+      String_format(storageIdsString,"%d",storageIds[z]);
     }
-    String_appendCString(storageIdsString,")");
+    String_appendCString(storageIdsString,"))");
   }
   else
   {
@@ -1995,12 +1996,13 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(0");
+    storageIdsString = String_newCString("(storage.id IN (");
     for (z = 0; z < storageIdCount; z++)
     {
-      String_format(storageIdsString," OR (storage.id=%d)",storageIds[z]);
+      if (z > 0) String_appendChar(storageIdsString,',');
+      String_format(storageIdsString,"%d",storageIds[z]);
     }
-    String_appendCString(storageIdsString,")");
+    String_appendCString(storageIdsString,"))");
   }
   else
   {
@@ -2095,12 +2097,13 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(0");
+    storageIdsString = String_newCString("(storage.id IN (");
     for (z = 0; z < storageIdCount; z++)
     {
-      String_format(storageIdsString," OR (storage.id=%d)",storageIds[z]);
+      if (z > 0) String_appendChar(storageIdsString,',');
+      String_format(storageIdsString,"%d",storageIds[z]);
     }
-    String_appendCString(storageIdsString,")");
+    String_appendCString(storageIdsString,"))");
   }
   else
   {
@@ -2201,12 +2204,13 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(0");
+    storageIdsString = String_newCString("(storage.id IN (");
     for (z = 0; z < storageIdCount; z++)
     {
-      String_format(storageIdsString," OR (storage.id=%d)",storageIds[z]);
+      if (z > 0) String_appendChar(storageIdsString,',');
+      String_format(storageIdsString,"%d",storageIds[z]);
     }
-    String_appendCString(storageIdsString,")");
+    String_appendCString(storageIdsString,"))");
   }
   else
   {
