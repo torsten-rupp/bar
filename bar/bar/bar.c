@@ -338,16 +338,23 @@ LOCAL const struct
   #endif /* HAVE_LZO */
 
   #ifdef HAVE_LZ4
-    {"lz4-0",COMPRESS_ALGORITHM_LZ4_0},
-    {"lz4-1",COMPRESS_ALGORITHM_LZ4_1},
-    {"lz4-2",COMPRESS_ALGORITHM_LZ4_2},
-    {"lz4-3",COMPRESS_ALGORITHM_LZ4_3},
-    {"lz4-4",COMPRESS_ALGORITHM_LZ4_4},
-    {"lz4-5",COMPRESS_ALGORITHM_LZ4_5},
-    {"lz4-6",COMPRESS_ALGORITHM_LZ4_6},
-    {"lz4-7",COMPRESS_ALGORITHM_LZ4_7},
-    {"lz4-8",COMPRESS_ALGORITHM_LZ4_8},
-    {"lz4-9",COMPRESS_ALGORITHM_LZ4_9},
+    {"lz4-0", COMPRESS_ALGORITHM_LZ4_0},
+    {"lz4-1", COMPRESS_ALGORITHM_LZ4_1},
+    {"lz4-2", COMPRESS_ALGORITHM_LZ4_2},
+    {"lz4-3", COMPRESS_ALGORITHM_LZ4_3},
+    {"lz4-4", COMPRESS_ALGORITHM_LZ4_4},
+    {"lz4-5", COMPRESS_ALGORITHM_LZ4_5},
+    {"lz4-6", COMPRESS_ALGORITHM_LZ4_6},
+    {"lz4-7", COMPRESS_ALGORITHM_LZ4_7},
+    {"lz4-8", COMPRESS_ALGORITHM_LZ4_8},
+    {"lz4-9", COMPRESS_ALGORITHM_LZ4_9},
+    {"lz4-10",COMPRESS_ALGORITHM_LZ4_10},
+    {"lz4-11",COMPRESS_ALGORITHM_LZ4_11},
+    {"lz4-12",COMPRESS_ALGORITHM_LZ4_12},
+    {"lz4-13",COMPRESS_ALGORITHM_LZ4_13},
+    {"lz4-14",COMPRESS_ALGORITHM_LZ4_14},
+    {"lz4-15",COMPRESS_ALGORITHM_LZ4_15},
+    {"lz4-16",COMPRESS_ALGORITHM_LZ4_16},
   #endif /* HAVE_LZO */
 };
 
@@ -529,23 +536,23 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("owner",                        0,  0,1,&jobOptions.owner,                               cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
 
   CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,1,&jobOptions.compressAlgorithm,                   cmdOptionParseCompressAlgorithm,NULL,                  "select compress algorithms to use\n"
-                                                                                                                                                                           "  none        : no compression (default)\n"
-                                                                                                                                                                           "  zip0..zip9  : ZIP compression level 0..9"
+                                                                                                                                                                           "  none         : no compression (default)\n"
+                                                                                                                                                                           "  zip0..zip9   : ZIP compression level 0..9"
                                                                                                                                                                            #ifdef HAVE_BZ2
                                                                                                                                                                            "\n"
-                                                                                                                                                                           "  bzip1..bzip9: BZIP2 compression level 1..9"
+                                                                                                                                                                           "  bzip1..bzip9 : BZIP2 compression level 1..9"
                                                                                                                                                                            #endif
                                                                                                                                                                            #ifdef HAVE_LZMA
                                                                                                                                                                            "\n"
-                                                                                                                                                                           "  lzma1..lzma9: LZMA compression level 1..9"
+                                                                                                                                                                           "  lzma1..lzma9 : LZMA compression level 1..9"
                                                                                                                                                                            #endif
                                                                                                                                                                            #ifdef HAVE_LZO
                                                                                                                                                                            "\n"
-                                                                                                                                                                           "  lzo1..lzo5  : LZO compression level 1..5"
+                                                                                                                                                                           "  lzo1..lzo5   : LZO compression level 1..5"
                                                                                                                                                                            #endif
                                                                                                                                                                            #ifdef HAVE_LZ4
                                                                                                                                                                            "\n"
-                                                                                                                                                                           "  lz4-0..lz4-9: LZ4 compression level 0..9"
+                                                                                                                                                                           "  lz4-0..lz4-16: LZ4 compression level 0..16"
                                                                                                                                                                            #endif
                                                                                                                                                                            #ifdef HAVE_XDELTA
                                                                                                                                                                            "\n"
@@ -920,25 +927,25 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_STRING   ("crypt-public-key",             &jobOptions.cryptPublicKeyFileName,-1                          ),
   CONFIG_VALUE_STRING   ("crypt-private-key",            &jobOptions.cryptPrivateKeyFileName,-1                         ),
 
-  CONFIG_VALUE_STRING   ("ftp-login-name",               &currentFTPServer,offsetof(Server,ftpServer.loginName)                ),
-  CONFIG_VALUE_SPECIAL  ("ftp-password",                 &currentFTPServer,offsetof(Server,ftpServer.password),                configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_INTEGER  ("ftp-max-connections",          &currentFTPServer,offsetof(Server,maxConnectionCount),      0,MAX_INT,NULL),
+  CONFIG_VALUE_STRING   ("ftp-login-name",               &currentFTPServer,offsetof(Server,ftpServer.loginName)         ),
+  CONFIG_VALUE_SPECIAL  ("ftp-password",                 &currentFTPServer,offsetof(Server,ftpServer.password),         configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_INTEGER  ("ftp-max-connections",          &currentFTPServer,offsetof(Server,maxConnectionCount),         0,MAX_INT,NULL),
 //TODO
 //  CONFIG_VALUE_INTEGER64("ftp-max-storage-size",         &currentFTPServer,offsetof(Server,maxStorageSize),          0LL,MAX_INT64,NULL),
 
-  CONFIG_VALUE_INTEGER  ("ssh-port",                     &currentSSHServer,offsetof(Server,sshServer.port),                    0,65535,NULL),
-  CONFIG_VALUE_STRING   ("ssh-login-name",               &currentSSHServer,offsetof(Server,sshServer.loginName)                ),
-  CONFIG_VALUE_SPECIAL  ("ssh-password",                 &currentSSHServer,offsetof(Server,sshServer.password),                configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_STRING   ("ssh-public-key",               &currentSSHServer,offsetof(Server,sshServer.publicKeyFileName)        ),
-  CONFIG_VALUE_STRING   ("ssh-private-key",              &currentSSHServer,offsetof(Server,sshServer.privateKeyFileName)       ),
-  CONFIG_VALUE_INTEGER  ("ssh-max-connections",          &currentSSHServer,offsetof(Server,maxConnectionCount),      0,MAX_INT,NULL),
+  CONFIG_VALUE_INTEGER  ("ssh-port",                     &currentSSHServer,offsetof(Server,sshServer.port),             0,65535,NULL),
+  CONFIG_VALUE_STRING   ("ssh-login-name",               &currentSSHServer,offsetof(Server,sshServer.loginName)         ),
+  CONFIG_VALUE_SPECIAL  ("ssh-password",                 &currentSSHServer,offsetof(Server,sshServer.password),         configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_STRING   ("ssh-public-key",               &currentSSHServer,offsetof(Server,sshServer.publicKeyFileName) ),
+  CONFIG_VALUE_STRING   ("ssh-private-key",              &currentSSHServer,offsetof(Server,sshServer.privateKeyFileName)),
+  CONFIG_VALUE_INTEGER  ("ssh-max-connections",          &currentSSHServer,offsetof(Server,maxConnectionCount),         0,MAX_INT,NULL),
 //TODO
 //  CONFIG_VALUE_INTEGER64("ssh-max-storage-size",         &currentSSHServer,offsetof(Server,maxStorageSize),          0LL,MAX_INT64,NULL),
 
 //  CONFIG_VALUE_INTEGER  ("webdav-port",                  &currentWebDAVServer,offsetof(Server,port),              0,65535,NULL),
-  CONFIG_VALUE_STRING   ("webdav-login-name",            &currentWebDAVServer,offsetof(Server,webDAVServer.loginName)          ),
-  CONFIG_VALUE_SPECIAL  ("webdav-password",              &currentWebDAVServer,offsetof(Server,webDAVServer.password),          configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_INTEGER  ("webdav-max-connections",       &currentWebDAVServer,offsetof(Server,maxConnectionCount),0,MAX_INT,NULL),
+  CONFIG_VALUE_STRING   ("webdav-login-name",            &currentWebDAVServer,offsetof(Server,webDAVServer.loginName)   ),
+  CONFIG_VALUE_SPECIAL  ("webdav-password",              &currentWebDAVServer,offsetof(Server,webDAVServer.password),   configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_INTEGER  ("webdav-max-connections",       &currentWebDAVServer,offsetof(Server,maxConnectionCount),      0,MAX_INT,NULL),
 //TODO
 //  CONFIG_VALUE_INTEGER64("webdav-max-storage-size",      &currentWebDAVServer,offsetof(Server,maxStorageSize),    0LL,MAX_INT64,NULL),
 
@@ -969,6 +976,9 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_SPECIAL  ("time",                         NULL,offsetof(ScheduleNode,time),                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
   CONFIG_VALUE_SELECT   ("archive-type",                 NULL,offsetof(ScheduleNode,archiveType),                       CONFIG_VALUE_ARCHIVE_TYPES),
   CONFIG_VALUE_STRING   ("text",                         NULL,offsetof(ScheduleNode,customText)                         ),
+  CONFIG_VALUE_INTEGER  ("min-keep",                     NULL,offsetof(ScheduleNode,minKeep),                           0,MAX_UINT,NULL),
+  CONFIG_VALUE_INTEGER  ("max-keep",                     NULL,offsetof(ScheduleNode,maxKeep),                           0,MAX_UINT,NULL),
+  CONFIG_VALUE_INTEGER  ("max-age",                      NULL,offsetof(ScheduleNode,maxAge),                            0,MAX_UINT,NULL),
   CONFIG_VALUE_BOOLEAN  ("enabled",                      NULL,offsetof(ScheduleNode,enabledFlag)                        ),
   CONFIG_VALUE_END_SECTION(),
 
@@ -4547,6 +4557,9 @@ LOCAL ScheduleNode *newScheduleNode(void)
   scheduleNode->time.minute = SCHEDULE_ANY;
   scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
   scheduleNode->customText  = String_new();
+  scheduleNode->minKeep     = 0;
+  scheduleNode->maxKeep     = MAX_UINT;
+  scheduleNode->maxAge      = 0;
   scheduleNode->enabledFlag = FALSE;
 
   return scheduleNode;

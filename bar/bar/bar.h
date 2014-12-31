@@ -422,6 +422,8 @@ typedef struct ScheduleNode
   ScheduleTime     time;
   ArchiveTypes     archiveType;                          // archive type to create
   String           customText;                           // custom text
+  uint             minKeep,maxKeep;                      // min./max keep count
+  uint             maxAge;                               // max. age [days]
   bool             enabledFlag;                          // TRUE iff enabled
 } ScheduleNode;
 
