@@ -11,6 +11,7 @@
 /****************************** Imports ********************************/
 // base
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -647,18 +648,6 @@ class TabRestore
    */
   class UUIDIndexDataMap extends HashMap<String,UUIDIndexData>
   {
-    /** remove not checked entries
-     */
-    public void clearNotChecked()
-    {
-      String[] keys = keySet().toArray(new String[0]);
-      for (String key : keys)
-      {
-        UUIDIndexData uuidIndexData = get(key);
-        if (!uuidIndexData.isChecked()) remove(key);
-      }
-    }
-
     /** get job data from map
      * @param uuid UUID
      * @return UUID data
@@ -879,18 +868,6 @@ class TabRestore
    */
   class JobIndexDataMap extends HashMap<Long,JobIndexData>
   {
-    /** remove not checked entries
-     */
-    public void clearNotChecked()
-    {
-      String[] keys = keySet().toArray(new String[0]);
-      for (String key : keys)
-      {
-        JobIndexData jobIndexData = get(key);
-        if (!jobIndexData.isChecked()) remove(key);
-      }
-    }
-
     /** get job data from map
      * @param jobId database id
      * @return job data
@@ -1122,18 +1099,6 @@ class TabRestore
    */
   class StorageIndexDataMap extends HashMap<Long,StorageIndexData>
   {
-    /** remove not checked entries
-     */
-    public void clearNotChecked()
-    {
-      String[] keys = keySet().toArray(new String[0]);
-      for (String key : keys)
-      {
-        StorageIndexData storageIndexData = get(key);
-        if (!storageIndexData.isChecked()) remove(key);
-      }
-    }
-
     /** get storage data from map
      * @param storageId database id
      * @return storage data
@@ -1189,18 +1154,6 @@ class TabRestore
       this.uuidIndexDataMap    = new HashMap<String,UUIDIndexData>();
       this.jobIndexDataMap     = new HashMap<Long,JobIndexData>();
       this.storageIndexDataMap = new HashMap<Long,StorageIndexData>();
-    }
-
-    /** remove not checked entries
-     */
-    public void clearNotChecked()
-    {
-      String[] keys = uuidIndexDataMap.keySet().toArray(new String[0]);
-      for (String key : keys)
-      {
-        UUIDIndexData uuidIndexData = uuidIndexDataMap.get(key);
-        if (!uuidIndexData.isChecked()) uuidIndexDataMap.remove(key);
-      }
     }
 
     /** get UUID index data from map by UUID
@@ -1424,12 +1377,12 @@ class TabRestore
    */
   class UpdateStorageThread extends Thread
   {
-    private Object        trigger                    = new Object();   // trigger update object
-    private boolean       triggeredFlag              = false;
-    private int           storageMaxCount            = 100;
-    private String        storagePattern             = null;
-    private IndexStateSet storageIndexStateSetFilter = INDEX_STATE_SET_ALL;
-    private boolean       setUpdateIndicator         = false;          // true to set color/cursor at update
+    private Object        trigger              = new Object();   // trigger update object
+    private boolean       triggeredFlag        = false;
+    private int           storageMaxCount      = 100;
+    private String        storagePattern       = null;
+    private IndexStateSet storageIndexStateSet = INDEX_STATE_SET_ALL;
+    private boolean       setUpdateIndicator   = false;          // true to set color/cursor at update
 
     /** create update storage list thread
      */
@@ -1464,38 +1417,6 @@ class TabRestore
           // update entries
           try
           {
-/*
-            // get current storage index data
-            final HashSet<StorageIndexData> removeStorageIdSet = new HashSet<StorageIndexData>();
-            if (!triggeredFlag)
-            {
-              display.syncExec(new Runnable()
-              {
-                public void run()
-                {
-                  for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
-                  {
-                    UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
-                    if (uuidTreeItem.getExpanded())
-                    {
-                      for (TreeItem jobTreeItem : uuidTreeItem.getItems())
-                      {
-                        JobIndexData jobIndexData = (JobIndexData)jobTreeItem.getData();
-                        if (jobTreeItem.getExpanded())
-                        {
-                          for (TreeItem storageTreeItem : jobTreeItem.getItems())
-                          {
-                            removeStorageIdSet.add((StorageIndexData)storageTreeItem.getData());
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              });
-            }
-            */
-
             HashSet<TreeItem> uuidTreeItems = new HashSet<TreeItem>();
             if (!triggeredFlag)
             {
@@ -1540,8 +1461,8 @@ class TabRestore
             {
               public void run()
               {
-                widgetStorageTable.setForeground(null);
                 widgetStorageTree.setForeground(null);
+                widgetStorageTable.setForeground(null);
                 shell.setCursor(null);
               }
             });
@@ -1575,21 +1496,24 @@ class TabRestore
       }
     }
 
-    /** trigger an update of the storage list
+    /** trigger update of storage list
      * @param storagePattern new storage pattern
-     * @param storageIndexStateSetFilter new storage index state set filter
+     * @param storageIndexStateSet new storage index state set
      * @param storageMaxCount new max. entries in list
      */
-    public void triggerUpdate(String storagePattern, IndexStateSet storageIndexStateSetFilter, int storageMaxCount)
+    public void triggerUpdate(String storagePattern, IndexStateSet storageIndexStateSet, int storageMaxCount)
     {
       synchronized(trigger)
       {
-        if ((this.storagePattern == null) || (storagePattern == null) || !storagePattern.equals(storagePattern))
+        if (   (this.storagePattern == null) || (storagePattern == null) || !this.storagePattern.equals(storagePattern)
+            || (this.storageIndexStateSet != storageIndexStateSet)
+            || (this.storageMaxCount != storageMaxCount)
+           )
         {
-          this.storagePattern             = storagePattern;
-          this.storageIndexStateSetFilter = storageIndexStateSetFilter;
-          this.storageMaxCount            = storageMaxCount;
-          this.setUpdateIndicator         = true;
+          this.storagePattern       = storagePattern;
+          this.storageIndexStateSet = storageIndexStateSet;
+          this.storageMaxCount      = storageMaxCount;
+          this.setUpdateIndicator   = true;
 
           triggeredFlag = true;
           trigger.notify();
@@ -1597,14 +1521,14 @@ class TabRestore
       }
     }
 
-    /** trigger an update of the storage list
+    /** trigger update of storage list
      * @param storagePattern new storage pattern
      */
-    public void triggerUpdate(String storagePattern)
+    public void triggerUpdateStoragePattern(String storagePattern)
     {
       synchronized(trigger)
       {
-        if ((this.storagePattern == null) || !storagePattern.equals(storagePattern))
+        if ((this.storagePattern == null) || (storagePattern == null) || !this.storagePattern.equals(storagePattern))
         {
           this.storagePattern     = storagePattern;
           this.setUpdateIndicator = true;
@@ -1615,17 +1539,17 @@ class TabRestore
       }
     }
 
-    /** trigger an update of the storage list
-     * @param storageIndexStateSetFilter new storage index state set filter
+    /** trigger update of storage list
+     * @param storageIndexStateSet new storage index state set
      */
-    public void triggerUpdate(IndexStateSet storageIndexStateSetFilter)
+    public void triggerUpdateIndexStateSet(IndexStateSet storageIndexStateSet)
     {
       synchronized(trigger)
       {
-        if (this.storageIndexStateSetFilter != storageIndexStateSetFilter)
+        if (this.storageIndexStateSet != storageIndexStateSet)
         {
-          this.storageIndexStateSetFilter = storageIndexStateSetFilter;
-          this.setUpdateIndicator         = true;
+          this.storageIndexStateSet = storageIndexStateSet;
+          this.setUpdateIndicator   = true;
 
           triggeredFlag = true;
           trigger.notify();
@@ -1633,10 +1557,10 @@ class TabRestore
       }
     }
 
-    /** trigger an update of the storage list
+    /** trigger update of storage list
      * @param storageMaxCount new max. entries in list
      */
-    public void triggerUpdate(int storageMaxCount)
+    public void triggerUpdateStorageMaxCount(int storageMaxCount)
     {
       synchronized(trigger)
       {
@@ -1651,7 +1575,7 @@ class TabRestore
       }
     }
 
-    /** trigger an update of the storage list
+    /** trigger update of storage list
      */
     public void triggerUpdate()
     {
@@ -1676,7 +1600,6 @@ class TabRestore
       uuidTreeItems.clear();
 
       // get UUID items
-      removeUUIDTreeItemSet.clear();
       display.syncExec(new Runnable()
       {
         public void run()
@@ -2102,7 +2025,7 @@ class TabRestore
       // update storage table
       command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST jobId=* maxCount=%d indexState=%s indexMode=%s pattern=%'S",
                                                          storageMaxCount,
-                                                         storageIndexStateSetFilter.nameList("|"),
+                                                         storageIndexStateSet.nameList("|"),
                                                          "*",
                                                          (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
                                                         ),
@@ -2238,8 +2161,8 @@ class TabRestore
   {
     String        storageName;
     long          storageDateTime;
+    EntryTypes    entryType;
     String        name;
-    EntryTypes    type;
     long          dateTime;
     long          size;
     boolean       checked;
@@ -2248,17 +2171,17 @@ class TabRestore
     /** create entry data
      * @param storageName archive name
      * @param storageDateTime archive date/time (timestamp)
+     * @param entryType entry type
      * @param name entry name
-     * @param type entry type
      * @param dateTime date/time (timestamp)
      * @param size size [bytes]
      */
-    EntryData(String storageName, long storageDateTime, String name, EntryTypes type, long dateTime, long size)
+    EntryData(String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
     {
       this.storageName     = storageName;
       this.storageDateTime = storageDateTime;
+      this.entryType       = entryType;
       this.name            = name;
-      this.type            = type;
       this.dateTime        = dateTime;
       this.size            = size;
       this.checked         = false;
@@ -2268,13 +2191,13 @@ class TabRestore
     /** create entry data
      * @param storageName archive name
      * @param storageDateTime archive date/time (timestamp)
+     * @param entryType entry type
      * @param name entry name
-     * @param type entry type
      * @param dateTime date/time (timestamp)
      */
-    EntryData(String storageName, long storageDateTime, String name, EntryTypes type, long dateTime)
+    EntryData(String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
     {
-      this(storageName,storageDateTime,name,type,dateTime,0L);
+      this(storageName,storageDateTime,entryType,name,dateTime,0L);
     }
 
     /** set restore state of entry
@@ -2306,54 +2229,96 @@ class TabRestore
      */
     public String toString()
     {
-      return "Entry {"+storageName+", "+name+", "+type+", dateTime="+dateTime+", "+size+" bytes, checked="+checked+", state="+restoreState+"}";
+      return "Entry {"+storageName+", "+name+", "+entryType+", dateTime="+dateTime+", "+size+" bytes, checked="+checked+", state="+restoreState+"}";
     }
   };
 
   /** entry data map
    */
-  class EntryDataMap extends HashMap<String,EntryData>
+  class EntryDataMap extends HashMap<String,WeakReference<EntryData>>
   {
-    /** remove not checked entries
-     */
-    public void clearNotChecked()
-    {
-      String[] keys = keySet().toArray(new String[0]);
-      for (String key : keys)
-      {
-        EntryData entryData = get(key);
-        if (!entryData.isChecked()) remove(key);
-      }
-    }
-
-    /** put entry data into map
-     * @param entryData entry data
-     */
-    public void put(EntryData entryData)
-    {
-      put(getHashKey(entryData),entryData);
-    }
-
-    /** get entry data
-     * @param storageName storage name
-     * @param name name
+    /** update entry data
+     * @param storageName archive name
+     * @param storageDateTime archive date/time (timestamp)
      * @param entryType entry type
-     * @return entry data or null if not found
+     * @param name entry name
+     * @param dateTime date/time (timestamp)
+     * @param size size [bytes]
      */
-    public EntryData get(String storageName, String name, EntryTypes entryType)
+    synchronized public EntryData update(String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
     {
-      return get(getHashKey(storageName,name,entryType));
+      String hashKey = getHashKey(storageName,entryType,name);
+
+      WeakReference<EntryData> reference = get(hashKey);
+      EntryData entryData = (reference != null) ? get(hashKey).get() : null;
+      if (entryData != null)
+      {
+        entryData.storageName     = storageName;
+        entryData.storageDateTime = storageDateTime;
+        entryData.entryType       = entryType;
+        entryData.name            = name;
+        entryData.dateTime        = dateTime;
+        entryData.size            = size;
+      }
+      else
+      {
+        entryData = new EntryData(storageName,
+                                  storageDateTime,
+                                  entryType,
+                                  name,
+                                  dateTime,
+                                  size
+                                 );
+        put(hashKey,new WeakReference<EntryData>(entryData));
+      }
+
+      return entryData;
+    }
+
+    /** update entry data
+     * @param storageName archive name
+     * @param storageDateTime archive date/time (timestamp)
+     * @param entryType entry type
+     * @param name entry name
+     * @param dateTime date/time (timestamp)
+     */
+    synchronized public EntryData update(String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
+    {
+      String hashKey = getHashKey(storageName,entryType,name);
+
+      WeakReference<EntryData> reference = get(hashKey);
+      EntryData entryData = (reference != null) ? get(hashKey).get() : null;
+      if (entryData != null)
+      {
+        entryData.storageName     = storageName;
+        entryData.storageDateTime = storageDateTime;
+        entryData.entryType       = entryType;
+        entryData.name            = name;
+        entryData.dateTime        = dateTime;
+      }
+      else
+      {
+        entryData = new EntryData(storageName,
+                                  storageDateTime,
+                                  entryType,
+                                  name,
+                                  dateTime
+                                 );
+        put(hashKey,new WeakReference<EntryData>(entryData));
+      }
+
+      return entryData;
     }
 
     /** get hash key from data
      * @param storageName storage name
-     * @param name name
      * @param entryType entry type
+     * @param name name
      * @return hash key string
      */
-    private String getHashKey(String storageName, String name, EntryTypes entryType)
+    private String getHashKey(String storageName, EntryTypes entryType, String name)
     {
-      return storageName+name+entryType.toString();
+      return storageName+entryType.toString()+name;
     }
 
     /** get hash key from entry data
@@ -2362,7 +2327,7 @@ class TabRestore
      */
     private String getHashKey(EntryData entryData)
     {
-      return getHashKey(entryData.storageName,entryData.name,entryData.type);
+      return getHashKey(entryData.storageName,entryData.entryType,entryData.name);
     }
   }
 
@@ -2416,7 +2381,7 @@ class TabRestore
         case SORTMODE_NAME:
           return entryData1.name.compareTo(entryData2.name);
         case SORTMODE_TYPE:
-          return entryData1.type.compareTo(entryData2.type);
+          return entryData1.entryType.compareTo(entryData2.entryType);
         case SORTMODE_SIZE:
           if      (entryData1.size < entryData2.size) return -1;
           else if (entryData1.size > entryData2.size) return  1;
@@ -2469,186 +2434,25 @@ class TabRestore
             }
           });
 
-          // update
-          synchronized(entryDataMap)
+          // update table
+          try
           {
-            // clear not checked entries
-            entryDataMap.clearNotChecked();
-
-            // get matching entries
-            if (entryPattern != null)
+            updateEntryList();
+          }
+          catch (CommunicationError error)
+          {
+            // ignored
+          }
+          catch (Exception exception)
+          {
+            if (Settings.debugLevel > 0)
             {
-              // execute command
-              Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S checkedStorageOnlyFlag=%y entryMaxCount=%d newestEntriesOnlyFlag=%y",
-                                                                         entryPattern,
-                                                                         checkedStorageOnlyFlag,
-                                                                         entryMaxCount,
-                                                                         newestEntriesOnlyFlag
-                                                                        ),
-                                                     0
-                                                    );
-
-              // read results, update/add data
-              String[] resultErrorMessage = new String[1];
-              ValueMap resultMap          = new ValueMap();
-              while (!command.endOfData() && !triggeredFlag)
-              {
-                if (command.getNextResult(resultErrorMessage,
-                                          resultMap,
-                                          Command.TIMEOUT
-                                         ) == Errors.NONE
-                   )
-                {
-                  try
-                  {
-                    switch (resultMap.getEnum("entryType",EntryTypes.class))
-                    {
-                      case FILE:
-                        {
-                          String storageName     = resultMap.getString("storageName"    );
-                          long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                          String fileName        = resultMap.getString("name"           );
-                          long   dateTime        = resultMap.getLong  ("dateTime"       );
-                          long   size            = resultMap.getLong  ("size"           );
-                          long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
-                          long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
-
-                          EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.FILE);
-                          if (entryData != null)
-                          {
-                            entryData.dateTime = dateTime;
-                            entryData.size     = size;
-                          }
-                          else
-                          {
-                            entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.FILE,dateTime,size);
-                            entryDataMap.put(entryData);
-                          }
-                        }
-                        break;
-                      case IMAGE:
-                        {
-                          String storageName     = resultMap.getString("storageName"    );
-                          long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                          String imageName       = resultMap.getString("name"           );
-                          long   size            = resultMap.getLong  ("size"           );
-                          long   blockOffset     = resultMap.getLong  ("blockOffset"    );
-                          long   blockCount      = resultMap.getLong  ("blockCount"     );
-
-                          EntryData entryData = entryDataMap.get(storageName,imageName,EntryTypes.IMAGE);
-                          if (entryData != null)
-                          {
-                            entryData.size = size;
-                          }
-                          else
-                          {
-                            entryData = new EntryData(storageName,storageDateTime,imageName,EntryTypes.IMAGE,0L,size);
-                            entryDataMap.put(entryData);
-                          }
-                        }
-                        break;
-                      case DIRECTORY:
-                        {
-                          String storageName     = resultMap.getString("storageName"    );
-                          long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                          String directoryName   = resultMap.getString("name"           );
-                          long   dateTime        = resultMap.getLong  ("dateTime"       );
-
-                          EntryData entryData = entryDataMap.get(storageName,directoryName,EntryTypes.DIRECTORY);
-                          if (entryData != null)
-                          {
-                            entryData.dateTime = dateTime;
-                          }
-                          else
-                          {
-                            entryData = new EntryData(storageName,storageDateTime,directoryName,EntryTypes.DIRECTORY,dateTime);
-                            entryDataMap.put(entryData);
-                          }
-                        }
-                        break;
-                      case LINK:
-                        {
-                          String storageName     = resultMap.getString("storageName"    );
-                          long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                          String linkName        = resultMap.getString("name"           );
-                          String destinationName = resultMap.getString("destinationName");
-                          long   dateTime        = resultMap.getLong  ("dateTime"       );
-
-                          EntryData entryData = entryDataMap.get(storageName,linkName,EntryTypes.LINK);
-                          if (entryData != null)
-                          {
-                            entryData.dateTime = dateTime;
-                          }
-                          else
-                          {
-                            entryData = new EntryData(storageName,storageDateTime,linkName,EntryTypes.LINK,dateTime);
-                            entryDataMap.put(entryData);
-                          }
-                        }
-                        break;
-                      case HARDLINK:
-                        {
-                          String storageName     = resultMap.getString("storageName"    );
-                          long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                          String fileName        = resultMap.getString("name"           );
-                          long   dateTime        = resultMap.getLong  ("dateTime"       );
-                          long   size            = resultMap.getLong  ("size"           );
-                          long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
-                          long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
-
-                          EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.HARDLINK);
-                          if (entryData != null)
-                          {
-                            entryData.dateTime = dateTime;
-                          }
-                          else
-                          {
-                            entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.HARDLINK,dateTime);
-                            entryDataMap.put(entryData);
-                          }
-                        }
-                        break;
-                      case SPECIAL:
-                        {
-                          String storageName     = resultMap.getString("storageName"    );
-                          long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                          String name            = resultMap.getString("name"           );
-                          long   dateTime        = resultMap.getLong  ("dateTime"       );
-
-                          EntryData entryData = entryDataMap.get(storageName,name,EntryTypes.SPECIAL);
-                          if (entryData != null)
-                          {
-                            entryData.dateTime = dateTime;
-                          }
-                          else
-                          {
-                            entryData = new EntryData(storageName,storageDateTime,name,EntryTypes.SPECIAL,dateTime);
-                            entryDataMap.put(entryData);
-                          }
-                        }
-                        break;
-                    }
-                  }
-                  catch (IllegalArgumentException exception)
-                  {
-                    if (Settings.debugLevel > 0)
-                    {
-                      System.err.println("ERROR: "+exception.getMessage());
-                    }
-                  }
-                }
-              }
+              BARServer.disconnect();
+              System.err.println("ERROR: "+exception.getMessage());
+              BARControl.printStackTrace(exception);
+              System.exit(1);
             }
           }
-
-          // refresh list
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              refreshEntryList();
-            }
-          });
 
           // reset cursor, foreground color
           display.syncExec(new Runnable()
@@ -2684,7 +2488,7 @@ class TabRestore
       }
     }
 
-    /** trigger an update of the entry list
+    /** trigger update of entry list
      * @param checkedStorageOnlyFlag checked storage only or null
      * @param entryPattern new entry pattern or null
      * @param newestEntriesOnlyFlag flag for newest entries only or null
@@ -2694,14 +2498,472 @@ class TabRestore
     {
       synchronized(trigger)
       {
-        this.checkedStorageOnlyFlag = checkedStorageOnlyFlag;
-        this.entryPattern           = entryPattern;
-        this.newestEntriesOnlyFlag  = newestEntriesOnlyFlag;
-        this.entryMaxCount          = entryMaxCount;
+        if (   (this.checkedStorageOnlyFlag != checkedStorageOnlyFlag)
+            || (this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern)
+            || (this.newestEntriesOnlyFlag != newestEntriesOnlyFlag)
+            || (this.entryMaxCount != entryMaxCount)
+           )
+        {
+          this.checkedStorageOnlyFlag = checkedStorageOnlyFlag;
+          this.entryPattern           = entryPattern;
+          this.newestEntriesOnlyFlag  = newestEntriesOnlyFlag;
+          this.entryMaxCount          = entryMaxCount;
 
+          triggeredFlag = true;
+          trigger.notify();
+        }
+      }
+    }
+
+    /** trigger update of entry list
+     * @param entryPattern new entry pattern or null
+     */
+    public void triggerUpdateEntryPattern(String entryPattern)
+    {
+      synchronized(trigger)
+      {
+        if ((this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern))
+        {
+          this.entryPattern = entryPattern;
+
+          triggeredFlag = true;
+          trigger.notify();
+        }
+      }
+    }
+
+    /** trigger update of entry list
+     * @param checkedStorageOnlyFlag checked storage only or null
+     * @param newestEntriesOnlyFlag flag for newest entries only or null
+     */
+    public void triggerUpdateCheckedStorageOnly(boolean checkedStorageOnlyFlag)
+    {
+      synchronized(trigger)
+      {
+        if (this.checkedStorageOnlyFlag != checkedStorageOnlyFlag)
+        {
+          this.checkedStorageOnlyFlag = checkedStorageOnlyFlag;
+
+          triggeredFlag = true;
+          trigger.notify();
+        }
+      }
+    }
+
+    /** trigger update of entry list
+     * @param newestEntriesOnlyFlag flag for newest entries only or null
+     */
+    public void triggerUpdateNewestEntriesOnly(boolean newestEntriesOnlyFlag)
+    {
+      synchronized(trigger)
+      {
+        if (this.newestEntriesOnlyFlag != newestEntriesOnlyFlag)
+        {
+          this.newestEntriesOnlyFlag  = newestEntriesOnlyFlag;
+
+          triggeredFlag = true;
+          trigger.notify();
+        }
+      }
+    }
+
+    /** trigger update of entry list
+     * @param entryMaxCount max. entries in list
+     */
+    public void triggerUpdateEntryMaxCount(int entryMaxCount)
+    {
+      synchronized(trigger)
+      {
+        if (this.entryMaxCount != entryMaxCount)
+        {
+          this.entryMaxCount = entryMaxCount;
+
+          triggeredFlag = true;
+          trigger.notify();
+        }
+      }
+    }
+
+    /** trigger update of entry list
+     */
+    public void triggerUpdate()
+    {
+      synchronized(trigger)
+      {
         triggeredFlag = true;
         trigger.notify();
       }
+    }
+
+    /** refresh entry list display
+     */
+    private void updateEntryList()
+    {
+// ??? statt findFileListIndex
+//      EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryTable);
+
+      // get entries
+      final HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          for (TableItem tableItem : widgetEntryTable.getItems())
+          {
+            if (!tableItem.getChecked())
+            {
+              removeTableItemSet.add(tableItem);
+            }
+          }
+        }
+      });
+      if (triggeredFlag) return;
+
+      // update table
+      if ((entryPattern != null) && !entryPattern.isEmpty())
+      {
+        Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S checkedStorageOnlyFlag=%y entryMaxCount=%d newestEntriesOnlyFlag=%y",
+                                                                   entryPattern,
+                                                                   checkedStorageOnlyFlag,
+                                                                   entryMaxCount,
+                                                                   newestEntriesOnlyFlag
+                                                                  ),
+                                               0
+                                              );
+        String[] resultErrorMessage = new String[1];
+        ValueMap resultMap          = new ValueMap();
+        while (!command.endOfData() && !triggeredFlag)
+        {
+          if (command.getNextResult(resultErrorMessage,
+                                    resultMap,
+                                    Command.TIMEOUT
+                                   ) == Errors.NONE
+             )
+          {
+            try
+            {
+              switch (resultMap.getEnum("entryType",EntryTypes.class))
+              {
+                case FILE:
+                  {
+                    String storageName     = resultMap.getString("storageName"    );
+                    long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                    String fileName        = resultMap.getString("name"           );
+                    long   dateTime        = resultMap.getLong  ("dateTime"       );
+                    long   size            = resultMap.getLong  ("size"           );
+                    long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
+                    long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
+
+                    // add/update entry data map
+                    final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.FILE,fileName,dateTime,size);
+
+                    // update/insert table item
+                    display.syncExec(new Runnable()
+                    {
+                      public void run()
+                      {
+                        TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
+                        if (tableItem == null)
+                        {
+                          // insert tree item
+                          tableItem = Widgets.insertTableItem(widgetEntryTable,
+                                                              findEntryListIndex(entryData),
+                                                              (Object)entryData
+                                                             );
+                        }
+                        else
+                        {
+                          assert tableItem.getData() instanceof EntryData;
+
+                          // keep tree item
+                          removeTableItemSet.remove(tableItem);
+                        }
+
+                        // update view
+                        Widgets.updateTableItem(tableItem,
+                                                (Object)entryData,
+                                                entryData.storageName,
+                                                entryData.name,
+                                                "FILE",
+                                                Units.formatByteSize(entryData.size),
+                                                simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                               );
+                      }
+                    });
+                  }
+                  break;
+                case IMAGE:
+                  {
+                    String storageName     = resultMap.getString("storageName"    );
+                    long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                    String imageName       = resultMap.getString("name"           );
+                    long   size            = resultMap.getLong  ("size"           );
+                    long   blockOffset     = resultMap.getLong  ("blockOffset"    );
+                    long   blockCount      = resultMap.getLong  ("blockCount"     );
+
+                    // add/update entry data map
+                    final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.IMAGE,imageName,0L,size);
+
+                    // update/insert table item
+                    display.syncExec(new Runnable()
+                    {
+                      public void run()
+                      {
+                        TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
+                        if (tableItem == null)
+                        {
+                          // insert tree item
+                          tableItem = Widgets.insertTableItem(widgetEntryTable,
+                                                              findEntryListIndex(entryData),
+                                                              (Object)entryData
+                                                             );
+                        }
+                        else
+                        {
+                          assert tableItem.getData() instanceof EntryData;
+
+                          // keep tree item
+                          removeTableItemSet.remove(tableItem);
+                        }
+
+                        // update view
+                        Widgets.updateTableItem(tableItem,
+                                                (Object)entryData,
+                                                entryData.storageName,
+                                                entryData.name,
+                                                "IMAGE",
+                                                Units.formatByteSize(entryData.size),
+                                                simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                               );
+                      }
+                    });
+                  }
+                  break;
+                case DIRECTORY:
+                  {
+                    String storageName     = resultMap.getString("storageName"    );
+                    long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                    String directoryName   = resultMap.getString("name"           );
+                    long   dateTime        = resultMap.getLong  ("dateTime"       );
+
+                    // add/update entry data map
+                    final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.DIRECTORY,directoryName,dateTime);
+
+                    // update/insert table item
+                    display.syncExec(new Runnable()
+                    {
+                      public void run()
+                      {
+                        TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
+                        if (tableItem == null)
+                        {
+                          // insert tree item
+                          tableItem = Widgets.insertTableItem(widgetEntryTable,
+                                                              findEntryListIndex(entryData),
+                                                              (Object)entryData
+                                                             );
+                        }
+                        else
+                        {
+                          assert tableItem.getData() instanceof EntryData;
+
+                          // keep tree item
+                          removeTableItemSet.remove(tableItem);
+                        }
+
+                        // update view
+                        Widgets.updateTableItem(tableItem,
+                                                (Object)entryData,
+                                                entryData.storageName,
+                                                entryData.name,
+                                                "DIR",
+                                                "",
+                                                simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                               );
+                      }
+                    });
+                  }
+                  break;
+                case LINK:
+                  {
+                    String storageName     = resultMap.getString("storageName"    );
+                    long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                    String linkName        = resultMap.getString("name"           );
+                    String destinationName = resultMap.getString("destinationName");
+                    long   dateTime        = resultMap.getLong  ("dateTime"       );
+
+                    // add/update entry data map
+                    final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.LINK,linkName,dateTime);
+
+                    // update/insert table item
+                    display.syncExec(new Runnable()
+                    {
+                      public void run()
+                      {
+                        TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
+                        if (tableItem == null)
+                        {
+                          // insert tree item
+                          tableItem = Widgets.insertTableItem(widgetEntryTable,
+                                                              findEntryListIndex(entryData),
+                                                              (Object)entryData
+                                                             );
+                        }
+                        else
+                        {
+                          assert tableItem.getData() instanceof EntryData;
+
+                          // keep tree item
+                          removeTableItemSet.remove(tableItem);
+                        }
+
+                        // update view
+                        Widgets.updateTableItem(tableItem,
+                                                (Object)entryData,
+                                                entryData.storageName,
+                                                entryData.name,
+                                                "LINK",
+                                                "",
+                                                simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                               );
+                      }
+                    });
+                  }
+                  break;
+                case HARDLINK:
+                  {
+                    String storageName     = resultMap.getString("storageName"    );
+                    long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                    String fileName        = resultMap.getString("name"           );
+                    long   dateTime        = resultMap.getLong  ("dateTime"       );
+                    long   size            = resultMap.getLong  ("size"           );
+                    long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
+                    long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
+
+                    // add/update entry data map
+                    final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.HARDLINK,fileName,dateTime,size);
+
+                    // update/insert table item
+                    display.syncExec(new Runnable()
+                    {
+                      public void run()
+                      {
+                        TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
+                        if (tableItem == null)
+                        {
+                          // insert tree item
+                          tableItem = Widgets.insertTableItem(widgetEntryTable,
+                                                              findEntryListIndex(entryData),
+                                                              (Object)entryData
+                                                             );
+                        }
+                        else
+                        {
+                          assert tableItem.getData() instanceof EntryData;
+
+                          // keep tree item
+                          removeTableItemSet.remove(tableItem);
+                        }
+
+                        // update view
+                        Widgets.updateTableItem(tableItem,
+                                                (Object)entryData,
+                                                entryData.storageName,
+                                                entryData.name,
+                                                "HARDLINK",
+                                                Units.formatByteSize(entryData.size),
+                                                simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                               );
+                      }
+                    });
+                  }
+                  break;
+                case SPECIAL:
+                  {
+                    String storageName     = resultMap.getString("storageName"    );
+                    long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                    String name            = resultMap.getString("name"           );
+                    long   dateTime        = resultMap.getLong  ("dateTime"       );
+
+                    // add/update entry data map
+                    final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.SPECIAL,name,dateTime);
+
+                    // update/insert table item
+                    display.syncExec(new Runnable()
+                    {
+                      public void run()
+                      {
+                        TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
+                        if (tableItem == null)
+                        {
+                          // insert tree item
+                          tableItem = Widgets.insertTableItem(widgetEntryTable,
+                                                              findEntryListIndex(entryData),
+                                                              (Object)entryData
+                                                             );
+                        }
+                        else
+                        {
+                          assert tableItem.getData() instanceof EntryData;
+
+                          // keep tree item
+                          removeTableItemSet.remove(tableItem);
+                        }
+
+                        // update view
+                        Widgets.updateTableItem(tableItem,
+                                                (Object)entryData,
+                                                entryData.storageName,
+                                                entryData.name,
+                                                "DEVICE",
+                                                Units.formatByteSize(entryData.size),
+                                                simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                               );
+                      }
+                    });
+                  }
+                  break;
+default:
+Dprintf.dprintf("ERROR");
+System.exit(1);
+break;
+              }
+            }
+            catch (IllegalArgumentException exception)
+            {
+              if (Settings.debugLevel > 0)
+              {
+                System.err.println("ERROR: "+exception.getMessage());
+              }
+            }
+          }
+        }
+      }
+      if (triggeredFlag) return;
+
+      // remove not existing entries
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          for (TableItem tableItem : removeTableItemSet)
+          {
+            EntryData entryData = (EntryData)tableItem.getData();
+            Widgets.removeTableItem(widgetEntryTable,tableItem);
+            entryDataMap.remove(entryData);
+          }
+        }
+      });
+      if (triggeredFlag) return;
+
+      // enable/disable restore button
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          checkedEntryEvent.trigger();
+        }
+      });
     }
   }
 
@@ -2741,32 +3003,23 @@ class TabRestore
   private Table               widgetStorageTable;
   private Shell               widgetStorageTableToolTip = null;
   private Text                widgetStoragePattern;
-  private Combo               widgetStorageStateFilter;
+  private Combo               widgetStorageState;
   private Combo               widgetStorageMaxCount;
-  private WidgetEvent         checkedStorageEvent = new WidgetEvent();
+  private WidgetEvent         checkedStorageEvent = new WidgetEvent();        // triggered when some checked storage changed
 
   private Table               widgetEntryTable;
   private Shell               widgetEntryTableToolTip = null;
-  private WidgetEvent         checkedEntryEvent = new WidgetEvent();
+  private WidgetEvent         checkedEntryEvent = new WidgetEvent();          // triggered when some checked entry changed
 
   private Button              widgetRestoreTo;
   private Text                widgetRestoreToDirectory;
   private Button              widgetOverwriteEntries;
   private WidgetEvent         selectRestoreToEvent = new WidgetEvent();
 
-  private boolean             checkedStorageOnlyFlag = false;
+  UpdateStorageThread         updateStorageThread = new UpdateStorageThread();
+  private IndexDataMap        indexDataMap        = new IndexDataMap();
 
-  UpdateStorageThread         updateStorageThread;
-//????
-//private String              storagePattern       = null;
-  private IndexStateSet       storageIndexStateSet = INDEX_STATE_SET_ALL;
-  private int                 storageMaxCount      = 100;
-  private IndexDataMap        indexDataMap         = new IndexDataMap();
-
-  UpdateEntryListThread       updateEntryListThread;
-  private String              entryPattern          = null;
-  private boolean             newestEntriesOnlyFlag = false;
-  private int                 entryMaxCount         = 100;
+  UpdateEntryListThread       updateEntryListThread = new UpdateEntryListThread();
   private EntryDataMap        entryDataMap          = new EntryDataMap();
 
   // ------------------------ native functions ----------------------------
@@ -2831,8 +3084,8 @@ class TabRestore
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
-        checkedStorageOnlyFlag = widget.getSelection();
-        updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
+        boolean checkedStorageOnlyFlag = widget.getSelection();
+        updateEntryListThread.triggerUpdateCheckedStorageOnly(checkedStorageOnlyFlag);
       }
     });
 
@@ -2847,6 +3100,17 @@ class TabRestore
 
       widgetStorageTabFolder = Widgets.newTabFolder(group);
       Widgets.layout(widgetStorageTabFolder,1,0,TableLayoutData.NSWE);
+      widgetStorageTabFolder.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          updateCheckedStorageList();
+          updateEntryListThread.triggerUpdate();
+        }
+      });
 
       // tree
       tab = Widgets.addTab(widgetStorageTabFolder,BARControl.tr("Jobs"));
@@ -2932,9 +3196,9 @@ class TabRestore
               // toogle check
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
               storageIndexData.setChecked(!storageIndexData.isChecked());
-            }
 
-            checkedStorageEvent.trigger();
+              checkedStorageEvent.trigger();
+            }
           }
         }
       });
@@ -2986,15 +3250,11 @@ class TabRestore
               }
             }
 
-            // update storage list
+            // update checked storage list
             updateCheckedStorageList();
 
             // trigger update checked
             checkedStorageEvent.trigger();
-            if (checkedStorageOnlyFlag)
-            {
-              updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
-            }
           }
         }
       });
@@ -3275,15 +3535,11 @@ class TabRestore
             // set checked
             ((StorageIndexData)tabletem.getData()).setChecked(tabletem.getChecked());
 
-            // update storage list
+            // update checked storage list
             updateCheckedStorageList();
 
             // trigger update checked
             checkedStorageEvent.trigger();
-            if (checkedStorageOnlyFlag)
-            {
-              updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
-            }
           }
         }
       });
@@ -3504,7 +3760,7 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            setCheckedStorage(true);
+            setCheckedAllStorage(true);
           }
         });
 
@@ -3517,7 +3773,7 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            setCheckedStorage(false);
+            setCheckedAllStorage(false);
           }
         });
 
@@ -3562,7 +3818,7 @@ class TabRestore
       widgetStorageTree.setMenu(menu);
       widgetStorageTable.setMenu(menu);
 
-      // storage list filter
+      // storage list filters
       composite = Widgets.newComposite(group);
       composite.setLayout(new TableLayout(0.0,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0}));
       Widgets.layout(composite,2,0,TableLayoutData.WE);
@@ -3596,13 +3852,13 @@ class TabRestore
             Button button = (Button)selectionEvent.widget;
             if (isStorageChecked())
             {
-              setCheckedStorage(false);
+              setCheckedAllStorage(false);
               button.setImage(IMAGE_MARK_ALL);
               button.setToolTipText(BARControl.tr("Mark all entries in list."));
             }
             else
             {
-              setCheckedStorage(true);
+              setCheckedAllStorage(true);
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
             }
@@ -3656,12 +3912,12 @@ class TabRestore
         label = Widgets.newLabel(composite,BARControl.tr("State")+":");
         Widgets.layout(label,0,3,TableLayoutData.W);
 
-        widgetStorageStateFilter = Widgets.newOptionMenu(composite);
-        widgetStorageStateFilter.setToolTipText(BARControl.tr("Storage states filter."));
-        widgetStorageStateFilter.setItems(new String[]{"*","ok","error","update","update requested","update/update requested","error/update/update requested"});
-        widgetStorageStateFilter.setText("*");
-        Widgets.layout(widgetStorageStateFilter,0,4,TableLayoutData.W);
-        widgetStorageStateFilter.addSelectionListener(new SelectionListener()
+        widgetStorageState = Widgets.newOptionMenu(composite);
+        widgetStorageState.setToolTipText(BARControl.tr("Storage states filter."));
+        widgetStorageState.setItems(new String[]{"*","ok","error","update","update requested","update/update requested","error/update/update requested"});
+        widgetStorageState.setText("*");
+        Widgets.layout(widgetStorageState,0,4,TableLayoutData.W);
+        widgetStorageState.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
@@ -3669,6 +3925,7 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
+            IndexStateSet storageIndexStateSet;
             switch (widget.getSelectionIndex())
             {
               case 0:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  break;
@@ -3681,9 +3938,10 @@ class TabRestore
               default: storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               break;
 
             }
-            updateStorageThread.triggerUpdate(storageIndexStateSet);
+            updateStorageThread.triggerUpdateIndexStateSet(storageIndexStateSet);
           }
         });
+        updateStorageThread.triggerUpdateIndexStateSet(INDEX_STATE_SET_ALL);
 
         label = Widgets.newLabel(composite,BARControl.tr("Max")+":");
         Widgets.layout(label,0,5,TableLayoutData.W);
@@ -3701,10 +3959,18 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
-            storageMaxCount = Integer.parseInt(widget.getText());
-            updateStorageThread.triggerUpdate(storageMaxCount);
+            try
+            {
+              int storageMaxCount = Integer.parseInt(widget.getText());
+              updateStorageThread.triggerUpdateStorageMaxCount(storageMaxCount);
+            }
+            catch (NumberFormatException exception)
+            {
+              // ignored
+            }
           }
         });
+        updateStorageThread.triggerUpdateStorageMaxCount(100);
 
         button = Widgets.newButton(composite,BARControl.tr("Restore"));
         button.setToolTipText(BARControl.tr("Start restoring selected archives."));
@@ -3889,7 +4155,7 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryTableToolTip,entryData.type.toString());
+            label = Widgets.newLabel(widgetEntryTableToolTip,entryData.entryType.toString());
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,1,TableLayoutData.WE);
@@ -3932,6 +4198,13 @@ class TabRestore
           }
         }
       });
+      Widgets.addEventListener(new WidgetEventListener(widgetEntryTable,checkedStorageEvent)
+      {
+        public void trigger(Control control)
+        {
+          updateEntryListThread.triggerUpdate();
+        }
+      });
 
       menu = Widgets.newPopupMenu(shell);
       {
@@ -3969,7 +4242,7 @@ class TabRestore
         {
           public void trigger(MenuItem menuItem)
           {
-            menuItem.setEnabled(checkEntriesChecked());
+            menuItem.setEnabled(isSomeEntryChecked());
           }
         });
         menuItem.addSelectionListener(new SelectionListener()
@@ -3989,7 +4262,7 @@ class TabRestore
       }
       widgetEntryTable.setMenu(menu);
 
-      // entry list filter
+      // entry list filters
       composite = Widgets.newComposite(group);
       composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0}));
       Widgets.layout(composite,2,0,TableLayoutData.WE);
@@ -4001,7 +4274,7 @@ class TabRestore
           public void trigger(Control control)
           {
             Button button = (Button)control;
-            if (checkEntriesChecked())
+            if (isSomeEntryChecked())
             {
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
@@ -4021,7 +4294,7 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
-            if (checkEntriesChecked())
+            if (isSomeEntryChecked())
             {
               setCheckedEntries(false);
               button.setImage(IMAGE_MARK_ALL);
@@ -4091,8 +4364,8 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
-            newestEntriesOnlyFlag = widget.getSelection();
-            updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
+            boolean newestEntriesOnlyFlag = widget.getSelection();
+            updateEntryListThread.triggerUpdateNewestEntriesOnly(newestEntriesOnlyFlag);
           }
         });
 
@@ -4112,10 +4385,18 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
-            entryMaxCount = Integer.parseInt(widget.getText());
-            updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
+            try
+            {
+              int entryMaxCount = Integer.parseInt(widget.getText());
+              updateEntryListThread.triggerUpdateEntryMaxCount(entryMaxCount);
+            }
+            catch (NumberFormatException exception)
+            {
+              // ignored
+            }
           }
         });
+        updateEntryListThread.triggerUpdateEntryMaxCount(100);
 
         button = Widgets.newButton(composite,BARControl.tr("Restore"));
         button.setToolTipText(BARControl.tr("Start restoring selected entries."));
@@ -4125,7 +4406,7 @@ class TabRestore
         {
           public void trigger(Control control)
           {
-            control.setEnabled(checkEntriesChecked());
+            control.setEnabled(isSomeEntryChecked());
           }
         });
         button.addSelectionListener(new SelectionListener()
@@ -4232,12 +4513,8 @@ class TabRestore
       Widgets.layout(widgetOverwriteEntries,1,3,TableLayoutData.W);
     }
 
-    // start storage list update thread
-    updateStorageThread = new UpdateStorageThread();
+    // start storage/entry update threads
     updateStorageThread.start();
-
-    // start entry list update thread
-    updateEntryListThread = new UpdateEntryListThread();
     updateEntryListThread.start();
   }
 
@@ -4297,10 +4574,10 @@ class TabRestore
     }
   }
 
-  /** set/clear tagging of all storage entries
+  /** set/clear checked all storage entries
    * @param checked true for set checked, false for clear checked
    */
-  private void setCheckedStorage(boolean checked)
+  private void setCheckedAllStorage(boolean checked)
   {
     // set checked
     switch (widgetStorageTabFolder.getSelectionIndex())
@@ -4339,7 +4616,7 @@ class TabRestore
         break;
     }
 
-    // update storage list
+    // update checked storage list
     updateCheckedStorageList();
 
     // trigger update checked
@@ -4855,19 +5132,11 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
     string = string.trim();
     if (string.length() > 0)
     {
-//      if ((storagePattern == null) || !storagePattern.equals(string))
-//      {
-//        storagePattern = string;
-        updateStorageThread.triggerUpdate(string,storageIndexStateSet,storageMaxCount);
-//      }
+      updateStorageThread.triggerUpdateStoragePattern(string);
     }
     else
     {
-//      if (storagePattern != null)
-//      {
-//        storagePattern = null;
-        updateStorageThread.triggerUpdate(null,storageIndexStateSet,storageMaxCount);
-//      }
+      updateStorageThread.triggerUpdateStoragePattern(null);
     }
   }
 
@@ -5700,33 +5969,33 @@ Dprintf.dprintf("");
   }
 
   /** get checked entries
-   * @return checked entries data
+   * @return checked data entries
    */
   private EntryData[] getCheckedEntries()
   {
     ArrayList<EntryData> entryDataArray = new ArrayList<EntryData>();
 
-    synchronized(entryDataMap)
+    for (TableItem tableItem : widgetEntryTable.getItems())
     {
-      for (EntryData entryData : entryDataMap.values())
+      if (tableItem.getChecked())
       {
-        if (entryData.isChecked()) entryDataArray.add(entryData);
+        entryDataArray.add((EntryData)tableItem.getData());
       }
     }
 
     return entryDataArray.toArray(new EntryData[entryDataArray.size()]);
   }
 
-  /** check if some entry is checked
+  /** check if some data entry is checked
    * @return tree iff some entry is checked
    */
-  private boolean checkEntriesChecked()
+  private boolean isSomeEntryChecked()
   {
-    synchronized(entryDataMap)
+    for (TableItem tableItem : widgetEntryTable.getItems())
     {
-      for (EntryData entryData : entryDataMap.values())
+      if (tableItem.getChecked())
       {
-        if (entryData.isChecked()) return true;
+        return true;
       }
     }
 
@@ -5764,9 +6033,10 @@ Dprintf.dprintf("");
     widgetEntryTable.removeAll();
     synchronized(entryDataMap)
     {
-      for (EntryData entryData : entryDataMap.values())
+      for (WeakReference<EntryData> entryDataR : entryDataMap.values())
       {
-        switch (entryData.type)
+        EntryData entryData = entryDataR.get();
+        switch (entryData.entryType)
         {
           case FILE:
             Widgets.insertTableItem(widgetEntryTable,
@@ -5866,19 +6136,11 @@ Dprintf.dprintf("");
     string = string.trim();
     if (string.length() > 0)
     {
-      if ((entryPattern == null) || !entryPattern.equals(string))
-      {
-        entryPattern = string.trim();
-        updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
-      }
+      updateEntryListThread.triggerUpdateEntryPattern(string);
     }
     else
     {
-      if (entryPattern != null)
-      {
-        entryPattern = null;
-        updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
-      }
+      updateEntryListThread.triggerUpdateEntryPattern(null);
     }
   }
 
