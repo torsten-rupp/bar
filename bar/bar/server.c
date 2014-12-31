@@ -602,6 +602,9 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_SPECIAL  ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
   CONFIG_STRUCT_VALUE_SELECT   ("archive-type",            ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
   CONFIG_STRUCT_VALUE_STRING   ("text",                    ScheduleNode,customText                         ),
+  CONFIG_STRUCT_VALUE_INTEGER  ("min-keep",                ScheduleNode,minKeep,                           0,MAX_UINT,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER  ("max-keep",                ScheduleNode,maxKeep,                           0,MAX_UINT,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER  ("max-age",                 ScheduleNode,maxAge,                            0,MAX_UINT,NULL),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("enabled",                 ScheduleNode,enabledFlag                        ),
   CONFIG_VALUE_END_SECTION(),
 
@@ -723,6 +726,9 @@ LOCAL ScheduleNode *newScheduleNode(void)
   scheduleNode->time.minute = -1;
   scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
   scheduleNode->customText  = String_new();
+  scheduleNode->minKeep     = 0;
+  scheduleNode->maxKeep     = 0;
+  scheduleNode->maxAge      = 0;
   scheduleNode->enabledFlag = FALSE;
 
   return scheduleNode;
@@ -760,6 +766,9 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
   scheduleNode->time.minute = fromScheduleNode->time.minute;
   scheduleNode->archiveType = fromScheduleNode->archiveType;
   scheduleNode->customText  = String_duplicate(fromScheduleNode->customText);
+  scheduleNode->minKeep     = fromScheduleNode->minKeep;
+  scheduleNode->maxKeep     = fromScheduleNode->maxKeep;
+  scheduleNode->maxAge      = fromScheduleNode->maxAge;
   scheduleNode->enabledFlag = fromScheduleNode->enabledFlag;
 
   return scheduleNode;
@@ -787,7 +796,7 @@ LOCAL void deleteScheduleNode(ScheduleNode *scheduleNode)
 * Purpose: compare schedule nodes if equals
 * Input  : scheduleNode1,scheduleNode2 - schedule nodes
 * Output : -
-* Return : 1 iff scheduleNode1 = scheduleNode2
+* Return : 1 iff scheduleNode1 = scheduleNode2, 0 otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -822,6 +831,21 @@ LOCAL int equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleNo
   }
 
   if      (!String_equals(scheduleNode1->customText,scheduleNode2->customText))
+  {
+    return 0;
+  }
+
+  if      (!scheduleNode1->minKeep == scheduleNode2->minKeep)
+  {
+    return 0;
+  }
+
+  if      (!scheduleNode1->maxKeep == scheduleNode2->maxKeep)
+  {
+    return 0;
+  }
+
+  if      (!scheduleNode1->maxAge == scheduleNode2->maxAge)
   {
     return 0;
   }
@@ -6736,6 +6760,9 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 *            time=<hour>|*:<minute>|* \
 *            archiveType=normal|full|incremental|differential
 *            customText=<text> \
+*            minKeep=<n>|0 \
+*            maxKeep=<n>|0 \
+*            maxAage=<n>|0 \
 *            enabledFlag=yes|no \
 *            ...
 \***********************************************************************/
@@ -6745,9 +6772,8 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
   uint          jobId;
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
-  String        line;
   ScheduleNode  *scheduleNode;
-  String        names;
+  String        date,weekDays,time;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6771,95 +6797,93 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
     }
 
     // send schedule list
-    line = String_new();
+    date     = String_new();
+    weekDays = String_new();
+    time     = String_new();
     LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
     {
-      String_clear(line);
-
-      String_appendCString(line,"date=");
+      // get date string
+      String_clear(date);
       if (scheduleNode->date.year != SCHEDULE_ANY)
       {
-        String_format(line,"%d",scheduleNode->date.year);
+        String_format(date,"%d",scheduleNode->date.year);
       }
       else
       {
-        String_appendCString(line,"*");
+        String_appendCString(date,"*");
       }
-      String_appendChar(line,'-');
+      String_appendChar(date,'-');
       if (scheduleNode->date.month != SCHEDULE_ANY)
       {
-        String_format(line,"%02d",scheduleNode->date.month);
+        String_format(date,"%02d",scheduleNode->date.month);
       }
       else
       {
-        String_appendCString(line,"*");
+        String_appendCString(date,"*");
       }
-      String_appendChar(line,'-');
+      String_appendChar(date,'-');
       if (scheduleNode->date.day != SCHEDULE_ANY)
       {
-        String_format(line,"%02d",scheduleNode->date.day);
+        String_format(date,"%02d",scheduleNode->date.day);
       }
       else
       {
-        String_appendCString(line,"*");
+        String_appendCString(date,"*");
       }
-      String_appendChar(line,' ');
 
-      String_appendCString(line,"weekDays=");
+      // get weekdays string
+      String_clear(weekDays);
       if (scheduleNode->weekDays != SCHEDULE_ANY_DAY)
       {
-        names = String_new();
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
-        String_append(line,names);
-        String_delete(names);
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_MON)) { String_joinCString(weekDays,"Mon",','); }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_TUE)) { String_joinCString(weekDays,"Tue",','); }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_WED)) { String_joinCString(weekDays,"Wed",','); }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_THU)) { String_joinCString(weekDays,"Thu",','); }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_FRI)) { String_joinCString(weekDays,"Fri",','); }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_SAT)) { String_joinCString(weekDays,"Sat",','); }
+        if (IN_SET(scheduleNode->weekDays,WEEKDAY_SUN)) { String_joinCString(weekDays,"Sun",','); }
       }
       else
       {
-        String_appendCString(line,"*");
+        String_appendCString(weekDays,"*");
       }
-      String_appendChar(line,' ');
 
-      String_appendCString(line,"time=");
+      // get time string
+      String_clear(time);
       if (scheduleNode->time.hour != SCHEDULE_ANY)
       {
-        String_format(line,"%02d",scheduleNode->time.hour);
+        String_format(time,"%02d",scheduleNode->time.hour);
       }
       else
       {
-        String_appendCString(line,"*");
+        String_appendCString(time,"*");
       }
-      String_appendChar(line,':');
+      String_appendChar(time,':');
       if (scheduleNode->time.minute != SCHEDULE_ANY)
       {
-        String_format(line,"%02d",scheduleNode->time.minute);
+        String_format(time,"%02d",scheduleNode->time.minute);
       }
       else
       {
-        String_appendCString(line,"*");
+        String_appendCString(time,"*");
       }
-      String_appendChar(line,' ');
-
-      String_appendCString(line,"archiveType=");
-      String_appendCString(line,archiveTypeToString(scheduleNode->archiveType,"*"));
-      String_appendChar(line,' ');
-
-      String_format(line,"customText=%'S",scheduleNode->customText);
-      String_appendChar(line,' ');
-
-      String_format(line,"enabledFlag=%y",scheduleNode->enabledFlag);
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "%S",
-                       line
+                       "date=%S weekDays=%S time=%S archiveType=%s customText=%'S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
+                       date,
+                       weekDays,
+                       time,
+                       archiveTypeToString(scheduleNode->archiveType,"*"),
+                       scheduleNode->customText,
+                       scheduleNode->minKeep,
+                       scheduleNode->maxKeep,
+                       scheduleNode->maxAge,
+                       scheduleNode->enabledFlag
                       );
     }
-    String_delete(line);
+    String_delete(time);
+    String_delete(weekDays);
+    String_delete(date);
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -6930,6 +6954,9 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, cons
 *            time=<hour>|*:<minute>|*
 *            archiveType=normal|full|incremental|differential
 *            customText=<text>
+*            minKeep=<n>|0
+*            maxKeep=<n>|0
+*            maxAage=<n>|0
 *            enabledFlag=yes|no
 *          Result:
 \***********************************************************************/
@@ -6943,6 +6970,8 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
   String        time;
   String        customText;
   ArchiveTypes  archiveType;
+  uint          minKeep,maxKeep;
+  uint          maxAge;
   bool          enabledFlag;
   SemaphoreLock semaphoreLock;
   ScheduleNode  *scheduleNode;
@@ -7004,6 +7033,36 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
   }
   customText = String_new();
   StringMap_getString(argumentMap,"customText",customText,NULL);
+  if (!StringMap_getUInt(argumentMap,"minKeep",&minKeep,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected minKeep=<n>");
+    String_delete(customText);
+    String_delete(time);
+    String_delete(weekDays);
+    String_delete(date);
+    String_delete(title);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"maxKeep",&maxKeep,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxKeep=<n>");
+    String_delete(customText);
+    String_delete(time);
+    String_delete(weekDays);
+    String_delete(date);
+    String_delete(title);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"maxAge",&maxAge,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxAge=<n>");
+    String_delete(customText);
+    String_delete(time);
+    String_delete(weekDays);
+    String_delete(date);
+    String_delete(title);
+    return;
+  }
   if (!StringMap_getBool(argumentMap,"enabledFlag",&enabledFlag,FALSE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected enabledFlag=yes|no");
@@ -7040,6 +7099,9 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
   }
   scheduleNode->archiveType = archiveType;
   String_set(scheduleNode->customText,customText);
+  scheduleNode->minKeep     = minKeep;
+  scheduleNode->maxKeep     = maxKeep;
+  scheduleNode->maxAge      = maxAge;
   scheduleNode->enabledFlag = enabledFlag;
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
