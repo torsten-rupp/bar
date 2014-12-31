@@ -147,6 +147,13 @@ ifeq ($(COMPRESS_NAMES),)
   else
     COMPRESS_NAMES += $(COMPRESS_NAMES_LZO) 
   endif
+  ifeq ($(COMPRESS_NAMES_LZ4),)
+    ifeq (@HAVE_LZ4@,1)
+      COMPRESS_NAMES += lz4-1 lz4-9
+    endif
+  else
+    COMPRESS_NAMES += $(COMPRESS_NAMES_LZ4) 
+  endif
 endif
 
 # supported crypt algorithms
@@ -651,6 +658,7 @@ TEST_FILES = \
   test/data/zero512k.dat \
   test/data/random1024.dat \
   test/data/random512k.dat \
+  test/data/zero-random512k.dat \
   test/data/zero.dat \
   test/data/readonly.dat \
   test/data/readonly512k.dat \
@@ -768,7 +776,7 @@ test1 test_basic: $(TEST_BAR)
           test_file_operations
 	@$(ECHO) "ok"
 
-test1-debug: $(TEST_BAR_DEBUG)
+test1-debug test_basic-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test1
 
 test2 test_compress: $(TEST_BAR)
@@ -797,7 +805,7 @@ test2 test_compress: $(TEST_BAR)
         done
 	@$(ECHO) "ok"
 
-test2-debug: $(TEST_BAR_DEBUG)
+test2-debug test_compress-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test2
 
 test_delta_compress: $(TEST_BAR)
@@ -855,7 +863,7 @@ test3 test_crypt: $(TEST_BAR)
         done
 	@$(ECHO) "ok"
 
-test3-debug: $(TEST_BAR_DEBUG)
+test3-debug test_crypt-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test3
 
 test4 test_asymmetric_crypt: $(TEST_BAR)
@@ -885,7 +893,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR)
         done
 	@$(ECHO) "ok"
 
-test4-debug: $(TEST_BAR_DEBUG)
+test4-debug test_asymmetric_crypt-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test4
 
 test5 test_split: $(TEST_BAR)
@@ -902,7 +910,7 @@ test5 test_split: $(TEST_BAR)
           test_file_operations
 	@$(ECHO) "ok"
 
-test5-debug: $(TEST_BAR_DEBUG)
+test5-debug test_split-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test5
 
 test6 test_image: $(TEST_BAR)
@@ -931,7 +939,7 @@ test6 test_image: $(TEST_BAR)
         done
 	@$(ECHO) "ok"
 
-test6-debug: $(TEST_BAR_DEBUG)
+test6-debug test_image-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test6
 
 test7 test_storage: $(TEST_BAR)
@@ -1010,7 +1018,7 @@ test7 test_storage: $(TEST_BAR)
           ;
 	@$(ECHO) "ok"
 
-test7-debug: $(TEST_BAR_DEBUG)
+test7-debug test_storage-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test7
 
 test8 test_dvd: $(TEST_BAR)
@@ -1023,7 +1031,7 @@ test8 test_dvd: $(TEST_BAR)
           ;
 	@$(ECHO) "ok"
 
-test8-debug: $(TEST_BAR_DEBUG)
+test8-debug test_dvd-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test8
 
 test_combined: $(TEST_BAR)
@@ -1141,6 +1149,16 @@ test/data/random1024.dat:
 test/data/random512k.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=512 2>/dev/null
+test/data/zero-random512k.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_RANDOM) bs=1k count=64 1>$@  2>/dev/null
+	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
+	$(DD) if=$(DEVICE_RANDOM) bs=1k count=64 1>>$@ 2>/dev/null
+	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
+	$(DD) if=$(DEVICE_RANDOM) bs=1k count=64 1>>$@ 2>/dev/null
+	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
+	$(DD) if=$(DEVICE_RANDOM) bs=1k count=64 1>>$@ 2>/dev/null
+	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
 test/data/zero.dat:
 	$(INSTALL) -d $(@D)
 	$(RMF) $0; touch $@
@@ -3103,10 +3121,11 @@ ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/bar/test
 	$(INSTALL) -d $(DIRECTORY)/bar/test/data
 	$(INSTALL) -m 664 test/data/zero.dat \
-                          test/data/zero512k.dat \
                           test/data/zero1024.dat \
-                          test/data/random512k.dat \
+                          test/data/zero512k.dat \
                           test/data/random1024.dat \
+                          test/data/random512k.dat \
+                          test/data/zero-random512k.dat \
                           test/data/smallfile.dat \
                           $(DIRECTORY)/bar/test/data
 else
