@@ -87,6 +87,24 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
   { "lzo3",     COMPRESS_ALGORITHM_LZO_3     },
   { "lzo4",     COMPRESS_ALGORITHM_LZO_4     },
   { "lzo5",     COMPRESS_ALGORITHM_LZO_5     },
+
+  { "lz4-0",    COMPRESS_ALGORITHM_LZ4_0     },
+  { "lz4-1",    COMPRESS_ALGORITHM_LZ4_1     },
+  { "lz4-2",    COMPRESS_ALGORITHM_LZ4_2     },
+  { "lz4-3",    COMPRESS_ALGORITHM_LZ4_3     },
+  { "lz4-4",    COMPRESS_ALGORITHM_LZ4_4     },
+  { "lz4-5",    COMPRESS_ALGORITHM_LZ4_5     },
+  { "lz4-6",    COMPRESS_ALGORITHM_LZ4_6     },
+  { "lz4-7",    COMPRESS_ALGORITHM_LZ4_7     },
+  { "lz4-8",    COMPRESS_ALGORITHM_LZ4_8     },
+  { "lz4-9",    COMPRESS_ALGORITHM_LZ4_9     },
+  { "lz4-10",   COMPRESS_ALGORITHM_LZ4_10    },
+  { "lz4-11",   COMPRESS_ALGORITHM_LZ4_11    },
+  { "lz4-12",   COMPRESS_ALGORITHM_LZ4_12    },
+  { "lz4-13",   COMPRESS_ALGORITHM_LZ4_13    },
+  { "lz4-14",   COMPRESS_ALGORITHM_LZ4_14    },
+  { "lz4-15",   COMPRESS_ALGORITHM_LZ4_15    },
+  { "lz4-16",   COMPRESS_ALGORITHM_LZ4_16    },
 };
 
 // size of compress buffers
@@ -106,6 +124,43 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : putUINT32
+* Purpose: put uint32 into buffer (big endian)
+* Input  : buffer - buffer
+*          n      - value
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE void putUINT32(byte *buffer, uint32 n)
+{
+  buffer[0] = (n & 0xFF000000) >> 24;
+  buffer[1] = (n & 0x00FF0000) >> 16;
+  buffer[2] = (n & 0x0000FF00) >>  8;
+  buffer[3] = (n & 0x000000FF) >>  0;
+}
+
+/***********************************************************************\
+* Name   : getUINT32
+* Purpose: get uint32 from buffer (big endian)
+* Input  : buffer - buffer
+* Output : -
+* Return : value
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE uint32 getUINT32(byte *buffer)
+{
+  assert(buffer != NULL);
+
+  return   ((uint32)buffer[0] << 24)
+         | ((uint32)buffer[1] << 16)
+         | ((uint32)buffer[2] <<  8)
+         | ((uint32)buffer[3] <<  0);
+}
+
 #ifdef HAVE_Z
   #include "compress_zip.c"
 #endif /* HAVE_Z */
@@ -118,6 +173,9 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
 #ifdef HAVE_LZO
   #include "compress_lzo.c"
 #endif /* HAVE_LZO */
+#ifdef HAVE_LZ4
+  #include "compress_lz4.c"
+#endif /* HAVE_LZ4 */
 #ifdef HAVE_XDELTA3
   #include "compress_xd3.c"
 #endif /* HAVE_XDELTA3 */
@@ -245,6 +303,30 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #else /* not HAVE_LZO */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
+      break;
+    case COMPRESS_ALGORITHM_LZ4_0:
+    case COMPRESS_ALGORITHM_LZ4_1:
+    case COMPRESS_ALGORITHM_LZ4_2:
+    case COMPRESS_ALGORITHM_LZ4_3:
+    case COMPRESS_ALGORITHM_LZ4_4:
+    case COMPRESS_ALGORITHM_LZ4_5:
+    case COMPRESS_ALGORITHM_LZ4_6:
+    case COMPRESS_ALGORITHM_LZ4_7:
+    case COMPRESS_ALGORITHM_LZ4_8:
+    case COMPRESS_ALGORITHM_LZ4_9:
+    case COMPRESS_ALGORITHM_LZ4_10:
+    case COMPRESS_ALGORITHM_LZ4_11:
+    case COMPRESS_ALGORITHM_LZ4_12:
+    case COMPRESS_ALGORITHM_LZ4_13:
+    case COMPRESS_ALGORITHM_LZ4_14:
+    case COMPRESS_ALGORITHM_LZ4_15:
+    case COMPRESS_ALGORITHM_LZ4_16:
+      // compress with lz4
+      #ifdef HAVE_LZ4
+        error = CompressLZ4_compressData(compressInfo);
+      #else /* not HAVE_LZ4 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZ4 */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
@@ -397,6 +479,30 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       #else /* not HAVE_LZO */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
+      break;
+    case COMPRESS_ALGORITHM_LZ4_0:
+    case COMPRESS_ALGORITHM_LZ4_1:
+    case COMPRESS_ALGORITHM_LZ4_2:
+    case COMPRESS_ALGORITHM_LZ4_3:
+    case COMPRESS_ALGORITHM_LZ4_4:
+    case COMPRESS_ALGORITHM_LZ4_5:
+    case COMPRESS_ALGORITHM_LZ4_6:
+    case COMPRESS_ALGORITHM_LZ4_7:
+    case COMPRESS_ALGORITHM_LZ4_8:
+    case COMPRESS_ALGORITHM_LZ4_9:
+    case COMPRESS_ALGORITHM_LZ4_10:
+    case COMPRESS_ALGORITHM_LZ4_11:
+    case COMPRESS_ALGORITHM_LZ4_12:
+    case COMPRESS_ALGORITHM_LZ4_13:
+    case COMPRESS_ALGORITHM_LZ4_14:
+    case COMPRESS_ALGORITHM_LZ4_15:
+    case COMPRESS_ALGORITHM_LZ4_16:
+      // decompress with lz4
+      #ifdef HAVE_LZ4
+        error = CompressLZ4_decompressData(compressInfo);
+      #else /* not HAVE_LZ4 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZ4 */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
@@ -610,6 +716,29 @@ bool Compress_isValidAlgorithm(uint16 n)
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
       break;
+    case COMPRESS_ALGORITHM_LZ4_0:
+    case COMPRESS_ALGORITHM_LZ4_1:
+    case COMPRESS_ALGORITHM_LZ4_2:
+    case COMPRESS_ALGORITHM_LZ4_3:
+    case COMPRESS_ALGORITHM_LZ4_4:
+    case COMPRESS_ALGORITHM_LZ4_5:
+    case COMPRESS_ALGORITHM_LZ4_6:
+    case COMPRESS_ALGORITHM_LZ4_7:
+    case COMPRESS_ALGORITHM_LZ4_8:
+    case COMPRESS_ALGORITHM_LZ4_9:
+    case COMPRESS_ALGORITHM_LZ4_10:
+    case COMPRESS_ALGORITHM_LZ4_11:
+    case COMPRESS_ALGORITHM_LZ4_12:
+    case COMPRESS_ALGORITHM_LZ4_13:
+    case COMPRESS_ALGORITHM_LZ4_14:
+    case COMPRESS_ALGORITHM_LZ4_15:
+    case COMPRESS_ALGORITHM_LZ4_16:
+      #ifdef HAVE_LZ4
+        error = CompressLZ4_init(compressInfo,compressMode,compressAlgorithm);
+      #else /* not HAVE_LZ4 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZ4 */
+      break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
     case COMPRESS_ALGORITHM_XDELTA_3:
@@ -717,6 +846,28 @@ bool Compress_isValidAlgorithm(uint16 n)
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
       break;
+    case COMPRESS_ALGORITHM_LZ4_0:
+    case COMPRESS_ALGORITHM_LZ4_1:
+    case COMPRESS_ALGORITHM_LZ4_2:
+    case COMPRESS_ALGORITHM_LZ4_3:
+    case COMPRESS_ALGORITHM_LZ4_4:
+    case COMPRESS_ALGORITHM_LZ4_5:
+    case COMPRESS_ALGORITHM_LZ4_6:
+    case COMPRESS_ALGORITHM_LZ4_7:
+    case COMPRESS_ALGORITHM_LZ4_8:
+    case COMPRESS_ALGORITHM_LZ4_9:
+    case COMPRESS_ALGORITHM_LZ4_10:
+    case COMPRESS_ALGORITHM_LZ4_11:
+    case COMPRESS_ALGORITHM_LZ4_12:
+    case COMPRESS_ALGORITHM_LZ4_13:
+    case COMPRESS_ALGORITHM_LZ4_14:
+    case COMPRESS_ALGORITHM_LZ4_15:
+    case COMPRESS_ALGORITHM_LZ4_16:
+      #ifdef HAVE_LZ4
+        CompressLZ4_done(compressInfo);
+      #else /* not HAVE_LZ4 */
+      #endif /* HAVE_LZ4 */
+      break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
     case COMPRESS_ALGORITHM_XDELTA_3:
@@ -818,6 +969,29 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #else /* not HAVE_LZO */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
+      break;
+    case COMPRESS_ALGORITHM_LZ4_0:
+    case COMPRESS_ALGORITHM_LZ4_1:
+    case COMPRESS_ALGORITHM_LZ4_2:
+    case COMPRESS_ALGORITHM_LZ4_3:
+    case COMPRESS_ALGORITHM_LZ4_4:
+    case COMPRESS_ALGORITHM_LZ4_5:
+    case COMPRESS_ALGORITHM_LZ4_6:
+    case COMPRESS_ALGORITHM_LZ4_7:
+    case COMPRESS_ALGORITHM_LZ4_8:
+    case COMPRESS_ALGORITHM_LZ4_9:
+    case COMPRESS_ALGORITHM_LZ4_10:
+    case COMPRESS_ALGORITHM_LZ4_11:
+    case COMPRESS_ALGORITHM_LZ4_12:
+    case COMPRESS_ALGORITHM_LZ4_13:
+    case COMPRESS_ALGORITHM_LZ4_14:
+    case COMPRESS_ALGORITHM_LZ4_15:
+    case COMPRESS_ALGORITHM_LZ4_16:
+      #ifdef HAVE_LZ4
+        error = CompressLZ4_reset(compressInfo);
+      #else /* not HAVE_LZ4 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_LZ4 */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
@@ -1035,6 +1209,29 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo)
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
       break;
+    case COMPRESS_ALGORITHM_LZ4_0:
+    case COMPRESS_ALGORITHM_LZ4_1:
+    case COMPRESS_ALGORITHM_LZ4_2:
+    case COMPRESS_ALGORITHM_LZ4_3:
+    case COMPRESS_ALGORITHM_LZ4_4:
+    case COMPRESS_ALGORITHM_LZ4_5:
+    case COMPRESS_ALGORITHM_LZ4_6:
+    case COMPRESS_ALGORITHM_LZ4_7:
+    case COMPRESS_ALGORITHM_LZ4_8:
+    case COMPRESS_ALGORITHM_LZ4_9:
+    case COMPRESS_ALGORITHM_LZ4_10:
+    case COMPRESS_ALGORITHM_LZ4_11:
+    case COMPRESS_ALGORITHM_LZ4_12:
+    case COMPRESS_ALGORITHM_LZ4_13:
+    case COMPRESS_ALGORITHM_LZ4_14:
+    case COMPRESS_ALGORITHM_LZ4_15:
+    case COMPRESS_ALGORITHM_LZ4_16:
+      #ifdef HAVE_LZ4
+        length = CompressLZ4_getInputLength(compressInfo);
+      #else /* not HAVE_LZ4 */
+        length = 0LL;
+      #endif /* HAVE_LZ4 */
+      break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
     case COMPRESS_ALGORITHM_XDELTA_3:
@@ -1128,6 +1325,29 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo)
       #else /* not HAVE_LZO */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
+      break;
+    case COMPRESS_ALGORITHM_LZ4_0:
+    case COMPRESS_ALGORITHM_LZ4_1:
+    case COMPRESS_ALGORITHM_LZ4_2:
+    case COMPRESS_ALGORITHM_LZ4_3:
+    case COMPRESS_ALGORITHM_LZ4_4:
+    case COMPRESS_ALGORITHM_LZ4_5:
+    case COMPRESS_ALGORITHM_LZ4_6:
+    case COMPRESS_ALGORITHM_LZ4_7:
+    case COMPRESS_ALGORITHM_LZ4_8:
+    case COMPRESS_ALGORITHM_LZ4_9:
+    case COMPRESS_ALGORITHM_LZ4_10:
+    case COMPRESS_ALGORITHM_LZ4_11:
+    case COMPRESS_ALGORITHM_LZ4_12:
+    case COMPRESS_ALGORITHM_LZ4_13:
+    case COMPRESS_ALGORITHM_LZ4_14:
+    case COMPRESS_ALGORITHM_LZ4_15:
+    case COMPRESS_ALGORITHM_LZ4_16:
+      #ifdef HAVE_LZ4
+        length = CompressLZ4_getOutputLength(compressInfo);
+      #else /* not HAVE_LZ4 */
+        length = 0LL;
+      #endif /* HAVE_LZ4 */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:

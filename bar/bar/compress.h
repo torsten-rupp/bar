@@ -26,6 +26,10 @@
 #ifdef HAVE_LZO
   #include <lzo/lzo1x.h>
 #endif /* HAVE_LZO */
+#ifdef HAVE_LZ4
+  #include <lz4.h>
+  #include <lz4hc.h>
+#endif /* HAVE_LZ4 */
 #ifdef HAVE_XDELTA3
   #include "xdelta3.h"
 #endif /* HAVE_XDELTA */
@@ -106,6 +110,24 @@ typedef enum
   COMPRESS_ALGORITHM_LZO_4    = CHUNK_CONST_COMPRESS_ALGORITHM_LZO1X_1,
   COMPRESS_ALGORITHM_LZO_5    = CHUNK_CONST_COMPRESS_ALGORITHM_LZO1X_1_999,
 
+  COMPRESS_ALGORITHM_LZ4_0    = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_0,
+  COMPRESS_ALGORITHM_LZ4_1    = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_1,
+  COMPRESS_ALGORITHM_LZ4_2    = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_2,
+  COMPRESS_ALGORITHM_LZ4_3    = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_3,
+  COMPRESS_ALGORITHM_LZ4_4    = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_4,
+  COMPRESS_ALGORITHM_LZ4_5    = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_5,
+  COMPRESS_ALGORITHM_LZ4_6    = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_6,
+  COMPRESS_ALGORITHM_LZ4_7    = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_7,
+  COMPRESS_ALGORITHM_LZ4_8    = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_8,
+  COMPRESS_ALGORITHM_LZ4_9    = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_9,
+  COMPRESS_ALGORITHM_LZ4_10   = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_10,
+  COMPRESS_ALGORITHM_LZ4_11   = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_11,
+  COMPRESS_ALGORITHM_LZ4_12   = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_12,
+  COMPRESS_ALGORITHM_LZ4_13   = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_13,
+  COMPRESS_ALGORITHM_LZ4_14   = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_14,
+  COMPRESS_ALGORITHM_LZ4_15   = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_15,
+  COMPRESS_ALGORITHM_LZ4_16   = CHUNK_CONST_COMPRESS_ALGORITHM_LZ4_16,
+
   COMPRESS_ALGORITHM_UNKNOWN = 0xFFFF,
 } CompressAlgorithms;
 
@@ -155,20 +177,20 @@ typedef struct
     #ifdef HAVE_LZO
       struct
       {
-        int(*compressFunction)(const lzo_bytep src,
-                               lzo_uint        src_len,
-                               lzo_bytep       dst,
-                               lzo_uintp       dst_len,
-                               lzo_voidp       wrkmem
+        int(*compressFunction)(const lzo_bytep inputBuffer,
+                               lzo_uint        inputBufferLength,
+                               lzo_bytep       outputBuffer,
+                               lzo_uintp       outputBufferLength,
+                               lzo_voidp       workingMemory
                               );
-        int(*decompressFunction)(const lzo_bytep src,
-                                 lzo_uint        src_len,
-                                 lzo_bytep       dst,
-                                 lzo_uintp       dst_len,
-                                 lzo_voidp       wrkmem
+        int(*decompressFunction)(const lzo_bytep inputBuffer,
+                                 lzo_uint        inputBufferLength,
+                                 lzo_bytep       outputBuffer,
+                                 lzo_uintp       outputBufferLength,
+                                 lzo_voidp       workingMemory
                                 );
         byte      *inputBuffer;
-        uint      inputBufferIndex;
+//        uint      inputBufferIndex;
         uint      inputBufferLength;
         byte      *outputBuffer;
         uint      outputBufferIndex;
@@ -179,6 +201,29 @@ typedef struct
         uint64    totalOutputLength;            // total output length [bytes]
       } lzo;
     #endif /* HAVE_LZO */
+    #ifdef HAVE_LZ4
+      struct
+      {
+        CompressModes compressMode;
+        uint          compressionLevel;         // used compression level
+        union
+        {
+          LZ4_stream_t *compress;
+          LZ4_streamHC_t *compressHC;
+          LZ4_streamDecode_t *decompress;
+        } stream;
+        byte          *inputBuffer;
+        uint          inputBufferIndex;
+        uint          inputBufferLength;
+        uint          inputBufferSize;
+        byte          *outputBuffer;
+        uint          outputBufferIndex;
+        uint          outputBufferLength;
+        uint          outputBufferSize;
+        uint64        totalInputLength;         // total input length [bytes]
+        uint64        totalOutputLength;        // total output length [bytes]
+      } lz4;
+    #endif /* HAVE_LZ4 */
     #ifdef HAVE_XDELTA
       struct
       {
