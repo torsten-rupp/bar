@@ -78,6 +78,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
@@ -759,6 +760,8 @@ class TabJobs
     int     hour,minute;
     String  archiveType;
     String  customText;
+    int     minKeep,maxKeep;
+    int     maxAge;
     boolean enabled;
 
     /** create schedule data
@@ -770,9 +773,12 @@ class TabJobs
      * @param minute minute
      * @param archiveType archive type string
      * @param customText custom text
+     * @param minKeep min. number of archives to keep
+     * @param maxKeep max. number of archives to keep
+     * @param maxAge max. age to keep archives [days]
      * @param enabled enabled state
      */
-    ScheduleData(int year, int month, int day, int weekDays, int hour, int minute, String archiveType, String customText, boolean enabled)
+    ScheduleData(int year, int month, int day, int weekDays, int hour, int minute, String archiveType, String customText, int minKeep, int maxKeep, int maxAge, boolean enabled)
     {
       this.year        = year;
       this.month       = month;
@@ -782,6 +788,9 @@ class TabJobs
       this.minute      = minute;
       this.archiveType = archiveType;
       this.customText  = customText;
+      this.minKeep     = minKeep;
+      this.maxKeep     = maxKeep;
+      this.maxAge      = maxAge;
       this.enabled     = enabled;
     }
 
@@ -789,7 +798,7 @@ class TabJobs
      */
     ScheduleData()
     {
-      this(ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,"*","",true);
+      this(ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,"*","",0,0,0,true);
     }
 
     /** create schedule data
@@ -799,13 +808,16 @@ class TabJobs
      * @param archiveType archive type string
      * @param enabled enabled state
      */
-    ScheduleData(String date, String weekDays, String time, String archiveType, String customText, boolean enabled)
+    ScheduleData(String date, String weekDays, String time, String archiveType, String customText, int minKeep, int maxKeep, int maxAge, boolean enabled)
     {
       setDate(date);
       setWeekDays(weekDays);
       setTime(time);
       this.archiveType = getValidString(archiveType,new String[]{"*","full","incremental","differential"},"*");
       this.customText  = customText;
+      this.minKeep     = minKeep;
+      this.maxKeep     = maxKeep;
+      this.maxAge      = maxAge;
       this.enabled     = enabled;
     }
 
@@ -822,6 +834,9 @@ class TabJobs
                               minute,
                               archiveType,
                               customText,
+                              minKeep,
+                              maxKeep,
+                              maxAge,
                               enabled
                              );
     }
@@ -1001,6 +1016,9 @@ class TabJobs
       this.day = !day.equals("*") ? Integer.parseInt(day) : ANY;
     }
 
+    /** set date
+     * @param date date string
+     */
     private void setDate(String date)
     {
       String[] parts = date.split("-");
@@ -1084,6 +1102,9 @@ class TabJobs
       this.minute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
     }
 
+    /** set time
+     * @param time time string
+     */
     void setTime(String time)
     {
       String[] parts = time.split(":");
@@ -1106,6 +1127,54 @@ class TabJobs
             );
 
       return (weekDays == ScheduleData.ANY) || ((weekDays & (1 << weekDay)) != 0);
+    }
+
+    /** get min. number of archives to keep
+     * @return min. number of archives to keep
+     */
+    int getMinKeep()
+    {
+      return minKeep;
+    }
+
+    /** set min. number of archives to keep
+     * @param minKeep min. number of archives to keep
+     */
+    void setMinKeep(int minKeep)
+    {
+      this.minKeep = minKeep;
+    }
+
+    /** get max. number of archives to keep
+     * @return max. number of archives to keep
+     */
+    int getMaxKeep()
+    {
+      return minKeep;
+    }
+
+    /** get max. number of archives to keep
+     * @return max. number of archives to keep
+     */
+    void setMaxKeep(int maxKeep)
+    {
+      this.maxKeep = maxKeep;
+    }
+
+    /** get max. age to keep archives
+     * @return number of days to keep archives
+     */
+    int getMaxAge()
+    {
+      return maxAge;
+    }
+
+    /** get max. age to keep archives
+     * @return number of days to keep archives
+     */
+    void getMaxAge(int maxAge)
+    {
+      this.maxAge = maxAge;
     }
 
     /** check if enabled
@@ -9366,9 +9435,12 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
           String  time        = resultMap.getString ("time"       );
           String  archiveType = resultMap.getString ("archiveType");
           String  customText  = resultMap.getString ("customText" );
+          int     minKeep     = resultMap.getInt    ("minKeep"    );
+          int     maxKeep     = resultMap.getInt    ("maxKeep"    );
+          int     maxAge      = resultMap.getInt    ("maxAge"     );
           boolean enabled     = resultMap.getBoolean("enabledFlag");
 
-          ScheduleData scheduleData = new ScheduleData(date,weekDays,time,archiveType,customText,enabled);
+          ScheduleData scheduleData = new ScheduleData(date,weekDays,time,archiveType,customText,minKeep,maxKeep,maxAge,enabled);
 
           scheduleList.add(scheduleData);
           TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
@@ -9415,6 +9487,8 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
     final Combo    widgetHour,widgetMinute;
     final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential;
     final Text     widgetCustomText;
+    final Spinner  widgetMinKeep,widgetMaxKeep;
+    final Spinner  widgetMaxAge;
     final Button   widgetEnabled;
     final Button   widgetAdd;
     composite = Widgets.newComposite(dialog,SWT.NONE);
@@ -9565,11 +9639,51 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
       widgetCustomText.setText(scheduleData.customText);
       Widgets.layout(widgetCustomText,4,1,TableLayoutData.WE);
 
-      label = Widgets.newLabel(composite,BARControl.tr("Options")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Keep")+":");
       Widgets.layout(label,5,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,5,1,TableLayoutData.WE);
+      {
+        label = Widgets.newLabel(subComposite,BARControl.tr("min.")+":");
+        Widgets.layout(label,0,0,TableLayoutData.W);
+
+        widgetMinKeep = Widgets.newSpinner(subComposite);
+        widgetMinKeep.setToolTipText(BARControl.tr("Min. number of archives to keep."));
+        widgetMinKeep.setMinimum(0);
+        widgetMinKeep.setMaximum(65536);
+        widgetMinKeep.setSelection(scheduleData.minKeep);
+        Widgets.layout(widgetMinKeep,0,1,TableLayoutData.W);
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("min.")+":");
+        Widgets.layout(label,0,2,TableLayoutData.W);
+
+        widgetMaxKeep = Widgets.newSpinner(subComposite);
+        widgetMaxKeep.setToolTipText(BARControl.tr("Min. number of archives to keep."));
+        widgetMaxKeep.setMinimum(0);
+        widgetMaxKeep.setMaximum(65536);
+        widgetMaxKeep.setSelection(scheduleData.maxKeep);
+        Widgets.layout(widgetMaxKeep,0,3,TableLayoutData.W);
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":");
+        Widgets.layout(label,0,4,TableLayoutData.W);
+
+        widgetMaxAge = Widgets.newSpinner(subComposite);
+        widgetMaxAge.setToolTipText(BARControl.tr("Min. number of archives to keep."));
+        widgetMaxAge.setMinimum(0);
+        widgetMaxAge.setMaximum(65536);
+        widgetMaxAge.setSelection(scheduleData.maxAge);
+        Widgets.layout(widgetMaxAge,0,5,TableLayoutData.W);
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("days")+":");
+        Widgets.layout(label,0,6,TableLayoutData.W);
+      }
+
+      label = Widgets.newLabel(composite,BARControl.tr("Options")+":");
+      Widgets.layout(label,7,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      Widgets.layout(subComposite,7,1,TableLayoutData.WE);
       {
         widgetEnabled = Widgets.newCheckbox(subComposite,BARControl.tr("enabled"));
         Widgets.layout(widgetEnabled,0,0,TableLayoutData.W);
@@ -9638,6 +9752,9 @@ throw new Error("NYI");
         else if (widgetTypeDifferential.getSelection()) scheduleData.archiveType = "differential";
         else                                            scheduleData.archiveType = "*";
         scheduleData.customText = widgetCustomText.getText();
+        scheduleData.minKeep    = widgetMinKeep.getSelection();
+        scheduleData.maxKeep    = widgetMaxKeep.getSelection();
+        scheduleData.maxAge     = widgetMaxAge.getSelection();
         scheduleData.enabled    = widgetEnabled.getSelection();
 
         Dialogs.close(dialog,true);
@@ -9658,13 +9775,16 @@ throw new Error("NYI");
     {
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-      BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S enabledFlag=%y",
+      BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
                                                    selectedJobId,
                                                    scheduleData.getDate(),
                                                    scheduleData.getWeekDays(),
                                                    scheduleData.getTime(),
                                                    scheduleData.archiveType,
                                                    scheduleData.customText,
+                                                   scheduleData.minKeep,
+                                                   scheduleData.maxKeep,
+                                                   scheduleData.maxAge,
                                                    scheduleData.enabled
                                                   ),
                                0,
@@ -9712,13 +9832,16 @@ throw new Error("NYI");
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),0,resultErrorMessage);
         for (ScheduleData scheduleData_ : scheduleList)
         {
-          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S enabledFlag=%y",
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
                                                        selectedJobId,
                                                        scheduleData_.getDate(),
                                                        scheduleData_.getWeekDays(),
                                                        scheduleData_.getTime(),
                                                        scheduleData_.archiveType,
                                                        scheduleData_.customText,
+                                                       scheduleData_.minKeep,
+                                                       scheduleData_.maxKeep,
+                                                       scheduleData_.maxAge,
                                                        scheduleData_.enabled
                                                       ),
                                    0,
@@ -9757,13 +9880,16 @@ throw new Error("NYI");
 
 // TODO result
         String[] resultErrorMessage = new String[1];
-        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S enabledFlag=%y",
+        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
                                                      selectedJobId,
                                                      newScheduleData.getDate(),
                                                      newScheduleData.getWeekDays(),
                                                      newScheduleData.getTime(),
                                                      newScheduleData.archiveType,
                                                      newScheduleData.customText,
+                                                     newScheduleData.minKeep,
+                                                     newScheduleData.maxKeep,
+                                                     newScheduleData.maxAge,
                                                      newScheduleData.enabled
                                                     ),
                                  0,
@@ -9797,13 +9923,16 @@ throw new Error("NYI");
           BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),0,resultErrorMessage);
           for (ScheduleData scheduleData_ : scheduleList)
           {
-            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S enabledFlag=%y",
+            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
                                                          selectedJobId,
                                                          scheduleData_.getDate(),
                                                          scheduleData_.getWeekDays(),
                                                          scheduleData_.getTime(),
                                                          scheduleData_.archiveType,
                                                          scheduleData_.customText,
+                                                         scheduleData_.minKeep,
+                                                         scheduleData_.maxKeep,
+                                                         scheduleData_.maxAge,
                                                          scheduleData_.enabled
                                                         ),
                                      0,
