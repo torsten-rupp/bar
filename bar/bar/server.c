@@ -474,16 +474,23 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
   #endif /* HAVE_LZO */
 
   #ifdef HAVE_LZ4
-    {"lz4-0",COMPRESS_ALGORITHM_LZ4_0},
-    {"lz4-1",COMPRESS_ALGORITHM_LZ4_1},
-    {"lz4-2",COMPRESS_ALGORITHM_LZ4_2},
-    {"lz4-3",COMPRESS_ALGORITHM_LZ4_3},
-    {"lz4-4",COMPRESS_ALGORITHM_LZ4_4},
-    {"lz4-5",COMPRESS_ALGORITHM_LZ4_5},
-    {"lz4-6",COMPRESS_ALGORITHM_LZ4_6},
-    {"lz4-7",COMPRESS_ALGORITHM_LZ4_7},
-    {"lz4-8",COMPRESS_ALGORITHM_LZ4_8},
-    {"lz4-9",COMPRESS_ALGORITHM_LZ4_9},
+    {"lz4-0", COMPRESS_ALGORITHM_LZ4_0 },
+    {"lz4-1", COMPRESS_ALGORITHM_LZ4_1 },
+    {"lz4-2", COMPRESS_ALGORITHM_LZ4_2 },
+    {"lz4-3", COMPRESS_ALGORITHM_LZ4_3 },
+    {"lz4-4", COMPRESS_ALGORITHM_LZ4_4 },
+    {"lz4-5", COMPRESS_ALGORITHM_LZ4_5 },
+    {"lz4-6", COMPRESS_ALGORITHM_LZ4_6 },
+    {"lz4-7", COMPRESS_ALGORITHM_LZ4_7 },
+    {"lz4-8", COMPRESS_ALGORITHM_LZ4_8 },
+    {"lz4-9", COMPRESS_ALGORITHM_LZ4_9 },
+    {"lz4-10",COMPRESS_ALGORITHM_LZ4_10},
+    {"lz4-11",COMPRESS_ALGORITHM_LZ4_11},
+    {"lz4-12",COMPRESS_ALGORITHM_LZ4_12},
+    {"lz4-13",COMPRESS_ALGORITHM_LZ4_13},
+    {"lz4-14",COMPRESS_ALGORITHM_LZ4_14},
+    {"lz4-15",COMPRESS_ALGORITHM_LZ4_15},
+    {"lz4-16",COMPRESS_ALGORITHM_LZ4_16},
   #endif /* HAVE_LZO */
 
   #ifdef HAVE_XDELTA3
@@ -3230,7 +3237,6 @@ LOCAL void indexThreadCode(void)
 
   // clean-up index
   indexCleanup();
-//__BP();
 
   // add/update index database
   while (!quitFlag)
@@ -3256,7 +3262,6 @@ LOCAL void indexThreadCode(void)
     }
 
     // update index entries
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     while (   Index_findByState(indexDatabaseHandle,
                                 INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                                 &storageId,
@@ -3272,10 +3277,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       {
         Misc_udelay(500L*1000L);
       }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
       // parse storage name
-fprintf(stderr,"%s, %d: storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
       error = Storage_parseName(&storageSpecifier,storageName);
       if (error == ERROR_NONE)
       {
@@ -3285,7 +3288,7 @@ fprintf(stderr,"%s, %d: storageName=%s\n",__FILE__,__LINE__,String_cString(stora
       {
         String_set(printableStorageName,storageName);
       }
-fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(storageSpecifier.fileName));
+//fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(storageSpecifier.fileName));
 
       // init storage
       initJobOptions(&jobOptions);
@@ -3343,7 +3346,6 @@ fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(storageS
                        "Cannot initialise storage (error: %s)",
                        Error_getText(error)
                       );
-exit(1);
       }
       doneJobOptions(&jobOptions);
 
@@ -8951,7 +8953,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>|0
+*            jobId=<id>|*
 *            pattern=<pattern>
 *            maxCount=<n>|0
 *            indexState=<state>|*
@@ -8983,6 +8985,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   StorageSpecifier storageSpecifier;
   String           storageName;
   String           printableStorageName;
+  uint             count;
   String           errorMessage;
   DatabaseId       storageId;
   String           uuid;
@@ -9069,8 +9072,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     String_delete(pattern);
     return;
   }
-  n = 0L;
-  while (   ((maxCount == 0) || (n < maxCount))
+  count = 0;
+  while (   ((maxCount == 0) || (count < maxCount))
          && !isCommandAborted(clientInfo,id)
          && Index_getNextStorage(&indexQueryHandle,
                                  &storageId,
@@ -9110,7 +9113,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                      lastCheckedDateTime,
                      errorMessage
                     );
-    n++;
+    count++;
   }
   Index_doneList(&indexQueryHandle);
 
@@ -9677,7 +9680,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
 * Return : -
 * Notes  : Arguments:
 *            checkedStorageOnlyFlag=0|1
-*            entryMaxCount=<n>
+*            entryMaxCount=<n>|0
 *            newestEntriesOnlyFlag=0|1
 *            entryPattern=<pattern>
 *          Result:
@@ -10069,7 +10072,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   name         = String_new();
 
   // collect index data
-  if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
     if (checkedStorageOnlyFlag)
     {
@@ -10099,7 +10102,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       String_delete(entryPattern);
       return;
     }
-    while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+    while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextFile(&indexQueryHandle,
                                 &databaseId,
@@ -10150,7 +10153,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     Index_doneList(&indexQueryHandle);
   }
 
-  if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
     if (checkedStorageOnlyFlag)
     {
@@ -10180,7 +10183,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       String_delete(entryPattern);
       return;
     }
-    while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+    while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextImage(&indexQueryHandle,
                                  &databaseId,
@@ -10226,7 +10229,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     Index_doneList(&indexQueryHandle);
   }
 
-  if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
     if (checkedStorageOnlyFlag)
     {
@@ -10256,7 +10259,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       String_delete(entryPattern);
       return;
     }
-    while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+    while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextDirectory(&indexQueryHandle,
                                      &databaseId,
@@ -10301,7 +10304,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     Index_doneList(&indexQueryHandle);
   }
 
-  if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
     if (checkedStorageOnlyFlag)
     {
@@ -10332,7 +10335,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       return;
     }
     destinationName = String_new();
-    while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+    while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextLink(&indexQueryHandle,
                                 &databaseId,
@@ -10380,7 +10383,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     String_delete(destinationName);
   }
 
-  if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
     if (checkedStorageOnlyFlag)
     {
@@ -10411,7 +10414,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       return;
     }
     destinationName = String_new();
-    while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+    while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextHardLink(&indexQueryHandle,
                                     &databaseId,
@@ -10463,7 +10466,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     String_delete(destinationName);
   }
 
-  if ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+  if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
     if (checkedStorageOnlyFlag)
     {
@@ -10493,7 +10496,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       String_delete(entryPattern);
       return;
     }
-    while (   ((entryMaxCount == 0L) || (entryCount < entryMaxCount))
+    while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextSpecial(&indexQueryHandle,
                                    &databaseId,
