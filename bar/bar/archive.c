@@ -10495,26 +10495,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
-    if (Error_getCode(error) == ERROR_NO_CRYPT_PASSWORD)
-    {
-      Index_setState(databaseHandle,
-                     databaseStorageId,
-                     INDEX_STATE_UPDATE_REQUESTED,
-                     0LL, // lastCheckedTimestamp
-                     NULL // erorMessage
-                    );
-    }
-    else
-    {
-      Index_setState(databaseHandle,
-                     databaseStorageId,
-                     INDEX_STATE_ERROR,
-                     0LL, // lastCheckedTimestamp
-                     "%s (error code: %d)",
-                     Error_getText(error),
-                     Error_getCode(error)
-                    );
-    }
+    Index_setState(databaseHandle,
+                   databaseStorageId,
+                   INDEX_STATE_ERROR,
+                   0LL, // lastCheckedTimestamp
+                   "%s (error code: %d)",
+                   Error_getText(error),
+                   Error_getCode(error)
+                  );
   }
   else if (abortedFlag)
   {
@@ -10522,9 +10510,9 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
     Index_setState(databaseHandle,
                    databaseStorageId,
-                   INDEX_STATE_UPDATE_REQUESTED,
+                   INDEX_STATE_ERROR,
                    0LL,
-                   NULL
+                   "aborted"
                   );
 
     error = ERROR_ABORTED;
