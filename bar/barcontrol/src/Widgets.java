@@ -993,7 +993,10 @@ class WidgetEventListener
     {
       trigger((MenuItem)widget);
     }
-    trigger(widget);
+    else
+    {
+      trigger(widget);
+    }
   }
 }
 
@@ -4501,15 +4504,6 @@ e composite widget
     sortTableColumn(table,String.CASE_INSENSITIVE_ORDER);
   }
 
-  /** get table items in tree
-   * @param table table
-   * @return table items array
-   */
-  public static TableItem[] getTableItems(Table table)
-  {
-    return table.getItems();
-  }
-
   /** get insert position in sorted table
    * @param table table
    * @param comparator table data comparator
@@ -5441,6 +5435,32 @@ e composite widget
     return addTreeItem(parentTreeItem,data,null,folderFlag,values);
   }
 
+  /** get tree item from sub-tree items
+   * @param parentTreeItem parent tree item
+   * @param data tree item data
+   * @return tree item or null if not found
+   */
+  private static TreeItem getSubTreeItem(TreeItem parentTreeItem, Object data)
+  {
+    for (TreeItem treeItem : parentTreeItem.getItems())
+    {
+      if (treeItem.getData() == data)
+      {
+        return treeItem;
+      }
+      if (treeItem.getExpanded())
+      {
+        treeItem = getSubTreeItem(treeItem,data);
+        if (treeItem != null)
+        {
+          return treeItem;
+        }
+      }
+    }
+
+    return null;
+  }
+
   /** get tree item
    * @param tree tree
    * @param data tree item data
@@ -5448,11 +5468,21 @@ e composite widget
    */
   public static TreeItem getTreeItem(Tree tree, Object data)
   {
+    TreeItem subTreeItem;
+
     for (TreeItem treeItem : tree.getItems())
     {
       if (treeItem.getData() == data)
       {
         return treeItem;
+      }
+      if (treeItem.getExpanded())
+      {
+        subTreeItem = getSubTreeItem(treeItem,data);
+        if (subTreeItem != null)
+        {
+          return subTreeItem;
+        }
       }
     }
 
@@ -5546,7 +5576,7 @@ e composite widget
       {
         if (!tree.isDisposed())
         {
-          for (TreeItem treeItem : Widgets.getTreeItems(tree))
+          for (TreeItem treeItem : tree.getItems())
           {
             if (treeItem.getData() == data)
             {
@@ -5681,6 +5711,18 @@ e composite widget
   }
 
 /*
+private void printItems(int i, TreeItem treeItem)
+{
+Dprintf.dprintf("%s%s: %s",StringUtils.repeat("  ",i),treeItem,treeItem.getData());
+for (TreeItem subTreeItem : treeItem.getItems()) printItems(i+1,subTreeItem);
+}
+private void printTree(Tree tree)
+{
+Dprintf.dprintf("--- tree:");
+for (TreeItem treeItem : tree.getItems()) printItems(0,treeItem);
+Dprintf.dprintf("---");
+}
+
 static int rr = 0;
 static String indent(int n)
 {
@@ -5901,24 +5943,6 @@ private static void printTree(Tree tree)
       treeItemSet.add(subTreeItem);
       getSubTreeItems(treeItemSet,subTreeItem);
     }
-  }
-
-  /** get tree items in tree
-   * @param tree tree
-   * @return tree items array
-   */
-  public static TreeItem[] getTreeItems(Tree tree)
-  {
-    return tree.getItems();
-  }
-
-  /** get tree sub-items of tree item
-   * @param treeItem tree item
-   * @return sub-tree items array
-   */
-  public static TreeItem[] getTreeItems(TreeItem treeItem)
-  {
-    return treeItem.getItems();
   }
 
   /** get all tree items in tree
