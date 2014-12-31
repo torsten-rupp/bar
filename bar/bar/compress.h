@@ -190,7 +190,7 @@ typedef struct
                                  lzo_voidp       workingMemory
                                 );
         byte      *inputBuffer;
-//        uint      inputBufferIndex;
+        uint      inputBufferIndex;
         uint      inputBufferLength;
         byte      *outputBuffer;
         uint      outputBufferIndex;

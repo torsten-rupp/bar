@@ -119,11 +119,11 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
           compressInfo->lzo.totalInputLength  += n;
         }
 
-        if (compressInfo->lzo.inputBufferLength >= LZO_BLOCK_SIZE)
+        if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= LZO_BLOCK_SIZE)
         {
           // compress: LZO input buffer -> LZO output buffer (spare 4 bytes for length in output buffer and compressed flag)
-          lzoError = compressInfo->lzo.compressFunction((lzo_bytep)compressInfo->lzo.inputBuffer,
-                                                        compressInfo->lzo.inputBufferLength,
+          lzoError = compressInfo->lzo.compressFunction((lzo_bytep)&compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex],
+                                                        compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex,
                                                         &compressInfo->lzo.outputBuffer[4],
                                                         &compressLength,
                                                         compressInfo->lzo.workingMemory
@@ -151,8 +151,8 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
 
             // move input buffer -> compress buffer (spare 4 bytes for length in output buffer)
             memcpy(&compressInfo->lzo.outputBuffer[4],
-                   compressInfo->lzo.inputBuffer,
-                   compressInfo->lzo.inputBufferLength
+                   &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex],
+                   compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex
                   );
 
             // put length of data into output buffer before data
@@ -163,6 +163,7 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
             compressInfo->lzo.outputBufferIndex  = 0;
             compressInfo->lzo.outputBufferLength = 4+(uint)compressInfo->lzo.inputBufferLength;
           }
+          compressInfo->lzo.inputBufferIndex  = 0;
           compressInfo->lzo.inputBufferLength = 0;
 
           // get max. number of data and max. number of compressed bytes
@@ -195,11 +196,11 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
           && (compressInfo->compressState == COMPRESS_STATE_RUNNING)          // compressor is running -> data available in internal buffers
          )
       {
-        if (compressInfo->lzo.inputBufferLength > 0)
+        if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) > 0)
         {
           // compress: LZO input buffer -> LZO output buffer (spare 4 bytes for length in output buffer and compressed flag)
-          lzoError = compressInfo->lzo.compressFunction((lzo_bytep)compressInfo->lzo.inputBuffer,
-                                                        compressInfo->lzo.inputBufferLength,
+          lzoError = compressInfo->lzo.compressFunction((lzo_bytep)&compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex],
+                                                        compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex,
                                                         &compressInfo->lzo.outputBuffer[4],
                                                         &compressLength,
                                                         compressInfo->lzo.workingMemory
@@ -227,8 +228,8 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
 
             // transfer: input buffer -> compress buffer
             memcpy(&compressInfo->lzo.outputBuffer[4],
-                   compressInfo->lzo.inputBuffer,
-                   compressInfo->lzo.inputBufferLength
+                   &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex],
+                   compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex
                   );
 
             // put length of compressed data into output buffer before data
@@ -239,6 +240,7 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
             compressInfo->lzo.outputBufferIndex  = 0;
             compressInfo->lzo.outputBufferLength = 4+(uint)compressInfo->lzo.inputBufferLength;
           }
+          compressInfo->lzo.inputBufferIndex  = 0;
           compressInfo->lzo.inputBufferLength = 0;
 
           // get max. number of compressed bytes
@@ -326,7 +328,7 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
           compressInfo->lzo.totalInputLength  += n;
         }
 
-        if (compressInfo->lzo.inputBufferLength >= 4)
+        if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= 4)
         {
           // decompress: get length of compressed data and compressed flag
           n = getUINT32(&compressInfo->lzo.inputBuffer[0]);
@@ -340,10 +342,10 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
             }
 //fprintf(stderr,"%s, %d: %d compressLength=%d\n",__FILE__,__LINE__,ii,compressLength); ii++;
 
-            if (compressInfo->lzo.inputBufferLength >= (4+compressLength))
+            if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= (4+compressLength))
             {
               // decompress: LZO input buffer -> LZO output buffer (byte 0..3 are length+compress flag)
-              lzoError = compressInfo->lzo.decompressFunction((lzo_bytep)&compressInfo->lzo.inputBuffer[4],
+              lzoError = compressInfo->lzo.decompressFunction((lzo_bytep)&compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex+4],
                                                               compressLength,
                                                               compressInfo->lzo.outputBuffer,
                                                               &length,
@@ -356,11 +358,11 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
 
               // shift LZO input buffer
               memmove(compressInfo->lzo.inputBuffer,
-                      &compressInfo->lzo.inputBuffer[4+compressLength],
-                      compressInfo->lzo.inputBufferLength-(4+compressLength)
+                      &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex+4+compressLength],
+                      compressInfo->lzo.inputBufferLength-(compressInfo->lzo.inputBufferIndex+4+compressLength)
                      );
-//              compressInfo->lzo.inputBufferIndex  =  0;
-              compressInfo->lzo.inputBufferLength -= 4+compressLength;
+              compressInfo->lzo.inputBufferLength -= compressInfo->lzo.inputBufferIndex+4+compressLength;
+              compressInfo->lzo.inputBufferIndex  =  0;
 //fprintf(stderr,"%s, %d: compressLength=%d\n",__FILE__,__LINE__,compressLength);
 //fprintf(stderr,"%s, %d: length=%d\n",__FILE__,__LINE__,length);
 
@@ -378,21 +380,21 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
               return ERRORX_(INFLATE_FAIL,0,"invalid data size");
             }
 
-            if (compressInfo->lzo.inputBufferLength >= (4+length))
+            if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= (4+length))
             {
               // transfer: LZO input buffer -> LZO output buffer (byte 0..3 are length)
               memcpy(compressInfo->lzo.outputBuffer,
-                     &compressInfo->lzo.inputBuffer[4],
+                     &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex+4],
                      length
                     );
 
               // shift LZO input buffer
               memmove(compressInfo->lzo.inputBuffer,
-                      &compressInfo->lzo.inputBuffer[4+length],
-                      compressInfo->lzo.inputBufferLength-(4+length)
+                      &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex+4+length],
+                      compressInfo->lzo.inputBufferLength-(compressInfo->lzo.inputBufferIndex+4+length)
                      );
-//              compressInfo->lzo.inputBufferIndex  =  0;
-              compressInfo->lzo.inputBufferLength -= 4+length;
+              compressInfo->lzo.inputBufferLength -= compressInfo->lzo.inputBufferIndex+4+length;
+              compressInfo->lzo.inputBufferIndex  =  0;
 //fprintf(stderr,"%s, %d: ii=%d dataLength=%d\n",__FILE__,__LINE__,ii,length); ii++;
 
               // init LZO output buffer
@@ -446,7 +448,7 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
           compressInfo->lzo.totalInputLength  += n;
         }
 
-        if (compressInfo->lzo.inputBufferLength >= 4)
+        if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= 4)
         {
           // decompress: get length of compressed data and compressed flag from LZO input buffer
           n = getUINT32(&compressInfo->lzo.inputBuffer[0]);
@@ -459,10 +461,10 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
               return ERRORX_(INFLATE_FAIL,0,"invalid data size");
             }
 
-            if (compressInfo->lzo.inputBufferLength >= (4+compressLength))
+            if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= (4+compressLength))
             {
               // decompress: LZO input buffer -> LZO output buffer (byte 0..3 are length+compress flag)
-              lzoError = compressInfo->lzo.decompressFunction((lzo_bytep)&compressInfo->lzo.inputBuffer[4],
+              lzoError = compressInfo->lzo.decompressFunction((lzo_bytep)&compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex+4],
                                                               compressLength,
                                                               compressInfo->lzo.outputBuffer,
                                                               &length,
@@ -475,11 +477,11 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
 
               // shift LZO input buffer
               memmove(compressInfo->lzo.inputBuffer,
-                      &compressInfo->lzo.inputBuffer[4+compressLength],
-                      compressInfo->lzo.inputBufferLength-(4+compressLength)
+                      &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex+4+compressLength],
+                      compressInfo->lzo.inputBufferLength-(compressInfo->lzo.inputBufferIndex+4+compressLength)
                      );
-//              compressInfo->lzo.inputBufferIndex  =  0;
-              compressInfo->lzo.inputBufferLength -= 4+compressLength;
+              compressInfo->lzo.inputBufferLength -= compressInfo->lzo.inputBufferIndex+4+compressLength;
+              compressInfo->lzo.inputBufferIndex  =  0;
 //fprintf(stderr,"%s, %d: compressLength=%d\n",__FILE__,__LINE__,compressLength);
 //fprintf(stderr,"%s, %d: length=%d\n",__FILE__,__LINE__,length);
 
@@ -502,17 +504,17 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
               // decompress: transfer input buffer -> data buffer (byte 0..3 are length)
               assert(compressInfo->lzo.outputBufferIndex >= compressInfo->lzo.outputBufferLength);
               memcpy(compressInfo->lzo.outputBuffer,
-                     &compressInfo->lzo.inputBuffer[4],
+                     &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex+4],
                      length
                     );
 
               // shift LZO input buffer
               memmove(compressInfo->lzo.inputBuffer,
-                      &compressInfo->lzo.inputBuffer[4+length],
-                      compressInfo->lzo.inputBufferLength-(4+length)
+                      &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex+4+length],
+                      compressInfo->lzo.inputBufferLength-(compressInfo->lzo.inputBufferIndex+4+length)
                      );
-//              compressInfo->lzo.inputBufferIndex  =  0;
-              compressInfo->lzo.inputBufferLength -= 4+length;
+              compressInfo->lzo.inputBufferLength -= compressInfo->lzo.inputBufferIndex+4+length;
+              compressInfo->lzo.inputBufferIndex  =  0;
 //fprintf(stderr,"%s, %d: dataLength=%d\n",__FILE__,__LINE__,length);
 
               // init LZO output buffer
@@ -559,7 +561,7 @@ LOCAL Errors CompressLZO_init(CompressInfo       *compressInfo,
 
   UNUSED_VARIABLE(compressMode);
 
-//  compressInfo->lzo.inputBufferIndex   = 0;
+  compressInfo->lzo.inputBufferIndex   = 0;
   compressInfo->lzo.inputBufferLength  = 0;
   compressInfo->lzo.outputBufferIndex  = 0;
   compressInfo->lzo.outputBufferLength = 0;
