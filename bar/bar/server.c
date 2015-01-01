@@ -602,9 +602,9 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_SPECIAL  ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
   CONFIG_STRUCT_VALUE_SELECT   ("archive-type",            ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
   CONFIG_STRUCT_VALUE_STRING   ("text",                    ScheduleNode,customText                         ),
-  CONFIG_STRUCT_VALUE_INTEGER  ("min-keep",                ScheduleNode,minKeep,                           0,MAX_UINT,NULL),
-  CONFIG_STRUCT_VALUE_INTEGER  ("max-keep",                ScheduleNode,maxKeep,                           0,MAX_UINT,NULL),
-  CONFIG_STRUCT_VALUE_INTEGER  ("max-age",                 ScheduleNode,maxAge,                            0,MAX_UINT,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER  ("min-keep",                ScheduleNode,minKeep,                           0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER  ("max-keep",                ScheduleNode,maxKeep,                           0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER  ("max-age",                 ScheduleNode,maxAge,                            0,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("enabled",                 ScheduleNode,enabledFlag                        ),
   CONFIG_VALUE_END_SECTION(),
 
