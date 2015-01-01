@@ -1371,7 +1371,7 @@ class TabJobs
                                                                                     "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
                                                                                     "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
                                                                                     "lzo1","lzo2","lzo3","lzo4","lzo5",
-                                                                                    "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9"
+                                                                                    "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16"
                                                                                    }
                                                                       );
   private WidgetVariable  compressMinSize         = new WidgetVariable(0);
@@ -2828,7 +2828,7 @@ class TabJobs
                                       "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
                                       "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
                                       "lzo1","lzo2","lzo3","lzo4","lzo5",
-                                      "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9"
+                                      "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16"
                                      }
                         );
           Widgets.layout(combo,0,3,TableLayoutData.W);
@@ -9690,8 +9690,8 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         Widgets.layout(label,0,4,TableLayoutData.W);
 
         widgetMaxAge = Widgets.newOptionMenu(subComposite);
-        widgetMaxAge.setToolTipText(BARControl.tr("Min. number of archives to keep."));
-        Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"unlimited",0,
+        widgetMaxAge.setToolTipText(BARControl.tr("Max. age of archives to keep."));
+        Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"forever",0,
                                                              "1 day",1,
                                                              "2 days",2,
                                                              "3 days",3,
