@@ -3107,6 +3107,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
       error = Device_mount(storageHandle->jobOptions->mountDeviceName);
       if (error != ERROR_NONE)
       {
+        AutoFree_cleanup(&autoFreeList);
         return error;
       }
       storageHandle->mountedDeviceFlag = TRUE;
