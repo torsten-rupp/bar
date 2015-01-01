@@ -976,9 +976,9 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_SPECIAL  ("time",                         NULL,offsetof(ScheduleNode,time),                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
   CONFIG_VALUE_SELECT   ("archive-type",                 NULL,offsetof(ScheduleNode,archiveType),                       CONFIG_VALUE_ARCHIVE_TYPES),
   CONFIG_VALUE_STRING   ("text",                         NULL,offsetof(ScheduleNode,customText)                         ),
-  CONFIG_VALUE_INTEGER  ("min-keep",                     NULL,offsetof(ScheduleNode,minKeep),                           0,MAX_UINT,NULL),
-  CONFIG_VALUE_INTEGER  ("max-keep",                     NULL,offsetof(ScheduleNode,maxKeep),                           0,MAX_UINT,NULL),
-  CONFIG_VALUE_INTEGER  ("max-age",                      NULL,offsetof(ScheduleNode,maxAge),                            0,MAX_UINT,NULL),
+  CONFIG_VALUE_INTEGER  ("min-keep",                     NULL,offsetof(ScheduleNode,minKeep),                           0,MAX_INT,NULL),
+  CONFIG_VALUE_INTEGER  ("max-keep",                     NULL,offsetof(ScheduleNode,maxKeep),                           0,MAX_INT,NULL),
+  CONFIG_VALUE_INTEGER  ("max-age",                      NULL,offsetof(ScheduleNode,maxAge),                            0,MAX_INT,NULL),
   CONFIG_VALUE_BOOLEAN  ("enabled",                      NULL,offsetof(ScheduleNode,enabledFlag)                        ),
   CONFIG_VALUE_END_SECTION(),
 
