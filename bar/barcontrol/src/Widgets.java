@@ -1000,17 +1000,61 @@ class WidgetEventListener
   }
 }
 
-/** combo box data entry
+/** select item for combo/enum select/option menu
  */
-class ComboItem
+class SelectItem
 {
   String text;
   Object data;
 
-  ComboItem(String text, Object data)
+  /** create select item
+   * @param text item text
+   * @param data item data
+   */
+  SelectItem(String text, Object data)
   {
     this.text = text;
     this.data = data;
+  }
+
+  /** get int from select item
+   * @return int
+   */
+  int getInt()
+  {
+    return (Integer)data;
+  }
+
+  /** get int from select item
+   * @return long
+   */
+  long getLong()
+  {
+    return (Long)data;
+  }
+
+  /** get float from select item
+   * @return float
+   */
+  float getFloat()
+  {
+    return (Float)data;
+  }
+
+  /** get double from select item
+   * @return double
+   */
+  double getDouble()
+  {
+    return (Double)data;
+  }
+
+  /** get string from select item
+   * @return string
+   */
+  String getString()
+  {
+    return (String)data;
   }
 }
 
@@ -3671,7 +3715,7 @@ e composite widget
     {
       combo.setText((String)getField(data,field));
     }
-    combo.setData(new ArrayList<ComboItem>());
+    combo.setData(new ArrayList<SelectItem>());
 
     combo.addSelectionListener(new SelectionListener()
     {
@@ -3692,7 +3736,7 @@ e composite widget
    * @param composite composite widget
    * @param data data structure to store combo value or null
    * @param field field name in data structure to set on selection
-   * @param value value for checkbox
+   * @param value value for combo
    * @return new combo widget
    */
   public static Combo newCombo(Composite composite, final Object data, final String field, String value)
@@ -3742,12 +3786,44 @@ e composite widget
     return newCombo(composite,SWT.BORDER);
   }
 
-  /** add combo entry
+  /** set combo items
    * @param combo combo
-   * @param combo entry data
-   * @param text combo text
+   * @param items items (array of [text,data])
    */
-  public static void addComboEntry(final Combo combo, final Object data, final String text)
+  public static void setComboItems(final Combo combo, final Object items[])
+  {
+    assert (items.length % 2) == 0;
+
+    if (!combo.isDisposed())
+    {
+      combo.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
+
+          combo.removeAll();
+          selectItems.clear();
+          for (int i = 0; i < items.length/2; i++)
+          {
+            String text = (String)items[i*2+0];
+            Object data = items[i*2+1];
+
+            SelectItem selectItem = new SelectItem(text,data);
+            combo.add(text);
+            selectItems.add(selectItem);
+          }
+        }
+      });
+    }
+  }
+
+  /** add combo item
+   * @param combo combo
+   * @param data item data
+   * @param text item text
+   */
+  public static void addComboItem(final Combo combo, final Object data, final String text)
   {
     if (!combo.isDisposed())
     {
@@ -3755,23 +3831,23 @@ e composite widget
       {
         public void run()
         {
-          ArrayList<ComboItem> comboItems = (ArrayList<ComboItem>)combo.getData();
+          ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
 
-          ComboItem comboItem = new ComboItem(text,data);
+          SelectItem selectItem = new SelectItem(text,data);
           combo.add(text);
-          comboItems.add(comboItem);
+          selectItems.add(selectItem);
         }
       });
     }
   }
 
-  /** update combo entry
+  /** update combo item
    * @param combo combo
-   * @param data entry data
-   * @param text entry text
+   * @param data item data
+   * @param text item text
    * @param true if updated, false if not found
    */
-  public static boolean updateComboEntry(final Combo combo, final Object data, final String text)
+  public static boolean updateComboItem(final Combo combo, final Object data, final String text)
   {
     /** combo update runnable
      */
@@ -3787,14 +3863,14 @@ e composite widget
           {
             public void run()
             {
-              ArrayList<ComboItem> comboItems = (ArrayList<ComboItem>)combo.getData();
+              ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
 
-              for (int i = 0; i < comboItems.size(); i++)
+              for (int i = 0; i < selectItems.size(); i++)
               {
-                ComboItem comboItem = comboItems.get(i);
-                if (comboItem.data == data)
+                SelectItem selectItem = selectItems.get(i);
+                if (selectItem.data == data)
                 {
-                  comboItem.text = text;
+                  selectItem.text = text;
                   combo.setItem(i,text);
                   updatedFlag = true;
                   break;
@@ -3815,11 +3891,11 @@ e composite widget
     return comboRunnable.updatedFlag;
   }
 
-  /** remove combo entry
+  /** remove combo item
    * @param combo combo
-   * @param combo entry data
+   * @param index item index
    */
-  public static void removeComboEntry(final Combo combo, final int index)
+  public static void removeComboItem(final Combo combo, final int index)
   {
     if (!combo.isDisposed())
     {
@@ -3829,65 +3905,65 @@ e composite widget
         {
           if (!combo.isDisposed())
           {
-            ArrayList<ComboItem> comboItems = (ArrayList<ComboItem>)combo.getData();
+            ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
             combo.remove(index);
-            comboItems.remove(index);
+            selectItems.remove(index);
           }
         }
       });
     }
   }
 
-  /** remove combo entry
+  /** remove combo item
    * @param combo combo
-   * @param combo entry data
+   * @param combo item data
    */
-  public static void removeComboEntry(final Combo combo, final Object data)
+  public static void removeComboItem(final Combo combo, final Object data)
   {
-    ArrayList<ComboItem> comboItems = (ArrayList<ComboItem>)combo.getData();
-    for (int i = 0; i < comboItems.size(); i++)
+    ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
+    for (int i = 0; i < selectItems.size(); i++)
     {
-      if (comboItems.get(i).data == data)
+      if (selectItems.get(i).data == data)
       {
-        removeComboEntry(combo,i);
+        removeComboItem(combo,i);
         break;
       }
     }
   }
 
-  /** remove combo entry
+  /** remove combo item
    * @param combo combo
-   * @param comboItem combo item to remove
+   * @param selectItem combo item to remove
    */
-  public static void removeComboEntry(final Combo combo, final ComboItem comboItem)
+  public static void removeComboItem(final Combo combo, final SelectItem selectItem)
   {
-    ArrayList<ComboItem> comboItems = (ArrayList<ComboItem>)combo.getData();
-    for (int i = 0; i < comboItems.size(); i++)
+    ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
+    for (int i = 0; i < selectItems.size(); i++)
     {
-      if (comboItems.get(i) == comboItem)
+      if (selectItems.get(i) == selectItem)
       {
-        removeComboEntry(combo,i);
+        removeComboItem(combo,i);
         break;
       }
     }
   }
 
-  /** remove combo entries
+  /** remove combo items
    * @param combo combo
-   * @param comboItems combo items to remove
+   * @param selectItems combo items to remove
    */
-  public static void removeComboEntries(Combo combo, ComboItem[] comboItems)
+  public static void removeComboItems(Combo combo, SelectItem[] selectItems)
   {
-    for (ComboItem comboItem : comboItems)
+    for (SelectItem selectItem : selectItems)
     {
-      removeComboEntry(combo,comboItem);
+      removeComboItem(combo,selectItem);
     }
   }
 
-  /** remove all combo entries
+  /** remove all combo items
    * @param combo combo
    */
-  public static void removeAllComboEntries(final Combo combo)
+  public static void removeAllComboItems(final Combo combo)
   {
     if (!combo.isDisposed())
     {
@@ -3898,49 +3974,104 @@ e composite widget
           if (!combo.isDisposed())
           {
             combo.removeAll();
-            ((ArrayList<ComboItem>)combo.getData()).clear();
+            ((ArrayList<SelectItem>)combo.getData()).clear();
           }
         }
       });
     }
   }
 
-  /** get combo entry
+  /** get combo item
    * @param combo combo
    * @param index index
    * @return entry
    */
-  public static Object getComboEntry(Combo combo, int index)
+  public static Object getComboItem(Combo combo, int index)
   {
-    ArrayList<ComboItem> comboItems = (ArrayList<ComboItem>)combo.getData();
-    if ((index < 0) || (index >= comboItems.size()))
+    ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
+    if ((index < 0) || (index >= selectItems.size()))
     {
       throw new IndexOutOfBoundsException();
     }
 
-    return comboItems.get(index).data;
+    return selectItems.get(index).data;
   }
 
-  /** get combo entries
+  /** get combo items
    * @param combo combo
    * @param entries array
    * @return entries array
    */
-  public static <T> T[] getComboEntries(Combo combo, T[] array)
+  public static <T> T[] getComboItems(Combo combo, T[] array)
   {
-    ArrayList<ComboItem> comboItems = (ArrayList<ComboItem>)combo.getData();
+    ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
 
-    if (array.length != comboItems.size())
+    if (array.length != selectItems.size())
     {
-      array = Arrays.copyOf(array,comboItems.size());
+      array = Arrays.copyOf(array,selectItems.size());
     }
 
-    for (int i = 0; i < comboItems.size(); i++)
+    for (int i = 0; i < selectItems.size(); i++)
     {
-      array[i] = (T)(comboItems.get(i).data);
+      array[i] = (T)(selectItems.get(i).data);
     }
 
     return array;
+  }
+
+  /** set selected combo item
+   * @param combo combo
+   * @return selected combo item
+   */
+  public static SelectItem getSelectedComboItem(final Combo combo)
+  {
+    final SelectItem selectItem[] = new SelectItem[1];
+
+    if (!combo.isDisposed())
+    {
+      combo.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!combo.isDisposed())
+          {
+            ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
+            selectItem[0] = selectItems.get(combo.getSelectionIndex());
+          }
+        }
+      });
+    }
+
+    return selectItem[0];
+  }
+
+  /** set selected combo item
+   * @param combo combo
+   * @param data item data
+   */
+  public static <T> void setSelectedComboItem(final Combo combo, final T data)
+  {
+    if (!combo.isDisposed())
+    {
+      combo.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!combo.isDisposed())
+          {
+            ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
+            for (int i = 0; i < selectItems.size(); i++)
+            {
+              if (selectItems.get(i).data == data)
+              {
+                combo.select(i);
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
   }
 
   //-----------------------------------------------------------------------
@@ -4008,15 +4139,147 @@ e composite widget
 
   /** create new option menu
    * @param composite composite widget
-   * @return new combo widget
+   * @param data data structure to store combo value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for combo
+   * @return new option menu combo widget
+   */
+  public static Combo newOptionMenu(Composite composite, Object data, String field, String value)
+  {
+    return newCombo(composite,data,field,value,SWT.RIGHT|SWT.READ_ONLY);
+  }
+
+  /** create new option menu
+   * @param composite composite widget
+   * @param data data structure to store combo value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for combo
+   * @return new option menu combo widget
+   */
+  public static Combo newOptionMenu(Composite composite, Object data, String field)
+  {
+    return newOptionMenu(composite,data,field,null);
+  }
+
+  /** create new option menu
+   * @param composite composite widget
+   * @return new option menu combo widget
    */
   public static Combo newOptionMenu(Composite composite)
   {
-    Combo combo;
+    return newOptionMenu(composite,null,null);
+  }
 
-    combo = new Combo(composite,SWT.RIGHT|SWT.READ_ONLY);
+  /** set option menu items
+   * @param combo option menu combo
+   * @param items items (array of [text,data])
+   */
+  public static void setOptionMenuItems(final Combo combo, Object items[])
+  {
+    setComboItems(combo,items);
+  }
 
-    return combo;
+  /** add option menu item
+   * @param combo option menu combo
+   * @param data item data
+   * @param text item text
+   */
+  public static void addOptionMenuItem(Combo combo, Object data, String text)
+  {
+    addComboItem(combo,data,text);
+  }
+
+  /** update option menu item
+   * @param combo option menu combo
+   * @param data item data
+   * @param text item text
+   * @param true if updated, false if not found
+   */
+  public static boolean updateOptionMenuItem(Combo combo, Object data, String text)
+  {
+    return updateComboItem(combo,data,text);
+  }
+
+  /** remove option menu item
+   * @param combo option menu combo
+   * @param index item index
+   */
+  public static void removeOptionMenuItem(Combo combo, int index)
+  {
+    removeComboItem(combo,index);
+  }
+
+  /** remove option menu item
+   * @param combo option menu combo
+   * @param combo item data
+   */
+  public static void removeOptionMenuItem(Combo combo, Object data)
+  {
+    removeComboItem(combo,data);
+  }
+
+  /** remove option menu item
+   * @param combo option menu combo
+   * @param selectItem option menu item to remove
+   */
+  public static void removeOptionMenuItem(Combo combo, SelectItem selectItem)
+  {
+    removeComboItem(combo,selectItem);
+  }
+
+  /** remove option menu items
+   * @param combo option menu combo
+   * @param selectItems option menu items to remove
+   */
+  public static void removeOptionMenuItems(Combo combo, SelectItem[] selectItems)
+  {
+    removeComboItems(combo,selectItems);
+  }
+
+  /** remove all option menu items
+   * @param combo option menu combo
+   */
+  public static void removeAllOptionMenuItems(Combo combo)
+  {
+    removeAllComboItems(combo);
+  }
+
+  /** get option menu item
+   * @param combo option menu combo
+   * @param index item index
+   * @return item
+   */
+  public static Object getOptionMenuItem(Combo combo, int index)
+  {
+    return getComboItem(combo,index);
+  }
+
+  /** get option menu items
+   * @param combo option menu combo
+   * @param items array
+   * @return items array
+   */
+  public static <T> T[] getOptionMenuItems(Combo combo, T[] array)
+  {
+    return getComboItems(combo,array);
+  }
+
+  /** get selected option menu item
+   * @param combo option menu combo
+   * @return selected option menu item
+   */
+  public static SelectItem getSelectedOptionMenuItem(Combo combo)
+  {
+    return getSelectedComboItem(combo);
+  }
+
+  /** set selected option menu item
+   * @param combo option menu combo
+   * @param data item data
+   */
+  public static <T> void setSelectedOptionMenuItem(Combo combo, T data)
+  {
+    setSelectedComboItem(combo,data);
   }
 
   //-----------------------------------------------------------------------
