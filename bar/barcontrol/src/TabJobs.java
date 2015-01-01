@@ -78,7 +78,6 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
@@ -4491,7 +4490,7 @@ class TabJobs
               }
             });
 
-            widgetFTPMaxBandWidth = Widgets.newCombo(composite,null);
+            widgetFTPMaxBandWidth = Widgets.newCombo(composite);
             widgetFTPMaxBandWidth.setItems(new String[]{"32K","64K","128K","256K","512K"});
             Widgets.layout(widgetFTPMaxBandWidth,0,2,TableLayoutData.W);
           }
@@ -4921,7 +4920,7 @@ class TabJobs
               }
             });
 
-            widgetSCPSFTPMaxBandWidth = Widgets.newCombo(subComposite,null);
+            widgetSCPSFTPMaxBandWidth = Widgets.newCombo(subComposite);
             widgetSCPSFTPMaxBandWidth.setItems(new String[]{"32K","64K","128K","256K","512K"});
             Widgets.layout(widgetSCPSFTPMaxBandWidth,0,2,TableLayoutData.W);
           }
@@ -5351,7 +5350,7 @@ class TabJobs
               }
             });
 
-            widgetWebdavMaxBandWidth = Widgets.newCombo(subComposite,null);
+            widgetWebdavMaxBandWidth = Widgets.newCombo(subComposite);
             widgetWebdavMaxBandWidth.setItems(new String[]{"32K","64K","128K","256K","512K"});
             Widgets.layout(widgetWebdavMaxBandWidth,0,2,TableLayoutData.W);
           }
@@ -9487,8 +9486,8 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
     final Combo    widgetHour,widgetMinute;
     final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential;
     final Text     widgetCustomText;
-    final Spinner  widgetMinKeep,widgetMaxKeep;
-    final Spinner  widgetMaxAge;
+    final Combo    widgetMinKeep,widgetMaxKeep;
+    final Combo    widgetMaxAge;
     final Button   widgetEnabled;
     final Button   widgetAdd;
     composite = Widgets.newComposite(dialog,SWT.NONE);
@@ -9648,35 +9647,65 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
         label = Widgets.newLabel(subComposite,BARControl.tr("min.")+":");
         Widgets.layout(label,0,0,TableLayoutData.W);
 
-        widgetMinKeep = Widgets.newSpinner(subComposite);
+        widgetMinKeep = Widgets.newOptionMenu(subComposite);
         widgetMinKeep.setToolTipText(BARControl.tr("Min. number of archives to keep."));
-        widgetMinKeep.setMinimum(0);
-        widgetMinKeep.setMaximum(65536);
-        widgetMinKeep.setSelection(scheduleData.minKeep);
+        Widgets.setOptionMenuItems(widgetMinKeep,new Object[]{"0",0,
+                                                              "1",1,
+                                                              "2",2,
+                                                              "3",3,
+                                                              "4",4,
+                                                              "5",5,
+                                                              "6",6,
+                                                              "7",7,
+                                                              "8",8,
+                                                              "9",9,
+                                                              "10",10
+                                                             }
+                                  );
+        Widgets.setSelectedOptionMenuItem(widgetMinKeep,scheduleData.minKeep);
         Widgets.layout(widgetMinKeep,0,1,TableLayoutData.W);
 
-        label = Widgets.newLabel(subComposite,BARControl.tr("min.")+":");
+        label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":");
         Widgets.layout(label,0,2,TableLayoutData.W);
 
-        widgetMaxKeep = Widgets.newSpinner(subComposite);
-        widgetMaxKeep.setToolTipText(BARControl.tr("Min. number of archives to keep."));
-        widgetMaxKeep.setMinimum(0);
-        widgetMaxKeep.setMaximum(65536);
-        widgetMaxKeep.setSelection(scheduleData.maxKeep);
+        widgetMaxKeep = Widgets.newOptionMenu(subComposite);
+        widgetMaxKeep.setToolTipText(BARControl.tr("Max. number of archives to keep."));
+        Widgets.setOptionMenuItems(widgetMaxKeep,new Object[]{"unlimited",0,
+                                                              "1",1,
+                                                              "2",2,
+                                                              "3",3,
+                                                              "4",4,
+                                                              "5",5,
+                                                              "6",6,
+                                                              "7",7,
+                                                              "8",8,
+                                                              "9",9,
+                                                              "10",10
+                                                             }
+                                  );
+        Widgets.setSelectedOptionMenuItem(widgetMaxKeep,scheduleData.maxKeep);
         Widgets.layout(widgetMaxKeep,0,3,TableLayoutData.W);
 
         label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":");
         Widgets.layout(label,0,4,TableLayoutData.W);
 
-        widgetMaxAge = Widgets.newSpinner(subComposite);
+        widgetMaxAge = Widgets.newOptionMenu(subComposite);
         widgetMaxAge.setToolTipText(BARControl.tr("Min. number of archives to keep."));
-        widgetMaxAge.setMinimum(0);
-        widgetMaxAge.setMaximum(65536);
-        widgetMaxAge.setSelection(scheduleData.maxAge);
+        Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"unlimited",0,
+                                                             "1 day",1,
+                                                             "2 days",2,
+                                                             "3 days",3,
+                                                             "4 days",4,
+                                                             "5 days",5,
+                                                             "6 days",6,
+                                                             "1 week",7,
+                                                             "2 weeks",14,
+                                                             "3 weeks",21,
+                                                             "4 weeks",28
+                                                            }
+                                  );
+        Widgets.setSelectedOptionMenuItem(widgetMaxAge,scheduleData.maxAge);
         Widgets.layout(widgetMaxAge,0,5,TableLayoutData.W);
-
-        label = Widgets.newLabel(subComposite,BARControl.tr("days")+":");
-        Widgets.layout(label,0,6,TableLayoutData.W);
       }
 
       label = Widgets.newLabel(composite,BARControl.tr("Options")+":");
@@ -9752,9 +9781,9 @@ throw new Error("NYI");
         else if (widgetTypeDifferential.getSelection()) scheduleData.archiveType = "differential";
         else                                            scheduleData.archiveType = "*";
         scheduleData.customText = widgetCustomText.getText();
-        scheduleData.minKeep    = widgetMinKeep.getSelection();
-        scheduleData.maxKeep    = widgetMaxKeep.getSelection();
-        scheduleData.maxAge     = widgetMaxAge.getSelection();
+        scheduleData.minKeep    = Widgets.getSelectedOptionMenuItem(widgetMinKeep).getInt();
+        scheduleData.maxKeep    = Widgets.getSelectedOptionMenuItem(widgetMaxKeep).getInt();
+        scheduleData.maxAge     = Widgets.getSelectedOptionMenuItem(widgetMaxAge).getInt();
         scheduleData.enabled    = widgetEnabled.getSelection();
 
         Dialogs.close(dialog,true);
