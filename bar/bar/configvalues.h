@@ -41,6 +41,8 @@ typedef enum
   CONFIG_VALUE_TYPE_STRING,
   CONFIG_VALUE_TYPE_SPECIAL,
 
+  CONFIG_VALUE_TYPE_IGNORE,
+
   CONFIG_VALUE_TYPE_BEGIN_SECTION,
   CONFIG_VALUE_TYPE_END_SECTION
 } ConfigValueTypes;
@@ -619,6 +621,35 @@ typedef struct
   }
 #define CONFIG_STRUCT_VALUE_SPECIAL(name,type,member,parse,formatInit,formatDone,format,userData) \
   CONFIG_VALUE_SPECIAL(name,NULL,offsetof(type,member),parse,formatInit,formatDone,format,userData)
+
+/***********************************************************************\
+* Name   : CONFIG_VALUE_IGNORE, CONFIG_STRUCT_VALUE_IGNORE
+* Purpose: define an string-value
+* Input  : name - name
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CONFIG_VALUE_IGNORE(name) \
+  { \
+    name,\
+    CONFIG_VALUE_TYPE_IGNORE,\
+    {},\
+    0,\
+    {0,0,NULL,0},\
+    {0LL,0LL,NULL,0},\
+    {0.0,0.0,NULL,0},\
+    {},\
+    {0},\
+    {NULL,0},\
+    {NULL,0}, \
+    {},\
+    {},\
+    {NULL,NULL,NULL,NULL,NULL},\
+  }
+#define CONFIG_STRUCT_VALUE_IGNORE(name) \
+  CONFIG_VALUE_IGNORE(name)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_BEGIN_SECTION, CONFIG_VALUE_END_SECTION

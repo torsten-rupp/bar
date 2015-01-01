@@ -919,6 +919,9 @@ LOCAL bool processValue(const ConfigValue *configValue,
         }
       }
       break;
+    case CONFIG_VALUE_TYPE_IGNORE:
+      // nothing to do
+      break;
     case CONFIG_VALUE_TYPE_BEGIN_SECTION:
     case CONFIG_VALUE_TYPE_END_SECTION:
       // nothing to do
@@ -1112,6 +1115,9 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
         }
       }
       break;
+    case CONFIG_VALUE_TYPE_IGNORE:
+      // nothing to do
+      break;
     case CONFIG_VALUE_TYPE_BEGIN_SECTION:
     case CONFIG_VALUE_TYPE_END_SECTION:
       // nothing to do
@@ -1147,6 +1153,9 @@ void ConfigValue_formatDone(ConfigValueFormat *configValueFormat)
                                                                 configValueFormat->configValue->specialValue.userData
                                                                );
       }
+      break;
+    case CONFIG_VALUE_TYPE_IGNORE:
+      // nothing to do
       break;
     case CONFIG_VALUE_TYPE_BEGIN_SECTION:
     case CONFIG_VALUE_TYPE_END_SECTION:
@@ -1611,6 +1620,9 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           configValueFormat->endOfDataFlag = TRUE;
         }
         if (configValueFormat->endOfDataFlag) return FALSE;
+        break;
+      case CONFIG_VALUE_TYPE_IGNORE:
+        // nothing to do
         break;
       case CONFIG_VALUE_TYPE_BEGIN_SECTION:
       case CONFIG_VALUE_TYPE_END_SECTION:
