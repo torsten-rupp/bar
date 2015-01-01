@@ -437,8 +437,8 @@ if test $cleanFlag -eq 0; then
 #
 #       fileName=`echo $URL|sed 's|.*/\(lz4-.*\.tar\.gz\).*|\1|g'`
 #       $WGET $WGET_OPTIONS "$url"
-       fileName="lz4-r123.tar.gz"
-       $WGET $WGET_OPTIONS "https://github.com/Cyan4973/lz4/archive/r123.tar.gz" -O "$fileName"
+       fileName="lz4-r126.tar.gz"
+       $WGET $WGET_OPTIONS "https://github.com/Cyan4973/lz4/archive/r126.tar.gz" -O "$fileName"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf $fileName
