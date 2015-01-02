@@ -3156,8 +3156,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                    );
       while (Index_getNextStorage(&indexQueryHandle,
                                   &oldStorageId,
-                                  NULL, // uuid
-                                  NULL, // job id
+                                  NULL, // entity id
+                                  NULL, // job UUID
+                                  NULL, // schedule UUID
                                   oldStorageName,
                                   NULL, // createdDateTime
                                   NULL, // size
