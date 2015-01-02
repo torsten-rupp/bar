@@ -95,9 +95,8 @@ typedef enum
   ARCHIVE_TYPE_UNKNOWN,
 } ArchiveTypes;
 
-#define SCHEDULE_ANY -1
 /*
-#define SCHEDULE_ANY_MONTH \
+#define WEEKDAY_ANY_MONTH \
   (  SET_VALUE(MONTH_JAN) \
    | SET_VALUE(MONTH_FEB) \
    | SET_VALUE(MONTH_MAR) \
@@ -112,7 +111,7 @@ typedef enum
    | SET_VALUE(MONTH_DEC) \
   )
 */
-#define SCHEDULE_ANY_DAY \
+#define WEEKDAY_SET_ANY \
   (  SET_VALUE(WEEKDAY_MON) \
    | SET_VALUE(WEEKDAY_TUE) \
    | SET_VALUE(WEEKDAY_WED) \
@@ -122,24 +121,30 @@ typedef enum
    | SET_VALUE(WEEKDAY_SUN) \
   )
 
+#define SCHEDULE_ANY             -1
+#define SCHEDULE_WEEKDAY_SET_ANY WEEKDAY_SET_ANY
+
 #define MAX_CONNECTION_COUNT_UNLIMITED MAX_INT
 #define MAX_STORAGE_SIZE_UNLIMITED     MAX_INT64
 
 /***************************** Datatypes *******************************/
+
+// week day sets
+typedef long WeekDaySet;                                 // week days set or WEEKDAY_SET_ANY
 
 // band width usage
 typedef struct BandWidthNode
 {
   LIST_NODE_HEADER(struct BandWidthNode);
 
-  int    year;                                           // valid year or SCHEDULE_ANY
-  int    month;                                          // valid month or SCHEDULE_ANY
-  int    day;                                            // valid day or SCHEDULE_ANY
-  int    hour;                                           // valid hour or SCHEDULE_ANY
-  int    minute;                                         // valid minute or SCHEDULE_ANY
-  long   weekDays;                                       // valid weekdays or SCHEDULE_ANY_DAY
-  ulong  n;                                              // band with limit [bits/s]
-  String fileName;                                       // file to read band width from
+  int        year;                                       // valid year or SCHEDULE_ANY
+  int        month;                                      // valid month or SCHEDULE_ANY
+  int        day;                                        // valid day or SCHEDULE_ANY
+  int        hour;                                       // valid hour or SCHEDULE_ANY
+  int        minute;                                     // valid minute or SCHEDULE_ANY
+  WeekDaySet weekDaySet;                                 // valid weekday set or SCHEDULE_WEEKDAY_SET_ANY
+  ulong      n;                                          // band with limit [bits/s]
+  String     fileName;                                   // file to read band width from
 } BandWidthNode;
 
 typedef struct
@@ -399,38 +404,6 @@ typedef struct
 
   bool                   serverDebugFlag;                // TRUE iff server debug enabled (for debug only)
 } GlobalOptions;
-
-// schedule
-typedef struct
-{
-  int year;                                              // year or SCHEDULE_ANY
-  int month;                                             // month or SCHEDULE_ANY
-  int day;                                               // day or SCHEDULE_ANY
-} ScheduleDate;
-typedef long ScheduleWeekDays;                           // week days set or SCHEDULE_ANY
-typedef struct
-{
-  int hour;                                              // hour or SCHEDULE_ANY
-  int minute;                                            // minute or SCHEDULE_ANY
-} ScheduleTime;
-typedef struct ScheduleNode
-{
-  LIST_NODE_HEADER(struct ScheduleNode);
-
-  ScheduleDate     date;
-  ScheduleWeekDays weekDays;
-  ScheduleTime     time;
-  ArchiveTypes     archiveType;                          // archive type to create
-  String           customText;                           // custom text
-  uint             minKeep,maxKeep;                      // min./max keep count
-  uint             maxAge;                               // max. age [days]
-  bool             enabledFlag;                          // TRUE iff enabled
-} ScheduleNode;
-
-typedef struct
-{
-  LIST_HEADER(ScheduleNode);
-} ScheduleList;
 
 // job options
 typedef struct
@@ -894,6 +867,39 @@ Errors inputCryptPassword(void         *userData,
                           bool         validateFlag,
                           bool         weakCheckFlag
                          );
+
+/***********************************************************************\
+* Name   : parseWeekDaySet
+* Purpose: parse date week day set
+* Input  : names - day names to parse
+* Output : weekDaySet - week day set
+* Return : TRUE iff week day parsed
+* Notes  : -
+\***********************************************************************/
+
+bool parseWeekDaySet(const char *names, WeekDaySet *weekDaySet);
+
+/***********************************************************************\
+* Name   : parseDateTimeNumber
+* Purpose: parse date/time number (year, day, month, hour, minute)
+* Input  : s - string to parse
+* Output : n - number variable
+* Return : TRUE iff number parsed
+* Notes  : -
+\***********************************************************************/
+
+bool parseDateTimeNumber(const String s, int *n);
+
+/***********************************************************************\
+* Name   : parseDateMonth
+* Purpose: parse date month name
+* Input  : s - string to parse
+* Output : month - month (MONTH_JAN..MONTH_DEC)
+* Return : TRUE iff month parsed
+* Notes  : -
+\***********************************************************************/
+
+bool parseDateMonth(const String s, int *month);
 
 /***********************************************************************\
 * Name   : configValueParseBandWidth
@@ -1363,311 +1369,6 @@ void configValueFormatDoneCompressAlgorithm(void **formatUserData, void *userDat
 \***********************************************************************/
 
 bool configValueFormatCompressAlgorithm(void **formatUserData, void *userData, String line);
-
-/***********************************************************************\
-* Name   : parseScheduleDate
-* Purpose: parse schedule date
-* Input  : date - date string (<year|*>-<month|*>-<day|*>)
-* Output :
-* Return : scheduleNode or NULL on error
-* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
-*          nov, dec
-*          week day names: mon, tue, wed, thu, fri, sat, sun
-\***********************************************************************/
-
-ScheduleNode *parseScheduleDate(const String date);
-
-/***********************************************************************\
-* Name   : parseScheduleParts
-* Purpose: parse schedule parts
-* Input  : date        - date string (<year|*>-<month|*>-<day|*>)
-*          weekDay     - week days string (<day>,...)
-*          time        - time string <hour|*>:<minute|*>
-* Output :
-* Return : scheduleNode or NULL on error
-* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
-*          nov, dec
-*          week day names: mon, tue, wed, thu, fri, sat, sun
-\***********************************************************************/
-
-ScheduleNode *parseScheduleWeekDays(const String weekDay);
-
-/***********************************************************************\
-* Name   : parseScheduleParts
-* Purpose: parse schedule parts
-* Input  : date        - date string (<year|*>-<month|*>-<day|*>)
-*          weekDay     - week day string
-*          time        - time string <hour|*>:<minute|*>
-* Output :
-* Return : scheduleNode or NULL on error
-* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
-*          nov, dec
-*          week day names: mon, tue, wed, thu, fri, sat, sun
-\***********************************************************************/
-
-ScheduleNode *parseScheduleTime(const String time);
-
-/***********************************************************************\
-* Name   : parseScheduleParts
-* Purpose: parse schedule parts
-* Input  : date        - date string (<year|*>-<month|*>-<day|*>)
-*          weekDays    - week days string (<day>,...)
-*          time        - time string <hour|*>:<minute|*>
-* Output :
-* Return : scheduleNode or NULL on error
-* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
-*          nov, dec
-*          week day names: mon, tue, wed, thu, fri, sat, sun
-\***********************************************************************/
-
-ScheduleNode *parseScheduleDateTime(const String date,
-                                    const String weekDays,
-                                    const String time
-                                   );
-
-/***********************************************************************\
-* Name   : parseSchedule
-* Purpose: parse schedule
-* Input  : s - schedule string
-* Output :
-* Return : scheduleNode or NULL on error
-* Notes  : string format
-*            <year|*>-<month|*>-<day|*> [<week day|*>] <hour|*>:<minute|*> <0|1> <archive type>
-*          month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
-*          nov, dec
-*          week day names: mon, tue, wed, thu, fri, sat, sun
-*          archive type names: normal, full, incremental, differential
-\***********************************************************************/
-
-ScheduleNode *parseSchedule(const String s);
-
-/***********************************************************************\
-* Name   : configValueParseScheduleDate
-* Purpose: config value option call back for parsing schedule date
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-/***********************************************************************\
-* Name   : configValueFormatInitScheduleDate
-* Purpose: init format config schedule
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneScheduleDate
-* Purpose: done format of config schedule statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneScheduleDate(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatScheduleDate
-* Purpose: format schedule config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line);
-
-/***********************************************************************\
-* Name   : configValueParseScheduleWeekDays
-* Purpose: config value option call back for parsing schedule week days
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParseScheduleWeekDays(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-/***********************************************************************\
-* Name   : configValueFormatInitSchedule
-* Purpose: init format config schedule
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitScheduleWeekDays(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneScheduleWeekDays
-* Purpose: done format of config schedule statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneScheduleWeekDays(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatScheduleWeekDays
-* Purpose: format schedule config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool configValueFormatScheduleWeekDays(void **formatUserData, void *userData, String line);
-
-/***********************************************************************\
-* Name   : configValueParseScheduleTime
-* Purpose: config value option call back for parsing schedule time
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-/***********************************************************************\
-* Name   : configValueFormatInitScheduleTime
-* Purpose: init format config schedule
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneScheduleTime
-* Purpose: done format of config schedule statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneScheduleTime(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatScheduleTime
-* Purpose: format schedule config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line);
-
-/***********************************************************************\
-* Name   : configValueParseSchedule
-* Purpose: config value option call back for parsing schedule
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-/***********************************************************************\
-* Name   : configValueFormatInitSchedule
-* Purpose: init format config schedule
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitSchedule(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneSchedule
-* Purpose: done format of config schedule statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneSchedule(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatSchedule
-* Purpose: format schedule config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool configValueFormatSchedule(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : archiveTypeToString

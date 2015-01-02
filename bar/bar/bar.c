@@ -173,6 +173,7 @@ LOCAL Commands         command;
 LOCAL String           jobName;
 
 LOCAL JobOptions       jobOptions;
+LOCAL String           uuid;
 LOCAL String           storageName;
 LOCAL ServerList       serverList;
 LOCAL Semaphore        serverListLock;
@@ -905,6 +906,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER  ("index-database-keep-time",     &globalOptions.indexDatabaseKeepTime,-1,                       0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
 
   // global job settings
+  CONFIG_VALUE_STRING   ("UUID",                         &uuid,-1                                                       ),
   CONFIG_VALUE_STRING   ("archive-name",                 &storageName,-1                                                ),
   CONFIG_VALUE_SELECT   ("archive-type",                 &jobOptions.archiveType,-1,                                    CONFIG_VALUE_ARCHIVE_TYPES),
 
@@ -969,17 +971,17 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_BOOLEAN  ("quiet",                        &globalOptions.quietFlag,-1                                    ),
   CONFIG_VALUE_INTEGER  ("verbose",                      &globalOptions.verboseLevel,-1,                                0,6,NULL),
 
-  // ignored job settings (server only)
+  // ignored schedule settings (server only)
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
-  CONFIG_VALUE_SPECIAL  ("date",                         NULL,offsetof(ScheduleNode,date),                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
-  CONFIG_VALUE_SPECIAL  ("weekdays",                     NULL,offsetof(ScheduleNode,weekDays),                          configValueParseScheduleWeekDays,configValueFormatInitScheduleWeekDays,configValueFormatDoneScheduleWeekDays,configValueFormatScheduleWeekDays,NULL),
-  CONFIG_VALUE_SPECIAL  ("time",                         NULL,offsetof(ScheduleNode,time),                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
-  CONFIG_VALUE_SELECT   ("archive-type",                 NULL,offsetof(ScheduleNode,archiveType),                       CONFIG_VALUE_ARCHIVE_TYPES),
-  CONFIG_VALUE_STRING   ("text",                         NULL,offsetof(ScheduleNode,customText)                         ),
-  CONFIG_VALUE_INTEGER  ("min-keep",                     NULL,offsetof(ScheduleNode,minKeep),                           0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER  ("max-keep",                     NULL,offsetof(ScheduleNode,maxKeep),                           0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER  ("max-age",                      NULL,offsetof(ScheduleNode,maxAge),                            0,MAX_INT,NULL),
-  CONFIG_VALUE_BOOLEAN  ("enabled",                      NULL,offsetof(ScheduleNode,enabledFlag)                        ),
+  CONFIG_VALUE_IGNORE   ("date"),
+  CONFIG_VALUE_IGNORE   ("weekdays"),
+  CONFIG_VALUE_IGNORE   ("time"),
+  CONFIG_VALUE_IGNORE   ("archive-type"),
+  CONFIG_VALUE_IGNORE   ("text"),
+  CONFIG_VALUE_IGNORE   ("min-keep"),
+  CONFIG_VALUE_IGNORE   ("max-keep"),
+  CONFIG_VALUE_IGNORE   ("max-age"),
+  CONFIG_VALUE_IGNORE   ("enabled"),
   CONFIG_VALUE_END_SECTION(),
 
   // commands
@@ -1084,7 +1086,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_CSTRING  ("pid-file",                     &pidFileName,-1                                                ),
 
   // old/obsolete
-  CONFIG_VALUE_SPECIAL  ("schedule",                     NULL,-1,                                                       configValueParseSchedule,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_IGNORE   ("schedule"),
 };
 
 /*---------------------------------------------------------------------*/
@@ -1790,143 +1792,6 @@ LOCAL bool parseBandWidthNumber(const String s, ulong *n)
 }
 
 /***********************************************************************\
-* Name   : parseDateTimeNumber
-* Purpose: parse date/time number (year, day, month, hour, minute)
-* Input  : s - string to parse
-* Output : n - number variable
-* Return : TRUE iff number parsed
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool parseDateTimeNumber(const String s, int *n)
-{
-  long nextIndex;
-
-  assert(s != NULL);
-  assert(n != NULL);
-
-  // init variables
-  if   (String_equalsCString(s,"*"))
-  {
-    (*n) = SCHEDULE_ANY;
-  }
-  else
-  {
-    while ((String_length(s) > 1) && String_startsWithChar(s,'0'))
-    {
-      String_remove(s,STRING_BEGIN,1);
-    }
-    (*n) = (int)String_toInteger(s,0,&nextIndex,NULL,0);
-    if (nextIndex != STRING_END) return FALSE;
-  }
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : parseDateMonth
-* Purpose: parse date month name
-* Input  : s - string to parse
-* Output : month - month (MONTH_JAN..MONTH_DEC)
-* Return : TRUE iff month parsed
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool parseDateMonth(const String s, int *month)
-{
-  String name;
-  long   nextIndex;
-
-  assert(s != NULL);
-  assert(month != NULL);
-
-  name = String_toLower(String_duplicate(s));
-  if      (String_equalsCString(s,"*"))
-  {
-    (*month) = SCHEDULE_ANY;
-  }
-  else if (String_equalsIgnoreCaseCString(name,"jan")) (*month) = MONTH_JAN;
-  else if (String_equalsIgnoreCaseCString(name,"feb")) (*month) = MONTH_FEB;
-  else if (String_equalsIgnoreCaseCString(name,"mar")) (*month) = MONTH_MAR;
-  else if (String_equalsIgnoreCaseCString(name,"apr")) (*month) = MONTH_APR;
-  else if (String_equalsIgnoreCaseCString(name,"may")) (*month) = MONTH_MAY;
-  else if (String_equalsIgnoreCaseCString(name,"jun")) (*month) = MONTH_JUN;
-  else if (String_equalsIgnoreCaseCString(name,"jul")) (*month) = MONTH_JUL;
-  else if (String_equalsIgnoreCaseCString(name,"aug")) (*month) = MONTH_AUG;
-  else if (String_equalsIgnoreCaseCString(name,"sep")) (*month) = MONTH_SEP;
-  else if (String_equalsIgnoreCaseCString(name,"oct")) (*month) = MONTH_OCT;
-  else if (String_equalsIgnoreCaseCString(name,"nov")) (*month) = MONTH_NOV;
-  else if (String_equalsIgnoreCaseCString(name,"dec")) (*month) = MONTH_DEC;
-  else
-  {
-    while ((String_length(s) > 1) && String_startsWithChar(s,'0'))
-    {
-      String_remove(s,STRING_BEGIN,1);
-    }
-    (*month) = (uint)String_toInteger(s,0,&nextIndex,NULL,0);
-    if ((nextIndex != STRING_END) || ((*month) < 1) || ((*month) > 12))
-    {
-      return FALSE;
-    }
-  }
-  String_delete(name);
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : parseDateWeekDays
-* Purpose: parse date week day
-* Input  : names - day names to parse
-* Output : weekDays - week days
-* Return : TRUE iff week day parsed
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool parseDateWeekDays(const char *names, ScheduleWeekDays *weekDays)
-{
-  StringTokenizer stringTokenizer;
-  String          name;
-
-  assert(names != NULL);
-  assert(weekDays != NULL);
-
-  if (stringEquals(names,"*"))
-  {
-    (*weekDays) = SCHEDULE_ANY_DAY;
-  }
-  else
-  {
-    SET_CLEAR(*weekDays);
-
-    String_initTokenizerCString(&stringTokenizer,
-                                names,
-                                ",",
-                                STRING_QUOTES,
-                                TRUE
-                               );
-    while (String_getNextToken(&stringTokenizer,&name,NULL))
-    {
-      if      (String_equalsIgnoreCaseCString(name,"mon")) SET_ADD(*weekDays,WEEKDAY_MON);
-      else if (String_equalsIgnoreCaseCString(name,"tue")) SET_ADD(*weekDays,WEEKDAY_TUE);
-      else if (String_equalsIgnoreCaseCString(name,"wed")) SET_ADD(*weekDays,WEEKDAY_WED);
-      else if (String_equalsIgnoreCaseCString(name,"thu")) SET_ADD(*weekDays,WEEKDAY_THU);
-      else if (String_equalsIgnoreCaseCString(name,"fri")) SET_ADD(*weekDays,WEEKDAY_FRI);
-      else if (String_equalsIgnoreCaseCString(name,"sat")) SET_ADD(*weekDays,WEEKDAY_SAT);
-      else if (String_equalsIgnoreCaseCString(name,"sun")) SET_ADD(*weekDays,WEEKDAY_SUN);
-      else
-      {
-        String_doneTokenizer(&stringTokenizer);
-        return FALSE;
-      }
-    }
-    String_doneTokenizer(&stringTokenizer);
-  }
-
-  return TRUE;
-}
-
-/***********************************************************************\
 * Name   : newBandWidthNode
 * Purpose: create new band width node
 * Input  : -
@@ -1950,7 +1815,7 @@ LOCAL BandWidthNode *newBandWidthNode(void)
   bandWidthNode->day         = SCHEDULE_ANY;
   bandWidthNode->hour        = SCHEDULE_ANY;
   bandWidthNode->minute      = SCHEDULE_ANY;
-  bandWidthNode->weekDays    = SCHEDULE_ANY_DAY;
+  bandWidthNode->weekDaySet  = SCHEDULE_WEEKDAY_SET_ANY;
   bandWidthNode->n           = 0L;
   bandWidthNode->fileName    = NULL;
 
@@ -2018,7 +1883,7 @@ LOCAL BandWidthNode *parseBandWidth(const String s)
     {
       if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
       {
-        if (!parseDateWeekDays(String_cString(s0),&bandWidthNode->weekDays)) errorFlag = TRUE;
+        if (!parseWeekDaySet(String_cString(s0),&bandWidthNode->weekDaySet)) errorFlag = TRUE;
         if (!parseDateTimeNumber(s1,&bandWidthNode->hour  )) errorFlag = TRUE;
         if (!parseDateTimeNumber(s2,&bandWidthNode->minute)) errorFlag = TRUE;
       }
@@ -2700,6 +2565,7 @@ LOCAL Errors initAll(void)
 
   command                               = COMMAND_LIST;
   jobName                               = NULL;
+  uuid                                  = NULL;
   storageName                           = NULL;
   initJobOptions(&jobOptions);
 
@@ -2841,6 +2707,7 @@ LOCAL void doneAll(void)
 
   doneJobOptions(&jobOptions);
   String_delete(storageName);
+  String_delete(uuid);
   String_delete(jobName);
   doneGlobalOptions();
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
@@ -3413,8 +3280,8 @@ ulong getBandWidth(BandWidthList *bandWidthList)
 
     // check week day
     weekDayMatchFlag =    (matchingBandWidthNode == NULL)
-                       || (   (bandWidthNode->weekDays == SCHEDULE_ANY_DAY)
-                           && IN_SET(bandWidthNode->weekDays,currentWeekDay)
+                       || (   (bandWidthNode->weekDaySet == SCHEDULE_WEEKDAY_SET_ANY)
+                           && IN_SET(bandWidthNode->weekDaySet,currentWeekDay)
                           );
 
     // check time
@@ -3911,6 +3778,116 @@ Errors inputCryptPassword(void         *userData,
   assert(error != ERROR_UNKNOWN);
 
   return error;
+}
+
+bool parseWeekDaySet(const char *names, WeekDaySet *weekDaySet)
+{
+  StringTokenizer stringTokenizer;
+  String          name;
+
+  assert(names != NULL);
+  assert(weekDaySet != NULL);
+
+  if (stringEquals(names,"*"))
+  {
+    (*weekDaySet) = WEEKDAY_SET_ANY;
+  }
+  else
+  {
+    SET_CLEAR(*weekDaySet);
+
+    String_initTokenizerCString(&stringTokenizer,
+                                names,
+                                ",",
+                                STRING_QUOTES,
+                                TRUE
+                               );
+    while (String_getNextToken(&stringTokenizer,&name,NULL))
+    {
+      if      (String_equalsIgnoreCaseCString(name,"mon")) SET_ADD(*weekDaySet,WEEKDAY_MON);
+      else if (String_equalsIgnoreCaseCString(name,"tue")) SET_ADD(*weekDaySet,WEEKDAY_TUE);
+      else if (String_equalsIgnoreCaseCString(name,"wed")) SET_ADD(*weekDaySet,WEEKDAY_WED);
+      else if (String_equalsIgnoreCaseCString(name,"thu")) SET_ADD(*weekDaySet,WEEKDAY_THU);
+      else if (String_equalsIgnoreCaseCString(name,"fri")) SET_ADD(*weekDaySet,WEEKDAY_FRI);
+      else if (String_equalsIgnoreCaseCString(name,"sat")) SET_ADD(*weekDaySet,WEEKDAY_SAT);
+      else if (String_equalsIgnoreCaseCString(name,"sun")) SET_ADD(*weekDaySet,WEEKDAY_SUN);
+      else
+      {
+        String_doneTokenizer(&stringTokenizer);
+        return FALSE;
+      }
+    }
+    String_doneTokenizer(&stringTokenizer);
+  }
+
+  return TRUE;
+}
+
+bool parseDateTimeNumber(const String s, int *n)
+{
+  long nextIndex;
+
+  assert(s != NULL);
+  assert(n != NULL);
+
+  // init variables
+  if   (String_equalsCString(s,"*"))
+  {
+    (*n) = SCHEDULE_ANY;
+  }
+  else
+  {
+    while ((String_length(s) > 1) && String_startsWithChar(s,'0'))
+    {
+      String_remove(s,STRING_BEGIN,1);
+    }
+    (*n) = (int)String_toInteger(s,0,&nextIndex,NULL,0);
+    if (nextIndex != STRING_END) return FALSE;
+  }
+
+  return TRUE;
+}
+
+bool parseDateMonth(const String s, int *month)
+{
+  String name;
+  long   nextIndex;
+
+  assert(s != NULL);
+  assert(month != NULL);
+
+  name = String_toLower(String_duplicate(s));
+  if      (String_equalsCString(s,"*"))
+  {
+    (*month) = SCHEDULE_ANY;
+  }
+  else if (String_equalsIgnoreCaseCString(name,"jan")) (*month) = MONTH_JAN;
+  else if (String_equalsIgnoreCaseCString(name,"feb")) (*month) = MONTH_FEB;
+  else if (String_equalsIgnoreCaseCString(name,"mar")) (*month) = MONTH_MAR;
+  else if (String_equalsIgnoreCaseCString(name,"apr")) (*month) = MONTH_APR;
+  else if (String_equalsIgnoreCaseCString(name,"may")) (*month) = MONTH_MAY;
+  else if (String_equalsIgnoreCaseCString(name,"jun")) (*month) = MONTH_JUN;
+  else if (String_equalsIgnoreCaseCString(name,"jul")) (*month) = MONTH_JUL;
+  else if (String_equalsIgnoreCaseCString(name,"aug")) (*month) = MONTH_AUG;
+  else if (String_equalsIgnoreCaseCString(name,"sep")) (*month) = MONTH_SEP;
+  else if (String_equalsIgnoreCaseCString(name,"oct")) (*month) = MONTH_OCT;
+  else if (String_equalsIgnoreCaseCString(name,"nov")) (*month) = MONTH_NOV;
+  else if (String_equalsIgnoreCaseCString(name,"dec")) (*month) = MONTH_DEC;
+  else
+  {
+    while ((String_length(s) > 1) && String_startsWithChar(s,'0'))
+    {
+      String_remove(s,STRING_BEGIN,1);
+    }
+    (*month) = (uint)String_toInteger(s,0,&nextIndex,NULL,0);
+    if ((nextIndex != STRING_END) || ((*month) < 1) || ((*month) > 12))
+    {
+      return FALSE;
+    }
+  }
+  String_delete(name);
+
+  return TRUE;
 }
 
 bool configValueParseBandWidth(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
@@ -4530,520 +4507,6 @@ bool configValueFormatCompressAlgorithm(void **formatUserData, void *userData, S
   }
 }
 
-/***********************************************************************\
-* Name   : newScheduleNode
-* Purpose: create new schedule node
-* Input  : -
-* Output : -
-* Return : schedule node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ScheduleNode *newScheduleNode(void)
-{
-  ScheduleNode *scheduleNode;
-
-  // allocate new schedule node
-  scheduleNode = LIST_NEW_NODE(ScheduleNode);
-  if (scheduleNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  scheduleNode->date.year   = SCHEDULE_ANY;
-  scheduleNode->date.month  = SCHEDULE_ANY;
-  scheduleNode->date.day    = SCHEDULE_ANY;
-  scheduleNode->weekDays    = SCHEDULE_ANY_DAY;
-  scheduleNode->time.hour   = SCHEDULE_ANY;
-  scheduleNode->time.minute = SCHEDULE_ANY;
-  scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
-  scheduleNode->customText  = String_new();
-  scheduleNode->minKeep     = 0;
-  scheduleNode->maxKeep     = MAX_UINT;
-  scheduleNode->maxAge      = 0;
-  scheduleNode->enabledFlag = FALSE;
-
-  return scheduleNode;
-}
-
-/***********************************************************************\
-* Name   : parseScheduleArchiveType
-* Purpose: parse archive type
-* Input  : s - string to parse
-* Output : archiveType - archive type
-* Return : TRUE iff archive type parsed
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool parseScheduleArchiveType(const String s, ArchiveTypes *archiveType)
-{
-  assert(s != NULL);
-  assert(archiveType != NULL);
-
-  if (String_equalsCString(s,"*"))
-  {
-    (*archiveType) = ARCHIVE_TYPE_NORMAL;
-  }
-  else
-  {
-    if (!parseArchiveType(String_cString(s),archiveType))
-    {
-      return FALSE;
-    }
-  }
-
-  return TRUE;
-}
-
-ScheduleNode *parseScheduleDateTime(const String date,
-                                    const String weekDays,
-                                    const String time
-                                   )
-{
-  ScheduleNode *scheduleNode;
-  bool         errorFlag;
-  String       s0,s1,s2;
-
-  assert(date != NULL);
-  assert(weekDays != NULL);
-  assert(time != NULL);
-
-  // allocate new schedule node
-  scheduleNode = newScheduleNode();
-
-  // parse schedule. Format: date [weekday] time enabled [type]
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
-  if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
-  {
-    if (!parseDateTimeNumber(s0,&scheduleNode->date.year)) errorFlag = TRUE;
-    if (!parseDateMonth     (s1,&scheduleNode->date.month)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&scheduleNode->date.day)) errorFlag = TRUE;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-  if (!parseDateWeekDays(String_cString(weekDays),&scheduleNode->weekDays))
-  {
-    errorFlag = TRUE;
-  }
-  if (String_parse(time,STRING_BEGIN,"%S:%S",NULL,s0,s1))
-  {
-    if (!parseDateTimeNumber(s0,&scheduleNode->time.hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&scheduleNode->time.minute)) errorFlag = TRUE;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-  String_delete(s2);
-  String_delete(s1);
-  String_delete(s0);
-
-  if (errorFlag)
-  {
-    LIST_DELETE_NODE(scheduleNode);
-    return NULL;
-  }
-
-  return scheduleNode;
-}
-
-ScheduleNode *parseSchedule(const String s)
-{
-  ScheduleNode *scheduleNode;
-  bool         errorFlag;
-  String       s0,s1,s2;
-  bool         b;
-  long         nextIndex;
-
-  assert(s != NULL);
-
-  // allocate new schedule node
-  scheduleNode = newScheduleNode();
-
-  // parse schedule. Format: date [weekday] time enabled [type]
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
-  nextIndex = STRING_BEGIN;
-  if      (String_parse(s,nextIndex,"%S-%S-%S",&nextIndex,s0,s1,s2))
-  {
-    if (!parseDateTimeNumber(s0,&scheduleNode->date.year )) errorFlag = TRUE;
-    if (!parseDateMonth     (s1,&scheduleNode->date.month)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&scheduleNode->date.day  )) errorFlag = TRUE;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-  if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
-  {
-    if (!parseDateWeekDays(String_cString(s0),&scheduleNode->weekDays)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&scheduleNode->time.hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&scheduleNode->time.minute)) errorFlag = TRUE;
-  }
-  else if (String_parse(s,nextIndex,"%S:%S",&nextIndex,s0,s1))
-  {
-    if (!parseDateTimeNumber(s0,&scheduleNode->time.hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&scheduleNode->time.minute)) errorFlag = TRUE;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-  if (String_parse(s,nextIndex,"%y",&nextIndex,&b))
-  {
-/* It seems gcc has a bug in option -fno-schedule-insns2: if -O2 is used this
-   option is enabled. Then either the program crashes with a SigSegV or parsing
-   boolean values here fail. It seems the address of 'b' is not received in the
-   function. Because this problem disappear when -fno-schedule-insns2 is given
-   it looks like the gcc do some rearrangements in the generated machine code
-   which is not valid anymore. How can this be tracked down? Is this problem
-   known?
-*/
-if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string value fail - C compiler bug?");
-    scheduleNode->enabledFlag = b;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-//fprintf(stderr,"%s,%d: scheduleNode->enabled=%d %p\n",__FILE__,__LINE__,scheduleNode->enabled,&b);
-  if (nextIndex != STRING_END)
-  {
-    if (String_parse(s,nextIndex,"%S",&nextIndex,s0))
-    {
-      if (!parseScheduleArchiveType(s0,&scheduleNode->archiveType)) errorFlag = TRUE;
-    }
-  }
-  String_delete(s2);
-  String_delete(s1);
-  String_delete(s0);
-
-  if (errorFlag || (nextIndex != STRING_END))
-  {
-    LIST_DELETE_NODE(scheduleNode);
-    return NULL;
-  }
-
-  return scheduleNode;
-}
-
-bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  bool         errorFlag;
-  String       s0,s1,s2;
-  ScheduleDate date;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
-  if      (String_parseCString(value,"%S-%S-%S",NULL,s0,s1,s2))
-  {
-    if (!parseDateTimeNumber(s0,&date.year )) errorFlag = TRUE;
-    if (!parseDateMonth     (s1,&date.month)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&date.day  )) errorFlag = TRUE;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-  String_delete(s2);
-  String_delete(s1);
-  String_delete(s0);
-  if (errorFlag)
-  {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule date '%s'",value);
-    return FALSE;
-  }
-
-  // store values
-  (*(ScheduleDate*)variable) = date;
-
-  return TRUE;
-}
-
-void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (ScheduleDate*)variable;
-}
-
-void configValueFormatDoneScheduleDate(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line)
-{
-  const ScheduleDate *scheduleDate;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  scheduleDate = (const ScheduleDate*)(*formatUserData);
-  if (scheduleDate != NULL)
-  {
-    if (scheduleDate->year != SCHEDULE_ANY)
-    {
-      String_format(line,"%d",scheduleDate->year);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,'-');
-    if (scheduleDate->month != SCHEDULE_ANY)
-    {
-      String_format(line,"%d",scheduleDate->month);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,'-');
-    if (scheduleDate->day != SCHEDULE_ANY)
-    {
-      String_format(line,"%d",scheduleDate->day);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-bool configValueParseScheduleWeekDays(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  ScheduleWeekDays weekDays;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse
-  if (!parseDateWeekDays(value,&weekDays))
-  {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule weekday '%s'",value);
-    return FALSE;
-  }
-
-  // store value
-  (*(ScheduleWeekDays*)variable) = weekDays;
-
-  return TRUE;
-}
-
-void configValueFormatInitScheduleWeekDays(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (ScheduleWeekDays*)variable;
-}
-
-void configValueFormatDoneScheduleWeekDays(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-bool configValueFormatScheduleWeekDays(void **formatUserData, void *userData, String line)
-{
-  const ScheduleWeekDays *scheduleWeekDays;
-  String                 names;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  scheduleWeekDays = (ScheduleWeekDays*)(*formatUserData);
-  if (scheduleWeekDays != NULL)
-  {
-    if ((*scheduleWeekDays) != SCHEDULE_ANY_DAY)
-    {
-      names = String_new();
-
-      if (IN_SET(*scheduleWeekDays,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
-      if (IN_SET(*scheduleWeekDays,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
-      if (IN_SET(*scheduleWeekDays,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
-      if (IN_SET(*scheduleWeekDays,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
-      if (IN_SET(*scheduleWeekDays,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
-      if (IN_SET(*scheduleWeekDays,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
-      if (IN_SET(*scheduleWeekDays,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
-
-      String_append(line,names);
-      String_appendChar(line,' ');
-
-      String_delete(names);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  bool         errorFlag;
-  String       s0,s1;
-  ScheduleTime time;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
-  if (String_parseCString(value,"%S:%S",NULL,s0,s1))
-  {
-    if (!parseDateTimeNumber(s0,&time.hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&time.minute)) errorFlag = TRUE;
-  }
-  String_delete(s1);
-  String_delete(s0);
-  if (errorFlag)
-  {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule time '%s'",value);
-    return FALSE;
-  }
-
-  // store values
-  (*(ScheduleTime*)variable) = time;
-
-  return TRUE;
-}
-
-void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (ScheduleTime*)variable;
-}
-
-void configValueFormatDoneScheduleTime(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line)
-{
-  const ScheduleTime *scheduleTime;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(userData);
-
-  scheduleTime = (const ScheduleTime*)(*formatUserData);
-  if (scheduleTime != NULL)
-  {
-    if (scheduleTime->hour != SCHEDULE_ANY)
-    {
-      String_format(line,"%d",scheduleTime->hour);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,':');
-    if (scheduleTime->minute != SCHEDULE_ANY)
-    {
-      String_format(line,"%d",scheduleTime->minute);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  ScheduleNode *scheduleNode;
-  String       s;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse schedule node
-  s = String_newCString(value);
-  scheduleNode = parseSchedule(s);
-  if (scheduleNode == NULL)
-  {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule '%s'",value);
-    String_delete(s);
-    return FALSE;
-  }
-  String_delete(s);
-
-  // append to list
-  List_append((ScheduleList*)variable,scheduleNode);
-
-  return TRUE;
-}
-
 const char *archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue)
 {
   uint       z;
@@ -5149,6 +4612,10 @@ LOCAL bool readFromJob(const String fileName)
       File_ungetLine(&fileHandle,line,&lineNb);
     }
     else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
+    {
+      // nothing to do
+    }
+    else if (String_parse(line,STRING_BEGIN,"[end]",NULL))
     {
       // nothing to do
     }

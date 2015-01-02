@@ -87,6 +87,38 @@ typedef enum
   SERVER_STATE_SUSPENDED,
 } ServerStates;
 
+// schedule
+typedef struct
+{
+  int year;                                              // year or SCHEDULE_ANY
+  int month;                                             // month or SCHEDULE_ANY
+  int day;                                               // day or SCHEDULE_ANY
+} ScheduleDate;
+typedef WeekDaySet ScheduleWeekDaySet;
+typedef struct
+{
+  int hour;                                              // hour or SCHEDULE_ANY
+  int minute;                                            // minute or SCHEDULE_ANY
+} ScheduleTime;
+typedef struct ScheduleNode
+{
+  LIST_NODE_HEADER(struct ScheduleNode);
+
+  ScheduleDate       date;
+  ScheduleWeekDaySet weekDaySet;
+  ScheduleTime       time;
+  ArchiveTypes       archiveType;                        // archive type to create
+  String             customText;                         // custom text
+  uint               minKeep,maxKeep;                    // min./max keep count
+  uint               maxAge;                             // max. age [days]
+  bool               enabledFlag;                        // TRUE iff enabled
+} ScheduleNode;
+
+typedef struct
+{
+  LIST_HEADER(ScheduleNode);
+} ScheduleList;
+
 // job type
 typedef enum
 {
@@ -399,6 +431,23 @@ typedef struct
   StringMap             argumentMap;
 } CommandMsg;
 
+bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable);
+void configValueFormatDoneScheduleDate(void **formatUserData, void *userData);
+bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line);
+bool configValueParseScheduleWeekDaySet(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+void configValueFormatInitScheduleWeekDaySet(void **formatUserData, void *userData, void *variable);
+void configValueFormatDoneScheduleWeekDaySet(void **formatUserData, void *userData);
+bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *userData, String line);
+bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable);
+void configValueFormatDoneScheduleTime(void **formatUserData, void *userData);
+bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line);
+bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+void configValueFormatInitSchedule(void **formatUserData, void *userData, void *variable);
+void configValueFormatDoneSchedule(void **formatUserData, void *userData);
+bool configValueFormatSchedule(void **formatUserData, void *userData, String line);
+
 LOCAL const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] =
 {
   {"G",1024*1024*1024},
@@ -598,7 +647,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
   CONFIG_STRUCT_VALUE_SPECIAL  ("date",                    ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("weekdays",                ScheduleNode,weekDays,                          configValueParseScheduleWeekDays,configValueFormatInitScheduleWeekDays,configValueFormatDoneScheduleWeekDays,configValueFormatScheduleWeekDays,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("weekdays",                ScheduleNode,weekDaySet,                        configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
   CONFIG_STRUCT_VALUE_SELECT   ("archive-type",            ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
   CONFIG_STRUCT_VALUE_STRING   ("text",                    ScheduleNode,customText                         ),
@@ -718,12 +767,12 @@ LOCAL ScheduleNode *newScheduleNode(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  scheduleNode->date.year   = -1;
-  scheduleNode->date.month  = -1;
-  scheduleNode->date.day    = -1;
-  scheduleNode->weekDays    = -1;
-  scheduleNode->time.hour   = -1;
-  scheduleNode->time.minute = -1;
+  scheduleNode->date.year   = SCHEDULE_ANY;
+  scheduleNode->date.month  = SCHEDULE_ANY;
+  scheduleNode->date.day    = SCHEDULE_ANY;
+  scheduleNode->weekDaySet  = SCHEDULE_WEEKDAY_SET_ANY;
+  scheduleNode->time.hour   = SCHEDULE_ANY;
+  scheduleNode->time.minute = SCHEDULE_ANY;
   scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
   scheduleNode->customText  = String_new();
   scheduleNode->minKeep     = 0;
@@ -761,7 +810,7 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
   scheduleNode->date.year   = fromScheduleNode->date.year;
   scheduleNode->date.month  = fromScheduleNode->date.month;
   scheduleNode->date.day    = fromScheduleNode->date.day;
-  scheduleNode->weekDays    = fromScheduleNode->weekDays;
+  scheduleNode->weekDaySet  = fromScheduleNode->weekDaySet;
   scheduleNode->time.hour   = fromScheduleNode->time.hour;
   scheduleNode->time.minute = fromScheduleNode->time.minute;
   scheduleNode->archiveType = fromScheduleNode->archiveType;
@@ -813,7 +862,7 @@ LOCAL int equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleNo
     return 0;
   }
 
-  if      (scheduleNode1->weekDays != scheduleNode2->weekDays)
+  if      (scheduleNode1->weekDaySet != scheduleNode2->weekDaySet)
   {
     return 0;
   }
@@ -851,6 +900,806 @@ LOCAL int equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleNo
   }
 
   return 1;
+}
+
+/***********************************************************************\
+* Name   : configValueParseScheduleDate
+* Purpose: config value option call back for parsing schedule date
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  bool         errorFlag;
+  String       s0,s1,s2;
+  ScheduleDate date;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse
+  errorFlag = FALSE;
+  s0 = String_new();
+  s1 = String_new();
+  s2 = String_new();
+  if      (String_parseCString(value,"%S-%S-%S",NULL,s0,s1,s2))
+  {
+    if (!parseDateTimeNumber(s0,&date.year )) errorFlag = TRUE;
+    if (!parseDateMonth     (s1,&date.month)) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s2,&date.day  )) errorFlag = TRUE;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
+  String_delete(s2);
+  String_delete(s1);
+  String_delete(s0);
+  if (errorFlag)
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule date '%s'",value);
+    return FALSE;
+  }
+
+  // store values
+  (*(ScheduleDate*)variable) = date;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatInitScheduleDate
+* Purpose: init format config schedule
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (ScheduleDate*)variable;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatDoneScheduleDate
+* Purpose: done format of config schedule statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneScheduleDate(void **formatUserData, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+/***********************************************************************\
+* Name   : configValueFormatScheduleDate
+* Purpose: format schedule config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line)
+{
+  const ScheduleDate *scheduleDate;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  scheduleDate = (const ScheduleDate*)(*formatUserData);
+  if (scheduleDate != NULL)
+  {
+    if (scheduleDate->year != SCHEDULE_ANY)
+    {
+      String_format(line,"%d",scheduleDate->year);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,'-');
+    if (scheduleDate->month != SCHEDULE_ANY)
+    {
+      String_format(line,"%d",scheduleDate->month);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,'-');
+    if (scheduleDate->day != SCHEDULE_ANY)
+    {
+      String_format(line,"%d",scheduleDate->day);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+/***********************************************************************\
+* Name   : configValueParseScheduleWeekDaySet
+* Purpose: config value option call back for parsing schedule week day
+*          set
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseScheduleWeekDaySet(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  WeekDaySet weekDaySet;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse
+  if (!parseWeekDaySet(value,&weekDaySet))
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule weekday '%s'",value);
+    return FALSE;
+  }
+
+  // store value
+  (*(WeekDaySet*)variable) = weekDaySet;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatInitSchedule
+* Purpose: init format config schedule week day set
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitScheduleWeekDaySet(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (WeekDaySet*)variable;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatDoneScheduleWeekDays
+* Purpose: done format of config schedule week day set
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneScheduleWeekDaySet(void **formatUserData, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+/***********************************************************************\
+* Name   : configValueFormatScheduleWeekDaySet
+* Purpose: format schedule config week day set
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *userData, String line)
+{
+  const ScheduleWeekDaySet *scheduleWeekDaySet;
+  String                   names;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  scheduleWeekDaySet = (ScheduleWeekDaySet*)(*formatUserData);
+  if (scheduleWeekDaySet != NULL)
+  {
+    if ((*scheduleWeekDaySet) != SCHEDULE_WEEKDAY_SET_ANY)
+    {
+      names = String_new();
+
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
+
+      String_append(line,names);
+      String_appendChar(line,' ');
+
+      String_delete(names);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+/***********************************************************************\
+* Name   : configValueParseScheduleTime
+* Purpose: config value option call back for parsing schedule time
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  bool         errorFlag;
+  String       s0,s1;
+  ScheduleTime time;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse
+  errorFlag = FALSE;
+  s0 = String_new();
+  s1 = String_new();
+  if (String_parseCString(value,"%S:%S",NULL,s0,s1))
+  {
+    if (!parseDateTimeNumber(s0,&time.hour  )) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s1,&time.minute)) errorFlag = TRUE;
+  }
+  String_delete(s1);
+  String_delete(s0);
+  if (errorFlag)
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule time '%s'",value);
+    return FALSE;
+  }
+
+  // store values
+  (*(ScheduleTime*)variable) = time;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatInitScheduleTime
+* Purpose: init format config schedule
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (ScheduleTime*)variable;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatDoneScheduleTime
+* Purpose: done format of config schedule statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneScheduleTime(void **formatUserData, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+/***********************************************************************\
+* Name   : configValueFormatScheduleTime
+* Purpose: format schedule config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line)
+{
+  const ScheduleTime *scheduleTime;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(userData);
+
+  scheduleTime = (const ScheduleTime*)(*formatUserData);
+  if (scheduleTime != NULL)
+  {
+    if (scheduleTime->hour != SCHEDULE_ANY)
+    {
+      String_format(line,"%d",scheduleTime->hour);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,':');
+    if (scheduleTime->minute != SCHEDULE_ANY)
+    {
+      String_format(line,"%d",scheduleTime->minute);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+/***********************************************************************\
+* Name   : parseScheduleArchiveType
+* Purpose: parse archive type
+* Input  : s - string to parse
+* Output : archiveType - archive type
+* Return : TRUE iff archive type parsed
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool parseScheduleArchiveType(const String s, ArchiveTypes *archiveType)
+{
+  assert(s != NULL);
+  assert(archiveType != NULL);
+
+  if (String_equalsCString(s,"*"))
+  {
+    (*archiveType) = ARCHIVE_TYPE_NORMAL;
+  }
+  else
+  {
+    if (!parseArchiveType(String_cString(s),archiveType))
+    {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : parseSchedule
+* Purpose: parse schedule
+* Input  : s - schedule string
+* Output :
+* Return : scheduleNode or NULL on error
+* Notes  : string format
+*            <year|*>-<month|*>-<day|*> [<week day|*>] <hour|*>:<minute|*> <0|1> <archive type>
+*          month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
+*          nov, dec
+*          week day names: mon, tue, wed, thu, fri, sat, sun
+*          archive type names: normal, full, incremental, differential
+\***********************************************************************/
+
+LOCAL ScheduleNode *parseSchedule(const String s)
+{
+  ScheduleNode *scheduleNode;
+  bool         errorFlag;
+  String       s0,s1,s2;
+  bool         b;
+  long         nextIndex;
+
+  assert(s != NULL);
+
+  // allocate new schedule node
+  scheduleNode = newScheduleNode();
+
+  // parse schedule. Format: date [weekday] time enabled [type]
+  errorFlag = FALSE;
+  s0 = String_new();
+  s1 = String_new();
+  s2 = String_new();
+  nextIndex = STRING_BEGIN;
+  if      (String_parse(s,nextIndex,"%S-%S-%S",&nextIndex,s0,s1,s2))
+  {
+    if (!parseDateTimeNumber(s0,&scheduleNode->date.year )) errorFlag = TRUE;
+    if (!parseDateMonth     (s1,&scheduleNode->date.month)) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s2,&scheduleNode->date.day  )) errorFlag = TRUE;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
+  if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
+  {
+    if (!parseWeekDaySet(String_cString(s0),&scheduleNode->weekDaySet)) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s1,&scheduleNode->time.hour  )) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s2,&scheduleNode->time.minute)) errorFlag = TRUE;
+  }
+  else if (String_parse(s,nextIndex,"%S:%S",&nextIndex,s0,s1))
+  {
+    if (!parseDateTimeNumber(s0,&scheduleNode->time.hour  )) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s1,&scheduleNode->time.minute)) errorFlag = TRUE;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
+  if (String_parse(s,nextIndex,"%y",&nextIndex,&b))
+  {
+/* It seems gcc has a bug in option -fno-schedule-insns2: if -O2 is used this
+   option is enabled. Then either the program crashes with a SigSegV or parsing
+   boolean values here fail. It seems the address of 'b' is not received in the
+   function. Because this problem disappear when -fno-schedule-insns2 is given
+   it looks like the gcc do some rearrangements in the generated machine code
+   which is not valid anymore. How can this be tracked down? Is this problem
+   known?
+*/
+if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string value fail - C compiler bug?");
+    scheduleNode->enabledFlag = b;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
+//fprintf(stderr,"%s,%d: scheduleNode->enabled=%d %p\n",__FILE__,__LINE__,scheduleNode->enabled,&b);
+  if (nextIndex != STRING_END)
+  {
+    if (String_parse(s,nextIndex,"%S",&nextIndex,s0))
+    {
+      if (!parseScheduleArchiveType(s0,&scheduleNode->archiveType)) errorFlag = TRUE;
+    }
+  }
+  String_delete(s2);
+  String_delete(s1);
+  String_delete(s0);
+
+  if (errorFlag || (nextIndex != STRING_END))
+  {
+    LIST_DELETE_NODE(scheduleNode);
+    return NULL;
+  }
+
+  return scheduleNode;
+}
+
+/***********************************************************************\
+* Name   : configValueParseSchedule
+* Purpose: config value option call back for parsing schedule
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  ScheduleNode *scheduleNode;
+  String       s;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse schedule (old style)
+  s = String_newCString(value);
+  scheduleNode = parseSchedule(s);
+  if (scheduleNode == NULL)
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule '%s'",value);
+    String_delete(s);
+    return FALSE;
+  }
+  String_delete(s);
+
+  // append to list
+  List_append((ScheduleList*)variable,scheduleNode);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatInitSchedule
+* Purpose: init format config schedule
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitSchedule(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneSchedule
+* Purpose: done format of config schedule statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneSchedule(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatSchedule
+* Purpose: format schedule config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatSchedule(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : parseDateTimeNumber
+* Purpose: parse date/time number (year, day, month, hour, minute)
+* Input  : s - string to parse
+* Output : n - number variable
+* Return : TRUE iff number parsed
+* Notes  : -
+\***********************************************************************/
+
+#if 0
+LOCAL bool parseDateTimeNumber(const String s, int *n)
+{
+  long nextIndex;
+
+  assert(s != NULL);
+  assert(n != NULL);
+
+  // init variables
+  if   (String_equalsCString(s,"*"))
+  {
+    (*n) = SCHEDULE_ANY;
+  }
+  else
+  {
+    while ((String_length(s) > 1) && String_startsWithChar(s,'0'))
+    {
+      String_remove(s,STRING_BEGIN,1);
+    }
+    (*n) = (int)String_toInteger(s,0,&nextIndex,NULL,0);
+    if (nextIndex != STRING_END) return FALSE;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : parseDateMonth
+* Purpose: parse date month name
+* Input  : s - string to parse
+* Output : month - month (MONTH_JAN..MONTH_DEC)
+* Return : TRUE iff month parsed
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool parseDateMonth(const String s, int *month)
+{
+  String name;
+  long   nextIndex;
+
+  assert(s != NULL);
+  assert(month != NULL);
+
+  name = String_toLower(String_duplicate(s));
+  if      (String_equalsCString(s,"*"))
+  {
+    (*month) = SCHEDULE_ANY;
+  }
+  else if (String_equalsIgnoreCaseCString(name,"jan")) (*month) = MONTH_JAN;
+  else if (String_equalsIgnoreCaseCString(name,"feb")) (*month) = MONTH_FEB;
+  else if (String_equalsIgnoreCaseCString(name,"mar")) (*month) = MONTH_MAR;
+  else if (String_equalsIgnoreCaseCString(name,"apr")) (*month) = MONTH_APR;
+  else if (String_equalsIgnoreCaseCString(name,"may")) (*month) = MONTH_MAY;
+  else if (String_equalsIgnoreCaseCString(name,"jun")) (*month) = MONTH_JUN;
+  else if (String_equalsIgnoreCaseCString(name,"jul")) (*month) = MONTH_JUL;
+  else if (String_equalsIgnoreCaseCString(name,"aug")) (*month) = MONTH_AUG;
+  else if (String_equalsIgnoreCaseCString(name,"sep")) (*month) = MONTH_SEP;
+  else if (String_equalsIgnoreCaseCString(name,"oct")) (*month) = MONTH_OCT;
+  else if (String_equalsIgnoreCaseCString(name,"nov")) (*month) = MONTH_NOV;
+  else if (String_equalsIgnoreCaseCString(name,"dec")) (*month) = MONTH_DEC;
+  else
+  {
+    while ((String_length(s) > 1) && String_startsWithChar(s,'0'))
+    {
+      String_remove(s,STRING_BEGIN,1);
+    }
+    (*month) = (uint)String_toInteger(s,0,&nextIndex,NULL,0);
+    if ((nextIndex != STRING_END) || ((*month) < 1) || ((*month) > 12))
+    {
+      return FALSE;
+    }
+  }
+  String_delete(name);
+
+  return TRUE;
+}
+#endif
+
+/***********************************************************************\
+* Name   : parseScheduleDateTime
+* Purpose: parse schedule date/time
+* Input  : date        - date string (<year|*>-<month|*>-<day|*>)
+*          weekDays    - week days string (<day>,...)
+*          time        - time string <hour|*>:<minute|*>
+* Output :
+* Return : scheduleNode or NULL on error
+* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
+*          nov, dec
+*          week day names: mon, tue, wed, thu, fri, sat, sun
+\***********************************************************************/
+
+LOCAL ScheduleNode *parseScheduleDateTime(const String date,
+                                          const String weekDays,
+                                          const String time
+                                         )
+{
+  ScheduleNode *scheduleNode;
+  bool         errorFlag;
+  String       s0,s1,s2;
+
+  assert(date != NULL);
+  assert(weekDays != NULL);
+  assert(time != NULL);
+
+  // allocate new schedule node
+  scheduleNode = newScheduleNode();
+
+  // parse date
+  errorFlag = FALSE;
+  s0 = String_new();
+  s1 = String_new();
+  s2 = String_new();
+  if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
+  {
+    if (!parseDateTimeNumber(s0,&scheduleNode->date.year)) errorFlag = TRUE;
+    if (!parseDateMonth     (s1,&scheduleNode->date.month)) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s2,&scheduleNode->date.day)) errorFlag = TRUE;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
+
+  // parse week days
+  if (!parseWeekDaySet(String_cString(weekDays),&scheduleNode->weekDaySet))
+  {
+    errorFlag = TRUE;
+  }
+
+  // parse time
+  if (String_parse(time,STRING_BEGIN,"%S:%S",NULL,s0,s1))
+  {
+    if (!parseDateTimeNumber(s0,&scheduleNode->time.hour  )) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s1,&scheduleNode->time.minute)) errorFlag = TRUE;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
+  String_delete(s2);
+  String_delete(s1);
+  String_delete(s0);
+
+  if (errorFlag)
+  {
+    LIST_DELETE_NODE(scheduleNode);
+    return NULL;
+  }
+
+  return scheduleNode;
 }
 
 /***********************************************************************\
@@ -2603,12 +3452,12 @@ LOCAL void schedulerThreadCode(void)
             scheduleNode = jobNode->scheduleList.head;
             while ((scheduleNode != NULL) && (executeScheduleNode == NULL))
             {
-              if (   ((scheduleNode->date.year     == SCHEDULE_ANY    ) || (scheduleNode->date.year   == (int)year  ) )
-                  && ((scheduleNode->date.month    == SCHEDULE_ANY    ) || (scheduleNode->date.month  == (int)month ) )
-                  && ((scheduleNode->date.day      == SCHEDULE_ANY    ) || (scheduleNode->date.day    == (int)day   ) )
-                  && ((scheduleNode->weekDays      == SCHEDULE_ANY_DAY) || IN_SET(scheduleNode->weekDays,weekDay)     )
-                  && ((scheduleNode->time.hour     == SCHEDULE_ANY    ) || (scheduleNode->time.hour   == (int)hour  ) )
-                  && ((scheduleNode->time.minute   == SCHEDULE_ANY    ) || (scheduleNode->time.minute == (int)minute) )
+              if (   ((scheduleNode->date.year     == SCHEDULE_ANY            ) || (scheduleNode->date.year   == (int)year  ) )
+                  && ((scheduleNode->date.month    == SCHEDULE_ANY            ) || (scheduleNode->date.month  == (int)month ) )
+                  && ((scheduleNode->date.day      == SCHEDULE_ANY            ) || (scheduleNode->date.day    == (int)day   ) )
+                  && ((scheduleNode->weekDaySet    == SCHEDULE_WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)   )
+                  && ((scheduleNode->time.hour     == SCHEDULE_ANY            ) || (scheduleNode->time.hour   == (int)hour  ) )
+                  && ((scheduleNode->time.minute   == SCHEDULE_ANY            ) || (scheduleNode->time.minute == (int)minute) )
                   && scheduleNode->enabledFlag
                  )
               {
@@ -3004,8 +3853,9 @@ LOCAL void indexCleanup(void)
   {
     while (Index_getNextStorage(&indexQueryHandle,
                                 &storageId,
-                                NULL, // uuid
-                                NULL, // job id
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
                                 storageName,
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -3123,8 +3973,9 @@ LOCAL void indexCleanup(void)
   {
     while (Index_getNextStorage(&indexQueryHandle1,
                                 &storageId,
-                                NULL, // uuid
-                                NULL, // job id
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
                                 storageName,
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -3151,8 +4002,9 @@ LOCAL void indexCleanup(void)
       {
         while (Index_getNextStorage(&indexQueryHandle2,
                                     &duplicateStorageId,
-                                    NULL, // uuid
-                                    NULL, // jobId
+                                    NULL, // entity id
+                                    NULL, // job UUID
+                                    NULL, // schedule UUID
                                     duplicateStorageName,
                                     NULL, // createdDateTime
                                     NULL, // size
@@ -3642,8 +4494,9 @@ LOCAL void autoIndexUpdateThreadCode(void)
       dateTime = String_new();
       while (Index_getNextStorage(&indexQueryHandle,
                                   &storageId,
-                                  NULL, // uuid
-                                  NULL, // jobId
+                                  NULL, // entity id
+                                  NULL, // job UUID
+                                  NULL, // schedule UUID
                                   storageName,
                                   &createdDateTime,
                                   NULL, // size
@@ -6833,15 +7686,15 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 
       // get weekdays string
       String_clear(weekDays);
-      if (scheduleNode->weekDays != SCHEDULE_ANY_DAY)
+      if (scheduleNode->weekDaySet != SCHEDULE_WEEKDAY_SET_ANY)
       {
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_MON)) { String_joinCString(weekDays,"Mon",','); }
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_TUE)) { String_joinCString(weekDays,"Tue",','); }
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_WED)) { String_joinCString(weekDays,"Wed",','); }
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_THU)) { String_joinCString(weekDays,"Thu",','); }
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_FRI)) { String_joinCString(weekDays,"Fri",','); }
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_SAT)) { String_joinCString(weekDays,"Sat",','); }
-        if (IN_SET(scheduleNode->weekDays,WEEKDAY_SUN)) { String_joinCString(weekDays,"Sun",','); }
+        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_MON)) { String_joinCString(weekDays,"Mon",','); }
+        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_TUE)) { String_joinCString(weekDays,"Tue",','); }
+        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_WED)) { String_joinCString(weekDays,"Wed",','); }
+        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_THU)) { String_joinCString(weekDays,"Thu",','); }
+        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_FRI)) { String_joinCString(weekDays,"Fri",','); }
+        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_SAT)) { String_joinCString(weekDays,"Sat",','); }
+        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_SUN)) { String_joinCString(weekDays,"Sun",','); }
       }
       else
       {
@@ -8165,8 +9018,9 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
     }
     while (Index_getNextStorage(&indexQueryHandle,
                                 &storageId,
-                                NULL, // uuid
-                                NULL, // job id
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
                                 NULL, // storageName
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -8205,8 +9059,9 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
     }
     while (Index_getNextStorage(&indexQueryHandle,
                                 &storageId,
-                                NULL, // uuid
-                                NULL, // job id
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
                                 NULL, // storageName
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -8424,8 +9279,9 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     }
     while (Index_getNextStorage(&indexQueryHandle,
                                 &storageId,
-                                NULL, // uuid
-                                NULL, // job id
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
                                 NULL, // storageName
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -8469,8 +9325,9 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     }
     while (Index_getNextStorage(&indexQueryHandle,
                                 &storageId,
-                                NULL, // uuid
-                                NULL, // job id
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
                                 NULL, // storageName
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -8659,7 +9516,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   {
     LIST_NODE_HEADER(struct UUIDDataNode);
 
-    String uuid;
+    String jobUUID;
+    String scheduleUUID;
     String name;
     uint64 lastCreatedDateTime;
     uint64 totalSize;
@@ -8684,7 +9542,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   void freeUUIDDataNode(UUIDDataNode *uuidDataNode, void *userData)
   {
     assert(uuidDataNode != NULL);
-    assert(uuidDataNode->uuid != NULL);
+    assert(uuidDataNode->jobUUID != NULL);
+    assert(uuidDataNode->scheduleUUID != NULL);
     assert(uuidDataNode->name != NULL);
     assert(uuidDataNode->lastErrorMessage != NULL);
 
@@ -8692,7 +9551,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 
     String_delete(uuidDataNode->lastErrorMessage);
     String_delete(uuidDataNode->name);
-    String_delete(uuidDataNode->uuid);
+    String_delete(uuidDataNode->scheduleUUID);
+    String_delete(uuidDataNode->jobUUID);
   }
 
   /***********************************************************************\
@@ -8725,7 +9585,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   UUIDDataList     uuidDataList;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
-  String           uuid;
+  String           jobUUID,scheduleUUID;
   uint64           lastCreatedDateTime;
   uint64           totalSize;
   String           lastErrorMessage;
@@ -8756,7 +9616,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 
   // initialize variables
   List_init(&uuidDataList);
-  uuid             = String_new();
+  jobUUID          = String_new();
+  scheduleUUID     = String_new();
   lastErrorMessage = String_new();
 
   // get uuids
@@ -8766,7 +9627,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   if (error != ERROR_NONE)
   {
     String_delete(lastErrorMessage);
-    String_delete(uuid);
+    String_delete(scheduleUUID);
+    String_delete(jobUUID);
     List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
 
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init uuid list fail: %s",Error_getText(error));
@@ -8776,7 +9638,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   }
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextUUID(&indexQueryHandle,
-                              uuid,
+                              jobUUID,
+                              scheduleUUID,
                               &lastCreatedDateTime,
                               &totalSize,
                               lastErrorMessage
@@ -8788,7 +9651,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     {
       Index_doneList(&indexQueryHandle);
       String_delete(lastErrorMessage);
-      String_delete(uuid);
+      String_delete(scheduleUUID);
+      String_delete(jobUUID);
       List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
 
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get uuid list fail: insufficient memory");
@@ -8797,8 +9661,9 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
       return;
     }
 
-    uuidDataNode->uuid                = String_duplicate(uuid);
-    uuidDataNode->name                = String_duplicate(uuid);
+    uuidDataNode->jobUUID             = String_duplicate(jobUUID);
+    uuidDataNode->scheduleUUID        = String_duplicate(scheduleUUID);
+    uuidDataNode->name                = String_duplicate(jobUUID);
     uuidDataNode->lastCreatedDateTime = lastCreatedDateTime;
     uuidDataNode->totalSize           = totalSize;
     uuidDataNode->lastErrorMessage    = String_duplicate(lastErrorMessage);
@@ -8812,7 +9677,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   {
     LIST_ITERATE(&uuidDataList,uuidDataNode)
     {
-      jobNode = findJobByUUID(uuidDataNode->uuid);
+      jobNode = findJobByUUID(uuidDataNode->jobUUID);
       if (jobNode != NULL)
       {
         String_set(uuidDataNode->name,jobNode->name);
@@ -8825,8 +9690,9 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   LIST_ITERATE(&uuidDataList,uuidDataNode)
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "uuid=%'S name=%'S lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
-                     uuidDataNode->uuid,
+                     "jobUUID=%S scheduleUUID=%S name=%'S lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
+                     uuidDataNode->jobUUID,
+                     uuidDataNode->scheduleUUID,
                      uuidDataNode->name,
                      uuidDataNode->lastCreatedDateTime,
                      uuidDataNode->totalSize,
@@ -8838,14 +9704,15 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 
   // free resources
   String_delete(lastErrorMessage);
-  String_delete(uuid);
+  String_delete(scheduleUUID);
+  String_delete(jobUUID);
   List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
   String_delete(pattern);
 }
 
 /***********************************************************************\
-* Name   : serverCommand_indexJobList
-* Purpose: get index database job list
+* Name   : serverCommand_indexEntityList
+* Purpose: get index database entity list
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -8853,10 +9720,11 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            uuid=<uuid>|*
+*            jobUUID=<uuid>|*
 *          Result:
-*            jobId=<job id>
-*            uuid=<uuid>
+*            entityId=<entity id>
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
 *            name=<name>
 *            lastDateTime=<created time stamp>
 *            totalSize=<size>
@@ -8864,25 +9732,26 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 *            ...
 \***********************************************************************/
 
-LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String           uuid;
+  String           jobUUID;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   DatabaseId       jobId;
   uint64           lastCreatedDateTime;
   uint64           totalSize;
+  String           scheduleUUID;
   String           lastErrorMessage;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get uuid
-  uuid = String_new();
-  if (!StringMap_getString(argumentMap,"uuid",uuid,NULL))
+  jobUUID = String_new();
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid>");
-    String_delete(uuid);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    String_delete(jobUUID);
     return;
   }
 
@@ -8890,39 +9759,43 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
   if (indexDatabaseHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
-    String_delete(uuid);
+    String_delete(jobUUID);
     return;
   }
 
   // initialize variables
+  scheduleUUID     = String_new();
   lastErrorMessage = String_new();
 
-  // get jobs
-  error = Index_initListJobs(&indexQueryHandle,
-                             indexDatabaseHandle,
-                             uuid
-                            );
+  // get entities
+  error = Index_initListEntities(&indexQueryHandle,
+                                 indexDatabaseHandle,
+                                 jobUUID
+                                );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init job list fail: %s",Error_getText(error));
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init entity list fail: %s",Error_getText(error));
     String_delete(lastErrorMessage);
-    String_delete(uuid);
+    String_delete(scheduleUUID);
+    String_delete(jobUUID);
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
-         && Index_getNextJob(&indexQueryHandle,
-                              &jobId,
-                              uuid,
-                              &lastCreatedDateTime,
-                              &totalSize,
-                              lastErrorMessage
-                             )
+         && Index_getNextEntity(&indexQueryHandle,
+                                &jobId,
+                                jobUUID,
+                                scheduleUUID,
+                                &lastCreatedDateTime,
+                                &totalSize,
+                                lastErrorMessage
+                               )
         )
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "jobId=%lld uuid=%'S type=%s lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
+                     "entityId=%lld jobUUID=%S scheduleUUID=%S type=%s lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
                      jobId,
-                     uuid,
+                     jobUUID,
+                     scheduleUUID,
 //TODO
 "NONE",
                      lastCreatedDateTime,
@@ -8936,7 +9809,8 @@ LOCAL void serverCommand_indexJobList(ClientInfo *clientInfo, uint id, const Str
 
   // free resources
   String_delete(lastErrorMessage);
-  String_delete(uuid);
+  String_delete(scheduleUUID);
+  String_delete(jobUUID);
 }
 
 /***********************************************************************\
@@ -9015,15 +9889,16 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>|*
+*            entityId=<id>|*
 *            pattern=<pattern>
 *            maxCount=<n>|0
 *            indexState=<state>|*
 *            indexMode=<mode>|*
 *          Result:
 *            storageId=<storage id>
-*            uuid=<uuid>
-*            jobId=<job id>
+*            entityId=<job id>
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
 *            name=<name>
 *            dateTime=<created time stamp>
 *            size=<size>
@@ -9037,7 +9912,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   uint64           n;
-  DatabaseId       jobId;
+  DatabaseId       entityId;
   uint             maxCount;
   IndexStateSet    indexStateSet;
   IndexModeSet     indexModeSet;
@@ -9050,7 +9925,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   uint             count;
   String           errorMessage;
   DatabaseId       storageId;
-  String           uuid;
+  String           jobUUID,scheduleUUID;
   uint64           storageDateTime;
   uint64           size;
   IndexStates      indexState;
@@ -9061,18 +9936,18 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   assert(argumentMap != NULL);
 
   // get job id, max. count, status pattern, filter pattern,
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"jobId","*"),"*"))
+  if   (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
   {
-    jobId = DATABASE_ID_ANY;
+    entityId = DATABASE_ID_ANY;
   }
   else
   {
-    if (!StringMap_getUInt64(argumentMap,"jobId",&n,0))
+    if (!StringMap_getUInt64(argumentMap,"entityId",&n,0))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
       return;
     }
-    jobId = (DatabaseId)n;
+    entityId = (DatabaseId)n;
   }
   StringMap_getUInt(argumentMap,"maxCount",&maxCount,0);
   if (!StringMap_getEnumSet(argumentMap,"indexState",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",0))
@@ -9104,7 +9979,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
-  uuid                 = String_new();
+  jobUUID              = String_new();
+  scheduleUUID         = String_new();
   errorMessage         = String_new();
   printableStorageName = String_new();
 
@@ -9112,7 +9988,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   error = Index_initListStorage(&indexQueryHandle,
                                 indexDatabaseHandle,
                                 NULL, // uuid
-                                jobId,
+                                entityId,
                                 STORAGE_TYPE_ANY,
                                 pattern,
                                 NULL, // hostName
@@ -9125,7 +10001,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   {
     String_delete(printableStorageName);
     String_delete(errorMessage);
-    String_delete(uuid);
+    String_delete(jobUUID);
     String_delete(storageName);
     Storage_doneSpecifier(&storageSpecifier);
 
@@ -9139,8 +10015,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
          && !isCommandAborted(clientInfo,id)
          && Index_getNextStorage(&indexQueryHandle,
                                  &storageId,
-                                 uuid,
-                                 &jobId,
+                                 &entityId,
+                                 jobUUID,
+                                 scheduleUUID,
                                  storageName,
                                  &storageDateTime,
                                  &size,
@@ -9163,10 +10040,11 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     }
 
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "storageId=%llu uuid=%'S jobId=%lld name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
+                     "storageId=%llu entityId=%lld jobUUID=%S scheduleUUID=%S name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                      storageId,
-                     uuid,
-                     jobId,
+                     entityId,
+                     jobUUID,
+                     scheduleUUID,
                      printableStorageName,
                      storageDateTime,
                      size,
@@ -9184,7 +10062,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   // free resources
   String_delete(printableStorageName);
   String_delete(errorMessage);
-  String_delete(uuid);
+  String_delete(jobUUID);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(pattern);
@@ -9262,8 +10140,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
 * Return : -
 * Notes  : Arguments:
 *            <state>|*
-*            uuid=<uuid>|"" and/or
-*            jobId=<job id>|0 and/or
+*            jobUUID=<uuid>|"" and/or
+*            entityId=<job id>|0 and/or
 *            storageId=<storage id>|0
 *          Result:
 \***********************************************************************/
@@ -9272,8 +10150,8 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 {
   bool             stateAny;
   IndexStates      state;
-  String           uuid;
-  DatabaseId       jobId;
+  String           jobUUID;
+  DatabaseId       entityId;
   DatabaseId       storageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -9285,7 +10163,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get state and uuid, jobId, or storageId
+  // get state and jobUUID, enityId, or storageId
   if      (stringEquals(StringMap_getTextCString(argumentMap,"state","*"),"*"))
   {
     stateAny = TRUE;
@@ -9299,14 +10177,14 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  uuid = String_new();
-  if (   !StringMap_getString(argumentMap,"uuid",uuid,NULL)
-      && !StringMap_getInt64(argumentMap,"jobId",&jobId,DATABASE_ID_NONE)
+  jobUUID = String_new();
+  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
      )
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid> or jobId=<job id> or storageId=<storage id>");
-    String_delete(uuid);
+    String_delete(jobUUID);
     return;
   }
 
@@ -9314,11 +10192,11 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
   if (indexDatabaseHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
-    String_delete(uuid);
+    String_delete(jobUUID);
     return;
   }
 
-  if (String_isEmpty(uuid) && (storageId == DATABASE_ID_NONE) && (jobId == DATABASE_ID_NONE))
+  if (String_isEmpty(jobUUID) && (storageId == DATABASE_ID_NONE) && (entityId == DATABASE_ID_NONE))
   {
     // initialize variables
     Storage_initSpecifier(&storageSpecifier);
@@ -9344,14 +10222,15 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
       String_delete(printableStorageName);
       String_delete(storageName);
       Storage_doneSpecifier(&storageSpecifier);
-      String_delete(uuid);
+      String_delete(jobUUID);
       return;
     }
     while (   !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
                                    &storageId,
-                                   NULL, // uuid
-                                   NULL, // job id
+                                   NULL, // entity id
+                                   NULL, // job UUID
+                                   NULL, // schedule UUID
                                    storageName,
                                    NULL, // createdDateTime
                                    NULL, // size
@@ -9389,7 +10268,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
         {
           sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
           Index_doneList(&indexQueryHandle);
-          String_delete(uuid);
+          String_delete(jobUUID);
           return;
         }
       }
@@ -9402,7 +10281,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     Storage_doneSpecifier(&storageSpecifier);
   }
 
-  if (!String_isEmpty(uuid))
+  if (!String_isEmpty(jobUUID))
   {
 //????
     // add all storage ids with specified uuid
@@ -9422,8 +10301,9 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     {
       while (Index_getNextStorage(&indexQueryHandle,
                                   &storageId,
-                                  NULL, // uuid
-                                  NULL, // job id
+                                  NULL, // entity id
+                                  NULL, // job UUID
+                                  NULL, // schedule UUID
                                   NULL, // storageName
                                   NULL, // createdDateTime
                                   NULL, // size
@@ -9439,7 +10319,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
         if (error != ERROR_NONE)
         {
           sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
-          String_delete(uuid);
+          String_delete(jobUUID);
           return;
         }
       }
@@ -9447,13 +10327,13 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     }
   }
 
-  if (jobId != DATABASE_ID_NONE)
+  if (entityId != DATABASE_ID_NONE)
   {
     // add all storage ids with job id
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   NULL, // uuid
-                                  jobId,
+                                  entityId,
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -9466,8 +10346,9 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     {
       while (Index_getNextStorage(&indexQueryHandle,
                                   &storageId,
-                                  NULL, // uuid
-                                  NULL, // job id
+                                  NULL, // entity id
+                                  NULL, // job UUID
+                                  NULL, // schedule UUID
                                   NULL, // storageName
                                   NULL, // createdDateTime
                                   NULL, // size
@@ -9483,7 +10364,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
         if (error != ERROR_NONE)
         {
           sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
-          String_delete(uuid);
+          String_delete(jobUUID);
           return;
         }
       }
@@ -9498,7 +10379,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
-      String_delete(uuid);
+      String_delete(jobUUID);
       return;
     }
   }
@@ -9506,7 +10387,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(uuid);
+  String_delete(jobUUID);
 }
 
 /***********************************************************************\
@@ -9520,9 +10401,9 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 * Return : -
 * Notes  : Arguments:
 *            <state>|*
-*            uuid=<uuid>|"" and/or
-*            jobId=<job id>|0 and/or
-*            storageId=<storage id>|0
+*            jobUUID=<uuid>|"" and/or
+*            entityId=<id>|0 and/or
+*            storageId=<id>|0
 *          Result:
 \***********************************************************************/
 
@@ -9530,8 +10411,8 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
 {
   bool             stateAny;
   IndexStates      state;
-  String           uuid;
-  DatabaseId       jobId;
+  String           jobUUID;
+  DatabaseId       entityId;
   DatabaseId       storageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -9540,7 +10421,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // state and uuid, jobId, or storageId
+  // state and uuid, enityId, or storageId
   if      (stringEquals(StringMap_getTextCString(argumentMap,"state","*"),"*"))
   {
     stateAny = TRUE;
@@ -9554,14 +10435,14 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  uuid = String_new();
-  if (   !StringMap_getString(argumentMap,"uuid",uuid,NULL)
-      && !StringMap_getInt64(argumentMap,"jobId",&jobId,DATABASE_ID_NONE)
+  jobUUID = String_new();
+  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
      )
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid> or jobId=<job id> or storageId=<storage id>");
-    String_delete(uuid);
+    String_delete(jobUUID);
     return;
   }
 
@@ -9569,11 +10450,11 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
   if (indexDatabaseHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
-    String_delete(uuid);
+    String_delete(jobUUID);
     return;
   }
 
-  if (String_isEmpty(uuid) && (storageId == DATABASE_ID_NONE) && (jobId == DATABASE_ID_NONE))
+  if (String_isEmpty(jobUUID) && (storageId == DATABASE_ID_NONE) && (entityId == DATABASE_ID_NONE))
   {
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
@@ -9590,14 +10471,15 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      String_delete(uuid);
+      String_delete(jobUUID);
       return;
     }
     while (   !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
                                    &storageId,
-                                   NULL, // uuid
-                                   NULL, // job id
+                                   NULL, // entity id
+                                   NULL, // job UUID
+                                   NULL, // schedule UUID
                                    NULL, // storageName
                                    NULL, // createdDateTime
                                    NULL, // size
@@ -9622,13 +10504,13 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     Index_doneList(&indexQueryHandle);
   }
 
-  if (!String_isEmpty(uuid))
+  if (!String_isEmpty(jobUUID))
   {
     // add all storage ids with specified uuid
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
-                                  uuid,
-                                  DATABASE_ID_ANY, // job id
+                                  jobUUID,
+                                  DATABASE_ID_ANY, // entity id
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -9640,13 +10522,14 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      String_delete(uuid);
+      String_delete(jobUUID);
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
                                 &storageId,
-                                NULL, // uuid
-                                NULL, // job id
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
                                 NULL, // storageName
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -9668,13 +10551,13 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     Index_doneList(&indexQueryHandle);
   }
 
-  if (jobId != DATABASE_ID_NONE)
+  if (entityId != DATABASE_ID_NONE)
   {
     // add all storage ids with job id
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   NULL, // uuid
-                                  jobId,
+                                  entityId,
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -9686,13 +10569,14 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      String_delete(uuid);
+      String_delete(jobUUID);
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
                                 &storageId,
-                                NULL, // uuid
-                                NULL, // job id
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
                                 NULL, // storageName
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -9728,7 +10612,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(uuid);
+  String_delete(jobUUID);
 }
 
 /***********************************************************************\
@@ -10868,7 +11752,7 @@ SERVER_COMMANDS[] =
   { "RESTORE",                    serverCommand_restore,                 AUTHORIZATION_STATE_OK      },
 
   { "INDEX_UUID_LIST",            serverCommand_indexUUIDList,           AUTHORIZATION_STATE_OK      },
-  { "INDEX_JOB_LIST",             serverCommand_indexJobList,            AUTHORIZATION_STATE_OK      },
+  { "INDEX_ENTITY_LIST",          serverCommand_indexEntityList,         AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_INFO",         serverCommand_indexStorageInfo,        AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_LIST",         serverCommand_indexStorageList,        AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_ADD",          serverCommand_indexStorageAdd,         AUTHORIZATION_STATE_OK      },
