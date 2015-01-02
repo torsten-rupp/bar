@@ -377,7 +377,7 @@ long Index_countState(DatabaseHandle *databaseHandle,
 
 /***********************************************************************\
 * Name   : Index_initListUUIDs
-* Purpose: list uuid entries and aggregated data of jobs
+* Purpose: list uuid entries and aggregated data of entities
 * Input  : IndexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
 *          name             - name pattern (glob) or NULL
@@ -394,7 +394,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextUUID
 * Purpose: get next index uuid entry
 * Input  : IndexQueryHandle - index query handle
-* Output : uuid                - unique id (can be NULL)
+* Output : jobUUID             - unique job id (can be NULL)
+*          scheduleUUID        - unique schedule id (can be NULL)
 *          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
 *          totalSize           - total storage size [bytes] (can be NULL)
 *          lastErrorMessage    - last storage error message (can be NULL)
@@ -403,34 +404,36 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
-                       String           uuid,
+                       String           jobUUID,
+                       String           scheduleUUID,
                        uint64           *lastCreatedDateTime,
                        uint64           *totalSize,
                        String           lastErrorMessage
                       );
 
 /***********************************************************************\
-* Name   : Index_initListJobs
-* Purpose: list job entries and aggregated data of storage
+* Name   : Index_initListEntities
+* Purpose: list entity entries and aggregated data of storage
 * Input  : IndexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
-*          uuid             - uuid or NULL
+*          jobUUID          - job UUID or NULL
 * Output : IndexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListJobs(IndexQueryHandle *indexQueryHandle,
-                          DatabaseHandle   *databaseHandle,
-                          const String     uuid
-                         );
+Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
+                              DatabaseHandle   *databaseHandle,
+                              const String     jobUUID
+                             );
 
 /***********************************************************************\
-* Name   : Index_getNextJob
-* Purpose: get next index job entry
+* Name   : Index_getNextEntity
+* Purpose: get next index entity entry
 * Input  : IndexQueryHandle - index query handle
 * Output : databaseId          - database id of entry
-*          uuid                - unique id (can be NULL)
+*          jobUUID             - unique job id (can be NULL)
+*          scheduleUUID        - unique schedule id (can be NULL)
 *          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
 *          totalSize           - total storage size [bytes] (can be NULL)
 *          lastErrorMessage    - last storage error message (can be NULL)
@@ -438,13 +441,14 @@ Errors Index_initListJobs(IndexQueryHandle *indexQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
-                      DatabaseId       *databaseId,
-                      String           uuid,
-                      uint64           *lastCreatedDateTime,
-                      uint64           *totalSize,
-                      String           lastErrorMessage
-                     );
+bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
+                         DatabaseId       *databaseId,
+                         String           jobUUID,
+                         String           scheduleUUID,
+                         uint64           *lastCreatedDateTime,
+                         uint64           *totalSize,
+                         String           lastErrorMessage
+                        );
 
 /***********************************************************************\
 * Name   : Index_initListStorage
@@ -452,7 +456,7 @@ bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
 * Input  : IndexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
 *          uuid             - unique id or NULL
-*          jobId            - job id or DATABASE_ID_NONE
+*          entityId         - entity id or DATABASE_ID_NONE
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
 *          storageName      - storage name pattern (glob) or NULL
 *          hostName         - host name pattern (glob) or NULL
@@ -468,7 +472,7 @@ bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
                              const String     uuid,
-                             DatabaseId       jobId,
+                             DatabaseId       entityId,
                              StorageTypes     storageType,
                              const String     storageName,
                              const String     hostName,
@@ -483,8 +487,9 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 * Purpose: get next index storage entry
 * Input  : IndexQueryHandle    - index query handle
 * Output : databaseId          - database id of entry
-*          uuid                - uuid (can be NULL)
-*          jobId               - database job id (can be NULL)
+*          entityId            - database entity id (can be NULL)
+*          jobUUID             - unique job UUID (can be NULL)
+*          scheduleUUID        - unique schedule UUID (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s]
 *          size                - size [bytes]
@@ -498,8 +503,9 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           DatabaseId       *databaseId,
-                          String           uuid,
-                          DatabaseId       *jobId,
+                          DatabaseId       *entityId,
+                          String           jobUUID,
+                          String           scheduleUUID,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,

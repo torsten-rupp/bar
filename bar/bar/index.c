@@ -212,7 +212,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
   bool                done;
   DatabaseId          lastStorageId;
   DatabaseId          storageId;
-  DatabaseId          jobId;
+  DatabaseId          entityId;
   bool                equalsFlag;
   ulong               i;
 
@@ -221,10 +221,10 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
   name1 = String_new();
   name2 = String_new();
 
-  // add jobId to storage
+  // add entityId to storage
   error = Database_addColumn(indexDatabaseHandle,
                              "storage",
-                             "jobId",
+                             "entityId",
                              DATABASE_TYPE_FOREIGN_KEY
                             );
   if (error != ERROR_NONE)
@@ -235,12 +235,12 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
     return error;
   }
 
-  // set jobId in storage entries
+  // set entityId in storage entries
   done          = FALSE;
   lastStorageId = DATABASE_ID_NONE;
   while (!done)
   {
-    // get next storage entry without job id
+    // get next storage entry without entity id
     error = Database_prepare(&databaseQueryHandle,
                              indexDatabaseHandle,
                              "SELECT id, \
@@ -248,7 +248,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
                                      name, \
                                      created \
                               FROM storage \
-                              WHERE     jobId=0 \
+                              WHERE     entityId=0 \
                                     AND id > %d \
                               ORDER BY id,created ASC \
                              ",
@@ -269,21 +269,21 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
     {
       lastStorageId = storageId;
 
-      // insert job
+      // insert entity
       error = Database_execute(indexDatabaseHandle,
                                CALLBACK(NULL,NULL),
-                               "INSERT INTO jobs \
+                               "INSERT INTO entities \
                                   (\
-                                   name,\
-                                   uuid,\
+                                   jobUUID,\
+                                   scheduleUUID, \
                                    created,\
                                    type,\
                                    bidFlag\
                                   ) \
                                 VALUES \
                                  (\
-                                  '',\
                                   %'S,\
+                                  '',\
                                   %d,\
                                   %d,\
                                   %d\
@@ -296,16 +296,16 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
                               );
       if (error == ERROR_NONE)
       {
-        // get job id
-        jobId = Database_getLastRowId(indexDatabaseHandle);
+        // get entity id
+        entityId = Database_getLastRowId(indexDatabaseHandle);
 
-        // assign job id for all storage entries with same uuid and matching name (equals except digits)
+        // assign entity id for all storage entries with same uuid and matching name (equals except digits)
         error = Database_prepare(&databaseQueryHandle,
                                  indexDatabaseHandle,
                                  "SELECT id, \
                                          name \
                                   FROM storage \
-                                  WHERE     jobId=0 \
+                                  WHERE     entityId=0 \
                                         AND uuid=%'S \
                                  ",
                                  uuid
@@ -335,18 +335,22 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
           }
           if (equalsFlag)
           {
-            // assign job id
+            // assign entity id
             (void)Database_execute(indexDatabaseHandle,
                                    CALLBACK(NULL,NULL),
                                    "UPDATE storage \
-                                    SET jobId=%llu \
+                                    SET entityId=%llu \
                                     WHERE id=%llu; \
                                    ",
-                                   jobId,
+                                   entityId,
                                    storageId
                                   );
           }
         }
+      }
+      else
+      {
+        done = TRUE;
       }
     }
     else
@@ -787,13 +791,26 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
       return error;
     }
 
-    // update database version
+    // update database version, datetime
     error = Database_setInteger64(indexDatabaseHandle,
                                   indexVersion,
                                   "meta",
                                   "value",
                                   "WHERE name='version'"
                                  );
+    if (error != ERROR_NONE)
+    {
+      #ifdef NDEBUG
+        Database_close(indexDatabaseHandle);
+      #else /* not NDEBUG */
+        __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+      #endif /* NDEBUG */
+      return error;
+    }
+    error = Database_execute(indexDatabaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "UPDATE meta SET value=DATETIME('now') WHERE name='datetime'"
+                            );
     if (error != ERROR_NONE)
     {
       #ifdef NDEBUG
@@ -1311,12 +1328,13 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
-                           "SELECT jobs.uuid, \
-                                   STRFTIME('%%s',(SELECT created FROM storage WHERE storage.uuid=jobs.uuid ORDER BY created DESC LIMIT 0,1)), \
-                                   (SELECT SUM(size) FROM storage WHERE storage.uuid=jobs.uuid), \
-                                   (SELECT errorMessage FROM storage WHERE storage.uuid=jobs.uuid ORDER BY created DESC LIMIT 0,1) \
-                            FROM jobs \
-                            GROUP BY uuid; \
+                           "SELECT entities.jobUUID, \
+                                   entities.scheduleUUID, \
+                                   STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1)), \
+                                   (SELECT SUM(size) FROM storage WHERE storage.entityId=entities.id), \
+                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
+                            FROM entities \
+                            GROUP BY jobUUID; \
                            "
                           );
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
@@ -1325,7 +1343,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 }
 
 bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
-                       String           uuid,
+                       String           jobUUID,
+                       String           scheduleUUID,
                        uint64           *lastCreatedDateTime,
                        uint64           *totalSize,
                        String           lastErrorMessage
@@ -1334,18 +1353,19 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%S %lld %lld %S",
-                             uuid,
+                             "%S %S %lld %lld %S",
+                             jobUUID,
+                             scheduleUUID,
                              lastCreatedDateTime,
                              totalSize,
                              lastErrorMessage
                             );
 }
 
-Errors Index_initListJobs(IndexQueryHandle *indexQueryHandle,
-                          DatabaseHandle   *databaseHandle,
-                          const String     uuid
-                         )
+Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
+                              DatabaseHandle   *databaseHandle,
+                              const String     jobUUID
+                             )
 {
   Errors error;
 
@@ -1356,36 +1376,39 @@ Errors Index_initListJobs(IndexQueryHandle *indexQueryHandle,
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
-                           "SELECT jobs.id, \
-                                   jobs.uuid, \
-                                   STRFTIME('%%s',(SELECT created FROM storage WHERE storage.jobId=jobs.id ORDER BY created DESC LIMIT 0,1)), \
-                                   (SELECT SUM(size) FROM storage WHERE storage.jobId=jobs.id), \
-                                   (SELECT errorMessage FROM storage WHERE storage.jobId=jobs.id ORDER BY created DESC LIMIT 0,1) \
-                            FROM jobs \
-                            WHERE (%d OR uuid=%'S); \
+                           "SELECT entities.id, \
+                                   entities.jobUUID, \
+                                   entities.scheduleUUID, \
+                                   STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1)), \
+                                   (SELECT SUM(size) FROM storage WHERE storage.entityId=entities.id), \
+                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
+                            FROM entities \
+                            WHERE (%d OR jobUUID=%'S); \
                            ",
-                           (uuid == NULL) ? 1 : 0,
-                           uuid
+                           (jobUUID == NULL) ? 1 : 0,
+                           jobUUID
                           );
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
 
   return error;
 }
 
-bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
-                      DatabaseId       *databaseId,
-                      String           uuid,
-                      uint64           *lastCreatedDateTime,
-                      uint64           *totalSize,
-                      String           lastErrorMessage
-                     )
+bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
+                         DatabaseId       *databaseId,
+                         String           jobUUID,
+                         String           scheduleUUID,
+                         uint64           *lastCreatedDateTime,
+                         uint64           *totalSize,
+                         String           lastErrorMessage
+                        )
 {
   assert(indexQueryHandle != NULL);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%lld %S %lld %lld %S",
+                             "%lld %S %S %lld %lld %S",
                              databaseId,
-                             uuid,
+                             jobUUID,
+                             scheduleUUID,
                              lastCreatedDateTime,
                              totalSize,
                              lastErrorMessage
@@ -1394,8 +1417,8 @@ bool Index_getNextJob(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
-                             const String     uuid,
-                             DatabaseId       jobId,
+                             const String     jobUUID,
+                             DatabaseId       entityId,
                              StorageTypes     storageType,
                              const String     storageName,
                              const String     hostName,
@@ -1411,6 +1434,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
+
   initIndexQueryHandle(indexQueryHandle,databaseHandle);
   indexQueryHandle->storage.type = storageType;
   if (storageName != NULL) indexQueryHandle->storage.storageNamePattern = Pattern_new(storageName,PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
@@ -1423,8 +1447,9 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            databaseHandle,
                            "SELECT storage.id, \
-                                   jobs.uuid, \
-                                   storage.jobId, \
+                                   storage.entityId, \
+                                   entities.jobUUID, \
+                                   entities.scheduleUUID, \
                                    storage.name, \
                                    STRFTIME('%%s',storage.created), \
                                    storage.size, \
@@ -1433,16 +1458,16 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                                    STRFTIME('%%s',storage.lastChecked), \
                                    storage.errorMessage \
                             FROM storage \
-                            LEFT JOIN jobs ON jobs.id=storage.jobId \
-                            WHERE     (%d OR (jobs.uuid='%S')) \
-                                  AND (%d OR (storage.jobId=%d)) \
+                            LEFT JOIN entities ON entities.id=storage.entityId \
+                            WHERE     (%d OR (entities.jobUUID='%S')) \
+                                  AND (%d OR (storage.entityId=%d)) \
                                   AND storage.state IN (%S) \
                             ORDER BY storage.created DESC \
                            ",
-                           (uuid == NULL) ? 1 : 0,
-                           uuid,
-                           (jobId == DATABASE_ID_ANY) ? 1 : 0,
-                           jobId,
+                           (jobUUID == NULL) ? 1 : 0,
+                           jobUUID,
+                           (entityId == DATABASE_ID_ANY) ? 1 : 0,
+                           entityId,
                            getIndexStateSetString(indexStateSetString,indexStateSet)
                           );
   String_delete(indexStateSetString);
@@ -1452,8 +1477,9 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           DatabaseId       *databaseId,
-                          String           uuid,
-                          DatabaseId       *jobId,
+                          DatabaseId       *entityId,
+                          String           jobUUID,
+                          String           scheduleUUID,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
@@ -1472,10 +1498,11 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   foundFlag = FALSE;
   while (   !foundFlag
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                                "%lld %S %lld %S %llu %llu %d %d %llu %S",
+                                "%lld %lld %S %S %S %llu %llu %d %d %llu %S",
                                 databaseId,
-                                uuid,
-                                jobId,
+                                entityId,
+                                jobUUID,
+                                scheduleUUID,
                                 storageName,
                                 createdDateTime,
                                 size,
