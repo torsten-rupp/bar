@@ -374,34 +374,51 @@ LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
   char  *newData;
   ulong newMaxLength;
 
-  assert((string->type == STRING_TYPE_DYNAMIC) || (string->type == STRING_TYPE_STATIC));
-
-  if ((newLength + 1) > string->maxLength)
+  switch (string->type)
   {
-    newMaxLength = ((newLength + 1) + STRING_DELTA_LENGTH - 1) & ~(STRING_DELTA_LENGTH - 1);
-    assert(newMaxLength >= (newLength + 1));
-    newData = realloc(string->data,newMaxLength);
-//??? error message?
-    if (newData == NULL)
-    {
-      fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%lu bytes) - program halted: %s\n",newMaxLength,strerror(errno));
-      exit(128);
-    }
-    #ifndef NDEBUG
-      pthread_once(&debugStringInitFlag,debugStringInit);
-
-      pthread_mutex_lock(&debugStringLock);
+    case STRING_TYPE_DYNAMIC:
+      if ((newLength + 1) > string->maxLength)
       {
-        debugStringAllocList.allocatedMemory += (newMaxLength-string->maxLength);
-      }
-      pthread_mutex_unlock(&debugStringLock);
-      #ifdef FILL_MEMORY
-        memset(&newData[string->maxLength],DEBUG_FILL_BYTE,newMaxLength-string->maxLength);
-      #endif /* FILL_MEMORY */
-    #endif /* not NDEBUG */
+        newMaxLength = ((newLength + 1) + STRING_DELTA_LENGTH - 1) & ~(STRING_DELTA_LENGTH - 1);
+        assert(newMaxLength >= (newLength + 1));
+        newData = realloc(string->data,newMaxLength*sizeof(char));
+//??? error message?
+        if (newData == NULL)
+        {
+          fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%lu bytes) - program halted: %s\n",newMaxLength*sizeof(char),strerror(errno));
+          exit(128);
+        }
+        #ifndef NDEBUG
+          pthread_once(&debugStringInitFlag,debugStringInit);
 
-    string->data      = newData;
-    string->maxLength = newMaxLength;
+          pthread_mutex_lock(&debugStringLock);
+          {
+            debugStringAllocList.allocatedMemory += (newMaxLength-string->maxLength);
+          }
+          pthread_mutex_unlock(&debugStringLock);
+          #ifdef FILL_MEMORY
+            memset(&newData[string->maxLength],DEBUG_FILL_BYTE,newMaxLength-string->maxLength);
+          #endif /* FILL_MEMORY */
+        #endif /* not NDEBUG */
+
+        string->data      = newData;
+        string->maxLength = newMaxLength;
+      }
+      break;
+    case STRING_TYPE_STATIC:
+      if ((newLength + 1) > string->maxLength)
+      {
+        fprintf(stderr,"FATAL ERROR: exceeded static string (required length %lu, max. length %lu) - program halted\n",newLength,(ulong)string->maxLength-1);
+        exit(128);
+      }
+      break;
+    case STRING_TYPE_CONST:
+      fprintf(stderr,"FATAL ERROR: cannot modify constant string - program halted\n",string->maxLength);
+      exit(128);
+      break; // not reached
+    default:
+      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      break; // not reached
   }
 }
 
@@ -2223,7 +2240,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
             debugDumpStackTrace(stderr,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
             debugDumpStackTrace(stderr,"deleted at",2,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize);
           #endif /* HAVE_BACKTRACE */
-          HALT_INTERNAL_ERROR("");
+          HALT_INTERNAL_ERROR("string delete fail");
         }
 
         // remove string from allocated list, add string to free-list, shorten list
@@ -2266,7 +2283,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
           #ifdef HAVE_BACKTRACE
             debugDumpCurrentStackTrace(stderr,"",0);
           #endif /* HAVE_BACKTRACE */
-          HALT_INTERNAL_ERROR("");
+          HALT_INTERNAL_ERROR("string delete fail");
         }
       }
       pthread_mutex_unlock(&debugStringLock);
@@ -4822,11 +4839,11 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, const St
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR_AT(__fileName__,
                              __lineNb__,
-                             "Invalid checksum 0x%08x in string %p, length %ld (max. %ld) (expected 0x%08x)!",
+                             "Invalid checksum 0x%08lx in string %p, length %lu (max. %lu) (expected 0x%08lx)!",
                              string->checkSum,
                              string,
                              string->length,
-                             string->maxLength,
+                             (ulong)string->maxLength,
                              checkSum
                             );
     }
@@ -4857,7 +4874,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, const St
           {
             HALT_INTERNAL_ERROR_AT(__fileName__,
                                    __lineNb__,
-                                   "String %p allocated at %s, %lu is already freed at %s, %l!",
+                                   "String %p allocated at %s, %lu is already freed at %s, %ld!",
                                    string,
                                    debugStringNode->allocFileName,
                                    debugStringNode->allocLineNb,

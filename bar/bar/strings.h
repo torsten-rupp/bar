@@ -106,19 +106,19 @@ typedef struct
     struct __String __STATIC_STRING_IDENTIFIER1(string,n) = \
     { \
       0, \
-      length, \
+      (length)+1, \
       STRING_TYPE_STATIC, \
       __STATIC_STRING_IDENTIFIER1(data,n), \
-      STRING_CHECKSUM(0,length,__STATIC_STRING_IDENTIFIER1(data,n)) \
+      STRING_CHECKSUM(0,(length)+1,__STATIC_STRING_IDENTIFIER1(data,n)) \
     }; \
     String name = &__STATIC_STRING_IDENTIFIER1(string,n)
 #else /* NDEBUG */
   #define __StaticString(name,length,n) \
-    char __STATIC_STRING_IDENTIFIER1(data,n)[length]; \
+    char __STATIC_STRING_IDENTIFIER1(data,n)[length+1] = { [0] = '\0' }; \
     struct __String __STATIC_STRING_IDENTIFIER1(string,n) = \
     { \
       0, \
-      length, \
+      (length)+1, \
       STRING_TYPE_STATIC, \
       __STATIC_STRING_IDENTIFIER1(data,n) \
     }; \
@@ -779,7 +779,7 @@ String String_escape(String string, const char *chars, char escapeChar);
 *          escapeChar - escape char
 *          from       - from map characters or NULL
 *          to         - to map characters or NULL
-*          count      - number of from/to map characters
+*          count      - number of from/to map characters or 0
 * Output : -
 * Return : unescaped string
 * Notes  : -
