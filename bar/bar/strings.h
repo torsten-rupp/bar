@@ -48,14 +48,25 @@ extern const struct __String* STRING_EMPTY;
 
 // string
 typedef struct __String* String;
+#define StaticString(name,length) \
+  __StaticString(name,length,__COUNTER__)
 
+#ifndef SIZEOF_ULONG
+  #define SIZEOF_ULONG 4
+#endif
 struct __String
 {
-  ulong length;
-  ulong maxLength;
-  char  *data;
+  ulong length;                         // current length
+  ulong maxLength : SIZEOF_ULONG*4-2;   // max. length
+  enum                                  // type
+  {
+    STRING_TYPE_DYNAMIC,
+    STRING_TYPE_STATIC,
+    STRING_TYPE_CONST
+  } type : 2;
+  char  *data;                          // string data
   #ifndef NDEBUG
-    ulong checkSum;
+    ulong checkSum;                     // checksum of data
   #endif /* not NDEBUG */
 };
 
@@ -86,6 +97,35 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+// static string
+#define __STATIC_STRING_IDENTIFIER1(name,n) __STATIC_STRING_IDENTIFIER2(name,n)
+#define __STATIC_STRING_IDENTIFIER2(name,n) __##name##n
+#ifndef NDEBUG
+  #define __StaticString(name,length,n) \
+    char __STATIC_STRING_IDENTIFIER1(data,n)[length+1] = { [0] = '\0' }; \
+    struct __String __STATIC_STRING_IDENTIFIER1(string,n) = \
+    { \
+      0, \
+      length, \
+      STRING_TYPE_STATIC, \
+      __STATIC_STRING_IDENTIFIER1(data,n), \
+      STRING_CHECKSUM(0,length,__STATIC_STRING_IDENTIFIER1(data,n)) \
+    }; \
+    String name = &__STATIC_STRING_IDENTIFIER1(string,n)
+#else /* NDEBUG */
+  #define __StaticString(name,length,n) \
+    char __STATIC_STRING_IDENTIFIER1(data,n)[length]; \
+    struct __String __STATIC_STRING_IDENTIFIER1(string,n) = \
+    { \
+      0, \
+      length, \
+      STRING_TYPE_STATIC, \
+      __STATIC_STRING_IDENTIFIER1(data,n) \
+    }; \
+    String name = &__STATIC_STRING_IDENTIFIER1(string,n)
+#endif /* not NDEBUG */
+
+// debugging
 #ifndef NDEBUG
   #define String_new()           __String_new(__FILE__,__LINE__)
   #define String_newCString(...) __String_newCString(__FILE__,__LINE__,__VA_ARGS__)
@@ -97,8 +137,26 @@ typedef struct
 #endif /* not NDEBUG */
 
 #ifndef NDEBUG
-  #define STRING_CHECKSUM(string) \
-    ((ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data)
+  #define STRING_CHECKSUM(length,maxLength,data) \
+    ((ulong)(length^(ulong)maxLength^(ulong)data))
+
+  #define STRING_IS_ASSIGNABLE(string) \
+    (((string)->type == STRING_TYPE_DYNAMIC) || ((string)->type == STRING_TYPE_STATIC))
+  #define STRING_IS_DYNAMIC(string) \
+    ((string)->type == STRING_TYPE_DYNAMIC)
+
+  #define STRING_CHECK_ASSIGNABLE(string) \
+    do \
+    { \
+      assert(STRING_IS_ASSIGNABLE(string)); \
+    } \
+    while (0)
+  #define STRING_CHECK_DYNAMIC(string) \
+    do \
+    { \
+      assert(STRING_IS_DYNAMIC(string)); \
+    } \
+    while (0)
 
   void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, const String string);
   #define STRING_CHECK_VALID(string) \
@@ -112,11 +170,22 @@ typedef struct
     { \
       if (string != NULL) \
       { \
-        (string)->checkSum = STRING_CHECKSUM(string); \
+        (string)->checkSum = STRING_CHECKSUM((string)->length,(string)->maxLength,(string)->data); \
       } \
     } \
     while (0)
 #else /* NDEBUG */
+  #define STRING_CHECK_ASSIGNABLE(string) \
+    do \
+    { \
+    } \
+    while (0)
+  #define STRING_CHECK_DYNAMIC(string) \
+    do \
+    { \
+    } \
+    while (0)
+
   #define STRING_CHECK_VALID(string) \
     do \
     { \

@@ -59,9 +59,10 @@ struct __String __STRING_EMPTY =
 {
   0,
   0,
+  STRING_TYPE_CONST,
   "",
   #ifndef NDEBUG
-    0
+    STRING_CHECKSUM(0,0,"")
   #endif /* not NDEBUG */
 };
 const struct __String* STRING_EMPTY = &__STRING_EMPTY;
@@ -222,6 +223,7 @@ LOCAL_INLINE struct __String* allocString(void)
 
   string->length    = 0L;
   string->maxLength = STRING_START_LENGTH;
+  string->type      = STRING_TYPE_DYNAMIC;
   string->data[0]   = '\0';
   #ifndef NDEBUG
     #ifdef FILL_MEMORY
@@ -313,6 +315,7 @@ LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpS
 
   assert(string != NULL);
   assert(string->data != NULL);
+  assert((string->type == STRING_TYPE_DYNAMIC) || (string->type == STRING_TYPE_STATIC));
   assert(tmpString != NULL);
   assert(tmpString->data != NULL);
 
@@ -370,6 +373,8 @@ LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
 {
   char  *newData;
   ulong newMaxLength;
+
+  assert((string->type == STRING_TYPE_DYNAMIC) || (string->type == STRING_TYPE_STATIC));
 
   if ((newLength + 1) > string->maxLength)
   {
@@ -649,6 +654,7 @@ LOCAL void formatString(struct __String *string,
   uint          j;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   while ((*format) != '\0')
   {
@@ -938,6 +944,7 @@ LOCAL void formatString(struct __String *string,
           data.string = (struct __String*)va_arg(arguments,void*);
           assert(string != NULL);
           STRING_CHECK_VALID(data.string);
+          STRING_CHECK_ASSIGNABLE(string);
 
           if (formatToken.quoteChar != '\0')
           {
@@ -1540,6 +1547,7 @@ LOCAL bool parseString(const char    *string,
             // get and copy data
             value.string = va_arg(arguments,String);
             STRING_CHECK_VALID(value.string);
+            STRING_CHECK_ASSIGNABLE(value.string);
 
             String_clear(value.string);
             if (index < length)
@@ -2130,6 +2138,8 @@ String String_copy(String *string, const String fromString)
 String __String_copy(const char *__fileName__, ulong __lineNb__, String *string, const String fromString)
 #endif /* NDEBUG */
 {
+  STRING_CHECK_VALID(*string);
+  STRING_CHECK_ASSIGNABLE(*string);
   STRING_CHECK_VALID(fromString);
 
   if (fromString != NULL)
@@ -2181,6 +2191,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
   #endif /* not NDEBUG */
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_DYNAMIC(string);
 
   if (string != NULL)
   {
@@ -2269,6 +2280,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
 String String_clear(String string)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2286,6 +2298,7 @@ String String_clear(String string)
 String String_erase(String string)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2303,6 +2316,7 @@ String String_erase(String string)
 String String_set(String string, const String sourceString)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2332,6 +2346,7 @@ String String_set(String string, const String sourceString)
 String String_setCString(String string, const char *s)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2356,6 +2371,7 @@ String String_setCString(String string, const char *s)
 String String_setChar(String string, char ch)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   String_setBuffer(string,&ch,1);
 
@@ -2367,6 +2383,7 @@ String String_setChar(String string, char ch)
 String String_setBuffer(String string, const void *buffer, ulong bufferLength)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2396,6 +2413,7 @@ String String_sub(String string, const String fromString, ulong fromIndex, long 
   ulong n;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
   STRING_CHECK_VALID(fromString);
 
   if (string != NULL)
@@ -2507,6 +2525,7 @@ String String_append(String string, const String appendString)
   ulong n;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
   STRING_CHECK_VALID(appendString);
 
   if (string != NULL)
@@ -2532,6 +2551,7 @@ String String_appendSub(String string, const String fromString, ulong fromIndex,
   ulong n;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
   STRING_CHECK_VALID(fromString);
 
   if (string != NULL)
@@ -2567,6 +2587,7 @@ String String_appendSub(String string, const String fromString, ulong fromIndex,
 String String_appendCString(String string, const char *s)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2586,6 +2607,7 @@ String String_appendChar(String string, char ch)
   ulong n;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2607,6 +2629,7 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
   ulong n;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2631,6 +2654,7 @@ String String_insert(String string, ulong index, const String insertString)
   ulong n;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
   STRING_CHECK_VALID(insertString);
 
   if (string != NULL)
@@ -2669,6 +2693,7 @@ String String_insertSub(String string, ulong index, const String fromString, ulo
   ulong n;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
   STRING_CHECK_VALID(fromString);
 
   if (string != NULL)
@@ -2715,6 +2740,7 @@ String String_insertSub(String string, ulong index, const String fromString, ulo
 String String_insertCString(String string, ulong index, const char *s)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2732,6 +2758,7 @@ String String_insertCString(String string, ulong index, const char *s)
 String String_insertChar(String string, ulong index, char ch)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2748,6 +2775,7 @@ String String_insertBuffer(String string, ulong index, const char *buffer, ulong
   ulong n;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2785,6 +2813,7 @@ String String_remove(String string, ulong index, ulong length)
   ulong n;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2820,6 +2849,7 @@ String String_remove(String string, ulong index, ulong length)
 String String_replace(String string, ulong index, ulong length, const String insertString)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
   STRING_CHECK_VALID(insertString);
 
   String_remove(string,index,length);
@@ -2831,6 +2861,7 @@ String String_replace(String string, ulong index, ulong length, const String ins
 String String_replaceCString(String string, ulong index, ulong length, const char *s)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   String_remove(string,index,length);
   String_insertCString(string,index,s);
@@ -2841,6 +2872,7 @@ String String_replaceCString(String string, ulong index, ulong length, const cha
 String String_replaceChar(String string, ulong index, ulong length, char ch)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   String_remove(string,index,length);
   String_insertChar(string,index,ch);
@@ -2851,6 +2883,7 @@ String String_replaceChar(String string, ulong index, ulong length, char ch)
 String String_replaceBuffer(String string, ulong index, ulong length, const char *buffer, ulong bufferLength)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   String_remove(string,index,length);
   String_insertBuffer(string,index,buffer,bufferLength);
@@ -2861,6 +2894,7 @@ String String_replaceBuffer(String string, ulong index, ulong length, const char
 String String_replaceAll(String string, ulong index, const String fromString, const String toString)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   return String_map(string,index,&fromString,&toString,1);
 }
@@ -2868,6 +2902,7 @@ String String_replaceAll(String string, ulong index, const String fromString, co
 String String_replaceAllCString(String string, ulong index, const char *from, const char *to)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   return String_mapCString(string,index,&from,&to,1);
 }
@@ -2875,6 +2910,7 @@ String String_replaceAllCString(String string, ulong index, const char *from, co
 String String_replaceAllChar(String string, ulong index, char fromCh, char toCh)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   return String_mapChar(string,index,&fromCh,&toCh,1);
 }
@@ -2886,6 +2922,7 @@ String String_map(String string, ulong index, const String from[], const String 
   bool  replaceFlag;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   while (index < String_length(string))
   {
@@ -2916,6 +2953,7 @@ String String_mapCString(String string, ulong index, const char* from[], const c
   bool  replaceFlag;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   while (index < String_length(string))
   {
@@ -2944,6 +2982,7 @@ String String_mapChar(String string, ulong index, const char from[], const char 
   uint z;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -2969,6 +3008,7 @@ String String_mapChar(String string, ulong index, const char from[], const char 
 String String_join(String string, const String joinString, char joinChar)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
   STRING_CHECK_VALID(joinString);
 
   if (!String_isEmpty(string)) String_appendChar(string,joinChar);
@@ -2980,6 +3020,7 @@ String String_join(String string, const String joinString, char joinChar)
 String String_joinCString(String string, const char *s, char joinChar)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (!String_isEmpty(string)) String_appendChar(string,joinChar);
   String_appendCString(string,s);
@@ -2990,6 +3031,7 @@ String String_joinCString(String string, const char *s, char joinChar)
 String String_joinChar(String string, char ch, char joinChar)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (!String_isEmpty(string)) String_appendChar(string,joinChar);
   String_appendChar(string,ch);
@@ -3000,6 +3042,7 @@ String String_joinChar(String string, char ch, char joinChar)
 String String_joinBuffer(String string, const char *buffer, ulong bufferLength, char joinChar)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (!String_isEmpty(string)) String_appendChar(string,joinChar);
   String_appendBuffer(string,buffer,bufferLength);
@@ -3822,6 +3865,7 @@ String String_iterate(                      String string,
   assert(stringIterateFunction != NULL);
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -3859,6 +3903,7 @@ String String_toLower(String string)
   ulong z;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -3880,6 +3925,7 @@ String String_toUpper(String string)
   ulong z;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -3899,6 +3945,7 @@ String String_toUpper(String string)
 String String_trim(String string, const char *chars)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   String_trimRight(string,chars);
   String_trimLeft(string,chars);
@@ -3911,6 +3958,7 @@ String String_trimRight(String string, const char *chars)
   ulong n;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -3935,6 +3983,7 @@ String String_trimLeft(String string, const char *chars)
   ulong z,n;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -3965,6 +4014,7 @@ String String_escape(String string, const char *chars, char escapeChar)
   ulong  z;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -3996,6 +4046,7 @@ String String_unescape(String string, char escapeChar, const char from[], const 
   uint   z;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -4058,6 +4109,7 @@ String String_quote(String string, char quoteChar)
   ulong  z;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -4091,6 +4143,7 @@ String String_unquote(String string, const char *quoteChars)
   ulong      z;
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -4140,6 +4193,7 @@ String String_padRight(String string, ulong length, char ch)
   assert(string != NULL);
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -4165,6 +4219,7 @@ String String_padLeft(String string, ulong length, char ch)
   assert(string != NULL);
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -4187,6 +4242,7 @@ String String_padLeft(String string, ulong length, char ch)
 String String_fillChar(String string, ulong length, char ch)
 {
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -4209,6 +4265,7 @@ String String_format(String string, const char *format, ...)
   assert(format != NULL);
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -4228,6 +4285,7 @@ String String_vformat(String string, const char *format, va_list arguments)
   assert(format != NULL);
 
   STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
@@ -4756,7 +4814,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, const St
   {
     ulong checkSum;
 
-    checkSum = STRING_CHECKSUM(string);
+    checkSum = STRING_CHECKSUM(string->length,string->maxLength,string->data);
     if (checkSum != string->checkSum)
     {
       #ifdef HAVE_BACKTRACE
@@ -4773,49 +4831,52 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, const St
                             );
     }
 
-    pthread_once(&debugStringInitFlag,debugStringInit);
-
-    pthread_mutex_lock(&debugStringLock);
+    if (STRING_IS_DYNAMIC(string))
     {
-      debugStringNode = debugStringAllocList.head;
-      while ((debugStringNode != NULL) && (debugStringNode->string != string))
+      pthread_once(&debugStringInitFlag,debugStringInit);
+
+      pthread_mutex_lock(&debugStringLock);
       {
-        debugStringNode = debugStringNode->next;
-      }
-      if (debugStringNode == NULL)
-      {
-        debugStringNode = debugStringFreeList.head;
+        debugStringNode = debugStringAllocList.head;
         while ((debugStringNode != NULL) && (debugStringNode->string != string))
         {
           debugStringNode = debugStringNode->next;
         }
+        if (debugStringNode == NULL)
+        {
+          debugStringNode = debugStringFreeList.head;
+          while ((debugStringNode != NULL) && (debugStringNode->string != string))
+          {
+            debugStringNode = debugStringNode->next;
+          }
 
-        #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,"",0);
-        #endif /* HAVE_BACKTRACE */
-        if (debugStringNode != NULL)
-        {
-          HALT_INTERNAL_ERROR_AT(__fileName__,
-                                 __lineNb__,
-                                 "String %p allocated at %s, %lu is already freed at %s, %l!",
-                                 string,
-                                 debugStringNode->allocFileName,
-                                 debugStringNode->allocLineNb,
-                                 debugStringNode->deleteFileName,
-                                 debugStringNode->deleteLineNb
-                                );
-        }
-        else
-        {
-          HALT_INTERNAL_ERROR_AT(__fileName__,
-                                 __lineNb__,
-                                 "String %p is not allocated and not known!",
-                                 string
-                                );
+          #ifdef HAVE_BACKTRACE
+            debugDumpCurrentStackTrace(stderr,"",0);
+          #endif /* HAVE_BACKTRACE */
+          if (debugStringNode != NULL)
+          {
+            HALT_INTERNAL_ERROR_AT(__fileName__,
+                                   __lineNb__,
+                                   "String %p allocated at %s, %lu is already freed at %s, %l!",
+                                   string,
+                                   debugStringNode->allocFileName,
+                                   debugStringNode->allocLineNb,
+                                   debugStringNode->deleteFileName,
+                                   debugStringNode->deleteLineNb
+                                  );
+          }
+          else
+          {
+            HALT_INTERNAL_ERROR_AT(__fileName__,
+                                   __lineNb__,
+                                   "String %p is not allocated and not known!",
+                                   string
+                                  );
+          }
         }
       }
+      pthread_mutex_unlock(&debugStringLock);
     }
-    pthread_mutex_unlock(&debugStringLock);
   }
 }
 
