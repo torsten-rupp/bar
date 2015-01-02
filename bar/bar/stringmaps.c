@@ -1108,8 +1108,6 @@ bool StringMap_parse(StringMap stringMap, const String string, const char *quote
 {
   assert(stringMap != NULL);
 
-  STRING_CHECK_VALID(string);
-
   return StringMap_parseCString(stringMap,String_cString(string),quoteChars,index,nextIndex);
 }
 
