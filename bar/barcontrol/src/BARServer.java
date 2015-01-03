@@ -742,7 +742,7 @@ class ReadThread extends Thread
               // result for unknown command -> currently ignored
               if (Settings.debugLevel > 0) System.err.println("Network: received unknown command result '"+line+"'");
             }
-          }         
+          }
         }
         catch (SocketTimeoutException exception)
         {
@@ -1272,7 +1272,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   static void abortCommand(Command command)
   {
     // send abort command to command
-    executeCommand(StringParser.format("ABORT jobId=%d",command.id),0);
+    executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
     readThread.commandRemove(command);
 
     // set abort error
@@ -1290,7 +1290,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   static void timeoutCommand(Command command)
   {
     // send abort command to command
-    executeCommand(StringParser.format("ABORT jobId=%d",command.id),0);
+    executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
     readThread.commandRemove(command);
 
     // set abort error
@@ -1459,7 +1459,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** set boolean value on BAR server
-   * @param jobId job id
    * @param name name of value
    * @param b value
    */
@@ -1469,7 +1468,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** set long value on BAR server
-   * @param jobId job id
    * @param name name of value
    * @param n value
    */
@@ -1479,7 +1477,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** set string value on BAR server
-   * @param jobId job id
+   * @param jobUUID job UUID
    * @param name name of value
    * @param s value
    */
@@ -1489,16 +1487,16 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** get boolean value from BAR server
-   * @param jobId job id
+   * @param jobUUID job UUID
    * @param name name of value
    * @return value
    */
-  public static boolean getBooleanOption(int jobId, String name)
+  public static boolean getBooleanOption(String jobUUID, String name)
   {
     String[] errorMessage = new String[1];
     ValueMap resultMap    = new ValueMap();
 
-    if (executeCommand(StringParser.format("OPTION_GET jobId=%d name=%S",jobId,name),
+    if (executeCommand(StringParser.format("OPTION_GET jobUUID=%s name=%S",jobUUID,name),
                        0,
                        errorMessage,
                        resultMap
@@ -1514,16 +1512,16 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** get long value from BAR server
-   * @param jobId job id
+   * @param jobUUID job UUID
    * @param name name of value
    * @return value
    */
-  public static long getLongOption(int jobId, String name)
+  public static long getLongOption(String jobUUID, String name)
   {
     String[] errorMessage = new String[1];
     ValueMap resultMap    = new ValueMap();
 
-    if (executeCommand(StringParser.format("OPTION_GET jobId=%d name=%S",jobId,name),
+    if (executeCommand(StringParser.format("OPTION_GET jobUUID=%s name=%S",jobUUID,name),
                        0,
                        errorMessage,
                        resultMap
@@ -1539,16 +1537,16 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** get string value from BAR server
-   * @param jobId job id
+   * @param jobUUID job UUID
    * @param name name of value
    * @return value
    */
-  public static String getStringOption(int jobId, String name)
+  public static String getStringOption(String jobUUID, String name)
   {
     String[] errorMessage = new String[1];
     ValueMap resultMap    = new ValueMap();
 
-    if (executeCommand(StringParser.format("OPTION_GET jobId=%d name=%S",jobId,name),
+    if (executeCommand(StringParser.format("OPTION_GET jobUUID=%s name=%S",jobUUID,name),
                        0,
                        errorMessage,
                        resultMap
@@ -1564,33 +1562,33 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** set boolean option value on BAR server
-   * @param jobId job id
+   * @param jobUUID job UUID
    * @param name option name of value
    * @param b value
    */
-  public static void setOption(int jobId, String name, boolean b)
+  public static void setOption(String jobUUID, String name, boolean b)
   {
-    executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%s",jobId,name,b ? "yes" : "no"),0);
+    executeCommand(StringParser.format("OPTION_SET jobUUID=%s name=%S value=%s",jobUUID,name,b ? "yes" : "no"),0);
   }
 
   /** set long option value on BAR server
-   * @param jobId job id
+   * @param jobUUID job UUID
    * @param name option name of value
    * @param n value
    */
-  public static void setOption(int jobId, String name, long n)
+  public static void setOption(String jobUUID, String name, long n)
   {
-    executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%d",jobId,name,n),0);
+    executeCommand(StringParser.format("OPTION_SET jobUUID=%s name=%S value=%d",jobUUID,name,n),0);
   }
 
   /** set string option value on BAR server
-   * @param jobId job id
+   * @param jobUUID job UUID
    * @param name option name of value
    * @param s value
    */
-  public static void setOption(int jobId, String name, String s)
+  public static void setOption(String jobUUID, String name, String s)
   {
-    executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%S",jobId,name,s),0);
+    executeCommand(StringParser.format("OPTION_SET jobUUID=%s name=%S value=%S",jobUUID,name,s),0);
   }
 
   /** get password encrypt type
