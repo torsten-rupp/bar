@@ -55,10 +55,285 @@ import org.eclipse.swt.widgets.Widget;
 
 /****************************** Classes ********************************/
 
+/** job data
+ */
+class JobData
+{
+  String uuid;
+  String name;
+  String state;
+  String archiveType;
+  long   archivePartSize;
+  String deltaCompressAlgorithm;
+  String byteCompressAlgorithm;
+  String cryptAlgorithm;
+  String cryptType;
+  String cryptPasswordMode;
+  long   lastExecutedDateTime;
+  long   estimatedRestTime;
+
+  // date/time format
+  private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+  /** create job data
+   * @param name name
+   * @param state job state
+   * @param archiveType archive type
+   * @param archivePartSize archive part size
+   * @param deltaCompressAlgorithm delta compress algorithm
+   * @param byteCompressAlgorithm byte compress algorithm
+   * @param cryptAlgorithm crypt algorithm
+   * @param cryptType crypt type
+   * @param cryptPasswordMode crypt password mode
+   * @param lastExecutedDateTime last executed date/time [s]
+   * @param estimatedRestTime estimated rest time [s]
+   */
+  JobData(String uuid, String name, String state, String archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
+  {
+    this.uuid                   = uuid;
+    this.name                   = name;
+    this.state                  = state;
+    this.archiveType            = archiveType;
+    this.archivePartSize        = archivePartSize;
+    this.deltaCompressAlgorithm = deltaCompressAlgorithm;
+    this.byteCompressAlgorithm  = byteCompressAlgorithm;
+    this.cryptAlgorithm         = cryptAlgorithm;
+    this.cryptType              = cryptType;
+    this.cryptPasswordMode      = cryptPasswordMode;
+    this.lastExecutedDateTime   = lastExecutedDateTime;
+    this.estimatedRestTime      = estimatedRestTime;
+  }
+
+  /** format job compress algorithms
+   * @return compress algorithm string
+   */
+  String formatCompressAlgorithm()
+  {
+    boolean deltaCompressIsNone = deltaCompressAlgorithm.equals("none");
+    boolean byteCompressIsNone  = byteCompressAlgorithm.equals("none");
+
+    if (!deltaCompressIsNone || !byteCompressIsNone)
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      if (!deltaCompressIsNone)
+      {
+        buffer.append(deltaCompressAlgorithm);
+      }
+      if (!byteCompressIsNone)
+      {
+        if (buffer.length() > 0) buffer.append('+');
+        buffer.append(byteCompressAlgorithm);
+      }
+
+      return buffer.toString();
+    }
+    else
+    {
+      return "none";
+    }
+  }
+
+  /** format job crypt algorithm (including "*" for asymmetric)
+   * @return crypt algorithm string
+   */
+  String formatCryptAlgorithm()
+  {
+    return cryptAlgorithm+(cryptType.equals("ASYMMETRIC") ? "*" : "");
+  }
+
+  /** format last executed date/time
+   * @return date/time string
+   */
+  String formatLastExecutedDateTime()
+  {
+    if (lastExecutedDateTime > 0)
+    {
+      return simpleDateFormat.format(new Date(lastExecutedDateTime*1000));
+    }
+    else
+    {
+      return "-";
+    }
+  }
+
+  /** format estimated rest time
+   * @return estimated rest time string
+   */
+  String formatEstimatedRestTime()
+  {
+    long   estimatedRestDays    = estimatedRestTime/(24*60*60);
+    long   estimatedRestHours   = estimatedRestTime%(24*60*60)/(60*60);
+    long   estimatedRestMinutes = estimatedRestTime%(60*60   )/(60   );
+    long   estimatedRestSeconds = estimatedRestTime%(60      );
+
+    return String.format("%2d days %02d:%02d:%02d",
+                         estimatedRestDays,
+                         estimatedRestHours,
+                         estimatedRestMinutes,
+                         estimatedRestSeconds
+                        );
+  }
+
+  /** convert data to string
+   * @return string
+   */
+  public String toString()
+  {
+    return "Job {"+uuid+", "+name+", "+state+", "+archiveType+"}";
+  }
+};
+
+/** job data comparator
+ */
+class JobDataComparator implements Comparator<JobData>
+{
+  // Note: enum in inner classes are not possible in Java, thus use the old way...
+  private final static int SORTMODE_NAME                   = 0;
+  private final static int SORTMODE_STATE                  = 1;
+  private final static int SORTMODE_TYPE                   = 2;
+  private final static int SORTMODE_PARTSIZE               = 3;
+  private final static int SORTMODE_COMPRESS               = 4;
+  private final static int SORTMODE_CRYPT                  = 5;
+  private final static int SORTMODE_LAST_EXECUTED_DATETIME = 6;
+  private final static int SORTMODE_ESTIMATED_TIME         = 7;
+
+  private int sortMode;
+
+  /** create job data comparator
+   * @param table job table
+   * @param sortColumn sorting column
+   */
+  JobDataComparator(Table table, TableColumn sortColumn)
+  {
+    if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
+    else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_STATE;
+    else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
+    else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_PARTSIZE;
+    else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_COMPRESS;
+    else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_CRYPT;
+    else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
+    else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
+    else                                       sortMode = SORTMODE_NAME;
+  }
+
+  /** create job data comparator
+   * @param table job table
+   */
+  JobDataComparator(Table table)
+  {
+    TableColumn sortColumn = table.getSortColumn();
+
+    if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
+    else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_STATE;
+    else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
+    else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_PARTSIZE;
+    else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_COMPRESS;
+    else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_CRYPT;
+    else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
+    else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
+    else                                       sortMode = SORTMODE_NAME;
+  }
+
+  /** compare job data
+   * @param jobData1, jobData2 file tree data to compare
+   * @return -1 iff jobData1 < jobData2,
+              0 iff jobData1 = jobData2,
+              1 iff jobData1 > jobData2
+   */
+  public int compare(JobData jobData1, JobData jobData2)
+  {
+    switch (sortMode)
+    {
+      case SORTMODE_NAME:
+        return jobData1.name.compareTo(jobData2.name);
+      case SORTMODE_STATE:
+        return jobData1.state.compareTo(jobData2.state);
+      case SORTMODE_TYPE:
+        return jobData1.archiveType.compareTo(jobData2.archiveType);
+      case SORTMODE_PARTSIZE:
+        if      (jobData1.archivePartSize < jobData2.archivePartSize) return -1;
+        else if (jobData1.archivePartSize > jobData2.archivePartSize) return  1;
+        else                                                          return  0;
+      case SORTMODE_COMPRESS:
+        int result = jobData1.deltaCompressAlgorithm.compareTo(jobData2.deltaCompressAlgorithm);
+        if (result == 0) result = jobData1.byteCompressAlgorithm.compareTo(jobData2.byteCompressAlgorithm);
+      case SORTMODE_CRYPT:
+        String crypt1 = jobData1.cryptAlgorithm+(jobData1.cryptType.equals("ASYMMETRIC") ?"*" : "");
+        String crypt2 = jobData2.cryptAlgorithm+(jobData2.cryptType.equals("ASYMMETRIC") ?"*" : "");
+
+        return crypt1.compareTo(crypt2);
+      case SORTMODE_LAST_EXECUTED_DATETIME:
+        if      (jobData1.lastExecutedDateTime < jobData2.lastExecutedDateTime) return -1;
+        else if (jobData1.lastExecutedDateTime > jobData2.lastExecutedDateTime) return  1;
+        else                                                                    return  0;
+      case SORTMODE_ESTIMATED_TIME:
+        if      (jobData1.estimatedRestTime < jobData2.estimatedRestTime) return -1;
+        else if (jobData1.estimatedRestTime > jobData2.estimatedRestTime) return  1;
+        else                                                              return  0;
+      default:
+        return 0;
+    }
+  }
+}
+
 /** tab status
  */
-class TabStatus
+public class TabStatus
 {
+  /** status update thread
+   */
+  class TabStatusUpdateThread extends Thread
+  {
+    private TabStatus tabStatus;
+
+    /** initialize status update thread
+     * @param tabStatus tab status
+     */
+    TabStatusUpdateThread(TabStatus tabStatus)
+    {
+      this.tabStatus = tabStatus;
+    }
+
+    /** run status update thread
+     */
+    public void run()
+    {
+      try
+      {
+        for (;;)
+        {
+          // update
+          try
+          {
+            tabStatus.update();
+          }
+          catch (org.eclipse.swt.SWTException exception)
+          {
+            // ignore SWT exceptions
+            if (Settings.debugLevel > 2)
+            {
+              BARControl.printStackTrace(exception);
+            }
+          }
+
+          // sleep a short time
+          try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ };
+        }
+      }
+      catch (Exception exception)
+      {
+        if (Settings.debugLevel > 0)
+        {
+          BARServer.disconnect();
+          System.err.println("ERROR: "+exception.getMessage());
+          BARControl.printStackTrace(exception);
+          System.exit(1);
+        }
+      }
+    }
+  }
+
   /** running states
    */
   enum States
@@ -79,237 +354,15 @@ class TabStatus
     NETWORK;
   };
 
-  /** job data
-   */
-  class JobData
-  {
-    int    id;
-    String name;
-    String state;
-    String archiveType;
-    long   archivePartSize;
-    String deltaCompressAlgorithm;
-    String byteCompressAlgorithm;
-    String cryptAlgorithm;
-    String cryptType;
-    String cryptPasswordMode;
-    long   lastExecutedDateTime;
-    long   estimatedRestTime;
-
-    // date/time format
-    private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-    /** create job data
-     * @param id id
-     * @param name name
-     * @param state job state
-     * @param archiveType archive type
-     * @param archivePartSize archive part size
-     * @param deltaCompressAlgorithm delta compress algorithm
-     * @param byteCompressAlgorithm byte compress algorithm
-     * @param cryptAlgorithm crypt algorithm
-     * @param cryptType crypt type
-     * @param cryptPasswordMode crypt password mode
-     * @param lastExecutedDateTime last executed date/time [s]
-     * @param estimatedRestTime estimated rest time [s]
-     */
-    JobData(int id, String name, String state, String archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
-    {
-      this.id                     = id;
-      this.name                   = name;
-      this.state                  = state;
-      this.archiveType            = archiveType;
-      this.archivePartSize        = archivePartSize;
-      this.deltaCompressAlgorithm = deltaCompressAlgorithm;
-      this.byteCompressAlgorithm  = byteCompressAlgorithm;
-      this.cryptAlgorithm         = cryptAlgorithm;
-      this.cryptType              = cryptType;
-      this.cryptPasswordMode      = cryptPasswordMode;
-      this.lastExecutedDateTime   = lastExecutedDateTime;
-      this.estimatedRestTime      = estimatedRestTime;
-    }
-
-    /** format job compress algorithms
-     * @return compress algorithm string
-     */
-    String formatCompressAlgorithm()
-    {
-      boolean deltaCompressIsNone = deltaCompressAlgorithm.equals("none");
-      boolean byteCompressIsNone  = byteCompressAlgorithm.equals("none");
-
-      if (!deltaCompressIsNone || !byteCompressIsNone)
-      {
-        StringBuilder buffer = new StringBuilder();
-
-        if (!deltaCompressIsNone)
-        {
-          buffer.append(deltaCompressAlgorithm);
-        }
-        if (!byteCompressIsNone)
-        {
-          if (buffer.length() > 0) buffer.append('+');
-          buffer.append(byteCompressAlgorithm);
-        }
-
-        return buffer.toString();
-      }
-      else
-      {
-        return "none";
-      }
-    }
-
-    /** format job crypt algorithm (including "*" for asymmetric)
-     * @return crypt algorithm string
-     */
-    String formatCryptAlgorithm()
-    {
-      return cryptAlgorithm+(cryptType.equals("ASYMMETRIC") ? "*" : "");
-    }
-
-    /** format last executed date/time
-     * @return date/time string
-     */
-    String formatLastExecutedDateTime()
-    {
-      if (lastExecutedDateTime > 0)
-      {
-        return simpleDateFormat.format(new Date(lastExecutedDateTime*1000));
-      }
-      else
-      {
-        return "-";
-      }
-    }
-
-    /** format estimated rest time
-     * @return estimated rest time string
-     */
-    String formatEstimatedRestTime()
-    {
-      long   estimatedRestDays    = estimatedRestTime/(24*60*60);
-      long   estimatedRestHours   = estimatedRestTime%(24*60*60)/(60*60);
-      long   estimatedRestMinutes = estimatedRestTime%(60*60   )/(60   );
-      long   estimatedRestSeconds = estimatedRestTime%(60      );
-
-      return String.format("%2d days %02d:%02d:%02d",
-                           estimatedRestDays,
-                           estimatedRestHours,
-                           estimatedRestMinutes,
-                           estimatedRestSeconds
-                          );
-    }
-
-    /** convert data to string
-     * @return string
-     */
-    public String toString()
-    {
-      return "Job {"+id+", "+name+", "+state+", "+archiveType+"}";
-    }
-  };
-
-  /** job data comparator
-   */
-  class JobDataComparator implements Comparator<JobData>
-  {
-    // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_NAME                   = 0;
-    private final static int SORTMODE_STATE                  = 1;
-    private final static int SORTMODE_TYPE                   = 2;
-    private final static int SORTMODE_PARTSIZE               = 3;
-    private final static int SORTMODE_COMPRESS               = 4;
-    private final static int SORTMODE_CRYPT                  = 5;
-    private final static int SORTMODE_LAST_EXECUTED_DATETIME = 6;
-    private final static int SORTMODE_ESTIMATED_TIME         = 7;
-
-    private int sortMode;
-
-    /** create job data comparator
-     * @param table job table
-     * @param sortColumn sorting column
-     */
-    JobDataComparator(Table table, TableColumn sortColumn)
-    {
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_STATE;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_PARTSIZE;
-      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_COMPRESS;
-      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_CRYPT;
-      else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
-      else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
-      else                                       sortMode = SORTMODE_NAME;
-    }
-
-    /** create job data comparator
-     * @param table job table
-     */
-    JobDataComparator(Table table)
-    {
-      TableColumn sortColumn = table.getSortColumn();
-
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_STATE;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_PARTSIZE;
-      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_COMPRESS;
-      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_CRYPT;
-      else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
-      else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
-      else                                       sortMode = SORTMODE_NAME;
-    }
-
-    /** compare job data
-     * @param jobData1, jobData2 file tree data to compare
-     * @return -1 iff jobData1 < jobData2,
-                0 iff jobData1 = jobData2,
-                1 iff jobData1 > jobData2
-     */
-    public int compare(JobData jobData1, JobData jobData2)
-    {
-      switch (sortMode)
-      {
-        case SORTMODE_NAME:
-          return jobData1.name.compareTo(jobData2.name);
-        case SORTMODE_STATE:
-          return jobData1.state.compareTo(jobData2.state);
-        case SORTMODE_TYPE:
-          return jobData1.archiveType.compareTo(jobData2.archiveType);
-        case SORTMODE_PARTSIZE:
-          if      (jobData1.archivePartSize < jobData2.archivePartSize) return -1;
-          else if (jobData1.archivePartSize > jobData2.archivePartSize) return  1;
-          else                                                          return  0;
-        case SORTMODE_COMPRESS:
-          int result = jobData1.deltaCompressAlgorithm.compareTo(jobData2.deltaCompressAlgorithm);
-          if (result == 0) result = jobData1.byteCompressAlgorithm.compareTo(jobData2.byteCompressAlgorithm);
-        case SORTMODE_CRYPT:
-          String crypt1 = jobData1.cryptAlgorithm+(jobData1.cryptType.equals("ASYMMETRIC") ?"*" : "");
-          String crypt2 = jobData2.cryptAlgorithm+(jobData2.cryptType.equals("ASYMMETRIC") ?"*" : "");
-
-          return crypt1.compareTo(crypt2);
-        case SORTMODE_LAST_EXECUTED_DATETIME:
-          if      (jobData1.lastExecutedDateTime < jobData2.lastExecutedDateTime) return -1;
-          else if (jobData1.lastExecutedDateTime > jobData2.lastExecutedDateTime) return  1;
-          else                                                                    return  0;
-        case SORTMODE_ESTIMATED_TIME:
-          if      (jobData1.estimatedRestTime < jobData2.estimatedRestTime) return -1;
-          else if (jobData1.estimatedRestTime > jobData2.estimatedRestTime) return  1;
-          else                                                              return  0;
-        default:
-          return 0;
-      }
-    }
-  }
-
   // global variable references
-  private Shell       shell;
-  private Display     display;
-  private TabJobs     tabJobs;
+  private Shell                 shell;
+  private Display               display;
+  private TabStatusUpdateThread tabStatusUpdateThread;
+  private TabJobs               tabJobs;
 
   // widgets
   public  Composite   widgetTab;
-  private Table       widgetJobList;
+  private Table       widgetJobTable;
   private Shell       widgetMessageToolTip = null;
   private Group       widgetSelectedJob;
   public  Button      widgetButtonStart;
@@ -348,58 +401,9 @@ class TabStatus
   private WidgetVariable message               = new WidgetVariable("");
 
   // variables
-  private HashMap<String,JobData> jobList         = new HashMap<String,JobData> ();
+  private HashMap<String,JobData> jobDataMap      = new HashMap<String,JobData>();
   private JobData                 selectedJobData = null;
   private States                  status          = States.RUNNING;
-
-  /** status update thread
-   */
-  class TabStatusUpdateThread extends Thread
-  {
-    private TabStatus tabStatus;
-
-    /** initialize status update thread
-     * @param tabStatus tab status
-     */
-    TabStatusUpdateThread(TabStatus tabStatus)
-    {
-      this.tabStatus = tabStatus;
-    }
-
-    /** run status update thread
-     */
-    public void run()
-    {
-      try
-      {
-        for (;;)
-        {
-          // update
-          try
-          {
-            tabStatus.update();
-          }
-          catch (org.eclipse.swt.SWTException exception)
-          {
-            // ignore SWT exceptions
-          }
-
-          // sleep a short time
-          try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ };
-        }
-      }
-      catch (Exception exception)
-      {
-        if (Settings.debugLevel > 0)
-        {
-          BARServer.disconnect();
-          System.err.println("ERROR: "+exception.getMessage());
-          BARControl.printStackTrace(exception);
-          System.exit(1);
-        }
-      }
-    }
-  }
 
   /** create status tab
    * @param parentTabFolder parent tab folder
@@ -435,11 +439,11 @@ class TabStatus
     });
 
     // list with jobs
-    widgetJobList = Widgets.newTable(widgetTab,SWT.NONE);
-    widgetJobList.setToolTipText(BARControl.tr("List with job entries.\nClick to select job, right-click to open context menu."));
-    widgetJobList.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}));
-    Widgets.layout(widgetJobList,0,0,TableLayoutData.NSWE);
-    widgetJobList.addSelectionListener(new SelectionListener()
+    widgetJobTable = Widgets.newTable(widgetTab,SWT.NONE);
+    widgetJobTable.setToolTipText(BARControl.tr("List with job entries.\nClick to select job, right-click to open context menu."));
+    widgetJobTable.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}));
+    Widgets.layout(widgetJobTable,0,0,TableLayoutData.NSWE);
+    widgetJobTable.addSelectionListener(new SelectionListener()
     {
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
@@ -448,8 +452,9 @@ class TabStatus
       {
         Table     widget    = (Table)selectionEvent.widget;
         TabStatus tabStatus = (TabStatus)widget.getData();
+
         selectedJobData = (JobData)selectionEvent.item.getData();
-        if (tabJobs != null) tabJobs.selectJob(selectedJobData.name);
+        if (tabJobs != null) tabJobs.setSelectedJob(selectedJobData);
         widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+selectedJobData.name+"'");
       }
     });
@@ -461,35 +466,33 @@ class TabStatus
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         TableColumn       tableColumn       = (TableColumn)selectionEvent.widget;
-        JobDataComparator jobDataComparator = new JobDataComparator(widgetJobList,tableColumn);
-        synchronized(jobList)
-        {
-          Widgets.sortTableColumn(widgetJobList,tableColumn,jobDataComparator);
-        }
+        JobDataComparator jobDataComparator = new JobDataComparator(widgetJobTable,tableColumn);
+
+        Widgets.sortTableColumn(widgetJobTable,tableColumn,jobDataComparator);
       }
     };
-    tableColumn = Widgets.addTableColumn(widgetJobList,0,BARControl.tr("Name"),          SWT.LEFT, 110,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,0,BARControl.tr("Name"),          SWT.LEFT, 110,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,1,BARControl.tr("State"),         SWT.LEFT,  90,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,1,BARControl.tr("State"),         SWT.LEFT,  90,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for state."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,2,BARControl.tr("Type"),          SWT.LEFT,  90,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,2,BARControl.tr("Type"),          SWT.LEFT,  90,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for type."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,3,BARControl.tr("Part size"),     SWT.RIGHT, 80,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,3,BARControl.tr("Part size"),     SWT.RIGHT, 80,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for part size."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,4,BARControl.tr("Compress"),      SWT.LEFT,  80,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,4,BARControl.tr("Compress"),      SWT.LEFT,  80,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for used compress algorithm."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,5,BARControl.tr("Crypt"),         SWT.LEFT, 100,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,5,BARControl.tr("Crypt"),         SWT.LEFT, 100,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for used encryption algorithm."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,6,BARControl.tr("Last executed"), SWT.LEFT, 150,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,6,BARControl.tr("Last executed"), SWT.LEFT, 150,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for last date/time job was executed."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobList,7,BARControl.tr("Estimated time"),SWT.LEFT, 120,false);
+    tableColumn = Widgets.addTableColumn(widgetJobTable,7,BARControl.tr("Estimated time"),SWT.LEFT, 120,false);
     tableColumn.setToolTipText(BARControl.tr("Click to sort for estimated rest time to execute job."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
 
@@ -610,7 +613,7 @@ class TabStatus
         }
       });
     }
-    widgetJobList.setMenu(menu);
+    widgetJobTable.setMenu(menu);
 
     // selected job group
     widgetSelectedJob = Widgets.newGroup(widgetTab,BARControl.tr("Selected")+" ''",SWT.NONE);
@@ -1108,12 +1111,9 @@ class TabStatus
     }
 
     // start status update thread
-    TabStatusUpdateThread tabStatusUpdateThread = new TabStatusUpdateThread(this);
+    tabStatusUpdateThread = new TabStatusUpdateThread(this);
     tabStatusUpdateThread.setDaemon(true);
-    tabStatusUpdateThread.start();
-
-    // get initial job list
-    updateJobList();
+//    tabStatusUpdateThread.start();
   }
 
   /** set jobs tab
@@ -1124,14 +1124,179 @@ class TabStatus
     this.tabJobs = tabJobs;
   }
 
-  /** select job
-   * @param name job name
-   */
-  void selectJob(String name)
+  public void startUpdate()
   {
-    synchronized(jobList)
+    tabStatusUpdateThread.start();
+  }
+
+  /** update job list
+   */
+  public void updateJobList()
+  {
+    if (!widgetJobTable.isDisposed())
     {
-      selectedJobData = jobList.get(name);
+      // get job list
+      HashMap<String,JobData> newJobDataMap = new HashMap<String,JobData>();
+      String[]                  resultErrorMessage = new String[1];
+      final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+      int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                           2,
+                                           resultErrorMessage,
+                                           resultMapList
+                                          );
+      if (error != Errors.NONE)
+      {
+        return;
+      }
+      for (ValueMap resultMap : resultMapList)
+      {
+        // get data
+        String jobUUID                = resultMap.getString("jobUUID"               );
+        String name                   = resultMap.getString("name"                  );
+        String state                  = resultMap.getString("state"                 );
+        String archiveType            = resultMap.getString("archiveType"           );
+        long   archivePartSize        = resultMap.getLong  ("archivePartSize"       );
+        String deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm");
+        String byteCompressAlgorithm  = resultMap.getString("byteCompressAlgorithm" );
+        String cryptAlgorithm         = resultMap.getString("cryptAlgorithm"        );
+        String cryptType              = resultMap.getString("cryptType"             );
+        String cryptPasswordMode      = resultMap.getString("cryptPasswordMode"     );
+        long   lastExecutedDateTime   = resultMap.getLong  ("lastExecutedDateTime"  );
+        long   estimatedRestTime      = resultMap.getLong  ("estimatedRestTime"     );
+
+        JobData jobData = jobDataMap.get(jobUUID);
+        if (jobData != null)
+        {
+          jobData.name                   = name;
+          jobData.state                  = state;
+          jobData.archiveType            = archiveType;
+          jobData.archivePartSize        = archivePartSize;
+          jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
+          jobData.byteCompressAlgorithm  = byteCompressAlgorithm;
+          jobData.cryptAlgorithm         = cryptAlgorithm;
+          jobData.cryptType              = cryptType;
+          jobData.cryptPasswordMode      = cryptPasswordMode;
+          jobData.lastExecutedDateTime   = lastExecutedDateTime;
+          jobData.estimatedRestTime      = estimatedRestTime;
+        }
+        else
+        {
+          jobData = new JobData(jobUUID,
+                                name,
+                                state,
+                                archiveType,
+                                archivePartSize,
+                                deltaCompressAlgorithm,
+                                byteCompressAlgorithm,
+                                cryptAlgorithm,
+                                cryptType,
+                                cryptPasswordMode,
+                                lastExecutedDateTime,
+                                estimatedRestTime
+                               );
+        }
+        newJobDataMap.put(jobUUID,jobData);
+      }
+      jobDataMap = newJobDataMap;
+
+      // update job table
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          // update entries in job list
+          synchronized(jobDataMap)
+          {
+            TableItem[] tableItems = widgetJobTable.getItems();
+
+            // get table items
+            HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
+            for (TableItem tableItem : tableItems)
+            {
+              removeTableItemSet.add(tableItem);
+            }
+
+            for (JobData jobData : jobDataMap.values())
+            {
+              // find table item
+              TableItem tableItem = Widgets.getTableItem(widgetJobTable,jobData);
+
+              // update/create table item
+              if (tableItem != null)
+              {
+                Widgets.updateTableItem(widgetJobTable,
+                                        tableItem,
+                                        jobData,
+                                        jobData.name,
+                                        (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
+                                        jobData.archiveType,
+                                        (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
+                                        jobData.formatCompressAlgorithm(),
+                                        jobData.formatCryptAlgorithm(),
+                                        jobData.formatLastExecutedDateTime(),
+                                        jobData.formatEstimatedRestTime()
+                                       );
+
+                // keep table item
+                removeTableItemSet.remove(tableItem);
+              }
+              else
+              {
+                // insert new item
+                tableItem = Widgets.insertTableItem(widgetJobTable,
+                                                    findJobTableItemIndex(jobData),
+                                                    jobData,
+                                                    jobData.name,
+                                                    (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
+                                                    jobData.archiveType,
+                                                    (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
+                                                    jobData.formatCompressAlgorithm(),
+                                                    jobData.formatCryptAlgorithm(),
+                                                    jobData.formatLastExecutedDateTime(),
+                                                    jobData.formatEstimatedRestTime()
+                                                   );
+                tableItem.setData(jobData);
+              }
+            }
+
+            // remove not existing entries
+            for (TableItem tableItem : removeTableItemSet)
+            {
+              Widgets.removeTableItem(widgetJobTable,tableItem);
+            }
+          }
+        }
+      });
+
+      // update tab jobs list
+      synchronized(jobDataMap)
+      {
+        tabJobs.updateJobList(jobDataMap.values());
+      }
+    }
+  }
+
+  /** select job by UUID
+   * @param uuid job UUID
+   */
+  public void selectJob(String uuid)
+  {
+    synchronized(jobDataMap)
+    {
+      setSelectedJob(jobDataMap.get(uuid));
+    }
+  }
+
+  /** set selected job
+   * @param jobData job data
+   */
+  public void setSelectedJob(JobData jobData)
+  {
+    synchronized(jobDataMap)
+    {
+      selectedJobData = jobData;
+
+      Widgets.setSelectedTableItem(widgetJobTable,selectedJobData);
       widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+((selectedJobData != null) ? selectedJobData.name : "")+"'");
     }
   }
@@ -1152,11 +1317,11 @@ class TabStatus
   private void updateStatus()
   {
     // get status
-    String[] errorMessage = new String[1];
-    ValueMap resultMap    = new ValueMap();
+    String[] resultErrorMessage = new String[1];
+    ValueMap resultMap          = new ValueMap();
     int error = BARServer.executeCommand(StringParser.format("STATUS"),
                                          2,
-                                         errorMessage,
+                                         resultErrorMessage,
                                          resultMap
                                         );
     if (error != Errors.NONE)
@@ -1205,29 +1370,51 @@ class TabStatus
     }
   }
 
+  /** get table item for job by name
+   * @param name job name
+   * @return table item or null if not found
+   */
+  private TableItem getJobTableItemByName(String name)
+  {
+    TableItem tableItems[] = widgetJobTable.getItems();
+    for (int i = 0; i < tableItems.length; i++)
+    {
+      if (((JobData)tableItems[i].getData()).name.equals(name))
+      {
+        return tableItems[i];
+      }
+    }
+
+    return null;
+  }
+
+  /** get table item for job by UUID
+   * @param jobUUID job UUID
+   * @return table item or null if not found
+   */
+  private TableItem getJobTableItemByUUID(String jobUUID)
+  {
+    TableItem tableItems[] = widgetJobTable.getItems();
+    for (int i = 0; i < tableItems.length; i++)
+    {
+      if (((JobData)tableItems[i].getData()).uuid.equals(jobUUID))
+      {
+        return tableItems[i];
+      }
+    }
+
+    return null;
+  }
+
   /** find index of table item for job
    * @param tableItems table items
    * @param id job id to find
-   * @return table item or null if not found
+   * @return index or 0 if not found
    */
-  private int getTableItemIndex(TableItem[] tableItems, int id)
+  private int findJobTableItemIndex(JobData jobData)
   {
-    for (int z = 0; z < tableItems.length; z++)
-    {
-      if (((JobData)tableItems[z].getData()).id == id) return z;
-    }
-
-    return -1;
-  }
-
-  /** find index for insert of job data in sorted job list
-   * @param jobData job data
-   * @return index in job table
-   */
-  private int findJobListIndex(JobData jobData)
-  {
-    TableItem         tableItems[]      = widgetJobList.getItems();
-    JobDataComparator jobDataComparator = new JobDataComparator(widgetJobList);
+    TableItem         tableItems[]      = widgetJobTable.getItems();
+    JobDataComparator jobDataComparator = new JobDataComparator(widgetJobTable);
 
     int index = 0;
     while (   (index < tableItems.length)
@@ -1240,117 +1427,6 @@ class TabStatus
     return index;
   }
 
-  /** update job list
-   */
-  private void updateJobList()
-  {
-    if (!widgetJobList.isDisposed())
-    {
-      // get job list
-      String[]                  resultErrorMessage = new String[1];
-      final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-      int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                           2,
-                                           resultErrorMessage,
-                                           resultMapList
-                                          );
-       if (error != Errors.NONE)
-       {
-         return;
-       }
-
-      display.syncExec(new Runnable()
-      {
-        public void run()
-        {
-          // update entries in job list
-          synchronized(jobList)
-          {
-            jobList.clear();
-            TableItem[] tableItems     = widgetJobList.getItems();
-            boolean[]   tableItemFlags = new boolean[tableItems.length];
-
-            for (ValueMap resultMap : resultMapList)
-            {
-              // get data
-              int    jobId                  = resultMap.getInt   ("jobId"                 );
-              String name                   = resultMap.getString("name"                  );
-              String state                  = resultMap.getString("state"                 );
-              String archiveType            = resultMap.getString("archiveType"           );
-              long   archivePartSize        = resultMap.getLong  ("archivePartSize"       );
-              String deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm");
-              String byteCompressAlgorithm  = resultMap.getString("byteCompressAlgorithm" );
-              String cryptAlgorithm         = resultMap.getString("cryptAlgorithm"        );
-              String cryptType              = resultMap.getString("cryptType"             );
-              String cryptPasswordMode      = resultMap.getString("cryptPasswordMode"     );
-              long   lastExecutedDateTime   = resultMap.getLong  ("lastExecutedDateTime"  );
-              long   estimatedRestTime      = resultMap.getLong  ("estimatedRestTime"     );
-
-              // get/create table item
-              TableItem tableItem;
-              JobData   jobData;
-              int index = getTableItemIndex(tableItems,jobId);
-              if (index >= 0)
-              {
-                tableItem = tableItems[index];
-
-                jobData = (JobData)tableItem.getData();
-                jobData.name                   = name;
-                jobData.state                  = state;
-                jobData.archiveType            = archiveType;
-                jobData.archivePartSize        = archivePartSize;
-                jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
-                jobData.byteCompressAlgorithm  = byteCompressAlgorithm;
-                jobData.cryptAlgorithm         = cryptAlgorithm;
-                jobData.cryptType              = cryptType;
-                jobData.cryptPasswordMode      = cryptPasswordMode;
-                jobData.lastExecutedDateTime   = lastExecutedDateTime;
-                jobData.estimatedRestTime      = estimatedRestTime;
-
-                tableItemFlags[index] = true;
-              }
-              else
-              {
-                jobData = new JobData(jobId,
-                                      name,
-                                      state,
-                                      archiveType,
-                                      archivePartSize,
-                                      deltaCompressAlgorithm,
-                                      byteCompressAlgorithm,
-                                      cryptAlgorithm,
-                                      cryptType,
-                                      cryptPasswordMode,
-                                      lastExecutedDateTime,
-                                      estimatedRestTime
-                                     );
-
-                tableItem = new TableItem(widgetJobList,SWT.NONE,findJobListIndex(jobData));
-                tableItem.setData(jobData);
-              }
-
-              jobList.put(name,jobData);
-              tableItem.setText(0,jobData.name);
-              tableItem.setText(1,(status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"));
-              tableItem.setText(2,jobData.archiveType);
-              tableItem.setText(3,(jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"));
-              tableItem.setText(4,jobData.formatCompressAlgorithm());
-              tableItem.setText(5,jobData.formatCryptAlgorithm());
-              tableItem.setText(6,jobData.formatLastExecutedDateTime());
-              tableItem.setText(7,jobData.formatEstimatedRestTime());
-            }
-
-            // remove not existing entries
-            for (int z = 0; z < tableItems.length; z++)
-            {
-              if (!tableItemFlags[z]) Widgets.removeTableItem(widgetJobList,tableItems[z]);
-            }
-          }
-        }
-      });
-    }
-  }
-
   /** update job information
    */
   private void updateJobInfo()
@@ -1360,7 +1436,7 @@ class TabStatus
       // get job info
       final String resultErrorMessage[] = new String[1];
       final ValueMap resultMap          = new ValueMap();
-      int error = BARServer.executeCommand(StringParser.format("JOB_INFO jobId=%d",selectedJobData.id),
+      int error = BARServer.executeCommand(StringParser.format("JOB_INFO jobUUID=%s",selectedJobData.uuid),
                                            0,
                                            resultErrorMessage,
                                            resultMap
@@ -1483,8 +1559,8 @@ class TabStatus
 
       // set crypt password
       String[] resultErrorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("CRYPT_PASSWORD jobId=%d encryptType=%s encryptedPassword=%S",
-                                                               selectedJobData.id,
+      int error = BARServer.executeCommand(StringParser.format("CRYPT_PASSWORD jobUUID=%s encryptType=%s encryptedPassword=%S",
+                                                               selectedJobData.uuid,
                                                                BARServer.getPasswordEncryptType(),
                                                                BARServer.encryptPassword(password)
                                                               ),
@@ -1502,19 +1578,19 @@ class TabStatus
     switch (mode)
     {
       case 0:
-        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=normal",selectedJobData.id),0);
+        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s type=normal",selectedJobData.uuid),0);
         break;
       case 1:
-        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=full",selectedJobData.id),0);
+        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s type=full",selectedJobData.uuid),0);
         break;
       case 2:
-        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=incremental",selectedJobData.id),0);
+        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s type=incremental",selectedJobData.uuid),0);
         break;
       case 3:
-        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=differential",selectedJobData.id),0);
+        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s type=differential",selectedJobData.uuid),0);
         break;
       case 4:
-        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=dry-run",selectedJobData.id),0);
+        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s type=dry-run",selectedJobData.uuid),0);
         break;
       case 5:
         break;
@@ -1540,7 +1616,7 @@ class TabStatus
           {
             // abort job
             final String[] resultErrorMessage = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobId=%d",selectedJobData.id),
+            int error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",selectedJobData.uuid),
                                                  0,
                                                  resultErrorMessage
                                                 );
@@ -1648,10 +1724,10 @@ class TabStatus
     switch (Dialogs.select(shell,BARControl.tr("Volume request"),BARControl.tr("Load volume number")+" "+volumeNumber+".",new String[]{BARControl.tr("OK"),BARControl.tr("Unload tray"),BARControl.tr("Cancel")},0))
     {
       case 0:
-        error = BARServer.executeCommand(StringParser.format("VOLUME_LOAD jobId=%d volumeNumber=%d",selectedJobData.id,volumeNumber),0,resultErrorMessage);
+        error = BARServer.executeCommand(StringParser.format("VOLUME_LOAD jobUUID=%s volumeNumber=%d",selectedJobData.uuid,volumeNumber),0,resultErrorMessage);
         break;
       case 1:
-        error = BARServer.executeCommand(StringParser.format("VOLUME_UNLOAD jobId=%d",selectedJobData.id),0,resultErrorMessage);
+        error = BARServer.executeCommand(StringParser.format("VOLUME_UNLOAD jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
         break;
       case 2:
         break;
@@ -1682,7 +1758,7 @@ class TabStatus
 
     assert selectedJobData != null;
 
-    tabJobs.jobClone(selectedJobData.id,selectedJobData.name);
+    tabJobs.jobClone(selectedJobData);
     updateJobList();
   }
 
@@ -1694,9 +1770,8 @@ class TabStatus
 
     assert selectedJobData != null;
 
-    if (tabJobs.jobRename(selectedJobData.id,selectedJobData.name))
+    if (tabJobs.jobRename(selectedJobData))
     {
-Dprintf.dprintf("");
       updateJobList();
     }
   }
@@ -1709,7 +1784,7 @@ Dprintf.dprintf("");
 
     if (!selectedJobData.state.equals("running"))
     {
-      tabJobs.jobDelete(selectedJobData.id,selectedJobData.name);
+      tabJobs.jobDelete(selectedJobData);
       updateJobList();
     }
   }

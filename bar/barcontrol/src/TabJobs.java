@@ -22,6 +22,7 @@ import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -92,7 +93,7 @@ import org.eclipse.swt.widgets.Widget;
 
 /** tab jobs
  */
-class TabJobs
+public class TabJobs
 {
   /** entry types
    */
@@ -1336,6 +1337,7 @@ class TabJobs
 
   // global variable references
   private Shell        shell;
+  private Display      display;
   private TabStatus    tabStatus;
 
   // widgets
@@ -1415,9 +1417,7 @@ class TabJobs
   // variables
   private DirectoryInfoThread       directoryInfoThread;
   private boolean                   directorySizesFlag     = false;
-  private HashMap<String,Integer>   jobIds                 = new HashMap<String,Integer>();
-  private int                       selectedJobId          = 0;
-  private String                    selectedJobName        = null;
+  private JobData                   selectedJobData        = null;
   private WidgetEvent               selectJobEvent         = new WidgetEvent();
   private HashMap<String,EntryData> includeHashMap         = new HashMap<String,EntryData>();
   private HashSet<String>           excludeHashSet         = new HashSet<String>();
@@ -1431,21 +1431,20 @@ class TabJobs
    */
   TabJobs(TabFolder parentTabFolder, int accelerator)
   {
-    final Display display;
-    Composite     tab;
-    Menu          menu;
-    MenuItem      menuItem;
-    Group         group;
-    Composite     composite,subComposite,subSubComposite;
-    Label         label;
-    Button        button;
-    Combo         combo;
-    TreeColumn    treeColumn;
-    TreeItem      treeItem;
-    Control       control;
-    Text          text;
-    StyledText    styledText;
-    TableColumn   tableColumn;
+    Composite   tab;
+    Menu        menu;
+    MenuItem    menuItem;
+    Group       group;
+    Composite   composite,subComposite,subSubComposite;
+    Label       label;
+    Button      button;
+    Combo       combo;
+    TreeColumn  treeColumn;
+    TreeItem    treeItem;
+    Control     control;
+    Text        text;
+    StyledText  styledText;
+    TableColumn tableColumn;
 
     // get shell, display
     shell = parentTabFolder.getShell();
@@ -1508,10 +1507,11 @@ class TabJobs
           int   index  = widget.getSelectionIndex();
           if (index >= 0)
           {
-            selectedJobName = widgetJobList.getItem(index);
-            selectedJobId = jobIds.get(selectedJobName);
-            selectJobEvent.trigger();
+            selectedJobData = Widgets.getSelectedOptionMenuItem(widgetJobList);
+            if (tabStatus != null) tabStatus.setSelectedJob(selectedJobData);
             update();
+
+            selectJobEvent.trigger();
           }
         }
       });
@@ -1538,7 +1538,7 @@ class TabJobs
       {
         public void trigger(Widget widget)
         {
-          Widgets.setEnabled(widget,selectedJobId != 0);
+          Widgets.setEnabled(widget,selectedJobData != null);
         }
       });
       button.addSelectionListener(new SelectionListener()
@@ -1548,7 +1548,7 @@ class TabJobs
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          if (selectedJobId > 0)
+          if (selectedJobData != null)
           {
             jobClone();
           }
@@ -1563,7 +1563,7 @@ class TabJobs
       {
         public void trigger(Control control)
         {
-          Widgets.setEnabled(control,selectedJobId != 0);
+          Widgets.setEnabled(control,selectedJobData != null);
         }
       });
       button.addSelectionListener(new SelectionListener()
@@ -1573,7 +1573,7 @@ class TabJobs
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          if (selectedJobId > 0)
+          if (selectedJobData != null)
           {
             jobRename();
           }
@@ -1588,7 +1588,7 @@ class TabJobs
       {
         public void trigger(Control control)
         {
-          Widgets.setEnabled(control,selectedJobId != 0);
+          Widgets.setEnabled(control,selectedJobData != null);
         }
       });
       button.addSelectionListener(new SelectionListener()
@@ -1598,7 +1598,7 @@ class TabJobs
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          if (selectedJobId > 0)
+          if (selectedJobData != null)
           {
             jobDelete();
           }
@@ -2241,7 +2241,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 includeListAdd();
               }
@@ -2257,7 +2257,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 includeListEdit();
               }
@@ -2273,7 +2273,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 includeListClone();
               }
@@ -2288,7 +2288,7 @@ class TabJobs
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 includeListRemove();
               }
@@ -2312,7 +2312,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 includeListAdd();
               }
@@ -2330,7 +2330,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 includeListEdit();
               }
@@ -2348,7 +2348,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 includeListClone();
               }
@@ -2365,7 +2365,7 @@ class TabJobs
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 includeListRemove();
               }
@@ -2425,7 +2425,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 excludeListAdd();
               }
@@ -2441,7 +2441,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 excludeListEdit();
               }
@@ -2457,7 +2457,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 excludeListClone();
               }
@@ -2473,7 +2473,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 excludeListRemove();
               }
@@ -2497,7 +2497,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 excludeListAdd();
               }
@@ -2515,7 +2515,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 excludeListEdit();
               }
@@ -2533,7 +2533,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 excludeListClone();
               }
@@ -2551,7 +2551,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              if (selectedJobId > 0)
+              if (selectedJobData != null)
               {
                 excludeListRemove();
               }
@@ -2578,7 +2578,7 @@ class TabJobs
               Button  widget      = (Button)selectionEvent.widget;
               boolean checkedFlag = widget.getSelection();
               skipUnreadable.set(checkedFlag);
-              BARServer.setOption(selectedJobId,"skip-unreadable",checkedFlag);
+              BARServer.setOption(selectedJobData.uuid,"skip-unreadable",checkedFlag);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,skipUnreadable));
@@ -2596,7 +2596,7 @@ class TabJobs
               Button  widget      = (Button)selectionEvent.widget;
               boolean checkedFlag = widget.getSelection();
               rawImages.set(checkedFlag);
-              BARServer.setOption(selectedJobId,"raw-images",checkedFlag);
+              BARServer.setOption(selectedJobData.uuid,"raw-images",checkedFlag);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,rawImages));
@@ -2627,7 +2627,7 @@ class TabJobs
 
               boolean changedFlag = archivePartSizeFlag.set(false);
               archivePartSize.set(0);
-              BARServer.setOption(selectedJobId,"archive-part-size",0);
+              BARServer.setOption(selectedJobData.uuid,"archive-part-size",0);
 
               if (   changedFlag
                   && (   storageType.equals("cd")
@@ -2710,7 +2710,7 @@ class TabJobs
               {
                 long n = Units.parseByteSize(string);
                 archivePartSize.set(n);
-                BARServer.setOption(selectedJobId,"archive-part-size",n);
+                BARServer.setOption(selectedJobData.uuid,"archive-part-size",n);
                 widget.setText(Units.formatByteSize(n));
                 widget.setBackground(null);
               }
@@ -2732,7 +2732,7 @@ class TabJobs
               {
                 long  n = Units.parseByteSize(string);
                 archivePartSize.set(n);
-                BARServer.setOption(selectedJobId,"archive-part-size",n);
+                BARServer.setOption(selectedJobData.uuid,"archive-part-size",n);
                 widget.setText(Units.formatByteSize(n));
                 widget.setBackground(null);
               }
@@ -2762,7 +2762,7 @@ class TabJobs
               {
                 long n = Units.parseByteSize(string);
                 archivePartSize.set(n);
-                BARServer.setOption(selectedJobId,"archive-part-size",n);
+                BARServer.setOption(selectedJobData.uuid,"archive-part-size",n);
                 widget.setText(Units.formatByteSize(n));
                 widget.setBackground(null);
               }
@@ -2813,7 +2813,7 @@ class TabJobs
               Combo  widget = (Combo)selectionEvent.widget;
               String string = widget.getText();
               deltaCompressAlgorithm.set(string);
-              BARServer.setOption(selectedJobId,"compress-algorithm",deltaCompressAlgorithm.toString()+"+"+byteCompressAlgorithm.toString());
+              BARServer.setOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.toString()+"+"+byteCompressAlgorithm.toString());
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,deltaCompressAlgorithm));
@@ -2842,7 +2842,7 @@ class TabJobs
               Combo  widget = (Combo)selectionEvent.widget;
               String string = widget.getText();
               byteCompressAlgorithm.set(string);
-              BARServer.setOption(selectedJobId,"compress-algorithm",deltaCompressAlgorithm.toString()+"+"+byteCompressAlgorithm.toString());
+              BARServer.setOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.toString()+"+"+byteCompressAlgorithm.toString());
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,byteCompressAlgorithm));
@@ -2882,7 +2882,7 @@ class TabJobs
               Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
               deltaSource.set(string);
-              BARServer.setOption(selectedJobId,"delta-source",string);
+              BARServer.setOption(selectedJobData.uuid,"delta-source",string);
               widget.setBackground(null);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -2899,7 +2899,7 @@ class TabJobs
               Text widget = (Text)focusEvent.widget;
               String string = widget.getText();
               deltaSource.set(string);
-              BARServer.setOption(selectedJobId,"delta-source",string);
+              BARServer.setOption(selectedJobData.uuid,"delta-source",string);
               widget.setBackground(null);
             }
           });
@@ -2932,7 +2932,7 @@ class TabJobs
               if (fileName != null)
               {
                 deltaSource.set(fileName);
-                BARServer.setOption(selectedJobId,"delta-source",fileName);
+                BARServer.setOption(selectedJobData.uuid,"delta-source",fileName);
               }
             }
           });
@@ -3092,7 +3092,7 @@ class TabJobs
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 MenuItem widget = (MenuItem)selectionEvent.widget;
-                if (selectedJobId > 0)
+                if (selectedJobData != null)
                 {
                   compressExcludeListRemove();
                 }
@@ -3123,7 +3123,7 @@ class TabJobs
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
-                if (selectedJobId > 0)
+                if (selectedJobData != null)
                 {
                   compressExcludeListAdd();
                 }
@@ -3148,7 +3148,7 @@ class TabJobs
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
-                if (selectedJobId > 0)
+                if (selectedJobData != null)
                 {
                   compressExcludeListEdit();
                 }
@@ -3173,7 +3173,7 @@ class TabJobs
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
-                if (selectedJobId > 0)
+                if (selectedJobData != null)
                 {
                   compressExcludeListRemove();
                 }
@@ -3202,7 +3202,7 @@ class TabJobs
               Combo  widget = (Combo)selectionEvent.widget;
               String string = widget.getText();
               cryptAlgorithm.set(string);
-              BARServer.setOption(selectedJobId,"crypt-algorithm",string);
+              BARServer.setOption(selectedJobData.uuid,"crypt-algorithm",string);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,cryptAlgorithm));
@@ -3232,7 +3232,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               cryptType.set("symmetric");
-              BARServer.setOption(selectedJobId,"crypt-type","symmetric");
+              BARServer.setOption(selectedJobData.uuid,"crypt-type","symmetric");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptType)
@@ -3263,7 +3263,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               cryptType.set("asymmetric");
-              BARServer.setOption(selectedJobId,"crypt-type","asymmetric");
+              BARServer.setOption(selectedJobData.uuid,"crypt-type","asymmetric");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptType)
@@ -3313,7 +3313,7 @@ class TabJobs
               Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
               cryptPublicKeyFileName.set(string);
-              BARServer.setOption(selectedJobId,"crypt-public-key",string);
+              BARServer.setOption(selectedJobData.uuid,"crypt-public-key",string);
               widget.setBackground(null);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -3330,7 +3330,7 @@ class TabJobs
               Text   widget = (Text)focusEvent.widget;
               String string = widget.getText();
               cryptPublicKeyFileName.set(string);
-              BARServer.setOption(selectedJobId,"crypt-public-key",string);
+              BARServer.setOption(selectedJobData.uuid,"crypt-public-key",string);
               widget.setBackground(null);
             }
           });
@@ -3369,7 +3369,7 @@ class TabJobs
               if (fileName != null)
               {
                 cryptPublicKeyFileName.set(fileName);
-                BARServer.setOption(selectedJobId,"crypt-public-key",fileName);
+                BARServer.setOption(selectedJobData.uuid,"crypt-public-key",fileName);
               }
             }
           });
@@ -3404,7 +3404,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               cryptPasswordMode.set("default");
-              BARServer.setOption(selectedJobId,"crypt-password-mode","default");
+              BARServer.setOption(selectedJobData.uuid,"crypt-password-mode","default");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
@@ -3437,7 +3437,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               cryptPasswordMode.set("ask");
-              BARServer.setOption(selectedJobId,"crypt-password-mode","ask");
+              BARServer.setOption(selectedJobData.uuid,"crypt-password-mode","ask");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
@@ -3470,7 +3470,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               cryptPasswordMode.set("config");
-              BARServer.setOption(selectedJobId,"crypt-password-mode","config");
+              BARServer.setOption(selectedJobData.uuid,"crypt-password-mode","config");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
@@ -3515,7 +3515,7 @@ class TabJobs
               if (string1.equals(string2))
               {
                 cryptPassword.set(string1);
-                BARServer.setOption(selectedJobId,"crypt-password",string1);
+                BARServer.setOption(selectedJobData.uuid,"crypt-password",string1);
                 widgetCryptPassword1.setBackground(null);
                 widgetCryptPassword2.setBackground(null);
               }
@@ -3536,7 +3536,7 @@ class TabJobs
               if (string1.equals(string2))
               {
                 cryptPassword.set(string1);
-                BARServer.setOption(selectedJobId,"crypt-password",string1);
+                BARServer.setOption(selectedJobData.uuid,"crypt-password",string1);
                 widgetCryptPassword1.setBackground(null);
                 widgetCryptPassword2.setBackground(null);
               }
@@ -3581,7 +3581,7 @@ class TabJobs
               if (string1.equals(string2))
               {
                 cryptPassword.set(string1);
-                BARServer.setOption(selectedJobId,"crypt-password",string1);
+                BARServer.setOption(selectedJobData.uuid,"crypt-password",string1);
                 widgetCryptPassword1.setBackground(null);
                 widgetCryptPassword2.setBackground(null);
               }
@@ -3602,7 +3602,7 @@ class TabJobs
               if (string1.equals(string2))
               {
                 cryptPassword.set(string1);
-                BARServer.setOption(selectedJobId,"crypt-password",string1);
+                BARServer.setOption(selectedJobData.uuid,"crypt-password",string1);
                 widgetCryptPassword1.setBackground(null);
                 widgetCryptPassword2.setBackground(null);
               }
@@ -3634,7 +3634,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               archiveType.set("normal");
-              BARServer.setOption(selectedJobId,"archive-type","normal");
+              BARServer.setOption(selectedJobData.uuid,"archive-type","normal");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
@@ -3657,7 +3657,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               archiveType.set("full");
-              BARServer.setOption(selectedJobId,"archive-type","full");
+              BARServer.setOption(selectedJobData.uuid,"archive-type","full");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
@@ -3680,7 +3680,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               archiveType.set("incremental");
-              BARServer.setOption(selectedJobId,"archive-type","incremental");
+              BARServer.setOption(selectedJobData.uuid,"archive-type","incremental");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
@@ -3703,7 +3703,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               archiveType.set("differential");
-              BARServer.setOption(selectedJobId,"archive-type","differential");
+              BARServer.setOption(selectedJobData.uuid,"archive-type","differential");
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
@@ -3742,7 +3742,7 @@ class TabJobs
             {
               Text widget = (Text)selectionEvent.widget;
               storageFileName.set(widget.getText());
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
               widget.setBackground(null);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -3758,7 +3758,7 @@ class TabJobs
             {
               Text widget = (Text)focusEvent.widget;
               storageFileName.set(widget.getText());
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
               widget.setBackground(null);
             }
           });
@@ -3774,10 +3774,10 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              if (selectedJobId != 0)
+              if (selectedJobData != null)
               {
                 storageFileNameEdit();
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
               }
             }
           });
@@ -3792,7 +3792,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              if (selectedJobId != 0)
+              if (selectedJobData != null)
               {
                 String fileName = Dialogs.fileSave(shell,
                                                    "Select storage file name",
@@ -3804,7 +3804,7 @@ class TabJobs
                 if (fileName != null)
                 {
                   storageFileName.set(fileName);
-                  BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                  BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 }
               }
             }
@@ -3839,7 +3839,7 @@ class TabJobs
               Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
               incrementalListFileName.set(string);
-              BARServer.setOption(selectedJobId,"incremental-list-file",string);
+              BARServer.setOption(selectedJobData.uuid,"incremental-list-file",string);
               widget.setBackground(null);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -3856,7 +3856,7 @@ class TabJobs
               Text   widget = (Text)focusEvent.widget;
               String string = widget.getText();
               incrementalListFileName.set(string);
-              BARServer.setOption(selectedJobId,"incremental-list-file",string);
+              BARServer.setOption(selectedJobData.uuid,"incremental-list-file",string);
               widget.setBackground(null);
             }
           });
@@ -3882,7 +3882,7 @@ class TabJobs
               if (fileName != null)
               {
                 incrementalListFileName.set(fileName);
-                BARServer.setOption(selectedJobId,"incremental-list-file",fileName);
+                BARServer.setOption(selectedJobData.uuid,"incremental-list-file",fileName);
               }
             }
           });
@@ -3906,7 +3906,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("filesystem");
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -3929,7 +3929,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("ftp");
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -3952,7 +3952,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("scp");
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -3975,7 +3975,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("sftp");
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -3998,7 +3998,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("webdav");
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -4022,7 +4022,7 @@ class TabJobs
               Button widget = (Button)selectionEvent.widget;
 
               boolean changedFlag = storageType.set("cd");
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
 
               if (   changedFlag
                   && !archivePartSizeFlag.getBoolean()
@@ -4069,7 +4069,7 @@ class TabJobs
               Button widget = (Button)selectionEvent.widget;
 
               boolean changedFlag = storageType.set("dvd");
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
 
               if (   changedFlag
                   && !archivePartSizeFlag.getBoolean()
@@ -4116,7 +4116,7 @@ class TabJobs
               Button widget = (Button)selectionEvent.widget;
 
               boolean changedFlag = storageType.set("bd");
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
 
               if (   changedFlag
                   && !archivePartSizeFlag.getBoolean()
@@ -4162,7 +4162,7 @@ class TabJobs
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("device");
-              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -4219,7 +4219,7 @@ class TabJobs
                   Text widget   = (Text)selectionEvent.widget;
                   String string = widget.getText();
                   mountDeviceName.set(string);
-                  BARServer.setOption(selectedJobId,"mount-device",string);
+                  BARServer.setOption(selectedJobData.uuid,"mount-device",string);
                   widget.setBackground(null);
                 }
                 public void widgetSelected(SelectionEvent selectionEvent)
@@ -4236,7 +4236,7 @@ class TabJobs
                   Text widget   = (Text)focusEvent.widget;
                   String string = widget.getText();
                   mountDeviceName.set(string);
-                  BARServer.setOption(selectedJobId,"mount-device",string);
+                  BARServer.setOption(selectedJobData.uuid,"mount-device",string);
                   widget.setBackground(null);
                 }
               });
@@ -4259,7 +4259,7 @@ class TabJobs
                   if (fileName != null)
                   {
                     mountDeviceName.set(fileName);
-                    BARServer.setOption(selectedJobId,"mount-device",fileName);
+                    BARServer.setOption(selectedJobData.uuid,"mount-device",fileName);
                   }
                 }
               });
@@ -4278,7 +4278,7 @@ class TabJobs
                 Button  widget      = (Button)selectionEvent.widget;
                 boolean checkedFlag = widget.getSelection();
                 overwriteArchiveFiles.set(checkedFlag);
-                BARServer.setOption(selectedJobId,"overwrite-archive-files",checkedFlag);
+                BARServer.setOption(selectedJobData.uuid,"overwrite-archive-files",checkedFlag);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,overwriteArchiveFiles));
@@ -4325,7 +4325,7 @@ class TabJobs
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -4341,7 +4341,7 @@ class TabJobs
               {
                 Text widget = (Text)focusEvent.widget;
                 storageLoginName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -4370,7 +4370,7 @@ class TabJobs
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageHostName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -4386,7 +4386,7 @@ class TabJobs
               {
                 Text widget = (Text)focusEvent.widget;
                 storageHostName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -4415,7 +4415,7 @@ class TabJobs
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginPassword.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -4431,7 +4431,7 @@ class TabJobs
               {
                 Text widget = (Text)focusEvent.widget;
                 storageLoginPassword.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -4456,7 +4456,7 @@ class TabJobs
                 Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.setOption(selectedJobId,"max-band-width",0);
+                BARServer.setOption(selectedJobData.uuid,"max-band-width",0);
               }
             });BARServer.setOption
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -4539,7 +4539,7 @@ class TabJobs
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -4555,7 +4555,7 @@ class TabJobs
               {
                 Text widget = (Text)focusEvent.widget;
                 storageLoginName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -4584,7 +4584,7 @@ class TabJobs
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageHostName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -4600,7 +4600,7 @@ class TabJobs
               {
                 Text widget = (Text)focusEvent.widget;
                 storageHostName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -4644,7 +4644,7 @@ class TabJobs
                   if ((n >= 0) && (n <= 65535))
                   {
                     storageHostPort.set(n);
-                    BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                    BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                     widget.setBackground(null);
                   }
                   else
@@ -4688,7 +4688,7 @@ class TabJobs
                   if ((n >= 0) && (n <= 65535))
                   {
                     storageHostPort.set(n);
-                    BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                    BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                     widget.setBackground(null);
                   }
                   else
@@ -4742,7 +4742,7 @@ class TabJobs
                 Text   widget = (Text)selectionEvent.widget;
                 String string = widget.getText();
                 sshPublicKeyFileName.set(string);
-                BARServer.setOption(selectedJobId,"ssh-public-key",string);
+                BARServer.setOption(selectedJobData.uuid,"ssh-public-key",string);
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -4759,7 +4759,7 @@ class TabJobs
                 Text   widget = (Text)focusEvent.widget;
                 String string = widget.getText();
                 sshPublicKeyFileName.set(string);
-                BARServer.setOption(selectedJobId,"ssh-public-key",string);
+                BARServer.setOption(selectedJobData.uuid,"ssh-public-key",string);
                 widget.setBackground(null);
               }
             });
@@ -4785,7 +4785,7 @@ class TabJobs
                 if (fileName != null)
                 {
                   sshPublicKeyFileName.set(fileName);
-                  BARServer.setOption(selectedJobId,"ssh-public-key",fileName);
+                  BARServer.setOption(selectedJobData.uuid,"ssh-public-key",fileName);
                 }
               }
             });
@@ -4818,7 +4818,7 @@ class TabJobs
                 Text   widget = (Text)selectionEvent.widget;
                 String string = widget.getText();
                 sshPrivateKeyFileName.set(string);
-                BARServer.setOption(selectedJobId,"ssh-private-key",string);
+                BARServer.setOption(selectedJobData.uuid,"ssh-private-key",string);
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -4835,7 +4835,7 @@ class TabJobs
                 Text   widget = (Text)focusEvent.widget;
                 String string = widget.getText();
                 sshPrivateKeyFileName.set(string);
-                BARServer.setOption(selectedJobId,"ssh-private-key",string);
+                BARServer.setOption(selectedJobData.uuid,"ssh-private-key",string);
                 widget.setBackground(null);
               }
             });
@@ -4860,7 +4860,7 @@ class TabJobs
                 if (fileName != null)
                 {
                   sshPrivateKeyFileName.set(fileName);
-                  BARServer.setOption(selectedJobId,"ssh-private-key",fileName);
+                  BARServer.setOption(selectedJobData.uuid,"ssh-private-key",fileName);
                 }
               }
             });
@@ -4884,7 +4884,7 @@ class TabJobs
                 Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.setOption(selectedJobId,"max-band-width",0);
+                BARServer.setOption(selectedJobData.uuid,"max-band-width",0);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -4908,7 +4908,7 @@ class TabJobs
                 Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.setOption(selectedJobId,"max-band-width",0);
+                BARServer.setOption(selectedJobData.uuid,"max-band-width",0);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -4969,7 +4969,7 @@ class TabJobs
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -4985,7 +4985,7 @@ class TabJobs
               {
                 Text widget = (Text)focusEvent.widget;
                 storageLoginName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -5014,7 +5014,7 @@ class TabJobs
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageHostName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -5030,7 +5030,7 @@ class TabJobs
               {
                 Text widget = (Text)focusEvent.widget;
                 storageHostName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -5074,7 +5074,7 @@ class TabJobs
                   if ((n >= 0) && (n <= 65535))
                   {
                     storageHostPort.set(n);
-                    BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                    BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                     widget.setBackground(null);
                   }
                   else
@@ -5118,7 +5118,7 @@ class TabJobs
                   if ((n >= 0) && (n <= 65535))
                   {
                     storageHostPort.set(n);
-                    BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                    BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                     widget.setBackground(null);
                   }
                   else
@@ -5172,7 +5172,7 @@ class TabJobs
                 Text   widget = (Text)selectionEvent.widget;
                 String string = widget.getText();
                 sshPublicKeyFileName.set(string);
-                BARServer.setOption(selectedJobId,"ssh-public-key",string);
+                BARServer.setOption(selectedJobData.uuid,"ssh-public-key",string);
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -5189,7 +5189,7 @@ class TabJobs
                 Text   widget = (Text)focusEvent.widget;
                 String string = widget.getText();
                 sshPublicKeyFileName.set(string);
-                BARServer.setOption(selectedJobId,"ssh-public-key",string);
+                BARServer.setOption(selectedJobData.uuid,"ssh-public-key",string);
                 widget.setBackground(null);
               }
             });
@@ -5215,7 +5215,7 @@ class TabJobs
                 if (fileName != null)
                 {
                   sshPublicKeyFileName.set(fileName);
-                  BARServer.setOption(selectedJobId,"ssh-public-key",fileName);
+                  BARServer.setOption(selectedJobData.uuid,"ssh-public-key",fileName);
                 }
               }
             });
@@ -5248,7 +5248,7 @@ class TabJobs
                 Text   widget = (Text)selectionEvent.widget;
                 String string = widget.getText();
                 sshPrivateKeyFileName.set(string);
-                BARServer.setOption(selectedJobId,"ssh-private-key",string);
+                BARServer.setOption(selectedJobData.uuid,"ssh-private-key",string);
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -5265,7 +5265,7 @@ class TabJobs
                 Text   widget = (Text)focusEvent.widget;
                 String string = widget.getText();
                 sshPrivateKeyFileName.set(string);
-                BARServer.setOption(selectedJobId,"ssh-private-key",string);
+                BARServer.setOption(selectedJobData.uuid,"ssh-private-key",string);
                 widget.setBackground(null);
               }
             });
@@ -5290,7 +5290,7 @@ class TabJobs
                 if (fileName != null)
                 {
                   sshPrivateKeyFileName.set(fileName);
-                  BARServer.setOption(selectedJobId,"ssh-private-key",fileName);
+                  BARServer.setOption(selectedJobData.uuid,"ssh-private-key",fileName);
                 }
               }
             });
@@ -5314,7 +5314,7 @@ class TabJobs
                 Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.setOption(selectedJobId,"max-band-width",0);
+                BARServer.setOption(selectedJobData.uuid,"max-band-width",0);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -5338,7 +5338,7 @@ class TabJobs
                 Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.setOption(selectedJobId,"max-band-width",0);
+                BARServer.setOption(selectedJobData.uuid,"max-band-width",0);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -5396,7 +5396,7 @@ class TabJobs
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageDeviceName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -5412,7 +5412,7 @@ class TabJobs
               {
                 Text widget = (Text)focusEvent.widget;
                 storageDeviceName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -5437,7 +5437,7 @@ class TabJobs
                 if (fileName != null)
                 {
                   storageDeviceName.set(fileName);
-                  BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                  BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 }
               }
             });
@@ -5481,7 +5481,7 @@ class TabJobs
                 {
                   long n = Units.parseByteSize(string);
                   boolean changedFlag = volumeSize.set(n);
-                  BARServer.setOption(selectedJobId,"volume-size",n);
+                  BARServer.setOption(selectedJobData.uuid,"volume-size",n);
                   widget.setBackground(null);
 
                   if (   changedFlag
@@ -5512,7 +5512,7 @@ class TabJobs
                 {
                   long  n = Units.parseByteSize(string);
                   boolean changedFlag = volumeSize.set(n);
-                  BARServer.setOption(selectedJobId,"volume-size",n);
+                  BARServer.setOption(selectedJobData.uuid,"volume-size",n);
                   widget.setBackground(null);
 
                   if (   changedFlag
@@ -5551,7 +5551,7 @@ class TabJobs
                 {
                   long n = Units.parseByteSize(string);
                   boolean changedFlag = volumeSize.set(n);
-                  BARServer.setOption(selectedJobId,"volume-size",n);
+                  BARServer.setOption(selectedJobData.uuid,"volume-size",n);
                   widget.setBackground(null);
 
                   if (   changedFlag
@@ -5605,7 +5605,7 @@ class TabJobs
                 Button  widget      = (Button)selectionEvent.widget;
                 boolean checkedFlag = widget.getSelection();
                 boolean changedFlag = ecc.set(checkedFlag);
-                BARServer.setOption(selectedJobId,"ecc",checkedFlag);
+                BARServer.setOption(selectedJobData.uuid,"ecc",checkedFlag);
 
                 if (   changedFlag
                     && archivePartSizeFlag.getBoolean()
@@ -5633,7 +5633,7 @@ class TabJobs
                 Button  widget      = (Button)selectionEvent.widget;
                 boolean checkedFlag = widget.getSelection();
                 waitFirstVolume.set(checkedFlag);
-                BARServer.setOption(selectedJobId,"wait-first-volume",checkedFlag);
+                BARServer.setOption(selectedJobData.uuid,"wait-first-volume",checkedFlag);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,waitFirstVolume));
@@ -5679,7 +5679,7 @@ class TabJobs
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageDeviceName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -5695,7 +5695,7 @@ class TabJobs
               {
                 Text widget = (Text)focusEvent.widget;
                 storageDeviceName.set(widget.getText());
-                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
               }
             });
@@ -5720,7 +5720,7 @@ class TabJobs
                 if (fileName != null)
                 {
                   storageDeviceName.set(fileName);
-                  BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                  BARServer.setOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 }
               }
             });
@@ -5764,7 +5764,7 @@ class TabJobs
                 {
                   long n = Units.parseByteSize(string);
                   volumeSize.set(n);
-                  BARServer.setOption(selectedJobId,"volume-size",n);
+                  BARServer.setOption(selectedJobData.uuid,"volume-size",n);
                   widget.setBackground(null);
                 }
                 catch (NumberFormatException exception)
@@ -5785,7 +5785,7 @@ class TabJobs
                 {
                   long  n = Units.parseByteSize(string);
                   volumeSize.set(n);
-                  BARServer.setOption(selectedJobId,"volume-size",n);
+                  BARServer.setOption(selectedJobData.uuid,"volume-size",n);
                   widget.setBackground(null);
                 }
                 catch (NumberFormatException exception)
@@ -5814,7 +5814,7 @@ class TabJobs
                 {
                   long n = Units.parseByteSize(string);
                   volumeSize.set(n);
-                  BARServer.setOption(selectedJobId,"volume-size",n);
+                  BARServer.setOption(selectedJobData.uuid,"volume-size",n);
                   widget.setBackground(null);
                 }
                 catch (NumberFormatException exception)
@@ -5870,7 +5870,7 @@ class TabJobs
           {
             StyledText widget = (StyledText)selectionEvent.widget;
             String     text   = widget.getText();
-            BARServer.setOption(selectedJobId,"pre-command",text);
+            BARServer.setOption(selectedJobData.uuid,"pre-command",text);
             widget.setBackground(null);
           }
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -5886,7 +5886,7 @@ class TabJobs
           {
             StyledText widget = (StyledText)focusEvent.widget;
             String     text   = widget.getText();
-            BARServer.setOption(selectedJobId,"pre-command",text);
+            BARServer.setOption(selectedJobData.uuid,"pre-command",text);
             widget.setBackground(null);
           }
         });
@@ -5915,7 +5915,7 @@ class TabJobs
           {
             StyledText widget = (StyledText)selectionEvent.widget;
             String     text   = widget.getText();
-            BARServer.setOption(selectedJobId,"post-command",text);
+            BARServer.setOption(selectedJobData.uuid,"post-command",text);
             widget.setBackground(null);
           }
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -5931,7 +5931,7 @@ class TabJobs
           {
             StyledText widget = (StyledText)focusEvent.widget;
             String     text   = widget.getText();
-            BARServer.setOption(selectedJobId,"post-command",text);
+            BARServer.setOption(selectedJobData.uuid,"post-command",text);
             widget.setBackground(null);
           }
         });
@@ -6138,50 +6138,91 @@ class TabJobs
     {
       public void trigger(Control control)
       {
-        Widgets.setEnabled(control,selectedJobId != 0);
+        Widgets.setEnabled(control,selectedJobData != null);
       }
     });
 
     // add root devices
     addDirectoryRootDevices();
     addDevicesList();
-
-    // update data
-    updateJobList();
   }
 
   /** set tab status reference
-   * @param tabStatus tab statut object
+   * @param tabStatus tab status object
    */
   void setTabStatus(TabStatus tabStatus)
   {
     this.tabStatus = tabStatus;
   }
 
-  /** select job by name
-   * @param name job name
-   */
-  public void selectJob(String name)
+  public void updateJobList(final Collection<JobData> jobData)
   {
-    synchronized(widgetJobList)
+    display.syncExec(new Runnable()
     {
-      int index = 0;
-      while (   (index < widgetJobList.getItemCount())
-             && !name.equals(widgetJobList.getItem(index))
-            )
+      public void run()
       {
-        index++;
-      }
-      if (index < widgetJobList.getItemCount())
-      {
-        selectedJobName = name;
-        selectedJobId   = jobIds.get(name);
-        widgetJobList.select(index);
-        selectJobEvent.trigger();
+        // get option menu items
+        HashSet<JobData> removeJobDataSet = new HashSet<JobData>();
+        for (JobData jobData : (JobData[])Widgets.getOptionMenuItems(widgetJobList,JobData.class))
+        {
+          removeJobDataSet.add(jobData);
+        }
 
-        update();
+        // update job list
+        synchronized(widgetJobList)
+        {
+          for (JobData jobData_ : jobData)
+          {
+            int index = Widgets.getOptionMenuIndex(widgetJobList,jobData_);
+            if (index >= 0)
+            {
+              // update item
+              Widgets.updateOptionMenuItem(widgetJobList,
+                                           index,
+                                           (Object)jobData_,
+                                           jobData_.name
+                                          );
+
+              // keep data
+              removeJobDataSet.remove(jobData_);
+            }
+            else
+            {
+              // insert new item
+              Widgets.insertOptionMenuItem(widgetJobList,
+                                           findJobListIndex(jobData_.name),
+                                           (Object)jobData_,
+                                           jobData_.name
+                                          );
+            }
+          }
+        }
+
+        for (JobData jobData : removeJobDataSet)
+        {
+          Widgets.removeOptionMenuItem(widgetJobList,jobData);
+        }
       }
-    }
+    });
+  }
+
+  /** select job by UUID
+   * @param uuid job UUID
+   */
+  public void selectJob(String uuid)
+  {
+    tabStatus.selectJob(uuid);
+  }
+
+  /** set selected job
+   * @param jobData job data
+   */
+  public void setSelectedJob(JobData jobData)
+  {
+    selectedJobData = jobData;
+    Widgets.setSelectedOptionMenuItem(widgetJobList,selectedJobData);
+    update();
+    selectJobEvent.trigger();
   }
 
   /** create new job
@@ -6257,20 +6298,23 @@ throw new Error("NYI");
         {
           try
           {
-            String[] errorMessage = new String[1];
-            String[] result = new String[1];
+            String[] resultErrorMessage = new String[1];
+            ValueMap resultMap          = new ValueMap();
             int error = BARServer.executeCommand(StringParser.format("JOB_NEW name=%S",jobName),
                                                  0,
-                                                 errorMessage
+                                                 resultErrorMessage,
+                                                 resultMap
                                                 );
             if (error == Errors.NONE)
             {
+              String newJobUUID = resultMap.getString("jobUUID");
+
               updateJobList();
-              selectJob(jobName);
+              selectJob(newJobUUID);
             }
             else
             {
-              Dialogs.error(shell,"Cannot create new job:\n\n"+result[0]);
+              Dialogs.error(shell,"Cannot create new job:\n\n"+resultErrorMessage[0]);
               widgetJobName.forceFocus();
               return;
             }
@@ -6290,18 +6334,16 @@ throw new Error("NYI");
   }
 
   /** clone job
-   * @param jobId job id
-   * @param jobName job name
+   * @param jobData job data
    * @return true iff job cloned
    */
-  public boolean jobClone(final int jobId, final String jobName)
+  public boolean jobClone(final JobData jobData)
   {
     Composite composite;
     Label     label;
     Button    button;
 
-    assert jobId != 0;
-    assert jobName != null;
+    assert jobData != null;
 
     final Shell dialog = Dialogs.openModal(shell,"Clone job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
@@ -6316,7 +6358,7 @@ throw new Error("NYI");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetJobName = Widgets.newText(composite);
-      widgetJobName.setText(jobName);
+      widgetJobName.setText(jobData.name);
       Widgets.layout(widgetJobName,0,1,TableLayoutData.WE);
     }
 
@@ -6350,7 +6392,7 @@ throw new Error("NYI");
       public void modifyText(ModifyEvent modifyEvent)
       {
         Text  widget = (Text)modifyEvent.widget;
-        widgetClone.setEnabled(!widget.getText().equals(jobName));
+        widgetClone.setEnabled(!widget.getText().equals(jobData.name));
       }
     });
     widgetJobName.addSelectionListener(new SelectionListener()
@@ -6377,27 +6419,27 @@ throw new Error("NYI");
         {
           try
           {
-            String[] errorMessage = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("JOB_CLONE jobId=%d name=%S",
-                                                                     jobId,
+            String[] resultErrorMessage = new String[1];
+            int error = BARServer.executeCommand(StringParser.format("JOB_CLONE jobUUID=%s name=%S",
+                                                                     jobData.uuid,
                                                                      newJobName
                                                                     ),
                                                  0,
-                                                 errorMessage
+                                                 resultErrorMessage
                                                 );
             if (error == Errors.NONE)
             {
               updateJobList();
-              selectJob(newJobName);
+              selectJob(jobData.uuid);
             }
             else
             {
-              Dialogs.error(shell,"Cannot clone job:\n\n"+errorMessage[0]);
+              Dialogs.error(shell,"Cannot clone job '"+jobData.name+"':\n\n"+resultErrorMessage[0]);
             }
           }
           catch (CommunicationError error)
           {
-            Dialogs.error(shell,"Cannot clone job:\n\n"+error.getMessage());
+            Dialogs.error(shell,"Cannot clone job '"+jobData.name+"':\n\n"+error.getMessage());
           }
         }
         Dialogs.close(dialog,true);
@@ -6409,18 +6451,16 @@ throw new Error("NYI");
   }
 
   /** rename job
-   * @param jobId job id
-   * @param jobName job name
+   * @param jobData job data
    * @return true iff new job renamed
    */
-  public boolean jobRename(final int jobId, final String jobName)
+  public boolean jobRename(final JobData jobData)
   {
     Composite composite;
     Label     label;
     Button    button;
 
-    assert jobId != 0;
-    assert jobName != null;
+    assert jobData != null;
 
     final Shell dialog = Dialogs.openModal(shell,"Rename job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
@@ -6434,14 +6474,14 @@ throw new Error("NYI");
       label = Widgets.newLabel(composite,BARControl.tr("Old name")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
-      label = Widgets.newLabel(composite,jobName);
+      label = Widgets.newLabel(composite,jobData.name);
       Widgets.layout(label,0,1,TableLayoutData.W);
 
       label = Widgets.newLabel(composite,BARControl.tr("New name")+":");
       Widgets.layout(label,1,0,TableLayoutData.W);
 
       widgetNewJobName = Widgets.newText(composite);
-      widgetNewJobName.setText(jobName);
+      widgetNewJobName.setText(jobData.name);
       Widgets.layout(widgetNewJobName,1,1,TableLayoutData.WE);
     }
 
@@ -6475,7 +6515,7 @@ throw new Error("NYI");
       public void modifyText(ModifyEvent modifyEvent)
       {
         Text  widget = (Text)modifyEvent.widget;
-        widgetRename.setEnabled(!widget.getText().equals(jobName));
+        widgetRename.setEnabled(!widget.getText().equals(jobData.name));
       }
     });
     widgetNewJobName.addSelectionListener(new SelectionListener()
@@ -6502,27 +6542,27 @@ throw new Error("NYI");
         {
           try
           {
-            String[] errorMessage = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("JOB_RENAME jobId=%d newName=%S",
-                                                                     jobId,
+            String[] resultErrorMessage = new String[1];
+            int error = BARServer.executeCommand(StringParser.format("JOB_RENAME jobUUID=%s newName=%S",
+                                                                     jobData.uuid,
                                                                      newJobName
                                                                     ),
                                                  0,
-                                                 errorMessage
+                                                 resultErrorMessage
                                                 );
             if (error == Errors.NONE)
             {
               updateJobList();
-              selectJob(newJobName);
+              selectJob(jobData.uuid);
             }
             else
             {
-              Dialogs.error(shell,"Cannot rename job:\n\n"+errorMessage[0]);
+              Dialogs.error(shell,"Cannot rename job '"+jobData.name+"':\n\n"+resultErrorMessage[0]);
             }
           }
           catch (CommunicationError error)
           {
-            Dialogs.error(shell,"Cannot rename job:\n\n"+error.getMessage());
+            Dialogs.error(shell,"Cannot rename job '"+jobData.name+"':\n\n"+error.getMessage());
           }
         }
         Dialogs.close(dialog,true);
@@ -6534,36 +6574,34 @@ throw new Error("NYI");
   }
 
   /** delete job
-   * @param jobId job id
-   * @param jobName job name
+   * @param jobData job data
    * @return true iff job deleted
    */
-  public boolean jobDelete(int jobId, String jobName)
+  public boolean jobDelete(final JobData jobData)
   {
-    assert jobId != 0;
-    assert jobName != null;
+    assert jobData != null;
 
-    if (Dialogs.confirm(shell,"Delete job '"+jobName+"'?"))
+    if (Dialogs.confirm(shell,"Delete job '"+jobData.name+"'?"))
     {
       try
       {
         String[] result = new String[1];
-        int error = BARServer.executeCommand(StringParser.format("JOB_DELETE jobId=%d",jobId),0);
+        int error = BARServer.executeCommand(StringParser.format("JOB_DELETE jobUUID=%s",jobData.uuid),0);
         if (error == Errors.NONE)
         {
           updateJobList();
-          selectJobEvent.trigger();
           clear();
+          selectJobEvent.trigger();
         }
         else
         {
-          Dialogs.error(shell,"Cannot delete job:\n\n"+result[0]);
+          Dialogs.error(shell,"Cannot delete job '"+jobData.name+"':\n\n"+result[0]);
           return false;
         }
       }
       catch (CommunicationError error)
       {
-        Dialogs.error(shell,"Cannot delete job:\n\n"+error.getMessage());
+        Dialogs.error(shell,"Cannot delete job '"+jobData.name+"':\n\n"+error.getMessage());
         return false;
       }
     }
@@ -6647,38 +6685,38 @@ throw new Error("NYI");
     // clear
     clearJobData();
 
-    if (selectedJobId > 0)
+    if (selectedJobData != null)
     {
       // get job data
-      parseArchiveName(BARServer.getStringOption(selectedJobId,"archive-name"));
-      archiveType.set(BARServer.getStringOption(selectedJobId,"archive-type"));
-      archivePartSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"archive-part-size"),0));
+      parseArchiveName(BARServer.getStringOption(selectedJobData.uuid,"archive-name"));
+      archiveType.set(BARServer.getStringOption(selectedJobData.uuid,"archive-type"));
+      archivePartSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobData.uuid,"archive-part-size"),0));
       archivePartSizeFlag.set(archivePartSize.getLong() > 0);
 
-      String[] compressAlgorithms = StringUtils.split(BARServer.getStringOption(selectedJobId,"compress-algorithm"),"+");
+      String[] compressAlgorithms = StringUtils.split(BARServer.getStringOption(selectedJobData.uuid,"compress-algorithm"),"+");
       deltaCompressAlgorithm.set((compressAlgorithms.length >= 1) ? compressAlgorithms[0] : "");
       byteCompressAlgorithm.set((compressAlgorithms.length >= 2) ? compressAlgorithms[1] : "");
-      cryptAlgorithm.set(BARServer.getStringOption(selectedJobId,"crypt-algorithm"));
-      cryptType.set(BARServer.getStringOption(selectedJobId,"crypt-type"));
-      cryptPublicKeyFileName.set(BARServer.getStringOption(selectedJobId,"crypt-public-key"));
-      cryptPasswordMode.set(BARServer.getStringOption(selectedJobId,"crypt-password-mode"));
-      cryptPassword.set(BARServer.getStringOption(selectedJobId,"crypt-password"));
-      incrementalListFileName.set(BARServer.getStringOption(selectedJobId,"incremental-list-file"));
-      overwriteArchiveFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-archive-files"));
-      sshPublicKeyFileName.set(BARServer.getStringOption(selectedJobId,"ssh-public-key"));
-      sshPrivateKeyFileName.set(BARServer.getStringOption(selectedJobId,"ssh-private-key"));
+      cryptAlgorithm.set(BARServer.getStringOption(selectedJobData.uuid,"crypt-algorithm"));
+      cryptType.set(BARServer.getStringOption(selectedJobData.uuid,"crypt-type"));
+      cryptPublicKeyFileName.set(BARServer.getStringOption(selectedJobData.uuid,"crypt-public-key"));
+      cryptPasswordMode.set(BARServer.getStringOption(selectedJobData.uuid,"crypt-password-mode"));
+      cryptPassword.set(BARServer.getStringOption(selectedJobData.uuid,"crypt-password"));
+      incrementalListFileName.set(BARServer.getStringOption(selectedJobData.uuid,"incremental-list-file"));
+      overwriteArchiveFiles.set(BARServer.getBooleanOption(selectedJobData.uuid,"overwrite-archive-files"));
+      sshPublicKeyFileName.set(BARServer.getStringOption(selectedJobData.uuid,"ssh-public-key"));
+      sshPrivateKeyFileName.set(BARServer.getStringOption(selectedJobData.uuid,"ssh-private-key"));
 /* NYI ???
-      maxBandWidth.set(Units.parseByteSize(BARServer.getStringOption(jobId,"max-band-width")));
+      maxBandWidth.set(Units.parseByteSize(BARServer.getStringOption(selectedJobData.uuid,"max-band-width")));
       maxBandWidthFlag.set(maxBandWidth.getLongOption() > 0);
 */
-      volumeSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"volume-size"),0));
-      ecc.set(BARServer.getBooleanOption(selectedJobId,"ecc"));
-      waitFirstVolume.set(BARServer.getBooleanOption(selectedJobId,"wait-first-volume"));
-      skipUnreadable.set(BARServer.getBooleanOption(selectedJobId,"skip-unreadable"));
-      overwriteFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-files"));
-      preCommand.set(BARServer.getStringOption(selectedJobId,"pre-command"));
-      postCommand.set(BARServer.getStringOption(selectedJobId,"post-command"));
-      mountDeviceName.set(BARServer.getStringOption(selectedJobId,"mount-device"));
+      volumeSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobData.uuid,"volume-size"),0));
+      ecc.set(BARServer.getBooleanOption(selectedJobData.uuid,"ecc"));
+      waitFirstVolume.set(BARServer.getBooleanOption(selectedJobData.uuid,"wait-first-volume"));
+      skipUnreadable.set(BARServer.getBooleanOption(selectedJobData.uuid,"skip-unreadable"));
+      overwriteFiles.set(BARServer.getBooleanOption(selectedJobData.uuid,"overwrite-files"));
+      preCommand.set(BARServer.getStringOption(selectedJobData.uuid,"pre-command"));
+      postCommand.set(BARServer.getStringOption(selectedJobData.uuid,"post-command"));
+      mountDeviceName.set(BARServer.getStringOption(selectedJobData.uuid,"mount-device"));
 
       updateFileTreeImages();
       updateDeviceImages();
@@ -6713,47 +6751,7 @@ throw new Error("NYI");
    */
   private void updateJobList()
   {
-    // get job list
-    String[]            resultErrorMessage = new String[1];
-    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                         0,
-                                         resultErrorMessage,
-                                         resultMapList
-                                        );
-    if (error != Errors.NONE)
-    {
-      return;
-    }
-
-// NYI: how to update job listin status tab?
-    // update job list
-    synchronized(widgetJobList)
-    {
-      jobIds.clear();
-      widgetJobList.removeAll();
-      for (ValueMap resultMap : resultMapList)
-      {
-        try
-        {
-          // get data
-          int    jobId = resultMap.getInt   ("jobId");
-          String name  = resultMap.getString("name" );
-
-// TODO deleted jobs?
-          int index = findJobListIndex(name);
-          widgetJobList.add(name,index);
-          jobIds.put(name,jobId);
-        }
-        catch (IllegalArgumentException exception)
-        {
-          if (Settings.debugLevel > 0)
-          {
-            System.err.println("ERROR: "+exception.getMessage());
-          }
-        }
-      }
-    }
+    tabStatus.updateJobList();
   }
 
   //-----------------------------------------------------------------------
@@ -6762,30 +6760,27 @@ throw new Error("NYI");
    */
   private void jobClone()
   {
-    assert selectedJobId != 0;
-    assert selectedJobName != null;
+    assert selectedJobData != null;
 
-    jobClone(selectedJobId,selectedJobName);
+    jobClone(selectedJobData);
   }
 
   /** rename selected job
    */
   private void jobRename()
   {
-    assert selectedJobId != 0;
-    assert selectedJobName != null;
+    assert selectedJobData != null;
 
-    jobRename(selectedJobId,selectedJobName);
+    jobRename(selectedJobData);
   }
 
   /** delete selected job
    */
   private void jobDelete()
   {
-    assert selectedJobId != 0;
-    assert selectedJobName != null;
+    assert selectedJobData != null;
 
-    jobDelete(selectedJobId,selectedJobName);
+    jobDelete(selectedJobData);
   }
 
   //-----------------------------------------------------------------------
@@ -7376,12 +7371,12 @@ throw new Error("NYI");
    */
   private void updateIncludeList()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     String[]            resultErrorMessage = new String[1];
     ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobId=%d",
-                                                             selectedJobId
+    int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobUUID=%s",
+                                                             selectedJobData.uuid
                                                             ),
                                          0,
                                          resultErrorMessage,
@@ -7442,12 +7437,12 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
    */
   private void updateExcludeList()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     String[]            resultErrorMessage = new String[1];
     ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST jobId=%d",
-                                                             selectedJobId
+    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST jobUUID=%s",
+                                                             selectedJobData.uuid
                                                             ),
                                          0,
                                          resultErrorMessage,
@@ -7493,12 +7488,12 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
    */
   private void updateCompressExcludeList()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     String[]            resultErrorMessage  = new String[1];
     ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST jobId=%d",
-                                                             selectedJobId
+    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST jobUUID=%s",
+                                                             selectedJobData.uuid
                                                             ),
                                          0,
                                          resultErrorMessage,
@@ -7553,7 +7548,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     Label     label;
     Button    button;
 
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
@@ -7693,12 +7688,12 @@ throw new Error("NYI");
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
 
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     // update include list
     String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobId=%d entryType=%s patternType=%s pattern=%'S",
-                                                             selectedJobId,
+    int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
+                                                             selectedJobData.uuid,
                                                              entryData.entryType.toString(),
                                                              "GLOB",
                                                              entryData.pattern
@@ -7736,7 +7731,7 @@ throw new Error("NYI");
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
 
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     // remove patterns from hash map
     for (String pattern : patterns)
@@ -7747,11 +7742,11 @@ throw new Error("NYI");
     // update include list
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-    BARServer.executeCommand(StringParser.format("INCLUDE_LIST_CLEAR jobId=%d",selectedJobId),0,resultErrorMessage);
+    BARServer.executeCommand(StringParser.format("INCLUDE_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
     for (EntryData entryData : includeHashMap.values())
     {
-      BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobId=%d entryType=%s patternType=%s pattern=%'S",
-                                                   selectedJobId,
+      BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
+                                                   selectedJobData.uuid,
                                                    entryData.entryType.toString(),
                                                    "GLOB",
                                                    entryData.pattern
@@ -7790,7 +7785,7 @@ throw new Error("NYI");
    */
   private void includeListAdd()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     EntryData entryData = new EntryData(EntryTypes.FILE,"");
     if (includeEdit(entryData,"Add new include pattern","Add"))
@@ -7803,7 +7798,7 @@ throw new Error("NYI");
    */
   private void includeListEdit()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     TableItem[] tableItems = widgetIncludeTable.getSelection();
     if (tableItems.length > 0)
@@ -7828,7 +7823,7 @@ throw new Error("NYI");
    */
   private void includeListClone()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     TableItem[] tableItems = widgetIncludeTable.getSelection();
     if (tableItems.length > 0)
@@ -7852,7 +7847,7 @@ throw new Error("NYI");
    */
   private void includeListRemove()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     ArrayList<EntryData> entryDataList = new ArrayList<EntryData>();
     for (TableItem tableItem : widgetIncludeTable.getSelection())
@@ -7884,7 +7879,7 @@ throw new Error("NYI");
     Label     label;
     Button    button;
 
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
@@ -7983,12 +7978,12 @@ throw new Error("NYI");
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
 
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     // update exclude list
     String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_ADD jobId=%d patternType=%s pattern=%'S",
-                                                             selectedJobId,
+    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+                                                             selectedJobData.uuid,
                                                              "GLOB",
                                                              pattern
                                                             ),
@@ -8024,7 +8019,7 @@ throw new Error("NYI");
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
 
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     // remove patterns from hash set
     for (String pattern : patterns)
@@ -8035,11 +8030,11 @@ throw new Error("NYI");
     // update exclude list
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-    BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_CLEAR jobId=%d",selectedJobId),0,resultErrorMessage);
+    BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
     for (String pattern : excludeHashSet)
     {
-      BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_ADD jobId=%d patternType=%s pattern=%'S",
-                                                   selectedJobId,
+      BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+                                                   selectedJobData.uuid,
                                                    "GLOB",
                                                    pattern
                                                   ),
@@ -8076,7 +8071,7 @@ throw new Error("NYI");
    */
   private void excludeListAdd()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     String[] pattern = new String[1];
     if (excludeEdit(pattern,"Add new exclude pattern","Add"))
@@ -8089,7 +8084,7 @@ throw new Error("NYI");
    */
   private void excludeListEdit()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     String[] patterns = widgetExcludeList.getSelection();
     if (patterns.length > 0)
@@ -8113,7 +8108,7 @@ throw new Error("NYI");
    */
   private void excludeListClone()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     String[] patterns = widgetExcludeList.getSelection();
     if (patterns.length > 0)
@@ -8136,7 +8131,7 @@ throw new Error("NYI");
    */
   private void excludeListRemove()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     String[] patterns = widgetExcludeList.getSelection();
     if (patterns.length > 0)
@@ -8161,7 +8156,7 @@ throw new Error("NYI");
     Label     label;
     Button    button;
 
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
@@ -8258,13 +8253,13 @@ throw new Error("NYI");
    */
   private void compressExcludeListAdd(String pattern)
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     if (!compressExcludeHashSet.contains(pattern))
     {
       String[] resultErrorMesage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobId=%d patternType=%s pattern=%'S",
-                                                               selectedJobId,
+      int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+                                                               selectedJobData.uuid,
                                                                "GLOB",
                                                                pattern
                                                               ),
@@ -8296,15 +8291,15 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
    */
   private void compressExcludeListAdd(String[] patterns)
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     for (String pattern : patterns)
     {
       if (!compressExcludeHashSet.contains(pattern))
       {
         String[] resultErrorMessage = new String[1];
-        int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobId=%d patternType=%s pattern=%'S",
-                                                                 selectedJobId,
+        int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+                                                                 selectedJobData.uuid,
                                                                  "GLOB",
                                                                  pattern
                                                                 ),
@@ -8335,7 +8330,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
    */
   private void compressExcludeListAdd()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     String[] pattern = new String[1];
     if (compressExcludeEdit(pattern,"Add new compress exclude pattern","Add"))
@@ -8348,7 +8343,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
    */
   private void compressExcludeListEdit()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     String[] patterns = widgetCompressExcludeList.getSelection();
     if (patterns.length > 0)
@@ -8377,7 +8372,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
 
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     for (String pattern : patterns)
     {
@@ -8386,12 +8381,12 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
 
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-    BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_CLEAR jobId=%d",selectedJobId),0,resultErrorMessage);
+    BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
     Widgets.removeAllListEntries(widgetCompressExcludeList);
     for (String pattern : compressExcludeHashSet)
     {
-      BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobId=%d patternType=%s pattern=%'S",
-                                                   selectedJobId,
+      BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+                                                   selectedJobData.uuid,
                                                    "GLOB",
                                                    pattern
                                                   ),
@@ -8422,8 +8417,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
    */
   private void compressExcludeListRemove()
   {
-    assert selectedJobId != 0;
-
+    assert selectedJobData != null;
 
     String[] patterns = widgetCompressExcludeList.getSelection();
     if (patterns.length > 0)
@@ -9316,7 +9310,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
     Button    button;
     Composite subComposite;
 
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,"Edit storage file name",700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
@@ -9409,7 +9403,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
     // get schedule list
     String[]            resultErrorMessage  = new String[1];
     ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobId=%d",selectedJobId),
+    int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",selectedJobData.uuid),
                                          0,
                                          resultErrorMessage,
                                          resultMapList
@@ -9475,7 +9469,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
     Button    button;
     Composite subComposite;
 
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
@@ -9781,9 +9775,9 @@ throw new Error("NYI");
         else if (widgetTypeDifferential.getSelection()) scheduleData.archiveType = "differential";
         else                                            scheduleData.archiveType = "*";
         scheduleData.customText = widgetCustomText.getText();
-        scheduleData.minKeep    = Widgets.getSelectedOptionMenuItem(widgetMinKeep).getInt();
-        scheduleData.maxKeep    = Widgets.getSelectedOptionMenuItem(widgetMaxKeep).getInt();
-        scheduleData.maxAge     = Widgets.getSelectedOptionMenuItem(widgetMaxAge).getInt();
+        scheduleData.minKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep);
+        scheduleData.maxKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep);
+        scheduleData.maxAge     = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge);
         scheduleData.enabled    = widgetEnabled.getSelection();
 
         Dialogs.close(dialog,true);
@@ -9797,15 +9791,15 @@ throw new Error("NYI");
    */
   private void scheduleNew()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     ScheduleData scheduleData = new ScheduleData();
     if (scheduleEdit(scheduleData,"New schedule","Add"))
     {
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-      BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
-                                                   selectedJobId,
+      BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
+                                                   selectedJobData.uuid,
                                                    scheduleData.getDate(),
                                                    scheduleData.getWeekDays(),
                                                    scheduleData.getTime(),
@@ -9836,7 +9830,7 @@ throw new Error("NYI");
    */
   private void scheduleEdit()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     int index = widgetScheduleList.getSelectionIndex();
     if (index >= 0)
@@ -9858,11 +9852,11 @@ throw new Error("NYI");
 
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),0,resultErrorMessage);
+        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
         for (ScheduleData scheduleData_ : scheduleList)
         {
-          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
-                                                       selectedJobId,
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
+                                                       selectedJobData.uuid,
                                                        scheduleData_.getDate(),
                                                        scheduleData_.getWeekDays(),
                                                        scheduleData_.getTime(),
@@ -9885,7 +9879,7 @@ throw new Error("NYI");
    */
   private void scheduleClone()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     int index = widgetScheduleList.getSelectionIndex();
     if (index >= 0)
@@ -9909,8 +9903,8 @@ throw new Error("NYI");
 
 // TODO result
         String[] resultErrorMessage = new String[1];
-        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
-                                                     selectedJobId,
+        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
+                                                     selectedJobData.uuid,
                                                      newScheduleData.getDate(),
                                                      newScheduleData.getWeekDays(),
                                                      newScheduleData.getTime(),
@@ -9932,7 +9926,7 @@ throw new Error("NYI");
    */
   private void scheduleDelete()
   {
-    assert selectedJobId != 0;
+    assert selectedJobData != null;
 
     TableItem[] tableItems = widgetScheduleList.getSelection();
     if (tableItems.length > 0)
@@ -9949,11 +9943,11 @@ throw new Error("NYI");
 
 // TODO result?
           String[] resultErrorMessage = new String[1];
-          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),0,resultErrorMessage);
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
           for (ScheduleData scheduleData_ : scheduleList)
           {
-            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
-                                                         selectedJobId,
+            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
+                                                         selectedJobData.uuid,
                                                          scheduleData_.getDate(),
                                                          scheduleData_.getWeekDays(),
                                                          scheduleData_.getTime(),
