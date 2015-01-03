@@ -119,7 +119,7 @@ abstract class BackgroundTask
 
 /** tab restore
  */
-class TabRestore
+public class TabRestore
 {
   /** index states
    */
@@ -503,19 +503,22 @@ class TabRestore
    */
   class UUIDIndexData extends IndexData
   {
-    public String uuid;                       // UUID
+    public String jobUUID;                       // job UUID
+    public String scheduleUUID;                  // schedule UUID
 
     /** create UUID data index
-     * @param uuid uuid
+     * @param jobUUID job uuid
+     * @param scheduleUUID schedule UUID
      * @param name job name
      * @param lastDateTime last date/time (timestamp) when storage was created
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    UUIDIndexData(String uuid, String name, long lastDateTime, long totalSize, String lastErrorMessage)
+    UUIDIndexData(String jobUUID, String scheduleUUID, String name, long lastDateTime, long totalSize, String lastErrorMessage)
     {
       super(name,lastDateTime,totalSize,name,lastErrorMessage);
-      this.uuid = uuid;
+      this.jobUUID      = jobUUID;
+      this.scheduleUUID = scheduleUUID;
     }
 
     /** set tree item reference
@@ -547,7 +550,7 @@ class TabRestore
      */
     public String getInfo()
     {
-      return uuid;
+      return jobUUID;
     }
 
     /** convert data to string
@@ -555,7 +558,7 @@ class TabRestore
      */
     public String toString()
     {
-      return "UUIDIndexData {"+uuid+", created="+dateTime+", size="+size+" bytes, checked="+isChecked()+"}";
+      return "UUIDIndexData {"+jobUUID+", created="+dateTime+", size="+size+" bytes, checked="+isChecked()+"}";
     }
   }
 
@@ -676,7 +679,7 @@ class TabRestore
      */
     public void put(UUIDIndexData uuidIndexData)
     {
-      put(uuidIndexData.uuid,uuidIndexData);
+      put(uuidIndexData.jobUUID,uuidIndexData);
     }
 
     /** remove UUID data from map
@@ -684,7 +687,7 @@ class TabRestore
      */
     public void remove(UUIDIndexData uuidIndexData)
     {
-      remove(uuidIndexData.uuid);
+      remove(uuidIndexData.jobUUID);
     }
   }
 
@@ -717,24 +720,24 @@ class TabRestore
     }
   };
 
-  /** job index data
+  /** entity index data
    */
-  class JobIndexData extends IndexData
+  class EntityIndexData extends IndexData
   {
-    long         jobId;
+    long         entityId;
     ArchiveTypes archiveType;
 
     /** create job data index
-     * @param jobId job id
+     * @param entityId entity id
      * @param name name of storage
      * @param lastDateTime last date/time (timestamp) when storage was created
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    JobIndexData(long jobId, ArchiveTypes archiveType, long lastDateTime, long totalSize, String lastErrorMessage)
+    EntityIndexData(long entityId, ArchiveTypes archiveType, long lastDateTime, long totalSize, String lastErrorMessage)
     {
       super("",lastDateTime,totalSize,"tttt",lastErrorMessage);
-      this.jobId       = jobId;
+      this.entityId    = entityId;
       this.archiveType = archiveType;
     }
 
@@ -747,13 +750,13 @@ class TabRestore
       {
         public void update(TreeItem treeItem, IndexData indexData)
         {
-          JobIndexData jobIndexData = (JobIndexData)indexData;
+          EntityIndexData entityIndexData = (EntityIndexData)indexData;
 
           Widgets.updateTreeItem(treeItem,
-                                 (Object)jobIndexData,
-                                 jobIndexData.archiveType.toString(),
-                                 Units.formatByteSize(jobIndexData.size),
-                                 simpleDateFormat.format(new Date(jobIndexData.dateTime*1000)),
+                                 (Object)entityIndexData,
+                                 entityIndexData.archiveType.toString(),
+                                 Units.formatByteSize(entityIndexData.size),
+                                 simpleDateFormat.format(new Date(entityIndexData.dateTime*1000)),
                                  ""
                                 );
         }
@@ -767,7 +770,7 @@ class TabRestore
      */
     public String getInfo()
     {
-      return String.format("%d: %s",jobId,name);
+      return String.format("%d: %s",entityId,name);
     }
 
     /** convert data to string
@@ -775,13 +778,13 @@ class TabRestore
      */
     public String toString()
     {
-      return "JobIndexData {"+jobId+", type="+archiveType.toString()+", created="+dateTime+", size="+size+" bytes, checked="+isChecked()+"}";
+      return "EntityIndexData {"+entityId+", type="+archiveType.toString()+", created="+dateTime+", size="+size+" bytes, checked="+isChecked()+"}";
     }
   }
 
   /** job data comparator
    */
-  class JobIndexDataComparator implements Comparator<JobIndexData>
+  class EntityIndexDataComparator implements Comparator<EntityIndexData>
   {
     // Note: enum in inner classes are not possible in Java, thus use the old way...
     private final static int SORTMODE_NAME             = 0;
@@ -794,7 +797,7 @@ class TabRestore
      * @param tree storage tree
      * @param sortColumn sort column
      */
-    JobIndexDataComparator(Tree tree, TreeColumn sortColumn)
+    EntityIndexDataComparator(Tree tree, TreeColumn sortColumn)
     {
       if      (tree.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
       else if (tree.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
@@ -806,7 +809,7 @@ class TabRestore
      * @param table storage table
      * @param sortColumn sort column
      */
-    JobIndexDataComparator(Table table, TableColumn sortColumn)
+    EntityIndexDataComparator(Table table, TableColumn sortColumn)
     {
       if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
       else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
@@ -817,7 +820,7 @@ class TabRestore
     /** create storage data comparator
      * @param tree storage tree
      */
-    JobIndexDataComparator(Tree tree)
+    EntityIndexDataComparator(Tree tree)
     {
       this(tree,tree.getSortColumn());
     }
@@ -825,31 +828,31 @@ class TabRestore
     /** create storage data comparator
      * @param tree storage tree
      */
-    JobIndexDataComparator(Table table)
+    EntityIndexDataComparator(Table table)
     {
       this(table,table.getSortColumn());
     }
 
     /** compare job index data
-     * @param jobIndexData1, jobIndexData2 job data to compare
-     * @return -1 iff jobIndexData1 < jobIndexData2,
-                0 iff jobIndexData1 = jobIndexData2,
-                1 iff jobIndexData1 > jobIndexData2
+     * @param entityIndexData1, entityIndexData2 job data to compare
+     * @return -1 iff entityIndexData1 < entityIndexData2,
+                0 iff entityIndexData1 = entityIndexData2,
+                1 iff entityIndexData1 > entityIndexData2
      */
-    public int compare(JobIndexData jobIndexData1, JobIndexData jobIndexData2)
+    public int compare(EntityIndexData entityIndexData1, EntityIndexData entityIndexData2)
     {
       switch (sortMode)
       {
         case SORTMODE_NAME:
-          return jobIndexData1.title.compareTo(jobIndexData2.title);
+          return entityIndexData1.title.compareTo(entityIndexData2.title);
         case SORTMODE_SIZE:
-          if      (jobIndexData1.size < jobIndexData2.size) return -1;
-          else if (jobIndexData1.size > jobIndexData2.size) return  1;
-          else                                              return  0;
+          if      (entityIndexData1.size < entityIndexData2.size) return -1;
+          else if (entityIndexData1.size > entityIndexData2.size) return  1;
+          else                                                    return  0;
         case SORTMODE_CREATED_DATETIME:
-          if      (jobIndexData1.dateTime < jobIndexData2.dateTime) return -1;
-          else if (jobIndexData1.dateTime > jobIndexData2.dateTime) return  1;
-          else                                                      return  0;
+          if      (entityIndexData1.dateTime < entityIndexData2.dateTime) return -1;
+          else if (entityIndexData1.dateTime > entityIndexData2.dateTime) return  1;
+          else                                                            return  0;
         default:
           return 0;
       }
@@ -860,51 +863,51 @@ class TabRestore
      */
     public String toString()
     {
-      return "JobIndexDataComparator {"+sortMode+"}";
+      return "EntityIndexDataComparator {"+sortMode+"}";
     }
   }
 
   /** job data map
    */
-  class JobIndexDataMap extends HashMap<Long,JobIndexData>
+  class EntityIndexDataMap extends HashMap<Long,EntityIndexData>
   {
     /** get job data from map
-     * @param jobId database id
+     * @param entityId database id
      * @return job data
      */
-    public JobIndexData get(long jobId)
+    public EntityIndexData get(long entityId)
     {
-      return super.get(jobId);
+      return super.get(entityId);
     }
 
     /** get job data from map by job name
      * @param jobName job name
      * @return job data
      */
-    public JobIndexData getByName(String jobName)
+    public EntityIndexData getByName(String jobName)
     {
-      for (JobIndexData jobIndexData : values())
+      for (EntityIndexData entityIndexData : values())
       {
-        if (jobIndexData.name.equals(jobName)) return jobIndexData;
+        if (entityIndexData.name.equals(jobName)) return entityIndexData;
       }
 
       return null;
     }
 
     /** put job data into map
-     * @param jobIndexData job data
+     * @param entityIndexData job data
      */
-    public void put(JobIndexData jobIndexData)
+    public void put(EntityIndexData entityIndexData)
     {
-      put(jobIndexData.jobId,jobIndexData);
+      put(entityIndexData.entityId,entityIndexData);
     }
 
     /** remove job data from map
-     * @param jobIndexData job data
+     * @param entityIndexData job data
      */
-    public void remove(JobIndexData jobIndexData)
+    public void remove(EntityIndexData entityIndexData)
     {
-      remove(jobIndexData.jobId);
+      remove(entityIndexData.entityId);
     }
   }
 
@@ -913,13 +916,13 @@ class TabRestore
   class StorageIndexData extends IndexData
   {
     public long        storageId;                // database storage id
-    public long        jobId;                    // database job id
+    public long        entityId;                 // database entity id
     public IndexModes  indexMode;                // mode of index
     public long        lastCheckedDateTime;      // last checked date/time
 
     /** create storage data index
      * @param storageId database storage id
-     * @param jobId database job id
+     * @param entityId database entity id
      * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
      * @param size size of storage [byte]
@@ -929,11 +932,11 @@ class TabRestore
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    StorageIndexData(long storageId, long jobId, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    StorageIndexData(long storageId, long entityId, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       super(name,dateTime,size,title,errorMessage);
       this.storageId           = storageId;
-      this.jobId               = jobId;
+      this.entityId            = entityId;
       this.indexState          = indexState;
       this.indexMode           = indexMode;
       this.lastCheckedDateTime = lastCheckedDateTime;
@@ -941,27 +944,27 @@ class TabRestore
 
     /** create storage data
      * @param id database id
-     * @param jobId database job id
+     * @param entityId database entity id
      * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
      * @param title title to show
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
-    StorageIndexData(long id, long jobId, String name, long dateTime, String title, long lastCheckedDateTime)
+    StorageIndexData(long id, long entityId, String name, long dateTime, String title, long lastCheckedDateTime)
     {
-      this(id,jobId,name,dateTime,0L,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+      this(id,entityId,name,dateTime,0L,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
     }
 
     /** create storage data
      * @param id database id
-     * @param jobId database job id
+     * @param entityId database entity id
      * @param name name of storage
      * @param uuid uuid
      * @param title title to show
      */
-    StorageIndexData(long id, long jobId, String name, String title)
+    StorageIndexData(long id, long entityId, String name, String title)
     {
-      this(id,jobId,name,0L,title,0L);
+      this(id,entityId,name,0L,title,0L);
     }
 
     /** set tree item reference
@@ -1001,7 +1004,7 @@ class TabRestore
      */
     public String toString()
     {
-      return "StorageIndexData {"+jobId+", name="+name+", created="+dateTime+", size="+size+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+", checked="+isChecked()+"}";
+      return "StorageIndexData {"+entityId+", name="+name+", created="+dateTime+", size="+size+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+", checked="+isChecked()+"}";
     }
   };
 
@@ -1144,7 +1147,7 @@ class TabRestore
   class IndexDataMap
   {
     private HashMap<String,UUIDIndexData>  uuidIndexDataMap;
-    private HashMap<Long,JobIndexData>     jobIndexDataMap;
+    private HashMap<Long,EntityIndexData>  entityIndexDataMap;
     private HashMap<Long,StorageIndexData> storageIndexDataMap;
 
     /** constructor
@@ -1152,7 +1155,7 @@ class TabRestore
     public IndexDataMap()
     {
       this.uuidIndexDataMap    = new HashMap<String,UUIDIndexData>();
-      this.jobIndexDataMap     = new HashMap<Long,JobIndexData>();
+      this.entityIndexDataMap  = new HashMap<Long,EntityIndexData>();
       this.storageIndexDataMap = new HashMap<Long,StorageIndexData>();
     }
 
@@ -1174,17 +1177,19 @@ class TabRestore
     }
 
     /** update UUID data index
-     * @param uuid uuid
+     * @param jobUUID job UUID
+     * @param scheduleUUID schedule UUID
      * @param name job name
      * @param lastDateTime last date/time (timestamp) when storage was created
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    synchronized public UUIDIndexData updateUUIDIndexData(String uuid, String name, long lastDateTime, long totalSize, String lastErrorMessage)
+    synchronized public UUIDIndexData updateUUIDIndexData(String jobUUID, String scheduleUUID, String name, long lastDateTime, long totalSize, String lastErrorMessage)
     {
-      UUIDIndexData uuidIndexData = uuidIndexDataMap.get(uuid);
+      UUIDIndexData uuidIndexData = uuidIndexDataMap.get(jobUUID);
       if (uuidIndexData != null)
       {
+        uuidIndexData.scheduleUUID = scheduleUUID;
         uuidIndexData.name         = name;
         uuidIndexData.dateTime     = lastDateTime;
         uuidIndexData.size         = totalSize;
@@ -1192,71 +1197,72 @@ class TabRestore
       }
       else
       {
-        uuidIndexData = new UUIDIndexData(uuid,
+        uuidIndexData = new UUIDIndexData(jobUUID,
+                                          scheduleUUID,
                                           name,
                                           lastDateTime,
                                           totalSize,
                                           lastErrorMessage
                                          );
-        uuidIndexDataMap.put(uuid,uuidIndexData);
+        uuidIndexDataMap.put(jobUUID,uuidIndexData);
       }
 
       return uuidIndexData;
     }
 
     /** get job index data from map by job id
-     * @param jobId database job id
+     * @param entityId database entity id
      * @return job index data
      */
-    public JobIndexData getJobIndexData(long jobId)
+    public EntityIndexData getEntityIndexData(long entityId)
     {
-      return jobIndexDataMap.get(jobId);
+      return entityIndexDataMap.get(entityId);
     }
 
     /** get job index data from map by job name
      * @param name job name
      * @return UUID data
      */
-    public JobIndexData getJobIndexDataByName(String name)
+    public EntityIndexData getEntityIndexDataByName(String name)
     {
-      for (JobIndexData jobIndexData : jobIndexDataMap.values())
+      for (EntityIndexData entityIndexData : entityIndexDataMap.values())
       {
-        if (jobIndexData.name.equals(name)) return jobIndexData;
+        if (entityIndexData.name.equals(name)) return entityIndexData;
       }
 
       return null;
     }
 
-    /** update job data index
-     * @param jobId job id
+    /** update entity data index
+     * @param entityId job id
      * @param name name of storage
      * @param lastDateTime last date/time (timestamp) when storage was created
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    public synchronized JobIndexData updateJobIndexData(long jobId, ArchiveTypes archiveType, long lastDateTime, long totalSize, String lastErrorMessage)
+    public synchronized EntityIndexData updateEntityIndexData(long entityId, ArchiveTypes archiveType, long lastDateTime, long totalSize, String lastErrorMessage)
     {
-      JobIndexData jobIndexData = jobIndexDataMap.get(jobId);
-      if (jobIndexData != null)
+      EntityIndexData entityIndexData = entityIndexDataMap.get(entityId);
+      if (entityIndexData != null)
       {
-        jobIndexData.jobId        = jobId;
-        jobIndexData.archiveType  = archiveType;
-        jobIndexData.dateTime     = lastDateTime;
-        jobIndexData.size         = totalSize;
-        jobIndexData.errorMessage = lastErrorMessage;
+        entityIndexData.entityId     = entityId;
+        entityIndexData.archiveType  = archiveType;
+        entityIndexData.dateTime     = lastDateTime;
+        entityIndexData.size         = totalSize;
+        entityIndexData.errorMessage = lastErrorMessage;
       }
       else
       {
-        jobIndexData = new JobIndexData(jobId,
-                                        archiveType,
-                                        lastDateTime,
-                                        totalSize,
-                                        lastErrorMessage
-                                       );
-        jobIndexDataMap.put(jobId,jobIndexData);
+        entityIndexData = new EntityIndexData(entityId,
+                                              archiveType,
+                                              lastDateTime,
+                                              totalSize,
+                                              lastErrorMessage
+                                             );
+        entityIndexDataMap.put(entityId,entityIndexData);
       }
 
-      return jobIndexData;
+      return entityIndexData;
     }
 
     /** get storage index data from map by storage id
@@ -1270,7 +1276,7 @@ class TabRestore
 
     /** update storage data index
      * @param storageId database storage id
-     * @param jobId database job id
+     * @param entityId database entity id
      * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
      * @param size size of storage [byte]
@@ -1280,12 +1286,12 @@ class TabRestore
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    public synchronized StorageIndexData updateStorageIndexData(long storageId, long jobId, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    public synchronized StorageIndexData updateStorageIndexData(long storageId, long entityId, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       StorageIndexData storageIndexData = storageIndexDataMap.get(storageId);
       if (storageIndexData != null)
       {
-        storageIndexData.jobId               = jobId;
+        storageIndexData.entityId            = entityId;
         storageIndexData.name                = name;
         storageIndexData.dateTime            = dateTime;
         storageIndexData.size                = size;
@@ -1297,7 +1303,7 @@ class TabRestore
       else
       {
         storageIndexData = new StorageIndexData(storageId,
-                                                jobId,
+                                                entityId,
                                                 name,
                                                 dateTime,
                                                 size,
@@ -1322,9 +1328,9 @@ class TabRestore
       {
         uuidIndexDataMap.remove((UUIDIndexData)indexData);
       }
-      else if (indexData instanceof JobIndexData)
+      else if (indexData instanceof EntityIndexData)
       {
-        jobIndexDataMap.remove((JobIndexData)indexData);
+        entityIndexDataMap.remove((EntityIndexData)indexData);
       }
       else if (indexData instanceof StorageIndexData)
       {
@@ -1337,14 +1343,14 @@ class TabRestore
    * @param storageIndexData data of tree item
    * @return index in tree
    */
-  private int findStorageTreeIndex(TreeItem treeItem, JobIndexData jobIndexData)
+  private int findStorageTreeIndex(TreeItem treeItem, EntityIndexData entityIndexData)
   {
-    TreeItem               treeItems[]            = treeItem.getItems();
-    JobIndexDataComparator jobIndexDataComparator = new JobIndexDataComparator(widgetStorageTree);
+    TreeItem                  treeItems[]               = treeItem.getItems();
+    EntityIndexDataComparator entityIndexDataComparator = new EntityIndexDataComparator(widgetStorageTree);
 
     int index = 0;
     while (   (index < treeItems.length)
-           && (jobIndexDataComparator.compare(jobIndexData,(JobIndexData)treeItems[index].getData()) > 0)
+           && (entityIndexDataComparator.compare(entityIndexData,(EntityIndexData)treeItems[index].getData()) > 0)
           )
     {
       index++;
@@ -1423,15 +1429,15 @@ class TabRestore
               updateUUIDTreeItems(uuidTreeItems);
             }
 
-            HashSet<TreeItem> jobTreeItems = new HashSet<TreeItem>();
+            HashSet<TreeItem> entityTreeItems = new HashSet<TreeItem>();
             if (!triggeredFlag)
             {
-              updateJobTreeItems(uuidTreeItems,jobTreeItems);
+              updateEntityTreeItems(uuidTreeItems,entityTreeItems);
             }
 
             if (!triggeredFlag)
             {
-              updateStorageTreeItems(jobTreeItems);
+              updateStorageTreeItems(entityTreeItems);
             }
 
             if (!triggeredFlag)
@@ -1629,14 +1635,16 @@ class TabRestore
         {
           try
           {
-            String uuid             = resultMap.getString("uuid"            );
+            String jobUUID          = resultMap.getString("jobUUID"         );
+            String scheduleUUID     = resultMap.getString("scheduleUUID"    );
             String name             = resultMap.getString("name"            );
             long   lastDateTime     = resultMap.getLong  ("lastDateTime"    );
             long   totalSize        = resultMap.getLong  ("totalSize"       );
             String lastErrorMessage = resultMap.getString("lastErrorMessage");
 
             // add/update index map
-            final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(uuid,
+            final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
+                                                                                 scheduleUUID,
                                                                                  name,
                                                                                  lastDateTime,
                                                                                  totalSize,
@@ -1717,13 +1725,13 @@ class TabRestore
       });
     }
 
-    /** update job tree items
+    /** update entity tree items
      * @param uuidTreeItem UUID tree item to update
-     * @param jobTreeItems updated job tree items
+     * @param entityTreeItems updated job tree items
      */
-    private void updateJobTreeItems(final TreeItem uuidTreeItem, final HashSet<TreeItem> jobTreeItems)
+    private void updateEntityTreeItems(final TreeItem uuidTreeItem, final HashSet<TreeItem> entityTreeItems)
     {
-      final HashSet<TreeItem> removeJobTreeItemSet = new HashSet<TreeItem>();
+      final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
       Command                 command;
       String[]                resultErrorMessage   = new String[1];
       ValueMap                resultMap            = new ValueMap();
@@ -1738,8 +1746,8 @@ class TabRestore
 
           for (TreeItem treeItem : uuidTreeItem.getItems())
           {
-            assert treeItem.getData() instanceof JobIndexData;
-            removeJobTreeItemSet.add(treeItem);
+            assert treeItem.getData() instanceof EntityIndexData;
+            removeEntityTreeItemSet.add(treeItem);
           }
 
           uuidIndexData[0] = (UUIDIndexData)uuidTreeItem.getData();
@@ -1747,9 +1755,9 @@ class TabRestore
       });
       if (triggeredFlag) return;
 
-      // update job list
-      command = BARServer.runCommand(StringParser.format("INDEX_JOB_LIST uuid=%'S pattern=%'S",
-                                                         uuidIndexData[0].uuid,
+      // update entity list
+      command = BARServer.runCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S pattern=%'S",
+                                                         uuidIndexData[0].jobUUID,
                                                          (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
                                                         ),
                                      0
@@ -1764,51 +1772,52 @@ class TabRestore
         {
           try
           {
-            long         jobId            = resultMap.getLong  ("jobId"                  );
-            String       uuid             = resultMap.getString("uuid"                   );
+            long         entityId         = resultMap.getLong  ("entityId"               );
+            String       jobUUID          = resultMap.getString("jobUUID"                );
+            String       scheduleUUID     = resultMap.getString("scheduleUUID"           );
             ArchiveTypes archiveType      = resultMap.getEnum  ("type",ArchiveTypes.class);
             long         lastDateTime     = resultMap.getLong  ("lastDateTime"           );
             long         totalSize        = resultMap.getLong  ("totalSize"              );
             String       lastErrorMessage = resultMap.getString("lastErrorMessage"       );
 
             // add/update job data index
-            final JobIndexData jobIndexData = indexDataMap.updateJobIndexData(jobId,
-                                                                              archiveType,
-                                                                              lastDateTime,
-                                                                              totalSize,
-                                                                              lastErrorMessage
-                                                                             );
+            final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
+                                                                                       archiveType,
+                                                                                       lastDateTime,
+                                                                                       totalSize,
+                                                                                       lastErrorMessage
+                                                                                      );
 
             // insert/update tree item
             display.syncExec(new Runnable()
             {
               public void run()
               {
-                TreeItem jobTreeItem = Widgets.getTreeItem(widgetStorageTree,jobIndexData);
-                if (jobTreeItem == null)
+                TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
+                if (entityTreeItem == null)
                 {
                   // insert tree item
-                  jobTreeItem = Widgets.insertTreeItem(uuidTreeItem,
-                                                       findStorageTreeIndex(uuidTreeItem,jobIndexData),
-                                                       (Object)jobIndexData,
-                                                       true
-                                                      );
-                  jobIndexData.setTreeItem(jobTreeItem);
+                  entityTreeItem = Widgets.insertTreeItem(uuidTreeItem,
+                                                          findStorageTreeIndex(uuidTreeItem,entityIndexData),
+                                                          (Object)entityIndexData,
+                                                          true
+                                                         );
+                  entityIndexData.setTreeItem(entityTreeItem);
                 }
                 else
                 {
-                  assert jobTreeItem.getData() instanceof JobIndexData;
+                  assert entityTreeItem.getData() instanceof EntityIndexData;
 
                   // keep tree item
-                  removeJobTreeItemSet.remove(jobTreeItem);
+                  removeEntityTreeItemSet.remove(entityTreeItem);
                 }
-                if (jobTreeItem.getExpanded())
+                if (entityTreeItem.getExpanded())
                 {
-                  jobTreeItems.add(jobTreeItem);
+                  entityTreeItems.add(entityTreeItem);
                 }
 
                 // update view
-                jobIndexData.update();
+                entityIndexData.update();
               }
             });
           }
@@ -1827,7 +1836,7 @@ class TabRestore
       {
         public void run()
         {
-          for (TreeItem treeItem : removeJobTreeItemSet)
+          for (TreeItem treeItem : removeEntityTreeItemSet)
           {
             IndexData indexData = (IndexData)treeItem.getData();
             Widgets.removeTreeItem(widgetStorageTree,treeItem);
@@ -1837,24 +1846,24 @@ class TabRestore
       });
     }
 
-    /** update job tree items
+    /** update entity tree items
      * @param uuidTreeItems UUID tree items to update
-     * @param jobTreeItems updated job tree items
+     * @param entityTreeItems updated job tree items
      */
-    private void updateJobTreeItems(final HashSet<TreeItem> uuidTreeItems, final HashSet<TreeItem> jobTreeItems)
+    private void updateEntityTreeItems(final HashSet<TreeItem> uuidTreeItems, final HashSet<TreeItem> entityTreeItems)
     {
-      jobTreeItems.clear();
+      entityTreeItems.clear();
 
       for (final TreeItem uuidTreeItem : uuidTreeItems)
       {
-        updateJobTreeItems(uuidTreeItem,jobTreeItems);
+        updateEntityTreeItems(uuidTreeItem,entityTreeItems);
       }
     }
 
     /** update storage tree items
-     * @param jobTreeItem job tree item to update
+     * @param entityTreeItem job tree item to update
      */
-    private void updateStorageTreeItems(final TreeItem jobTreeItem)
+    private void updateStorageTreeItems(final TreeItem entityTreeItem)
     {
       final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
       Command                 command;
@@ -1862,25 +1871,25 @@ class TabRestore
       ValueMap                resultMap             = new ValueMap();
 
       // get storage items, job index data
-      final JobIndexData jobIndexData[] = new JobIndexData[1];
+      final EntityIndexData entityIndexData[] = new EntityIndexData[1];
       display.syncExec(new Runnable()
       {
         public void run()
         {
-          for (TreeItem treeItem : jobTreeItem.getItems())
+          for (TreeItem treeItem : entityTreeItem.getItems())
           {
             assert treeItem.getData() instanceof StorageIndexData;
             removeStorageTreeItemSet.add(treeItem);
           }
 
-          jobIndexData[0] = (JobIndexData)jobTreeItem.getData();
+          entityIndexData[0] = (EntityIndexData)entityTreeItem.getData();
         }
       });
       if (triggeredFlag) return;
 
       // update storage list
-      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST jobId=%d maxCount=%d indexState=%s indexMode=%s pattern=%'S",
-                                                         jobIndexData[0].jobId,
+      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexState=%s indexMode=%s pattern=%'S",
+                                                         entityIndexData[0].entityId,
                                                          -1,
                                                          "*",
                                                          "*",
@@ -1899,8 +1908,9 @@ class TabRestore
           try
           {
             long        storageId           = resultMap.getLong  ("storageId"                   );
-            String      uuid                = resultMap.getString("uuid"                        );
-            long        jobId               = resultMap.getLong  ("jobId"                       );
+            long        entityId            = resultMap.getLong  ("entityId"                    );
+            String      jobUUID             = resultMap.getString("jobUUID"                     );
+            String      scheduleUUID        = resultMap.getString("scheduleUUID"                );
             String      name                = resultMap.getString("name"                        );
             long        dateTime            = resultMap.getLong  ("dateTime"                    );
             long        size                = resultMap.getLong  ("size"                        );
@@ -1911,7 +1921,7 @@ class TabRestore
 
             // add/update storage data
             final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-                                                                                          jobId,
+                                                                                          entityId,
                                                                                           name,
                                                                                           dateTime,
                                                                                           size,
@@ -1931,8 +1941,8 @@ class TabRestore
                 if (storageTreeItem == null)
                 {
                   // insert tree item
-                  storageTreeItem = Widgets.insertTreeItem(jobTreeItem,
-                                                           findStorageTreeIndex(jobTreeItem,storageIndexData),
+                  storageTreeItem = Widgets.insertTreeItem(entityTreeItem,
+                                                           findStorageTreeIndex(entityTreeItem,storageIndexData),
                                                            (Object)storageIndexData,
                                                            false
                                                           );
@@ -1975,13 +1985,13 @@ class TabRestore
     }
 
     /** update storage tree items
-     * @param jobTreeItems job tree items to update
+     * @param entityTreeItems job tree items to update
      */
-    private void updateStorageTreeItems(final HashSet<TreeItem> jobTreeItems)
+    private void updateStorageTreeItems(final HashSet<TreeItem> entityTreeItems)
     {
-      for (final TreeItem jobTreeItem : jobTreeItems)
+      for (final TreeItem entityTreeItem : entityTreeItems)
       {
-        updateStorageTreeItems(jobTreeItem);
+        updateStorageTreeItems(entityTreeItem);
       }
     }
 
@@ -1992,9 +2002,9 @@ class TabRestore
     {
       if      (treeItem.getData() instanceof UUIDIndexData)
       {
-        updateStorageThread.updateJobTreeItems(treeItem,new HashSet<TreeItem>());
+        updateStorageThread.updateEntityTreeItems(treeItem,new HashSet<TreeItem>());
       }
-      else if (treeItem.getData() instanceof JobIndexData)
+      else if (treeItem.getData() instanceof EntityIndexData)
       {
         updateStorageThread.updateStorageTreeItems(treeItem);
       }
@@ -2023,7 +2033,7 @@ class TabRestore
       if (triggeredFlag) return;
 
       // update storage table
-      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST jobId=* maxCount=%d indexState=%s indexMode=%s pattern=%'S",
+      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* maxCount=%d indexState=%s indexMode=%s pattern=%'S",
                                                          storageMaxCount,
                                                          storageIndexStateSet.nameList("|"),
                                                          "*",
@@ -2042,8 +2052,9 @@ class TabRestore
           try
           {
             long        storageId           = resultMap.getLong  ("storageId"                   );
-            long        jobId               = resultMap.getLong  ("jobId"                       );
-            String      uuid                = resultMap.getString("uuid"                        );
+            long        entityId            = resultMap.getLong  ("entityId"                    );
+            String      jobUUID             = resultMap.getString("jobUUID"                     );
+            String      scheduleUUID        = resultMap.getString("scheduleUUID"                );
             String      name                = resultMap.getString("name"                        );
             long        dateTime            = resultMap.getLong  ("dateTime"                    );
             long        size                = resultMap.getLong  ("size"                        );
@@ -2054,7 +2065,7 @@ class TabRestore
 
             // add/update to index map
             final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-                                                                                          jobId,
+                                                                                          entityId,
                                                                                           name,
                                                                                           dateTime,
                                                                                           size,
@@ -3176,7 +3187,7 @@ break;
           if (treeItem != null)
           {
             if      (   (treeItem.getData() instanceof UUIDIndexData)
-                     || (treeItem.getData() instanceof JobIndexData)
+                     || (treeItem.getData() instanceof EntityIndexData)
                     )
             {
               // expand/collaps sub-tree
@@ -3222,14 +3233,14 @@ break;
             {
               if (treeItem.getExpanded())
               {
-                for (TreeItem jobTreeItem : treeItem.getItems())
+                for (TreeItem entityTreeItem : treeItem.getItems())
                 {
-                  JobIndexData jobIndexData = (JobIndexData)jobTreeItem.getData();
-                  jobIndexData.setChecked(indexData.isChecked());
+                  EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
+                  entityIndexData.setChecked(indexData.isChecked());
 
-                  if (jobTreeItem.getExpanded())
+                  if (entityTreeItem.getExpanded())
                   {
-                    for (TreeItem storageTreeItem : jobTreeItem.getItems())
+                    for (TreeItem storageTreeItem : entityTreeItem.getItems())
                     {
                       StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
                       storageIndexData.setChecked(indexData.isChecked());
@@ -3238,7 +3249,7 @@ break;
                 }
               }
             }
-            else if (indexData instanceof JobIndexData)
+            else if (indexData instanceof EntityIndexData)
             {
               if (treeItem.getExpanded())
               {
@@ -3282,10 +3293,10 @@ break;
           // show if tree item available and mouse is in the left side
           if ((treeItem != null) && (mouseEvent.x < 64))
           {
-            if      (treeItem.getData() instanceof JobIndexData)
+            if      (treeItem.getData() instanceof EntityIndexData)
             {
-              JobIndexData jobIndexData = (JobIndexData)treeItem.getData();
-              Label        label;
+              EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
+              Label           label;
 
               final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
               final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
@@ -3316,7 +3327,7 @@ break;
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,0,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,jobIndexData.name);
+              label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.name);
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,0,1,TableLayoutData.WE);
@@ -3326,7 +3337,7 @@ break;
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,1,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(jobIndexData.dateTime*1000)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(entityIndexData.dateTime*1000)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,1,1,TableLayoutData.WE);
@@ -3336,7 +3347,7 @@ break;
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),jobIndexData.size,Units.formatByteSize(jobIndexData.size)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),entityIndexData.size,Units.formatByteSize(entityIndexData.size)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,1,TableLayoutData.WE);
@@ -3346,7 +3357,7 @@ break;
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,3,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,jobIndexData.errorMessage);
+              label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.errorMessage);
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,3,1,TableLayoutData.WE);
@@ -4533,22 +4544,22 @@ break;
           UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
           if (uuidIndexData.isChecked())
           {
-            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD uuid=%'S",uuidIndexData.uuid),0);
+            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD jobUUID=%'S",uuidIndexData.jobUUID),0);
           }
 
           if (uuidTreeItem.getExpanded())
           {
-            for (TreeItem jobTreeItem : uuidTreeItem.getItems())
+            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
             {
-              JobIndexData jobIndexData = (JobIndexData)jobTreeItem.getData();
-              if (jobIndexData.isChecked())
+              EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
+              if (entityIndexData.isChecked())
               {
-                BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD jobId=%d",jobIndexData.jobId),0);
+                BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD entityId=%d",entityIndexData.entityId),0);
               }
 
-              if (jobTreeItem.getExpanded())
+              if (entityTreeItem.getExpanded())
               {
-                for (TreeItem storageTreeItem : jobTreeItem.getItems())
+                for (TreeItem storageTreeItem : entityTreeItem.getItems())
                 {
                   StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
                   if (storageIndexData.isChecked())
@@ -4590,14 +4601,14 @@ break;
 
           if (uuidTreeItem.getExpanded())
           {
-            for (TreeItem jobTreeItem : uuidTreeItem.getItems())
+            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
             {
-              JobIndexData jobIndexData = (JobIndexData)uuidTreeItem.getData();
-              jobIndexData.setChecked(checked);
+              EntityIndexData entityIndexData = (EntityIndexData)uuidTreeItem.getData();
+              entityIndexData.setChecked(checked);
 
-              if (jobTreeItem.getExpanded())
+              if (entityTreeItem.getExpanded())
               {
-                for (TreeItem storageTreeItem : jobTreeItem.getItems())
+                for (TreeItem storageTreeItem : entityTreeItem.getItems())
                 {
                   StorageIndexData storageIndexData = (StorageIndexData)uuidTreeItem.getData();
                   storageIndexData.setChecked(checked);
@@ -4683,16 +4694,16 @@ break;
           }
           else if (uuidTreeItem.getExpanded())
           {
-            for (TreeItem jobTreeItem : uuidTreeItem.getItems())
+            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
             {
-              indexData = (IndexData)jobTreeItem.getData();
-              if      (!jobTreeItem.getGrayed() && indexData.isChecked())
+              indexData = (IndexData)entityTreeItem.getData();
+              if      (!entityTreeItem.getGrayed() && indexData.isChecked())
               {
                 indexDataHashSet.add(indexData);
               }
-              else if (jobTreeItem.getExpanded())
+              else if (entityTreeItem.getExpanded())
               {
-                for (TreeItem storageTreeItem : jobTreeItem.getItems())
+                for (TreeItem storageTreeItem : entityTreeItem.getItems())
                 {
                   indexData = (IndexData)storageTreeItem.getData();
                   if (!storageTreeItem.getGrayed() && indexData.isChecked())
@@ -4748,7 +4759,7 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
           if      (indexData instanceof UUIDIndexData)
           {
           }
-          else if (indexData instanceof JobIndexData)
+          else if (indexData instanceof EntityIndexData)
           {
           }
           else if (indexData instanceof StorageIndexData)
@@ -4761,11 +4772,11 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
         {
           if (uuidTreeItem.getExpanded())
           {
-            for (TreeItem jobTreeItem : uuidTreeItem.getItems())
+            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
             {
-              if (jobTreeItem.getExpanded())
+              if (entityTreeItem.getExpanded())
               {
-                for (TreeItem storageTreeItem : jobTreeItem.getItems())
+                for (TreeItem storageTreeItem : entityTreeItem.getItems())
                 {
                   StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
                   if (!storageTreeItem.getGrayed())
@@ -4838,7 +4849,7 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
   }
 
   /** find index for insert of item in sorted storage data list
-   * @param jobIndexData data of tree item
+   * @param entityIndexData data of tree item
    * @return index in tree
    */
   private int findStorageTreeIndex(UUIDIndexData uuidIndexData)
@@ -4893,23 +4904,23 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
       if      (treeItem.getData() instanceof UUIDIndexData)
       {
         // get job index data
-        final HashSet<TreeItem> removeJobTreeItemSet = new HashSet<TreeItem>();
+        final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
         display.syncExec(new Runnable()
         {
           public void run()
           {
-            for (TreeItem jobTreeItem : treeItem.getItems())
+            for (TreeItem entityTreeItem : treeItem.getItems())
             {
-              assert jobTreeItem.getData() instanceof JobIndexData;
-              removeJobTreeItemSet.add(jobTreeItem);
+              assert entityTreeItem.getData() instanceof EntityIndexData;
+              removeEntityTreeItemSet.add(entityTreeItem);
             }
           }
         });
 
         // update job list
         UUIDIndexData uuidIndexData = (UUIDIndexData)treeItem.getData();
-        Command command = BARServer.runCommand(StringParser.format("INDEX_JOB_LIST uuid=%'S pattern=%'S",
-                                                                   uuidIndexData.uuid,
+        Command command = BARServer.runCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S pattern=%'S",
+                                                                   uuidIndexData.jobUUID,
                                                                    (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
                                                                   ),
                                                0
@@ -4924,47 +4935,48 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
           {
             try
             {
-              long         jobId            = resultMap.getLong  ("jobId"                  );
-              String       uuid             = resultMap.getString("uuid"                   );
+              long         entityId         = resultMap.getLong  ("entityId"               );
+              String       jobUUID          = resultMap.getString("jobUUID"                );
+              String       scheuduleUUID    = resultMap.getString("scheduleUUID"           );
               ArchiveTypes archiveType      = resultMap.getEnum  ("type",ArchiveTypes.class);
               long         lastDateTime     = resultMap.getLong  ("lastDateTime"           );
               long         totalSize        = resultMap.getLong  ("totalSize"              );
               String       lastErrorMessage = resultMap.getString("lastErrorMessage"       );
 
               // add/update job data index
-              final JobIndexData jobIndexData = indexDataMap.updateJobIndexData(jobId,
-                                                                                archiveType,
-                                                                                lastDateTime,
-                                                                                totalSize,
-                                                                                lastErrorMessage
-                                                                               );
+              final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
+                                                                                         archiveType,
+                                                                                         lastDateTime,
+                                                                                         totalSize,
+                                                                                         lastErrorMessage
+                                                                                        );
 
               // insert/update tree item
               display.syncExec(new Runnable()
               {
                 public void run()
                 {
-                  TreeItem jobTreeItem = Widgets.getTreeItem(widgetStorageTree,jobIndexData);
-                  if (jobTreeItem == null)
+                  TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
+                  if (entityTreeItem == null)
                   {
                     // insert tree item
-                    jobTreeItem = Widgets.insertTreeItem(treeItem,
-                                                         findStorageTreeIndex(treeItem,jobIndexData),
-                                                         (Object)jobIndexData,
-                                                         true
-                                                        );
-                    jobIndexData.setTreeItem(jobTreeItem);
+                    entityTreeItem = Widgets.insertTreeItem(treeItem,
+                                                            findStorageTreeIndex(treeItem,entityIndexData),
+                                                            (Object)entityIndexData,
+                                                            true
+                                                           );
+                    entityIndexData.setTreeItem(entityTreeItem);
                   }
                   else
                   {
-                    assert jobTreeItem.getData() instanceof JobIndexData;
+                    assert entityTreeItem.getData() instanceof EntityIndexData;
 
                     // keep tree item
-                    removeJobTreeItemSet.remove(jobTreeItem);
+                    removeEntityTreeItemSet.remove(entityTreeItem);
                   }
 
                   // update view
-                  jobIndexData.update();
+                  entityIndexData.update();
                 }
               });
             }
@@ -4983,7 +4995,7 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
         {
           public void run()
           {
-            for (TreeItem treeItem : removeJobTreeItemSet)
+            for (TreeItem treeItem : removeEntityTreeItemSet)
             {
               IndexData indexData = (IndexData)treeItem.getData();
               Widgets.removeTreeItem(widgetStorageTree,treeItem);
@@ -4992,7 +5004,7 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
           }
         });
       }
-      else if (treeItem.getData() instanceof JobIndexData)
+      else if (treeItem.getData() instanceof EntityIndexData)
       {
         // get job index data
         final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
@@ -5010,9 +5022,9 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
 
 
         // update storage list
-        JobIndexData jobIndexData = (JobIndexData)treeItem.getData();
-        Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST jobId=%d maxCount=%d indexState=%s indexMode=%s pattern=%'S",
-                                                                   jobIndexData.jobId,
+        EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
+        Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexState=%s indexMode=%s pattern=%'S",
+                                                                   entityIndexData.entityId,
                                                                    -1,
                                                                    "*",
                                                                    "*",
@@ -5031,8 +5043,8 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
             try
             {
               long        storageId           = resultMap.getLong  ("storageId"                   );
-              String      uuid                = resultMap.getString("uuid"                        );
-              long        jobId               = resultMap.getLong  ("jobId"                       );
+              long        entityId            = resultMap.getLong  ("entityId"                    );
+              String      jobUUID             = resultMap.getString("jobUUID"                     );
               String      name                = resultMap.getString("name"                        );
               long        dateTime            = resultMap.getLong  ("dateTime"                    );
               long        size                = resultMap.getLong  ("size"                        );
@@ -5043,7 +5055,7 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
 
               // add/update storage data
               final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-                                                                                            jobId,
+                                                                                            entityId,
                                                                                             name,
                                                                                             dateTime,
                                                                                             size,
@@ -5179,17 +5191,17 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
                 int errorCode = Errors.UNKNOWN;
                 if      (indexData instanceof UUIDIndexData)
                 {
-                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE uuid=%'S",
-                                                                           ((UUIDIndexData)indexData).uuid
+                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE jobUUID=%'S",
+                                                                           ((UUIDIndexData)indexData).jobUUID
                                                                           ),
                                                        0,
                                                        resultErrorMessage
                                                       );
                 }
-                else if (indexData instanceof JobIndexData)
+                else if (indexData instanceof EntityIndexData)
                 {
-                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE jobId=%d",
-                                                                           ((JobIndexData)indexData).jobId
+                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE entityId=%d",
+                                                                           ((EntityIndexData)indexData).entityId
                                                                           ),
                                                        0,
                                                        resultErrorMessage
@@ -5448,17 +5460,17 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
                 int errorCode = Errors.UNKNOWN;
                 if      (indexData instanceof UUIDIndexData)
                 {
-                  errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* uuid=%'S",
-                                                                           ((UUIDIndexData)indexData).uuid
+                  errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* jobUUID=%'S",
+                                                                           ((UUIDIndexData)indexData).jobUUID
                                                                           ),
                                                        0,
                                                        resultErrorMessage
                                                       );
                 }
-                else if (indexData instanceof JobIndexData)
+                else if (indexData instanceof EntityIndexData)
                 {
-                  errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* jobId=%d",
-                                                                           ((JobIndexData)indexData).jobId
+                  errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* entityId=%d",
+                                                                           ((EntityIndexData)indexData).entityId
                                                                           ),
                                                        0,
                                                        resultErrorMessage
@@ -5693,19 +5705,19 @@ Dprintf.dprintf("");
             int errorCode = Errors.UNKNOWN;
             if      (indexData instanceof UUIDIndexData)
             {
-              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s uuid=%'S",
+              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s jobUUID=%'S",
                                                                        "*",
-                                                                       ((UUIDIndexData)indexData).uuid
+                                                                       ((UUIDIndexData)indexData).jobUUID
                                                                       ),
                                                    0,
                                                    resultErrorMessage
                                                   );
             }
-            else if (indexData instanceof JobIndexData)
+            else if (indexData instanceof EntityIndexData)
             {
-              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s jobId=%d",
+              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s entityId=%d",
                                                                        "*",
-                                                                       ((JobIndexData)indexData).jobId
+                                                                       ((EntityIndexData)indexData).entityId
                                                                       ),
                                                    0,
                                                    resultErrorMessage
