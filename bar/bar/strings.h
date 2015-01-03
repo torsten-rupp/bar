@@ -138,7 +138,7 @@ typedef struct
 
 #ifndef NDEBUG
   #define STRING_CHECKSUM(length,maxLength,data) \
-    ((ulong)(length^(ulong)maxLength^(ulong)data))
+    ((ulong)((length)^(ulong)(maxLength)^(ulong)(data)))
 
   #define STRING_IS_ASSIGNABLE(string) \
     (((string)->type == STRING_TYPE_DYNAMIC) || ((string)->type == STRING_TYPE_STATIC))
