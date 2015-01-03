@@ -1033,7 +1033,7 @@ bool ConfigValue_getInteger64Value(int64                 *value,
 void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
                             const ConfigValue      *configValue,
                             ConfigValueFormatModes mode,
-                            void                   *variable
+                            const void             *variable
                            )
 {
   assert(configValueFormat != NULL);

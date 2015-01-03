@@ -235,7 +235,7 @@ typedef struct
   void                   *formatUserData;         // user data for special value call back
   void                   *userData;
   const ConfigValue      *configValue;            // config value to format
-  void                   *variable;               // config value variable
+  const void             *variable;               // config value variable
   ConfigValueFormatModes mode;
   bool                   endOfDataFlag;           // TRUE iff no more data
 } ConfigValueFormat;
@@ -1067,7 +1067,7 @@ bool ConfigValue_getInteger64Value(int64                 *value,
 void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
                             const ConfigValue      *configValue,
                             ConfigValueFormatModes mode,
-                            void                   *variable
+                            const void             *variable
                            );
 
 /***********************************************************************\
