@@ -102,7 +102,7 @@ typedef struct
 #define __STATIC_STRING_IDENTIFIER2(name,n) __##name##n
 #ifndef NDEBUG
   #define __StaticString(name,length,n) \
-    char __STATIC_STRING_IDENTIFIER1(data,n)[length+1] = { [0] = '\0' }; \
+    char __STATIC_STRING_IDENTIFIER1(data,n)[(length)+1] = { [0] = '\0' }; \
     struct __String __STATIC_STRING_IDENTIFIER1(string,n) = \
     { \
       0, \
@@ -111,10 +111,10 @@ typedef struct
       __STATIC_STRING_IDENTIFIER1(data,n), \
       STRING_CHECKSUM(0,(length)+1,__STATIC_STRING_IDENTIFIER1(data,n)) \
     }; \
-    String name = &__STATIC_STRING_IDENTIFIER1(string,n)
+    String name = &(__STATIC_STRING_IDENTIFIER1(string,n))
 #else /* NDEBUG */
   #define __StaticString(name,length,n) \
-    char __STATIC_STRING_IDENTIFIER1(data,n)[length+1] = { [0] = '\0' }; \
+    char __STATIC_STRING_IDENTIFIER1(data,n)[(length)+1] = { [0] = '\0' }; \
     struct __String __STATIC_STRING_IDENTIFIER1(string,n) = \
     { \
       0, \
@@ -122,7 +122,7 @@ typedef struct
       STRING_TYPE_STATIC, \
       __STATIC_STRING_IDENTIFIER1(data,n) \
     }; \
-    String name = &__STATIC_STRING_IDENTIFIER1(string,n)
+    String name = &(__STATIC_STRING_IDENTIFIER1(string,n))
 #endif /* not NDEBUG */
 
 // debugging
