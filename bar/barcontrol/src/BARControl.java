@@ -1350,11 +1350,13 @@ public class BARControl
     tabStatus.setTabJobs(tabJobs);
     tabJobs.setTabStatus(tabStatus);
 
+    // start auto update
+    tabStatus.startUpdate();
+
     // pre-select job
     if (selectedJobName != null)
     {
       tabStatus.selectJob(selectedJobName);
-      tabJobs.selectJob(selectedJobName);
     }
 
     // add tab listener
