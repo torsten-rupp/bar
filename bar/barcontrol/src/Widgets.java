@@ -1000,64 +1000,7 @@ class WidgetEventListener
   }
 }
 
-/** select item for combo/enum select/option menu
- */
-class SelectItem
-{
-  String text;
-  Object data;
-
-  /** create select item
-   * @param text item text
-   * @param data item data
-   */
-  SelectItem(String text, Object data)
-  {
-    this.text = text;
-    this.data = data;
-  }
-
-  /** get int from select item
-   * @return int
-   */
-  int getInt()
-  {
-    return (Integer)data;
-  }
-
-  /** get int from select item
-   * @return long
-   */
-  long getLong()
-  {
-    return (Long)data;
-  }
-
-  /** get float from select item
-   * @return float
-   */
-  float getFloat()
-  {
-    return (Float)data;
-  }
-
-  /** get double from select item
-   * @return double
-   */
-  double getDouble()
-  {
-    return (Double)data;
-  }
-
-  /** get string from select item
-   * @return string
-   */
-  String getString()
-  {
-    return (String)data;
-  }
-}
-
+//????
 /** list data entry
  */
 class ListItem
@@ -3294,11 +3237,11 @@ e composite widget
 
   /** get insert position in sorted list
    * @param list list
-   * @param comparator table data comparator
    * @param data data
+   * @param comparator table data comparator
    * @return index in list
    */
-  public static int getListIndex(List list, Comparator comparator, Object data)
+  public static int getListItemIndex(List list, Object data, Comparator comparator)
   {
     int index = 0;
 
@@ -3306,15 +3249,50 @@ e composite widget
     {
       ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
 
-      // find insert index
-      boolean foundFlag = false;
-      while ((index < listItems.size()) && !foundFlag)
+      for (int i = 0; i < listItems.size(); i++)
       {
         if (comparator != String.CASE_INSENSITIVE_ORDER)
-          foundFlag = (comparator.compare(listItems.get(index).data,data) > 0);
+        {
+          if (comparator.compare(listItems.get(index).data,data) > 0)
+          {
+            index = i;
+            break;
+          }
+        }
         else
-          foundFlag = (comparator.compare(listItems.get(index).text,data) > 0);
-        if (!foundFlag) index++;
+        {
+          if (comparator.compare(listItems.get(index).text,data) > 0)
+          {
+            index = i;
+            break;
+          }
+        }
+      }
+    }
+
+    return index;
+  }
+
+  /** get list item
+   * @param list list
+   * @param data data
+   * @return index in list
+   */
+  public static int getListItemIndex(List list, Object data)
+  {
+    int index = 0;
+
+    if (!list.isDisposed())
+    {
+      ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
+
+      for (int i = 0; i < listItems.size(); i++)
+      {
+        if (listItems.get(index).data == data)
+        {
+          index = i;
+          break;
+        }
       }
     }
 
@@ -3378,7 +3356,7 @@ e composite widget
         {
           ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
 
-          int index = getListIndex(list,comparator,data);
+          int index = getListItemIndex(list,data,comparator);
           list.add(text,index);
           listItems.add(index,listItem);
         }
@@ -3649,10 +3627,6 @@ e composite widget
   public static Object getListItem(List list, int index)
   {
     ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
-    if ((index < 0) || (index >= listItems.size()))
-    {
-      throw new IndexOutOfBoundsException();
-    }
 
     return listItems.get(index).data;
   }
@@ -3688,7 +3662,138 @@ e composite widget
   {
     ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
 
-    return getListEntries(list,(T[])Array.newInstance(clazz,listItems.size()));
+    T[] array = (T[])Array.newInstance(clazz,listItems.size());
+    for (int i = 0; i < listItems.size(); i++)
+    {
+      array[i] = (T)listItems.get(i);
+    }
+
+    return array;
+  }
+
+  /** set selected combo item
+   * @param combo combo
+   * @return selected combo item data
+   */
+  public static <T> T getSelectedListItem(final List list)
+  {
+    final Object data[] = new Object[1];
+
+    if (!list.isDisposed())
+    {
+      list.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!list.isDisposed())
+          {
+            ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
+            data[0] = listItems.get(list.getSelectionIndex());
+          }
+        }
+      });
+    }
+
+    return (T)data[0];
+  }
+
+  /** set selected combo items
+   * @param combo combo
+   * @param clazz data type class
+   * @return selected combo items data
+   */
+  public static <T> T[] getSelectedListItems(final List list, Class clazz)
+  {
+    final ArrayList<Object> dataArray = new ArrayList<Object>();
+
+    if (!list.isDisposed())
+    {
+      list.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!list.isDisposed())
+          {
+            ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
+            for (int index : list.getSelectionIndices())
+            {
+              dataArray.add(listItems.get(index));
+            }
+          }
+        }
+      });
+    }
+
+    T[] array = (T[])Array.newInstance(clazz,dataArray.size());
+    for (int i = 0; i < dataArray.size(); i++)
+    {
+      array[i] = (T)dataArray.get(i);
+    }
+
+    return array;
+  }
+
+  /** set selected combo item
+   * @param combo combo
+   * @param data item data
+   */
+  public static <T> void setSelectedListItem(final List list, final T data)
+  {
+    if (!list.isDisposed())
+    {
+      list.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!list.isDisposed())
+          {
+            list.deselectAll();
+            ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
+            for (int i = 0; i < listItems.size(); i++)
+            {
+              if (listItems.get(i) == data)
+              {
+                list.select(i);
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** set selected combo items
+   * @param combo combo
+   * @param data items data
+   */
+  public static <T> void setSelectedListItems(final List list, final T data[])
+  {
+    if (!list.isDisposed())
+    {
+      list.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!list.isDisposed())
+          {
+            list.deselectAll();
+            ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
+            for (T _data : data)
+            {
+              for (int i = 0; i < listItems.size(); i++)
+              {
+                if (listItems.get(i) == _data)
+                {
+                  list.select(i);
+                  break;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
   }
 
   //-----------------------------------------------------------------------
@@ -3715,7 +3820,7 @@ e composite widget
     {
       combo.setText((String)getField(data,field));
     }
-    combo.setData(new ArrayList<SelectItem>());
+    combo.setData(new ArrayList<Object>());
 
     combo.addSelectionListener(new SelectionListener()
     {
@@ -3800,19 +3905,73 @@ e composite widget
       {
         public void run()
         {
-          ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
+          ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
 
           combo.removeAll();
-          selectItems.clear();
+          dataArray.clear();
           for (int i = 0; i < items.length/2; i++)
           {
             String text = (String)items[i*2+0];
             Object data = items[i*2+1];
 
-            SelectItem selectItem = new SelectItem(text,data);
             combo.add(text);
-            selectItems.add(selectItem);
+            dataArray.add(data);
           }
+        }
+      });
+    }
+  }
+
+  /** get index of combo item
+   * @param combo combo
+   * @param data item data
+   * @return index or -1
+   */
+  public static <T> int getComboIndex(final Combo combo, final T data)
+  {
+    final int index[] = new int[]{-1};
+
+    if (!combo.isDisposed())
+    {
+      combo.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+
+          for (int i = 0; i < dataArray.size(); i++)
+          {
+            if (dataArray.get(i) == data)
+            {
+              index[0] = i;
+              break;
+            }
+          }
+        }
+      });
+    }
+
+    return index[0];
+  }
+
+  /** insert combo item
+   * @param combo combo
+   * @param index insert index (0..n)
+   * @param data item data
+   * @param text item text
+   */
+  public static void insertComboItem(final Combo combo, final int index, final Object data, final String text)
+  {
+    if (!combo.isDisposed())
+    {
+      combo.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+
+          combo.add(text,index);
+          dataArray.add(index,data);
         }
       });
     }
@@ -3831,11 +3990,42 @@ e composite widget
       {
         public void run()
         {
-          ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
+          ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
 
-          SelectItem selectItem = new SelectItem(text,data);
           combo.add(text);
-          selectItems.add(selectItem);
+          dataArray.add(data);
+        }
+      });
+    }
+  }
+
+  /** update combo item
+   * @param combo combo
+   * @param index index (0..n-1)
+   * @param data item data
+   * @param text item text
+   */
+  public static void updateComboItem(final Combo combo, final int index, final Object data, final String text)
+  {
+    if (!combo.isDisposed())
+    {
+      combo.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!combo.isDisposed())
+          {
+            combo.getDisplay().syncExec(new Runnable()
+            {
+              public void run()
+              {
+                ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+
+                if (!combo.getItem(index).equals(text)) combo.setItem(index,text);
+                dataArray.set(index,data);
+              }
+            });
+          }
         }
       });
     }
@@ -3863,14 +4053,12 @@ e composite widget
           {
             public void run()
             {
-              ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
+              ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
 
-              for (int i = 0; i < selectItems.size(); i++)
+              for (int i = 0; i < dataArray.size(); i++)
               {
-                SelectItem selectItem = selectItems.get(i);
-                if (selectItem.data == data)
+                if (dataArray.get(i) == data)
                 {
-                  selectItem.text = text;
                   combo.setItem(i,text);
                   updatedFlag = true;
                   break;
@@ -3905,9 +4093,9 @@ e composite widget
         {
           if (!combo.isDisposed())
           {
-            ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
+            ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
             combo.remove(index);
-            selectItems.remove(index);
+            dataArray.remove(index);
           }
         }
       });
@@ -3920,27 +4108,10 @@ e composite widget
    */
   public static void removeComboItem(final Combo combo, final Object data)
   {
-    ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
-    for (int i = 0; i < selectItems.size(); i++)
+    ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+    for (int i = 0; i < dataArray.size(); i++)
     {
-      if (selectItems.get(i).data == data)
-      {
-        removeComboItem(combo,i);
-        break;
-      }
-    }
-  }
-
-  /** remove combo item
-   * @param combo combo
-   * @param selectItem combo item to remove
-   */
-  public static void removeComboItem(final Combo combo, final SelectItem selectItem)
-  {
-    ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
-    for (int i = 0; i < selectItems.size(); i++)
-    {
-      if (selectItems.get(i) == selectItem)
+      if (dataArray.get(i) == data)
       {
         removeComboItem(combo,i);
         break;
@@ -3950,13 +4121,13 @@ e composite widget
 
   /** remove combo items
    * @param combo combo
-   * @param selectItems combo items to remove
+   * @param data data of combo items to remove
    */
-  public static void removeComboItems(Combo combo, SelectItem[] selectItems)
+  public static void removeComboItems(Combo combo, Object[] data)
   {
-    for (SelectItem selectItem : selectItems)
+    for (Object _data : data)
     {
-      removeComboItem(combo,selectItem);
+      removeComboItem(combo,_data);
     }
   }
 
@@ -3974,7 +4145,7 @@ e composite widget
           if (!combo.isDisposed())
           {
             combo.removeAll();
-            ((ArrayList<SelectItem>)combo.getData()).clear();
+            ((ArrayList<Object>)combo.getData()).clear();
           }
         }
       });
@@ -3988,13 +4159,9 @@ e composite widget
    */
   public static Object getComboItem(Combo combo, int index)
   {
-    ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
-    if ((index < 0) || (index >= selectItems.size()))
-    {
-      throw new IndexOutOfBoundsException();
-    }
+    ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
 
-    return selectItems.get(index).data;
+    return dataArray.get(index);
   }
 
   /** get combo items
@@ -4004,28 +4171,46 @@ e composite widget
    */
   public static <T> T[] getComboItems(Combo combo, T[] array)
   {
-    ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
+    ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
 
-    if (array.length != selectItems.size())
+    if (array.length != dataArray.size())
     {
-      array = Arrays.copyOf(array,selectItems.size());
+      array = Arrays.copyOf(array,dataArray.size());
     }
 
-    for (int i = 0; i < selectItems.size(); i++)
+    for (int i = 0; i < dataArray.size(); i++)
     {
-      array[i] = (T)(selectItems.get(i).data);
+      array[i] = (T)(dataArray.get(i));
     }
 
     return array;
   }
 
-  /** set selected combo item
+  /** get combo items data
    * @param combo combo
-   * @return selected combo item
+   * @param clazz data type class
+   * @return data array
    */
-  public static SelectItem getSelectedComboItem(final Combo combo)
+  public static <T> T[] getComboItems(Combo combo, Class clazz)
   {
-    final SelectItem selectItem[] = new SelectItem[1];
+    ArrayList<Object> comboItems = (ArrayList<Object>)combo.getData();
+
+    T[] array = (T[])Array.newInstance(clazz,comboItems.size());
+    for (int i = 0; i < comboItems.size(); i++)
+    {
+      array[i] = (T)comboItems.get(i);
+    }
+
+    return array;
+  }
+
+  /** get selected combo item
+   * @param combo combo
+   * @return selected combo item data
+   */
+  public static <T> T getSelectedComboItem(final Combo combo)
+  {
+    final Object data[] = new Object[1];
 
     if (!combo.isDisposed())
     {
@@ -4035,14 +4220,14 @@ e composite widget
         {
           if (!combo.isDisposed())
           {
-            ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
-            selectItem[0] = selectItems.get(combo.getSelectionIndex());
+            ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+            data[0] = dataArray.get(combo.getSelectionIndex());
           }
         }
       });
     }
 
-    return selectItem[0];
+    return (T)data[0];
   }
 
   /** set selected combo item
@@ -4059,10 +4244,10 @@ e composite widget
         {
           if (!combo.isDisposed())
           {
-            ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>)combo.getData();
-            for (int i = 0; i < selectItems.size(); i++)
+            ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+            for (int i = 0; i < dataArray.size(); i++)
             {
-              if (selectItems.get(i).data == data)
+              if (dataArray.get(i) == data)
               {
                 combo.select(i);
                 break;
@@ -4174,9 +4359,30 @@ e composite widget
    * @param combo option menu combo
    * @param items items (array of [text,data])
    */
-  public static void setOptionMenuItems(final Combo combo, Object items[])
+  public static void setOptionMenuItems(Combo combo, Object items[])
   {
     setComboItems(combo,items);
+  }
+
+  /** get insert position
+   * @param combo option menu combo
+   * @param data data
+   * @return index
+   */
+  public static <T> int getOptionMenuIndex(Combo combo, T data)
+  {
+    return getComboIndex(combo,data);
+  }
+
+  /** insert option menu item
+   * @param combo option menu combo
+   * @param index index (0..n)
+   * @param data item data
+   * @param text item text
+   */
+  public static void insertOptionMenuItem(Combo combo, int index, Object data, String text)
+  {
+    insertComboItem(combo,index,data,text);
   }
 
   /** add option menu item
@@ -4187,6 +4393,18 @@ e composite widget
   public static void addOptionMenuItem(Combo combo, Object data, String text)
   {
     addComboItem(combo,data,text);
+  }
+
+  /** update option menu item
+   * @param combo option menu combo
+   * @param index index (0..n-1)
+   * @param data item data
+   * @param text item text
+   * @param true if updated, false if not found
+   */
+  public static void updateOptionMenuItem(Combo combo, int index, Object data, String text)
+  {
+    updateComboItem(combo,index,data,text);
   }
 
   /** update option menu item
@@ -4218,22 +4436,13 @@ e composite widget
     removeComboItem(combo,data);
   }
 
-  /** remove option menu item
-   * @param combo option menu combo
-   * @param selectItem option menu item to remove
-   */
-  public static void removeOptionMenuItem(Combo combo, SelectItem selectItem)
-  {
-    removeComboItem(combo,selectItem);
-  }
-
   /** remove option menu items
    * @param combo option menu combo
-   * @param selectItems option menu items to remove
+   * @param data data of option menu items to remove
    */
-  public static void removeOptionMenuItems(Combo combo, SelectItem[] selectItems)
+  public static void removeOptionMenuItems(Combo combo, Object[] data)
   {
-    removeComboItems(combo,selectItems);
+    removeComboItems(combo,data);
   }
 
   /** remove all option menu items
@@ -4264,11 +4473,21 @@ e composite widget
     return getComboItems(combo,array);
   }
 
+  /** get option menu items
+   * @param combo option menu combo
+   * @param clazz data type class
+   * @return items array
+   */
+  public static <T> T[] getOptionMenuItems(Combo combo, Class clazz)
+  {
+    return getComboItems(combo,clazz);
+  }
+
   /** get selected option menu item
    * @param combo option menu combo
-   * @return selected option menu item
+   * @return selected option menu item data
    */
-  public static SelectItem getSelectedOptionMenuItem(Combo combo)
+  public static <T> T getSelectedOptionMenuItem(Combo combo)
   {
     return getSelectedComboItem(combo);
   }
@@ -4530,6 +4749,37 @@ e composite widget
     {
       tableColumns[z].setWidth(width[z]);
     }
+  }
+
+  /** get index of combo item
+   * @param combo combo
+   * @param data item data
+   * @return index or -1
+   */
+  public static <T> int getTableIndex(final Table table, final T data)
+  {
+    final int index[] = new int[]{-1};
+
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          TableItem tableItems[] = table.getItems();
+          for (int i = 0; i < tableItems.length; i++)
+          {
+            if (tableItems[i].getData() == data)
+            {
+              index[0] = i;
+              break;
+            }
+          }
+        }
+      });
+    }
+
+    return index[0];
   }
 
   /** default table sort selection listener
@@ -5401,6 +5651,69 @@ e composite widget
           if (!table.isDisposed())
           {
             table.removeAll();
+          }
+        }
+      });
+    }
+  }
+
+  /** get selected table item
+   * @param table table
+   * @return selected table item data
+   */
+  public static <T> T getSelectedTableItem(final Table table)
+  {
+    final Object data[] = new Object[1];
+
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!table.isDisposed())
+          {
+            TableItem tableItems[] = table.getSelection();
+            if (tableItems.length > 0)
+            {
+              data[0] = tableItems[0];
+            }
+            else
+            {
+              data[0] = null;
+            }
+          }
+        }
+      });
+    }
+
+    return (T)data[0];
+  }
+
+  /** set selected table item
+   * @param table table
+   * @param data item data
+   */
+  public static <T> void setSelectedTableItem(final Table table, final T data)
+  {
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!table.isDisposed())
+          {
+            table.deselectAll();
+            TableItem tableItems[] = table.getItems();
+            for (TableItem tableItem : tableItems)
+            {
+              if (tableItem.getData() == data)
+              {
+                table.setSelection(tableItem);
+                break;
+              }
+            }
           }
         }
       });
