@@ -90,28 +90,29 @@ typedef enum
 // schedule
 typedef struct
 {
-  int year;                                              // year or SCHEDULE_ANY
-  int month;                                             // month or SCHEDULE_ANY
-  int day;                                               // day or SCHEDULE_ANY
+  int year;                                    // year or SCHEDULE_ANY
+  int month;                                   // month or SCHEDULE_ANY
+  int day;                                     // day or SCHEDULE_ANY
 } ScheduleDate;
 typedef WeekDaySet ScheduleWeekDaySet;
 typedef struct
 {
-  int hour;                                              // hour or SCHEDULE_ANY
-  int minute;                                            // minute or SCHEDULE_ANY
+  int hour;                                    // hour or SCHEDULE_ANY
+  int minute;                                  // minute or SCHEDULE_ANY
 } ScheduleTime;
 typedef struct ScheduleNode
 {
   LIST_NODE_HEADER(struct ScheduleNode);
 
+  String             uuid;                     // unique id
   ScheduleDate       date;
   ScheduleWeekDaySet weekDaySet;
   ScheduleTime       time;
-  ArchiveTypes       archiveType;                        // archive type to create
-  String             customText;                         // custom text
-  uint               minKeep,maxKeep;                    // min./max keep count
-  uint               maxAge;                             // max. age [days]
-  bool               enabledFlag;                        // TRUE iff enabled
+  ArchiveTypes       archiveType;              // archive type to create
+  String             customText;               // custom text
+  uint               minKeep,maxKeep;          // min./max keep count
+  uint               maxAge;                   // max. age [days]
+  bool               enabledFlag;              // TRUE iff enabled
 } ScheduleNode;
 
 typedef struct
@@ -147,9 +148,9 @@ typedef struct JobNode
   uint64       timeModified;                   // file modified date/time (timestamp)
 
   // job config
+  String       uuid;                           // unique id
   JobTypes     jobType;                        // job type: backup, restore
   String       name;                           // name of job
-  String       uuid;                           // unique id
   String       archiveName;                    // archive name
   EntryList    includeEntryList;               // included entries
   PatternList  excludePatternList;             // excluded entry patterns
@@ -169,7 +170,6 @@ typedef struct JobNode
   Password     *cryptPassword;                 // crypt password if password mode is 'ask'
 
   // job info
-  uint         id;                             // unique job id
   JobStates    state;                          // current state of job
   ArchiveTypes archiveType;                    // archive type to create
   String       scheduleTitle;
@@ -431,22 +431,19 @@ typedef struct
   StringMap             argumentMap;
 } CommandMsg;
 
-bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable);
-void configValueFormatDoneScheduleDate(void **formatUserData, void *userData);
-bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line);
-bool configValueParseScheduleWeekDaySet(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-void configValueFormatInitScheduleWeekDaySet(void **formatUserData, void *userData, void *variable);
-void configValueFormatDoneScheduleWeekDaySet(void **formatUserData, void *userData);
-bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *userData, String line);
-bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable);
-void configValueFormatDoneScheduleTime(void **formatUserData, void *userData);
-bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line);
-bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-void configValueFormatInitSchedule(void **formatUserData, void *userData, void *variable);
-void configValueFormatDoneSchedule(void **formatUserData, void *userData);
-bool configValueFormatSchedule(void **formatUserData, void *userData, String line);
+LOCAL bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueFormatDoneScheduleDate(void **formatUserData, void *userData);
+LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line);
+LOCAL bool configValueParseScheduleWeekDaySet(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueFormatInitScheduleWeekDaySet(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueFormatDoneScheduleWeekDaySet(void **formatUserData, void *userData);
+LOCAL bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *userData, String line);
+LOCAL bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueFormatDoneScheduleTime(void **formatUserData, void *userData);
+LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line);
+LOCAL bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 LOCAL const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] =
 {
@@ -646,6 +643,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_BOOLEAN  ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
 
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
+  CONFIG_STRUCT_VALUE_STRING   ("UUID",                    ScheduleNode,uuid                               ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("date",                    ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("weekdays",                ScheduleNode,weekDaySet,                        configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
@@ -747,6 +745,7 @@ LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
   UNUSED_VARIABLE(userData);
 
   String_delete(scheduleNode->customText);
+  String_delete(scheduleNode->uuid);
 }
 
 /***********************************************************************\
@@ -767,6 +766,7 @@ LOCAL ScheduleNode *newScheduleNode(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  scheduleNode->uuid        = Misc_getUUID(String_new());
   scheduleNode->date.year   = SCHEDULE_ANY;
   scheduleNode->date.month  = SCHEDULE_ANY;
   scheduleNode->date.day    = SCHEDULE_ANY;
@@ -807,6 +807,7 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  scheduleNode->uuid        = Misc_getUUID(String_new());
   scheduleNode->date.year   = fromScheduleNode->date.year;
   scheduleNode->date.month  = fromScheduleNode->date.month;
   scheduleNode->date.day    = fromScheduleNode->date.day;
@@ -916,7 +917,7 @@ LOCAL int equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleNo
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   bool         errorFlag;
   String       s0,s1,s2;
@@ -969,7 +970,7 @@ bool configValueParseScheduleDate(void *userData, void *variable, const char *na
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable)
+LOCAL void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
@@ -989,7 +990,7 @@ void configValueFormatInitScheduleDate(void **formatUserData, void *userData, vo
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatDoneScheduleDate(void **formatUserData, void *userData)
+LOCAL void configValueFormatDoneScheduleDate(void **formatUserData, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -1010,7 +1011,7 @@ void configValueFormatDoneScheduleDate(void **formatUserData, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line)
+LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line)
 {
   const ScheduleDate *scheduleDate;
 
@@ -1073,7 +1074,7 @@ bool configValueFormatScheduleDate(void **formatUserData, void *userData, String
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseScheduleWeekDaySet(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueParseScheduleWeekDaySet(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   WeekDaySet weekDaySet;
 
@@ -1097,7 +1098,7 @@ bool configValueParseScheduleWeekDaySet(void *userData, void *variable, const ch
 }
 
 /***********************************************************************\
-* Name   : configValueFormatInitSchedule
+* Name   : configValueFormatInitScheduleWeekDaySet
 * Purpose: init format config schedule week day set
 * Input  : userData - user data
 *          variable - config variable
@@ -1107,7 +1108,7 @@ bool configValueParseScheduleWeekDaySet(void *userData, void *variable, const ch
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatInitScheduleWeekDaySet(void **formatUserData, void *userData, void *variable)
+LOCAL void configValueFormatInitScheduleWeekDaySet(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
@@ -1127,7 +1128,7 @@ void configValueFormatInitScheduleWeekDaySet(void **formatUserData, void *userDa
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatDoneScheduleWeekDaySet(void **formatUserData, void *userData)
+LOCAL void configValueFormatDoneScheduleWeekDaySet(void **formatUserData, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -1148,7 +1149,7 @@ void configValueFormatDoneScheduleWeekDaySet(void **formatUserData, void *userDa
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *userData, String line)
+LOCAL bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *userData, String line)
 {
   const ScheduleWeekDaySet *scheduleWeekDaySet;
   String                   names;
@@ -1206,7 +1207,7 @@ bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *userData, 
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   bool         errorFlag;
   String       s0,s1;
@@ -1252,7 +1253,7 @@ bool configValueParseScheduleTime(void *userData, void *variable, const char *na
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable)
+LOCAL void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
@@ -1272,7 +1273,7 @@ void configValueFormatInitScheduleTime(void **formatUserData, void *userData, vo
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatDoneScheduleTime(void **formatUserData, void *userData)
+LOCAL void configValueFormatDoneScheduleTime(void **formatUserData, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -1293,7 +1294,7 @@ void configValueFormatDoneScheduleTime(void **formatUserData, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line)
+LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line)
 {
   const ScheduleTime *scheduleTime;
 
@@ -1364,7 +1365,7 @@ LOCAL bool parseScheduleArchiveType(const String s, ArchiveTypes *archiveType)
 
 /***********************************************************************\
 * Name   : parseSchedule
-* Purpose: parse schedule
+* Purpose: parse schedule (old style)
 * Input  : s - schedule string
 * Output :
 * Return : scheduleNode or NULL on error
@@ -1472,7 +1473,7 @@ if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string val
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   ScheduleNode *scheduleNode;
   String       s;
@@ -1499,134 +1500,6 @@ bool configValueParseSchedule(void *userData, void *variable, const char *name, 
 
   return TRUE;
 }
-
-/***********************************************************************\
-* Name   : configValueFormatInitSchedule
-* Purpose: init format config schedule
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitSchedule(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneSchedule
-* Purpose: done format of config schedule statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneSchedule(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatSchedule
-* Purpose: format schedule config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool configValueFormatSchedule(void **formatUserData, void *userData, String line);
-
-/***********************************************************************\
-* Name   : parseDateTimeNumber
-* Purpose: parse date/time number (year, day, month, hour, minute)
-* Input  : s - string to parse
-* Output : n - number variable
-* Return : TRUE iff number parsed
-* Notes  : -
-\***********************************************************************/
-
-#if 0
-LOCAL bool parseDateTimeNumber(const String s, int *n)
-{
-  long nextIndex;
-
-  assert(s != NULL);
-  assert(n != NULL);
-
-  // init variables
-  if   (String_equalsCString(s,"*"))
-  {
-    (*n) = SCHEDULE_ANY;
-  }
-  else
-  {
-    while ((String_length(s) > 1) && String_startsWithChar(s,'0'))
-    {
-      String_remove(s,STRING_BEGIN,1);
-    }
-    (*n) = (int)String_toInteger(s,0,&nextIndex,NULL,0);
-    if (nextIndex != STRING_END) return FALSE;
-  }
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : parseDateMonth
-* Purpose: parse date month name
-* Input  : s - string to parse
-* Output : month - month (MONTH_JAN..MONTH_DEC)
-* Return : TRUE iff month parsed
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool parseDateMonth(const String s, int *month)
-{
-  String name;
-  long   nextIndex;
-
-  assert(s != NULL);
-  assert(month != NULL);
-
-  name = String_toLower(String_duplicate(s));
-  if      (String_equalsCString(s,"*"))
-  {
-    (*month) = SCHEDULE_ANY;
-  }
-  else if (String_equalsIgnoreCaseCString(name,"jan")) (*month) = MONTH_JAN;
-  else if (String_equalsIgnoreCaseCString(name,"feb")) (*month) = MONTH_FEB;
-  else if (String_equalsIgnoreCaseCString(name,"mar")) (*month) = MONTH_MAR;
-  else if (String_equalsIgnoreCaseCString(name,"apr")) (*month) = MONTH_APR;
-  else if (String_equalsIgnoreCaseCString(name,"may")) (*month) = MONTH_MAY;
-  else if (String_equalsIgnoreCaseCString(name,"jun")) (*month) = MONTH_JUN;
-  else if (String_equalsIgnoreCaseCString(name,"jul")) (*month) = MONTH_JUL;
-  else if (String_equalsIgnoreCaseCString(name,"aug")) (*month) = MONTH_AUG;
-  else if (String_equalsIgnoreCaseCString(name,"sep")) (*month) = MONTH_SEP;
-  else if (String_equalsIgnoreCaseCString(name,"oct")) (*month) = MONTH_OCT;
-  else if (String_equalsIgnoreCaseCString(name,"nov")) (*month) = MONTH_NOV;
-  else if (String_equalsIgnoreCaseCString(name,"dec")) (*month) = MONTH_DEC;
-  else
-  {
-    while ((String_length(s) > 1) && String_startsWithChar(s,'0'))
-    {
-      String_remove(s,STRING_BEGIN,1);
-    }
-    (*month) = (uint)String_toInteger(s,0,&nextIndex,NULL,0);
-    if ((nextIndex != STRING_END) || ((*month) < 1) || ((*month) > 12))
-    {
-      return FALSE;
-    }
-  }
-  String_delete(name);
-
-  return TRUE;
-}
-#endif
 
 /***********************************************************************\
 * Name   : parseScheduleDateTime
@@ -1700,23 +1573,6 @@ LOCAL ScheduleNode *parseScheduleDateTime(const String date,
   }
 
   return scheduleNode;
-}
-
-/***********************************************************************\
-* Name   : getNewJobId
-* Purpose: get new job id
-* Input  : -
-* Output : -
-* Return : job id
-* Notes  : -
-\***********************************************************************/
-
-LOCAL uint getNewJobId(void)
-{
-
-  jobList.lastJobId++;
-
-  return jobList.lastJobId;
 }
 
 /***********************************************************************\
@@ -1798,8 +1654,8 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   PatternList_done(&jobNode->excludePatternList);
   EntryList_done(&jobNode->includeEntryList);
   String_delete(jobNode->archiveName);
-  String_delete(jobNode->uuid);
   String_delete(jobNode->name);
+  String_delete(jobNode->uuid);
   String_delete(jobNode->fileName);
 }
 
@@ -1829,8 +1685,8 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
   jobNode->fileName                       = String_duplicate(fileName);
   jobNode->timeModified                   = 0LL;
 
-  jobNode->name                           = File_getFileBaseName(File_newFileName(),fileName);
   jobNode->uuid                           = Misc_getUUID(String_new());
+  jobNode->name                           = File_getFileBaseName(File_newFileName(),fileName);
   jobNode->archiveName                    = String_new();
   EntryList_init(&jobNode->includeEntryList);
   PatternList_init(&jobNode->excludePatternList);
@@ -1847,7 +1703,6 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
   jobNode->sshPassword                    = NULL;
   jobNode->cryptPassword                  = NULL;
 
-  jobNode->id                             = getNewJobId();
   jobNode->state                          = JOB_STATE_NONE;
   jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
   jobNode->scheduleTitle                  = NULL;
@@ -1898,9 +1753,9 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->fileName                       = String_duplicate(fileName);
   newJobNode->timeModified                   = 0LL;
 
+  newJobNode->uuid                           = Misc_getUUID(String_new());
   newJobNode->jobType                        = jobNode->jobType;
   newJobNode->name                           = File_getFileBaseName(File_newFileName(),fileName);
-  newJobNode->uuid                           = Misc_getUUID(String_new());
   newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
   EntryList_initDuplicate(&newJobNode->includeEntryList,&jobNode->includeEntryList,NULL,NULL);
   PatternList_initDuplicate(&newJobNode->excludePatternList,&jobNode->excludePatternList,NULL,NULL);
@@ -1917,7 +1772,6 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->sshPassword                    = NULL;
   newJobNode->cryptPassword                  = NULL;
 
-  newJobNode->id                             = getNewJobId();
   newJobNode->state                          = JOB_STATE_NONE;
   newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
   newJobNode->scheduleTitle                  = NULL;
@@ -2021,28 +1875,6 @@ LOCAL void doneJob(JobNode *jobNode)
     Password_delete(jobNode->ftpPassword);
     jobNode->ftpPassword = NULL;
   }
-}
-
-/***********************************************************************\
-* Name   : findJobById
-* Purpose: find job by id
-* Input  : jobId - job id
-* Output : -
-* Return : job node or NULL if not found
-* Notes  : -
-\***********************************************************************/
-
-LOCAL JobNode *findJobById(uint jobId)
-{
-  JobNode *jobNode;
-
-  jobNode = jobList.head;
-  while ((jobNode != NULL) && (jobNode->id != jobId))
-  {
-    jobNode = jobNode->next;
-  }
-
-  return jobNode;
 }
 
 /***********************************************************************\
@@ -5004,11 +4836,12 @@ LOCAL void freeDirectoryInfoNode(DirectoryInfoNode *directoryInfoNode, void *use
 }
 
 /***********************************************************************\
-* Name   : findJobById
+* Name   : findDirectoryInfo
 * Purpose: find job by id
-* Input  : jobId - job id
+* Input  : directoryInfoList - directory info list
+*          pathName          - path name
 * Output : -
-* Return : job node or NULL if not found
+* Return : directory info node or NULL if not found
 * Notes  : -
 \***********************************************************************/
 
@@ -5377,9 +5210,9 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const StringMap 
   assert(argumentMap != NULL);
 
   // get command id
-  if (!StringMap_getUInt(argumentMap,"jobId",&commandId,0))
+  if (!StringMap_getUInt(argumentMap,"commandId",&commandId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<command id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected commandId=<command id>");
     return;
   }
 
@@ -5965,7 +5798,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *            name=<name>
 *          Result:
 *            value=<value>
@@ -5973,7 +5806,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
 
 LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint              jobId;
+  StaticString      (jobUUID,64);
   String            name;
   SemaphoreLock     semaphoreLock;
   JobNode           *jobNode;
@@ -5984,10 +5817,10 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id, name
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID, name
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   name = String_new();
@@ -6000,10 +5833,10 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -6052,7 +5885,7 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *            name=<name>
 *            value=<value>
 *          Result:
@@ -6060,7 +5893,7 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
 
 LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   String        name,value;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -6068,10 +5901,10 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id, name, value
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID, name, value
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   name = String_new();
@@ -6091,10 +5924,10 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(value);
       String_delete(name);
@@ -6136,14 +5969,14 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *            name=<name>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   String        name;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -6152,10 +5985,10 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id, name
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID, name
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   name = String_new();
@@ -6168,10 +6001,10 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -6213,9 +6046,19 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
 * Return : -
 * Notes  : Arguments:
 *          Result:
-*            <id> <name> <state> <type> <part size> <delta compress algorithm> \
-*            <byte compress alrogithm> <crypt algorithm> <crypt type> \
-*            <password mode> <last executed time> <estimated rest time>
+*            jobUUID=<uuid> \
+*            uuid=<uuid> \
+*            name=<name> \
+*            state=<state> \
+*            archiveType=<type> \
+*            archivePartSize=<part size> \
+*            deltaCompressAlgorithm=<delta compress algorithm> \
+*            byteCompressAlgorithm=<byte compress alrogithm> \
+*            cryptAlgorithm=<crypt algorithm> \
+*            cryptType=<crypt type> \
+*            cryptPasswordMode=<password mode> \
+*            lastExecutedDateTime=<last executed time> \
+*            estimatedRestTime=<estimated rest time>
 \***********************************************************************/
 
 LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -6236,8 +6079,8 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
           )
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "jobId=%u name=%'S state=%'s archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
-                       jobNode->id,
+                       "jobUUID=%S name=%'S state=%'s archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
+                       jobNode->uuid,
                        jobNode->name,
                        getJobStateText(&jobNode->jobOptions,jobNode->state),
                        archiveTypeToString((   (jobNode->archiveType == ARCHIVE_TYPE_FULL        )
@@ -6275,7 +6118,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 *            state=<state>
 *            message=<text>
@@ -6305,27 +6148,27 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
 
 LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -6374,7 +6217,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMa
 * Notes  : Arguments:
 *            name=<name>
 *          Result:
-*            jobId=<id>
+*            jobUUID=<uuid>
 \***********************************************************************/
 
 LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -6389,7 +6232,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get filename
+  // get name
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
@@ -6446,10 +6289,9 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
 
     // add new job to list
     List_append(&jobList,jobNode);
-  }
-  assert(jobNode != NULL);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"%d",jobNode->id);
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"jobUUID=%S",jobNode->uuid);
+  }
 
   // free resources
   String_delete(name);
@@ -6465,15 +6307,15 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *            name=<name>
 *          Result:
-*            jobId=<new job id>
+*            jobUUID=<new uuid>
 \***********************************************************************/
 
 LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   String        name;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -6485,10 +6327,10 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringM
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   name = String_new();
@@ -6511,10 +6353,10 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringM
     }
 
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -6539,7 +6381,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringM
     if (newJobNode == NULL)
     {
       File_deleteFileName(fileName);
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error copy job #%d",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error copy job %S",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -6553,9 +6395,9 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringM
 
     // add new job to list
     List_append(&jobList,newJobNode);
-  }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"jobUUID=%S",newJobNode->uuid);
+  }
 
   // free resources
   String_delete(name);
@@ -6571,14 +6413,14 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringM
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *            name=<new job name>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   String        newName;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -6588,10 +6430,10 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   newName = String_new();
@@ -6614,10 +6456,10 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
     }
 
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(newName);
       return;
@@ -6629,7 +6471,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
     if (error != ERROR_NONE)
     {
       File_deleteFileName(fileName);
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error renaming job #%d: %s",jobId,Error_getText(error));
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error renaming job %S: %s",jobUUID,Error_getText(error));
       Semaphore_unlock(&jobList.lock);
       String_delete(newName);
       return;
@@ -6659,13 +6501,13 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   Errors        error;
@@ -6674,20 +6516,20 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -6695,7 +6537,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
     // remove job in list if not running or requested volume
     if (CHECK_JOB_IS_RUNNING(jobNode))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job #%d running",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job %S running",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -6704,7 +6546,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
     error = File_delete(jobNode->fileName,FALSE);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error deleting job #%d: %s",jobId,Error_getText(error));
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error deleting job %S: %s",jobUUID,Error_getText(error));
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -6736,13 +6578,13 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   char          s[64];
   ArchiveTypes  archiveType;
   bool          dryRunFlag;
@@ -6752,10 +6594,10 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -6783,10 +6625,10 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -6816,33 +6658,33 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -6905,7 +6747,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const StringM
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 *            entryType=<type> patternType=<type> pattern=<text>
 *            ...
@@ -6913,7 +6755,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const StringM
 
 LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   EntryNode     *entryNode;
@@ -6921,20 +6763,20 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -6964,33 +6806,33 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -7012,7 +6854,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *            entryType=<type>
 *            patternType=<type>
 *            pattern=<text>
@@ -7021,7 +6863,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   EntryTypes    entryType;
   PatternTypes  patternType;
   String        pattern;
@@ -7031,10 +6873,10 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id, entry type, pattern type, pattern
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID, entry type, pattern type, pattern
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,0))
@@ -7057,10 +6899,10 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(pattern);
       return;
@@ -7087,7 +6929,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 *            patternType=<type> pattern=<text>
 *            ...
@@ -7095,7 +6937,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   PatternNode   *patternNode;
@@ -7103,20 +6945,20 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -7145,33 +6987,33 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -7194,7 +7036,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *            patternType=<type>
 *            pattern=<text>
 *          Result:
@@ -7202,7 +7044,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   PatternTypes  patternType;
   String        pattern;
   SemaphoreLock semaphoreLock;
@@ -7211,10 +7053,10 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id, pattern type, pattern
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID, pattern type, pattern
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,0))
@@ -7232,10 +7074,10 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(pattern);
       return;
@@ -7262,7 +7104,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 *            patternType=<type> pattern=<text>
 *            ...
@@ -7270,7 +7112,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   PatternNode   *patternNode;
@@ -7278,20 +7120,20 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -7320,33 +7162,33 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -7369,7 +7211,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *            entryType=<entry type>
 *            patternType=<pattern type>
 *            pattern=<text>
@@ -7378,7 +7220,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
 
 LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   PatternTypes  patternType;
   String        pattern;
   SemaphoreLock semaphoreLock;
@@ -7387,10 +7229,10 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id, type, pattern type, pattern
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID, type, pattern type, pattern
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,0))
@@ -7408,10 +7250,10 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -7434,7 +7276,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 *            patternType=<type> pattern=<text>
 *            ...
@@ -7442,7 +7284,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
 
 LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   PatternNode   *patternNode;
@@ -7450,20 +7292,20 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, co
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -7492,33 +7334,33 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, co
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -7541,7 +7383,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint i
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *            entryType=<type>
 *            patternType=<type>
 *            pattern=<text>
@@ -7550,7 +7392,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint i
 
 LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   PatternTypes  patternType;
   String        pattern;
   SemaphoreLock semaphoreLock;
@@ -7559,10 +7401,10 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id, type, pattern type, pattern
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID, type, pattern type, pattern
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,0))
@@ -7580,10 +7422,10 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -7606,7 +7448,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 *            date=<year>|*-<month>|*-<day>|* \
 *            weekDay=<week day>|* \
@@ -7622,7 +7464,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 
 LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   ScheduleNode  *scheduleNode;
@@ -7631,20 +7473,20 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -7752,33 +7594,33 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -7801,7 +7643,8 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, cons
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            scheduleUUID=<uuid>
+*            jobUUID=<uuid>
 *            date=<year>|*-<month>|*-<day>|*
 *            weekDays=<week day>,...|*
 *            time=<hour>|*:<minute>|*
@@ -7816,7 +7659,7 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, cons
 
 LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   String        title;
   String        date;
   String        weekDays;
@@ -7833,10 +7676,10 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id, date, weekday, time, enable, type
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID, date, weekday, time, enable, type
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   title = String_new();
@@ -7960,10 +7803,10 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       deleteScheduleNode(scheduleNode);
       String_delete(customText);
@@ -8249,7 +8092,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, uint id, const S
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>|0
+*            jobUUID=<uuid>|*
 *            encryptType=<type>
 *            encryptedPassword=<encrypted password>
 *          Result:
@@ -8257,7 +8100,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   String        encryptType;
   String        encryptedPassword;
   SemaphoreLock semaphoreLock;
@@ -8266,10 +8109,10 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id, get encrypt type, encrypted password
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID, get encrypt type, encrypted password
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   encryptType = String_new();
@@ -8286,15 +8129,15 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
     return;
   }
 
-  if (jobId != 0)
+  if (!String_equalsCString(jobUUID,"*"))
   {
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       // find job
-      jobNode = findJobById(jobId);
+      jobNode = findJobByUUID(jobUUID);
       if (jobNode == NULL)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+        sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
         Semaphore_unlock(&jobList.lock);
         String_delete(encryptedPassword);
         String_delete(encryptType);
@@ -8367,14 +8210,14 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, uint id, const S
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *            volumeNnumber=<n>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   uint          volumeNumber;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -8382,10 +8225,10 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const Strin
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id, volume number
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID, volume number
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"volumeNumber",&volumeNumber,0))
@@ -8397,10 +8240,10 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const Strin
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -8422,33 +8265,33 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const Strin
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobId=<id>
+*            jobUUID=<uuid>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint          jobId;
+  StaticString  (jobUUID,64);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id
-  if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
-    jobNode = findJobById(jobId);
+    jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -8957,16 +8800,16 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            uuid=<uuid>|"" and/or
-*            jobId=<job id>|0 and/or
-*            storageId=<storage id>|0
+*            uuid=<uuid>|* and/or
+*            entityId=<id>|0
+*            storageId=<id>|0
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String           uuid;
-  DatabaseId       jobId;
+  StaticString     (jobUUID,64);
+  DatabaseId       entityId;
   DatabaseId       storageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -8974,15 +8817,13 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get uuid, job id, or storage id
-  uuid = String_new();
-  if (   !StringMap_getString(argumentMap,"uuid",uuid,NULL)
-      && !StringMap_getInt64(argumentMap,"jobId",&jobId,DATABASE_ID_NONE)
+  // get job UUID, entity id, or storage id
+  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid> or jobId=<job id> or storageId=<storage id>");
-    String_delete(uuid);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
     return;
   }
 
@@ -8990,17 +8831,16 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
   if (indexDatabaseHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
-    String_delete(uuid);
     return;
   }
 
-  if (!String_isEmpty(uuid))
+  if (!String_isEmpty(jobUUID))
   {
 //????
     // add all storage ids with specified uuid
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
-                                  NULL, // uuid
+                                  jobUUID,
                                   DATABASE_ID_ANY, // job id
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
@@ -9013,7 +8853,6 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      String_delete(uuid);
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
@@ -9036,13 +8875,13 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
     Index_doneList(&indexQueryHandle);
   }
 
-  if (jobId != DATABASE_ID_NONE)
+  if (entityId != DATABASE_ID_NONE)
   {
-    // add all storage ids with job id
+    // add all storage ids with entity id
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   NULL, // uuid
-                                  jobId,
+                                  entityId,
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -9054,7 +8893,6 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      String_delete(uuid);
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
@@ -9084,9 +8922,6 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-
-  // free resources
-  String_delete(uuid);
 }
 
 /***********************************************************************\
@@ -9099,9 +8934,9 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            uuid=<uuid>|"" and/or
-*            jobId=<job id>|0 and/or
-*            storageId=<storage id>|0
+*            jobUUID=<uuid>|"" and/or
+*            entityId=<id>|0 and/or
+*            storageId=<id>|0
 *          Result:
 \***********************************************************************/
 
@@ -9226,8 +9061,8 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     return TRUE;
   }
 
-  String           uuid;
-  DatabaseId       jobId;
+  StaticString     (jobUUID,64);
+  DatabaseId       entityId;
   DatabaseId       storageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -9236,14 +9071,12 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   assert(argumentMap != NULL);
 
   // get uuid, job id, or storage id
-  uuid = String_new();
-  if (   !StringMap_getString(argumentMap,"uuid",uuid,NULL)
-      && !StringMap_getInt64(argumentMap,"jobId",&jobId,DATABASE_ID_NONE)
+  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid> or jobId=<job id> or storageId=<storage id>");
-    String_delete(uuid);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
     return;
   }
 
@@ -9251,17 +9084,16 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   if (indexDatabaseHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
-    String_delete(uuid);
     return;
   }
 
-  if (!String_isEmpty(uuid))
+  if (!String_isEmpty(jobUUID))
   {
 //????
     // delete all storage with specified uuid
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
-                                  NULL, // uuid
+                                  jobUUID,
                                   DATABASE_ID_ANY, // job id
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
@@ -9274,7 +9106,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      String_delete(uuid);
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
@@ -9295,20 +9126,19 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       if (!deleteStorage(storageId))
       {
         Index_doneList(&indexQueryHandle);
-        String_delete(uuid);
         return;
       }
     }
     Index_doneList(&indexQueryHandle);
   }
 
-  if (jobId != DATABASE_ID_NONE)
+  if (entityId != DATABASE_ID_NONE)
   {
-    // delete all storage with job id
+    // delete all storage with entity id
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   NULL, // uuid
-                                  jobId,
+                                  entityId,
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -9320,7 +9150,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      String_delete(uuid);
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
@@ -9341,7 +9170,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       if (!deleteStorage(storageId))
       {
         Index_doneList(&indexQueryHandle);
-        String_delete(uuid);
         return;
       }
     }
@@ -9353,15 +9181,11 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     // delete storage
     if (!deleteStorage(storageId))
     {
-      String_delete(uuid);
       return;
     }
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-
-  // free resources
-  String_delete(uuid);
 }
 
 /***********************************************************************\
@@ -10183,7 +10007,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid> or jobId=<job id> or storageId=<storage id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
     String_delete(jobUUID);
     return;
   }
@@ -10441,7 +10265,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuid=<uuid> or jobId=<job id> or storageId=<storage id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
     String_delete(jobUUID);
     return;
   }
