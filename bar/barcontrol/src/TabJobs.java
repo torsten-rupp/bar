@@ -6412,22 +6412,24 @@ throw new Error("NYI");
           try
           {
             String[] resultErrorMessage = new String[1];
+            ValueMap resultMap          = new ValueMap();
             int error = BARServer.executeCommand(StringParser.format("JOB_CLONE jobUUID=%s name=%S",
                                                                      jobData.uuid,
                                                                      newJobName
                                                                     ),
                                                  0,
-                                                 resultErrorMessage
+                                                 resultErrorMessage,
+                                                 resultMap
                                                 );
-            if (error == Errors.NONE)
-            {
-              updateJobList();
-              selectJob(jobData.uuid);
-            }
-            else
+            if (error != Errors.NONE)
             {
               Dialogs.error(shell,"Cannot clone job '"+jobData.name+"':\n\n"+resultErrorMessage[0]);
+              return;
             }
+
+            String newJobUUID = resultMap.getString("jobUUID");
+            updateJobList();
+            selectJob(newJobUUID);
           }
           catch (CommunicationError error)
           {
@@ -8265,7 +8267,6 @@ throw new Error("NYI");
       }
 
       compressExcludeHashSet.add(pattern);
-Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
       Widgets.insertListItem(widgetCompressExcludeList,
                              findListIndex(widgetCompressExcludeList,pattern),
                              (Object)pattern,

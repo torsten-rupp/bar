@@ -451,12 +451,7 @@ public class TabStatus
       }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Table     widget    = (Table)selectionEvent.widget;
-        TabStatus tabStatus = (TabStatus)widget.getData();
-
-        selectedJobData = (JobData)selectionEvent.item.getData();
-        if (tabJobs != null) tabJobs.setSelectedJob(selectedJobData);
-        widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+selectedJobData.name+"'");
+        setSelectedJob((JobData)selectionEvent.item.getData());
       }
     });
     SelectionListener jobListColumnSelectionListener = new SelectionListener()
@@ -1307,6 +1302,8 @@ public class TabStatus
 
       Widgets.setSelectedTableItem(widgetJobTable,selectedJobData);
       widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+((selectedJobData != null) ? selectedJobData.name : "")+"'");
+
+      if (tabJobs != null) tabJobs.setSelectedJob(selectedJobData);
     }
   }
 
