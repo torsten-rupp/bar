@@ -879,11 +879,11 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
       {
         // create index
         error = Index_newStorage(archiveInfo->databaseHandle,
-                                 NULL, // uuid
+                                 archiveInfo->entityId,
                                  NULL, // storageName
                                  INDEX_STATE_CREATE,
                                  INDEX_MODE_MANUAL,
-                                 &archiveInfo->databaseStorageId
+                                 &archiveInfo->storageId
                                 );
         if (error != ERROR_NONE)
         {
@@ -891,13 +891,13 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        AUTOFREE_ADD(&autoFreeList,&archiveInfo->databaseStorageId,{ Index_deleteStorage(archiveInfo->databaseHandle,archiveInfo->databaseStorageId); });
+        AUTOFREE_ADD(&autoFreeList,&archiveInfo->storageId,{ Index_deleteStorage(archiveInfo->databaseHandle,archiveInfo->storageId); });
         DEBUG_TESTCODE("createArchiveFile5") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
       }
       else
       {
         // no index
-        archiveInfo->databaseStorageId = DATABASE_ID_NONE;
+        archiveInfo->storageId = DATABASE_ID_NONE;
       }
 
       // call back for new archive
@@ -905,7 +905,8 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
       {
         error = archiveInfo->archiveNewFunction(archiveInfo->archiveNewUserData,
                                                 archiveInfo->databaseHandle,
-                                                archiveInfo->databaseStorageId
+                                                archiveInfo->entityId,
+                                                archiveInfo->storageId
                                                );
         if (error != ERROR_NONE)
         {
@@ -963,7 +964,8 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
       {
         error = archiveInfo->archiveCreatedFunction(archiveInfo->archiveCreatedUserData,
                                                     archiveInfo->databaseHandle,
-                                                    archiveInfo->databaseStorageId,
+                                                    archiveInfo->entityId,
+                                                    archiveInfo->storageId,
                                                     archiveInfo->file.fileName,
                                                     (archiveInfo->jobOptions->archivePartSize > 0LL)
                                                       ? (int)archiveInfo->partNumber
@@ -2836,26 +2838,30 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 #ifdef NDEBUG
   Errors Archive_create(ArchiveInfo                     *archiveInfo,
                         const JobOptions                *jobOptions,
+                        DatabaseHandle                  *databaseHandle,
+                        const String                    jobUUID,
+                        const String                    scheduleUUID,
                         ArchiveNewFunction              archiveNewFunction,
                         void                            *archiveNewUserData,
                         ArchiveCreatedFunction          archiveCreatedFunction,
                         void                            *archiveCreatedUserData,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                        void                            *archiveGetCryptPasswordUserData,
-                        DatabaseHandle                  *databaseHandle
+                        void                            *archiveGetCryptPasswordUserData
                        )
 #else /* not NDEBUG */
   Errors __Archive_create(const char                      *__fileName__,
                           ulong                           __lineNb__,
                           ArchiveInfo                     *archiveInfo,
                           const JobOptions                *jobOptions,
+                          DatabaseHandle                  *databaseHandle,
+                          const String                    jobUUID,
+                          const String                    scheduleUUID,
                           ArchiveNewFunction              archiveNewFunction,
                           void                            *archiveNewUserData,
                           ArchiveCreatedFunction          archiveCreatedFunction,
                           void                            *archiveCreatedUserData,
                           ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                          void                            *archiveGetCryptPasswordUserData,
-                          DatabaseHandle                  *databaseHandle
+                          void                            *archiveGetCryptPasswordUserData
                          )
 #endif /* NDEBUG */
 {
@@ -2910,8 +2916,8 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->chunkIOUserData                 = &archiveInfo->file.fileHandle;
 
   archiveInfo->databaseHandle                  = databaseHandle;
-  archiveInfo->databaseJobId                   = DATABASE_ID_NONE;
-  archiveInfo->databaseStorageId               = DATABASE_ID_NONE;
+  archiveInfo->entityId                        = DATABASE_ID_NONE;
+  archiveInfo->storageId                       = DATABASE_ID_NONE;
 
   archiveInfo->partNumber                      = 0;
 
@@ -2952,6 +2958,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
+    AUTOFREE_ADD(&autoFreeList,&archiveInfo->cryptPassword,{ Password_delete(archiveInfo->cryptPassword); });
     maxCryptKeyDataLength = 2*MAX_PASSWORD_LENGTH;
     okFlag = FALSE;
     do
@@ -2985,6 +2992,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
       }
     }
     while (!okFlag);
+    AUTOFREE_ADD(&autoFreeList,&archiveInfo->cryptKeyData,{ free(archiveInfo->cryptKeyData); });
 #if 0
 Password_dump(archiveInfo->cryptPassword);
 {
@@ -2993,6 +3001,24 @@ byte *p=archiveInfo->cryptKeyData;
 fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf(stderr,"%02x",p[z]); fprintf(stderr,"\n");
 }
 #endif /* 0 */
+  }
+
+  // create index
+  if (databaseHandle != NULL)
+  {
+    error = Index_newEntity(databaseHandle,
+                            jobUUID,
+                            scheduleUUID,
+                            &archiveInfo->entityId
+                           );
+    if (error != ERROR_NONE)
+    {
+      if (error != ERROR_NONE)
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+    }
   }
 
   // free resources
@@ -3065,8 +3091,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->chunkIOUserData                 = storageHandle;
 
   archiveInfo->databaseHandle                  = NULL;
-  archiveInfo->databaseJobId                   = DATABASE_ID_NONE;
-  archiveInfo->databaseStorageId               = DATABASE_ID_NONE;
+  archiveInfo->entityId                        = DATABASE_ID_NONE;
+  archiveInfo->storageId                       = DATABASE_ID_NONE;
 
   archiveInfo->partNumber                      = 0;
 
@@ -8354,14 +8380,14 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && (archiveEntryInfo->archiveInfo->databaseStorageId != DATABASE_ID_NONE)
+                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
                 if (error == ERROR_NONE)
                 {
                   error = Index_addFile(archiveEntryInfo->archiveInfo->databaseHandle,
-                                        archiveEntryInfo->archiveInfo->databaseStorageId,
+                                        archiveEntryInfo->archiveInfo->storageId,
                                         archiveEntryInfo->file.chunkFileEntry.name,
                                         archiveEntryInfo->file.chunkFileEntry.size,
                                         archiveEntryInfo->file.chunkFileEntry.timeLastAccess,
@@ -8508,7 +8534,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && (archiveEntryInfo->archiveInfo->databaseStorageId != DATABASE_ID_NONE)
+                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
@@ -8520,7 +8546,7 @@ archiveEntryInfo->image.chunkImageEntry.size,
 archiveEntryInfo->image.chunkImageEntry.blockSize
 );
                   error = Index_addImage(archiveEntryInfo->archiveInfo->databaseHandle,
-                                         archiveEntryInfo->archiveInfo->databaseStorageId,
+                                         archiveEntryInfo->archiveInfo->storageId,
                                          archiveEntryInfo->image.chunkImageEntry.name,
                                          archiveEntryInfo->image.chunkImageEntry.fileSystemType,
                                          archiveEntryInfo->image.chunkImageEntry.size,
@@ -8573,14 +8599,14 @@ archiveEntryInfo->image.chunkImageEntry.blockSize
               Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && (archiveEntryInfo->archiveInfo->databaseStorageId != DATABASE_ID_NONE)
+                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
                 if (error == ERROR_NONE)
                 {
                   error = Index_addDirectory(archiveEntryInfo->archiveInfo->databaseHandle,
-                                             archiveEntryInfo->archiveInfo->databaseStorageId,
+                                             archiveEntryInfo->archiveInfo->storageId,
                                              archiveEntryInfo->directory.chunkDirectoryEntry.name,
                                              archiveEntryInfo->directory.chunkDirectoryEntry.timeLastAccess,
                                              archiveEntryInfo->directory.chunkDirectoryEntry.timeModified,
@@ -8617,14 +8643,14 @@ archiveEntryInfo->image.chunkImageEntry.blockSize
               Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && (archiveEntryInfo->archiveInfo->databaseStorageId != DATABASE_ID_NONE)
+                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
                 if (error == ERROR_NONE)
                 {
                   error = Index_addLink(archiveEntryInfo->archiveInfo->databaseHandle,
-                                        archiveEntryInfo->archiveInfo->databaseStorageId,
+                                        archiveEntryInfo->archiveInfo->storageId,
                                         archiveEntryInfo->link.chunkLinkEntry.name,
                                         archiveEntryInfo->link.chunkLinkEntry.destinationName,
                                         archiveEntryInfo->link.chunkLinkEntry.timeLastAccess,
@@ -8751,7 +8777,7 @@ archiveEntryInfo->image.chunkImageEntry.blockSize
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && (archiveEntryInfo->archiveInfo->databaseStorageId != DATABASE_ID_NONE)
+                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
@@ -8760,7 +8786,7 @@ archiveEntryInfo->image.chunkImageEntry.blockSize
                   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
                   {
                     error = Index_addFile(archiveEntryInfo->archiveInfo->databaseHandle,
-                                          archiveEntryInfo->archiveInfo->databaseStorageId,
+                                          archiveEntryInfo->archiveInfo->storageId,
                                           fileName,
                                           archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
                                           archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess,
@@ -8823,14 +8849,14 @@ archiveEntryInfo->image.chunkImageEntry.blockSize
               Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && (archiveEntryInfo->archiveInfo->databaseStorageId != DATABASE_ID_NONE)
+                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
                 if (error == ERROR_NONE)
                 {
                   error = Index_addSpecial(archiveEntryInfo->archiveInfo->databaseHandle,
-                                           archiveEntryInfo->archiveInfo->databaseStorageId,
+                                           archiveEntryInfo->archiveInfo->storageId,
                                            archiveEntryInfo->special.chunkSpecialEntry.name,
                                            archiveEntryInfo->special.chunkSpecialEntry.specialType,
                                            archiveEntryInfo->special.chunkSpecialEntry.timeLastAccess,
@@ -9950,18 +9976,18 @@ Errors Archive_addToIndex(DatabaseHandle   *databaseHandle,
                          )
 {
   Errors     error;
-  DatabaseId databaseStorageId;
+  DatabaseId storageId;
 
   assert(databaseHandle != NULL);
   assert(storageName != NULL);
 
   // create new index
   error = Index_newStorage(databaseHandle,
+                           DATABASE_ID_NONE, // entityId
                            storageName,
-                           NULL, // uuid
                            INDEX_STATE_UPDATE,
                            indexMode,
-                           &databaseStorageId
+                           &storageId
                           );
   if (error != ERROR_NONE)
   {
@@ -9970,7 +9996,7 @@ Errors Archive_addToIndex(DatabaseHandle   *databaseHandle,
 
   // add index
   error = Archive_updateIndex(databaseHandle,
-                              databaseStorageId,
+                              storageId,
                               storageHandle,
                               storageName,
                               jobOptions,
@@ -9979,7 +10005,7 @@ Errors Archive_addToIndex(DatabaseHandle   *databaseHandle,
                              );
   if (error != ERROR_NONE)
   {
-    Archive_remIndex(databaseHandle,databaseStorageId);
+    Archive_remIndex(databaseHandle,storageId);
     return error;
   }
 
@@ -9987,7 +10013,7 @@ Errors Archive_addToIndex(DatabaseHandle   *databaseHandle,
 }
 
 Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
-                           DatabaseId                   databaseStorageId,
+                           DatabaseId                   storageId,
                            StorageHandle                *storageHandle,
                            const String                 storageName,
                            const JobOptions             *jobOptions,
@@ -10061,7 +10087,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
     Index_setState(databaseHandle,
-                   databaseStorageId,
+                   storageId,
                    INDEX_STATE_ERROR,
                    0LL,
                    "%s (error code: %d)",
@@ -10075,7 +10101,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
   // clear index
   error = Index_clear(databaseHandle,
-                      databaseStorageId
+                      storageId
                      );
   if (error != ERROR_NONE)
   {
@@ -10083,7 +10109,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
     Archive_close(&archiveInfo);
     Index_setState(databaseHandle,
-                   databaseStorageId,
+                   storageId,
                    INDEX_STATE_ERROR,
                    0LL,
                    "%s (error code: %d)",
@@ -10097,7 +10123,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
   // set state 'update'
   Index_setState(databaseHandle,
-                 databaseStorageId,
+                 storageId,
                  INDEX_STATE_UPDATE,
                  0LL,
                  NULL
@@ -10183,7 +10209,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
             // add to index database
             error = Index_addFile(databaseHandle,
-                                  databaseStorageId,
+                                  storageId,
                                   fileName,
                                   fileInfo.size,
                                   fileInfo.timeLastAccess,
@@ -10240,7 +10266,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
             // add to index database
             error = Index_addImage(databaseHandle,
-                                   databaseStorageId,
+                                   storageId,
                                    imageName,
                                    fileSystemType,
                                    deviceInfo.size,
@@ -10284,7 +10310,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
             // add to index database
             error = Index_addDirectory(databaseHandle,
-                                       databaseStorageId,
+                                       storageId,
                                        directoryName,
                                        fileInfo.timeLastAccess,
                                        fileInfo.timeModified,
@@ -10333,7 +10359,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
             // add to index database
             error = Index_addLink(databaseHandle,
-                                  databaseStorageId,
+                                  storageId,
                                   linkName,
                                   destinationName,
                                   fileInfo.timeLastAccess,
@@ -10393,7 +10419,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
             {
               error = Index_addHardLink(databaseHandle,
-                                        databaseStorageId,
+                                        storageId,
                                         fileName,
                                         fileInfo.size,
                                         fileInfo.timeLastAccess,
@@ -10446,7 +10472,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
             // add to index database
             error = Index_addSpecial(databaseHandle,
-                                     databaseStorageId,
+                                     storageId,
                                      fileName,
                                      fileInfo.type,
                                      fileInfo.timeLastAccess,
@@ -10480,9 +10506,11 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
       // update temporary size (ignore error)
       Index_update(databaseHandle,
-                   databaseStorageId,
+                   DATABASE_ID_NONE,
+                   NULL, // job UUID
+                   NULL, // schedule UUID
+                   storageId,
                    NULL, // storageName
-                   NULL, // uuid
                    Archive_tell(&archiveInfo)
                   );
     }
@@ -10496,7 +10524,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
     Index_setState(databaseHandle,
-                   databaseStorageId,
+                   storageId,
                    INDEX_STATE_ERROR,
                    0LL, // lastCheckedTimestamp
                    "%s (error code: %d)",
@@ -10509,7 +10537,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     printInfo(4,"Aborted create index for '%s'\n",String_cString(printableStorageName));
 
     Index_setState(databaseHandle,
-                   databaseStorageId,
+                   storageId,
                    INDEX_STATE_ERROR,
                    0LL,
                    "aborted"
@@ -10522,7 +10550,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     printInfo(4,"Interrupted create index for '%s'\n",String_cString(printableStorageName));
 
     Index_setState(databaseHandle,
-                   databaseStorageId,
+                   storageId,
                    INDEX_STATE_UPDATE_REQUESTED,
                    0LL,
                    NULL
@@ -10536,7 +10564,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
     // set index state 'OK', last checked time
     Index_setState(databaseHandle,
-                   databaseStorageId,
+                   storageId,
                    INDEX_STATE_OK,
                    Misc_getCurrentDateTime(),
                    NULL
@@ -10544,15 +10572,17 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
     // update name/size
     error = Index_update(databaseHandle,
-                         databaseStorageId,
+                         DATABASE_ID_NONE,
+                         NULL, // job UUID
+                         NULL, // schedule UUID
+                         storageId,
                          storageName,
-                         NULL, // uuid
                          Archive_getSize(&archiveInfo)
                         );
     if (error != ERROR_NONE)
     {
       Index_setState(databaseHandle,
-                     databaseStorageId,
+                     storageId,
                      INDEX_STATE_ERROR,
                      0LL, // lastCheckedTimestamp
                      "%s (error code: %d)",
@@ -10573,14 +10603,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 }
 
 Errors Archive_remIndex(DatabaseHandle *databaseHandle,
-                        DatabaseId     databaseStorageId
+                        DatabaseId     storageId
                        )
 {
   Errors error;
 
   assert(databaseHandle != NULL);
 
-  error = Index_deleteStorage(databaseHandle,databaseStorageId);
+  error = Index_deleteStorage(databaseHandle,storageId);
   if (error != ERROR_NONE)
   {
     return error;

@@ -67,9 +67,10 @@ typedef enum
 /***********************************************************************\
 * Name   : ArchiveNewFunction
 * Purpose: call back when archive file is created/written
-* Input  : userData          - user data
-*          databaseHandle    - database handle or NULL if no database
-*          databaseStorageId - database id of storage
+* Input  : userData       - user data
+*          databaseHandle - database handle or NULL if no database
+*          entityId       - database id of entity
+*          storageId      - database id of storage
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -77,7 +78,8 @@ typedef enum
 
 typedef Errors(*ArchiveNewFunction)(void           *userData,
                                     DatabaseHandle *databaseHandle,
-                                    DatabaseId     databaseStorageId
+                                    DatabaseId     entityId,
+                                    DatabaseId     storageId
                                    );
 
 /***********************************************************************\
@@ -85,7 +87,8 @@ typedef Errors(*ArchiveNewFunction)(void           *userData,
 * Purpose: call back when archive file is created/written
 * Input  : userData          - user data
 *          databaseHandle    - database handle or NULL if no database
-*          databaseStorageId - database id of storage
+*          entityId          - database id of entity
+*          storageId         - database id of storage
 *          fileName          - archive file name
 *          partNumber        - part number or -1 if no parts
 *          lastPartFlag      - TRUE iff last archive part, FALSE
@@ -97,7 +100,8 @@ typedef Errors(*ArchiveNewFunction)(void           *userData,
 
 typedef Errors(*ArchiveCreatedFunction)(void           *userData,
                                         DatabaseHandle *databaseHandle,
-                                        DatabaseId     databaseStorageId,
+                                        DatabaseId     entityId,
+                                        DatabaseId     storageId,
                                         String         fileName,
                                         int            partNumber,
                                         bool           lastPartFlag
@@ -170,8 +174,8 @@ typedef struct
   void                            *chunkIOUserData;                    // chunk i/o functions data
 
   DatabaseHandle                  *databaseHandle;                     // database handle
-  DatabaseId                      databaseJobId;                       // index job id in database
-  DatabaseId                      databaseStorageId;                   // index storage id in database
+  DatabaseId                      entityId;                            // database id of entity
+  DatabaseId                      storageId;                           // database id of storage
 
   uint                            partNumber;                          // file part number
 
@@ -455,26 +459,30 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 #ifdef NDEBUG
   Errors Archive_create(ArchiveInfo                     *archiveInfo,
                         const JobOptions                *jobOptions,
+                        DatabaseHandle                  *databaseHandle,
+                        const String                    jobUUID,
+                        const String                    scheduleUUID,
                         ArchiveNewFunction              archiveNewFunction,
                         void                            *archiveNewUserData,
                         ArchiveCreatedFunction          archiveCreatedFunction,
                         void                            *archiveCreatedUserData,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                        void                            *archiveGetCryptPasswordUserData,
-                        DatabaseHandle                  *databaseHandle
+                        void                            *archiveGetCryptPasswordUserData
                        );
 #else /* not NDEBUG */
   Errors __Archive_create(const char                      *__fileName__,
                           ulong                           __lineNb__,
                           ArchiveInfo                     *archiveInfo,
                           const JobOptions                *jobOptions,
+                          DatabaseHandle                  *databaseHandle,
+                          const String                    jobUUID,
+                          const String                    scheduleUUID,
                           ArchiveNewFunction              archiveNewFunction,
                           void                            *archiveNewUserData,
                           ArchiveCreatedFunction          archiveCreatedFunction,
                           void                            *archiveCreatedUserData,
                           ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                          void                            *archiveGetCryptPasswordUserData,
-                          DatabaseHandle                  *databaseHandle
+                          void                            *archiveGetCryptPasswordUserData
                          );
 #endif /* NDEBUG */
 
@@ -1236,7 +1244,7 @@ Errors Archive_addToIndex(DatabaseHandle    *databaseHandle,
 * Name   : Archive_updateIndex
 * Purpose: update storage index
 * Input  : databaseHandle          - database handle
-*          databaseStorageId       - database storage id
+*          storageId               - database id of storage
 *          storageHandle           - storage handle
 *          storageName             - storage name
 *          cryptPassword           - encryption password
@@ -1251,7 +1259,7 @@ Errors Archive_addToIndex(DatabaseHandle    *databaseHandle,
 \***********************************************************************/
 
 Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
-                           DatabaseId                   databaseStorageId,
+                           DatabaseId                   storageId,
                            StorageHandle                *storageHandle,
                            const String                 storageName,
                            const JobOptions             *jobOptions,
@@ -1265,14 +1273,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 * Name   : Archive_remIndex
 * Purpose: remove storage index
 * Input  : databaseHandle - database handle
-*          storageId      - storage id
+*          storageId      - database id of storage
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Archive_remIndex(DatabaseHandle *databaseHandle,
-                        DatabaseId     databaseStorageId
+                        DatabaseId     storageId
                        );
 
 #if 0

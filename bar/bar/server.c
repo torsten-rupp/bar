@@ -105,6 +105,7 @@ typedef struct ScheduleNode
   LIST_NODE_HEADER(struct ScheduleNode);
 
   String             uuid;                     // unique id
+  String             parentUUID;               // unique parent id or NULL
   ScheduleDate       date;
   ScheduleWeekDaySet weekDaySet;
   ScheduleTime       time;
@@ -174,6 +175,7 @@ typedef struct JobNode
   ArchiveTypes archiveType;                    // archive type to create
   String       scheduleTitle;
   String       scheduleCustomText;
+  ScheduleNode *scheduleNode;                  // schedule node which triggered job or NULL
   bool         requestedAbortFlag;             // request abort
   uint         requestedVolumeNumber;          // requested volume number
   uint         volumeNumber;                   // loaded volume number
@@ -644,6 +646,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
   CONFIG_STRUCT_VALUE_STRING   ("UUID",                    ScheduleNode,uuid                               ),
+  CONFIG_STRUCT_VALUE_STRING   ("parentUUID",              ScheduleNode,parentUUID                         ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("date",                    ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("weekdays",                ScheduleNode,weekDaySet,                        configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
@@ -740,11 +743,13 @@ LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
 LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 {
   assert(scheduleNode != NULL);
+  assert(scheduleNode->uuid != NULL);
   assert(scheduleNode->customText != NULL);
 
   UNUSED_VARIABLE(userData);
 
   String_delete(scheduleNode->customText);
+  String_delete(scheduleNode->parentUUID);
   String_delete(scheduleNode->uuid);
 }
 
@@ -767,6 +772,7 @@ LOCAL ScheduleNode *newScheduleNode(void)
     HALT_INSUFFICIENT_MEMORY();
   }
   scheduleNode->uuid        = Misc_getUUID(String_new());
+  scheduleNode->parentUUID  = NULL;
   scheduleNode->date.year   = SCHEDULE_ANY;
   scheduleNode->date.month  = SCHEDULE_ANY;
   scheduleNode->date.day    = SCHEDULE_ANY;
@@ -808,6 +814,7 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
     HALT_INSUFFICIENT_MEMORY();
   }
   scheduleNode->uuid        = Misc_getUUID(String_new());
+  scheduleNode->parentUUID  = String_duplicate(fromScheduleNode->parentUUID);
   scheduleNode->date.year   = fromScheduleNode->date.year;
   scheduleNode->date.month  = fromScheduleNode->date.month;
   scheduleNode->date.day    = fromScheduleNode->date.day;
@@ -1630,6 +1637,9 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
 LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 {
   assert(jobNode != NULL);
+  assert(jobNode->fileName != NULL);
+  assert(jobNode->uuid != NULL);
+  assert(jobNode->name != NULL);
 
   UNUSED_VARIABLE(userData);
 
@@ -1707,6 +1717,7 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
   jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
   jobNode->scheduleTitle                  = NULL;
   jobNode->scheduleCustomText             = String_new();
+  jobNode->scheduleNode                   = NULL;
   jobNode->requestedAbortFlag             = FALSE;
   jobNode->requestedVolumeNumber          = 0;
   jobNode->volumeNumber                   = 0;
@@ -1776,6 +1787,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
   newJobNode->scheduleTitle                  = NULL;
   newJobNode->scheduleCustomText             = String_new();
+  newJobNode->scheduleNode                   = NULL;
   newJobNode->requestedAbortFlag             = FALSE;
   newJobNode->requestedVolumeNumber          = 0;
   newJobNode->volumeNumber                   = 0;
@@ -2962,7 +2974,8 @@ LOCAL void jobThreadCode(void)
 {
   StorageSpecifier storageSpecifier;
   String           storageName;
-  String           uuid;
+  StaticString     (jobUUID,64);
+  StaticString     (scheduleUUID,64);
   EntryList        includeEntryList;
   PatternList      excludePatternList;
   PatternList      deltaSourcePatternList;
@@ -2977,7 +2990,6 @@ LOCAL void jobThreadCode(void)
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
   storageName        = String_new();
-  uuid               = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   PatternList_init(&deltaSourcePatternList);
@@ -3013,15 +3025,25 @@ LOCAL void jobThreadCode(void)
 
     // get copy of mandatory job data
     String_set(storageName,jobNode->archiveName);
-    String_set(uuid,jobNode->uuid);
+    String_set(jobUUID,jobNode->uuid);
     EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList,NULL,NULL);
     PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList,NULL,NULL);
     PatternList_clear(&deltaSourcePatternList); PatternList_copy(&jobNode->deltaSourcePatternList,&deltaSourcePatternList,NULL,NULL);
     PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,NULL,NULL);
     initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
-    archiveType        = jobNode->archiveType,
-    scheduleTitle      = jobNode->scheduleTitle;
-    scheduleCustomText = jobNode->scheduleCustomText;
+    archiveType = jobNode->archiveType;
+    if (jobNode->scheduleNode != NULL)
+    {
+      scheduleTitle      = jobNode->scheduleTitle;
+      scheduleCustomText = jobNode->scheduleCustomText;
+      String_set(scheduleUUID,jobNode->scheduleNode->uuid);
+    }
+    else
+    {
+      scheduleTitle      = NULL;
+      scheduleCustomText = NULL;
+      String_clear(scheduleUUID);
+    }
 
     // unlock (Note: job is now protected by running state)
     Semaphore_unlock(&jobList.lock);
@@ -3091,8 +3113,8 @@ LOCAL void jobThreadCode(void)
 
             jobNode->runningInfo.doneEntries++;
             jobNode->runningInfo.doneBytes += 100;
-  //          jobNode->runningInfo.totalEntries += 3;
-  //          jobNode->runningInfo.totalBytes += 181;
+//            jobNode->runningInfo.totalEntries += 3;
+//            jobNode->runningInfo.totalBytes += 181;
             jobNode->runningInfo.estimatedRestTime=120-z;
             String_clear(jobNode->runningInfo.fileName);String_format(jobNode->runningInfo.fileName,"file %d",z);
             String_clear(jobNode->runningInfo.storageName);String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
@@ -3109,8 +3131,9 @@ LOCAL void jobThreadCode(void)
                       );
 
             // create archive
-            jobNode->runningInfo.error = Command_create(storageName,
-                                                        uuid,
+            jobNode->runningInfo.error = Command_create(jobUUID,
+                                                        scheduleUUID,
+                                                        storageName,
                                                         &includeEntryList,
                                                         &excludePatternList,
                                                         &compressExcludePatternList,
@@ -3239,7 +3262,6 @@ LOCAL void jobThreadCode(void)
   PatternList_done(&deltaSourcePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
-  String_delete(uuid);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
 }
@@ -4310,8 +4332,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
               {
                 // create index
                 error = Index_newStorage(indexDatabaseHandle,
+                                         DATABASE_ID_NONE, // entityId
                                          printableStorageName,
-                                         NULL,
                                          INDEX_STATE_UPDATE_REQUESTED,
                                          INDEX_MODE_AUTO,
                                          &storageId
@@ -7612,55 +7634,6 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 }
 
 /***********************************************************************\
-* Name   : serverCommand_scheduleListClear
-* Purpose: clear job schedule list
-* Input  : clientInfo    - client info
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            jobUUID=<uuid>
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
-{
-  StaticString  (jobUUID,64);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
-    return;
-  }
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
-    // find job
-    jobNode = findJobByUUID(jobUUID);
-    if (jobNode == NULL)
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
-      Semaphore_unlock(&jobList.lock);
-      return;
-    }
-
-    // clear schedule list
-    List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-    jobNode->modifiedFlag = TRUE;
-  }
-
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-}
-
-/***********************************************************************\
 * Name   : serverCommand_scheduleAdd
 * Purpose: add entry to job schedule list
 * Input  : clientInfo    - client info
@@ -10325,7 +10298,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
 
   // create index
   error = Index_newStorage(indexDatabaseHandle,
-                           NULL, // uuid
+                           DATABASE_ID_NONE, // entityId
                            storageName,
                            INDEX_STATE_UPDATE_REQUESTED,
                            INDEX_MODE_MANUAL,

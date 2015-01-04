@@ -302,9 +302,11 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
 * Name   : Index_update
 * Purpose: update index name/size
 * Input  : databaseHandle - database handle
-*          storageId      - database id of index
+*          entityId       - database id of entity
+*          jobUUID        - job UUID (can be NULL)
+*          scheduleUUID   - schedule UUID (can be NULL)
+*          storageId      - database id of storage
 *          storageName    - storage name (can be NULL)
-*          uuid           - uuid (can be NULL)
 *          size           - size [bytes]
 * Output : -
 * Return : ERROR_NONE or error code
@@ -312,9 +314,11 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_update(DatabaseHandle *databaseHandle,
+                    DatabaseId     entityId,
+                    const String   jobUUID,
+                    const String   scheduleUUID,
                     DatabaseId     storageId,
-                    String         storageName,
-                    String         uuid,
+                    const String   storageName,
                     uint64         size
                    );
 
@@ -451,6 +455,23 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                         );
 
 /***********************************************************************\
+* Name   : Index_newEntity
+* Purpose: create new entity index
+* Input  : databaseHandle - database handle
+*          jobUUID             - unique job id (can be NULL)
+*          scheduleUUID        - unique schedule id (can be NULL)
+* Output : entityId - database id of new entity index
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_newEntity(DatabaseHandle *databaseHandle,
+                       const String   jobUUID,
+                       const String   scheduleUUID,
+                       DatabaseId     *entityId
+                      );
+
+/***********************************************************************\
 * Name   : Index_initListStorage
 * Purpose: list storage entries
 * Input  : IndexQueryHandle - index query handle variable
@@ -519,21 +540,21 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_newStorage
 * Purpose: create new storage index
 * Input  : databaseHandle - database handle
-*          uuid           - unique id
+*          entityId       - database id of entity
 *          storageName    - storage name
 *          indexState     - index state
 *          indexMode      - index mode
-* Output : databaseId - database id of new storage index
+* Output : databaseId - storageId id of new storage index
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_newStorage(DatabaseHandle *databaseHandle,
-                        const String   uuid,
+                        DatabaseId     entityId,
                         const String   storageName,
                         IndexStates    indexState,
                         IndexModes     indexMode,
-                        DatabaseId     *databaseId
+                        DatabaseId     *storageId
                        );
 
 /***********************************************************************\

@@ -973,6 +973,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   // ignored schedule settings (server only)
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
+  CONFIG_VALUE_IGNORE   ("UUID"),
+  CONFIG_VALUE_IGNORE   ("parentUUID"),
   CONFIG_VALUE_IGNORE   ("date"),
   CONFIG_VALUE_IGNORE   ("weekdays"),
   CONFIG_VALUE_IGNORE   ("time"),
@@ -5104,8 +5106,9 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     globalOptions.runMode = RUN_MODE_INTERACTIVE;
 
     // create archive
-    error = Command_create(storageName,
-                           NULL, // uuid
+    error = Command_create(NULL, // job UUID
+                           NULL, // schedule UUID
+                           storageName,
                            &includeEntryList,
                            &excludePatternList,
                            &compressExcludePatternList,
@@ -5157,8 +5160,9 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
           }
 
           // create archive
-          error = Command_create(storageName,
-                                 NULL, // uuid
+          error = Command_create(NULL, // job UUID
+                                 NULL, // schedule UUID
+                                 storageName,
                                  &includeEntryList,
                                  &excludePatternList,
                                  &compressExcludePatternList,

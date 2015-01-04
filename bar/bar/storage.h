@@ -56,7 +56,6 @@
 #include "stringlists.h"
 #include "files.h"
 #include "network.h"
-#include "database.h"
 #include "errors.h"
 
 #include "crypt.h"

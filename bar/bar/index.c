@@ -1104,9 +1104,11 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_update(DatabaseHandle *databaseHandle,
+                    DatabaseId     entityId,
+                    const String   jobUUID,
+                    const String   scheduleUUID,
                     DatabaseId     storageId,
-                    String         storageName,
-                    String         uuid,
+                    const String   storageName,
                     uint64         size
                    )
 {
@@ -1130,16 +1132,32 @@ Errors Index_update(DatabaseHandle *databaseHandle,
       return error;
     }
   }
-  if (uuid != NULL)
+  if (jobUUID != NULL)
   {
     error = Database_execute(databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "UPDATE storage \
-                              SET uuid=%'S \
+                             "UPDATE entities \
+                              SET jobUUID=%'S \
                               WHERE id=%ld;\
                              ",
-                             uuid,
-                             storageId
+                             jobUUID,
+                             entityId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  if (scheduleUUID != NULL)
+  {
+    error = Database_execute(databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "UPDATE entities \
+                              SET scheduleUUID=%'S \
+                              WHERE id=%ld;\
+                             ",
+                             scheduleUUID,
+                             entityId
                             );
     if (error != ERROR_NONE)
     {
@@ -1415,6 +1433,50 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                             );
 }
 
+Errors Index_newEntity(DatabaseHandle *databaseHandle,
+                       const String   jobUUID,
+                       const String   scheduleUUID,
+                       DatabaseId     *entityId
+                      )
+{
+  Errors error;
+
+  assert(databaseHandle != NULL);
+  assert(entityId != NULL);
+
+  error = Database_execute(databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO entities \
+                              (\
+                               jobUUID,\
+                               scheduleUUID,\
+                               created,\
+                               type,\
+                               parentJobUUID,\
+                               bidFlag\
+                              ) \
+                            VALUES \
+                             (\
+                              %'S,\
+                              %'S,\
+                              DATETIME('now'),\
+                              0,\
+                              '',\
+                              0\
+                             ); \
+                           ",
+                           jobUUID,
+                           scheduleUUID
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  (*entityId) = Database_getLastRowId(indexDatabaseHandle);
+
+  return ERROR_NONE;
+}
+
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
                              const String     jobUUID,
@@ -1594,7 +1656,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 }
 
 Errors Index_newStorage(DatabaseHandle *databaseHandle,
-                        String         uuid,
+                        DatabaseId     entityId,
                         const String   storageName,
                         IndexStates    indexState,
                         IndexModes     indexMode,
@@ -1603,15 +1665,15 @@ Errors Index_newStorage(DatabaseHandle *databaseHandle,
 {
   Errors error;
 
-  assert(storageId != NULL);
   assert(databaseHandle != NULL);
+  assert(storageId != NULL);
 
   error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),
                            "INSERT INTO storage \
                               (\
+                               entityId,\
                                name,\
-                               uuid,\
                                created,\
                                size,\
                                state,\
@@ -1620,7 +1682,7 @@ Errors Index_newStorage(DatabaseHandle *databaseHandle,
                               ) \
                             VALUES \
                              (\
-                              %'S,\
+                              %d,\
                               %'S,\
                               DATETIME('now'),\
                               0,\
@@ -1629,8 +1691,8 @@ Errors Index_newStorage(DatabaseHandle *databaseHandle,
                               DATETIME('now')\
                              ); \
                            ",
+                           entityId,
                            storageName,
-                           uuid,
                            indexState,
                            indexMode
                           );

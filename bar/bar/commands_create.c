@@ -86,7 +86,8 @@ typedef struct
 typedef struct
 {
   StorageSpecifier            *storageSpecifier;                  // storage specifier structure
-  String                      uuid;                               // unique id to store or NULL
+  String                      jobUUID;                            // unique job id to store or NULL
+  String                      scheduleUUID;                       // unique schedule id to store or NULL
   const EntryList             *includeEntryList;                  // list of included entries
   const PatternList           *excludePatternList;                // list of exclude patterns
   const PatternList           *compressExcludePatternList;        // exclude compression pattern list
@@ -149,7 +150,8 @@ typedef struct
 typedef struct
 {
   DatabaseHandle *databaseHandle;
-  int64          storageId;                                       // database storage id
+  DatabaseId     entityId;                                        // database entity id
+  DatabaseId     storageId;                                       // database storage id
   String         fileName;                                        // temporary archive name
   uint64         fileSize;                                        // archive size
   String         destinationFileName;                             // destination archive name
@@ -208,7 +210,8 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 * Purpose: initialize create info
 * Input  : createInfo                 - create info variable
 *          storageSpecifier           - storage specifier structure
-*          uuid                       - unique id to store or NULL
+*          jobUUID                    - unique job id to store or NULL
+*          scheduleUUID               - unique schedule id to store or NULL
 *          includeEntryList           - include entry list
 *          excludePatternList         - exclude pattern list
 *          compressExcludePatternList - exclude compression pattern list
@@ -231,7 +234,8 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 
 LOCAL void initCreateInfo(CreateInfo               *createInfo,
                           StorageSpecifier         *storageSpecifier,
-                          const String             uuid,
+                          const String             jobUUID,
+                          const String             scheduleUUID,
                           const EntryList          *includeEntryList,
                           const PatternList        *excludePatternList,
                           const PatternList        *compressExcludePatternList,
@@ -250,7 +254,8 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
 
   // init variables
   createInfo->storageSpecifier               = storageSpecifier;
-  createInfo->uuid                           = uuid;
+  createInfo->jobUUID                        = jobUUID;
+  createInfo->scheduleUUID                   = scheduleUUID;
   createInfo->includeEntryList               = includeEntryList;
   createInfo->excludePatternList             = excludePatternList;
   createInfo->compressExcludePatternList     = compressExcludePatternList;
@@ -2724,7 +2729,8 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 
 LOCAL Errors newArchiveFile(void           *userData,
                             DatabaseHandle *databaseHandle,
-                            int64          storageId
+                            DatabaseId     entityId,
+                            DatabaseId     storageId
                            )
 {
   CreateInfo    *createInfo = (CreateInfo*)userData;
@@ -2746,6 +2752,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Purpose: call back to store created archive
 * Input  : userData       - user data
 *          databaseHandle - database handle or NULL if no database
+*          entityId       - database id of entity
 *          storageId      - database id of storage
 *          fileName       - archive file name
 *          partNumber     - part number or ARCHIVE_PART_NUMBER_NONE for
@@ -2758,7 +2765,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 LOCAL Errors storeArchiveFile(void           *userData,
                               DatabaseHandle *databaseHandle,
-                              int64          storageId,
+                              DatabaseId     entityId,
+                              DatabaseId     storageId,
                               String         tmpFileName,
                               int            partNumber,
                               bool           lastPartFlag
@@ -2808,14 +2816,16 @@ LOCAL Errors storeArchiveFile(void           *userData,
   String_set(storageName,Storage_getName(createInfo->storageSpecifier,destinationFileName));
   DEBUG_TESTCODE("storeArchiveFile1") { String_delete(storageName); String_delete(destinationFileName); return DEBUG_TESTCODE_ERROR(); }
 
-  // set database storage name and uuid
+  // set database storage name
   if (storageId != DATABASE_ID_NONE)
   {
     printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,destinationFileName);
     error = Index_update(indexDatabaseHandle,
+                         entityId,
+                         createInfo->jobUUID,
+                         createInfo->scheduleUUID,
                          storageId,
                          printableStorageName,
-                         createInfo->uuid,
                          0LL   // size
                         );
     if (error != ERROR_NONE)
@@ -2831,6 +2841,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
 
   // send to storage controller
   storageMsg.databaseHandle      = databaseHandle;
+  storageMsg.entityId            = entityId;
   storageMsg.storageId           = storageId;
   storageMsg.fileName            = String_duplicate(tmpFileName);
   storageMsg.fileSize            = fileInfo.size;
@@ -2900,7 +2911,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   String                     pattern;
   StorageSpecifier           storageDirectorySpecifier;
   IndexQueryHandle           indexQueryHandle;
-  int64                      oldStorageId;
+  DatabaseId                 oldStorageId;
   String                     oldStorageName;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
@@ -3194,9 +3205,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
       // set database storage size
       error = Index_update(indexDatabaseHandle,
+                           storageMsg.entityId,
+                           NULL, // job UUID
+                           NULL, // schedule UUID
                            storageMsg.storageId,
                            NULL, // storageName
-                           NULL, // uuid
                            fileInfo.size
                           );
       if (error != ERROR_NONE)
@@ -4973,8 +4986,9 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_create(const String                    storageName,
-                      const String                    uuid,
+Errors Command_create(const String                    jobUUID,
+                      const String                    scheduleUUID,
+                      const String                    storageName,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
                       const PatternList               *compressExcludePatternList,
@@ -5044,7 +5058,8 @@ Errors Command_create(const String                    storageName,
   // init threads
   initCreateInfo(&createInfo,
                  &storageSpecifier,
-                 uuid,
+                 jobUUID,
+                 scheduleUUID,
                  includeEntryList,
                  excludePatternList,
                  compressExcludePatternList,
@@ -5174,10 +5189,12 @@ Errors Command_create(const String                    storageName,
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
                          jobOptions,
+                         indexDatabaseHandle,
+                         jobUUID,
+                         scheduleUUID,
                          CALLBACK(newArchiveFile,&createInfo),
                          CALLBACK(storeArchiveFile,&createInfo),
-                         CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData),
-                         indexDatabaseHandle
+                         CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData)
                         );
   if (error != ERROR_NONE)
   {

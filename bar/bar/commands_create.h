@@ -87,8 +87,9 @@ typedef void(*CreateStatusInfoFunction)(void                   *userData,
 /***********************************************************************\
 * Name   : Command_create
 * Purpose: create archive
-* Input  : storageName                      - storage name
-*          uuid                             - unique id to store or NULL
+* Input  : jobUUID                          - unique job id to store or NULL
+*          scheduleUUID                     - unique schedule id to store or NULL
+*          storageName                      - storage name
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
 *          compressExcludePatternList       - exclude compression pattern
@@ -120,8 +121,9 @@ typedef void(*CreateStatusInfoFunction)(void                   *userData,
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_create(const String                    storageName,
-                      const String                    uuid,
+Errors Command_create(const String                    jobUUID,
+                      const String                    scheduleUUID,
+                      const String                    storageName,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
                       const PatternList               *compressExcludePatternList,
