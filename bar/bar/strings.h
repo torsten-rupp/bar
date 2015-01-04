@@ -148,13 +148,19 @@ typedef struct
   #define STRING_CHECK_ASSIGNABLE(string) \
     do \
     { \
-      assert(STRING_IS_ASSIGNABLE(string)); \
+      if (string != NULL) \
+      { \
+        assert(STRING_IS_ASSIGNABLE(string)); \
+      } \
     } \
     while (0)
   #define STRING_CHECK_DYNAMIC(string) \
     do \
     { \
-      assert(STRING_IS_DYNAMIC(string)); \
+      if (string != NULL) \
+      { \
+        assert(STRING_IS_DYNAMIC(string)); \
+      } \
     } \
     while (0)
 
