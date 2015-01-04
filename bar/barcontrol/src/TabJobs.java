@@ -1364,8 +1364,8 @@ public class TabJobs
   private Combo        widgetFTPMaxBandWidth;
   private Combo        widgetSCPSFTPMaxBandWidth;
   private Combo        widgetWebdavMaxBandWidth;
-  private Table        widgetScheduleList;
-  private Button       widgetScheduleListAdd,widgetScheduleListEdit,widgetScheduleListRemove;
+  private Table        widgetScheduleTable;
+  private Button       widgetScheduleTableAdd,widgetScheduleTableEdit,widgetScheduleTableRemove;
 
   // BAR variables
   private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental","differential"});
@@ -5948,10 +5948,10 @@ public class TabJobs
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // list
-        widgetScheduleList = Widgets.newTable(tab);
-        widgetScheduleList.setToolTipText(BARControl.tr("List with schedule entries.\nDouble-click to edit entry, right-click to open context menu."));
-        Widgets.layout(widgetScheduleList,0,0,TableLayoutData.NSWE);
-        widgetScheduleList.addMouseListener(new MouseListener()
+        widgetScheduleTable = Widgets.newTable(tab);
+        widgetScheduleTable.setToolTipText(BARControl.tr("List with schedule entries.\nDouble-click to edit entry, right-click to open context menu."));
+        Widgets.layout(widgetScheduleTable,0,0,TableLayoutData.NSWE);
+        widgetScheduleTable.addMouseListener(new MouseListener()
         {
           public void mouseDoubleClick(final MouseEvent mouseEvent)
           {
@@ -5964,7 +5964,7 @@ public class TabJobs
           {
           }
         });
-        widgetScheduleList.addKeyListener(new KeyListener()
+        widgetScheduleTable.addKeyListener(new KeyListener()
         {
           public void keyPressed(KeyEvent keyEvent)
           {
@@ -5973,15 +5973,15 @@ public class TabJobs
           {
             if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
             {
-              Widgets.invoke(widgetScheduleListAdd);
+              Widgets.invoke(widgetScheduleTableAdd);
             }
             else if (Widgets.isAccelerator(keyEvent,SWT.CR))
             {
-              Widgets.invoke(widgetScheduleListEdit);
+              Widgets.invoke(widgetScheduleTableEdit);
             }
             else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
             {
-              Widgets.invoke(widgetScheduleListRemove);
+              Widgets.invoke(widgetScheduleTableRemove);
             }
           }
         });
@@ -5993,22 +5993,22 @@ public class TabJobs
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             TableColumn            tableColumn = (TableColumn)selectionEvent.widget;
-            ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleList,tableColumn);
-            Widgets.sortTableColumn(widgetScheduleList,tableColumn,scheduleDataComparator);
+            ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleTable,tableColumn);
+            Widgets.sortTableColumn(widgetScheduleTable,tableColumn,scheduleDataComparator);
           }
         };
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,0,BARControl.tr("Date"),        SWT.LEFT,100,false);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,0,BARControl.tr("Date"),        SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,1,BARControl.tr("Week day"),    SWT.LEFT,250,true );
-        Widgets.sortTableColumn(widgetScheduleList,tableColumn,new ScheduleDataComparator(widgetScheduleList,tableColumn));
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,1,BARControl.tr("Week day"),    SWT.LEFT,250,true );
+        Widgets.sortTableColumn(widgetScheduleTable,tableColumn,new ScheduleDataComparator(widgetScheduleTable,tableColumn));
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,2,BARControl.tr("Time"),        SWT.LEFT,100,false);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,2,BARControl.tr("Time"),        SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,3,BARControl.tr("Archive type"),SWT.LEFT, 80,true );
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,3,BARControl.tr("Archive type"),SWT.LEFT, 80,true );
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,4,BARControl.tr("Custom text"), SWT.LEFT, 90,true );
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,4,BARControl.tr("Custom text"), SWT.LEFT, 90,true );
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,5,BARControl.tr("Enabled"),     SWT.LEFT, 60,false);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,5,BARControl.tr("Enabled"),     SWT.LEFT, 60,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
 
         menu = Widgets.newPopupMenu(shell);
@@ -6062,16 +6062,16 @@ public class TabJobs
             }
           });
         }
-        widgetScheduleList.setMenu(menu);
+        widgetScheduleTable.setMenu(menu);
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
-          widgetScheduleListAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
-          widgetScheduleListAdd.setToolTipText(BARControl.tr("Add new schedule entry."));
-          Widgets.layout(widgetScheduleListAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          widgetScheduleListAdd.addSelectionListener(new SelectionListener()
+          widgetScheduleTableAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
+          widgetScheduleTableAdd.setToolTipText(BARControl.tr("Add new schedule entry."));
+          Widgets.layout(widgetScheduleTableAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetScheduleTableAdd.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -6082,10 +6082,10 @@ public class TabJobs
             }
           });
 
-          widgetScheduleListEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"\u2026");
-          widgetScheduleListEdit.setToolTipText(BARControl.tr("Edit schedule entry."));
-          Widgets.layout(widgetScheduleListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          widgetScheduleListEdit.addSelectionListener(new SelectionListener()
+          widgetScheduleTableEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"\u2026");
+          widgetScheduleTableEdit.setToolTipText(BARControl.tr("Edit schedule entry."));
+          Widgets.layout(widgetScheduleTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetScheduleTableEdit.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -6110,10 +6110,10 @@ public class TabJobs
             }
           });
 
-          widgetScheduleListRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
-          widgetScheduleListRemove.setToolTipText(BARControl.tr("Remove schedule entry."));
-          Widgets.layout(widgetScheduleListRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          widgetScheduleListRemove.addSelectionListener(new SelectionListener()
+          widgetScheduleTableRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
+          widgetScheduleTableRemove.setToolTipText(BARControl.tr("Remove schedule entry."));
+          Widgets.layout(widgetScheduleTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetScheduleTableRemove.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -6664,7 +6664,7 @@ throw new Error("NYI");
     Widgets.removeAllTableEntries(widgetIncludeTable);
     Widgets.removeAllListEntries(widgetExcludeList);
     Widgets.removeAllListEntries(widgetCompressExcludeList);
-    Widgets.removeAllTableEntries(widgetScheduleList);
+    Widgets.removeAllTableEntries(widgetScheduleTable);
   }
 
   /** update selected job data
@@ -9363,7 +9363,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
    */
   private TableItem getScheduleTableItemByUUID(String scheduleUUID)
   {
-    TableItem tableItems[] = widgetScheduleList.getItems();
+    TableItem tableItems[] = widgetScheduleTable.getItems();
     for (int i = 0; i < tableItems.length; i++)
     {
       if (((ScheduleData)tableItems[i].getData()).uuid.equals(scheduleUUID))
@@ -9381,8 +9381,8 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
    */
   private int findScheduleItemIndex(ScheduleData scheduleData)
   {
-    TableItem              tableItems[]           = widgetScheduleList.getItems();
-    ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleList);
+    TableItem              tableItems[]           = widgetScheduleTable.getItems();
+    ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleTable);
 
     int index = 0;
     while (   (index < tableItems.length)
@@ -9402,7 +9402,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
     synchronized(scheduleDataMap)
     {
       scheduleDataMap.clear();
-      widgetScheduleList.removeAll();
+      widgetScheduleTable.removeAll();
     }
   }
 
@@ -9410,7 +9410,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
    */
   private void updateScheduleList()
   {
-    if (!widgetScheduleList.isDisposed())
+    if (!widgetScheduleTable.isDisposed())
     {
       try
       {
@@ -9479,7 +9479,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
           {
             synchronized(scheduleDataMap)
             {
-              TableItem[] tableItems = widgetScheduleList.getItems();
+              TableItem[] tableItems = widgetScheduleTable.getItems();
 
               // get table items
               HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
@@ -9491,7 +9491,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
               for (ScheduleData scheduleData : scheduleDataMap.values())
               {
                 // find table item
-                TableItem tableItem = Widgets.getTableItem(widgetScheduleList,scheduleData);
+                TableItem tableItem = Widgets.getTableItem(widgetScheduleTable,scheduleData);
 
                 // update/create table item
                 if (tableItem != null)
@@ -9512,7 +9512,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
                 else
                 {
                   // insert new item
-                  tableItem = Widgets.insertTableItem(widgetScheduleList,
+                  tableItem = Widgets.insertTableItem(widgetScheduleTable,
                                                       findScheduleItemIndex(scheduleData),
                                                       scheduleData,
                                                       scheduleData.getDate(),
@@ -9529,7 +9529,7 @@ Dprintf.dprintf("%d",findListIndex(widgetCompressExcludeList,pattern));
               // remove not existing entries
               for (TableItem tableItem : removeTableItemSet)
               {
-                Widgets.removeTableItem(widgetScheduleList,tableItem);
+                Widgets.removeTableItem(widgetScheduleTable,tableItem);
               }
             }
           }
@@ -9909,7 +9909,7 @@ throw new Error("NYI");
       scheduleData.uuid = resultMap.getString("scheduleUUID");
       scheduleDataMap.put(scheduleData.uuid,scheduleData);
 
-      TableItem tableItem = Widgets.insertTableItem(widgetScheduleList,
+      TableItem tableItem = Widgets.insertTableItem(widgetScheduleTable,
                                                     findScheduleItemIndex(scheduleData),
                                                     scheduleData,
                                                     scheduleData.getDate(),
@@ -9929,10 +9929,10 @@ throw new Error("NYI");
   {
     assert selectedJobData != null;
 
-    int index = widgetScheduleList.getSelectionIndex();
+    int index = widgetScheduleTable.getSelectionIndex();
     if (index >= 0)
     {
-      TableItem tableItem       = widgetScheduleList.getItem(index);
+      TableItem tableItem       = widgetScheduleTable.getItem(index);
       ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
       if (scheduleEdit(scheduleData,"Edit schedule","Save"))
@@ -9966,10 +9966,10 @@ throw new Error("NYI");
   {
     assert selectedJobData != null;
 
-    int index = widgetScheduleList.getSelectionIndex();
+    int index = widgetScheduleTable.getSelectionIndex();
     if (index >= 0)
     {
-      TableItem    tableItem    = widgetScheduleList.getItem(index);
+      TableItem    tableItem    = widgetScheduleTable.getItem(index);
       ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
       ScheduleData newScheduleData = scheduleData.clone();
@@ -10001,7 +10001,7 @@ throw new Error("NYI");
         scheduleData.uuid = resultMap.getString("scheduleUUID");
         scheduleDataMap.put(scheduleData.uuid,newScheduleData);
 
-        TableItem newTableItem = Widgets.insertTableItem(widgetScheduleList,
+        TableItem newTableItem = Widgets.insertTableItem(widgetScheduleTable,
                                                          findScheduleItemIndex(scheduleData),
                                                          scheduleData,
                                                          scheduleData.getDate(),
@@ -10022,7 +10022,7 @@ throw new Error("NYI");
   {
     assert selectedJobData != null;
 
-    TableItem[] tableItems = widgetScheduleList.getSelection();
+    TableItem[] tableItems = widgetScheduleTable.getSelection();
     if (tableItems.length > 0)
     {
       if (Dialogs.confirm(shell,"Delete "+tableItems.length+" selected schedule entries?"))
