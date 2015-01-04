@@ -1486,17 +1486,52 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     executeCommand(StringParser.format("SET name=% value=%S",name,s),0);
   }
 
+  /** get job option value from BAR server
+   * @param jobUUID job UUID
+   * @param name name of value
+   * @return value
+   */
+  public static <T> T getJobOption(String jobUUID, String name, Class clazz)
+  {
+    T data = null;
+
+    String[] errorMessage = new String[1];
+    ValueMap resultMap    = new ValueMap();
+    if (executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,name),
+                       0,
+                       errorMessage,
+                       resultMap
+                      ) == Errors.NONE
+       )
+    {
+      if      (clazz == Boolean.class)
+      {
+        data = (T)new Boolean(resultMap.getBoolean("value"));
+      }
+      else if (clazz == Long.class)
+      {
+        data = (T)new Long(resultMap.getLong("value"));
+      }
+      else if (clazz == String.class)
+      {
+        data = (T)resultMap.get("value");
+      }
+    }
+
+    return data;
+  }
+
   /** get boolean value from BAR server
    * @param jobUUID job UUID
    * @param name name of value
    * @return value
    */
-  public static boolean getBooleanOption(String jobUUID, String name)
+  public static boolean getBooleanJobOption(String jobUUID, String name)
   {
     String[] errorMessage = new String[1];
     ValueMap resultMap    = new ValueMap();
 
-    if (executeCommand(StringParser.format("OPTION_GET jobUUID=%s name=%S",jobUUID,name),
+    if (executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,name),
                        0,
                        errorMessage,
                        resultMap
@@ -1516,12 +1551,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param name name of value
    * @return value
    */
-  public static long getLongOption(String jobUUID, String name)
+  public static long getLongJobOption(String jobUUID, String name)
   {
     String[] errorMessage = new String[1];
     ValueMap resultMap    = new ValueMap();
 
-    if (executeCommand(StringParser.format("OPTION_GET jobUUID=%s name=%S",jobUUID,name),
+    if (executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,name),
                        0,
                        errorMessage,
                        resultMap
@@ -1541,12 +1576,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param name name of value
    * @return value
    */
-  public static String getStringOption(String jobUUID, String name)
+  public static String getStringJobOption(String jobUUID, String name)
   {
     String[] errorMessage = new String[1];
     ValueMap resultMap    = new ValueMap();
 
-    if (executeCommand(StringParser.format("OPTION_GET jobUUID=%s name=%S",jobUUID,name),
+    if (executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,name),
                        0,
                        errorMessage,
                        resultMap
@@ -1561,34 +1596,103 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
   }
 
-  /** set boolean option value on BAR server
+  /** set boolean job option value on BAR server
    * @param jobUUID job UUID
    * @param name option name of value
    * @param b value
    */
-  public static void setOption(String jobUUID, String name, boolean b)
+  public static void setJobOption(String jobUUID, String name, boolean b)
   {
-    executeCommand(StringParser.format("OPTION_SET jobUUID=%s name=%S value=%s",jobUUID,name,b ? "yes" : "no"),0);
+    executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",jobUUID,name,b ? "yes" : "no"),0);
   }
 
-  /** set long option value on BAR server
+  /** set long job option value on BAR server
    * @param jobUUID job UUID
    * @param name option name of value
    * @param n value
    */
-  public static void setOption(String jobUUID, String name, long n)
+  public static void setJobOption(String jobUUID, String name, long n)
   {
-    executeCommand(StringParser.format("OPTION_SET jobUUID=%s name=%S value=%d",jobUUID,name,n),0);
+    executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",jobUUID,name,n),0);
   }
 
-  /** set string option value on BAR server
+  /** set string job option value on BAR server
    * @param jobUUID job UUID
    * @param name option name of value
    * @param s value
    */
-  public static void setOption(String jobUUID, String name, String s)
+  public static void setJobOption(String jobUUID, String name, String s)
   {
-    executeCommand(StringParser.format("OPTION_SET jobUUID=%s name=%S value=%S",jobUUID,name,s),0);
+    executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%S",jobUUID,name,s),0);
+  }
+
+  /** get schedule option value from BAR server
+   * @param jobUUID job UUID
+   * @param scheduleUUID schedule UUID
+   * @param name name of value
+   * @return value
+   */
+  public static <T> T getScheduleOption(String jobUUID, String scheduleUUID, String name, Class clazz)
+  {
+    T data = null;
+
+    String[] errorMessage = new String[1];
+    ValueMap resultMap    = new ValueMap();
+    if (executeCommand(StringParser.format("SCHEDULE_OPTION_GET jobUUID=%s scheduleUUID=%s name=%S",jobUUID,scheduleUUID,name),
+                       0,
+                       errorMessage,
+                       resultMap
+                      ) == Errors.NONE
+       )
+    {
+      if      (clazz == Boolean.class)
+      {
+        data = (T)new Boolean(resultMap.getBoolean("value"));
+      }
+      else if (clazz == Long.class)
+      {
+        data = (T)new Long(resultMap.getLong("value"));
+      }
+      else if (clazz == String.class)
+      {
+        data = (T)resultMap.get("value");
+      }
+    }
+
+    return data;
+  }
+
+  /** set boolean schedule option value on BAR server
+   * @param jobUUID job UUID
+   * @param scheduleUUID schedule UUID
+   * @param name option name of value
+   * @param b value
+   */
+  public static void setScheduleOption(String jobUUID, String scheduleUUID, String name, boolean b)
+  {
+    executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%s",jobUUID,scheduleUUID,name,b ? "yes" : "no"),0);
+  }
+
+  /** set long schedule option value on BAR server
+   * @param jobUUID job UUID
+   * @param scheduleUUID schedule UUID
+   * @param name option name of value
+   * @param n value
+   */
+  public static void setScheduleOption(String jobUUID, String scheduleUUID, String name, long n)
+  {
+    executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%d",jobUUID,scheduleUUID,name,n),0);
+  }
+
+  /** set string schedule option value on BAR server
+   * @param jobUUID job UUID
+   * @param scheduleUUID schedule UUID
+   * @param name option name of value
+   * @param s value
+   */
+  public static void setScheduleOption(String jobUUID, String scheduleUUID, String name, String s)
+  {
+    executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%S",jobUUID,scheduleUUID,name,s),0);
   }
 
   /** get password encrypt type
