@@ -1922,6 +1922,32 @@ LOCAL JobNode *findJobByUUID(const String uuid)
 }
 
 /***********************************************************************\
+* Name   : findScheduleByUUID
+* Purpose: find schedule by uuid
+* Input  : jobNode      - job node
+*          scheduleUUID - schedule UUID
+* Output : -
+* Return : schedule node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, const String scheduleUUID)
+{
+  ScheduleNode *scheduleNode;
+
+  assert(jobNode != NULL);
+
+  scheduleNode = jobNode->scheduleList.head;
+  while ((scheduleNode != NULL) && !String_equals(scheduleNode->uuid,scheduleUUID))
+  {
+    scheduleNode = scheduleNode->next;
+  }
+
+
+  return scheduleNode;
+}
+
+/***********************************************************************\
 * Name   : readJobScheduleInfo
 * Purpose: read job schedule info
 * Input  : jobNode - job node
@@ -5789,7 +5815,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
 }
 
 /***********************************************************************\
-* Name   : serverCommand_optionGet
+* Name   : serverCommand_jobOptionGet
 * Purpose: get job options
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -5804,12 +5830,12 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
 *            value=<value>
 \***********************************************************************/
 
-LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   StaticString      (jobUUID,64);
   String            name;
   SemaphoreLock     semaphoreLock;
-  JobNode           *jobNode;
+  const JobNode     *jobNode;
   uint              z;
   String            s;
   ConfigValueFormat configValueFormat;
@@ -5876,7 +5902,7 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
 }
 
 /***********************************************************************\
-* Name   : serverCommand_optionSet
+* Name   : serverCommand_jobOptionSet
 * Purpose: set job option
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -5891,7 +5917,7 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,64);
   String        name,value;
@@ -5960,7 +5986,7 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
 }
 
 /***********************************************************************\
-* Name   : serverCommand_optionDelete
+* Name   : serverCommand_jobOptionDelete
 * Purpose: delete job option
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -5974,7 +6000,7 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,64);
   String        name;
@@ -6047,7 +6073,6 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
 * Notes  : Arguments:
 *          Result:
 *            jobUUID=<uuid> \
-*            uuid=<uuid> \
 *            name=<name> \
 *            state=<state> \
 *            archiveType=<type> \
@@ -7450,6 +7475,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *          Result:
+*            scheduleUUID=<uuid>
 *            date=<year>|*-<month>|*-<day>|* \
 *            weekDay=<week day>|* \
 *            time=<hour>|*:<minute>|* \
@@ -7564,7 +7590,8 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
       }
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "date=%S weekDays=%S time=%S archiveType=%s customText=%'S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
+                       "scheduleUUID=%S date=%S weekDays=%S time=%S archiveType=%s customText=%'S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
+                       scheduleNode->uuid,
                        date,
                        weekDays,
                        time,
@@ -7634,7 +7661,7 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, cons
 }
 
 /***********************************************************************\
-* Name   : serverCommand_scheduleListAdd
+* Name   : serverCommand_scheduleAdd
 * Purpose: add entry to job schedule list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -7643,7 +7670,6 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, cons
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            scheduleUUID=<uuid>
 *            jobUUID=<uuid>
 *            date=<year>|*-<month>|*-<day>|*
 *            weekDays=<week day>,...|*
@@ -7655,9 +7681,10 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, cons
 *            maxAage=<n>|0
 *            enabledFlag=yes|no
 *          Result:
+*            scheduleUUID=<uuid>
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,64);
   String        title;
@@ -7822,7 +7849,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"scheduleUUID=%S",scheduleNode->uuid);
 
   // free resources
   String_delete(customText);
@@ -7830,6 +7857,370 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
   String_delete(weekDays);
   String_delete(date);
   String_delete(title);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_scheduleDelete
+* Purpose: clear job schedule list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_scheduleDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,64);
+  StaticString  (scheduleUUID,64);
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  ScheduleNode  *scheduleNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, schdule UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // find schedule
+    scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+    if (scheduleNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // remove from list
+    List_removeAndFree(&jobNode->scheduleList,scheduleNode,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+    jobNode->modifiedFlag = TRUE;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_scheduleOptionGet
+* Purpose: get schedule options
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
+*            name=<name>
+*          Result:
+*            value=<value>
+\***********************************************************************/
+
+LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString       (jobUUID,64);
+  StaticString       (scheduleUUID,64);
+  String             name;
+  SemaphoreLock      semaphoreLock;
+  const JobNode      *jobNode;
+  const ScheduleNode *scheduleNode;
+  uint               z;
+  String             s;
+  ConfigValueFormat  configValueFormat;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, schdule UUID, name
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // find schedule
+    scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+    if (scheduleNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(name);
+      return;
+    }
+
+    // find config value
+    z = 0;
+    while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
+           && !String_equalsCString(name,CONFIG_VALUES[z].name)
+          )
+    {
+      z++;
+    }
+    if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(name);
+      return;
+    }
+
+    // send value
+    s = String_new();
+    ConfigValue_formatInit(&configValueFormat,
+                           &CONFIG_VALUES[z],
+                           CONFIG_VALUE_FORMAT_MODE_VALUE,
+                           jobNode
+                          );
+    ConfigValue_format(&configValueFormat,s);
+    ConfigValue_formatDone(&configValueFormat);
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%S",s);
+    String_delete(s);
+  }
+
+  // free resources
+  String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_scheduleOptionSet
+* Purpose: set schedule option
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
+*            name=<name>
+*            value=<value>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,64);
+  StaticString  (scheduleUUID,64);
+  String        name,value;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  ScheduleNode  *scheduleNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, schdule UUID, name, value
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    return;
+  }
+  value = String_new();
+  if (!StringMap_getString(argumentMap,"value",value,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
+    String_delete(name);
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // find schedule
+    scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+    if (scheduleNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(value);
+      String_delete(name);
+      return;
+    }
+
+    // parse
+    if (ConfigValue_parse(String_cString(name),
+                          String_cString(value),
+                          CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                          "schedule",
+                          NULL, // errorOutputHandle,
+                          NULL, // errorPrefix,
+                          scheduleNode
+                         )
+       )
+    {
+      jobNode->modifiedFlag = TRUE;
+      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    }
+    else
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
+    }
+  }
+
+  // free resources
+  String_delete(value);
+  String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_scheduleOptionDelete
+* Purpose: delete schedule option
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
+*            name=<name>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,64);
+  StaticString  (scheduleUUID,64);
+  String        name;
+  SemaphoreLock semaphoreLock;
+  const JobNode *jobNode;
+  ScheduleNode  *scheduleNode;
+  uint          z;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, schdule UUID, name
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // find schedule
+    scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+    if (scheduleNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(name);
+      return;
+    }
+
+    // find config value
+    z = 0;
+    while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
+           && !String_equalsCString(name,CONFIG_VALUES[z].name)
+          )
+    {
+      z++;
+    }
+    if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(name);
+      return;
+    }
+
+    // delete value
+#warning todo?
+//    ConfigValue_reset(&CONFIG_VALUES[z],jobNode);
+  }
+
+  // free resources
+  String_delete(name);
 }
 
 /***********************************************************************\
@@ -11536,6 +11927,9 @@ SERVER_COMMANDS[] =
   { "JOB_START",                  serverCommand_jobStart,                AUTHORIZATION_STATE_OK      },
   { "JOB_ABORT",                  serverCommand_jobAbort,                AUTHORIZATION_STATE_OK      },
   { "JOB_FLUSH",                  serverCommand_jobFlush,                AUTHORIZATION_STATE_OK      },
+  { "JOB_OPTION_GET",             serverCommand_jobOptionGet,            AUTHORIZATION_STATE_OK      },
+  { "JOB_OPTION_SET",             serverCommand_jobOptionSet,            AUTHORIZATION_STATE_OK      },
+  { "JOB_OPTION_DELETE",          serverCommand_jobOptionDelete,         AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST",               serverCommand_includeList,             AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST_CLEAR",         serverCommand_includeListClear,        AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST_ADD",           serverCommand_includeListAdd,          AUTHORIZATION_STATE_OK      },
@@ -11549,11 +11943,11 @@ SERVER_COMMANDS[] =
   { "EXCLUDE_COMPRESS_LIST_CLEAR",serverCommand_excludeCompressListClear,AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_COMPRESS_LIST_ADD",  serverCommand_excludeCompressListAdd,  AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_LIST",              serverCommand_scheduleList,            AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_LIST_CLEAR",        serverCommand_scheduleListClear,       AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_LIST_ADD",          serverCommand_scheduleListAdd,         AUTHORIZATION_STATE_OK      },
-  { "OPTION_GET",                 serverCommand_optionGet,               AUTHORIZATION_STATE_OK      },
-  { "OPTION_SET",                 serverCommand_optionSet,               AUTHORIZATION_STATE_OK      },
-  { "OPTION_DELETE",              serverCommand_optionDelete,            AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_ADD",               serverCommand_scheduleAdd,             AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_DELETE",            serverCommand_scheduleDelete,          AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_OPTION_GET",        serverCommand_scheduleOptionGet,       AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_OPTION_SET",        serverCommand_scheduleOptionSet,       AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_OPTION_DELETE",     serverCommand_scheduleOptionDelete,    AUTHORIZATION_STATE_OK      },
   { "DECRYPT_PASSWORD_CLEAR",     serverCommand_decryptPasswordsClear,   AUTHORIZATION_STATE_OK      },
   { "DECRYPT_PASSWORD_ADD",       serverCommand_decryptPasswordAdd,      AUTHORIZATION_STATE_OK      },
   { "FTP_PASSWORD",               serverCommand_ftpPassword,             AUTHORIZATION_STATE_OK      },
@@ -11584,6 +11978,11 @@ SERVER_COMMANDS[] =
   { "INDEX_STORAGE_REFRESH",      serverCommand_indexStorageRefresh,     AUTHORIZATION_STATE_OK      },
 
   { "INDEX_ENTRIES_LIST",         serverCommand_indexEntriesList,        AUTHORIZATION_STATE_OK      },
+
+  // obsolote
+  { "OPTION_GET",                 serverCommand_jobOptionGet,            AUTHORIZATION_STATE_OK      },
+  { "OPTION_SET",                 serverCommand_jobOptionSet,            AUTHORIZATION_STATE_OK      },
+  { "OPTION_DELETE",              serverCommand_jobOptionDelete,         AUTHORIZATION_STATE_OK      },
 
   #ifndef NDEBUG
   { "DEBUG_PRINT_STATISTICS",     serverCommand_debugPrintStatistics,    AUTHORIZATION_STATE_OK      },
