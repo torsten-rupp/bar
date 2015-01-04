@@ -1541,9 +1541,9 @@ public class TabJobs
       Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
       Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
       {
-        public void trigger(Widget widget)
+        public void trigger(Control control)
         {
-          Widgets.setEnabled(widget,selectedJobData != null);
+          Widgets.setEnabled(control,selectedJobData != null);
         }
       });
       button.addSelectionListener(new SelectionListener()
@@ -6004,7 +6004,7 @@ public class TabJobs
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,2,BARControl.tr("Time"),        SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleTable,3,BARControl.tr("Archive type"),SWT.LEFT, 80,true );
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,3,BARControl.tr("Archive type"),SWT.LEFT,100,true );
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,4,BARControl.tr("Custom text"), SWT.LEFT, 90,true );
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
