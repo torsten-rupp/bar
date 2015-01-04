@@ -76,6 +76,7 @@ class JobData
   private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   /** create job data
+   * @param uuid job UUID
    * @param name name
    * @param state job state
    * @param archiveType archive type
@@ -1135,143 +1136,151 @@ public class TabStatus
   {
     if (!widgetJobTable.isDisposed())
     {
-      // get job list
-      HashMap<String,JobData> newJobDataMap = new HashMap<String,JobData>();
-      String[]                  resultErrorMessage = new String[1];
-      final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-      int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                           2,
-                                           resultErrorMessage,
-                                           resultMapList
-                                          );
-      if (error != Errors.NONE)
+      try
       {
-        return;
-      }
-      for (ValueMap resultMap : resultMapList)
-      {
-        // get data
-        String jobUUID                = resultMap.getString("jobUUID"               );
-        String name                   = resultMap.getString("name"                  );
-        String state                  = resultMap.getString("state"                 );
-        String archiveType            = resultMap.getString("archiveType"           );
-        long   archivePartSize        = resultMap.getLong  ("archivePartSize"       );
-        String deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm");
-        String byteCompressAlgorithm  = resultMap.getString("byteCompressAlgorithm" );
-        String cryptAlgorithm         = resultMap.getString("cryptAlgorithm"        );
-        String cryptType              = resultMap.getString("cryptType"             );
-        String cryptPasswordMode      = resultMap.getString("cryptPasswordMode"     );
-        long   lastExecutedDateTime   = resultMap.getLong  ("lastExecutedDateTime"  );
-        long   estimatedRestTime      = resultMap.getLong  ("estimatedRestTime"     );
-
-        JobData jobData = jobDataMap.get(jobUUID);
-        if (jobData != null)
+        // get job list
+        HashMap<String,JobData> newJobDataMap = new HashMap<String,JobData>();
+        String[]                  resultErrorMessage = new String[1];
+        final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+        int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                             2,
+                                             resultErrorMessage,
+                                             resultMapList
+                                            );
+        if (error != Errors.NONE)
         {
-          jobData.name                   = name;
-          jobData.state                  = state;
-          jobData.archiveType            = archiveType;
-          jobData.archivePartSize        = archivePartSize;
-          jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
-          jobData.byteCompressAlgorithm  = byteCompressAlgorithm;
-          jobData.cryptAlgorithm         = cryptAlgorithm;
-          jobData.cryptType              = cryptType;
-          jobData.cryptPasswordMode      = cryptPasswordMode;
-          jobData.lastExecutedDateTime   = lastExecutedDateTime;
-          jobData.estimatedRestTime      = estimatedRestTime;
+          Dialogs.error(shell,BARControl.tr("Cannot get job list:\n\n")+resultErrorMessage);
+          return;
         }
-        else
+        for (ValueMap resultMap : resultMapList)
         {
-          jobData = new JobData(jobUUID,
-                                name,
-                                state,
-                                archiveType,
-                                archivePartSize,
-                                deltaCompressAlgorithm,
-                                byteCompressAlgorithm,
-                                cryptAlgorithm,
-                                cryptType,
-                                cryptPasswordMode,
-                                lastExecutedDateTime,
-                                estimatedRestTime
-                               );
-        }
-        newJobDataMap.put(jobUUID,jobData);
-      }
-      jobDataMap = newJobDataMap;
+          // get data
+          String jobUUID                = resultMap.getString("jobUUID"               );
+          String name                   = resultMap.getString("name"                  );
+          String state                  = resultMap.getString("state"                 );
+          String archiveType            = resultMap.getString("archiveType"           );
+          long   archivePartSize        = resultMap.getLong  ("archivePartSize"       );
+          String deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm");
+          String byteCompressAlgorithm  = resultMap.getString("byteCompressAlgorithm" );
+          String cryptAlgorithm         = resultMap.getString("cryptAlgorithm"        );
+          String cryptType              = resultMap.getString("cryptType"             );
+          String cryptPasswordMode      = resultMap.getString("cryptPasswordMode"     );
+          long   lastExecutedDateTime   = resultMap.getLong  ("lastExecutedDateTime"  );
+          long   estimatedRestTime      = resultMap.getLong  ("estimatedRestTime"     );
 
-      // update job table
-      display.syncExec(new Runnable()
-      {
-        public void run()
-        {
-          // update entries in job list
-          synchronized(jobDataMap)
+          JobData jobData = jobDataMap.get(jobUUID);
+          if (jobData != null)
           {
-            TableItem[] tableItems = widgetJobTable.getItems();
+            jobData.name                   = name;
+            jobData.state                  = state;
+            jobData.archiveType            = archiveType;
+            jobData.archivePartSize        = archivePartSize;
+            jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
+            jobData.byteCompressAlgorithm  = byteCompressAlgorithm;
+            jobData.cryptAlgorithm         = cryptAlgorithm;
+            jobData.cryptType              = cryptType;
+            jobData.cryptPasswordMode      = cryptPasswordMode;
+            jobData.lastExecutedDateTime   = lastExecutedDateTime;
+            jobData.estimatedRestTime      = estimatedRestTime;
+          }
+          else
+          {
+            jobData = new JobData(jobUUID,
+                                  name,
+                                  state,
+                                  archiveType,
+                                  archivePartSize,
+                                  deltaCompressAlgorithm,
+                                  byteCompressAlgorithm,
+                                  cryptAlgorithm,
+                                  cryptType,
+                                  cryptPasswordMode,
+                                  lastExecutedDateTime,
+                                  estimatedRestTime
+                                 );
+          }
+          newJobDataMap.put(jobUUID,jobData);
+        }
+        jobDataMap = newJobDataMap;
 
-            // get table items
-            HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
-            for (TableItem tableItem : tableItems)
+        // update job table
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            synchronized(jobDataMap)
             {
-              removeTableItemSet.add(tableItem);
-            }
+              TableItem[] tableItems = widgetJobTable.getItems();
 
-            for (JobData jobData : jobDataMap.values())
-            {
-              // find table item
-              TableItem tableItem = Widgets.getTableItem(widgetJobTable,jobData);
-
-              // update/create table item
-              if (tableItem != null)
+              // get table items
+              HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
+              for (TableItem tableItem : tableItems)
               {
-                Widgets.updateTableItem(widgetJobTable,
-                                        tableItem,
-                                        jobData,
-                                        jobData.name,
-                                        (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
-                                        jobData.archiveType,
-                                        (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
-                                        jobData.formatCompressAlgorithm(),
-                                        jobData.formatCryptAlgorithm(),
-                                        jobData.formatLastExecutedDateTime(),
-                                        jobData.formatEstimatedRestTime()
-                                       );
-
-                // keep table item
-                removeTableItemSet.remove(tableItem);
+                removeTableItemSet.add(tableItem);
               }
-              else
+
+              for (JobData jobData : jobDataMap.values())
               {
-                // insert new item
-                tableItem = Widgets.insertTableItem(widgetJobTable,
-                                                    findJobTableItemIndex(jobData),
-                                                    jobData,
-                                                    jobData.name,
-                                                    (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
-                                                    jobData.archiveType,
-                                                    (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
-                                                    jobData.formatCompressAlgorithm(),
-                                                    jobData.formatCryptAlgorithm(),
-                                                    jobData.formatLastExecutedDateTime(),
-                                                    jobData.formatEstimatedRestTime()
-                                                   );
-                tableItem.setData(jobData);
-              }
-            }
+                // find table item
+                TableItem tableItem = Widgets.getTableItem(widgetJobTable,jobData);
 
-            // remove not existing entries
-            for (TableItem tableItem : removeTableItemSet)
-            {
-              Widgets.removeTableItem(widgetJobTable,tableItem);
+                // update/create table item
+                if (tableItem != null)
+                {
+                  Widgets.updateTableItem(widgetJobTable,
+                                          tableItem,
+                                          jobData,
+                                          jobData.name,
+                                          (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
+                                          jobData.archiveType,
+                                          (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
+                                          jobData.formatCompressAlgorithm(),
+                                          jobData.formatCryptAlgorithm(),
+                                          jobData.formatLastExecutedDateTime(),
+                                          jobData.formatEstimatedRestTime()
+                                         );
+
+                  // keep table item
+                  removeTableItemSet.remove(tableItem);
+                }
+                else
+                {
+                  // insert new item
+                  tableItem = Widgets.insertTableItem(widgetJobTable,
+                                                      findJobTableItemIndex(jobData),
+                                                      jobData,
+                                                      jobData.name,
+                                                      (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
+                                                      jobData.archiveType,
+                                                      (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
+                                                      jobData.formatCompressAlgorithm(),
+                                                      jobData.formatCryptAlgorithm(),
+                                                      jobData.formatLastExecutedDateTime(),
+                                                      jobData.formatEstimatedRestTime()
+                                                     );
+                  tableItem.setData(jobData);
+                }
+              }
+
+              // remove not existing entries
+              for (TableItem tableItem : removeTableItemSet)
+              {
+                Widgets.removeTableItem(widgetJobTable,tableItem);
+              }
             }
           }
-        }
-      });
+        });
 
-      // update tab jobs list
-      synchronized(jobDataMap)
+        // update tab jobs list
+        synchronized(jobDataMap)
+        {
+          tabJobs.updateJobList(jobDataMap.values());
+        }
+      }
+      catch (CommunicationError error)
       {
-        tabJobs.updateJobList(jobDataMap.values());
+        Dialogs.error(shell,BARControl.tr("Cannot get job list:\n\n")+error.getMessage());
+        return;
       }
     }
   }
