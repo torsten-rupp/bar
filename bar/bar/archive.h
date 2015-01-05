@@ -49,7 +49,7 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-/* archive entry types */
+// archive entry types
 typedef enum
 {
   ARCHIVE_ENTRY_TYPE_NONE,
@@ -64,7 +64,7 @@ typedef enum
   ARCHIVE_ENTRY_TYPE_UNKNOWN
 } ArchiveEntryTypes;
 
-/***********************************************************************\
+/******************************************************************** ***\
 * Name   : ArchiveNewFunction
 * Purpose: call back when archive file is created/written
 * Input  : userData       - user data
@@ -440,6 +440,9 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 * Name   : Archive_create
 * Purpose: create archive
 * Input  : archiveInfo                     - archive info data
+*          jobUUID                         - unique job id or NULL
+*          scheduleUUID                    - unique schedule id or NULL
+*          archiveType                     - archive type
 *          jobOptions                      - job option settings
 *          archiveNewFunction              - call back for new archive
 *                                            file
@@ -462,6 +465,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                         DatabaseHandle                  *databaseHandle,
                         const String                    jobUUID,
                         const String                    scheduleUUID,
+                        ArchiveTypes                    archiveType,
                         ArchiveNewFunction              archiveNewFunction,
                         void                            *archiveNewUserData,
                         ArchiveCreatedFunction          archiveCreatedFunction,
@@ -477,6 +481,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                           DatabaseHandle                  *databaseHandle,
                           const String                    jobUUID,
                           const String                    scheduleUUID,
+                          ArchiveTypes                    archiveType,
                           ArchiveNewFunction              archiveNewFunction,
                           void                            *archiveNewUserData,
                           ArchiveCreatedFunction          archiveCreatedFunction,

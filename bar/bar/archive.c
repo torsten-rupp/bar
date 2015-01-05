@@ -2841,6 +2841,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
                         DatabaseHandle                  *databaseHandle,
                         const String                    jobUUID,
                         const String                    scheduleUUID,
+                        ArchiveTypes                    archiveType,
                         ArchiveNewFunction              archiveNewFunction,
                         void                            *archiveNewUserData,
                         ArchiveCreatedFunction          archiveCreatedFunction,
@@ -2856,6 +2857,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
                           DatabaseHandle                  *databaseHandle,
                           const String                    jobUUID,
                           const String                    scheduleUUID,
+                          ArchiveTypes                    archiveType,
                           ArchiveNewFunction              archiveNewFunction,
                           void                            *archiveNewUserData,
                           ArchiveCreatedFunction          archiveCreatedFunction,
@@ -3009,6 +3011,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     error = Index_newEntity(databaseHandle,
                             jobUUID,
                             scheduleUUID,
+                            archiveType,
                             &archiveInfo->entityId
                            );
     if (error != ERROR_NONE)
@@ -10506,9 +10509,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
       // update temporary size (ignore error)
       Index_update(databaseHandle,
-                   DATABASE_ID_NONE,
-                   NULL, // job UUID
-                   NULL, // schedule UUID
                    storageId,
                    NULL, // storageName
                    Archive_tell(&archiveInfo)
@@ -10572,9 +10572,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
     // update name/size
     error = Index_update(databaseHandle,
-                         DATABASE_ID_NONE,
-                         NULL, // job UUID
-                         NULL, // schedule UUID
                          storageId,
                          storageName,
                          Archive_getSize(&archiveInfo)
