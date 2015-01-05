@@ -771,7 +771,7 @@ LOCAL ScheduleNode *newScheduleNode(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  scheduleNode->uuid        = Misc_getUUID(String_new());
+  scheduleNode->uuid        = String_new();
   scheduleNode->parentUUID  = NULL;
   scheduleNode->date.year   = SCHEDULE_ANY;
   scheduleNode->date.month  = SCHEDULE_ANY;
@@ -1396,6 +1396,7 @@ LOCAL ScheduleNode *parseSchedule(const String s)
 
   // allocate new schedule node
   scheduleNode = newScheduleNode();
+  Misc_getUUID(scheduleNode->uuid);
 
   // parse schedule. Format: date [weekday] time enabled [type]
   errorFlag = FALSE;
@@ -1536,6 +1537,7 @@ LOCAL ScheduleNode *parseScheduleDateTime(const String date,
 
   // allocate new schedule node
   scheduleNode = newScheduleNode();
+  Misc_getUUID(scheduleNode->uuid);
 
   // parse date
   errorFlag = FALSE;
@@ -1764,7 +1766,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->fileName                       = String_duplicate(fileName);
   newJobNode->timeModified                   = 0LL;
 
-  newJobNode->uuid                           = Misc_getUUID(String_new());
+  newJobNode->uuid                           = String_new();
   newJobNode->jobType                        = jobNode->jobType;
   newJobNode->name                           = File_getFileBaseName(File_newFileName(),fileName);
   newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
@@ -2082,6 +2084,7 @@ LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 * Name   : deleteJobEntries
 * Purpose: delete all entries from job with given name
 * Input  : stringList - job file string list to modify
+*          section    - name of section or NULL
 *          name       - name of value
 * Output : -
 * Return : next entry in string list or NULL
@@ -2089,6 +2092,7 @@ LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 \***********************************************************************/
 
 LOCAL StringNode *deleteJobEntries(StringList *stringList,
+                                   const char *section,
                                    const char *name
                                   )
 {
@@ -2114,9 +2118,76 @@ LOCAL StringNode *deleteJobEntries(StringList *stringList,
     }
 
     // parse and match
-    if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
-        && String_equalsCString(string,name)
-       )
+    if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL))
+    {
+      // keep line: begin section
+      stringNode = stringNode->next;
+
+      if (String_equalsCString(string,section))
+      {
+        // section found: remove matching entries
+        while (stringNode != NULL)
+        {
+          // skip comments, empty lines
+          String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+          if (String_isEmpty(line) || String_startsWithChar(line,'#'))
+          {
+            stringNode = stringNode->next;
+            continue;
+          }
+
+          // parse and match
+          if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
+          {
+            // keep line: end section
+            stringNode = stringNode->next;
+            break;
+          }
+          else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
+                   && String_equalsCString(string,name)
+                  )
+          {
+            // delete line
+            stringNode = StringList_remove(stringList,stringNode);
+
+            // store next line
+            nextStringNode = stringNode;
+          }
+          else
+          {
+            // keep line
+            stringNode = stringNode->next;
+          }
+        }
+      }
+      else
+      {
+        // section not found: skip
+        while (stringNode != NULL)
+        {
+          // skip comments, empty lines
+          String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+          if (String_isEmpty(line) || String_startsWithChar(line,'#'))
+          {
+            stringNode = stringNode->next;
+            continue;
+          }
+
+          // keep line
+          stringNode = stringNode->next;
+
+          // parse and match
+          if (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
+          {
+            // end section
+            break;
+          }
+        }
+      }
+    }
+    else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
+             && String_equalsCString(string,name)
+            )
     {
       // delete line
       stringNode = StringList_remove(stringList,stringNode);
@@ -2140,14 +2211,14 @@ LOCAL StringNode *deleteJobEntries(StringList *stringList,
 * Name   : deleteJobSections
 * Purpose: delete all sections from job with given name
 * Input  : stringList - job file string list to modify
-*          name       - name of section
+*          section    - name of section
 * Output : -
 * Return : next entry in string list or NULL
 * Notes  : -
 \***********************************************************************/
 
 LOCAL StringNode *deleteJobSections(StringList *stringList,
-                                    const char *name
+                                    const char *section
                                    )
 {
   StringNode *nextStringNode;
@@ -2173,7 +2244,7 @@ LOCAL StringNode *deleteJobSections(StringList *stringList,
 
     // parse and match
     if (   String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL)
-        && String_equalsCString(string,name)
+        && String_equalsCString(string,section)
        )
     {
       // delete section
@@ -2297,7 +2368,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
   CONFIG_VALUE_ITERATE(CONFIG_VALUES,z)
   {
     // delete old entries, get position for insert new entries
-    nextStringNode = deleteJobEntries(&jobLinesList,CONFIG_VALUES[z].name);
+    nextStringNode = deleteJobEntries(&jobLinesList,NULL,CONFIG_VALUES[z].name);
 
     // insert new entries
     ConfigValue_formatInit(&configValueFormat,
@@ -2476,6 +2547,7 @@ LOCAL bool readJob(JobNode *jobNode)
   jobNode->jobOptions.rawImagesFlag                = FALSE;
   jobNode->jobOptions.overwriteArchiveFilesFlag    = FALSE;
   jobNode->jobOptions.overwriteFilesFlag           = FALSE;
+  jobNode->modifiedFlag                            = FALSE;
 
   // open file
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
@@ -2539,6 +2611,11 @@ LOCAL bool readJob(JobNode *jobNode)
         }
       }
       File_ungetLine(&fileHandle,line,&lineNb);
+      if (String_isEmpty(scheduleNode->uuid))
+      {
+        Misc_getUUID(scheduleNode->uuid);
+        jobNode->modifiedFlag = TRUE;
+      }
 
       if (!List_appendUniq(&jobNode->scheduleList,scheduleNode,CALLBACK((ListNodeEqualsFunction)equalsScheduleNode,scheduleNode)))
       {
@@ -2599,6 +2676,12 @@ LOCAL bool readJob(JobNode *jobNode)
   if (String_isEmpty(jobNode->uuid))
   {
     Misc_getUUID(jobNode->uuid);
+    jobNode->modifiedFlag = TRUE;
+  }
+
+  // save job if modified
+  if (jobNode->modifiedFlag)
+  {
     updateJob(jobNode);
   }
 
@@ -2668,6 +2751,8 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
         if (jobNode == NULL)
         {
           jobNode = newJob(JOB_TYPE_CREATE,fileName);
+          assert(jobNode != NULL);
+          Misc_getUUID(jobNode->uuid);
           List_append(&jobList,jobNode);
         }
 
@@ -6317,15 +6402,8 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
 
     // create new job
     jobNode = newJob(JOB_TYPE_CREATE,fileName);
-    if (jobNode == NULL)
-    {
-      File_delete(fileName,FALSE);
-      File_deleteFileName(fileName);
-      sendClientResult(clientInfo,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"insufficient memory");
-      Semaphore_unlock(&jobList.lock);
-      String_delete(name);
-      return;
-    }
+    assert(jobNode != NULL);
+    Misc_getUUID(jobNode->uuid);
     copyJobOptions(serverDefaultJobOptions,&jobNode->jobOptions);
 
     // free resources
@@ -6425,14 +6503,8 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringM
 
     // copy job
     newJobNode = copyJob(jobNode,fileName);
-    if (newJobNode == NULL)
-    {
-      File_deleteFileName(fileName);
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error copy job %S",jobUUID);
-      Semaphore_unlock(&jobList.lock);
-      String_delete(name);
-      return;
-    }
+    assert(newJobNode != NULL);
+    Misc_getUUID(newJobNode->uuid);
 
     // free resources
     File_deleteFileName(fileName);
@@ -9929,6 +10001,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   uint64           lastCreatedDateTime;
   uint64           totalSize;
   String           scheduleUUID;
+  ArchiveTypes     archiveType;
   String           lastErrorMessage;
 
   assert(clientInfo != NULL);
@@ -9973,6 +10046,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
                                 &jobId,
                                 jobUUID,
                                 scheduleUUID,
+                                &archiveType,
                                 &lastCreatedDateTime,
                                 &totalSize,
                                 lastErrorMessage
@@ -9984,8 +10058,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
                      jobId,
                      jobUUID,
                      scheduleUUID,
-//TODO
-"NONE",
+                     archiveTypeToString(archiveType,"NONE"),
                      lastCreatedDateTime,
                      totalSize,
                      lastErrorMessage
