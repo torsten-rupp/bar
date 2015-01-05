@@ -24,7 +24,6 @@ ToDo
 - compile-info (what is included, which version)
 - delete tempora ry image directory when writing dvd
 - support for config reload with SIGHUP
-- support lzo compression library
 - support for rmt? (tape control tool)
 - support xdelta compression
 - barcontrol: file separator character
@@ -37,7 +36,8 @@ ToDo
 - general handling of strings containing LF, CR..
 - doc: min. password length for 3DES
 - progress bar when writing CDs
-- when writing a DVD do not write more data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
+- when writing a DVD do not write more ToDo
+data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - dvd: eject last disk
 - schedule: add tag text which can be used in the archive file name
 - add debug version to packages
@@ -54,7 +54,7 @@ ToDo
 - replace ftplib by curl
 - limit used bandwidth when creating index (all data is transmitted?)
 - add allocator of connection (ftp, scp, sftp) and limit number of connections
-- pre/post-script in barcontrol
+- barcontrol: pre/post-script
 - valgrind-test for delta-compression
 - configure check for LIBSSH2_SEND_FUNC, LIBSSH2_RECV_FUNC
 - read corrupted archive files, e. g. scan for next valid entry
@@ -76,12 +76,7 @@ ToDo
 - support bar dvd://*.bar
 - restore image to file instead of a device
 - compression lrzip
-- compression lz4
-  http://stackoverflow.com/questions/16190231/lz4-compression-c-example
-  https://github.com/exalead/fastlzlib
 - compression miniz
-- compression lzo
-  http://content.gpwiki.org/index.php/LZO
 - include .nobackup files into archive
 - database lock timeout?
   http://beets.radbox.org/blog/sqlite-nightmare.html
@@ -91,3 +86,20 @@ ToDo
 - pre/post-process filter for single entries
 - read/write tar-format at stdin/stdout for pipeling
 - signal handler to show internal state on stdout
+- pre/post-commands in GUI
+- barcontrol: use bouncycastle to read .pem key, remove bar.jks
+- barcontrol: menu connect to another server
+- barcontrol: show connected server, ssl/none
+- option to select ctime or mtime
+- doc: ext4
+- doc: encrypt algorithms
+- barcontrol: create .bid only
+- create .bid from specific date
+- delete storage: delete index anyway even file cannot be deleted
+- option --tmp-min-free
+- inotify for time machine function
+- sqlite full text search for file names
+- FSE compressor https://github.com/Cyan4973/FiniteStateEntropy
+- delete job/schedule entry in barcontrol when file is deleted
+
+https://lists.samba.org/archive/samba-technical/2008-July/060155.html
