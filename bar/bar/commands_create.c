@@ -2821,9 +2821,6 @@ LOCAL Errors storeArchiveFile(void           *userData,
   {
     printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,destinationFileName);
     error = Index_update(indexDatabaseHandle,
-                         entityId,
-                         createInfo->jobUUID,
-                         createInfo->scheduleUUID,
                          storageId,
                          printableStorageName,
                          0LL   // size
@@ -3205,9 +3202,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
       // set database storage size
       error = Index_update(indexDatabaseHandle,
-                           storageMsg.entityId,
-                           NULL, // job UUID
-                           NULL, // schedule UUID
                            storageMsg.storageId,
                            NULL, // storageName
                            fileInfo.size
@@ -5192,6 +5186,7 @@ Errors Command_create(const String                    jobUUID,
                          indexDatabaseHandle,
                          jobUUID,
                          scheduleUUID,
+                         archiveType,
                          CALLBACK(newArchiveFile,&createInfo),
                          CALLBACK(storeArchiveFile,&createInfo),
                          CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData)
