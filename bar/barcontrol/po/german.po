@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-04 02:23+0100\n"
+"POT-Creation-Date: 2015-01-04 20:55+0100\n"
 "PO-Revision-Date: 2014-10-03 09:44+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -30,17 +30,17 @@ msgstr "Verschlüsselungspasswort"
 msgid "Program"
 msgstr "Programm"
 
-#: src/BARControl.java:1401 src/TabStatus.java:502 src/TabStatus.java:1017
+#: src/BARControl.java:1401 src/TabStatus.java:497 src/TabStatus.java:1012
 msgid "Start"
 msgstr "Start"
 
-#: src/BARControl.java:1414 src/TabStatus.java:515 src/TabStatus.java:1033
-#: src/TabStatus.java:1617
+#: src/BARControl.java:1414 src/TabStatus.java:510 src/TabStatus.java:1028
+#: src/TabStatus.java:1614
 msgid "Abort"
 msgstr "Abbrechen"
 
-#: src/BARControl.java:1427 src/TabStatus.java:528 src/TabStatus.java:1049
-#: src/TabStatus.java:1363 src/TabStatus.java:1375
+#: src/BARControl.java:1427 src/TabStatus.java:523 src/TabStatus.java:1044
+#: src/TabStatus.java:1360 src/TabStatus.java:1372
 msgid "Pause"
 msgstr "Pause"
 
@@ -76,7 +76,7 @@ msgstr "Anhalten/Weiter"
 msgid "Clear stored passwords on server"
 msgstr "Gespeicherte Passworte auf Server löschen"
 
-#: src/BARControl.java:1556 src/TabStatus.java:1095
+#: src/BARControl.java:1556 src/TabStatus.java:1090
 msgid "Quit"
 msgstr "Beenden"
 
@@ -98,7 +98,7 @@ msgstr "Aufträge"
 
 #: src/TabJobs.java:1498 src/TabJobs.java:6238 src/TabJobs.java:6349
 #: src/TabRestore.java:3325 src/TabRestore.java:3400 src/TabRestore.java:3608
-#: src/TabRestore.java:4045 src/TabRestore.java:4174 src/TabStatus.java:475
+#: src/TabRestore.java:4045 src/TabRestore.java:4174 src/TabStatus.java:470
 msgid "Name"
 msgstr "Name"
 
@@ -106,7 +106,7 @@ msgstr "Name"
 msgid "Existing job entries."
 msgstr "Vorhandene Aufträge."
 
-#: src/TabJobs.java:1524 src/TabStatus.java:569
+#: src/TabJobs.java:1524 src/TabStatus.java:564
 msgid "New"
 msgstr "Neu"
 
@@ -115,7 +115,7 @@ msgid "Create new job entry."
 msgstr "Neuen Auftrag erstellen."
 
 #: src/TabJobs.java:1538 src/TabJobs.java:2345 src/TabJobs.java:2530
-#: src/TabJobs.java:6099 src/TabJobs.java:6362 src/TabStatus.java:581
+#: src/TabJobs.java:6099 src/TabJobs.java:6362 src/TabStatus.java:576
 msgid "Clone"
 msgstr "Duplizieren"
 
@@ -123,7 +123,7 @@ msgstr "Duplizieren"
 msgid "Clone an existing job entry."
 msgstr "Existierenden Auftrag duplizieren."
 
-#: src/TabJobs.java:1563 src/TabJobs.java:6485 src/TabStatus.java:593
+#: src/TabJobs.java:1563 src/TabJobs.java:6487 src/TabStatus.java:588
 msgid "Rename"
 msgstr "Umbenennen"
 
@@ -131,7 +131,7 @@ msgstr "Umbenennen"
 msgid "Rename a job entry."
 msgstr "Auftrag umbenennen."
 
-#: src/TabJobs.java:1588 src/TabStatus.java:605
+#: src/TabJobs.java:1588 src/TabStatus.java:600
 msgid "Delete"
 msgstr "Löschen"
 
@@ -144,11 +144,11 @@ msgid "Files"
 msgstr "Dateien"
 
 #: src/TabJobs.java:1643 src/TabRestore.java:3150 src/TabRestore.java:3511
-#: src/TabRestore.java:4046 src/TabStatus.java:476
+#: src/TabRestore.java:4046 src/TabStatus.java:471
 msgid "Click to sort for name."
 msgstr "Klicken um nach Namen zu sortieren."
 
-#: src/TabJobs.java:1646 src/TabRestore.java:4049 src/TabStatus.java:482
+#: src/TabJobs.java:1646 src/TabRestore.java:4049 src/TabStatus.java:477
 msgid "Click to sort for type."
 msgstr "Klicken um nach Typ zu sortieren"
 
@@ -246,7 +246,7 @@ msgid "List with include patterns, right-click for context menu."
 msgstr "Liste mit Einschlussmustern. Rechts-Klick für Kontextmenü."
 
 #: src/TabJobs.java:2309 src/TabJobs.java:2494 src/TabJobs.java:3113
-#: src/TabJobs.java:6071 src/TabJobs.java:6250 src/TabJobs.java:9884
+#: src/TabJobs.java:6071 src/TabJobs.java:6250 src/TabJobs.java:9885
 #: src/TabRestore.java:5373
 msgid "Add"
 msgstr "Hinzufügen"
@@ -303,7 +303,7 @@ msgstr "Eintrag in der Ausschlussliste duplizieren."
 msgid "Remove entry from excluded list."
 msgstr "Eintrag aus der Ausschlussliste entfernen."
 
-#: src/TabJobs.java:2568 src/TabJobs.java:5595 src/TabJobs.java:9792
+#: src/TabJobs.java:2568 src/TabJobs.java:5595 src/TabJobs.java:9793
 msgid "Options"
 msgstr "Optionen"
 
@@ -333,15 +333,15 @@ msgstr ""
 "aktiviert, nur vom Dateisystem benutzte Datenblöcke speichern."
 
 #: src/TabJobs.java:2611 src/TabRestore.java:3104 src/TabRestore.java:4141
-#: src/TabStatus.java:912
+#: src/TabStatus.java:907
 msgid "Storage"
 msgstr "Speicherung"
 
-#: src/TabJobs.java:2616 src/TabStatus.java:484
+#: src/TabJobs.java:2616 src/TabStatus.java:479
 msgid "Part size"
 msgstr "Teilgröße"
 
-#: src/TabJobs.java:2621 src/TabStatus.java:1236 src/TabStatus.java:1255
+#: src/TabJobs.java:2621 src/TabStatus.java:1231 src/TabStatus.java:1250
 msgid "unlimited"
 msgstr "unbegrenzt"
 
@@ -382,14 +382,14 @@ msgstr ""
 "MB oder GB angefügt werden."
 
 #: src/TabJobs.java:2793 src/TabJobs.java:5591 src/TabJobs.java:5844
-#: src/TabStatus.java:639 src/TabStatus.java:652 src/TabStatus.java:709
-#: src/TabStatus.java:722 src/TabStatus.java:786 src/TabStatus.java:799
-#: src/TabStatus.java:820 src/TabStatus.java:833 src/TabStatus.java:870
-#: src/TabStatus.java:891
+#: src/TabStatus.java:634 src/TabStatus.java:647 src/TabStatus.java:704
+#: src/TabStatus.java:717 src/TabStatus.java:781 src/TabStatus.java:794
+#: src/TabStatus.java:815 src/TabStatus.java:828 src/TabStatus.java:865
+#: src/TabStatus.java:886
 msgid "bytes"
 msgstr "Bytes"
 
-#: src/TabJobs.java:2798 src/TabStatus.java:487
+#: src/TabJobs.java:2798 src/TabStatus.java:482
 msgid "Compress"
 msgstr "Kompression"
 
@@ -439,7 +439,7 @@ msgstr "Eintrag in der Kompressionsausschlussliste ändern."
 msgid "Remove entry from compress exclude list."
 msgstr "Eintrag aus der Kompressionsausschlussliste entfernen."
 
-#: src/TabJobs.java:3191 src/TabStatus.java:490
+#: src/TabJobs.java:3191 src/TabStatus.java:485
 msgid "Crypt"
 msgstr "Verschlüsselung"
 
@@ -473,7 +473,7 @@ msgstr "Öffentlicher Schlüssel"
 msgid "Public key file used for asymmetric encryption."
 msgstr "Öffentlicher Schlüssel für asymmetrische Verschlüsselung."
 
-#: src/TabJobs.java:3384 src/TabStatus.java:1559 src/TabStatus.java:1561
+#: src/TabJobs.java:3384 src/TabStatus.java:1556 src/TabStatus.java:1558
 msgid "Crypt password"
 msgstr "Verschlüsselungspasswort"
 
@@ -514,7 +514,7 @@ msgstr "wiederholen"
 msgid "Mode"
 msgstr "Modus"
 
-#: src/TabJobs.java:3630 src/TabJobs.java:9693
+#: src/TabJobs.java:3630 src/TabJobs.java:9694
 msgid "normal"
 msgstr "normal"
 
@@ -522,7 +522,7 @@ msgstr "normal"
 msgid "Normal mode: do not create incremental data files."
 msgstr "Alle Dateien speichern: keine Inkrementdaten erzeugen."
 
-#: src/TabJobs.java:3653 src/TabJobs.java:9698
+#: src/TabJobs.java:3653 src/TabJobs.java:9699
 msgid "full"
 msgstr "voll"
 
@@ -530,7 +530,7 @@ msgstr "voll"
 msgid "Full mode: store all entries and create incremental data files."
 msgstr "Alle Dateien speichern: Inkrementdaten erzeugen."
 
-#: src/TabJobs.java:3676 src/TabJobs.java:9703
+#: src/TabJobs.java:3676 src/TabJobs.java:9704
 msgid "incremental"
 msgstr "inkrementell"
 
@@ -542,7 +542,7 @@ msgstr ""
 "Inkrementell: speichern von veränderten Dateien seit dem letzten "
 "vollständigen oder inkrementellen Speichern."
 
-#: src/TabJobs.java:3699 src/TabJobs.java:9708
+#: src/TabJobs.java:3699 src/TabJobs.java:9709
 msgid "differential"
 msgstr "differentiell"
 
@@ -552,7 +552,7 @@ msgstr ""
 "Differentiell: speichern von veränderten Dateien seit dem letzten "
 "vollständigen Speichern."
 
-#: src/TabJobs.java:3724 src/TabJobs.java:8628
+#: src/TabJobs.java:3724 src/TabJobs.java:8629
 msgid "File name"
 msgstr "Dateiname"
 
@@ -842,7 +842,7 @@ msgstr ""
 "Liste mit der Zeitplanung. Klicken Sie um einen Eintrag auszuwählen, Rechts-"
 "Klick für Kontextmenü."
 
-#: src/TabJobs.java:6000 src/TabJobs.java:9578 src/TabRestore.java:4054
+#: src/TabJobs.java:6000 src/TabJobs.java:9579 src/TabRestore.java:4054
 #: src/TabRestore.java:4194
 msgid "Date"
 msgstr "Datum"
@@ -851,7 +851,7 @@ msgstr "Datum"
 msgid "Week day"
 msgstr "Wochentag"
 
-#: src/TabJobs.java:6005 src/TabJobs.java:9663
+#: src/TabJobs.java:6005 src/TabJobs.java:9664
 msgid "Time"
 msgstr "Zeit"
 
@@ -859,7 +859,7 @@ msgstr "Zeit"
 msgid "Archive type"
 msgstr "Archivtyp"
 
-#: src/TabJobs.java:6009 src/TabJobs.java:9714
+#: src/TabJobs.java:6009 src/TabJobs.java:9715
 msgid "Custom text"
 msgstr "Benutzertext"
 
@@ -883,10 +883,10 @@ msgstr "Eintrag in der Zeitplanung duplizieren."
 msgid "Remove schedule entry."
 msgstr "Eintrag aus der Zeitplanung entfernen."
 
-#: src/TabJobs.java:6253 src/TabJobs.java:6366 src/TabJobs.java:6489
-#: src/TabJobs.java:7645 src/TabJobs.java:7934 src/TabJobs.java:8200
-#: src/TabJobs.java:9326 src/TabJobs.java:9812 src/TabRestore.java:5376
-#: src/TabStatus.java:1540 src/TabStatus.java:1733
+#: src/TabJobs.java:6253 src/TabJobs.java:6366 src/TabJobs.java:6491
+#: src/TabJobs.java:7647 src/TabJobs.java:7936 src/TabJobs.java:8202
+#: src/TabJobs.java:9327 src/TabJobs.java:9813 src/TabRestore.java:5376
+#: src/TabStatus.java:1537 src/TabStatus.java:1730
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -902,214 +902,214 @@ msgstr "Neuen Auftrag erstellen."
 msgid "Clone job"
 msgstr "Duplizieren"
 
-#: src/TabJobs.java:6466
+#: src/TabJobs.java:6468
 msgid "Old name"
 msgstr "Alter Name"
 
-#: src/TabJobs.java:6472
+#: src/TabJobs.java:6474
 msgid "New name"
 msgstr "Neuer Name"
 
-#: src/TabJobs.java:7555 src/TabJobs.java:7886 src/TabJobs.java:8163
+#: src/TabJobs.java:7557 src/TabJobs.java:7888 src/TabJobs.java:8165
 msgid "Pattern"
 msgstr "Muster"
 
-#: src/TabJobs.java:7563
+#: src/TabJobs.java:7565
 msgid "Include pattern. Use * and ? as wildcards."
 msgstr ""
 "Muster für einzuschliessende Dateien. Es können * und ? verwendet werden."
 
-#: src/TabJobs.java:7588 src/TabJobs.java:9682 src/TabRestore.java:4048
-#: src/TabRestore.java:4164 src/TabStatus.java:481
+#: src/TabJobs.java:7590 src/TabJobs.java:9683 src/TabRestore.java:4048
+#: src/TabRestore.java:4164 src/TabStatus.java:476
 msgid "Type"
 msgstr "Typ"
 
-#: src/TabJobs.java:7595
+#: src/TabJobs.java:7597
 msgid "file"
 msgstr "Datei"
 
-#: src/TabJobs.java:7609
+#: src/TabJobs.java:7611
 msgid "image"
 msgstr "Abbold"
 
-#: src/TabJobs.java:7890
+#: src/TabJobs.java:7892
 msgid "Exclude pattern. Use * and ? as wildcards."
 msgstr ""
 "Muster für auszuschliessende Dateien. Es können * und ? verwendet werden."
 
-#: src/TabJobs.java:8167
+#: src/TabJobs.java:8169
 msgid "Compress exclude pattern. Use * and ? as wildcards."
 msgstr ""
 "Von der Kompression auszuschliessende Dateien. Es können * und ? verwendet "
 "werden."
 
-#: src/TabJobs.java:8632
+#: src/TabJobs.java:8633
 msgid "Drag to trashcan icon to the right to remove name part."
 msgstr ""
 "Auf das Mülleimersymbol rechts ziehen, um einen Namensteil zu entfernen."
 
-#: src/TabJobs.java:8754
+#: src/TabJobs.java:8755
 msgid "Use drag&drop to remove name parts."
 msgstr "MIt Ziehen und Ablegen, um einen Namensteil zu entfernen."
 
-#: src/TabJobs.java:8790
+#: src/TabJobs.java:8791
 msgid "Example"
 msgstr "Beispiel"
 
-#: src/TabJobs.java:8798
+#: src/TabJobs.java:8799
 msgid "Use drag&drop to add name parts."
 msgstr "MIt Ziehen und Ablegen, um einen Namensteil hinzu zu fügen."
 
-#: src/TabJobs.java:9323
+#: src/TabJobs.java:9324
 msgid "Save"
 msgstr "Speichern"
 
-#: src/TabJobs.java:9540
+#: src/TabJobs.java:9541
 msgid ""
 "Cannot get schedule list:\n"
 "\n"
 msgstr ""
 
-#: src/TabJobs.java:9585
+#: src/TabJobs.java:9586
 msgid "Year to execute job. Leave to '*' for each year."
 msgstr "Jahr für die Ausführung des Auftrags. '*' für jedes Jahr."
 
-#: src/TabJobs.java:9592
+#: src/TabJobs.java:9593
 msgid "Month to execute job. Leave to '*' for each month."
 msgstr "Monat für die Ausführung des Auftrags. '*' für jeden Monat."
 
-#: src/TabJobs.java:9598
+#: src/TabJobs.java:9599
 msgid "Day to execute job. Leave to '*' for each day."
 msgstr "Tag für die Ausführung des Auftrags. '*' für jeden Tag."
 
-#: src/TabJobs.java:9604
+#: src/TabJobs.java:9605
 msgid "Week days"
 msgstr "Wochentage"
 
-#: src/TabJobs.java:9610
+#: src/TabJobs.java:9611
 msgid "Mon"
 msgstr "Mo"
 
-#: src/TabJobs.java:9611 src/TabJobs.java:9616 src/TabJobs.java:9621
-#: src/TabJobs.java:9626 src/TabJobs.java:9631 src/TabJobs.java:9636
-#: src/TabJobs.java:9641
+#: src/TabJobs.java:9612 src/TabJobs.java:9617 src/TabJobs.java:9622
+#: src/TabJobs.java:9627 src/TabJobs.java:9632 src/TabJobs.java:9637
+#: src/TabJobs.java:9642
 msgid "Week days to execute job."
 msgstr "Woche für die Ausführung des Auftrags. '*' für jede Woche."
 
-#: src/TabJobs.java:9615
+#: src/TabJobs.java:9616
 msgid "Tue"
 msgstr "Di"
 
-#: src/TabJobs.java:9620
+#: src/TabJobs.java:9621
 msgid "Wed"
 msgstr "Mi"
 
-#: src/TabJobs.java:9625
+#: src/TabJobs.java:9626
 msgid "Thu"
 msgstr "Do"
 
-#: src/TabJobs.java:9630
+#: src/TabJobs.java:9631
 msgid "Fri"
 msgstr "Fr"
 
-#: src/TabJobs.java:9635
+#: src/TabJobs.java:9636
 msgid "Sat"
 msgstr "Sa"
 
-#: src/TabJobs.java:9640
+#: src/TabJobs.java:9641
 msgid "Sun"
 msgstr "So"
 
-#: src/TabJobs.java:9646
+#: src/TabJobs.java:9647
 msgid "Toggle week days set."
 msgstr "Menge der Wochentage invertieren."
 
-#: src/TabJobs.java:9670
+#: src/TabJobs.java:9671
 msgid "Hour to execute job. Leave to '*' for every hour."
 msgstr "Stunde für die Ausführung des Auftrags. '*' für jede Stunde."
 
-#: src/TabJobs.java:9676
+#: src/TabJobs.java:9677
 msgid "Minute to execute job. Leave to '*' for every minute."
 msgstr "Minute für die Ausführung des Auftrags. '*' für jede Minute."
 
-#: src/TabJobs.java:9688
+#: src/TabJobs.java:9689
 msgid "*"
 msgstr "*"
 
-#: src/TabJobs.java:9689
+#: src/TabJobs.java:9690
 msgid "Execute job with default type."
 msgstr "Auftrag mit Standardtyp ausführen."
 
-#: src/TabJobs.java:9694
+#: src/TabJobs.java:9695
 msgid "Execute job as normal backup (no incremental data)."
 msgstr "Auftrag als normale Sicherung ausführen (keine Inkrementdaten)."
 
-#: src/TabJobs.java:9699
+#: src/TabJobs.java:9700
 msgid "Execute job as full backup."
 msgstr "Auftrag als Vollsicherung ausführen."
 
-#: src/TabJobs.java:9704
+#: src/TabJobs.java:9705
 msgid "Execute job as incremental backup."
 msgstr "Auftrag als inkrementelle Sicherung ausführen."
 
-#: src/TabJobs.java:9709
+#: src/TabJobs.java:9710
 msgid "Execute job as differential backup."
 msgstr "Auftrag als differentielle Sicherung ausführen."
 
-#: src/TabJobs.java:9718
+#: src/TabJobs.java:9719
 msgid "Custom text."
 msgstr "Benutzertext."
 
-#: src/TabJobs.java:9722
+#: src/TabJobs.java:9723
 msgid "Keep"
 msgstr ""
 
-#: src/TabJobs.java:9728
+#: src/TabJobs.java:9729
 msgid "min."
 msgstr ""
 
-#: src/TabJobs.java:9732
+#: src/TabJobs.java:9733
 #, fuzzy
 msgid "Min. number of archives to keep."
 msgstr "Max. Anzahl Einträge in Liste."
 
-#: src/TabJobs.java:9749 src/TabJobs.java:9770
+#: src/TabJobs.java:9750 src/TabJobs.java:9771
 msgid "max."
 msgstr ""
 
-#: src/TabJobs.java:9753
+#: src/TabJobs.java:9754
 #, fuzzy
 msgid "Max. number of archives to keep."
 msgstr "Max. Anzahl Einträge in Liste."
 
-#: src/TabJobs.java:9774
+#: src/TabJobs.java:9775
 #, fuzzy
 msgid "Max. age of archives to keep."
 msgstr "Max. Anzahl Einträge in Liste."
 
-#: src/TabJobs.java:9798
+#: src/TabJobs.java:9799
 msgid "enabled"
 msgstr "markiert"
 
-#: src/TabJobs.java:9884
+#: src/TabJobs.java:9885
 #, fuzzy
 msgid "New schedule"
 msgstr "Zeitplan"
 
-#: src/TabJobs.java:9906
+#: src/TabJobs.java:9907
 msgid ""
 "Cannot create new schedule:\n"
 "\n"
 msgstr ""
 
-#: src/TabJobs.java:9998
+#: src/TabJobs.java:9999
 #, fuzzy
 msgid ""
 "Cannot clone new schedule:\n"
 "\n"
 msgstr "Neuen Auftrag erstellen."
 
-#: src/TabJobs.java:10039
+#: src/TabJobs.java:10040
 #, fuzzy
 msgid ""
 "Cannot delete schedule:\n"
@@ -1132,7 +1132,7 @@ msgstr ""
 msgid "Click to sort for modification date/time."
 msgstr "Klicken um nach Datum/Zeit zu sortieren."
 
-#: src/TabRestore.java:3159 src/TabRestore.java:3520 src/TabStatus.java:479
+#: src/TabRestore.java:3159 src/TabRestore.java:3520 src/TabStatus.java:474
 msgid "Click to sort for state."
 msgstr "Klicken um nach Status zu sortieren."
 
@@ -1160,7 +1160,7 @@ msgid "Created"
 msgstr "Erzeugt"
 
 #: src/TabRestore.java:3430 src/TabRestore.java:3638 src/TabRestore.java:3923
-#: src/TabStatus.java:478
+#: src/TabStatus.java:473
 msgid "State"
 msgstr "Status"
 
@@ -1332,182 +1332,182 @@ msgstr ""
 "Liste mit Aufträgen. Klicken Sie, um einen Auftrag auszuwählen, Rechts-Klick "
 "für Kontextmenü."
 
-#: src/TabStatus.java:459 src/TabStatus.java:620 src/TabStatus.java:1309
-msgid "Selected"
-msgstr "Ausgewählt"
-
-#: src/TabStatus.java:485
+#: src/TabStatus.java:480
 msgid "Click to sort for part size."
 msgstr "Klicken um nach Teilgrößen zu sortieren."
 
-#: src/TabStatus.java:488
+#: src/TabStatus.java:483
 msgid "Click to sort for used compress algorithm."
 msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren."
 
-#: src/TabStatus.java:491
+#: src/TabStatus.java:486
 msgid "Click to sort for used encryption algorithm."
 msgstr "Klicken um nach verwendetem Verschlüsselungsalgorithmus zu sortieren."
 
-#: src/TabStatus.java:493
+#: src/TabStatus.java:488
 msgid "Last executed"
 msgstr "Letzte Ausführung"
 
-#: src/TabStatus.java:494
+#: src/TabStatus.java:489
 msgid "Click to sort for last date/time job was executed."
 msgstr ""
 "Klicken um nach Datum/Zeit der letzten Ausführung des Auftrags zu sortieren."
 
-#: src/TabStatus.java:496
+#: src/TabStatus.java:491
 msgid "Estimated time"
 msgstr "Geschätzte Restzeit"
 
-#: src/TabStatus.java:497
+#: src/TabStatus.java:492
 msgid "Click to sort for estimated rest time to execute job."
 msgstr ""
 "Klicken um nach geschötzter Restzeit für Ausführung des Auftrags zu sortieren"
 
-#: src/TabStatus.java:541 src/TabStatus.java:1064 src/TabStatus.java:1352
-#: src/TabStatus.java:1364
+#: src/TabStatus.java:536 src/TabStatus.java:1059 src/TabStatus.java:1349
+#: src/TabStatus.java:1361
 msgid "Continue"
 msgstr "Weiter"
 
-#: src/TabStatus.java:554 src/TabStatus.java:922 src/TabStatus.java:1079
+#: src/TabStatus.java:549 src/TabStatus.java:917 src/TabStatus.java:1074
 msgid "Volume"
 msgstr "Medium"
 
-#: src/TabStatus.java:629
+#: src/TabStatus.java:615 src/TabStatus.java:1304
+msgid "Selected"
+msgstr "Ausgewählt"
+
+#: src/TabStatus.java:624
 msgid "Done"
 msgstr "Bearbeitet"
 
-#: src/TabStatus.java:634 src/TabStatus.java:781 src/TabStatus.java:815
-#: src/TabStatus.java:857
+#: src/TabStatus.java:629 src/TabStatus.java:776 src/TabStatus.java:810
+#: src/TabStatus.java:852
 msgid "files"
 msgstr "Dateien"
 
-#: src/TabStatus.java:675
+#: src/TabStatus.java:670
 msgid "files/s"
 msgstr "Dateien/s"
 
-#: src/TabStatus.java:692 src/TabStatus.java:764
+#: src/TabStatus.java:687 src/TabStatus.java:759
 msgid "bytes/s"
 msgstr "Bytes/s"
 
-#: src/TabStatus.java:704
+#: src/TabStatus.java:699
 msgid "Stored"
 msgstr "Gespeichert"
 
-#: src/TabStatus.java:736
+#: src/TabStatus.java:731
 msgid "Ratio"
 msgstr "Verhältnis"
 
-#: src/TabStatus.java:776
+#: src/TabStatus.java:771
 msgid "Skipped"
 msgstr "Übersprungen"
 
-#: src/TabStatus.java:810
+#: src/TabStatus.java:805
 msgid "Errors"
 msgstr "Fehler"
 
-#: src/TabStatus.java:844
+#: src/TabStatus.java:839
 msgid "Total"
 msgstr "Gesamt"
 
-#: src/TabStatus.java:902
+#: src/TabStatus.java:897
 msgid "File"
 msgstr "Datei"
 
-#: src/TabStatus.java:929
+#: src/TabStatus.java:924
 msgid "Total files"
 msgstr "Dateien gesamt"
 
-#: src/TabStatus.java:936
+#: src/TabStatus.java:931
 msgid "Total bytes"
 msgstr "Bytes gesamt"
 
-#: src/TabStatus.java:943
+#: src/TabStatus.java:938
 msgid "Message"
 msgstr "Meldung"
 
-#: src/TabStatus.java:1018
+#: src/TabStatus.java:1013
 msgid "Start selected job."
 msgstr "Ausgewählten Auftrag starten."
 
-#: src/TabStatus.java:1034
+#: src/TabStatus.java:1029
 msgid "Abort selected job."
 msgstr "Ausgewählten Auftrag abbrechen."
 
-#: src/TabStatus.java:1050
+#: src/TabStatus.java:1045
 msgid "Pause selected job for a specific time."
 msgstr "Ausgewählten Auftrag für die angegebene Zeit pausieren."
 
-#: src/TabStatus.java:1065
+#: src/TabStatus.java:1060
 msgid "Suspend selected job for an infinite time."
 msgstr "Ausgewählten Auftrag anhalten."
 
-#: src/TabStatus.java:1080
+#: src/TabStatus.java:1075
 msgid "Click when a new volume is available in drive."
 msgstr "Klicken wenn eine neues Medium im Laufwerk ist."
 
-#: src/TabStatus.java:1096
+#: src/TabStatus.java:1091
 msgid "Quit BARControl program."
 msgstr "BARControl beenden."
 
-#: src/TabStatus.java:1152 src/TabStatus.java:1282
+#: src/TabStatus.java:1147 src/TabStatus.java:1277
 #, fuzzy
 msgid ""
 "Cannot get job list:\n"
 "\n"
 msgstr "Neuen Auftrag erstellen."
 
-#: src/TabStatus.java:1234 src/TabStatus.java:1253
+#: src/TabStatus.java:1229 src/TabStatus.java:1248
 msgid "suspended"
 msgstr "angehalten"
 
-#: src/TabStatus.java:1351
+#: src/TabStatus.java:1348
 msgid "Pause [%3dmin]"
 msgstr "Pause [%3dmin]"
 
-#: src/TabStatus.java:1376
+#: src/TabStatus.java:1373
 msgid "Suspend"
 msgstr "Anhalten"
 
-#: src/TabStatus.java:1533
+#: src/TabStatus.java:1530
 msgid "Confirmation"
 msgstr "Bestätigung"
 
-#: src/TabStatus.java:1534
+#: src/TabStatus.java:1531
 msgid "Start job"
 msgstr "Auftrag starten"
 
-#: src/TabStatus.java:1535
+#: src/TabStatus.java:1532
 msgid "Normal"
 msgstr "Normal"
 
-#: src/TabStatus.java:1536
+#: src/TabStatus.java:1533
 msgid "Full"
 msgstr "Vollständig"
 
-#: src/TabStatus.java:1537
+#: src/TabStatus.java:1534
 msgid "Incremental"
 msgstr "Inkrementell"
 
-#: src/TabStatus.java:1538
+#: src/TabStatus.java:1535
 msgid "Differential"
 msgstr "Differentiell"
 
-#: src/TabStatus.java:1539
+#: src/TabStatus.java:1536
 msgid "Dry-run"
 msgstr "Testlauf"
 
-#: src/TabStatus.java:1542
+#: src/TabStatus.java:1539
 msgid "Store all files."
 msgstr "Alle Dateien speichern."
 
-#: src/TabStatus.java:1543
+#: src/TabStatus.java:1540
 msgid "Store all files and create incremental data file."
 msgstr "Alle Dateien speichern und Inkrementdaten erzeugen."
 
-#: src/TabStatus.java:1544
+#: src/TabStatus.java:1541
 msgid ""
 "Store changed files since last incremental or full storage and update "
 "incremental data file."
@@ -1515,64 +1515,64 @@ msgstr ""
 "Speichern von veränderten Dateien seit dem letzten inkrementellen oder "
 "vollständigen Speichern und aktuallisieren der Inkrementdaten."
 
-#: src/TabStatus.java:1545
+#: src/TabStatus.java:1542
 msgid "Store changed files since last full storage."
 msgstr ""
 "Speichern von veränderten Dateien seit dem letzten vollständigen Speichern."
 
-#: src/TabStatus.java:1546
+#: src/TabStatus.java:1543
 msgid "Collect and process all files, but do not create archives."
 msgstr "Dateien suchen und verarbeiten, aber keine Archive erzeugen."
 
-#: src/TabStatus.java:1562
+#: src/TabStatus.java:1559
 msgid "Verify"
 msgstr "Verifikation"
 
-#: src/TabStatus.java:1581
+#: src/TabStatus.java:1578
 msgid "Cannot start job (error: %s)"
 msgstr "Auftrag kann nicht gestartet werden (Fehler: %s)"
 
-#: src/TabStatus.java:1615
+#: src/TabStatus.java:1612
 msgid "Abort running job"
 msgstr "Laufenden Auftrag abbrechen"
 
-#: src/TabStatus.java:1617
+#: src/TabStatus.java:1614
 msgid "Abort job"
 msgstr "Auftrag abbrechen"
 
-#: src/TabStatus.java:1649
+#: src/TabStatus.java:1646
 msgid "Cannot abort job (error: %s)"
 msgstr "Auftrag kann nicht abgebrochen werden (Fehler: %s)"
 
-#: src/TabStatus.java:1662
+#: src/TabStatus.java:1659
 msgid "Communication error while deleting storage"
 msgstr "Kommunikationsfehler beim Löschen eines Archives"
 
-#: src/TabStatus.java:1701
+#: src/TabStatus.java:1698
 msgid "Cannot pause job (error: %s)"
 msgstr "Auftrag kann nicht pausiert werden (Fehler: %s)"
 
-#: src/TabStatus.java:1720
+#: src/TabStatus.java:1717
 msgid "Cannot suspend job (error: %s)"
 msgstr "Auftrag kann nicht angehalten werden (Fehler: %s)"
 
-#: src/TabStatus.java:1733
+#: src/TabStatus.java:1730
 msgid "Volume request"
 msgstr "Medium anfordern"
 
-#: src/TabStatus.java:1733
+#: src/TabStatus.java:1730
 msgid "Load volume number"
 msgstr "Medium laden"
 
-#: src/TabStatus.java:1733
+#: src/TabStatus.java:1730
 msgid "OK"
 msgstr "OK"
 
-#: src/TabStatus.java:1733
+#: src/TabStatus.java:1730
 msgid "Unload tray"
 msgstr "Schublade öffnen"
 
-#: src/TabStatus.java:1746
+#: src/TabStatus.java:1743
 msgid "Cannot change volume job (error: %s)"
 msgstr "Name des Auftrags kann nicht geändert werden (Fehler: %s)"
 
