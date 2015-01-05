@@ -1104,9 +1104,6 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
 }
 
 Errors Index_update(DatabaseHandle *databaseHandle,
-                    DatabaseId     entityId,
-                    const String   jobUUID,
-                    const String   scheduleUUID,
                     DatabaseId     storageId,
                     const String   storageName,
                     uint64         size
@@ -1126,38 +1123,6 @@ Errors Index_update(DatabaseHandle *databaseHandle,
                              ",
                              storageName,
                              storageId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
-  if (jobUUID != NULL)
-  {
-    error = Database_execute(databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "UPDATE entities \
-                              SET jobUUID=%'S \
-                              WHERE id=%ld;\
-                             ",
-                             jobUUID,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
-  if (scheduleUUID != NULL)
-  {
-    error = Database_execute(databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "UPDATE entities \
-                              SET scheduleUUID=%'S \
-                              WHERE id=%ld;\
-                             ",
-                             scheduleUUID,
-                             entityId
                             );
     if (error != ERROR_NONE)
     {
@@ -1397,6 +1362,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                            "SELECT entities.id, \
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
+                                   entities.type, \
                                    STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1)), \
                                    (SELECT SUM(size) FROM storage WHERE storage.entityId=entities.id), \
                                    (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
@@ -1415,6 +1381,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          DatabaseId       *databaseId,
                          String           jobUUID,
                          String           scheduleUUID,
+                         ArchiveTypes     *archiveType,
                          uint64           *lastCreatedDateTime,
                          uint64           *totalSize,
                          String           lastErrorMessage
@@ -1423,10 +1390,11 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%lld %S %S %lld %lld %S",
+                             "%lld %S %S %u %lld %lld %S",
                              databaseId,
                              jobUUID,
                              scheduleUUID,
+                             archiveType,
                              lastCreatedDateTime,
                              totalSize,
                              lastErrorMessage
@@ -1436,6 +1404,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 Errors Index_newEntity(DatabaseHandle *databaseHandle,
                        const String   jobUUID,
                        const String   scheduleUUID,
+                       ArchiveTypes   archiveType,
                        DatabaseId     *entityId
                       )
 {
@@ -1460,13 +1429,14 @@ Errors Index_newEntity(DatabaseHandle *databaseHandle,
                               %'S,\
                               %'S,\
                               DATETIME('now'),\
-                              0,\
+                              %u,\
                               '',\
                               0\
                              ); \
                            ",
                            jobUUID,
-                           scheduleUUID
+                           scheduleUUID,
+                           archiveType
                           );
   if (error != ERROR_NONE)
   {

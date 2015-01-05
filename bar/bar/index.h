@@ -302,9 +302,6 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
 * Name   : Index_update
 * Purpose: update index name/size
 * Input  : databaseHandle - database handle
-*          entityId       - database id of entity
-*          jobUUID        - job UUID (can be NULL)
-*          scheduleUUID   - schedule UUID (can be NULL)
 *          storageId      - database id of storage
 *          storageName    - storage name (can be NULL)
 *          size           - size [bytes]
@@ -314,9 +311,6 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Index_update(DatabaseHandle *databaseHandle,
-                    DatabaseId     entityId,
-                    const String   jobUUID,
-                    const String   scheduleUUID,
                     DatabaseId     storageId,
                     const String   storageName,
                     uint64         size
@@ -449,6 +443,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          DatabaseId       *databaseId,
                          String           jobUUID,
                          String           scheduleUUID,
+                         ArchiveTypes     *archiveType,
                          uint64           *lastCreatedDateTime,
                          uint64           *totalSize,
                          String           lastErrorMessage
@@ -468,6 +463,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 Errors Index_newEntity(DatabaseHandle *databaseHandle,
                        const String   jobUUID,
                        const String   scheduleUUID,
+                       ArchiveTypes   archiveType,
                        DatabaseId     *entityId
                       );
 
