@@ -353,7 +353,7 @@ LOCAL Errors checkFTPLogin(const String hostName,
     // check host name (Note: FTP library crash if host name is not valid!)
     if (!Network_hostExists(hostName))
     {
-      return ERROR_HOST_NOT_FOUND;
+      return ERRORX_(HOST_NOT_FOUND,0,String_cString(hostName);
     }
 
     // connect
@@ -5300,7 +5300,7 @@ Errors Storage_create(StorageHandle *storageHandle,
           // connect
           if (!Network_hostExists(storageHandle->storageSpecifier.hostName))
           {
-            return ERROR_HOST_NOT_FOUND;
+            return ERRORX_(HOST_NOT_FOUND,0,String_cString(storageHandle->storageSpecifier.hostName));
           }
           if (FtpConnect(String_cString(storageHandle->storageSpecifier.hostName),&storageHandle->ftp.control) != 1)
           {
@@ -6099,7 +6099,7 @@ Errors Storage_open(StorageHandle *storageHandle)
           // FTP connect
           if (!Network_hostExists(storageHandle->storageSpecifier.hostName))
           {
-            return ERROR_HOST_NOT_FOUND;
+            return ERRORX_(HOST_NOT_FOUND,0,String_cString(storageHandle->storageSpecifier.hostName));
           }
           if (FtpConnect(String_cString(storageHandle->storageSpecifier.hostName),&storageHandle->ftp.control) != 1)
           {

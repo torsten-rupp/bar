@@ -353,7 +353,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         }
         if (ipAddress == INADDR_NONE)
         {
-          return ERROR_HOST_NOT_FOUND;
+          return ERRORX_(HOST_NOT_FOUND,0,String_cString(hostName));
         }
 
         // connect
@@ -437,7 +437,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         }
         if (ipAddress == INADDR_NONE)
         {
-          return ERROR_HOST_NOT_FOUND;
+          return ERRORX_(HOST_NOT_FOUND,0,String_cString(hostName));
         }
 
         // connect
