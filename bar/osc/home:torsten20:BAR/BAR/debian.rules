@@ -20,25 +20,25 @@ build-stamp:
 	dh_testdir
 
 	# Add here commands to compile the package.
-	ln -s packages/zlib-1.2.7 zlib
-	ln -s packages/bzip2-1.0.5 bzip2
-	ln -s packages/xz-5.0.7 xz
-	ln -s packages/lzo-2.06 lzo
-	ln -s packages/lz4-r123 lz4
-	ln -s packages/xdelta3.0.0 xdelta3
+	ln -s `find packages -maxdepth 1 -type d -name 'zlib-*'|head -1` zlib
+	ln -s `find packages -maxdepth 1 -type d -name 'bzip2-*'|head -1` bzip2
+	ln -s `find packages -maxdepth 1 -type d -name 'xz*'|head -1` xz
+	ln -s `find packages -maxdepth 1 -type d -name 'lzo-*'|head -1` lzo
+	ln -s `find packages -maxdepth 1 -type d -name 'lz4-*'|head -1` lz4
+	ln -s `find packages -maxdepth 1 -type d -name 'xdelta*'|head -1` xdelta3
 	ln -s packages/ftplib-3.1 ftplib
-	ln -s packages/libgpg-error-1.10 libgpg-error
-	ln -s packages/libgcrypt-1.5.0 libgcrypt
-	ln -s packages/gmp-5.1.3 gmp
-	ln -s packages/nettle-2.6 nettle
-	ln -s packages/gnutls-3.1.18 gnutls
-	ln -s packages/openssl-1.0.1g openssl
-	ln -s packages/libssh2-1.4.2 libssh2
-	ln -s packages/curl-7.28.1 curl
-	ln -s packages/c-ares-1.10.0 c-ares
-	ln -s packages/mxml-2.7 mxml
-	ln -s packages/libcdio-0.92 libcdio
-	ln -s packages/pcre-8.34 pcre
+	ln -s `find packages -maxdepth 1 -type d -name 'libgpg-error-*'|head -1` libgpg-error
+	ln -s `find packages -maxdepth 1 -type d -name 'libgcrypt-*'|head -1` libgcrypt
+	ln -s `find packages -maxdepth 1 -type d -name 'gmp-*'|head -1` gmp
+	ln -s `find packages -maxdepth 1 -type d -name 'nettle-*'|head -1` nettle
+	ln -s `find packages -maxdepth 1 -type d -name 'gnutls-*'|head -1` gnutls
+	ln -s `find packages -maxdepth 1 -type d -name 'openssl-*'|head -1` openssl
+	ln -s `find packages -maxdepth 1 -type d -name 'libssh2-*'|head -1` libssh2
+	ln -s `find packages -maxdepth 1 -type d -name 'curl-*'|head -1` curl
+	ln -s `find packages -maxdepth 1 -type d -name 'c-ares-*'|head -1` c-ares
+	ln -s `find packages -maxdepth 1 -type d -name 'mxml-*'|head -1` mxml
+	ln -s `find packages -maxdepth 1 -type d -name 'libcdio-*'|head -1` libcdio
+	ln -s `find packages -maxdepth 1 -type d -name 'pcre-*'|head -1` pcre
 	ls -la
 	ls -la packages
 	./configure --enable-package-check

@@ -33,63 +33,88 @@ automated backups in the background.
 %build
 mkdir packages
 (
-  cp %{_sourcedir}/zlib-1.2.5.tar.gz packages
-  (cd packages; tar xzf zlib-1.2.5.tar.gz)
-  ln -s packages/zlib-1.2.5 zlib
+  cp %{_sourcedir}/zlib-*.tar.gz packages
+  (cd packages; tar xzf zlib-*.tar.gz)
+  ln -s `find packages -type d -name 'zlib-*'|head -1` zlib
 )
 (
-  cp %{_sourcedir}/bzip2-1.0.5.tar.gz packages
-  (cd packages; tar xzf bzip2-1.0.5.tar.gz)
-  ln -s packages/bzip2-1.0.5 bzip2
+  cp %{_sourcedir}/bzip2-*.tar.gz packages
+  (cd packages; tar xzf bzip2-*.tar.gz)
+  ln -s `find packages -type d -name 'bzip2-*'|head -1` bzip2
 )
 (
-  cp %{_sourcedir}/xz-5.0.4.tar.gz packages
-  (cd packages; tar xzf xz-5.0.4.tar.gz)
-  ln -s packages/xz-5.0.4 xz
+  cp %{_sourcedir}/xz-*.tar.gz packages
+  (cd packages; tar xzf xz-*.tar.gz)
+  ln -s `find packages -type d -name 'xz-*'|head -1` xz
 )
 (
-  cp %{_sourcedir}/lzo-2.06.tar.gz packages
-  (cd packages; tar xzf lzo-2.06.tar.gz)
-  ln -s packages/lzo-2.06 lzo
+  cp %{_sourcedir}/lzo-*.tar.gz packages
+  (cd packages; tar xzf lzo-*.tar.gz)
+  ln -s `find packages -type d -name 'lzo-*'|head -1` lzo
 )
 (
-  cp %{_sourcedir}/lz4-r123.tar.gz packages
-  (cd packages; tar xzf lz4-r123.tar.gz)
-  ln -s packages/lz4-r123 lz4
+  cp %{_sourcedir}/lz4-*.tar.gz packages
+  (cd packages; tar xzf lz4-*.tar.gz)
+  ln -s `find packages -type d -name 'lz4-*'|head -1` lz4
 )
 (
-  cp %{_sourcedir}/xdelta3.0.0.tar.gz packages
-  (cd packages; tar xzf xdelta3.0.0.tar.gz)
-  ln -s packages/xdelta3.0.0 xdelta3
+  cp %{_sourcedir}/xdelta*.tar.gz packages
+  (cd packages; tar xzf xdelta*.tar.gz)
+  ln -s `find packages -type d -name 'xdelta*'|head -1` xdelta3
 )
 (
-  cp %{_sourcedir}/libgpg-error-1.7.tar.bz2 packages
-  cp %{_sourcedir}/libgcrypt-1.4.4.tar.bz2 packages
-  (cd packages; tar xjf libgpg-error-1.7.tar.bz2)
-  (cd packages; tar xjf libgcrypt-1.4.4.tar.bz2)
-  ln -s packages/libgpg-error-1.7 libgpg-error
-  ln -s packages/libgcrypt-1.4.4 libgcrypt
+  cp %{_sourcedir}/libgpg-error-*.tar.bz2 packages
+  cp %{_sourcedir}/libgcrypt-*.tar.bz2 packages
+  (cd packages; tar xjf libgpg-error-*.tar.bz2)
+  (cd packages; tar xjf libgcrypt-*.tar.bz2)
+  ln -s `find packages -type d -name 'libgpg-error-*'|head -1` libgpg-error
+  ln -s `find packages -type d -name 'libgcrypt-*'|head -1` libgcrypt
 )
 (
-  cp %{_sourcedir}/ftplib-3.1-src.tar.gz packages
-  (cd packages; tar xzf ftplib-3.1-src.tar.gz)
-  (cd packages/ftplib-3.1; patch -p3 < %{_sourcedir}/ftplib-3.1-1.patch)
-  ln -s packages/ftplib-3.1 ftplib
+  cp %{_sourcedir}/openssl-*.tar.gz packages
+  (cd packages; tar xzf openssl-*.tar.gz)
+  ln -s `find packages -type d -name 'openssl-*'|head -1` openssl
 )
 (
-  cp %{_sourcedir}/libssh2-1.4.2.tar.gz packages
-  (cd packages; tar xzf libssh2-1.4.2.tar.gz)
-  ln -s packages/libssh2-1.4.2 libssh2
+  cp %{_sourcedir}/c-ares-*.tar.gz packages
+  (cd packages; tar xzf c-ares-*.tar.gz)
+  ln -s `find packages -type d -name 'c-ares-*'|head -1` c-ares
+
+  cp %{_sourcedir}/curl-*.tar.bz2 packages
+  (cd packages; tar xjf curl-*.tar.bz2)
+  ln -s `find packages -type d -name 'curl-*'|head -1` curl
+
+  cp %{_sourcedir}/mxml-*.tar.gz packages
+  (cd packages; tar xzf mxml-*.tar.gz)
+  ln -s `find packages -type d -name 'mxml-*'|head -1` mxml
 )
 (
-  cp %{_sourcedir}/gnutls-3.1.18.tar.xz packages
-  (cd packages; xz -d -c gnutls-3.1.18.tar.xz | tar xf -)
-  ln -s packages/gnutls-3.1.18 gnutls
+  cp %{_sourcedir}/libssh2-*.tar.gz packages
+  (cd packages; tar xzf libssh2-*.tar.gz)
+  ln -s `find packages -type d -name 'libssh2-*'|head -1` libssh2
 )
 (
-  cp %{_sourcedir}/libcdio-0.92.tar.gz packages
-  (cd packages; tar xzf libcdio-0.92.tar.gz)
-  ln -s packages/libcdio-0.92 libcdio
+  cp %{_sourcedir}/nettle-*.tar.gz packages
+  (cd packages; tar xzf nettle-*.tar.gz)
+  ln -s `find packages -type d -name 'nettle-*'|head -1` nettle
+
+  cp %{_sourcedir}/gmp-*.tar.bz2 packages
+  (cd packages; tar xjf gmp-*.tar.bz2)
+  ln -s `find packages -type d -name 'gmp-*'|head -1` gmp
+
+  cp %{_sourcedir}/gnutls-*.tar.xz packages
+  (cd packages; xz -d -c gnutls-*.tar.xz | tar xf -)
+  ln -s `find packages -type d -name 'gnutls-*'|head -1` gnutls
+)
+(
+  cp %{_sourcedir}/libcdio-*.tar.gz packages
+  (cd packages; tar xzf libcdio-*.tar.gz)
+  ln -s `find packages -type d -name 'libcdio-*'|head -1` libcdio
+)
+(
+  cp %{_sourcedir}/pcre-*.tar.bz2 packages
+  (cd packages; tar xjf pcre-*.tar.bz2)
+  ln -s `find packages -type d -name 'pcre-*'|head -1` pcre
 )
 
 %configure --enable-package-check
