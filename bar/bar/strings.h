@@ -48,8 +48,6 @@ extern const struct __String* STRING_EMPTY;
 
 // string
 typedef struct __String* String;
-#define StaticString(name,length) \
-  __StaticString(name,length,__COUNTER__)
 
 #ifndef SIZEOF_ULONG
   #define SIZEOF_ULONG 4
@@ -98,31 +96,31 @@ typedef struct
 /****************************** Macros *********************************/
 
 // static string
-#define __STATIC_STRING_IDENTIFIER1(name,n) __STATIC_STRING_IDENTIFIER2(name,n)
-#define __STATIC_STRING_IDENTIFIER2(name,n) __##name##n
+#define __STATIC_STRING_IDENTIFIER1(name,suffix) __STATIC_STRING_IDENTIFIER2(name,suffix)
+#define __STATIC_STRING_IDENTIFIER2(name,suffix) __##name##suffix
 #ifndef NDEBUG
-  #define __StaticString(name,length,n) \
-    char __STATIC_STRING_IDENTIFIER1(data,n)[(length)+1] = { [0] = '\0' }; \
-    struct __String __STATIC_STRING_IDENTIFIER1(string,n) = \
+  #define StaticString(name,length) \
+    char __STATIC_STRING_IDENTIFIER1(name,_data)[(length)+1] = { [0] = '\0' }; \
+    struct __String __STATIC_STRING_IDENTIFIER1(name,_string) = \
     { \
       0, \
       (length)+1, \
       STRING_TYPE_STATIC, \
-      __STATIC_STRING_IDENTIFIER1(data,n), \
-      STRING_CHECKSUM(0,(length)+1,__STATIC_STRING_IDENTIFIER1(data,n)) \
+      __STATIC_STRING_IDENTIFIER1(name,_data), \
+      STRING_CHECKSUM(0,(length)+1,__STATIC_STRING_IDENTIFIER1(name,_data)) \
     }; \
-    String name = &(__STATIC_STRING_IDENTIFIER1(string,n))
+    String name = &(__STATIC_STRING_IDENTIFIER1(name,_string))
 #else /* NDEBUG */
-  #define __StaticString(name,length,n) \
-    char __STATIC_STRING_IDENTIFIER1(data,n)[(length)+1] = { [0] = '\0' }; \
-    struct __String __STATIC_STRING_IDENTIFIER1(string,n) = \
+  #define StaticString(name,length) \
+    char __STATIC_STRING_IDENTIFIER1(name,_data)[(length)+1] = { [0] = '\0' }; \
+    struct __String __STATIC_STRING_IDENTIFIER1(name,_string) = \
     { \
       0, \
       (length)+1, \
       STRING_TYPE_STATIC, \
-      __STATIC_STRING_IDENTIFIER1(data,n) \
+      __STATIC_STRING_IDENTIFIER1(name,_data) \
     }; \
-    String name = &(__STATIC_STRING_IDENTIFIER1(string,n))
+    String name = &(__STATIC_STRING_IDENTIFIER1(name,_string))
 #endif /* not NDEBUG */
 
 // debugging
