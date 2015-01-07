@@ -26,6 +26,8 @@ WGET_OPTIONS="--timeout=30 --tries=3"
 UNZIP="unzip"
 XZ="xz"
 
+PCRE_VERSION=8.36
+
 # --------------------------------- variables --------------------------------
 
 # ---------------------------------- functions -------------------------------
@@ -740,7 +742,7 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
-    # pcre 8.34
+    # pcre
     (
      if test -n "$destination"; then
        cd $destination
@@ -748,14 +750,14 @@ if test $cleanFlag -eq 0; then
        cd $tmpDirectory
      fi
 
-     if test ! -f pcre-8.34.tar.bz2; then
-       $WGET $WGET_OPTIONS 'ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.34.tar.bz2'
+     if test ! -f pcre-$PCRE_VERSION.tar.bz2; then
+       $WGET $WGET_OPTIONS "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-$PCRE_VERSION.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xjf pcre-8.34.tar.bz2
+       $TAR xjf pcre-$PCRE_VERSION.tar.bz2
      fi
     )
-    $LN -f -s $tmpDirectory/pcre-8.34 pcre
+    $LN -f -s $tmpDirectory/pcre-$PCRE_VERSION pcre
   fi
 
   if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
