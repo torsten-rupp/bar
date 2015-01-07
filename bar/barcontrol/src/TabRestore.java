@@ -366,11 +366,11 @@ public class TabRestore
      */
     public void update()
     {
-      if (treeItem != null)
+      if ((treeItem != null) && !treeItem.isDisposed())
       {
         treeItemUpdateRunnable.update(treeItem,this);
       }
-      if (tableItem != null)
+      if ((tableItem != null) && !tableItem.isDisposed())
       {
         tableItemUpdateRunnable.update(tableItem,this);
       }
@@ -390,8 +390,14 @@ public class TabRestore
     public void setChecked(boolean checked)
     {
       this.checked = checked;
-      if (treeItem != null) treeItem.setChecked(checked);
-      if (tableItem != null) tableItem.setChecked(checked);
+      if ((treeItem != null) && !treeItem.isDisposed())
+      {
+        treeItem.setChecked(checked);
+      }
+      if ((tableItem != null) && !tableItem.isDisposed())
+      {
+        tableItem.setChecked(checked);
+      }
     }
 
     /** get info string
@@ -915,14 +921,18 @@ public class TabRestore
    */
   class StorageIndexData extends IndexData
   {
-    public long        storageId;                // database storage id
-    public long        entityId;                 // database entity id
-    public IndexModes  indexMode;                // mode of index
-    public long        lastCheckedDateTime;      // last checked date/time
+    public long         storageId;                // database storage id
+    public long         entityId;                 // database entity id
+    public String       jobName;                  // job name or null
+    public ArchiveTypes archiveType;              // archive type
+    public IndexModes   indexMode;                // mode of index
+    public long         lastCheckedDateTime;      // last checked date/time
 
     /** create storage data index
      * @param storageId database storage id
      * @param entityId database entity id
+     * @param jobName job name or null
+     * @param archiveType archive type
      * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
      * @param size size of storage [byte]
@@ -932,11 +942,13 @@ public class TabRestore
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    StorageIndexData(long storageId, long entityId, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    StorageIndexData(long storageId, long entityId, String jobName, ArchiveTypes archiveType, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       super(name,dateTime,size,title,errorMessage);
       this.storageId           = storageId;
       this.entityId            = entityId;
+      this.jobName             = jobName;
+      this.archiveType         = archiveType;
       this.indexState          = indexState;
       this.indexMode           = indexMode;
       this.lastCheckedDateTime = lastCheckedDateTime;
@@ -945,26 +957,30 @@ public class TabRestore
     /** create storage data
      * @param id database id
      * @param entityId database entity id
+     * @param jobName job name
+     * @param archiveType archive type
      * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
      * @param title title to show
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
-    StorageIndexData(long id, long entityId, String name, long dateTime, String title, long lastCheckedDateTime)
+    StorageIndexData(long id, long entityId, String jobName, ArchiveTypes archiveType, String name, long dateTime, String title, long lastCheckedDateTime)
     {
-      this(id,entityId,name,dateTime,0L,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+      this(id,entityId,jobName,archiveType,name,dateTime,0L,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
     }
 
     /** create storage data
      * @param id database id
      * @param entityId database entity id
+     * @param jobName job name
+     * @param archiveType archive type
      * @param name name of storage
      * @param uuid uuid
      * @param title title to show
      */
-    StorageIndexData(long id, long entityId, String name, String title)
+    StorageIndexData(long id, long entityId, String jobName, ArchiveTypes archiveType, String name, String title)
     {
-      this(id,entityId,name,0L,title,0L);
+      this(id,entityId,jobName,archiveType,name,0L,title,0L);
     }
 
     /** set tree item reference
@@ -1277,6 +1293,8 @@ public class TabRestore
     /** update storage data index
      * @param storageId database storage id
      * @param entityId database entity id
+     * @param jobName job name
+     * @param archiveType archive type
      * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
      * @param size size of storage [byte]
@@ -1286,12 +1304,14 @@ public class TabRestore
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    public synchronized StorageIndexData updateStorageIndexData(long storageId, long entityId, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    public synchronized StorageIndexData updateStorageIndexData(long storageId, long entityId, String jobName, ArchiveTypes archiveType, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       StorageIndexData storageIndexData = storageIndexDataMap.get(storageId);
       if (storageIndexData != null)
       {
         storageIndexData.entityId            = entityId;
+        storageIndexData.jobName             = jobName;
+        storageIndexData.archiveType         = archiveType;
         storageIndexData.name                = name;
         storageIndexData.dateTime            = dateTime;
         storageIndexData.size                = size;
@@ -1304,6 +1324,8 @@ public class TabRestore
       {
         storageIndexData = new StorageIndexData(storageId,
                                                 entityId,
+                                                jobName,
+                                                archiveType,
                                                 name,
                                                 dateTime,
                                                 size,
@@ -1907,21 +1929,25 @@ public class TabRestore
         {
           try
           {
-            long        storageId           = resultMap.getLong  ("storageId"                   );
-            long        entityId            = resultMap.getLong  ("entityId"                    );
-            String      jobUUID             = resultMap.getString("jobUUID"                     );
-            String      scheduleUUID        = resultMap.getString("scheduleUUID"                );
-            String      name                = resultMap.getString("name"                        );
-            long        dateTime            = resultMap.getLong  ("dateTime"                    );
-            long        size                = resultMap.getLong  ("size"                        );
-            IndexStates indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
-            IndexModes  indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class  );
-            long        lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"         );
-            String      errorMessage        = resultMap.getString("errorMessage"                );
+            long         storageId           = resultMap.getLong  ("storageId"                   );
+//            long         entityId            = resultMap.getLong  ("entityId"                    );
+            String       jobUUID             = resultMap.getString("jobUUID"                     );
+            String       scheduleUUID        = resultMap.getString("scheduleUUID"                );
+            String       jobName             = resultMap.getString("jobName"                     );
+            ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",ArchiveTypes.class);
+            String       name                = resultMap.getString("name"                        );
+            long         dateTime            = resultMap.getLong  ("dateTime"                    );
+            long         size                = resultMap.getLong  ("size"                        );
+            IndexStates  indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
+            IndexModes   indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class  );
+            long         lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"         );
+            String       errorMessage        = resultMap.getString("errorMessage"                );
 
             // add/update storage data
             final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-                                                                                          entityId,
+0,//                                                                                          entityId,
+                                                                                          jobName,
+                                                                                          archiveType,
                                                                                           name,
                                                                                           dateTime,
                                                                                           size,
@@ -2051,21 +2077,25 @@ public class TabRestore
         {
           try
           {
-            long        storageId           = resultMap.getLong  ("storageId"                   );
-            long        entityId            = resultMap.getLong  ("entityId"                    );
-            String      jobUUID             = resultMap.getString("jobUUID"                     );
-            String      scheduleUUID        = resultMap.getString("scheduleUUID"                );
-            String      name                = resultMap.getString("name"                        );
-            long        dateTime            = resultMap.getLong  ("dateTime"                    );
-            long        size                = resultMap.getLong  ("size"                        );
-            IndexStates indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
-            IndexModes  indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class  );
-            long        lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"         );
-            String      errorMessage        = resultMap.getString("errorMessage"                );
+            long         storageId           = resultMap.getLong  ("storageId"                     );
+//            long         entityId            = resultMap.getLong  ("entityId"                      );
+            String       jobUUID             = resultMap.getString("jobUUID"                       );
+            String       scheduleUUID        = resultMap.getString("scheduleUUID"                  );
+            String       jobName             = resultMap.getString("jobName"                       );
+            ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",ArchiveTypes.class);
+            String       name                = resultMap.getString("name"                          );
+            long         dateTime            = resultMap.getLong  ("dateTime"                      );
+            long         size                = resultMap.getLong  ("size"                          );
+            IndexStates  indexState          = resultMap.getEnum  ("indexState",IndexStates.class  );
+            IndexModes   indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class    );
+            long         lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"           );
+            String       errorMessage        = resultMap.getString("errorMessage"                  );
 
             // add/update to index map
             final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-                                                                                          entityId,
+0,//                                                                                          entityId,
+                                                                                          jobName,
+                                                                                          archiveType,
                                                                                           name,
                                                                                           dateTime,
                                                                                           size,
@@ -3152,7 +3182,7 @@ break;
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,"Size",    SWT.RIGHT,100,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for size."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
-      treeColumn = Widgets.addTreeColumn(widgetStorageTree,"Modified",SWT.LEFT, 150,true);
+      treeColumn = Widgets.addTreeColumn(widgetStorageTree,"Modified",SWT.LEFT, 160,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for modification date/time."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,"State",   SWT.LEFT,  60,true);
@@ -3190,7 +3220,7 @@ break;
                      || (treeItem.getData() instanceof EntityIndexData)
                     )
             {
-              // expand/collaps sub-tree
+              // expand/collapse sub-tree
               Event treeEvent = new Event();
               treeEvent.item = treeItem;
               if (treeItem.getExpanded())
@@ -3397,65 +3427,85 @@ break;
                 }
               });
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Name")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Job")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,0,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.name);
+              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.jobName);
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,0,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Created")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Name")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,1,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.name);
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,1,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Size")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Created")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageIndexData.size,Units.formatByteSize(storageIndexData.size)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("State")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Type")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,3,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.indexState.toString());
+              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.archiveType.toString());
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,3,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last checked")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Size")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,4,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageIndexData.size,Units.formatByteSize(storageIndexData.size)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,4,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Error")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("State")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,5,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.errorMessage);
+              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.indexState.toString());
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,5,1,TableLayoutData.WE);
+
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last checked")+":");
+              label.setForeground(COLOR_FORGROUND);
+              label.setBackground(COLOR_BACKGROUND);
+              Widgets.layout(label,6,0,TableLayoutData.W);
+
+              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000)));
+              label.setForeground(COLOR_FORGROUND);
+              label.setBackground(COLOR_BACKGROUND);
+              Widgets.layout(label,6,1,TableLayoutData.WE);
+
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Error")+":");
+              label.setForeground(COLOR_FORGROUND);
+              label.setBackground(COLOR_BACKGROUND);
+              Widgets.layout(label,7,0,TableLayoutData.W);
+
+              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.errorMessage);
+              label.setForeground(COLOR_FORGROUND);
+              label.setBackground(COLOR_BACKGROUND);
+              Widgets.layout(label,7,1,TableLayoutData.WE);
 
               Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
               Rectangle bounds = treeItem.getBounds(0);
@@ -3605,65 +3655,85 @@ break;
               }
             });
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Name")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Job")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.name);
+            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.jobName);
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Created")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Name")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)));
+            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.name);
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Size")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Created")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,2,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageIndexData.size,Units.formatByteSize(storageIndexData.size)));
+            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,2,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("State")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Type")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.indexState.toString());
+            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.archiveType.toString());
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Last checked")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Size")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000)));
+            label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageIndexData.size,Units.formatByteSize(storageIndexData.size)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Error")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("State")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,5,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.errorMessage);
+            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.indexState.toString());
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,5,1,TableLayoutData.WE);
+
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Last checked")+":");
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,6,0,TableLayoutData.W);
+
+            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000)));
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,6,1,TableLayoutData.WE);
+
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Error")+":");
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,7,0,TableLayoutData.W);
+
+            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.errorMessage);
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,7,1,TableLayoutData.WE);
 
             Point size = widgetStorageTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
             Rectangle bounds = tableItem.getBounds(0);
@@ -4603,14 +4673,14 @@ break;
           {
             for (TreeItem entityTreeItem : uuidTreeItem.getItems())
             {
-              EntityIndexData entityIndexData = (EntityIndexData)uuidTreeItem.getData();
+              EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
               entityIndexData.setChecked(checked);
 
               if (entityTreeItem.getExpanded())
               {
                 for (TreeItem storageTreeItem : entityTreeItem.getItems())
                 {
-                  StorageIndexData storageIndexData = (StorageIndexData)uuidTreeItem.getData();
+                  StorageIndexData storageIndexData = (StorageIndexData)entityTreeItem.getData();
                   storageIndexData.setChecked(checked);
                 }
               }
@@ -5042,20 +5112,24 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
           {
             try
             {
-              long        storageId           = resultMap.getLong  ("storageId"                   );
-              long        entityId            = resultMap.getLong  ("entityId"                    );
-              String      jobUUID             = resultMap.getString("jobUUID"                     );
-              String      name                = resultMap.getString("name"                        );
-              long        dateTime            = resultMap.getLong  ("dateTime"                    );
-              long        size                = resultMap.getLong  ("size"                        );
-              IndexStates indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
-              IndexModes  indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class  );
-              long        lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"         );
-              String      errorMessage        = resultMap.getString("errorMessage"                );
+              long         storageId           = resultMap.getLong  ("storageId"                   );
+              String       jobUUID             = resultMap.getString("jobUUID"                     );
+              String       scheduleUUID        = resultMap.getString("scheduleUUID"                );
+              String       jobName             = resultMap.getString("jobName"                     );
+              ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",ArchiveTypes.class);
+              String       name                = resultMap.getString("name"                        );
+              long         dateTime            = resultMap.getLong  ("dateTime"                    );
+              long         size                = resultMap.getLong  ("size"                        );
+              IndexStates  indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
+              IndexModes   indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class  );
+              long         lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"         );
+              String       errorMessage        = resultMap.getString("errorMessage"                );
 
               // add/update storage data
               final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-                                                                                            entityId,
+0,//entityId
+                                                                                            jobName,
+                                                                                            archiveType,
                                                                                             name,
                                                                                             dateTime,
                                                                                             size,
