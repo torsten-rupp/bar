@@ -9,6 +9,7 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+
 // base
 import java.io.File;
 import java.lang.ref.WeakReference;
@@ -340,7 +341,7 @@ public class TabRestore
      * @param tableItem table item
      * @param tableItemUpdateRunnable table item update runnable
      */
-    public void setTableItem(TableItem tableItem, TableItemUpdateRunnable tableItemUpdateRunnable)
+    protected void setTableItem(TableItem tableItem, TableItemUpdateRunnable tableItemUpdateRunnable)
     {
       this.tableItem               = tableItem;
       this.tableItemUpdateRunnable = tableItemUpdateRunnable;
@@ -697,41 +698,12 @@ public class TabRestore
     }
   }
 
-  /** index modes
-   */
-  enum ArchiveTypes
-  {
-    NONE,
-
-    NORMAL,
-    FULL,
-    INCREMENTAL,
-    DIFFERENTAL,
-
-    UNKNOWN;
-
-    /** convert data to string
-     * @return string
-     */
-    public String toString()
-    {
-      switch (this)
-      {
-        case NORMAL:      return "normal";
-        case FULL:        return "full";
-        case INCREMENTAL: return "inremental";
-        case DIFFERENTAL: return "differental";
-        default:          return "normal";
-      }
-    }
-  };
-
   /** entity index data
    */
   class EntityIndexData extends IndexData
   {
-    long         entityId;
-    ArchiveTypes archiveType;
+    long                  entityId;
+    Settings.ArchiveTypes archiveType;
 
     /** create job data index
      * @param entityId entity id
@@ -740,7 +712,7 @@ public class TabRestore
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    EntityIndexData(long entityId, ArchiveTypes archiveType, long lastDateTime, long totalSize, String lastErrorMessage)
+    EntityIndexData(long entityId, Settings.ArchiveTypes archiveType, long lastDateTime, long totalSize, String lastErrorMessage)
     {
       super("",lastDateTime,totalSize,"tttt",lastErrorMessage);
       this.entityId    = entityId;
@@ -921,12 +893,12 @@ public class TabRestore
    */
   class StorageIndexData extends IndexData
   {
-    public long         storageId;                // database storage id
-    public long         entityId;                 // database entity id
-    public String       jobName;                  // job name or null
-    public ArchiveTypes archiveType;              // archive type
-    public IndexModes   indexMode;                // mode of index
-    public long         lastCheckedDateTime;      // last checked date/time
+    public long                  storageId;                // database storage id
+    public long                  entityId;                 // database entity id
+    public String                jobName;                  // job name or null
+    public Settings.ArchiveTypes archiveType;              // archive type
+    public IndexModes            indexMode;                // mode of index
+    public long                  lastCheckedDateTime;      // last checked date/time
 
     /** create storage data index
      * @param storageId database storage id
@@ -942,7 +914,7 @@ public class TabRestore
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    StorageIndexData(long storageId, long entityId, String jobName, ArchiveTypes archiveType, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    StorageIndexData(long storageId, long entityId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       super(name,dateTime,size,title,errorMessage);
       this.storageId           = storageId;
@@ -964,7 +936,7 @@ public class TabRestore
      * @param title title to show
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
-    StorageIndexData(long id, long entityId, String jobName, ArchiveTypes archiveType, String name, long dateTime, String title, long lastCheckedDateTime)
+    StorageIndexData(long id, long entityId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, String title, long lastCheckedDateTime)
     {
       this(id,entityId,jobName,archiveType,name,dateTime,0L,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
     }
@@ -978,7 +950,7 @@ public class TabRestore
      * @param uuid uuid
      * @param title title to show
      */
-    StorageIndexData(long id, long entityId, String jobName, ArchiveTypes archiveType, String name, String title)
+    StorageIndexData(long id, long entityId, String jobName, Settings.ArchiveTypes archiveType, String name, String title)
     {
       this(id,entityId,jobName,archiveType,name,0L,title,0L);
     }
@@ -1005,6 +977,27 @@ public class TabRestore
       };
 
       setTreeItem(treeItem,treeItemUpdateRunnable);
+    }
+
+    public void setTableItem(TableItem tableItem)
+    {
+      final TableItemUpdateRunnable tableItemUpdateRunnable = new TableItemUpdateRunnable()
+      {
+        public void update(TableItem tableItem, IndexData indexData)
+        {
+           StorageIndexData storageIndexData = (StorageIndexData)indexData;
+
+           Widgets.updateTableItem(widgetStorageTable,
+                                   (Object)storageIndexData,
+                                   storageIndexData.name,
+                                   Units.formatByteSize(storageIndexData.size),
+                                   simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)),
+                                   storageIndexData.indexState.toString()
+                                  );
+        }
+      };
+
+      setTableItem(tableItem,tableItemUpdateRunnable);
     }
 
     /** get info string
@@ -1256,7 +1249,7 @@ public class TabRestore
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    public synchronized EntityIndexData updateEntityIndexData(long entityId, ArchiveTypes archiveType, long lastDateTime, long totalSize, String lastErrorMessage)
+    public synchronized EntityIndexData updateEntityIndexData(long entityId, Settings.ArchiveTypes archiveType, long lastDateTime, long totalSize, String lastErrorMessage)
     {
       EntityIndexData entityIndexData = entityIndexDataMap.get(entityId);
       if (entityIndexData != null)
@@ -1304,7 +1297,7 @@ public class TabRestore
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    public synchronized StorageIndexData updateStorageIndexData(long storageId, long entityId, String jobName, ArchiveTypes archiveType, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    public synchronized StorageIndexData updateStorageIndexData(long storageId, long entityId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       StorageIndexData storageIndexData = storageIndexDataMap.get(storageId);
       if (storageIndexData != null)
@@ -1794,13 +1787,13 @@ public class TabRestore
         {
           try
           {
-            long         entityId         = resultMap.getLong  ("entityId"               );
-            String       jobUUID          = resultMap.getString("jobUUID"                );
-            String       scheduleUUID     = resultMap.getString("scheduleUUID"           );
-            ArchiveTypes archiveType      = resultMap.getEnum  ("type",ArchiveTypes.class);
-            long         lastDateTime     = resultMap.getLong  ("lastDateTime"           );
-            long         totalSize        = resultMap.getLong  ("totalSize"              );
-            String       lastErrorMessage = resultMap.getString("lastErrorMessage"       );
+            long                  entityId         = resultMap.getLong  ("entityId"                        );
+            String                jobUUID          = resultMap.getString("jobUUID"                         );
+            String                scheduleUUID     = resultMap.getString("scheduleUUID"                    );
+            Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("type",Settings.ArchiveTypes.class);
+            long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                    );
+            long                  totalSize        = resultMap.getLong  ("totalSize"                       );
+            String                lastErrorMessage = resultMap.getString("lastErrorMessage"                );
 
             // add/update job data index
             final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
@@ -1929,19 +1922,19 @@ public class TabRestore
         {
           try
           {
-            long         storageId           = resultMap.getLong  ("storageId"                   );
+            long                  storageId           = resultMap.getLong  ("storageId"                              );
 //            long         entityId            = resultMap.getLong  ("entityId"                    );
-            String       jobUUID             = resultMap.getString("jobUUID"                     );
-            String       scheduleUUID        = resultMap.getString("scheduleUUID"                );
-            String       jobName             = resultMap.getString("jobName"                     );
-            ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",ArchiveTypes.class);
-            String       name                = resultMap.getString("name"                        );
-            long         dateTime            = resultMap.getLong  ("dateTime"                    );
-            long         size                = resultMap.getLong  ("size"                        );
-            IndexStates  indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
-            IndexModes   indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class  );
-            long         lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"         );
-            String       errorMessage        = resultMap.getString("errorMessage"                );
+            String                jobUUID             = resultMap.getString("jobUUID"                                );
+            String                scheduleUUID        = resultMap.getString("scheduleUUID"                           );
+            String                jobName             = resultMap.getString("jobName"                                );
+            Settings.ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+            String                name                = resultMap.getString("name"                                   );
+            long                  dateTime            = resultMap.getLong  ("dateTime"                               );
+            long                  size                = resultMap.getLong  ("size"                                   );
+            IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
+            IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
+            long                  lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"                    );
+            String                errorMessage        = resultMap.getString("errorMessage"                           );
 
             // add/update storage data
             final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
@@ -2077,19 +2070,19 @@ public class TabRestore
         {
           try
           {
-            long         storageId           = resultMap.getLong  ("storageId"                     );
+            long                  storageId           = resultMap.getLong  ("storageId"                              );
 //            long         entityId            = resultMap.getLong  ("entityId"                      );
-            String       jobUUID             = resultMap.getString("jobUUID"                       );
-            String       scheduleUUID        = resultMap.getString("scheduleUUID"                  );
-            String       jobName             = resultMap.getString("jobName"                       );
-            ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",ArchiveTypes.class);
-            String       name                = resultMap.getString("name"                          );
-            long         dateTime            = resultMap.getLong  ("dateTime"                      );
-            long         size                = resultMap.getLong  ("size"                          );
-            IndexStates  indexState          = resultMap.getEnum  ("indexState",IndexStates.class  );
-            IndexModes   indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class    );
-            long         lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"           );
-            String       errorMessage        = resultMap.getString("errorMessage"                  );
+            String                jobUUID             = resultMap.getString("jobUUID"                                );
+            String                scheduleUUID        = resultMap.getString("scheduleUUID"                           );
+            String                jobName             = resultMap.getString("jobName"                                );
+            Settings.ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+            String                name                = resultMap.getString("name"                                   );
+            long                  dateTime            = resultMap.getLong  ("dateTime"                               );
+            long                  size                = resultMap.getLong  ("size"                                   );
+            IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
+            IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
+            long                  lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"                    );
+            String                errorMessage        = resultMap.getString("errorMessage"                           );
 
             // add/update to index map
             final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
@@ -2119,21 +2112,7 @@ public class TabRestore
                                                       findStorageListIndex(storageIndexData),
                                                       (Object)storageIndexData
                                                      );
-                  storageIndexData.setTableItem(tableItem,storageIndexData.new TableItemUpdateRunnable()
-                  {
-                    public void update(TableItem tableItem, IndexData indexData)
-                    {
-                      StorageIndexData storageIndexData = (StorageIndexData)indexData;
-
-                      Widgets.updateTableItem(widgetStorageTable,
-                                              (Object)storageIndexData,
-                                              storageIndexData.name,
-                                              Units.formatByteSize(storageIndexData.size),
-                                              simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)),
-                                              storageIndexData.indexState.toString()
-                                             );
-                    }
-                  });
+                  storageIndexData.setTableItem(tableItem);
                 }
                 else
                 {
@@ -5005,13 +4984,13 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
           {
             try
             {
-              long         entityId         = resultMap.getLong  ("entityId"               );
-              String       jobUUID          = resultMap.getString("jobUUID"                );
-              String       scheuduleUUID    = resultMap.getString("scheduleUUID"           );
-              ArchiveTypes archiveType      = resultMap.getEnum  ("type",ArchiveTypes.class);
-              long         lastDateTime     = resultMap.getLong  ("lastDateTime"           );
-              long         totalSize        = resultMap.getLong  ("totalSize"              );
-              String       lastErrorMessage = resultMap.getString("lastErrorMessage"       );
+              long                  entityId         = resultMap.getLong  ("entityId"                        );
+              String                jobUUID          = resultMap.getString("jobUUID"                         );
+              String                scheuduleUUID    = resultMap.getString("scheduleUUID"                    );
+              Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("type",Settings.ArchiveTypes.class);
+              long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                    );
+              long                  totalSize        = resultMap.getLong  ("totalSize"                       );
+              String                lastErrorMessage = resultMap.getString("lastErrorMessage"                );
 
               // add/update job data index
               final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
@@ -5112,18 +5091,18 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
           {
             try
             {
-              long         storageId           = resultMap.getLong  ("storageId"                   );
-              String       jobUUID             = resultMap.getString("jobUUID"                     );
-              String       scheduleUUID        = resultMap.getString("scheduleUUID"                );
-              String       jobName             = resultMap.getString("jobName"                     );
-              ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",ArchiveTypes.class);
-              String       name                = resultMap.getString("name"                        );
-              long         dateTime            = resultMap.getLong  ("dateTime"                    );
-              long         size                = resultMap.getLong  ("size"                        );
-              IndexStates  indexState          = resultMap.getEnum  ("indexState",IndexStates.class);
-              IndexModes   indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class  );
-              long         lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"         );
-              String       errorMessage        = resultMap.getString("errorMessage"                );
+              long                  storageId           = resultMap.getLong  ("storageId"                              );
+              String                jobUUID             = resultMap.getString("jobUUID"                                );
+              String                scheduleUUID        = resultMap.getString("scheduleUUID"                           );
+              String                jobName             = resultMap.getString("jobName"                                );
+              Settings.ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+              String                name                = resultMap.getString("name"                                   );
+              long                  dateTime            = resultMap.getLong  ("dateTime"                               );
+              long                  size                = resultMap.getLong  ("size"                                   );
+              IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
+              IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
+              long                  lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"                    );
+              String                errorMessage        = resultMap.getString("errorMessage"                           );
 
               // add/update storage data
               final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
