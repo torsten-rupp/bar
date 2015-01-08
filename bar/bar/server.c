@@ -3821,6 +3821,7 @@ LOCAL void indexCleanup(void)
                                 NULL, // entity id
                                 NULL, // job UUID
                                 NULL, // schedule UUID
+                                NULL, // archive type
                                 storageName,
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -3941,6 +3942,7 @@ LOCAL void indexCleanup(void)
                                 NULL, // entity id
                                 NULL, // job UUID
                                 NULL, // schedule UUID
+                                NULL, // archive type
                                 storageName,
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -3970,6 +3972,7 @@ LOCAL void indexCleanup(void)
                                     NULL, // entity id
                                     NULL, // job UUID
                                     NULL, // schedule UUID
+                                    NULL, // archive type
                                     duplicateStorageName,
                                     NULL, // createdDateTime
                                     NULL, // size
@@ -4462,6 +4465,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                   NULL, // entity id
                                   NULL, // job UUID
                                   NULL, // schedule UUID
+                                  NULL, // archive type
                                   storageName,
                                   &createdDateTime,
                                   NULL, // size
@@ -9296,6 +9300,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                 NULL, // entity id
                                 NULL, // job UUID
                                 NULL, // schedule UUID
+                                NULL, // archive type
                                 NULL, // storageName
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -9336,6 +9341,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                 NULL, // entity id
                                 NULL, // job UUID
                                 NULL, // schedule UUID
+                                NULL, // archive type
                                 NULL, // storageName
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -9389,10 +9395,16 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
   bool deleteStorage(DatabaseId storageId)
   {
+    Errors           resultError;
+    String           resultString;
     String           storageName;
     StorageSpecifier storageSpecifier;
     Errors           error;
     StorageHandle    storageHandle;
+
+    // initi variables
+    resultError  = ERROR_UNKNOWN;
+    resultString = String_new();
 
     // find storage
     storageName = String_new();
@@ -9406,83 +9418,77 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_ARCHIVE_NOT_FOUND,"storage not found");
       String_delete(storageName);
+      String_delete(resultString);
       return FALSE;
     }
 
-    // parse storage name
+    // delete storage file
     Storage_initSpecifier(&storageSpecifier);
-    error = Storage_parseName(&storageSpecifier,storageName);
-    if (error != ERROR_NONE)
+    resultError = Storage_parseName(&storageSpecifier,storageName);
+    if (resultError == ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_ARCHIVE_NOT_FOUND,"invalid storage name");
-      Storage_doneSpecifier(&storageSpecifier);
-      String_delete(storageName);
-      return FALSE;
-    }
-
 #warning NYI: move this special handling of limited scp into Storage_delete()?
-    // init storage
-    if (storageSpecifier.type == STORAGE_TYPE_SCP)
-    {
-      // try to init scp-storage first with sftp
-      storageSpecifier.type = STORAGE_TYPE_SFTP;
-      error = Storage_init(&storageHandle,
-                           &storageSpecifier,
-                           &clientInfo->jobOptions,
-                           &globalOptions.indexDatabaseMaxBandWidthList,
-                           SERVER_CONNECTION_PRIORITY_HIGH,
-                           CALLBACK(NULL,NULL),
-                           CALLBACK(NULL,NULL)
-                          );
-      if (error != ERROR_NONE)
+      // init storage
+      if (storageSpecifier.type == STORAGE_TYPE_SCP)
       {
-        // init scp-storage
-        storageSpecifier.type = STORAGE_TYPE_SCP;
-        error = Storage_init(&storageHandle,
-                             &storageSpecifier,
-                             &clientInfo->jobOptions,
-                             &globalOptions.indexDatabaseMaxBandWidthList,
-                             SERVER_CONNECTION_PRIORITY_HIGH,
-                             CALLBACK(NULL,NULL),
-                             CALLBACK(NULL,NULL)
-                            );
+        // try to init scp-storage first with sftp
+        storageSpecifier.type = STORAGE_TYPE_SFTP;
+        resultError = Storage_init(&storageHandle,
+                                   &storageSpecifier,
+                                   &clientInfo->jobOptions,
+                                   &globalOptions.indexDatabaseMaxBandWidthList,
+                                   SERVER_CONNECTION_PRIORITY_HIGH,
+                                   CALLBACK(NULL,NULL),
+                                   CALLBACK(NULL,NULL)
+                                  );
+        if (resultError != ERROR_NONE)
+        {
+          // init scp-storage
+          storageSpecifier.type = STORAGE_TYPE_SCP;
+          resultError = Storage_init(&storageHandle,
+                                     &storageSpecifier,
+                                     &clientInfo->jobOptions,
+                                     &globalOptions.indexDatabaseMaxBandWidthList,
+                                     SERVER_CONNECTION_PRIORITY_HIGH,
+                                     CALLBACK(NULL,NULL),
+                                     CALLBACK(NULL,NULL)
+                                    );
+        }
+      }
+      else
+      {
+        // init other storage types
+        resultError = Storage_init(&storageHandle,
+                                   &storageSpecifier,
+                                   &clientInfo->jobOptions,
+                                   &globalOptions.indexDatabaseMaxBandWidthList,
+                                   SERVER_CONNECTION_PRIORITY_HIGH,
+                                   CALLBACK(NULL,NULL),
+                                   CALLBACK(NULL,NULL)
+                                  );
+      }
+      if (resultError == ERROR_NONE)
+      {
+        resultError = Storage_delete(&storageHandle,
+                                     storageSpecifier.fileName
+                                    );
+        if (resultError != ERROR_NONE)
+        {
+          String_format(resultString,"delete storage file: %s",Error_getText(resultError));
+        }
+
+        // close storage
+        Storage_done(&storageHandle);
+      }
+      else
+      {
+        String_format(resultString,"init storage: %s",Error_getText(resultError));
       }
     }
     else
     {
-      // init other storage types
-      error = Storage_init(&storageHandle,
-                           &storageSpecifier,
-                           &clientInfo->jobOptions,
-                           &globalOptions.indexDatabaseMaxBandWidthList,
-                           SERVER_CONNECTION_PRIORITY_HIGH,
-                           CALLBACK(NULL,NULL),
-                           CALLBACK(NULL,NULL)
-                          );
+      String_format(resultString,"invalid storage name");
     }
-    if (error != ERROR_NONE)
-    {
-      sendClientResult(clientInfo,id,TRUE,error,"init storage: %s",Error_getText(error));
-      Storage_doneSpecifier(&storageSpecifier);
-      String_delete(storageName);
-      return FALSE;
-    }
-
-    // delete storage
-    error = Storage_delete(&storageHandle,
-                           storageSpecifier.fileName
-                          );
-    if (error != ERROR_NONE)
-    {
-      sendClientResult(clientInfo,id,TRUE,error,"delete storage file: %s",Error_getText(error));
-      Storage_done(&storageHandle);
-      Storage_doneSpecifier(&storageSpecifier);
-      String_delete(storageName);
-      return FALSE;
-    }
-
-    // close storage
-    Storage_done(&storageHandle);
 
     // delete index
     error = Index_deleteStorage(indexDatabaseHandle,storageId);
@@ -9494,7 +9500,15 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       return FALSE;
     }
 
-    return TRUE;
+    if (resultError == ERROR_NONE)
+    {
+      return TRUE;
+    }
+    else
+    {
+      sendClientResult(clientInfo,id,TRUE,resultError,String_cString(resultString));
+      return FALSE;
+    }
   }
 
   StaticString     (jobUUID,64);
@@ -9502,11 +9516,15 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   DatabaseId       storageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
+  DatabaseId       databaseId;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get uuid, job id, or storage id
+  // get uuid, job id, and/or storage id
+  String_clear(jobUUID);
+  entityId  = DATABASE_ID_NONE;
+  storageId = DATABASE_ID_NONE;
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
@@ -9525,8 +9543,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
   if (!String_isEmpty(jobUUID))
   {
-//????
-    // delete all storage with specified uuid
+    // delete all storage with specified job UUID
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   jobUUID,
@@ -9545,10 +9562,11 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                &storageId,
+                                &databaseId,
                                 NULL, // entity id
                                 NULL, // job UUID
                                 NULL, // schedule UUID
+                                NULL, // archive type
                                 NULL, // storageName
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -9559,13 +9577,17 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
                                )
           )
     {
-      if (!deleteStorage(storageId))
-      {
-        Index_doneList(&indexQueryHandle);
-        return;
-      }
+      (void)deleteStorage(databaseId);
     }
     Index_doneList(&indexQueryHandle);
+
+    // delete uuid
+    error = Index_deleteUUID(indexDatabaseHandle,jobUUID);
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,error,"remove index: %s",Error_getText(error));
+      return;
+    }
   }
 
   if (entityId != DATABASE_ID_NONE)
@@ -9589,10 +9611,11 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                &storageId,
+                                &databaseId,
                                 NULL, // entity id
                                 NULL, // job UUID
                                 NULL, // schedule UUID
+                                NULL, // archive type
                                 NULL, // storageName
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -9603,13 +9626,17 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
                                )
           )
     {
-      if (!deleteStorage(storageId))
-      {
-        Index_doneList(&indexQueryHandle);
-        return;
-      }
+      (void)deleteStorage(databaseId);
     }
     Index_doneList(&indexQueryHandle);
+
+    // delete entity
+    error = Index_deleteEntity(indexDatabaseHandle,entityId);
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,error,"remove index: %s",Error_getText(error));
+      return;
+    }
   }
 
   if (storageId != DATABASE_ID_NONE)
@@ -9761,7 +9788,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 * Notes  : Arguments:
 *            pattern=<pattern>
 *          Result:
-*            uuid=<uuid>
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
 *            name=<name>
 *            lastDateTime=<created time stamp>
 *            totalSize=<size>
@@ -9982,7 +10010,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 * Notes  : Arguments:
 *            jobUUID=<uuid>|*
 *          Result:
-*            entityId=<entity id>
+*            entityId=<id>
 *            jobUUID=<uuid>
 *            scheduleUUID=<uuid>
 *            name=<name>
@@ -10156,8 +10184,8 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 *            indexState=<state>|*
 *            indexMode=<mode>|*
 *          Result:
-*            storageId=<storage id>
-*            entityId=<job id>
+*            storageId=<id>
+*            entityId=<id>
 *            jobUUID=<uuid>
 *            scheduleUUID=<uuid>
 *            name=<name>
@@ -10181,17 +10209,21 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   StorageSpecifier storageSpecifier;
+  StaticString     (jobUUID,64);
+  StaticString     (scheduleUUID,64);
+  String           jobName;
   String           storageName;
   String           printableStorageName;
   uint             count;
   String           errorMessage;
   DatabaseId       storageId;
-  String           jobUUID,scheduleUUID;
-  uint64           storageDateTime;
+  ArchiveTypes     archiveType;
+  uint64           dateTime;
   uint64           size;
   IndexStates      indexState;
   IndexModes       indexMode;
   uint64           lastCheckedDateTime;
+  JobNode          *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -10239,9 +10271,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
+  jobName              = String_new();
   storageName          = String_new();
-  jobUUID              = String_new();
-  scheduleUUID         = String_new();
   errorMessage         = String_new();
   printableStorageName = String_new();
 
@@ -10262,8 +10293,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   {
     String_delete(printableStorageName);
     String_delete(errorMessage);
-    String_delete(jobUUID);
     String_delete(storageName);
+    String_delete(jobName);
     Storage_doneSpecifier(&storageSpecifier);
 
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
@@ -10279,8 +10310,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                  &entityId,
                                  jobUUID,
                                  scheduleUUID,
+                                 &archiveType,
                                  storageName,
-                                 &storageDateTime,
+                                 &dateTime,
                                  &size,
                                  &indexState,
                                  &indexMode,
@@ -10289,6 +10321,17 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                 )
         )
   {
+    // get job name
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode != NULL)
+    {
+      String_set(jobName,jobNode->name);
+    }
+    else
+    {
+      String_clear(jobName);
+    }
+
     // get printable name (if possible)
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error == ERROR_NONE)
@@ -10301,13 +10344,14 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     }
 
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "storageId=%llu entityId=%lld jobUUID=%S scheduleUUID=%S name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
+                     "storageId=%llu jobUUID=%S scheduleUUID=%S jobName=%'S archiveType='%s' name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                      storageId,
-                     entityId,
                      jobUUID,
                      scheduleUUID,
+                     jobName,
+                     archiveTypeToString(archiveType,"NONE"),
                      printableStorageName,
-                     storageDateTime,
+                     dateTime,
                      size,
                      Index_stateToString(indexState,"unknown"),
                      Index_modeToString(indexMode,"unknown"),
@@ -10323,8 +10367,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   // free resources
   String_delete(printableStorageName);
   String_delete(errorMessage);
-  String_delete(jobUUID);
   String_delete(storageName);
+  String_delete(jobName);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(pattern);
 }
@@ -10402,8 +10446,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
 * Notes  : Arguments:
 *            <state>|*
 *            jobUUID=<uuid>|"" and/or
-*            entityId=<job id>|0 and/or
-*            storageId=<storage id>|0
+*            entityId=<id>|0 and/or
+*            storageId=<id>|0
 *          Result:
 \***********************************************************************/
 
@@ -10492,6 +10536,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
                                    NULL, // entity id
                                    NULL, // job UUID
                                    NULL, // schedule UUID
+                                   NULL, // archive type
                                    storageName,
                                    NULL, // createdDateTime
                                    NULL, // size
@@ -10565,6 +10610,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
                                   NULL, // entity id
                                   NULL, // job UUID
                                   NULL, // schedule UUID
+                                  NULL, // archive type
                                   NULL, // storageName
                                   NULL, // createdDateTime
                                   NULL, // size
@@ -10590,7 +10636,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 
   if (entityId != DATABASE_ID_NONE)
   {
-    // add all storage ids with job id
+    // delete all storage ids with entity id
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   NULL, // uuid
@@ -10610,6 +10656,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
                                   NULL, // entity id
                                   NULL, // job UUID
                                   NULL, // schedule UUID
+                                  NULL, // archive type
                                   NULL, // storageName
                                   NULL, // createdDateTime
                                   NULL, // size
@@ -10741,6 +10788,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
                                    NULL, // entity id
                                    NULL, // job UUID
                                    NULL, // schedule UUID
+                                   NULL, // archive type
                                    NULL, // storageName
                                    NULL, // createdDateTime
                                    NULL, // size
@@ -10791,6 +10839,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
                                 NULL, // entity id
                                 NULL, // job UUID
                                 NULL, // schedule UUID
+                                NULL, // archive type
                                 NULL, // storageName
                                 NULL, // createdDateTime
                                 NULL, // size
@@ -10838,6 +10887,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
                                 NULL, // entity id
                                 NULL, // job UUID
                                 NULL, // schedule UUID
+                                NULL, // archive type
                                 NULL, // storageName
                                 NULL, // createdDateTime
                                 NULL, // size
