@@ -1205,11 +1205,9 @@ public class TabStatus
           {
             synchronized(jobDataMap)
             {
-              TableItem[] tableItems = widgetJobTable.getItems();
-
               // get table items
               HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
-              for (TableItem tableItem : tableItems)
+              for (TableItem tableItem : widgetJobTable.getItems())
               {
                 removeTableItemSet.add(tableItem);
               }
@@ -1222,8 +1220,7 @@ public class TabStatus
                 // update/create table item
                 if (tableItem != null)
                 {
-                  Widgets.updateTableItem(widgetJobTable,
-                                          tableItem,
+                  Widgets.updateTableItem(tableItem,
                                           jobData,
                                           jobData.name,
                                           (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
@@ -1443,7 +1440,7 @@ public class TabStatus
       final String resultErrorMessage[] = new String[1];
       final ValueMap resultMap          = new ValueMap();
       int error = BARServer.executeCommand(StringParser.format("JOB_INFO jobUUID=%s",selectedJobData.uuid),
-                                           0,
+                                           1,
                                            resultErrorMessage,
                                            resultMap
                                           );
