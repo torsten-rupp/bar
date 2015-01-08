@@ -3167,6 +3167,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                   NULL, // entity id
                                   NULL, // job UUID
                                   NULL, // schedule UUID
+                                  NULL, // archive type
                                   oldStorageName,
                                   NULL, // createdDateTime
                                   NULL, // size
