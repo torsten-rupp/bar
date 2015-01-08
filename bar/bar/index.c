@@ -240,7 +240,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
   lastStorageId = DATABASE_ID_NONE;
   while (!done)
   {
-    // get next storage entry without entity id
+    // get next storage entry with not set entity id
     error = Database_prepare(&databaseQueryHandle,
                              indexDatabaseHandle,
                              "SELECT id, \
@@ -1345,6 +1345,43 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                             );
 }
 
+Errors Index_deleteUUID(DatabaseHandle *databaseHandle,
+                        const String   jobUUID
+                       )
+{
+  DatabaseQueryHandle databaseQueryHandle;
+  Errors              error;
+  DatabaseId          entityId;
+
+  assert(databaseHandle != NULL);
+  assert(entityId != 0LL);
+
+  // delete entities of UUID
+  error = Database_prepare(&databaseQueryHandle,
+                           databaseHandle,
+                           "SELECT id \
+                            FROM entities \
+                            WHERE jobUUID=%'S; \
+                           ",
+                           jobUUID
+                          );
+  if (error == ERROR_NONE)
+  {
+    while (   Database_getNextRow(&databaseQueryHandle,
+                                  "%lld",
+                                  &entityId
+                                 )
+           && (error == ERROR_NONE)
+          )
+    {
+      error = Index_deleteEntity(databaseHandle,entityId);
+    }
+    Database_finalize(&databaseQueryHandle);
+  }
+
+  return error;
+}
+
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               DatabaseHandle   *databaseHandle,
                               const String     jobUUID
@@ -1447,6 +1484,53 @@ Errors Index_newEntity(DatabaseHandle *databaseHandle,
   return ERROR_NONE;
 }
 
+Errors Index_deleteEntity(DatabaseHandle *databaseHandle,
+                          DatabaseId     entityId
+                         )
+{
+  DatabaseQueryHandle databaseQueryHandle;
+  Errors              error;
+  DatabaseId          storageId;
+
+  assert(databaseHandle != NULL);
+  assert(entityId != 0LL);
+
+  // delete storage of entity
+  error = Database_prepare(&databaseQueryHandle,
+                           databaseHandle,
+                           "SELECT id \
+                            FROM storage \
+                            WHERE entityId=%ld; \
+                           ",
+                           entityId
+                          );
+  if (error == ERROR_NONE)
+  {
+    while (   Database_getNextRow(&databaseQueryHandle,
+                                  "%lld",
+                                  &storageId
+                                 )
+           && (error == ERROR_NONE)
+          )
+    {
+      error = Index_deleteStorage(databaseHandle,storageId);
+    }
+    Database_finalize(&databaseQueryHandle);
+  }
+
+  // delete entity
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entities WHERE id=%ld;",
+                             entityId
+                            );
+  }
+
+  return error;
+}
+
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              DatabaseHandle   *databaseHandle,
                              const String     jobUUID,
@@ -1482,6 +1566,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                                    storage.entityId, \
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
+                                   entities.type, \
                                    storage.name, \
                                    STRFTIME('%%s',storage.created), \
                                    storage.size, \
@@ -1508,10 +1593,11 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 }
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
-                          DatabaseId       *databaseId,
+                          DatabaseId       *storageId,
                           DatabaseId       *entityId,
                           String           jobUUID,
                           String           scheduleUUID,
+                          ArchiveTypes     *archiveType,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
@@ -1530,11 +1616,12 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   foundFlag = FALSE;
   while (   !foundFlag
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                                "%lld %lld %S %S %S %llu %llu %d %d %llu %S",
-                                databaseId,
+                                "%lld %lld %S %S %d %S %llu %llu %d %d %llu %S",
+                                storageId,
                                 entityId,
                                 jobUUID,
                                 scheduleUUID,
+                                archiveType,
                                 storageName,
                                 createdDateTime,
                                 size,

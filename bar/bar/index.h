@@ -410,6 +410,19 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                       );
 
 /***********************************************************************\
+* Name   : Index_deleteUUID
+* Purpose: delete job UUID index including entries for attached entities
+* Input  : indexQueryHandle - index query handle
+*          jobUUID          - unique job id
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteUUID(DatabaseHandle *databaseHandle,
+                        const String   jobUUID
+                       );
+
+/***********************************************************************\
 * Name   : Index_initListEntities
 * Purpose: list entity entries and aggregated data of storage
 * Input  : IndexQueryHandle - index query handle variable
@@ -468,6 +481,19 @@ Errors Index_newEntity(DatabaseHandle *databaseHandle,
                       );
 
 /***********************************************************************\
+* Name   : Index_deleteEntity
+* Purpose: delete entity index including entries for attached storages
+* Input  : indexQueryHandle - index query handle
+*          entityId         - database id of entity index
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteEntity(DatabaseHandle *databaseHandle,
+                          DatabaseId     entityId
+                         );
+
+/***********************************************************************\
 * Name   : Index_initListStorage
 * Purpose: list storage entries
 * Input  : IndexQueryHandle - index query handle variable
@@ -503,10 +529,11 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextStorage
 * Purpose: get next index storage entry
 * Input  : IndexQueryHandle    - index query handle
-* Output : databaseId          - database id of entry
+* Output : storageId           - database storage id of entry
 *          entityId            - database entity id (can be NULL)
 *          jobUUID             - unique job UUID (can be NULL)
 *          scheduleUUID        - unique schedule UUID (can be NULL)
+*          archiveType         - archive type (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s]
 *          size                - size [bytes]
@@ -519,10 +546,11 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
-                          DatabaseId       *databaseId,
+                          DatabaseId       *storageId,
                           DatabaseId       *entityId,
                           String           jobUUID,
                           String           scheduleUUID,
+                          ArchiveTypes     *archiveType,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
