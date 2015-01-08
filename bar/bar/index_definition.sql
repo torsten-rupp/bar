@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS storage(
   lastChecked     INTEGER,
   errorMessage    TEXT,
 
-  FOREIGN KEY(jobId) REFERENCES jobs(id)
+  FOREIGN KEY(entityId) REFERENCES entities(id)
 );
 
 CREATE TABLE IF NOT EXISTS files(
