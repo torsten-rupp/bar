@@ -3061,7 +3061,6 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
 
   assert(storageHandle != NULL);
   assert(storageSpecifier != NULL);
-  assert(jobOptions != NULL);
 
   #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && !defined(HAVE_SSH2)
     UNUSED_VARIABLE(serverConnectionPriority);
@@ -3075,7 +3074,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   storageHandle->mountedDeviceFlag         = FALSE;
   storageHandle->requestVolumeFunction     = storageRequestVolumeFunction;
   storageHandle->requestVolumeUserData     = storageRequestVolumeUserData;
-  if (jobOptions->waitFirstVolumeFlag)
+  if ((jobOptions != NULL) && jobOptions->waitFirstVolumeFlag)
   {
     storageHandle->volumeNumber            = 0;
     storageHandle->requestedVolumeNumber   = 0;
@@ -3099,7 +3098,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   }
 
   // mount device if needed
-  if (!String_isEmpty(storageHandle->jobOptions->mountDeviceName))
+  if ((storageHandle->jobOptions != NULL) && !String_isEmpty(storageHandle->jobOptions->mountDeviceName))
   {
     if (!Device_isMounted(storageHandle->jobOptions->mountDeviceName))
     {
@@ -4061,6 +4060,8 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   // unmount device if mounted before
   if (storageHandle->mountedDeviceFlag)
   {
+    assert(storageHandle->jobOptions != NULL);
+
     tmpError = Device_umount(storageHandle->jobOptions->mountDeviceName);
     if (tmpError != ERROR_NONE)
     {
@@ -4150,7 +4151,6 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
   Errors error;
 
   assert(storageHandle != NULL);
-  assert(storageHandle->jobOptions != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   error = ERROR_NONE;
@@ -4162,7 +4162,7 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
       {
         TextMacro textMacros[2];
 
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           if (!initialFlag)
           {
@@ -4198,7 +4198,7 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
         {
           TextMacro textMacros[1];
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             if (!initialFlag)
             {
@@ -4238,7 +4238,7 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
         {
           TextMacro textMacros[1];
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             if (!initialFlag)
             {
@@ -4276,7 +4276,7 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
         {
           TextMacro textMacros[1];
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             if (!initialFlag)
             {
@@ -4314,7 +4314,7 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
         {
           TextMacro textMacros[1];
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             if (!initialFlag)
             {
@@ -4350,7 +4350,7 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         // request next medium
         if (storageHandle->opticalDisk.write.newVolumeFlag)
@@ -4370,7 +4370,7 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
       }
       break;
     case STORAGE_TYPE_DEVICE:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         // request next volume
         if (storageHandle->device.newVolumeFlag)
@@ -4405,7 +4405,6 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
   Errors error;
 
   assert(storageHandle != NULL);
-  assert(storageHandle->jobOptions != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   error = ERROR_NONE;
@@ -4417,7 +4416,7 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
       {
         TextMacro textMacros[2];
 
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           if (!finalFlag)
           {
@@ -4453,7 +4452,7 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
         {
           TextMacro textMacros[1];
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             if (!finalFlag)
             {
@@ -4493,7 +4492,7 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
         {
           TextMacro textMacros[1];
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             if (!finalFlag)
             {
@@ -4531,7 +4530,7 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
         {
           TextMacro textMacros[1];
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             if (!finalFlag)
             {
@@ -4569,7 +4568,7 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
         {
           TextMacro textMacros[1];
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             if (!finalFlag)
             {
@@ -4613,7 +4612,7 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
         FileInfo   fileInfo;
         bool       retryFlag;
 
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           if (   (storageHandle->opticalDisk.write.totalSize > storageHandle->opticalDisk.write.volumeSize)
               || (finalFlag && (storageHandle->opticalDisk.write.totalSize > 0LL))
@@ -4644,7 +4643,7 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
             TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",  0                                             );
             TEXT_MACRO_N_INTEGER(textMacros[4],"%number",   storageHandle->volumeNumber               );
 
-            if (storageHandle->jobOptions->alwaysCreateImageFlag || storageHandle->jobOptions->errorCorrectionCodesFlag)
+            if ((storageHandle->jobOptions != NULL) && (storageHandle->jobOptions->alwaysCreateImageFlag || storageHandle->jobOptions->errorCorrectionCodesFlag))
             {
               // create medium image
               printInfo(0,"Make medium image #%d with %d part(s)...",storageHandle->opticalDisk.write.number,StringList_count(&storageHandle->opticalDisk.write.fileNameList));
@@ -4854,7 +4853,7 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
           printWarning("Device volume size is 0 bytes!\n");
         }
 
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           if (   (storageHandle->device.totalSize > storageHandle->device.volumeSize)
               || (finalFlag && storageHandle->device.totalSize > 0LL)
@@ -5087,7 +5086,6 @@ Errors Storage_create(StorageHandle *storageHandle,
   String directoryName;
 
   assert(storageHandle != NULL);
-  assert(storageHandle->jobOptions != NULL);
   assert(fileName != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
@@ -5100,12 +5098,12 @@ Errors Storage_create(StorageHandle *storageHandle,
       break;
     case STORAGE_TYPE_FILESYSTEM:
       // check if archive file exists
-      if (!storageHandle->jobOptions->overwriteArchiveFilesFlag && File_exists(fileName))
+      if ((storageHandle->jobOptions != NULL) && !storageHandle->jobOptions->overwriteArchiveFilesFlag && File_exists(fileName))
       {
         return ERRORX_(FILE_EXISTS_,0,String_cString(fileName));
       }
 
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         // create directory if not existing
         directoryName = File_getFilePathName(String_new(),fileName);
@@ -5218,7 +5216,7 @@ Errors Storage_create(StorageHandle *storageHandle,
           (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
           Password_undeploy(storageHandle->storageSpecifier.loginPassword);
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             // create directories if necessary
             curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FTP_CREATE_MISSING_DIRS,1L);
@@ -5321,7 +5319,7 @@ Errors Storage_create(StorageHandle *storageHandle,
           }
           Password_undeploy(storageHandle->storageSpecifier.loginPassword);
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             // create directory (try it and ignore errors)
             pathName      = File_getFilePathName(String_new(),fileName);
@@ -5436,7 +5434,7 @@ Errors Storage_create(StorageHandle *storageHandle,
           storageHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,sshSendCallback   );
           storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,sshReceiveCallback);
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             // open channel and file for writing
             #ifdef HAVE_SSH2_SCP_SEND64
@@ -5518,7 +5516,7 @@ Errors Storage_create(StorageHandle *storageHandle,
             return error;
           }
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             // create file
             storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
@@ -5615,7 +5613,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
           (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
           Password_undeploy(storageHandle->storageSpecifier.loginPassword);
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             // get pathname, basename
             pathName = File_getFilePathName(String_new(),fileName);
@@ -5667,7 +5665,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             }
 
             // first delete file if overwrite requested
-            if (storageHandle->jobOptions->overwriteArchiveFilesFlag)
+            if ((storageHandle->jobOptions != NULL) && storageHandle->jobOptions->overwriteArchiveFilesFlag)
             {
               url = String_format(String_duplicate(baseURL),"/");
               File_initSplitFileName(&nameTokenizer,pathName);
@@ -5807,7 +5805,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
       String_set(storageHandle->opticalDisk.write.fileName,storageHandle->opticalDisk.write.directory);
       File_appendFileName(storageHandle->opticalDisk.write.fileName,fileName);
 
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         // create directory if not existing
         directoryName = File_getFilePathName(String_new(),storageHandle->opticalDisk.write.fileName);
@@ -5842,7 +5840,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
       String_set(storageHandle->device.fileName,storageHandle->device.directory);
       File_appendFileName(storageHandle->device.fileName,fileName);
 
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         // open file
         error = File_open(&storageHandle->device.fileHandle,
@@ -6696,7 +6694,6 @@ Errors Storage_open(StorageHandle *storageHandle)
 void Storage_close(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  assert(storageHandle->jobOptions != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   switch (storageHandle->storageSpecifier.type)
@@ -6709,7 +6706,7 @@ void Storage_close(StorageHandle *storageHandle)
         case STORAGE_MODE_UNKNOWN:
           break;
         case STORAGE_MODE_WRITE:
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             File_close(&storageHandle->fileSystem.fileHandle);
           }
@@ -6750,7 +6747,7 @@ void Storage_close(StorageHandle *storageHandle)
           case STORAGE_MODE_UNKNOWN:
             break;
           case STORAGE_MODE_WRITE:
-            if (!storageHandle->jobOptions->dryRunFlag)
+            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
             {
               assert(storageHandle->ftp.data != NULL);
               FtpClose(storageHandle->ftp.data);
@@ -6779,7 +6776,7 @@ void Storage_close(StorageHandle *storageHandle)
           case STORAGE_MODE_UNKNOWN:
             break;
           case STORAGE_MODE_WRITE:
-            if (!storageHandle->jobOptions->dryRunFlag)
+            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
             {
               libssh2_channel_send_eof(storageHandle->scp.channel);
 //???
@@ -6810,7 +6807,7 @@ void Storage_close(StorageHandle *storageHandle)
           case STORAGE_MODE_UNKNOWN:
             break;
           case STORAGE_MODE_WRITE:
-            if (!storageHandle->jobOptions->dryRunFlag)
+            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
             {
               libssh2_sftp_close(storageHandle->sftp.sftpHandle);
             }
@@ -6859,7 +6856,7 @@ void Storage_close(StorageHandle *storageHandle)
         case STORAGE_MODE_UNKNOWN:
           break;
         case STORAGE_MODE_WRITE:
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             storageHandle->opticalDisk.write.totalSize += File_getSize(&storageHandle->opticalDisk.write.fileHandle);
             File_close(&storageHandle->opticalDisk.write.fileHandle);
@@ -6888,7 +6885,7 @@ void Storage_close(StorageHandle *storageHandle)
         case STORAGE_MODE_UNKNOWN:
           break;
         case STORAGE_MODE_WRITE:
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             storageHandle->device.totalSize += File_getSize(&storageHandle->device.fileHandle);
             File_close(&storageHandle->device.fileHandle);
@@ -6921,7 +6918,6 @@ Errors Storage_delete(StorageHandle *storageHandle,
   Errors error;
 
   assert(storageHandle != NULL);
-  assert(storageHandle->jobOptions != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   error = ERROR_UNKNOWN;
@@ -6930,7 +6926,7 @@ Errors Storage_delete(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         error = File_delete(storageFileName,FALSE);
       }
@@ -6996,7 +6992,7 @@ Errors Storage_delete(StorageHandle *storageHandle,
               (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
               Password_undeploy(storageHandle->storageSpecifier.loginPassword);
 
-              if (!storageHandle->jobOptions->dryRunFlag)
+              if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
               {
                 // delete file
                 ftpCommand = String_format(String_new(),"*DELE %S",storageFileName);
@@ -7046,7 +7042,7 @@ Errors Storage_delete(StorageHandle *storageHandle,
       #elif defined(HAVE_FTP)
         assert(storageHandle->ftp.data != NULL);
 
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           error = (FtpDelete(String_cString(storageFileName),storageHandle->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
         }
@@ -7116,7 +7112,7 @@ whould this be a possible implementation?
           storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
           if (storageHandle->sftp.sftp != NULL)
           {
-            if (!storageHandle->jobOptions->dryRunFlag)
+            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
             {
               // delete file
               if (libssh2_sftp_unlink(storageHandle->sftp.sftp,
@@ -7221,7 +7217,7 @@ whould this be a possible implementation?
               (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
               Password_undeploy(storageHandle->storageSpecifier.loginPassword);
 
-              if (!storageHandle->jobOptions->dryRunFlag)
+              if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
               {
                 // delete file
                 curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
@@ -7295,7 +7291,6 @@ bool Storage_eof(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->jobOptions != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   switch (storageHandle->storageSpecifier.type)
@@ -7303,7 +7298,7 @@ bool Storage_eof(StorageHandle *storageHandle)
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         return File_eof(&storageHandle->fileSystem.fileHandle);
       }
@@ -7314,7 +7309,7 @@ bool Storage_eof(StorageHandle *storageHandle)
       break;
     case STORAGE_TYPE_FTP:
       #if defined(HAVE_CURL) || defined(HAVE_FTP)
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           return storageHandle->ftp.index >= storageHandle->ftp.size;
         }
@@ -7333,7 +7328,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           return storageHandle->scp.index >= storageHandle->scp.size;
         }
@@ -7347,7 +7342,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           return storageHandle->sftp.index >= storageHandle->sftp.size;
         }
@@ -7361,7 +7356,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_WEBDAV:
       #ifdef HAVE_CURL
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           return storageHandle->webdav.index >= storageHandle->webdav.size;
         }
@@ -7379,7 +7374,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
         assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
 
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           return storageHandle->opticalDisk.read.index >= storageHandle->opticalDisk.read.iso9660Stat->size;
         }
@@ -7392,7 +7387,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         return File_eof(&storageHandle->device.fileHandle);
       }
@@ -7421,8 +7416,6 @@ Errors Storage_read(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->jobOptions != NULL);
-  assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(buffer != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
@@ -7434,7 +7427,7 @@ Errors Storage_read(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         error = File_read(&storageHandle->fileSystem.fileHandle,buffer,size,bytesRead);
       }
@@ -7449,7 +7442,7 @@ Errors Storage_read(StorageHandle *storageHandle,
           CURLMcode curlmCode;
           int       runningHandles;
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->ftp.curlMultiHandle != NULL);
             assert(storageHandle->ftp.readAheadBuffer.data != NULL);
@@ -7621,7 +7614,7 @@ Errors Storage_read(StorageHandle *storageHandle,
           uint64  startTimestamp,endTimestamp;
           ssize_t readBytes;
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->ftp.control != NULL);
             assert(storageHandle->ftp.data != NULL);
@@ -7769,7 +7762,7 @@ Errors Storage_read(StorageHandle *storageHandle,
           uint64  startTotalReceivedBytes,endTotalReceivedBytes;
           ssize_t n;
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->scp.channel != NULL);
             assert(storageHandle->scp.readAheadBuffer.data != NULL);
@@ -7901,7 +7894,7 @@ Errors Storage_read(StorageHandle *storageHandle,
           uint64  startTotalReceivedBytes,endTotalReceivedBytes;
           ssize_t n;
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->sftp.sftpHandle != NULL);
             assert(storageHandle->sftp.readAheadBuffer.data != NULL);
@@ -8027,7 +8020,7 @@ Errors Storage_read(StorageHandle *storageHandle,
           CURLMcode curlmCode;
           int       runningHandles;
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->webdav.curlMultiHandle != NULL);
             assert(storageHandle->webdav.receiveBuffer.data != NULL);
@@ -8154,7 +8147,7 @@ Errors Storage_read(StorageHandle *storageHandle,
           assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
           assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->opticalDisk.read.buffer.data != NULL);
 
@@ -8204,7 +8197,7 @@ Errors Storage_read(StorageHandle *storageHandle,
       #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         error = File_read(&storageHandle->device.fileHandle,buffer,size,bytesRead);
       }
@@ -8229,7 +8222,6 @@ Errors Storage_write(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->jobOptions != NULL);
   assert(buffer != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
@@ -8239,7 +8231,7 @@ Errors Storage_write(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         error = File_write(&storageHandle->fileSystem.fileHandle,buffer,size);
       }
@@ -8253,7 +8245,7 @@ Errors Storage_write(StorageHandle *storageHandle,
           CURLMcode curlmCode;
           int       runningHandles;
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->ftp.curlMultiHandle != NULL);
 
@@ -8340,7 +8332,7 @@ Errors Storage_write(StorageHandle *storageHandle,
           uint64 startTimestamp,endTimestamp;
           long   n;
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->ftp.control != NULL);
             assert(storageHandle->ftp.data != NULL);
@@ -8413,7 +8405,7 @@ Errors Storage_write(StorageHandle *storageHandle,
           uint64  startTotalSentBytes,endTotalSentBytes;
           ssize_t n;
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->scp.channel != NULL);
 
@@ -8508,7 +8500,7 @@ Errors Storage_write(StorageHandle *storageHandle,
           uint64  startTotalSentBytes,endTotalSentBytes;
           ssize_t n;
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->sftp.sftpHandle != NULL);
 
@@ -8599,7 +8591,7 @@ Errors Storage_write(StorageHandle *storageHandle,
           CURLMcode curlmCode;
           int       runningHandles;
 
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->webdav.curlMultiHandle != NULL);
 
@@ -8685,13 +8677,13 @@ Errors Storage_write(StorageHandle *storageHandle,
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         error = File_write(&storageHandle->opticalDisk.write.fileHandle,buffer,size);
       }
       break;
     case STORAGE_TYPE_DEVICE:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         error = File_write(&storageHandle->device.fileHandle,buffer,size);
       }
@@ -8712,7 +8704,6 @@ uint64 Storage_getSize(StorageHandle *storageHandle)
   uint64 size;
 
   assert(storageHandle != NULL);
-  assert(storageHandle->jobOptions != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   size = 0LL;
@@ -8721,14 +8712,14 @@ uint64 Storage_getSize(StorageHandle *storageHandle)
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         size = File_getSize(&storageHandle->fileSystem.fileHandle);
       }
       break;
     case STORAGE_TYPE_FTP:
       #if defined(HAVE_CURL) || defined(HAVE_FTP)
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           size = storageHandle->ftp.size;
         }
@@ -8743,7 +8734,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           size = storageHandle->scp.size;
         }
@@ -8752,7 +8743,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           size = storageHandle->sftp.size;
         }
@@ -8761,7 +8752,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_WEBDAV:
       #ifdef HAVE_CURL
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           size = storageHandle->webdav.size;
         }
@@ -8772,7 +8763,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
       #ifdef HAVE_ISO9660
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           size = (uint64)storageHandle->opticalDisk.read.iso9660Stat->size;
         }
@@ -8780,7 +8771,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         size = File_getSize(&storageHandle->device.fileHandle);
       }
@@ -8802,7 +8793,6 @@ Errors Storage_tell(StorageHandle *storageHandle,
   Errors error;
 
   assert(storageHandle != NULL);
-  assert(storageHandle->jobOptions != NULL);
   assert(offset != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
@@ -8814,14 +8804,14 @@ Errors Storage_tell(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         error = File_tell(&storageHandle->fileSystem.fileHandle,offset);
       }
       break;
     case STORAGE_TYPE_FTP:
       #if defined(HAVE_CURL) || defined(HAVE_FTP)
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           (*offset) = storageHandle->ftp.index;
           error     = ERROR_NONE;
@@ -8839,7 +8829,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           (*offset) = storageHandle->scp.index;
           error     = ERROR_NONE;
@@ -8850,7 +8840,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           (*offset) = storageHandle->sftp.index;
           error     = ERROR_NONE;
@@ -8861,7 +8851,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_WEBDAV:
       #ifdef HAVE_CURL
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           (*offset) = storageHandle->webdav.index;
           error     = ERROR_NONE;
@@ -8874,7 +8864,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
       #ifdef HAVE_ISO9660
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           (*offset) = storageHandle->opticalDisk.read.index;
           error     = ERROR_NONE;
@@ -8883,7 +8873,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         error = File_tell(&storageHandle->device.fileHandle,offset);
       }
@@ -8906,7 +8896,6 @@ Errors Storage_seek(StorageHandle *storageHandle,
   Errors error;
 
   assert(storageHandle != NULL);
-  assert(storageHandle->jobOptions != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   error = ERROR_NONE;
@@ -8915,7 +8904,7 @@ Errors Storage_seek(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         error = File_seek(&storageHandle->fileSystem.fileHandle,offset);
       }
@@ -8932,7 +8921,7 @@ Errors Storage_seek(StorageHandle *storageHandle,
       */
       #if   defined(HAVE_CURL)
         {
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->ftp.readAheadBuffer.data != NULL);
 
@@ -9015,7 +9004,7 @@ Errors Storage_seek(StorageHandle *storageHandle,
           }
         }
       #elif defined(HAVE_FTP)
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           assert(storageHandle->ftp.readAheadBuffer.data != NULL);
 
@@ -9094,7 +9083,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
            Note: this is slow!
         */
 
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           assert(storageHandle->scp.channel != NULL);
           assert(storageHandle->scp.readAheadBuffer.data != NULL);
@@ -9157,7 +9146,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           assert(storageHandle->sftp.sftpHandle != NULL);
           assert(storageHandle->sftp.readAheadBuffer.data != NULL);
@@ -9208,7 +9197,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_WEBDAV:
       #ifdef HAVE_CURL
         {
-          if (!storageHandle->jobOptions->dryRunFlag)
+          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             assert(storageHandle->webdav.receiveBuffer.data != NULL);
 
@@ -9333,7 +9322,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
       #ifdef HAVE_ISO9660
-        if (!storageHandle->jobOptions->dryRunFlag)
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
         {
           storageHandle->opticalDisk.read.index = offset;
           error = ERROR_NONE;
@@ -9342,7 +9331,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
-      if (!storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         error = File_seek(&storageHandle->device.fileHandle,offset);
       }

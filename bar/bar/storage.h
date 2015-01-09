@@ -809,7 +809,7 @@ Errors Storage_prepare(const String     storageName,
 * Purpose: init new storage
 * Input  : storageHandle                - storage handle variable
 *          storageSpecifier             - storage specifier structure
-*          jobOptions                   - job options
+*          jobOptions                   - job options or NULL
 *          maxBandWidthList             - list with max. band width to
 *                                         use [bits/s] or NULL
 *          serverConnectionPriority     - server connection priority
