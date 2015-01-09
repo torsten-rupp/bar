@@ -557,7 +557,7 @@ public class TabRestore
      */
     public String getInfo()
     {
-      return jobUUID;
+      return name;
     }
 
     /** convert data to string
@@ -1680,21 +1680,7 @@ public class TabRestore
                                                         (Object)uuidIndexData,
                                                         true
                                                        );
-                  uuidIndexData.setTreeItem(uuidTreeItem,uuidIndexData.new TreeItemUpdateRunnable()
-                  {
-                    public void update(TreeItem treeItem, IndexData indexData)
-                    {
-                      UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
-
-                      Widgets.updateTreeItem(treeItem,
-                                             (Object)uuidIndexData,
-                                             uuidIndexData.name,
-                                             Units.formatByteSize(uuidIndexData.size),
-                                             simpleDateFormat.format(new Date(uuidIndexData.dateTime*1000)),
-                                             ""
-                                            );
-                    }
-                  });
+                  uuidIndexData.setTreeItem(uuidTreeItem);
                 }
                 else
                 {
@@ -3290,6 +3276,9 @@ break;
 
         public void mouseHover(MouseEvent mouseEvent)
         {
+          final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+          final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+
           Tree     tree     = (Tree)mouseEvent.widget;
           TreeItem treeItem = tree.getItem(new Point(mouseEvent.x,mouseEvent.y));
 
@@ -3300,15 +3289,16 @@ break;
           }
 
           // show if tree item available and mouse is in the left side
-          if ((treeItem != null) && (mouseEvent.x < 64))
+          if ((treeItem != null) && (mouseEvent.x < tree.getBounds().width/2))
           {
-            if      (treeItem.getData() instanceof EntityIndexData)
+            if      (treeItem.getData() instanceof UUIDIndexData)
+            {
+              // TODO: show something?
+            }
+            else if (treeItem.getData() instanceof EntityIndexData)
             {
               EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
               Label           label;
-
-              final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
-              final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 
               widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
               widgetStorageTreeToolTip.setBackground(COLOR_BACKGROUND);
@@ -3372,8 +3362,7 @@ break;
               Widgets.layout(label,3,1,TableLayoutData.WE);
 
               Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-              Rectangle bounds = treeItem.getBounds(0);
-              Point point = tree.toDisplay(mouseEvent.x+16,bounds.y);
+              Point point = tree.toDisplay(mouseEvent.x+16,treeItem.getBounds(0).y);
               widgetStorageTreeToolTip.setBounds(point.x,point.y,size.x,size.y);
               widgetStorageTreeToolTip.setVisible(true);
             }
@@ -3381,9 +3370,6 @@ break;
             {
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
               Label            label;
-
-              final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
-              final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 
               widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
               widgetStorageTreeToolTip.setBackground(COLOR_BACKGROUND);
@@ -3487,8 +3473,7 @@ break;
               Widgets.layout(label,7,1,TableLayoutData.WE);
 
               Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-              Rectangle bounds = treeItem.getBounds(0);
-              Point point = tree.toDisplay(mouseEvent.x+16,bounds.y);
+              Point point = tree.toDisplay(mouseEvent.x+16,treeItem.getBounds(0).y);
               widgetStorageTreeToolTip.setBounds(point.x,point.y,size.x,size.y);
               widgetStorageTreeToolTip.setVisible(true);
             }
@@ -3863,7 +3848,7 @@ break;
 
         Widgets.addMenuSeparator(menu);
 
-        menuItem = Widgets.addMenuItem(menu,"Delete storage...");
+        menuItem = Widgets.addMenuItem(menu,"Delete...");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4801,7 +4786,6 @@ break;
         for (TreeItem treeItem : widgetStorageTree.getSelection())
         {
           indexData = (IndexData)treeItem.getData();
-Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
 
           indexDataHashSet.add(indexData);
 
@@ -5215,9 +5199,9 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
     getSelectedIndexData(indexDataHashSet);
     if (!indexDataHashSet.isEmpty())
     {
-      if (Dialogs.confirm(shell,"Really delete "+indexDataHashSet.size()+" storage files?"))
+      if (Dialogs.confirm(shell,"Really delete "+indexDataHashSet.size()+" indizes and storage files?"))
       {
-        final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+        final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
         busyDialog.setMaximum(indexDataHashSet.size());
 
         new BackgroundTask(busyDialog,new Object[]{indexDataHashSet})
@@ -5273,7 +5257,9 @@ Dprintf.dprintf("treeItem=%s: %s",treeItem,indexData);
                 {
                   indexDataMap.remove(indexData);
                   Widgets.removeTreeItem(widgetStorageTree,indexData);
+                  indexData.clearTreeItem();
                   Widgets.removeTableItem(widgetStorageTable,indexData);
+                  indexData.clearTableItem();
                 }
                 else
                 {
