@@ -3059,8 +3059,8 @@ LOCAL void jobThreadCode(void)
 {
   StorageSpecifier storageSpecifier;
   String           storageName;
-  StaticString     (jobUUID,64);
-  StaticString     (scheduleUUID,64);
+  StaticString     (jobUUID,INDEX_UUID_LENGTH);
+  StaticString     (scheduleUUID,INDEX_UUID_LENGTH);
   EntryList        includeEntryList;
   PatternList      excludePatternList;
   PatternList      deltaSourcePatternList;
@@ -3851,9 +3851,10 @@ LOCAL void indexCleanup(void)
   // reset incomplete updated database entries
   while (Index_findByState(indexDatabaseHandle,
                            INDEX_STATE_SET(INDEX_STATE_UPDATE),
+                           NULL, // jobUUID
+                           NULL, // scheduleUUID
                            &storageId,
                            NULL, // storageName
-                           NULL, // uuid
                            NULL  // lastCheckedTimestamp
                           )
          && (error == ERROR_NONE)
@@ -3890,9 +3891,10 @@ LOCAL void indexCleanup(void)
   // delete incomplete created database entries
   while (Index_findByState(indexDatabaseHandle,
                            INDEX_STATE_SET(INDEX_STATE_CREATE),
+                           NULL, // jobUUID
+                           NULL, // scheduleUUID
                            &storageId,
                            storageName,
-                           NULL, // uuid
                            NULL  // lastCheckedTimestamp
                           )
          && (error == ERROR_NONE)
@@ -4023,9 +4025,10 @@ LOCAL void indexCleanup(void)
   {
     while (Index_findByState(indexDatabaseHandle,
                              INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
+                             NULL, // jobUUID
+                             NULL, // scheduleUUID
                              &storageId,
                              NULL, // storageName
-                             NULL, // uuid
                              NULL  // lastCheckedTimestamp
                             )
            && (error == ERROR_NONE)
@@ -4108,9 +4111,10 @@ LOCAL void indexThreadCode(void)
     // update index entries
     while (   Index_findByState(indexDatabaseHandle,
                                 INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
+                                NULL, // jobUUID
+                                NULL, // scheduleUUID
                                 &storageId,
                                 storageName,
-                                NULL, // uuid
                                 NULL  // lastCheckedTimestamp
                                )
            && !quitFlag
@@ -4394,8 +4398,9 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                    storageSpecifier.loginName,
                                    storageSpecifier.deviceName,
                                    fileName,
+                                   NULL, // jobUUID
+                                   NULL, // scheduleUUID
                                    &storageId,
-                                   NULL, // uuid
                                    &indexState,
                                    NULL
                                   )
@@ -5943,7 +5948,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
 
 LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString      (jobUUID,64);
+  StaticString      (jobUUID,INDEX_UUID_LENGTH);
   String            name;
   SemaphoreLock     semaphoreLock;
   const JobNode     *jobNode;
@@ -6030,7 +6035,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const Str
 
 LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   String        name,value;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -6113,7 +6118,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, uint id, const Str
 
 LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   String        name;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -6284,7 +6289,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
 
 LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
 
@@ -6444,7 +6449,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
 
 LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   String        name;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -6543,7 +6548,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringM
 
 LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   String        newName;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -6630,7 +6635,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
 
 LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   Errors        error;
@@ -6707,7 +6712,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
 
 LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   char          s[64];
   ArchiveTypes  archiveType;
   bool          dryRunFlag;
@@ -6787,7 +6792,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
 
 LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -6878,7 +6883,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const StringM
 
 LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   EntryNode     *entryNode;
@@ -6935,7 +6940,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
 
 LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -6986,7 +6991,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   EntryTypes    entryType;
   PatternTypes  patternType;
   String        pattern;
@@ -7060,7 +7065,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   PatternNode   *patternNode;
@@ -7116,7 +7121,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
 
 LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -7167,7 +7172,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   PatternTypes  patternType;
   String        pattern;
   SemaphoreLock semaphoreLock;
@@ -7235,7 +7240,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   PatternNode   *patternNode;
@@ -7291,7 +7296,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
 
 LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -7343,7 +7348,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
 
 LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   PatternTypes  patternType;
   String        pattern;
   SemaphoreLock semaphoreLock;
@@ -7407,7 +7412,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
 
 LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   PatternNode   *patternNode;
@@ -7463,7 +7468,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, co
 
 LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -7515,7 +7520,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint i
 
 LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   PatternTypes  patternType;
   String        pattern;
   SemaphoreLock semaphoreLock;
@@ -7588,7 +7593,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 
 LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   ScheduleNode  *scheduleNode;
@@ -7735,7 +7740,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 
 LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   String        title;
   String        date;
   String        weekDays;
@@ -7925,8 +7930,8 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
 
 LOCAL void serverCommand_scheduleDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
-  StaticString  (scheduleUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
+  StaticString  (scheduleUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   ScheduleNode  *scheduleNode;
@@ -7993,8 +7998,8 @@ LOCAL void serverCommand_scheduleDelete(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString       (jobUUID,64);
-  StaticString       (scheduleUUID,64);
+  StaticString       (jobUUID,INDEX_UUID_LENGTH);
+  StaticString       (scheduleUUID,INDEX_UUID_LENGTH);
   String             name;
   SemaphoreLock      semaphoreLock;
   const JobNode      *jobNode;
@@ -8097,8 +8102,8 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, cons
 
 LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
-  StaticString  (scheduleUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
+  StaticString  (scheduleUUID,INDEX_UUID_LENGTH);
   String        name,value;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -8197,8 +8202,8 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, uint id, cons
 
 LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
-  StaticString  (scheduleUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
+  StaticString  (scheduleUUID,INDEX_UUID_LENGTH);
   String        name;
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
@@ -8540,7 +8545,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   String        encryptType;
   String        encryptedPassword;
   SemaphoreLock semaphoreLock;
@@ -8657,7 +8662,7 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   uint          volumeNumber;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -8711,7 +8716,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const Strin
 
 LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,64);
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -9248,7 +9253,7 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString     (jobUUID,64);
+  StaticString     (jobUUID,INDEX_UUID_LENGTH);
   DatabaseId       entityId;
   DatabaseId       storageId;
   Errors           error;
@@ -9397,12 +9402,15 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   {
     Errors           resultError;
     String           resultString;
+    StaticString     (jobUUID,INDEX_UUID_LENGTH);
     String           storageName;
+    SemaphoreLock    semaphoreLock;
+    const JobNode    *jobNode;
     StorageSpecifier storageSpecifier;
     Errors           error;
     StorageHandle    storageHandle;
 
-    // initi variables
+    // init variables
     resultError  = ERROR_UNKNOWN;
     resultString = String_new();
 
@@ -9410,9 +9418,11 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     storageName = String_new();
     if (!Index_findById(indexDatabaseHandle,
                         storageId,
+                        jobUUID,
+                        NULL, // scheduleUUID
                         storageName,
-                        NULL,
-                        NULL
+                        NULL, // indexState
+                        NULL  // lastCheckedTimestamp
                        )
        )
     {
@@ -9422,72 +9432,78 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       return FALSE;
     }
 
-    // delete storage file
-    Storage_initSpecifier(&storageSpecifier);
-    resultError = Storage_parseName(&storageSpecifier,storageName);
-    if (resultError == ERROR_NONE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
     {
-#warning NYI: move this special handling of limited scp into Storage_delete()?
-      // init storage
-      if (storageSpecifier.type == STORAGE_TYPE_SCP)
+      // find job if possible
+      jobNode = findJobByUUID(jobUUID);
+
+      // delete storage file
+      Storage_initSpecifier(&storageSpecifier);
+      resultError = Storage_parseName(&storageSpecifier,storageName);
+      if (resultError == ERROR_NONE)
       {
-        // try to init scp-storage first with sftp
-        storageSpecifier.type = STORAGE_TYPE_SFTP;
-        resultError = Storage_init(&storageHandle,
-                                   &storageSpecifier,
-                                   &clientInfo->jobOptions,
-                                   &globalOptions.indexDatabaseMaxBandWidthList,
-                                   SERVER_CONNECTION_PRIORITY_HIGH,
-                                   CALLBACK(NULL,NULL),
-                                   CALLBACK(NULL,NULL)
-                                  );
-        if (resultError != ERROR_NONE)
+#warning NYI: move this special handling of limited scp into Storage_delete()?
+        // init storage
+        if (storageSpecifier.type == STORAGE_TYPE_SCP)
         {
-          // init scp-storage
-          storageSpecifier.type = STORAGE_TYPE_SCP;
+          // try to init scp-storage first with sftp
+          storageSpecifier.type = STORAGE_TYPE_SFTP;
           resultError = Storage_init(&storageHandle,
                                      &storageSpecifier,
-                                     &clientInfo->jobOptions,
+                                     (jobNode != NULL) ? &jobNode->jobOptions : NULL,
+                                     &globalOptions.indexDatabaseMaxBandWidthList,
+                                     SERVER_CONNECTION_PRIORITY_HIGH,
+                                     CALLBACK(NULL,NULL),
+                                     CALLBACK(NULL,NULL)
+                                    );
+          if (resultError != ERROR_NONE)
+          {
+            // init scp-storage
+            storageSpecifier.type = STORAGE_TYPE_SCP;
+            resultError = Storage_init(&storageHandle,
+                                       &storageSpecifier,
+                                       (jobNode != NULL) ? &jobNode->jobOptions : NULL,
+                                       &globalOptions.indexDatabaseMaxBandWidthList,
+                                       SERVER_CONNECTION_PRIORITY_HIGH,
+                                       CALLBACK(NULL,NULL),
+                                       CALLBACK(NULL,NULL)
+                                      );
+          }
+        }
+        else
+        {
+          // init other storage types
+          resultError = Storage_init(&storageHandle,
+                                     &storageSpecifier,
+                                     (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      CALLBACK(NULL,NULL),
                                      CALLBACK(NULL,NULL)
                                     );
         }
-      }
-      else
-      {
-        // init other storage types
-        resultError = Storage_init(&storageHandle,
-                                   &storageSpecifier,
-                                   &clientInfo->jobOptions,
-                                   &globalOptions.indexDatabaseMaxBandWidthList,
-                                   SERVER_CONNECTION_PRIORITY_HIGH,
-                                   CALLBACK(NULL,NULL),
-                                   CALLBACK(NULL,NULL)
-                                  );
-      }
-      if (resultError == ERROR_NONE)
-      {
-        resultError = Storage_delete(&storageHandle,
-                                     storageSpecifier.fileName
-                                    );
-        if (resultError != ERROR_NONE)
+        if (resultError == ERROR_NONE)
         {
-          String_format(resultString,"delete storage file: %s",Error_getText(resultError));
-        }
+          resultError = Storage_delete(&storageHandle,
+                                       storageSpecifier.fileName
+                                      );
+          if (resultError != ERROR_NONE)
+          {
+            String_format(resultString,"delete storage file: %s",Error_getText(resultError));
+          }
 
-        // close storage
-        Storage_done(&storageHandle);
+          // close storage
+          Storage_done(&storageHandle);
+        }
+        else
+        {
+          String_format(resultString,"init storage: %s",Error_getText(resultError));
+        }
       }
       else
       {
-        String_format(resultString,"init storage: %s",Error_getText(resultError));
+        String_format(resultString,"invalid storage name");
       }
-    }
-    else
-    {
-      String_format(resultString,"invalid storage name");
     }
 
     // delete index
@@ -9511,7 +9527,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     }
   }
 
-  StaticString     (jobUUID,64);
+  StaticString     (jobUUID,INDEX_UUID_LENGTH);
   DatabaseId       entityId;
   DatabaseId       storageId;
   Errors           error;
@@ -10209,8 +10225,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   StorageSpecifier storageSpecifier;
-  StaticString     (jobUUID,64);
-  StaticString     (scheduleUUID,64);
+  StaticString     (jobUUID,INDEX_UUID_LENGTH);
+  StaticString     (scheduleUUID,INDEX_UUID_LENGTH);
   String           jobName;
   String           storageName;
   String           printableStorageName;
