@@ -846,6 +846,8 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
 
 bool Index_findById(DatabaseHandle *databaseHandle,
                     DatabaseId     storageId,
+                    String         jobUUID,
+                    String         scheduleUUID,
                     String         storageName,
                     IndexStates    *indexState,
                     uint64         *lastCheckedTimestamp
@@ -860,11 +862,14 @@ bool Index_findById(DatabaseHandle *databaseHandle,
 
   error = Database_prepare(&databaseQueryHandle,
                            databaseHandle,
-                           "SELECT name, \
-                                   state, \
-                                   STRFTIME('%%s',lastChecked) \
+                           "SELECT entities.jobUUID, \
+                                   entities.scheduleUUID, \
+                                   storage.name, \
+                                   storage.state, \
+                                   STRFTIME('%%s',storage.lastChecked) \
                             FROM storage \
-                            WHERE id=%lld \
+                            LEFT JOIN entities ON storage.entityId=entities.id \
+                            WHERE storage.id=%lld \
                            ",
                            storageId
                           );
@@ -873,7 +878,9 @@ bool Index_findById(DatabaseHandle *databaseHandle,
     return FALSE;
   }
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%S %d %llu",
+                               "%S %S %S %d %llu",
+                               jobUUID,
+                               scheduleUUID,
                                storageName,
                                indexState,
                                lastCheckedTimestamp
@@ -889,8 +896,9 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                       const String   loginName,
                       const String   deviceName,
                       const String   fileName,
+                      String         jobUUID,
+                      String         scheduleUUID,
                       DatabaseId     *storageId,
-                      String         uuid,
                       IndexStates    *indexState,
                       uint64         *lastCheckedTimestamp
                      )
@@ -908,12 +916,14 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 
   error = Database_prepare(&databaseQueryHandle,
                            databaseHandle,
-                           "SELECT id, \
-                                   name, \
-                                   uuid, \
-                                   state, \
-                                   STRFTIME('%%s',lastChecked) \
+                           "SELECT entities.jobUUID, \
+                                   entities.scheduleUUID, \
+                                   storage.id, \
+                                   storage.name, \
+                                   storage.state, \
+                                   STRFTIME('%%s',storagelastChecked) \
                             FROM storage \
+                            LEFT JOIN entities ON storage.entityId=entities.id \
                            "
                           );
   if (error != ERROR_NONE)
@@ -925,13 +935,14 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
   Storage_initSpecifier(&storageSpecifier);
   foundFlag   = FALSE;
   while (   Database_getNextRow(&databaseQueryHandle,
-                                "%lld %S %S %d %llu",
-                                 storageId,
-                                 storageName,
-                                 uuid,
-                                 indexState,
-                                 lastCheckedTimestamp
-                                )
+                                "%S %S %lld %S %S %d %llu",
+                                jobUUID,
+                                scheduleUUID,
+                                storageId,
+                                storageName,
+                                indexState,
+                                lastCheckedTimestamp
+                               )
          && !foundFlag
         )
   {
@@ -1006,9 +1017,10 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 
 bool Index_findByState(DatabaseHandle *databaseHandle,
                        IndexStateSet  indexStateSet,
+                       String         jobUUID,
+                       String         scheduleUUID,
                        DatabaseId     *storageId,
                        String         storageName,
-                       String         uuid,
                        uint64         *lastCheckedTimestamp
                       )
 {
@@ -1027,12 +1039,14 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
   indexStateSetString = String_new();
   error = Database_prepare(&databaseQueryHandle,
                            databaseHandle,
-                           "SELECT id, \
-                                   name, \
-                                   uuid, \
-                                   STRFTIME('%%s',lastChecked) \
+                           "SELECT entities.jobUUID, \
+                                   entities.scheduleUUID, \
+                                   storage.id, \
+                                   storage.name, \
+                                   STRFTIME('%%s',storage.lastChecked) \
                             FROM storage \
-                            WHERE state IN (%S) \
+                            LEFT JOIN entities ON storage.entityId=entities.id \
+                            WHERE storage.state IN (%S) \
                            ",
                            getIndexStateSetString(indexStateSetString,indexStateSet)
                           );
@@ -1043,10 +1057,11 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
   }
   String_delete(indexStateSetString);
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%lld %S %S %llu",
+                               "%S %S %lld %S %S %llu",
+                               jobUUID,
+                               scheduleUUID,
                                storageId,
                                storageName,
-                               uuid,
                                lastCheckedTimestamp
                               );
   Database_finalize(&databaseQueryHandle);

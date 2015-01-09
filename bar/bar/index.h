@@ -31,6 +31,7 @@
 
 /***************************** Constants *******************************/
 #define INDEX_STORAGE_ID_NONE -1LL
+#define INDEX_UUID_LENGTH     64
 
 // index states
 typedef enum
@@ -216,8 +217,10 @@ bool Index_parseMode(const char *name, IndexModes *indexMode);
 * Name   : Index_findById
 * Purpose: find index by id
 * Input  : databaseHandle - database handle
-*          storageId   - database id of index
-* Output : storageName          - storage name
+*          storageId      - database id of index
+* Output : jobUUID        - unique job id (can be NULL)
+*          scheduleUUID   - unique schedule id (can be NULL)
+*          storageName          - storage name
 *          indexState           - index state (can be NULL)
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be NULL)
@@ -227,6 +230,8 @@ bool Index_parseMode(const char *name, IndexModes *indexMode);
 
 bool Index_findById(DatabaseHandle *databaseHandle,
                     DatabaseId     storageId,
+                    String         jobUUID,
+                    String         scheduleUUID,
                     String         storageName,
                     IndexStates    *indexState,
                     uint64         *lastCheckedTimestamp
@@ -241,8 +246,9 @@ bool Index_findById(DatabaseHandle *databaseHandle,
 *          findLoginName   - login name to find or NULL
 *          findDeviceName  - device name to find or NULL
 *          findFileName    - file name to find or NULL
-* Output : storageId            - database id of index
-*          uuid                 - unique id (can be NULL)
+* Output : jobUUID              - unique job id (can be NULL)
+*          scheduleUUID         - unique schedule id (can be NULL)
+*          storageId            - database id of index
 *          indexState           - index state (can be NULL)
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be NULL)
@@ -256,8 +262,9 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                       const String   findLoginName,
                       const String   findDeviceName,
                       const String   findFileName,
+                      String         jobUUID,
+                      String         scheduleUUID,
                       DatabaseId     *storageId,
-                      String         uuid,
                       IndexStates    *indexState,
                       uint64         *lastCheckedTimestamp
                      );
@@ -267,9 +274,10 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 * Purpose: find index by state
 * Input  : databaseHandle - database handle
 *          indexState     - index state
-* Output : storageId            - database id of index
+* Output : jobUUID              - unique job id (can be NULL)
+*          scheduleUUID         - unique schedule id (can be NULL)
+*          storageId            - database id of index
 *          storageName          - storage name (can be NULL)
-*          uuid                 - unique id (can be NULL)
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be NULL)
 * Return : TRUE if index found, FALSE otherwise
@@ -278,9 +286,10 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 
 bool Index_findByState(DatabaseHandle *databaseHandle,
                        IndexStateSet  indexStateSet,
+                       String         jobUUID,
+                       String         scheduleUUID,
                        DatabaseId     *storageId,
                        String         storageName,
-                       String         uuid,
                        uint64         *lastCheckedTimestamp
                       );
 
