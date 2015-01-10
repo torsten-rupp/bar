@@ -9971,11 +9971,11 @@ throw new Error("NYI");
     int index = widgetScheduleTable.getSelectionIndex();
     if (index >= 0)
     {
-      TableItem    tableItem    = widgetScheduleTable.getItem(index);
-      ScheduleData scheduleData = (ScheduleData)tableItem.getData();
+      TableItem          tableItem    = widgetScheduleTable.getItem(index);
+      final ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
       ScheduleData newScheduleData = scheduleData.clone();
-      if (scheduleEdit(newScheduleData,"New schedule","Add"))
+      if (scheduleEdit(newScheduleData,BARControl.tr("Clone schedule"),BARControl.tr("Add")))
       {
         String[] resultErrorMessage = new String[1];
         ValueMap resultMap          = new ValueMap();
@@ -10004,16 +10004,16 @@ throw new Error("NYI");
         scheduleDataMap.put(scheduleData.uuid,newScheduleData);
 
         TableItem newTableItem = Widgets.insertTableItem(widgetScheduleTable,
-                                                         findScheduleItemIndex(scheduleData),
-                                                         scheduleData,
-                                                         scheduleData.getDate(),
-                                                         scheduleData.getWeekDays(),
-                                                         scheduleData.getTime(),
-                                                         scheduleData.archiveType,
-                                                         scheduleData.customText,
-                                                         scheduleData.enabled ? "yes" : "no"
+                                                         findScheduleItemIndex(newScheduleData),
+                                                         newScheduleData,
+                                                         newScheduleData.getDate(),
+                                                         newScheduleData.getWeekDays(),
+                                                         newScheduleData.getTime(),
+                                                         newScheduleData.archiveType,
+                                                         newScheduleData.customText,
+                                                         newScheduleData.enabled ? "yes" : "no"
                                                         );
-        tableItem.setData(scheduleData);
+        tableItem.setData(newScheduleData);
       }
     }
   }
