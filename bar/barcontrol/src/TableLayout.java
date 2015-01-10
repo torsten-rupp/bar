@@ -370,7 +370,7 @@ if (debug) System.err.println(indent()+"computeSize "+composite);
     Control children[] = composite.getChildren();
     if (flushCache || checkInitializeRequired(children))
     {
-      initialize(children);
+      initialize(composite,children);
     }
 
     int width  = (widthHint  != SWT.DEFAULT)?widthHint :totalWidth;
@@ -410,7 +410,7 @@ if (debug) debugRecursion--;
     Control children[] = composite.getChildren();
     if (flushCache || checkInitializeRequired(children))
     {
-      initialize(children);
+      initialize(composite,children);
     }
 if (debug) debugRecursion++;
 if (debug) System.err.println(indent()+"S========================================================");
@@ -585,7 +585,7 @@ if (debug) debugRecursion--;
   /** initialize
    * @param children children to initialize
    */
-  private void initialize(Control children[])
+  private void initialize(Composite composite, Control children[])
   {
 if (debug) debugRecursion++;
 if (debug) System.err.println(indent()+"S--------------------------------------------------------");
@@ -654,8 +654,12 @@ if (debug) System.err.println(indent()+"rows="+rows+" columns="+columns);
       }
     }
 
-    // initialize weights (only if there are child objects)
-    if (children.length > 0)
+    // initialize weights (if table or children)
+    if      (composite instanceof Table)
+    {
+      columnWeights = getWeights(columnWeight,columnWeights,((Table)composite).getColumnCount(),columnExpandFlags);
+    }
+    else if (children.length > 0)
     {
       rowWeights    = getWeights(rowWeight,   rowWeights,   rows,   rowExpandFlags   );
       columnWeights = getWeights(columnWeight,columnWeights,columns,columnExpandFlags);
