@@ -486,6 +486,7 @@ public class TabJobs
       this.display                  = display;
       this.directoryInfoRequestList = new LinkedList<DirectoryInfoRequest>();
       setDaemon(true);
+      setName("BARControl Directory Info");
     }
 
     /**
