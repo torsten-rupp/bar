@@ -857,7 +857,6 @@ bool Index_findById(DatabaseHandle *databaseHandle,
   Errors              error;
   bool                result;
 
-  assert(storageId != DATABASE_ID_NONE);
   assert(databaseHandle != NULL);
 
   error = Database_prepare(&databaseQueryHandle,
@@ -909,8 +908,8 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
   StorageSpecifier    storageSpecifier;
   bool                foundFlag;
 
-  assert(storageId != NULL);
   assert(databaseHandle != NULL);
+  assert(storageId != NULL);
 
   (*storageId) = DATABASE_ID_NONE;
 
@@ -935,7 +934,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
   Storage_initSpecifier(&storageSpecifier);
   foundFlag   = FALSE;
   while (   Database_getNextRow(&databaseQueryHandle,
-                                "%S %S %lld %S %S %d %llu",
+                                "%S %S %lld %S %d %llu",
                                 jobUUID,
                                 scheduleUUID,
                                 storageId,
@@ -1029,8 +1028,8 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
   Errors              error;
   bool                result;
 
-  assert(storageId != NULL);
   assert(databaseHandle != NULL);
+  assert(storageId != NULL);
 
   (*storageId) = DATABASE_ID_NONE;
   if (storageName != NULL) String_clear(storageName);
@@ -1057,7 +1056,7 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
   }
   String_delete(indexStateSetString);
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%S %S %lld %S %S %llu",
+                               "%S %S %lld %S %llu",
                                jobUUID,
                                scheduleUUID,
                                storageId,
@@ -1076,7 +1075,6 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
   Errors error;
 
   assert(databaseHandle != NULL);
-  assert(storageId != 0LL);
 
   // Note: do in single steps to avoid long-time-locking of database!
   error = Database_execute(databaseHandle,
@@ -1369,7 +1367,6 @@ Errors Index_deleteUUID(DatabaseHandle *databaseHandle,
   DatabaseId          entityId;
 
   assert(databaseHandle != NULL);
-  assert(entityId != 0LL);
 
   // delete entities of UUID
   error = Database_prepare(&databaseQueryHandle,
@@ -1508,7 +1505,6 @@ Errors Index_deleteEntity(DatabaseHandle *databaseHandle,
   DatabaseId          storageId;
 
   assert(databaseHandle != NULL);
-  assert(entityId != 0LL);
 
   // delete storage of entity
   error = Database_prepare(&databaseQueryHandle,
@@ -1784,7 +1780,6 @@ Errors Index_deleteStorage(DatabaseHandle *databaseHandle,
   Errors error;
 
   assert(databaseHandle != NULL);
-  assert(storageId != 0LL);
 
   // Note: do in single steps to avoid long-time-locking of database!
   error = Database_execute(databaseHandle,
