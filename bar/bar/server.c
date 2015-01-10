@@ -9504,6 +9504,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       {
         String_format(resultString,"invalid storage name");
       }
+      Storage_doneSpecifier(&storageSpecifier);
     }
 
     // delete index
@@ -9511,7 +9512,6 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,error,"remove index: %s",Error_getText(error));
-      Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
       return FALSE;
     }
