@@ -4835,21 +4835,20 @@ e composite widget
 
   /** swap table items
    * @param table table
+   * @param tableItems table items
    * @param i,j indizes of table items to swap
    */
-  private static void swapTableItems(Table table, int i, int j)
+  private static void swapTableItems(Table table, TableItem tableItems[], int i, int j)
   {
-    // get table items
-    TableItem[] tableItems = table.getItems();
+    int columnCount = table.getColumnCount();
 
     // save data
     Object   data = tableItems[i].getData();
-    int columnCount = table.getColumnCount();
     String[] texts;
     if (columnCount > 0)
     {
-      texts = new String[table.getColumnCount()];
-      for (int z = 0; z < table.getColumnCount(); z++)
+      texts = new String[columnCount];
+      for (int z = 0; z < columnCount; z++)
       {
         texts[z] = tableItems[i].getText(z);
       }
@@ -4862,24 +4861,40 @@ e composite widget
     Color foregroundColor = tableItems[i].getForeground();
     Color backgroundColor = tableItems[i].getBackground();
     boolean checked = tableItems[i].getChecked();
+    TableItem tableItem = tableItems[i];
 
-    // discard item
-    tableItems[i].dispose();
-
-    // create new item
-    TableItem tableItem = new TableItem(table,SWT.NONE,j);
-    tableItem.setData(data);
+    // swap
+    tableItems[i].setData(tableItems[j].getData());
     if (columnCount > 0)
     {
-      tableItem.setText(texts);
+      for (int z = 0; z < columnCount; z++)
+      {
+        tableItems[i].setText(z,tableItems[j].getText(z));
+      }
     }
     else
     {
-      tableItem.setText(texts[0]);
+      tableItems[i].setText(tableItems[j].getText());
     }
-    tableItem.setForeground(foregroundColor);
-    tableItem.setBackground(backgroundColor);
-    tableItem.setChecked(checked);
+    tableItems[i].setForeground(tableItems[j].getForeground());
+    tableItems[i].setBackground(tableItems[j].getBackground());
+    tableItems[i].setChecked(tableItems[j].getChecked());
+
+    tableItems[j].setData(data);
+    if (columnCount > 0)
+    {
+      for (int z = 0; z < columnCount; z++)
+      {
+        tableItems[j].setText(z,texts[z]);
+      }
+    }
+    else
+    {
+      tableItems[j].setText(texts[0]);
+    }
+    tableItems[j].setForeground(foregroundColor);
+    tableItems[j].setBackground(backgroundColor);
+    tableItems[j].setChecked(checked);
   }
 
   /** select sort column and sort table
@@ -4946,33 +4961,40 @@ e composite widget
       if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
 
       // sort column
-      for (int i = 1; i < tableItems.length; i++)
+      int n = tableItems.length;
+      int m;
+      do
       {
-        boolean sortedFlag = false;
-        for (int j = 0; (j < i) && !sortedFlag; j++)
+        m = 1;
+        for (int i = 0; i < n-1; i++)
         {
+          boolean swapFlag = false;
           switch (sortDirection)
           {
             case SWT.UP:
               if (comparator != String.CASE_INSENSITIVE_ORDER)
-                sortedFlag = (comparator.compare(tableItems[i].getData(),tableItems[j].getData()) < 0);
+                swapFlag = (comparator.compare(tableItems[i].getData(),tableItems[i+1].getData()) > 0);
               else
-                sortedFlag = (comparator.compare(tableItems[i].getText(sortColumnIndex),tableItems[j].getText(sortColumnIndex)) < 0);
+                swapFlag = (comparator.compare(tableItems[i].getText(sortColumnIndex),tableItems[i+1].getText(sortColumnIndex)) > 0);
               break;
             case SWT.DOWN:
               if (comparator != String.CASE_INSENSITIVE_ORDER)
-                sortedFlag = (comparator.compare(tableItems[i].getData(),tableItems[j].getData()) > 0);
+                swapFlag = (comparator.compare(tableItems[i].getData(),tableItems[i+1].getData()) < 0);
               else
-                sortedFlag = (comparator.compare(tableItems[i].getText(sortColumnIndex),tableItems[j].getText(sortColumnIndex)) > 0);
+                swapFlag = (comparator.compare(tableItems[i].getText(sortColumnIndex),tableItems[i+1].getText(sortColumnIndex)) < 0);
               break;
           }
-          if (sortedFlag)
+          if (swapFlag)
           {
-            swapTableItems(table,i,j);
-            tableItems = table.getItems();
+            swapTableItems(table,tableItems,i,i+1);
+            m = i+1;
           }
         }
+        n = m;
+//Dprintf.dprintf("--------------------------------------------------- %d %d",n,tableItems.length);
+//for (int z = 0; z < n-1; z++) Dprintf.dprintf("%s: %d",tableItems[z].getData(),comparator.compare(tableItems[z].getData(),tableItems[z+1].getData()));
       }
+      while (n > 1);
     }
   }
 
@@ -5316,7 +5338,7 @@ e composite widget
             // move item down
             while ((n > 0) && (i < tableItems.length-1))
             {
-              swapTableItems(table,i,i+1);
+              swapTableItems(table,tableItems,i,i+1);
               i++;
               n--;
             }
@@ -5324,7 +5346,7 @@ e composite widget
             // move imte up
             while ((n < 0) && (i > 0))
             {
-              swapTableItems(table,i,i-1);
+              swapTableItems(table,tableItems,i,i-1);
               i--;
               n++;
             }
@@ -6430,17 +6452,12 @@ private static void printTree(Tree tree)
   {
     if (!tree.isDisposed())
     {
-//rr++;
-
-//System.err.println(indent(rr)+"A "+treeItem+" "+treeItem.hashCode()+" "+treeItem.getItemCount()+" open="+treeItem.getExpanded());
       for (TreeItem subTreeItem : subTreeItems)
       {
         sortSubTreeColumn(tree,subTreeItem,subTreeItem.getItems(),sortDirection,comparator);
       }
-//System.err.println(indent(rr)+"B "+subTreeItem+" ("+subTreeItem.hashCode()+") "+subTreeItem.hashCode()+" "+subTreeItem.getItemCount()+" open="+subTreeItem.getExpanded());
 
       // sort sub-tree
-//boolean xx = treeItem.getExpanded();
       for (int i = 0; i < subTreeItems.length; i++)
       {
         boolean sortedFlag = false;
@@ -6457,9 +6474,6 @@ private static void printTree(Tree tree)
           }
         }
       }
-//treeItem.setExpanded(xx);
-
-//rr--;
     }
   }
 
@@ -6473,18 +6487,13 @@ private static void printTree(Tree tree)
   {
     if (!tree.isDisposed())
     {
-//rr++;
-
-//System.err.println(indent(rr)+"A "+treeItem+" "+treeItem.hashCode()+" "+treeItem.getItemCount()+" open="+treeItem.getExpanded());
       // sort sub-trees
       for (TreeItem subTreeItem : subTreeItems)
       {
         sortSubTreeColumn(tree,subTreeItem,subTreeItem.getItems(),sortDirection,comparator);
       }
-//System.err.println(indent(rr)+"B "+subTreeItem+" ("+subTreeItem.hashCode()+") "+subTreeItem.hashCode()+" "+subTreeItem.getItemCount()+" open="+subTreeItem.getExpanded());
 
       // sort tree
-//boolean xx = treeItem.getExpanded();
       for (int i = 0; i < subTreeItems.length; i++)
       {
         boolean sortedFlag = false;
@@ -6501,9 +6510,6 @@ private static void printTree(Tree tree)
           }
         }
       }
-//treeItem.setExpanded(xx);
-
-//rr--;
     }
   }
 
