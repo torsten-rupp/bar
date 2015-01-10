@@ -492,6 +492,8 @@ public class TabRestore
           if      (indexData1.dateTime < indexData2.dateTime) return -1;
           else if (indexData1.dateTime > indexData2.dateTime) return  1;
           else                                                return  0;
+        case SORTMODE_STATE:
+          return indexData1.indexState.compareTo(indexData2.indexState);
         default:
           return 0;
       }
@@ -513,6 +515,22 @@ public class TabRestore
     public String jobUUID;                       // job UUID
     public String scheduleUUID;                  // schedule UUID
 
+    private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
+    {
+      public void update(TreeItem treeItem, IndexData indexData)
+      {
+        UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
+
+        Widgets.updateTreeItem(treeItem,
+                               (Object)uuidIndexData,
+                               uuidIndexData.name,
+                               Units.formatByteSize(uuidIndexData.size),
+                               simpleDateFormat.format(new Date(uuidIndexData.dateTime*1000)),
+                               ""
+                              );
+      }
+    };
+
     /** create UUID data index
      * @param jobUUID job uuid
      * @param scheduleUUID schedule UUID
@@ -533,22 +551,6 @@ public class TabRestore
      */
     public void setTreeItem(TreeItem treeItem)
     {
-      final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
-      {
-        public void update(TreeItem treeItem, IndexData indexData)
-        {
-          UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
-
-          Widgets.updateTreeItem(treeItem,
-                                 (Object)uuidIndexData,
-                                 uuidIndexData.name,
-                                 Units.formatByteSize(uuidIndexData.size),
-                                 simpleDateFormat.format(new Date(uuidIndexData.dateTime*1000)),
-                                 ""
-                                );
-        }
-      };
-
       setTreeItem(treeItem,treeItemUpdateRunnable);
     }
 
@@ -566,91 +568,6 @@ public class TabRestore
     public String toString()
     {
       return "UUIDIndexData {"+jobUUID+", created="+dateTime+", size="+size+" bytes, checked="+isChecked()+"}";
-    }
-  }
-
-  /** UUID data comparator
-   */
-  class UUIDIndexDataComparator implements Comparator<UUIDIndexData>
-  {
-    // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_NAME             = 0;
-    private final static int SORTMODE_SIZE             = 1;
-    private final static int SORTMODE_CREATED_DATETIME = 2;
-
-    private int sortMode;
-
-    /** create storage data comparator
-     * @param tree storage tree
-     * @param sortColumn sort column
-     */
-    UUIDIndexDataComparator(Tree tree, TreeColumn sortColumn)
-    {
-      if      (tree.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (tree.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
-      else if (tree.getColumn(2) == sortColumn) sortMode = SORTMODE_CREATED_DATETIME;
-      else                                      sortMode = SORTMODE_NAME;
-    }
-
-    /** create storage data comparator
-     * @param table storage table
-     * @param sortColumn sort column
-     */
-    UUIDIndexDataComparator(Table table, TableColumn sortColumn)
-    {
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_CREATED_DATETIME;
-      else                                       sortMode = SORTMODE_NAME;
-    }
-
-    /** create storage data comparator
-     * @param tree storage tree
-     */
-    UUIDIndexDataComparator(Tree tree)
-    {
-      this(tree,tree.getSortColumn());
-    }
-
-    /** create storage data comparator
-     * @param tree storage tree
-     */
-    UUIDIndexDataComparator(Table table)
-    {
-      this(table,table.getSortColumn());
-    }
-
-    /** compare uuid index data
-     * @param uuidIndexData1, uuidIndexData2 storage data to compare
-     * @return -1 iff uuidIndexData1 < uuidIndexData2,
-                0 iff uuidIndexData1 = uuidIndexData2,
-                1 iff uuidIndexData1 > uuidIndexData2
-     */
-    public int compare(UUIDIndexData uuidIndexData1, UUIDIndexData uuidIndexData2)
-    {
-      switch (sortMode)
-      {
-        case SORTMODE_NAME:
-          return uuidIndexData1.title.compareTo(uuidIndexData2.title);
-        case SORTMODE_SIZE:
-          if      (uuidIndexData1.size < uuidIndexData2.size) return -1;
-          else if (uuidIndexData1.size > uuidIndexData2.size) return  1;
-          else                                                return  0;
-        case SORTMODE_CREATED_DATETIME:
-          if      (uuidIndexData1.dateTime < uuidIndexData2.dateTime) return -1;
-          else if (uuidIndexData1.dateTime > uuidIndexData2.dateTime) return  1;
-          else                                                        return  0;
-        default:
-          return 0;
-      }
-    }
-
-    /** convert data to string
-     * @return string
-     */
-    public String toString()
-    {
-      return "UUIDIndexDataComparator {"+sortMode+"}";
     }
   }
 
@@ -705,6 +622,22 @@ public class TabRestore
     long                  entityId;
     Settings.ArchiveTypes archiveType;
 
+    private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
+    {
+      public void update(TreeItem treeItem, IndexData indexData)
+      {
+        EntityIndexData entityIndexData = (EntityIndexData)indexData;
+
+        Widgets.updateTreeItem(treeItem,
+                               (Object)entityIndexData,
+                               entityIndexData.archiveType.toString(),
+                               Units.formatByteSize(entityIndexData.size),
+                               simpleDateFormat.format(new Date(entityIndexData.dateTime*1000)),
+                               ""
+                              );
+      }
+    };
+
     /** create job data index
      * @param entityId entity id
      * @param name name of storage
@@ -714,7 +647,7 @@ public class TabRestore
      */
     EntityIndexData(long entityId, Settings.ArchiveTypes archiveType, long lastDateTime, long totalSize, String lastErrorMessage)
     {
-      super("",lastDateTime,totalSize,"tttt",lastErrorMessage);
+      super("",lastDateTime,totalSize,"",lastErrorMessage);
       this.entityId    = entityId;
       this.archiveType = archiveType;
     }
@@ -724,22 +657,6 @@ public class TabRestore
      */
     public void setTreeItem(TreeItem treeItem)
     {
-      final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
-      {
-        public void update(TreeItem treeItem, IndexData indexData)
-        {
-          EntityIndexData entityIndexData = (EntityIndexData)indexData;
-
-          Widgets.updateTreeItem(treeItem,
-                                 (Object)entityIndexData,
-                                 entityIndexData.archiveType.toString(),
-                                 Units.formatByteSize(entityIndexData.size),
-                                 simpleDateFormat.format(new Date(entityIndexData.dateTime*1000)),
-                                 ""
-                                );
-        }
-      };
-
       setTreeItem(treeItem,treeItemUpdateRunnable);
     }
 
@@ -757,91 +674,6 @@ public class TabRestore
     public String toString()
     {
       return "EntityIndexData {"+entityId+", type="+archiveType.toString()+", created="+dateTime+", size="+size+" bytes, checked="+isChecked()+"}";
-    }
-  }
-
-  /** job data comparator
-   */
-  class EntityIndexDataComparator implements Comparator<EntityIndexData>
-  {
-    // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_NAME             = 0;
-    private final static int SORTMODE_SIZE             = 1;
-    private final static int SORTMODE_CREATED_DATETIME = 2;
-
-    private int sortMode;
-
-    /** create storage data comparator
-     * @param tree storage tree
-     * @param sortColumn sort column
-     */
-    EntityIndexDataComparator(Tree tree, TreeColumn sortColumn)
-    {
-      if      (tree.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (tree.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
-      else if (tree.getColumn(2) == sortColumn) sortMode = SORTMODE_CREATED_DATETIME;
-      else                                      sortMode = SORTMODE_NAME;
-    }
-
-    /** create storage data comparator
-     * @param table storage table
-     * @param sortColumn sort column
-     */
-    EntityIndexDataComparator(Table table, TableColumn sortColumn)
-    {
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_CREATED_DATETIME;
-      else                                       sortMode = SORTMODE_NAME;
-    }
-
-    /** create storage data comparator
-     * @param tree storage tree
-     */
-    EntityIndexDataComparator(Tree tree)
-    {
-      this(tree,tree.getSortColumn());
-    }
-
-    /** create storage data comparator
-     * @param tree storage tree
-     */
-    EntityIndexDataComparator(Table table)
-    {
-      this(table,table.getSortColumn());
-    }
-
-    /** compare job index data
-     * @param entityIndexData1, entityIndexData2 job data to compare
-     * @return -1 iff entityIndexData1 < entityIndexData2,
-                0 iff entityIndexData1 = entityIndexData2,
-                1 iff entityIndexData1 > entityIndexData2
-     */
-    public int compare(EntityIndexData entityIndexData1, EntityIndexData entityIndexData2)
-    {
-      switch (sortMode)
-      {
-        case SORTMODE_NAME:
-          return entityIndexData1.title.compareTo(entityIndexData2.title);
-        case SORTMODE_SIZE:
-          if      (entityIndexData1.size < entityIndexData2.size) return -1;
-          else if (entityIndexData1.size > entityIndexData2.size) return  1;
-          else                                                    return  0;
-        case SORTMODE_CREATED_DATETIME:
-          if      (entityIndexData1.dateTime < entityIndexData2.dateTime) return -1;
-          else if (entityIndexData1.dateTime > entityIndexData2.dateTime) return  1;
-          else                                                            return  0;
-        default:
-          return 0;
-      }
-    }
-
-    /** convert data to string
-     * @return string
-     */
-    public String toString()
-    {
-      return "EntityIndexDataComparator {"+sortMode+"}";
     }
   }
 
@@ -894,15 +726,45 @@ public class TabRestore
   class StorageIndexData extends IndexData
   {
     public long                  storageId;                // database storage id
-    public long                  entityId;                 // database entity id
     public String                jobName;                  // job name or null
     public Settings.ArchiveTypes archiveType;              // archive type
     public IndexModes            indexMode;                // mode of index
     public long                  lastCheckedDateTime;      // last checked date/time
 
+    private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
+    {
+      public void update(TreeItem treeItem, IndexData indexData)
+      {
+        StorageIndexData storageIndexData = (StorageIndexData)indexData;
+
+        Widgets.updateTreeItem(treeItem,
+                               (Object)storageIndexData,
+                               storageIndexData.name,
+                               Units.formatByteSize(storageIndexData.size),
+                               simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)),
+                               storageIndexData.indexState.toString()
+                              );
+      }
+    };
+
+    private final TableItemUpdateRunnable tableItemUpdateRunnable = new TableItemUpdateRunnable()
+    {
+      public void update(TableItem tableItem, IndexData indexData)
+      {
+         StorageIndexData storageIndexData = (StorageIndexData)indexData;
+
+         Widgets.updateTableItem(widgetStorageTable,
+                                 (Object)storageIndexData,
+                                 storageIndexData.name,
+                                 Units.formatByteSize(storageIndexData.size),
+                                 simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)),
+                                 storageIndexData.indexState.toString()
+                                );
+      }
+    };
+
     /** create storage data index
      * @param storageId database storage id
-     * @param entityId database entity id
      * @param jobName job name or null
      * @param archiveType archive type
      * @param name name of storage
@@ -914,11 +776,10 @@ public class TabRestore
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    StorageIndexData(long storageId, long entityId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    StorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       super(name,dateTime,size,title,errorMessage);
       this.storageId           = storageId;
-      this.entityId            = entityId;
       this.jobName             = jobName;
       this.archiveType         = archiveType;
       this.indexState          = indexState;
@@ -927,8 +788,7 @@ public class TabRestore
     }
 
     /** create storage data
-     * @param id database id
-     * @param entityId database entity id
+     * @param storageId database storage id
      * @param jobName job name
      * @param archiveType archive type
      * @param name name of storage
@@ -936,13 +796,13 @@ public class TabRestore
      * @param title title to show
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
-    StorageIndexData(long id, long entityId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, String title, long lastCheckedDateTime)
+    StorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, String title, long lastCheckedDateTime)
     {
-      this(id,entityId,jobName,archiveType,name,dateTime,0L,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+      this(storageId,jobName,archiveType,name,dateTime,0L,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
     }
 
     /** create storage data
-     * @param id database id
+     * @param storageId database storage id
      * @param entityId database entity id
      * @param jobName job name
      * @param archiveType archive type
@@ -950,9 +810,9 @@ public class TabRestore
      * @param uuid uuid
      * @param title title to show
      */
-    StorageIndexData(long id, long entityId, String jobName, Settings.ArchiveTypes archiveType, String name, String title)
+    StorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, String title)
     {
-      this(id,entityId,jobName,archiveType,name,0L,title,0L);
+      this(storageId,jobName,archiveType,name,0L,title,0L);
     }
 
     /** set tree item reference
@@ -960,43 +820,11 @@ public class TabRestore
      */
     public void setTreeItem(TreeItem treeItem)
     {
-      final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
-      {
-        public void update(TreeItem treeItem, IndexData indexData)
-        {
-          StorageIndexData storageIndexData = (StorageIndexData)indexData;
-
-          Widgets.updateTreeItem(treeItem,
-                                 (Object)storageIndexData,
-                                 storageIndexData.name,
-                                 Units.formatByteSize(storageIndexData.size),
-                                 simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)),
-                                 storageIndexData.indexState.toString()
-                                );
-        }
-      };
-
       setTreeItem(treeItem,treeItemUpdateRunnable);
     }
 
     public void setTableItem(TableItem tableItem)
     {
-      final TableItemUpdateRunnable tableItemUpdateRunnable = new TableItemUpdateRunnable()
-      {
-        public void update(TableItem tableItem, IndexData indexData)
-        {
-           StorageIndexData storageIndexData = (StorageIndexData)indexData;
-
-           Widgets.updateTableItem(widgetStorageTable,
-                                   (Object)storageIndexData,
-                                   storageIndexData.name,
-                                   Units.formatByteSize(storageIndexData.size),
-                                   simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)),
-                                   storageIndexData.indexState.toString()
-                                  );
-        }
-      };
-
       setTableItem(tableItem,tableItemUpdateRunnable);
     }
 
@@ -1013,99 +841,9 @@ public class TabRestore
      */
     public String toString()
     {
-      return "StorageIndexData {"+entityId+", name="+name+", created="+dateTime+", size="+size+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+", checked="+isChecked()+"}";
+      return "StorageIndexData {"+name+", created="+dateTime+", size="+size+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+", checked="+isChecked()+"}";
     }
   };
-
-  /** storage index data comparator
-   */
-  class StorageIndexDataComparator implements Comparator<StorageIndexData>
-  {
-    // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_NAME             = 0;
-    private final static int SORTMODE_SIZE             = 1;
-    private final static int SORTMODE_CREATED_DATETIME = 2;
-    private final static int SORTMODE_STATE            = 3;
-
-    private int sortMode;
-
-    /** create storage data comparator
-     * @param tree storage tree
-     * @param sortColumn sort column
-     */
-    StorageIndexDataComparator(Tree tree, TreeColumn sortColumn)
-    {
-      if      (tree.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (tree.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
-      else if (tree.getColumn(2) == sortColumn) sortMode = SORTMODE_CREATED_DATETIME;
-      else if (tree.getColumn(3) == sortColumn) sortMode = SORTMODE_STATE;
-      else                                      sortMode = SORTMODE_NAME;
-    }
-
-    /** create storage data comparator
-     * @param table storage table
-     * @param sortColumn sort column
-     */
-    StorageIndexDataComparator(Table table, TableColumn sortColumn)
-    {
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_CREATED_DATETIME;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_STATE;
-      else                                       sortMode = SORTMODE_NAME;
-    }
-
-    /** create storage data comparator
-     * @param tree storage tree
-     */
-    StorageIndexDataComparator(Tree tree)
-    {
-      this(tree,tree.getSortColumn());
-    }
-
-    /** create storage data comparator
-     * @param tree storage tree
-     */
-    StorageIndexDataComparator(Table table)
-    {
-      this(table,table.getSortColumn());
-    }
-
-    /** compare storage index data
-     * @param storageIndexData1, storageIndexData2 storage data to compare
-     * @return -1 iff storageIndexData1 < storageIndexData2,
-                0 iff storageIndexData1 = storageIndexData2,
-                1 iff storageIndexData1 > storageIndexData2
-     */
-    public int compare(StorageIndexData storageIndexData1, StorageIndexData storageIndexData2)
-    {
-      switch (sortMode)
-      {
-        case SORTMODE_NAME:
-          return storageIndexData1.title.compareTo(storageIndexData2.title);
-        case SORTMODE_SIZE:
-          if      (storageIndexData1.size < storageIndexData2.size) return -1;
-          else if (storageIndexData1.size > storageIndexData2.size) return  1;
-          else                                                      return  0;
-        case SORTMODE_CREATED_DATETIME:
-          if      (storageIndexData1.dateTime < storageIndexData2.dateTime) return -1;
-          else if (storageIndexData1.dateTime > storageIndexData2.dateTime) return  1;
-          else                                                              return  0;
-        case SORTMODE_STATE:
-          return storageIndexData1.indexState.compareTo(storageIndexData2.indexState);
-        default:
-          return 0;
-      }
-    }
-
-    /** convert data to string
-     * @return string
-     */
-    public String toString()
-    {
-      return "StorageIndexDataComparator {"+sortMode+"}";
-    }
-  }
 
   /** storage data map
    */
@@ -1285,29 +1023,27 @@ public class TabRestore
 
     /** update storage data index
      * @param storageId database storage id
-     * @param entityId database entity id
      * @param jobName job name
      * @param archiveType archive type
      * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
      * @param size size of storage [byte]
-     * @param title title to show
      * @param indexState storage index state
      * @param indexMode storage index mode
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    public synchronized StorageIndexData updateStorageIndexData(long storageId, long entityId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    public synchronized StorageIndexData updateStorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, long size, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       StorageIndexData storageIndexData = storageIndexDataMap.get(storageId);
       if (storageIndexData != null)
       {
-        storageIndexData.entityId            = entityId;
         storageIndexData.jobName             = jobName;
         storageIndexData.archiveType         = archiveType;
         storageIndexData.name                = name;
         storageIndexData.dateTime            = dateTime;
         storageIndexData.size                = size;
+        storageIndexData.title               = new File(name).getName();
         storageIndexData.indexState          = indexState;
         storageIndexData.indexMode           = indexMode;
         storageIndexData.lastCheckedDateTime = lastCheckedDateTime;
@@ -1316,7 +1052,6 @@ public class TabRestore
       else
       {
         storageIndexData = new StorageIndexData(storageId,
-                                                entityId,
                                                 jobName,
                                                 archiveType,
                                                 name,
@@ -1355,17 +1090,17 @@ public class TabRestore
   }
 
   /** find index for insert of item in sorted storage data list
-   * @param storageIndexData data of tree item
+   * @param indexData index data
    * @return index in tree
    */
-  private int findStorageTreeIndex(TreeItem treeItem, EntityIndexData entityIndexData)
+  private int findStorageTreeIndex(IndexData indexData)
   {
-    TreeItem                  treeItems[]               = treeItem.getItems();
-    EntityIndexDataComparator entityIndexDataComparator = new EntityIndexDataComparator(widgetStorageTree);
+    TreeItem            treeItems[]         = widgetStorageTree.getItems();
+    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
     int index = 0;
     while (   (index < treeItems.length)
-           && (entityIndexDataComparator.compare(entityIndexData,(EntityIndexData)treeItems[index].getData()) > 0)
+           && (indexDataComparator.compare(indexData,(IndexData)treeItems[index].getData()) > 0)
           )
     {
       index++;
@@ -1374,18 +1109,39 @@ public class TabRestore
     return index;
   }
 
-  /** find index for insert of item in sorted storage data list
+  /** find index for insert of item in sorted index data tree
+   * @param treeItem tree item
+   * @param indexData index data
+   * @return index in tree
+   */
+  private int findStorageTreeIndex(TreeItem treeItem, IndexData indexData)
+  {
+    TreeItem            treeItems[]         = treeItem.getItems();
+    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
+
+    int index = 0;
+    while (   (index < treeItems.length)
+           && (indexDataComparator.compare(indexData,(IndexData)treeItems[index].getData()) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
+  }
+
+  /** find index for insert of item in sorted storage data table
    * @param storageIndexData data of tree item
    * @return index in table
    */
-  private int findStorageListIndex(StorageIndexData storageIndexData)
+  private int findStorageTableIndex(StorageIndexData storageIndexData)
   {
-    TableItem                  tableItems[]          = widgetStorageTable.getItems();
-    StorageIndexDataComparator storageIndexDataComparator = new StorageIndexDataComparator(widgetStorageTable);
+    TableItem           tableItems[]        = widgetStorageTable.getItems();
+    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable);
 
     int index = 0;
     while (   (index < tableItems.length)
-           && (storageIndexDataComparator.compare(storageIndexData,(StorageIndexData)tableItems[index].getData()) > 0)
+           && (indexDataComparator.compare(storageIndexData,(StorageIndexData)tableItems[index].getData()) > 0)
           )
     {
       index++;
@@ -1411,6 +1167,7 @@ public class TabRestore
     {
       super();
       setDaemon(true);
+      setName("BARControl Update Storage");
     }
 
     /** run status update thread
@@ -1909,7 +1666,6 @@ public class TabRestore
           try
           {
             long                  storageId           = resultMap.getLong  ("storageId"                              );
-//            long         entityId            = resultMap.getLong  ("entityId"                    );
             String                jobUUID             = resultMap.getString("jobUUID"                                );
             String                scheduleUUID        = resultMap.getString("scheduleUUID"                           );
             String                jobName             = resultMap.getString("jobName"                                );
@@ -1924,13 +1680,11 @@ public class TabRestore
 
             // add/update storage data
             final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-0,//                                                                                          entityId,
                                                                                           jobName,
                                                                                           archiveType,
                                                                                           name,
                                                                                           dateTime,
                                                                                           size,
-                                                                                          new File(name).getName(),
                                                                                           indexState,
                                                                                           indexMode,
                                                                                           lastCheckedDateTime,
@@ -2057,7 +1811,6 @@ public class TabRestore
           try
           {
             long                  storageId           = resultMap.getLong  ("storageId"                              );
-//            long         entityId            = resultMap.getLong  ("entityId"                      );
             String                jobUUID             = resultMap.getString("jobUUID"                                );
             String                scheduleUUID        = resultMap.getString("scheduleUUID"                           );
             String                jobName             = resultMap.getString("jobName"                                );
@@ -2072,13 +1825,11 @@ public class TabRestore
 
             // add/update to index map
             final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-0,//                                                                                          entityId,
                                                                                           jobName,
                                                                                           archiveType,
                                                                                           name,
                                                                                           dateTime,
                                                                                           size,
-                                                                                          new File(name).getName(),
                                                                                           indexState,
                                                                                           indexMode,
                                                                                           lastCheckedDateTime,
@@ -2095,7 +1846,7 @@ public class TabRestore
                 {
                   // insert table item
                   tableItem = Widgets.insertTableItem(widgetStorageTable,
-                                                      findStorageListIndex(storageIndexData),
+                                                      findStorageTableIndex(storageIndexData),
                                                       (Object)storageIndexData
                                                      );
                   storageIndexData.setTableItem(tableItem);
@@ -2420,6 +2171,7 @@ public class TabRestore
     {
       super();
       setDaemon(true);
+      setName("BARControl Update Entry");
     }
 
     /** run status update thread
@@ -3133,11 +2885,11 @@ break;
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          TreeColumn                 treeColumn            = (TreeColumn)selectionEvent.widget;
-          StorageIndexDataComparator storageIndexDataComparator = new StorageIndexDataComparator(widgetStorageTree,treeColumn);
+          TreeColumn          treeColumn          = (TreeColumn)selectionEvent.widget;
+          IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree,treeColumn);
           synchronized(widgetStorageTree)
           {
-            Widgets.sortTreeColumn(widgetStorageTree,treeColumn,storageIndexDataComparator);
+            Widgets.sortTreeColumn(widgetStorageTree,treeColumn,indexDataComparator);
           }
         }
       };
@@ -3506,33 +3258,33 @@ break;
       widgetStorageTable = Widgets.newTable(tab,SWT.CHECK);
       widgetStorageTable.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0}));
       Widgets.layout(widgetStorageTable,1,0,TableLayoutData.NSWE);
-      SelectionListener storageListColumnSelectionListener = new SelectionListener()
+      SelectionListener storageTableColumnSelectionListener = new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          TableColumn                tableColumn           = (TableColumn)selectionEvent.widget;
-          StorageIndexDataComparator storageIndexDataComparator = new StorageIndexDataComparator(widgetStorageTable,tableColumn);
+          TableColumn         tableColumn         = (TableColumn)selectionEvent.widget;
+          IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable,tableColumn);
           synchronized(widgetStorageTable)
           {
-            Widgets.sortTableColumn(widgetStorageTable,tableColumn,storageIndexDataComparator);
+            Widgets.sortTableColumn(widgetStorageTable,tableColumn,indexDataComparator);
           }
         }
       };
       tableColumn = Widgets.addTableColumn(widgetStorageTable,0,"Name",    SWT.LEFT, 450,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
-      tableColumn.addSelectionListener(storageListColumnSelectionListener);
+      tableColumn.addSelectionListener(storageTableColumnSelectionListener);
       tableColumn = Widgets.addTableColumn(widgetStorageTable,1,"Size",    SWT.RIGHT,100,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for size."));
-      tableColumn.addSelectionListener(storageListColumnSelectionListener);
+      tableColumn.addSelectionListener(storageTableColumnSelectionListener);
       tableColumn = Widgets.addTableColumn(widgetStorageTable,2,"Modified",SWT.LEFT, 150,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for modification date/time."));
-      tableColumn.addSelectionListener(storageListColumnSelectionListener);
+      tableColumn.addSelectionListener(storageTableColumnSelectionListener);
       tableColumn = Widgets.addTableColumn(widgetStorageTable,3,"State",   SWT.LEFT,  60,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for state."));
-      tableColumn.addSelectionListener(storageListColumnSelectionListener);
+      tableColumn.addSelectionListener(storageTableColumnSelectionListener);
       widgetStorageTable.addListener(SWT.MouseDoubleClick,new Listener()
       {
         public void handleEvent(final Event event)
@@ -4881,46 +4633,6 @@ break;
     return false;
   }
 
-  /** find index for insert of item in sorted storage data list
-   * @param entityIndexData data of tree item
-   * @return index in tree
-   */
-  private int findStorageTreeIndex(UUIDIndexData uuidIndexData)
-  {
-    TreeItem                treeItems[]             = widgetStorageTree.getItems();
-    UUIDIndexDataComparator uuidIndexDataComparator = new UUIDIndexDataComparator(widgetStorageTree);
-
-    int index = 0;
-    while (   (index < treeItems.length)
-           && (uuidIndexDataComparator.compare(uuidIndexData,(UUIDIndexData)treeItems[index].getData()) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
-  }
-
-  /** find index for insert of item in sorted storage data list
-   * @param storageIndexData data of tree item
-   * @return index in tree
-   */
-  private int findStorageTreeIndex(TreeItem treeItem, StorageIndexData storageIndexData)
-  {
-    TreeItem                   treeItems[]           = treeItem.getItems();
-    StorageIndexDataComparator storageIndexDataComparator = new StorageIndexDataComparator(widgetStorageTree);
-
-    int index = 0;
-    while (   (index < treeItems.length)
-           && (storageIndexDataComparator.compare(storageIndexData,(StorageIndexData)treeItems[index].getData()) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
-  }
-
   /** update storage tree item
    * @param treeItem tree item to update
    * @param storagePattern storage pattern or null
@@ -5090,13 +4802,11 @@ break;
 
               // add/update storage data
               final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-0,//entityId
                                                                                             jobName,
                                                                                             archiveType,
                                                                                             name,
                                                                                             dateTime,
                                                                                             size,
-                                                                                            new File(name).getName(),
                                                                                             indexState,
                                                                                             indexMode,
                                                                                             lastCheckedDateTime,
