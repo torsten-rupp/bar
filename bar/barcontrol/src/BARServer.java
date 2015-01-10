@@ -641,6 +641,7 @@ class ReadThread extends Thread
   {
     this.input = input;
     setDaemon(true);
+    setName("BARControl Server Read");
 
     quitFlag = false;
   }
