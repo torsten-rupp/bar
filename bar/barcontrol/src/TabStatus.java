@@ -294,6 +294,8 @@ public class TabStatus
     TabStatusUpdateThread(TabStatus tabStatus)
     {
       this.tabStatus = tabStatus;
+      setDaemon(true);
+      setName("BARControl Update Status");
     }
 
     /** run status update thread
@@ -1134,7 +1136,7 @@ public class TabStatus
       try
       {
         // get job list
-        HashMap<String,JobData> newJobDataMap = new HashMap<String,JobData>();
+        HashMap<String,JobData>   newJobDataMap      = new HashMap<String,JobData>();
         String[]                  resultErrorMessage = new String[1];
         final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
         int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
@@ -1282,10 +1284,7 @@ public class TabStatus
    */
   public void selectJob(String uuid)
   {
-    synchronized(jobDataMap)
-    {
-      setSelectedJob(jobDataMap.get(uuid));
-    }
+    setSelectedJob(jobDataMap.get(uuid));
   }
 
   /** set selected job
@@ -1293,15 +1292,12 @@ public class TabStatus
    */
   public void setSelectedJob(JobData jobData)
   {
-    synchronized(jobDataMap)
-    {
-      selectedJobData = jobData;
+    selectedJobData = jobData;
 
-      Widgets.setSelectedTableItem(widgetJobTable,selectedJobData);
-      widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+((selectedJobData != null) ? selectedJobData.name : "")+"'");
+    Widgets.setSelectedTableItem(widgetJobTable,selectedJobData);
+    widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+((selectedJobData != null) ? selectedJobData.name : "")+"'");
 
-      if (tabJobs != null) tabJobs.setSelectedJob(selectedJobData);
-    }
+    if (tabJobs != null) tabJobs.setSelectedJob(selectedJobData);
   }
 
   //-----------------------------------------------------------------------
