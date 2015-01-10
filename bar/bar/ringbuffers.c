@@ -370,7 +370,7 @@ void __RingBuffer_done(const char *__fileName__, uint __lineNb__, RingBuffer *ri
           #ifdef HAVE_BACKTRACE
             debugDumpCurrentStackTrace(stderr,"",0);
           #endif /* HAVE_BACKTRACE */
-          HALT_INTERNAL_ERROR("");
+          HALT_INTERNAL_ERROR("ringbuffer done fail");
         }
       }
       pthread_mutex_unlock(&debugRingBufferLock);
