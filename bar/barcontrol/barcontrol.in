@@ -75,7 +75,8 @@ if test $rc -ne 0; then
 fi
 
 # run main
-$JAVA $JAVA_FLAGS -jar $BARCONTROL_JAR "$@"
+# Note: do not use GTK3. Buggy with SWT 4.4
+SWT_GTK3=0 $JAVA $JAVA_FLAGS -jar $BARCONTROL_JAR "$@"
 rc=$?
 
 exit $rc

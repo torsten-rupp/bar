@@ -89,6 +89,8 @@ GETTEXT_JAR      = $(SOURCE_DIR)/jars/gettext-commons-0.9.6.jar
 
 CLASSPATH        = classes:$(SWT_JAR):$(GETTEXT_JAR)
 
+ENVIRONMENT      = SWT_GTK3=0
+
 #---------------------------------- commands----------------------------------
 
 CAT        = cat
@@ -479,37 +481,37 @@ compile: $(OBJECTS)
 .PHONY: run runde runjp rundebug runxdebug runxxdebug
 run: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(OPTIONS)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(OPTIONS)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 runde: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -Duser.language=de -classpath $(CLASSPATH) BARControl $(OPTIONS)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=de -classpath $(CLASSPATH) BARControl $(OPTIONS)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 runjp: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -Duser.language=jp -classpath $(CLASSPATH) BARControl $(OPTIONS)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=jp -classpath $(CLASSPATH) BARControl $(OPTIONS)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 rundebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug=1 $(OPTIONS)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug=1 $(OPTIONS)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 runxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug=2 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug=2 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 runxxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug=3 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug=3 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -517,25 +519,25 @@ endif
 .PHONY: rundev rundevdebug rundevxdebug rundevxxdebug
 rundev: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 rundevdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug=1 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug=1 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 rundevxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug=2 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug=2 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 rundevxxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug=3 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug=3 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
