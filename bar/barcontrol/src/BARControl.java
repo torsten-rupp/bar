@@ -1667,6 +1667,8 @@ public class BARControl
     final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     final char             MAIL_AT     = '@';
 
+    Thread.currentThread().setName("BARControl");
+
 /*
 // xgettext -L java -k -ktr -o barcontrol.pot ../src/*.java
 // msgmerge -U german.po barcontrol.pot
