@@ -50,10 +50,10 @@ typedef enum
 } DatabaseTypes;
 
 // no id
-#define DATABASE_ID_NONE -1LL
+#define DATABASE_ID_NONE 0LL
 
 // any id
-#define DATABASE_ID_ANY 0LL
+#define DATABASE_ID_ANY -1LL
 
 /***************************** Datatypes *******************************/
 

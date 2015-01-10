@@ -644,7 +644,7 @@ sqlite3_busy_handler(databaseHandle->handle,busyHandler,NULL);
                          );
 
   #ifdef DATABASE_DEBUG
-    fprintf(stderr,"Database debug: open %s: %p\n",fileName,databaseHandle);
+    fprintf(stderr,"Database debug: open '%s'\n",fileName);
   #endif
 
   #ifdef NDEBUG
@@ -675,7 +675,7 @@ sqlite3_busy_handler(databaseHandle->handle,busyHandler,NULL);
   #endif /* NDEBUG */
 
   #ifdef DATABASE_DEBUG
-    fprintf(stderr,"Database debug: close: %p\n",databaseHandle);
+    fprintf(stderr,"Database debug: close\n");
   #endif
 
   sqlite3_close(databaseHandle->handle);
@@ -1000,6 +1000,20 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
   return ERROR_NONE;
 }
 
+#if 0
+int XXX(void*userdata,int argc,const char *argv[], const char *columns[])
+{
+int i;
+//fprintf(stderr,"%s, %d:\n",__FILE__,__LINE__);
+for (i = 0; i < argc; i++)
+{
+fprintf(stderr,"  %s=%s",columns[i],argv[i]);
+}
+fprintf(stderr," \n");
+return 0;
+}
+#endif
+
 Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
                         DatabaseHandle      *databaseHandle,
                         const char          *command,
@@ -1038,6 +1052,21 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: prepare command: %s\n",String_cString(sqlString));
     #endif
+#if 0
+{
+String s = String_new();
+String_format(s,"EXPLAIN QUERY PLAN %s",String_cString(sqlString));
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(s));
+sqlite3_exec(databaseHandle->handle,
+                                String_cString(s),
+                                XXX,
+                                NULL,
+                                NULL
+                               );
+String_delete(s);
+//exit(1);
+}
+#endif
     sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
                                       String_cString(sqlString),
                                       -1,
