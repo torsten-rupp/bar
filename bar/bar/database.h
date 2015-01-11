@@ -49,11 +49,16 @@ typedef enum
   DATABASE_TYPE_BLOB
 } DatabaseTypes;
 
-// no id
+// special database ids
 #define DATABASE_ID_NONE 0LL
-
-// any id
 #define DATABASE_ID_ANY -1LL
+
+// ordering mode
+typedef enum
+{
+  DATABASE_ORDERING_ASCENDING,
+  DATABASE_ORDERING_DESCENDING
+} DatabaseOrdering;
 
 /***************************** Datatypes *******************************/
 
