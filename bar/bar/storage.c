@@ -194,30 +194,33 @@ LOCAL bool initFTPPassword(const String hostName, const String loginName, const 
   String        s;
   bool          initFlag;
 
-  assert(jobOptions != NULL);
+  initFlag = FALSE;
 
-  initFlag = TRUE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  if (jobOptions != NULL)
   {
-    if (jobOptions->ftpServer.password == NULL)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
-      if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+      if (jobOptions->ftpServer.password == NULL)
       {
-        s = String_newCString("FTP login password for ");
-        if (!String_isEmpty(loginName))
+        if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
         {
-          String_format(s,"'%S@%S'",loginName,hostName);
+          s = String_newCString("FTP login password for ");
+          if (!String_isEmpty(loginName))
+          {
+            String_format(s,"'%S@%S'",loginName,hostName);
+          }
+          else
+          {
+            String_format(s,"'%S'",hostName);
+          }
+          initFlag = Password_input(defaultFTPPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
+          String_delete(s);
+          initFlag = TRUE;
         }
-        else
-        {
-          String_format(s,"'%S'",hostName);
-        }
-        initFlag = Password_input(defaultFTPPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
-        String_delete(s);
       }
       else
       {
-        initFlag = FALSE;
+        initFlag = TRUE;
       }
     }
   }
@@ -244,30 +247,33 @@ LOCAL bool initSSHPassword(const String hostName, const String loginName, const 
   String        s;
   bool          initFlag;
 
-  assert(jobOptions != NULL);
+  initFlag = FALSE;
 
-  initFlag = TRUE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  if (jobOptions != NULL)
   {
-    if (jobOptions->sshServer.password == NULL)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
-      if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+      if (jobOptions->sshServer.password == NULL)
       {
-        s = String_newCString("SSH login password for ");
-        if (!String_isEmpty(loginName))
+        if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
         {
-          String_format(s,"'%S@%S'",loginName,hostName);
+          s = String_newCString("SSH login password for ");
+          if (!String_isEmpty(loginName))
+          {
+            String_format(s,"'%S@%S'",loginName,hostName);
+          }
+          else
+          {
+            String_format(s,"'%S'",hostName);
+          }
+          initFlag = Password_input(defaultSSHPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
+          String_delete(s);
+          initFlag = TRUE;
         }
-        else
-        {
-          String_format(s,"'%S'",hostName);
-        }
-        initFlag = Password_input(defaultSSHPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
-        String_delete(s);
       }
       else
       {
-        initFlag = FALSE;
+        initFlag = TRUE;
       }
     }
   }
@@ -1113,24 +1119,27 @@ LOCAL bool initWebDAVPassword(const String hostName, const String loginName, con
   String        s;
   bool          initFlag;
 
-  assert(jobOptions != NULL);
+  initFlag = FALSE;
 
-  initFlag = TRUE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  if (jobOptions != NULL)
   {
-    if (jobOptions->webDAVServer.password == NULL)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
-      if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+      if (jobOptions->webDAVServer.password == NULL)
       {
-        s = !String_isEmpty(loginName)
-              ? String_format(String_new(),"WebDAV login password for %S@%S",loginName,hostName)
-              : String_format(String_new(),"WebDAV login password for %S",hostName);
-        initFlag = Password_input(defaultWebDAVPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
-        String_delete(s);
+        if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+        {
+          s = !String_isEmpty(loginName)
+                ? String_format(String_new(),"WebDAV login password for %S@%S",loginName,hostName)
+                : String_format(String_new(),"WebDAV login password for %S",hostName);
+          initFlag = Password_input(defaultWebDAVPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
+          String_delete(s);
+          initFlag = TRUE;
+        }
       }
       else
       {
-        initFlag = FALSE;
+        initFlag = TRUE;
       }
     }
   }
@@ -3631,7 +3640,6 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           }
           if (error != ERROR_NONE)
           {
-            freeServer(storageHandle->webdav.server);
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
