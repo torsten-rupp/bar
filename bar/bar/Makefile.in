@@ -593,35 +593,35 @@ run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
 .PHONY: rundev rundevd rundevddd rundevvalgrind rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl
 rundev: bar@EXEEXT@
 	$(INSTALL) -d jobs
-	nice ./bar@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910
+	nice ./bar@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundevd: bar-debug@EXEEXT@
 	$(INSTALL) -d jobs
-	nice ./bar-debug@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910
+	nice ./bar-debug@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundevddd: bar-debug@EXEEXT@
 	$(INSTALL) -d jobs
-	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910
+	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundevvalgrind: bar-valgrind
 	$(INSTALL) -d jobs
-	$(VALGRIND) ./bar-valgrind --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910
+	$(VALGRIND) ./bar-valgrind --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundev_en: bar@EXEEXT@
 	$(INSTALL) -d jobs
-	__BAR_LOCALE__=$(PWD)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910
+	__BAR_LOCALE__=$(PWD)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundev_de: bar@EXEEXT@
 	$(INSTALL) -d jobs
-	__BAR_LOCALE__=$(PWD)/po LANGUAGE=de_DE nice ./bar@EXEEXT@ --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910
+	__BAR_LOCALE__=$(PWD)/po LANGUAGE=de_DE nice ./bar@EXEEXT@ --daemon -D --index-database=bar-index.db --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundev_jp: bar@EXEEXT@
 	$(INSTALL) -d jobs
-	__BAR_LOCALE__=$(PWD)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910
+	__BAR_LOCALE__=$(PWD)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundev_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
-	nice ./bar@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 --server-tls-port=39910
+	nice ./bar@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem:
 	$(MAKE) -C .. keys
