@@ -3107,11 +3107,11 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   }
 
   // mount device if needed
-  if ((storageHandle->jobOptions != NULL) && !String_isEmpty(storageHandle->jobOptions->mountDeviceName))
+  if ((jobOptions != NULL) && !String_isEmpty(jobOptions->mountDeviceName))
   {
-    if (!Device_isMounted(storageHandle->jobOptions->mountDeviceName))
+    if (!Device_isMounted(jobOptions->mountDeviceName))
     {
-      error = Device_mount(storageHandle->jobOptions->mountDeviceName);
+      error = Device_mount(jobOptions->mountDeviceName);
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
@@ -3716,39 +3716,25 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
         switch (storageHandle->storageSpecifier.type)
         {
           case STORAGE_TYPE_CD:
-            volumeSize = (jobOptions->volumeSize != MAX_INT64)
-                          ? jobOptions->volumeSize
-                          : ((globalOptions.cd.volumeSize != MAX_INT64)
-                            ? globalOptions.cd.volumeSize
-                            : (jobOptions->errorCorrectionCodesFlag
-                              ? CD_VOLUME_ECC_SIZE
-                              : CD_VOLUME_SIZE
-                             )
-                           );
+            volumeSize = CD_VOLUME_SIZE;
+            if      ((jobOptions != NULL) && (jobOptions->volumeSize != MAX_INT64)) volumeSize = jobOptions->volumeSize;
+            else if (globalOptions.cd.volumeSize != MAX_INT64                     ) volumeSize = globalOptions.cd.volumeSize;
+            else if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag ) volumeSize = CD_VOLUME_ECC_SIZE;
+            else                                                                    volumeSize = CD_VOLUME_SIZE;
             maxMediumSize = MAX_CD_SIZE;
             break;
           case STORAGE_TYPE_DVD:
-            volumeSize = (jobOptions->volumeSize != MAX_INT64)
-                          ? jobOptions->volumeSize
-                          : ((globalOptions.dvd.volumeSize != MAX_INT64)
-                            ? globalOptions.dvd.volumeSize
-                            : (jobOptions->errorCorrectionCodesFlag
-                              ? DVD_VOLUME_ECC_SIZE
-                              : DVD_VOLUME_SIZE
-                             )
-                           );
+            if      ((jobOptions != NULL) && (jobOptions->volumeSize != MAX_INT64)) volumeSize = jobOptions->volumeSize;
+            else if (globalOptions.dvd.volumeSize != MAX_INT64                    ) volumeSize = globalOptions.dvd.volumeSize;
+            else if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag ) volumeSize = DVD_VOLUME_ECC_SIZE;
+            else                                                                    volumeSize = DVD_VOLUME_SIZE;
             maxMediumSize = MAX_DVD_SIZE;
             break;
           case STORAGE_TYPE_BD:
-            volumeSize = (jobOptions->volumeSize != MAX_INT64)
-                          ? jobOptions->volumeSize
-                          : ((globalOptions.bd.volumeSize != MAX_INT64)
-                            ? globalOptions.bd.volumeSize
-                            : (jobOptions->errorCorrectionCodesFlag
-                              ? BD_VOLUME_ECC_SIZE
-                              : BD_VOLUME_SIZE
-                            )
-                           );
+            if      ((jobOptions != NULL) && (jobOptions->volumeSize != MAX_INT64)) volumeSize = jobOptions->volumeSize;
+            else if (globalOptions.bd.volumeSize != MAX_INT64                     ) volumeSize = globalOptions.bd.volumeSize;
+            else if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag ) volumeSize = BD_VOLUME_ECC_SIZE;
+            else                                                                    volumeSize = BD_VOLUME_SIZE;
             maxMediumSize = MAX_BD_SIZE;
             break;
           default:
@@ -3757,12 +3743,12 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
             #endif /* NDEBUG */
             break;
         }
-        if (fileSystemInfo.freeBytes < (volumeSize+maxMediumSize*(jobOptions->errorCorrectionCodesFlag?2:1)))
+        if (fileSystemInfo.freeBytes < (volumeSize+maxMediumSize*(((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag) ? 2 : 1)))
         {
           printWarning("Insufficient space in temporary directory '%s' for medium (%.1f%s free, %.1f%s recommended)!\n",
                        String_cString(tmpDirectory),
                        BYTES_SHORT(fileSystemInfo.freeBytes),BYTES_UNIT(fileSystemInfo.freeBytes),
-                       BYTES_SHORT((volumeSize+maxMediumSize*(jobOptions->errorCorrectionCodesFlag?2:1))),BYTES_UNIT((volumeSize+maxMediumSize*(jobOptions->errorCorrectionCodesFlag?2:1)))
+                       BYTES_SHORT((volumeSize+maxMediumSize*(((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag ? 2 : 1)))),BYTES_UNIT((volumeSize+maxMediumSize*(((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag ? 2 : 1))))
                       );
         }
 
@@ -3796,10 +3782,10 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
         storageHandle->opticalDisk.write.writePostProcessCommand= opticalDisk.writePostProcessCommand;
         storageHandle->opticalDisk.write.writeCommand           = opticalDisk.writeCommand;
         storageHandle->opticalDisk.write.writeImageCommand      = opticalDisk.writeImageCommand;
-        storageHandle->opticalDisk.write.steps                  = jobOptions->errorCorrectionCodesFlag?4:1;
+        storageHandle->opticalDisk.write.steps                  = ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag) ? 4 : 1;
         storageHandle->opticalDisk.write.directory              = String_new();
         storageHandle->opticalDisk.write.step                   = 0;
-        if (jobOptions->waitFirstVolumeFlag)
+        if ((jobOptions != NULL) && jobOptions->waitFirstVolumeFlag)
         {
           storageHandle->opticalDisk.write.number        = 0;
           storageHandle->opticalDisk.write.newVolumeFlag = TRUE;
@@ -3824,7 +3810,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           return error;
         }
 
-        if (!jobOptions->noBAROnMediumFlag)
+        if ((jobOptions != NULL) && !jobOptions->noBAROnMediumFlag)
         {
           // store a copy of BAR executable on medium (ignore errors)
           sourceFileName = String_newCString(globalOptions.barExecutable);
@@ -3882,7 +3868,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
         storageHandle->device.writePostProcessCommand= device.writePostProcessCommand;
         storageHandle->device.writeCommand           = device.writeCommand;
         storageHandle->device.directory              = String_new();
-        if (jobOptions->waitFirstVolumeFlag)
+        if ((jobOptions != NULL) && jobOptions->waitFirstVolumeFlag)
         {
           storageHandle->device.number        = 0;
           storageHandle->device.newVolumeFlag = TRUE;
@@ -4066,10 +4052,8 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   }
 
   // unmount device if mounted before
-  if (storageHandle->mountedDeviceFlag)
+  if ((storageHandle->jobOptions != NULL) && storageHandle->mountedDeviceFlag)
   {
-    assert(storageHandle->jobOptions != NULL);
-
     tmpError = Device_umount(storageHandle->jobOptions->mountDeviceName);
     if (tmpError != ERROR_NONE)
     {
