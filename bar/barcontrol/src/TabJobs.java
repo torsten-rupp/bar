@@ -1383,7 +1383,7 @@ public class TabJobs
                                                                                    }
                                                                       );
   private WidgetVariable  compressMinSize         = new WidgetVariable(0);
-  private WidgetVariable  cryptAlgorithm          = new WidgetVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
+  private WidgetVariable  cryptAlgorithm          = new WidgetVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256","SERPENT128","SERPENT192","SERPENT256","CAMELLIA128","CAMELLIA192","CAMELLIA256"});
   private WidgetVariable  cryptType               = new WidgetVariable(new String[]{"none","symmetric","asymmetric"});
   private WidgetVariable  cryptPublicKeyFileName  = new WidgetVariable("");
   private WidgetVariable  cryptPasswordMode       = new WidgetVariable(new String[]{"default","ask","config"});
@@ -3196,7 +3196,7 @@ public class TabJobs
         {
           combo = Widgets.newOptionMenu(composite);
           combo.setToolTipText(BARControl.tr("Encryption method to use."));
-          combo.setItems(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
+          combo.setItems(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256","SERPENT128","SERPENT192","SERPENT256","CAMELLIA128","CAMELLIA192","CAMELLIA256"});
           Widgets.layout(combo,0,0,TableLayoutData.W);
           combo.addSelectionListener(new SelectionListener()
           {
