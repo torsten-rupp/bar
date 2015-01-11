@@ -176,40 +176,40 @@ bool Index_parseMode(const char *name, IndexModes *indexMode);
 /***********************************************************************\
 * Name   : Index_init
 * Purpose: initialize index database
-* Input  : indexDatabaseHandle   - index database handle variable
-*          indexDatabaseFileName - database file name
-* Output : indexDatabaseHandle - index database handle
+* Input  : databaseHandle   - index database handle variable
+*          databaseFileName - database file name
+* Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Index_init(DatabaseHandle *indexDatabaseHandle,
-                    const char     *indexDatabaseFileName
+  Errors Index_init(DatabaseHandle *databaseHandle,
+                    const char     *databaseFileName
                    );
 #else /* not NDEBUG */
   Errors __Index_init(const char     *__fileName__,
                       uint           __lineNb__,
-                      DatabaseHandle *indexDatabaseHandle,
-                      const char     *indexDatabaseFileName
+                      DatabaseHandle *databaseHandle,
+                      const char     *databaseFileName
                      );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Index_done
 * Purpose: deinitialize index database
-* Input  : indexDatabaseHandle - index database handle
+* Input  : databaseHandle - index database handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  void Index_done(DatabaseHandle *indexDatabaseHandle);
+  void Index_done(DatabaseHandle *databaseHandle);
 #else /* not NDEBUG */
   void __Index_done(const char     *__fileName__,
                     uint           __lineNb__,
-                    DatabaseHandle *indexDatabaseHandle
+                    DatabaseHandle *databaseHandle
                    );
 #endif /* NDEBUG */
 
@@ -444,19 +444,23 @@ Errors Index_deleteUUID(DatabaseHandle *databaseHandle,
 
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               DatabaseHandle   *databaseHandle,
-                              const String     jobUUID
+                              const String     jobUUID,
+                              const String     scheduleUUID,
+                              DatabaseOrdering ordering,
+                              ulong            offset
                              );
 
 /***********************************************************************\
 * Name   : Index_getNextEntity
 * Purpose: get next index entity entry
 * Input  : IndexQueryHandle - index query handle
-* Output : databaseId          - database id of entry
-*          jobUUID             - unique job id (can be NULL)
-*          scheduleUUID        - unique schedule id (can be NULL)
-*          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
-*          totalSize           - total storage size [bytes] (can be NULL)
-*          lastErrorMessage    - last storage error message (can be NULL)
+* Output : databaseId       - database id of entry
+*          jobUUID          - unique job id (can be NULL)
+*          scheduleUUID     - unique schedule id (can be NULL)
+*          createdDateTime  - created date/time stamp [s] (can be NULL)
+*          archiveType      - archive type (can be NULL)
+*          totalSize        - total storage size [bytes] (can be NULL)
+*          lastErrorMessage - last storage error message (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -465,8 +469,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          DatabaseId       *databaseId,
                          String           jobUUID,
                          String           scheduleUUID,
+                         uint64           *createdDateTime,
                          ArchiveTypes     *archiveType,
-                         uint64           *lastCreatedDateTime,
                          uint64           *totalSize,
                          String           lastErrorMessage
                         );
@@ -507,7 +511,7 @@ Errors Index_deleteEntity(DatabaseHandle *databaseHandle,
 * Purpose: list storage entries
 * Input  : IndexQueryHandle - index query handle variable
 *          databaseHandle   - database handle
-*          uuid             - unique id or NULL
+*          uuid             - unique job id or NULL
 *          entityId         - entity id or DATABASE_ID_NONE
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
 *          storageName      - storage name pattern (glob) or NULL

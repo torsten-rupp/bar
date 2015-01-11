@@ -74,7 +74,7 @@ LOCAL const struct
 /***********************************************************************\
 * Name   : cleanUp
 * Purpose: clean-up index database
-* Input  : indexDatabaseHandle - index database handle
+* Input  : databaseHandle - index database handle
 * Output : -
 * Return : -
 * Notes  : clean-up steps:
@@ -83,14 +83,14 @@ LOCAL const struct
 *              hardlinks, special
 \***********************************************************************/
 
-LOCAL void cleanUp(DatabaseHandle *indexDatabaseHandle)
+LOCAL void cleanUp(DatabaseHandle *databaseHandle)
 {
   DatabaseQueryHandle databaseQueryHandle;
   String              name;
 
   // remove duplicate entries in meta table
   if (Database_prepare(&databaseQueryHandle,
-                       indexDatabaseHandle,
+                       databaseHandle,
                        "SELECT name FROM meta GROUP BY name"
                       ) == ERROR_NONE
      )
@@ -102,7 +102,7 @@ LOCAL void cleanUp(DatabaseHandle *indexDatabaseHandle)
                               )
           )
     {
-      (void)Database_execute(indexDatabaseHandle,
+      (void)Database_execute(databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM meta \
                               WHERE     name=%'S \
@@ -117,31 +117,31 @@ LOCAL void cleanUp(DatabaseHandle *indexDatabaseHandle)
   }
 
   // fix ids
-  (void)Database_execute(indexDatabaseHandle,
+  (void)Database_execute(databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE storage SET id=rowId WHERE id IS NULL;"
                         );
-  (void)Database_execute(indexDatabaseHandle,
+  (void)Database_execute(databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE files SET id=rowId WHERE id IS NULL;"
                         );
-  (void)Database_execute(indexDatabaseHandle,
+  (void)Database_execute(databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE images SET id=rowId WHERE id IS NULL;"
                         );
-  (void)Database_execute(indexDatabaseHandle,
+  (void)Database_execute(databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE directories SET id=rowId WHERE id IS NULL;"
                         );
-  (void)Database_execute(indexDatabaseHandle,
+  (void)Database_execute(databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE links SET id=rowId WHERE id IS NULL;"
                         );
-  (void)Database_execute(indexDatabaseHandle,
+  (void)Database_execute(databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE hardlinks SET id=rowId WHERE id IS NULL;"
                         );
-  (void)Database_execute(indexDatabaseHandle,
+  (void)Database_execute(databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE special SET id=rowId WHERE id IS NULL;"
                         );
@@ -150,18 +150,18 @@ LOCAL void cleanUp(DatabaseHandle *indexDatabaseHandle)
 /***********************************************************************\
 * Name   : upgradeToVersion2
 * Purpose: upgrade index database to version 2
-* Input  : indexDatabaseHandle - index database handle
+* Input  : databaseHandle - index database handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeToVersion2(DatabaseHandle *indexDatabaseHandle)
+LOCAL Errors upgradeToVersion2(DatabaseHandle *databaseHandle)
 {
   Errors error;
 
   // add table hardlinks
-  error = Database_execute(indexDatabaseHandle,
+  error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),
                            INDEX_TABLE_DEFINITION_HARDLINKS
                           );
@@ -173,18 +173,18 @@ LOCAL Errors upgradeToVersion2(DatabaseHandle *indexDatabaseHandle)
 /***********************************************************************\
 * Name   : upgradeToVersion3
 * Purpose: upgrade index database to version 3
-* Input  : indexDatabaseHandle - index database handle
+* Input  : databaseHandle - index database handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeToVersion3(DatabaseHandle *indexDatabaseHandle)
+LOCAL Errors upgradeToVersion3(DatabaseHandle *databaseHandle)
 {
   Errors error;
 
   // add uuid to storage
-  error = Database_execute(indexDatabaseHandle,
+  error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),
                            "ALTER TABLE storage ADD COLUMN uuid TEXT"
                           );
@@ -196,13 +196,13 @@ LOCAL Errors upgradeToVersion3(DatabaseHandle *indexDatabaseHandle)
 /***********************************************************************\
 * Name   : upgradeToVersion4
 * Purpose: upgrade index database to version 4
-* Input  : indexDatabaseHandle - index database handle
+* Input  : databaseHandle - index database handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
+LOCAL Errors upgradeToVersion4(DatabaseHandle *databaseHandle)
 {
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
@@ -222,7 +222,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
   name2 = String_new();
 
   // add entityId to storage
-  error = Database_addColumn(indexDatabaseHandle,
+  error = Database_addColumn(databaseHandle,
                              "storage",
                              "entityId",
                              DATABASE_TYPE_FOREIGN_KEY
@@ -242,7 +242,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
   {
     // get next storage entry with not set entity id
     error = Database_prepare(&databaseQueryHandle,
-                             indexDatabaseHandle,
+                             databaseHandle,
                              "SELECT id, \
                                      uuid, \
                                      name, \
@@ -270,7 +270,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
       lastStorageId = storageId;
 
       // insert entity
-      error = Database_execute(indexDatabaseHandle,
+      error = Database_execute(databaseHandle,
                                CALLBACK(NULL,NULL),
                                "INSERT INTO entities \
                                   (\
@@ -297,11 +297,11 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
       if (error == ERROR_NONE)
       {
         // get entity id
-        entityId = Database_getLastRowId(indexDatabaseHandle);
+        entityId = Database_getLastRowId(databaseHandle);
 
         // assign entity id for all storage entries with same uuid and matching name (equals except digits)
         error = Database_prepare(&databaseQueryHandle,
-                                 indexDatabaseHandle,
+                                 databaseHandle,
                                  "SELECT id, \
                                          name \
                                   FROM storage \
@@ -336,7 +336,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
           if (equalsFlag)
           {
             // assign entity id
-            (void)Database_execute(indexDatabaseHandle,
+            (void)Database_execute(databaseHandle,
                                    CALLBACK(NULL,NULL),
                                    "UPDATE storage \
                                     SET entityId=%llu \
@@ -370,7 +370,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *indexDatabaseHandle)
 #warning remove #if 0
 #if 0
   // remove uuid from storage
-  error = Database_removeColumn(indexDatabaseHandle,
+  error = Database_removeColumn(databaseHandle,
                                 "storage",
                                 "uuid"
                                );
@@ -542,6 +542,33 @@ LOCAL String getREGEXPString(String string, const char *columnName, const String
   return string;
 }
 
+/***********************************************************************\
+* Name   : getOrderingString
+* Purpose: get SQL ordering string
+* Input  : ordering - database ordering
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const char *getOrderingString(DatabaseOrdering ordering)
+{
+  const char *s;
+
+  switch (ordering)
+  {
+    case DATABASE_ORDERING_ASCENDING:  s = "ASC";  break;
+    case DATABASE_ORDERING_DESCENDING: s = "DESC"; break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
+
+  return s;
+}
+
 /*---------------------------------------------------------------------*/
 
 Errors Index_initAll(void)
@@ -652,14 +679,14 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
 }
 
 #ifdef NDEBUG
-  Errors Index_init(DatabaseHandle *indexDatabaseHandle,
-                    const char     *indexDatabaseFileName
+  Errors Index_init(DatabaseHandle *databaseHandle,
+                    const char     *databaseFileName
                    )
 #else /* not NDEBUG */
   Errors __Index_init(const char     *__fileName__,
                       uint           __lineNb__,
-                      DatabaseHandle *indexDatabaseHandle,
-                      const char     *indexDatabaseFileName
+                      DatabaseHandle *databaseHandle,
+                      const char     *databaseFileName
                      )
 #endif /* NDEBUG */
 {
@@ -668,13 +695,13 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
   int64  indexVersion;
 
   // open/create database
-  if (File_existsCString(indexDatabaseFileName))
+  if (File_existsCString(databaseFileName))
   {
     // open index database
     #ifdef NDEBUG
-      error = Database_open(indexDatabaseHandle,indexDatabaseFileName,DATABASE_OPENMODE_READWRITE);
+      error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE);
     #else /* not NDEBUG */
-      error = __Database_open(__fileName__,__lineNb__,indexDatabaseHandle,indexDatabaseFileName,DATABASE_OPENMODE_READWRITE);
+      error = __Database_open(__fileName__,__lineNb__,databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE);
     #endif /* NDEBUG */
     if (error != ERROR_NONE)
     {
@@ -685,9 +712,9 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
   {
     // create index database
     #ifdef NDEBUG
-      error = Database_open(indexDatabaseHandle,indexDatabaseFileName,DATABASE_OPENMODE_CREATE);
+      error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE);
     #else /* not NDEBUG */
-      error = __Database_open(__fileName__,__lineNb__,indexDatabaseHandle,indexDatabaseFileName,DATABASE_OPENMODE_CREATE);
+      error = __Database_open(__fileName__,__lineNb__,databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE);
     #endif /* NDEBUG */
     if (error != ERROR_NONE)
     {
@@ -698,13 +725,13 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
   indexVersion     = INDEX_VERSION;
 
   // clean-up database
-  cleanUp(indexDatabaseHandle);
+  cleanUp(databaseHandle);
 
   // assume current version as database version
   indexVersion = INDEX_VERSION;
 
   // get database version (if posssible)
-  if (Database_getInteger64(indexDatabaseHandle,
+  if (Database_getInteger64(databaseHandle,
                             &indexVersion,
                             "meta",
                             "value",
@@ -716,26 +743,26 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
   }
 
   // create tables (if not exists)
-  error = Database_execute(indexDatabaseHandle,
+  error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),
                            INDEX_TABLE_DEFINITION
                           );
   if (error != ERROR_NONE)
   {
     #ifdef NDEBUG
-      Database_close(indexDatabaseHandle);
+      Database_close(databaseHandle);
     #else /* not NDEBUG */
-      __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+      __Database_close(__fileName__,__lineNb__,databaseHandle);
     #endif /* NDEBUG */
     return error;
   }
 
   // disable synchronous mode and journal to increase transaction speed
-  Database_execute(indexDatabaseHandle,
+  Database_execute(databaseHandle,
                    CALLBACK(NULL,NULL),
                    "PRAGMA synchronous=OFF;"
                   );
-  Database_execute(indexDatabaseHandle,
+  Database_execute(databaseHandle,
                    CALLBACK(NULL,NULL),
                    "PRAGMA journal_mode=OFF;"
                   );
@@ -743,7 +770,7 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
   // get database version
   if (!indexVersionFlag)
   {
-    error = Database_getInteger64(indexDatabaseHandle,
+    error = Database_getInteger64(databaseHandle,
                                   &indexVersion,
                                   "meta",
                                   "value",
@@ -752,9 +779,9 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
     if (error != ERROR_NONE)
     {
       #ifdef NDEBUG
-        Database_close(indexDatabaseHandle);
+        Database_close(databaseHandle);
       #else /* not NDEBUG */
-        __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+        __Database_close(__fileName__,__lineNb__,databaseHandle);
       #endif /* NDEBUG */
       return error;
     }
@@ -766,14 +793,14 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
     switch (indexVersion)
     {
       case 1:
-        error = upgradeToVersion2(indexDatabaseHandle);
+        error = upgradeToVersion2(databaseHandle);
         indexVersion = 2;
       case 2:
-        error = upgradeToVersion3(indexDatabaseHandle);
+        error = upgradeToVersion3(databaseHandle);
         indexVersion = 3;
         break;
       case 3:
-        error = upgradeToVersion4(indexDatabaseHandle);
+        error = upgradeToVersion4(databaseHandle);
         indexVersion = 4;
         break;
       default:
@@ -784,15 +811,15 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
     if (error != ERROR_NONE)
     {
       #ifdef NDEBUG
-        Database_close(indexDatabaseHandle);
+        Database_close(databaseHandle);
       #else /* not NDEBUG */
-        __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+        __Database_close(__fileName__,__lineNb__,databaseHandle);
       #endif /* NDEBUG */
       return error;
     }
 
     // update database version, datetime
-    error = Database_setInteger64(indexDatabaseHandle,
+    error = Database_setInteger64(databaseHandle,
                                   indexVersion,
                                   "meta",
                                   "value",
@@ -801,22 +828,22 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
     if (error != ERROR_NONE)
     {
       #ifdef NDEBUG
-        Database_close(indexDatabaseHandle);
+        Database_close(databaseHandle);
       #else /* not NDEBUG */
-        __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+        __Database_close(__fileName__,__lineNb__,databaseHandle);
       #endif /* NDEBUG */
       return error;
     }
-    error = Database_execute(indexDatabaseHandle,
+    error = Database_execute(databaseHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE meta SET value=DATETIME('now') WHERE name='datetime'"
                             );
     if (error != ERROR_NONE)
     {
       #ifdef NDEBUG
-        Database_close(indexDatabaseHandle);
+        Database_close(databaseHandle);
       #else /* not NDEBUG */
-        __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+        __Database_close(__fileName__,__lineNb__,databaseHandle);
       #endif /* NDEBUG */
       return error;
     }
@@ -827,20 +854,20 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
 }
 
 #ifdef NDEBUG
-  void Index_done(DatabaseHandle *indexDatabaseHandle)
+  void Index_done(DatabaseHandle *databaseHandle)
 #else /* not NDEBUG */
   void __Index_done(const char     *__fileName__,
                     uint           __lineNb__,
-                    DatabaseHandle *indexDatabaseHandle
+                    DatabaseHandle *databaseHandle
                    )
 #endif /* NDEBUG */
 {
-  assert(indexDatabaseHandle != NULL);
+  assert(databaseHandle != NULL);
 
   #ifdef NDEBUG
-    Database_close(indexDatabaseHandle);
+    Database_close(databaseHandle);
   #else /* not NDEBUG */
-    __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+    __Database_close(__fileName__,__lineNb__,databaseHandle);
   #endif /* NDEBUG */
 }
 
@@ -1396,7 +1423,10 @@ Errors Index_deleteUUID(DatabaseHandle *databaseHandle,
 
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               DatabaseHandle   *databaseHandle,
-                              const String     jobUUID
+                              const String     jobUUID,
+                              const String     scheduleUUID,
+                              DatabaseOrdering ordering,
+                              ulong            offset
                              )
 {
   Errors error;
@@ -1411,15 +1441,23 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                            "SELECT entities.id, \
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
+                                   STRFTIME('%%s',entities.created), \
                                    entities.type, \
-                                   STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1)), \
                                    (SELECT SUM(size) FROM storage WHERE storage.entityId=entities.id), \
                                    (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
                             FROM entities \
-                            WHERE (%d OR jobUUID=%'S); \
+                            WHERE     (%d OR jobUUID=%'S) \
+                                  AND (%d OR scheduleUUID=%'S) \
+                            ORDER BY entities.created %s \
+                            LIMIT %lu OFFSET %lu \
                            ",
-                           (jobUUID == NULL) ? 1 : 0,
-                           jobUUID
+                           String_isEmpty(jobUUID) ? 1 : 0,
+                           jobUUID,
+                           String_isEmpty(scheduleUUID) ? 1 : 0,
+                           scheduleUUID,
+                           getOrderingString(ordering),
+                           MAX_UINT,
+                           offset
                           );
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
 
@@ -1430,8 +1468,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          DatabaseId       *databaseId,
                          String           jobUUID,
                          String           scheduleUUID,
+                         uint64           *createdDateTime,
                          ArchiveTypes     *archiveType,
-                         uint64           *lastCreatedDateTime,
                          uint64           *totalSize,
                          String           lastErrorMessage
                         )
@@ -1439,12 +1477,12 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   assert(indexQueryHandle != NULL);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%lld %S %S %u %lld %lld %S",
+                             "%lld %S %S %llu %u %lld %S",
                              databaseId,
                              jobUUID,
                              scheduleUUID,
+                             createdDateTime,
                              archiveType,
-                             lastCreatedDateTime,
                              totalSize,
                              lastErrorMessage
                             );
@@ -1491,7 +1529,7 @@ Errors Index_newEntity(DatabaseHandle *databaseHandle,
   {
     return error;
   }
-  (*entityId) = Database_getLastRowId(indexDatabaseHandle);
+  (*entityId) = Database_getLastRowId(databaseHandle);
 
   return ERROR_NONE;
 }
@@ -1592,7 +1630,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                                   AND storage.state IN (%S) \
                             ORDER BY storage.created DESC \
                            ",
-                           (jobUUID == NULL) ? 1 : 0,
+                           String_isEmpty(jobUUID) ? 1 : 0,
                            jobUUID,
                            (entityId == DATABASE_ID_ANY) ? 1 : 0,
                            entityId,
@@ -1749,15 +1787,15 @@ Errors Index_newStorage(DatabaseHandle *databaseHandle,
                                lastChecked\
                               ) \
                             VALUES \
-                             (\
-                              %d,\
-                              %'S,\
-                              DATETIME('now'),\
-                              0,\
-                              %d,\
-                              %d,\
-                              DATETIME('now')\
-                             ); \
+                              (\
+                               %d,\
+                               %'S,\
+                               DATETIME('now'),\
+                               0,\
+                               %d,\
+                               %d,\
+                               DATETIME('now')\
+                              ); \
                            ",
                            entityId,
                            storageName,
@@ -1768,7 +1806,8 @@ Errors Index_newStorage(DatabaseHandle *databaseHandle,
   {
     return error;
   }
-  (*storageId) = Database_getLastRowId(indexDatabaseHandle);
+  (*storageId) = Database_getLastRowId(databaseHandle);
+fprintf(stderr,"%s, %d: new storage id: %llu \n",__FILE__,__LINE__,*storageId);
 
   return ERROR_NONE;
 }
