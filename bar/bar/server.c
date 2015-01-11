@@ -170,12 +170,14 @@ typedef struct JobNode
   Password     *sshPassword;                   // SSH password if password mode is 'ask'
   Password     *cryptPassword;                 // crypt password if password mode is 'ask'
 
-  // job info
+  // job running state
   JobStates    state;                          // current state of job
   ArchiveTypes archiveType;                    // archive type to create
-  String       scheduleTitle;
-  String       scheduleCustomText;
-  ScheduleNode *scheduleNode;                  // schedule node which triggered job or NULL
+  struct                                       // schedule data which triggered job
+  {
+    String       uuid;                         // UUID or empty
+    String       customText;                   // custom text or empty
+  } schedule;
   bool         requestedAbortFlag;             // request abort
   uint         requestedVolumeNumber;          // requested volume number
   uint         volumeNumber;                   // loaded volume number
@@ -1653,7 +1655,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->runningInfo.storageName);
   String_delete(jobNode->runningInfo.name);
 
-  String_delete(jobNode->scheduleCustomText);
+  String_delete(jobNode->schedule.customText);
 
   if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
   if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
@@ -1717,9 +1719,8 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
 
   jobNode->state                          = JOB_STATE_NONE;
   jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
-  jobNode->scheduleTitle                  = NULL;
-  jobNode->scheduleCustomText             = String_new();
-  jobNode->scheduleNode                   = NULL;
+  jobNode->schedule.uuid                  = String_new();
+  jobNode->schedule.customText            = String_new();
   jobNode->requestedAbortFlag             = FALSE;
   jobNode->requestedVolumeNumber          = 0;
   jobNode->volumeNumber                   = 0;
@@ -1787,9 +1788,8 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
 
   newJobNode->state                          = JOB_STATE_NONE;
   newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
-  newJobNode->scheduleTitle                  = NULL;
-  newJobNode->scheduleCustomText             = String_new();
-  newJobNode->scheduleNode                   = NULL;
+  newJobNode->schedule.uuid                  = String_new();
+  newJobNode->schedule.customText            = String_new();
   newJobNode->requestedAbortFlag             = FALSE;
   newJobNode->requestedVolumeNumber          = 0;
   newJobNode->volumeNumber                   = 0;
@@ -1889,6 +1889,9 @@ LOCAL void doneJob(JobNode *jobNode)
     Password_delete(jobNode->ftpPassword);
     jobNode->ftpPassword = NULL;
   }
+
+  // clear schedule
+  String_clear(jobNode->schedule.uuid);
 }
 
 /***********************************************************************\
@@ -1938,7 +1941,7 @@ LOCAL JobNode *findJobByUUID(const String uuid)
 /***********************************************************************\
 * Name   : findScheduleByUUID
 * Purpose: find schedule by uuid
-* Input  : jobNode      - job node
+* Input  : jobNode      - job node (can be NULL)
 *          scheduleUUID - schedule UUID
 * Output : -
 * Return : schedule node or NULL if not found
@@ -1949,14 +1952,28 @@ LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, const String sche
 {
   ScheduleNode *scheduleNode;
 
-  assert(jobNode != NULL);
-
-  scheduleNode = jobNode->scheduleList.head;
-  while ((scheduleNode != NULL) && !String_equals(scheduleNode->uuid,scheduleUUID))
+  if (jobNode != NULL)
   {
-    scheduleNode = scheduleNode->next;
+    scheduleNode = jobNode->scheduleList.head;
+    while ((scheduleNode != NULL) && !String_equals(scheduleNode->uuid,scheduleUUID))
+    {
+      scheduleNode = scheduleNode->next;
+    }
   }
-
+  else
+  {
+    scheduleNode = NULL;
+    jobNode      = jobList.head;
+    while ((jobNode != NULL) && (scheduleNode == NULL))
+    {
+      scheduleNode = jobNode->scheduleList.head;
+      while ((scheduleNode != NULL) && !String_equals(scheduleNode->uuid,scheduleUUID))
+      {
+        scheduleNode = scheduleNode->next;
+      }
+      jobNode = jobNode->next;
+    }
+  }
 
   return scheduleNode;
 }
@@ -3059,14 +3076,14 @@ LOCAL void jobThreadCode(void)
 {
   StorageSpecifier storageSpecifier;
   String           storageName;
+  JobNode          *jobNode;
   StaticString     (jobUUID,INDEX_UUID_LENGTH);
-  StaticString     (scheduleUUID,INDEX_UUID_LENGTH);
   EntryList        includeEntryList;
   PatternList      excludePatternList;
   PatternList      deltaSourcePatternList;
   PatternList      compressExcludePatternList;
-  String           scheduleTitle,scheduleCustomText;
-  JobNode          *jobNode;
+  StaticString     (scheduleUUID,INDEX_UUID_LENGTH);
+  String           scheduleCustomText;
   JobOptions       jobOptions;
   ArchiveTypes     archiveType;
   StringList       archiveFileNameList;
@@ -3074,13 +3091,12 @@ LOCAL void jobThreadCode(void)
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
-  storageName        = String_new();
+  storageName         = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
-  scheduleTitle      = NULL;
-  scheduleCustomText = NULL;
+  scheduleCustomText = String_new();
 
   while (!quitFlag)
   {
@@ -3117,17 +3133,15 @@ LOCAL void jobThreadCode(void)
     PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,NULL,NULL);
     initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
     archiveType = jobNode->archiveType;
-    if (jobNode->scheduleNode != NULL)
+    if (!String_isEmpty(jobNode->schedule.uuid))
     {
-      scheduleTitle      = jobNode->scheduleTitle;
-      scheduleCustomText = jobNode->scheduleCustomText;
-      String_set(scheduleUUID,jobNode->scheduleNode->uuid);
+      String_set(scheduleUUID,      jobNode->schedule.uuid);
+      String_set(scheduleCustomText,jobNode->schedule.customText);
     }
     else
     {
-      scheduleTitle      = NULL;
-      scheduleCustomText = NULL;
       String_clear(scheduleUUID);
+      String_clear(scheduleCustomText);
     }
 
     // unlock (Note: job is now protected by running state)
@@ -3224,7 +3238,7 @@ LOCAL void jobThreadCode(void)
                                                         &compressExcludePatternList,
                                                         &jobOptions,
                                                         archiveType,
-                                                        scheduleTitle,
+NULL,//                                                        scheduleTitle,
                                                         scheduleCustomText,
                                                         CALLBACK(getCryptPassword,jobNode),
                                                         CALLBACK((CreateStatusInfoFunction)updateCreateJobStatus,jobNode),
@@ -3343,6 +3357,7 @@ LOCAL void jobThreadCode(void)
   }
 
   // free resources
+  String_delete(scheduleCustomText);
   PatternList_done(&compressExcludePatternList);
   PatternList_done(&deltaSourcePatternList);
   PatternList_done(&excludePatternList);
@@ -3352,6 +3367,435 @@ LOCAL void jobThreadCode(void)
 }
 
 /*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : deleteStorage
+* Purpose: delete storage
+* Input  : storageId - storage to delete
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors deleteStorage(const String jobName, DatabaseId storageId)
+{
+  Errors           resultError;
+  String           resultString;
+  StaticString     (jobUUID,INDEX_UUID_LENGTH);
+  String           storageName;
+  SemaphoreLock    semaphoreLock;
+  const JobNode    *jobNode;
+  StorageSpecifier storageSpecifier;
+  Errors           error;
+  StorageHandle    storageHandle;
+
+  // init variables
+  resultError  = ERROR_UNKNOWN;
+  resultString = String_new();
+
+  // find storage
+  storageName = String_new();
+  if (!Index_findById(indexDatabaseHandle,
+                      storageId,
+                      jobUUID,
+                      NULL, // scheduleUUID
+                      storageName,
+                      NULL, // indexState
+                      NULL  // lastCheckedTimestamp
+                     )
+     )
+  {
+    return ERROR_ARCHIVE_NOT_FOUND;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    // find job if possible
+    jobNode = findJobByUUID(jobUUID);
+
+    if (!String_isEmpty(storageName))
+    {
+      // delete storage file
+      Storage_initSpecifier(&storageSpecifier);
+      resultError = Storage_parseName(&storageSpecifier,storageName);
+      if (resultError == ERROR_NONE)
+      {
+  #warning NYI: move this special handling of limited scp into Storage_delete()?
+        // init storage
+        if (storageSpecifier.type == STORAGE_TYPE_SCP)
+        {
+          // try to init scp-storage first with sftp
+          storageSpecifier.type = STORAGE_TYPE_SFTP;
+          resultError = Storage_init(&storageHandle,
+                                     &storageSpecifier,
+                                     (jobNode != NULL) ? &jobNode->jobOptions : NULL,
+                                     &globalOptions.indexDatabaseMaxBandWidthList,
+                                     SERVER_CONNECTION_PRIORITY_HIGH,
+                                     CALLBACK(NULL,NULL),
+                                     CALLBACK(NULL,NULL)
+                                    );
+          if (resultError != ERROR_NONE)
+          {
+            // init scp-storage
+            storageSpecifier.type = STORAGE_TYPE_SCP;
+            resultError = Storage_init(&storageHandle,
+                                       &storageSpecifier,
+                                       (jobNode != NULL) ? &jobNode->jobOptions : NULL,
+                                       &globalOptions.indexDatabaseMaxBandWidthList,
+                                       SERVER_CONNECTION_PRIORITY_HIGH,
+                                       CALLBACK(NULL,NULL),
+                                       CALLBACK(NULL,NULL)
+                                      );
+          }
+        }
+        else
+        {
+          // init other storage types
+          resultError = Storage_init(&storageHandle,
+                                     &storageSpecifier,
+                                     (jobNode != NULL) ? &jobNode->jobOptions : NULL,
+                                     &globalOptions.indexDatabaseMaxBandWidthList,
+                                     SERVER_CONNECTION_PRIORITY_HIGH,
+                                     CALLBACK(NULL,NULL),
+                                     CALLBACK(NULL,NULL)
+                                    );
+        }
+        if (resultError == ERROR_NONE)
+        {
+#warning remove xxxxxxxxxxxx comment
+/*
+          resultError = Storage_delete(&storageHandle,
+                                       storageSpecifier.fileName
+                                      );
+*/
+resultError = ERROR_NONE;
+          if (resultError != ERROR_NONE)
+          {
+            String_format(resultString,"delete storage file: %s",Error_getText(resultError));
+          }
+
+          // close storage
+          Storage_done(&storageHandle);
+        }
+        else
+        {
+          String_format(resultString,"init storage: %s",Error_getText(resultError));
+        }
+      }
+    }
+    else
+    {
+      String_format(resultString,"invalid storage name");
+    }
+    Storage_doneSpecifier(&storageSpecifier);
+  }
+
+  // delete index
+  error = Index_deleteStorage(indexDatabaseHandle,storageId);
+  if (error != ERROR_NONE)
+  {
+    String_delete(storageName);
+    return error;
+  }
+
+  return resultError;
+}
+
+/***********************************************************************\
+* Name   : deleteEntity
+* Purpose: delete entity index and all attached storage files
+* Input  : entityId - database id of entity
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : No error is reported if a storage file cannot be deleted
+\***********************************************************************/
+
+LOCAL Errors deleteEntity(const String jobName, DatabaseId entityId)
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       storageId;
+
+  // delete all storage with entity id
+  error = Index_initListStorage(&indexQueryHandle,
+                                indexDatabaseHandle,
+                                NULL, // uuid
+                                DATABASE_ID_ANY, // entity id
+                                STORAGE_TYPE_ANY,
+                                NULL, // storageName
+                                NULL, // hostName
+                                NULL, // loginName
+                                NULL, // deviceName
+                                NULL, // fileName
+                                INDEX_STATE_SET_ALL
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  while (Index_getNextStorage(&indexQueryHandle,
+                              &storageId,
+                              NULL, // entity id
+                              NULL, // job UUID
+                              NULL, // schedule UUID
+                              NULL, // archive type
+                              NULL, // storageName
+                              NULL, // createdDateTime
+                              NULL, // size
+                              NULL, // indexState
+                              NULL, // indexMode
+                              NULL, // lastCheckedDateTime
+                              NULL  // errorMessage
+                             )
+        )
+  {
+    (void)deleteStorage(NULL,storageId);
+  }
+  Index_doneList(&indexQueryHandle);
+
+  // delete entity index
+  error = Index_deleteEntity(indexDatabaseHandle,entityId);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : deleteUUID
+* Purpose: delete all entities of UUID and all attached storage files
+* Input  : entityId - database id of entity
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : No error is reported if a storage file cannot be deleted
+\***********************************************************************/
+
+LOCAL Errors deleteUUID(const String jobName, const String jobUUID)
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       entityId;
+
+  // delete all entities with specified job UUID
+  error = Index_initListEntities(&indexQueryHandle,
+                                 indexDatabaseHandle,
+                                 jobUUID,
+                                 NULL, // scheduldUUID
+                                 DATABASE_ORDERING_ASCENDING,
+                                 0LL   // offset
+                                );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  while (Index_getNextEntity(&indexQueryHandle,
+                             &entityId,
+                             NULL,  // jobUUID,
+                             NULL,  // scheduleUUID,
+                             NULL,  // createdDateTime,
+                             NULL,  // archiveType,
+                             NULL,  // totalSize,
+                             NULL   // lastErrorMessage
+                            )
+        )
+  {
+    (void)deleteEntity(NULL,entityId);
+  }
+  Index_doneList(&indexQueryHandle);
+
+  // delete uuid
+  error = Index_deleteUUID(indexDatabaseHandle,jobUUID);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : cleanExpiredStorage
+* Purpose: clean expired/surplus storage
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void cleanExpiredStorage(void)
+{
+  const uint64 SECONDS_PER_DAY = 24*60*60;
+
+  String             jobName;
+  uint64             now;
+  Errors             error;
+  IndexQueryHandle   indexQueryHandle1,indexQueryHandle2;
+  DatabaseId         entityId;
+  StaticString       (jobUUID,INDEX_UUID_LENGTH);
+  StaticString       (scheduleUUID,INDEX_UUID_LENGTH);
+  uint               minKeep,maxKeep,maxAge;
+  SemaphoreLock      semaphoreLock;
+  const JobNode      *jobNode;
+  const ScheduleNode *scheduleNode;
+  uint64             createdDateTime;
+  ArchiveTypes       archiveType;
+  uint64             totalSize;
+  String             dateTime;
+
+  // init variables
+  jobName  = String_new();
+  dateTime = String_new();
+
+  // check entities
+  now = Misc_getCurrentDateTime();
+  error = Index_initListUUIDs(&indexQueryHandle1,
+                              indexDatabaseHandle
+                             );
+  if (error != ERROR_NONE)
+  {
+    String_delete(dateTime);
+    String_delete(jobName);
+    return;
+  }
+  while (   !quitFlag
+         && Index_getNextUUID(&indexQueryHandle1,
+                              jobUUID,
+                              scheduleUUID,
+                              NULL,  // lastCreatedDateTime
+                              NULL,  // totalSize
+                              NULL   // lastErrorMessage
+                             )
+        )
+  {
+    if (!String_isEmpty(scheduleUUID))
+    {
+fprintf(stderr,"%s, %d: ----------------------- scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(scheduleUUID));
+      // get job name, schedule min./max. keep, max. age
+      minKeep = 0;
+      maxKeep = 0;
+      maxAge  = 0;
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      {
+        jobNode = findJobByUUID(jobUUID);
+        if (jobNode != NULL)
+        {
+          String_set(jobName,jobNode->name);
+        }
+        else
+        {
+          String_clear(jobName);
+        }
+        scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+        if (scheduleNode != NULL)
+        {
+          minKeep = scheduleNode->minKeep;
+          maxKeep = scheduleNode->maxKeep;
+          maxAge  = scheduleNode->maxAge;
+        }
+      }
+
+      if ((maxKeep > 0) || (maxAge > 0))
+      {
+        // delete expired entities
+        if (maxAge > 0)
+        {
+          error = Index_initListEntities(&indexQueryHandle2,
+                                         indexDatabaseHandle,
+                                         jobUUID,
+                                         scheduleUUID,
+                                         DATABASE_ORDERING_DESCENDING,
+                                         (ulong)minKeep
+                                        );
+          if (error == ERROR_NONE)
+          {
+            while (   !quitFlag
+                   && Index_getNextEntity(&indexQueryHandle2,
+                                          &entityId,
+                                          NULL,  // jobUUID
+                                          NULL,  // scheduleUUID
+                                          &createdDateTime,
+                                          &archiveType,
+                                          &totalSize,
+                                          NULL   // lastErrorMessage
+                                         )
+                  )
+            {
+              if (now > (createdDateTime+maxAge*SECONDS_PER_DAY))
+              {
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+                error = deleteEntity(jobName,entityId);
+                if (error == ERROR_NONE)
+                {
+                  Misc_formatDateTime(dateTime,createdDateTime,NULL);
+                  plogMessage(LOG_TYPE_INDEX,
+                              "INDEX",
+                              "Deleted expired entity of job '%s': %s, created at %s, %llu bytes\n",
+                              String_cString(jobName),
+                              archiveTypeToString(archiveType,"unknown"),
+                              String_cString(dateTime),
+                              totalSize
+                             );
+                }
+              }
+            }
+            Index_doneList(&indexQueryHandle2);
+          }
+        }
+
+        // delete surplus entities
+        if ((maxKeep > 0) && (maxKeep >= minKeep))
+        {
+          error = Index_initListEntities(&indexQueryHandle2,
+                                         indexDatabaseHandle,
+                                         jobUUID,
+                                         scheduleUUID,
+                                         DATABASE_ORDERING_DESCENDING,
+                                         (ulong)maxKeep
+                                        );
+          if (error == ERROR_NONE)
+          {
+            while (   !quitFlag
+                   && Index_getNextEntity(&indexQueryHandle2,
+                                          &entityId,
+                                          NULL,  // jobUUID
+                                          NULL,  // scheduleUUID
+                                          &createdDateTime,
+                                          &archiveType,
+                                          &totalSize,
+                                          NULL   // lastErrorMessage
+                                         )
+                  )
+            {
+fprintf(stderr,"%s, %d: %lld %llu\n",__FILE__,__LINE__,entityId,createdDateTime);
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+              error = deleteEntity(jobName,entityId);
+              if (error == ERROR_NONE)
+              {
+                Misc_formatDateTime(dateTime,createdDateTime,NULL);
+                plogMessage(LOG_TYPE_INDEX,
+                            "INDEX",
+                            "Deleted surplus entity of job '%s': %s, created at %s, %llu bytes\n",
+                            String_cString(jobName),
+                            archiveTypeToString(archiveType,"unknown"),
+                            String_cString(dateTime),
+                            totalSize
+                           );
+              }
+            }
+            Index_doneList(&indexQueryHandle2);
+          }
+        }
+      }
+    }
+  }
+  Index_doneList(&indexQueryHandle1);
+
+  // free resources
+  String_delete(dateTime);
+  String_delete(jobName);
+}
 
 /***********************************************************************\
 * Name   : schedulerThreadCode
@@ -3379,8 +3823,11 @@ LOCAL void schedulerThreadCode(void)
     // update job files
     updateAllJobs();
 
-    // re-read config files
+    // re-read job config files
     rereadAllJobs(serverJobsDirectory);
+
+    // clean-up expired/surplus storage files
+    cleanExpiredStorage();
 
     // trigger jobs
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER);
@@ -3451,10 +3898,14 @@ LOCAL void schedulerThreadCode(void)
         if (executeScheduleNode != NULL)
         {
           // set state
-          jobNode->state              = JOB_STATE_WAITING;
-          jobNode->archiveType        = executeScheduleNode->archiveType;
-          String_set(jobNode->scheduleCustomText,executeScheduleNode->customText);
-          jobNode->requestedAbortFlag = FALSE;
+          jobNode->state                 = JOB_STATE_WAITING;
+          jobNode->archiveType           = executeScheduleNode->archiveType;
+          String_set(jobNode->schedule.uuid,executeScheduleNode->uuid);
+          String_set(jobNode->schedule.customText,executeScheduleNode->customText);
+          jobNode->requestedAbortFlag    = FALSE;
+          jobNode->requestedVolumeNumber = 0;
+          jobNode->volumeNumber          = 0;
+          jobNode->volumeUnloadFlag      = FALSE;
           resetJobRunningInfo(jobNode);
         }
 
@@ -3805,7 +4256,7 @@ LOCAL void indexCleanup(void)
   error = Index_initListStorage(&indexQueryHandle,
                                 indexDatabaseHandle,
                                 NULL, // uuid
-                                DATABASE_ID_ANY, // job id
+                                DATABASE_ID_ANY, // entity id
                                 STORAGE_TYPE_ANY,
                                 NULL, // storageName
                                 NULL, // hostName
@@ -3928,7 +4379,7 @@ LOCAL void indexCleanup(void)
   error = Index_initListStorage(&indexQueryHandle1,
                                 indexDatabaseHandle,
                                 NULL, // uuid
-                                DATABASE_ID_ANY, // job id
+                                DATABASE_ID_ANY, // entity id
                                 STORAGE_TYPE_ANY,
                                 NULL, // storageName
                                 NULL, // hostName
@@ -3958,7 +4409,7 @@ LOCAL void indexCleanup(void)
       error = Index_initListStorage(&indexQueryHandle2,
                                     indexDatabaseHandle,
                                     NULL, // uuid
-                                    DATABASE_ID_ANY, // job id
+                                    DATABASE_ID_ANY, // entity id
                                     STORAGE_TYPE_ANY,
                                     NULL, // storageName
                                     NULL, // hostName
@@ -4452,7 +4903,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   NULL, // uuid
-                                  DATABASE_ID_ANY, // job id
+                                  DATABASE_ID_ANY, // entity id
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -6768,7 +7219,12 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
       jobNode->jobOptions.dryRunFlag = dryRunFlag;
       jobNode->state                 = JOB_STATE_WAITING;
       jobNode->archiveType           = archiveType;
+      String_clear(jobNode->schedule.uuid);
+      String_clear(jobNode->schedule.customText);
       jobNode->requestedAbortFlag    = FALSE;
+      jobNode->requestedVolumeNumber = 0;
+      jobNode->volumeNumber          = 0;
+      jobNode->volumeUnloadFlag      = FALSE;
       resetJobRunningInfo(jobNode);
     }
   }
@@ -9286,7 +9742,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   jobUUID,
-                                  DATABASE_ID_ANY, // job id
+                                  DATABASE_ID_ANY, // entity id
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -9389,150 +9845,10 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  /***********************************************************************\
-  * Name   : deleteStorage
-  * Purpose: delete storage
-  * Input  : storageId - storage to delete
-  * Output : -
-  * Return : TRUE iff deleted
-  * Notes  : -
-  \***********************************************************************/
-
-  bool deleteStorage(DatabaseId storageId)
-  {
-    Errors           resultError;
-    String           resultString;
-    StaticString     (jobUUID,INDEX_UUID_LENGTH);
-    String           storageName;
-    SemaphoreLock    semaphoreLock;
-    const JobNode    *jobNode;
-    StorageSpecifier storageSpecifier;
-    Errors           error;
-    StorageHandle    storageHandle;
-
-    // init variables
-    resultError  = ERROR_UNKNOWN;
-    resultString = String_new();
-
-    // find storage
-    storageName = String_new();
-    if (!Index_findById(indexDatabaseHandle,
-                        storageId,
-                        jobUUID,
-                        NULL, // scheduleUUID
-                        storageName,
-                        NULL, // indexState
-                        NULL  // lastCheckedTimestamp
-                       )
-       )
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_ARCHIVE_NOT_FOUND,"storage not found");
-      String_delete(storageName);
-      String_delete(resultString);
-      return FALSE;
-    }
-
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
-    {
-      // find job if possible
-      jobNode = findJobByUUID(jobUUID);
-
-      // delete storage file
-      Storage_initSpecifier(&storageSpecifier);
-      resultError = Storage_parseName(&storageSpecifier,storageName);
-      if (resultError == ERROR_NONE)
-      {
-#warning NYI: move this special handling of limited scp into Storage_delete()?
-        // init storage
-        if (storageSpecifier.type == STORAGE_TYPE_SCP)
-        {
-          // try to init scp-storage first with sftp
-          storageSpecifier.type = STORAGE_TYPE_SFTP;
-          resultError = Storage_init(&storageHandle,
-                                     &storageSpecifier,
-                                     (jobNode != NULL) ? &jobNode->jobOptions : NULL,
-                                     &globalOptions.indexDatabaseMaxBandWidthList,
-                                     SERVER_CONNECTION_PRIORITY_HIGH,
-                                     CALLBACK(NULL,NULL),
-                                     CALLBACK(NULL,NULL)
-                                    );
-          if (resultError != ERROR_NONE)
-          {
-            // init scp-storage
-            storageSpecifier.type = STORAGE_TYPE_SCP;
-            resultError = Storage_init(&storageHandle,
-                                       &storageSpecifier,
-                                       (jobNode != NULL) ? &jobNode->jobOptions : NULL,
-                                       &globalOptions.indexDatabaseMaxBandWidthList,
-                                       SERVER_CONNECTION_PRIORITY_HIGH,
-                                       CALLBACK(NULL,NULL),
-                                       CALLBACK(NULL,NULL)
-                                      );
-          }
-        }
-        else
-        {
-          // init other storage types
-          resultError = Storage_init(&storageHandle,
-                                     &storageSpecifier,
-                                     (jobNode != NULL) ? &jobNode->jobOptions : NULL,
-                                     &globalOptions.indexDatabaseMaxBandWidthList,
-                                     SERVER_CONNECTION_PRIORITY_HIGH,
-                                     CALLBACK(NULL,NULL),
-                                     CALLBACK(NULL,NULL)
-                                    );
-        }
-        if (resultError == ERROR_NONE)
-        {
-          resultError = Storage_delete(&storageHandle,
-                                       storageSpecifier.fileName
-                                      );
-          if (resultError != ERROR_NONE)
-          {
-            String_format(resultString,"delete storage file: %s",Error_getText(resultError));
-          }
-
-          // close storage
-          Storage_done(&storageHandle);
-        }
-        else
-        {
-          String_format(resultString,"init storage: %s",Error_getText(resultError));
-        }
-      }
-      else
-      {
-        String_format(resultString,"invalid storage name");
-      }
-      Storage_doneSpecifier(&storageSpecifier);
-    }
-
-    // delete index
-    error = Index_deleteStorage(indexDatabaseHandle,storageId);
-    if (error != ERROR_NONE)
-    {
-      sendClientResult(clientInfo,id,TRUE,error,"remove index: %s",Error_getText(error));
-      String_delete(storageName);
-      return FALSE;
-    }
-
-    if (resultError == ERROR_NONE)
-    {
-      return TRUE;
-    }
-    else
-    {
-      sendClientResult(clientInfo,id,TRUE,resultError,String_cString(resultString));
-      return FALSE;
-    }
-  }
-
   StaticString     (jobUUID,INDEX_UUID_LENGTH);
   DatabaseId       entityId;
   DatabaseId       storageId;
   Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  DatabaseId       databaseId;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9560,97 +9876,21 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   if (!String_isEmpty(jobUUID))
   {
     // delete all storage with specified job UUID
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexDatabaseHandle,
-                                  jobUUID,
-                                  DATABASE_ID_ANY, // job id
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL
-                                 );
+    error = deleteUUID(NULL,jobUUID);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      return;
-    }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                &databaseId,
-                                NULL, // entity id
-                                NULL, // job UUID
-                                NULL, // schedule UUID
-                                NULL, // archive type
-                                NULL, // storageName
-                                NULL, // createdDateTime
-                                NULL, // size
-                                NULL, // indexState
-                                NULL, // indexMode
-                                NULL, // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
-          )
-    {
-      (void)deleteStorage(databaseId);
-    }
-    Index_doneList(&indexQueryHandle);
-
-    // delete uuid
-    error = Index_deleteUUID(indexDatabaseHandle,jobUUID);
-    if (error != ERROR_NONE)
-    {
-      sendClientResult(clientInfo,id,TRUE,error,"remove index: %s",Error_getText(error));
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"delete entities fail: %s",Error_getText(error));
       return;
     }
   }
 
   if (entityId != DATABASE_ID_NONE)
   {
-    // delete all storage with entity id
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexDatabaseHandle,
-                                  NULL, // uuid
-                                  entityId,
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL
-                                 );
-    if (error != ERROR_NONE)
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      return;
-    }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                &databaseId,
-                                NULL, // entity id
-                                NULL, // job UUID
-                                NULL, // schedule UUID
-                                NULL, // archive type
-                                NULL, // storageName
-                                NULL, // createdDateTime
-                                NULL, // size
-                                NULL, // indexState
-                                NULL, // indexMode
-                                NULL, // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
-          )
-    {
-      (void)deleteStorage(databaseId);
-    }
-    Index_doneList(&indexQueryHandle);
-
     // delete entity
-    error = Index_deleteEntity(indexDatabaseHandle,entityId);
+    error = deleteEntity(NULL,entityId);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,error,"remove index: %s",Error_getText(error));
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"delete entity fail: %s",Error_getText(error));
       return;
     }
   }
@@ -9658,8 +9898,10 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   if (storageId != DATABASE_ID_NONE)
   {
     // delete storage
-    if (!deleteStorage(storageId))
+    error = deleteStorage(NULL,storageId);
+    if (error != ERROR_NONE)
     {
+      sendClientResult(clientInfo,id,TRUE,error,"delete storage fail: %s",Error_getText(error));
       return;
     }
   }
@@ -10038,13 +10280,13 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 
 LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String           jobUUID;
+  StaticString     (jobUUID,INDEX_UUID_LENGTH);
   Errors           error;
   IndexQueryHandle indexQueryHandle;
-  DatabaseId       jobId;
-  uint64           lastCreatedDateTime;
+  DatabaseId       entityId;
+  uint64           createdDateTime;
   uint64           totalSize;
-  String           scheduleUUID;
+  StaticString     (scheduleUUID,INDEX_UUID_LENGTH);
   ArchiveTypes     archiveType;
   String           lastErrorMessage;
 
@@ -10052,11 +10294,9 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   assert(argumentMap != NULL);
 
   // get uuid
-  jobUUID = String_new();
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
-    String_delete(jobUUID);
     return;
   }
 
@@ -10064,7 +10304,6 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   if (indexDatabaseHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
-    String_delete(jobUUID);
     return;
   }
 
@@ -10075,23 +10314,24 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   // get entities
   error = Index_initListEntities(&indexQueryHandle,
                                  indexDatabaseHandle,
-                                 jobUUID
+                                 jobUUID,
+                                 NULL, // scheduldUUID
+                                 DATABASE_ORDERING_ASCENDING,
+                                 0LL   // offset
                                 );
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init entity list fail: %s",Error_getText(error));
     String_delete(lastErrorMessage);
-    String_delete(scheduleUUID);
-    String_delete(jobUUID);
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextEntity(&indexQueryHandle,
-                                &jobId,
+                                &entityId,
                                 jobUUID,
                                 scheduleUUID,
+                                &createdDateTime,
                                 &archiveType,
-                                &lastCreatedDateTime,
                                 &totalSize,
                                 lastErrorMessage
                                )
@@ -10099,11 +10339,11 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                      "entityId=%lld jobUUID=%S scheduleUUID=%S type=%s lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
-                     jobId,
+                     entityId,
                      jobUUID,
                      scheduleUUID,
                      archiveTypeToString(archiveType,"NONE"),
-                     lastCreatedDateTime,
+                     createdDateTime,
                      totalSize,
                      lastErrorMessage
                     );
@@ -10114,8 +10354,6 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
 
   // free resources
   String_delete(lastErrorMessage);
-  String_delete(scheduleUUID);
-  String_delete(jobUUID);
 }
 
 /***********************************************************************\
@@ -10528,7 +10766,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   NULL, // uuid
-                                  DATABASE_ID_ANY, // job id
+                                  DATABASE_ID_ANY, // entity id
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -10610,7 +10848,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   NULL, // uuid
-                                  DATABASE_ID_ANY, // job id
+                                  DATABASE_ID_ANY, // entity id
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
@@ -10783,7 +11021,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     error = Index_initListStorage(&indexQueryHandle,
                                   indexDatabaseHandle,
                                   NULL, // uuid
-                                  DATABASE_ID_ANY, // job id
+                                  DATABASE_ID_ANY, // entity id
                                   STORAGE_TYPE_ANY,
                                   NULL, // storageName
                                   NULL, // hostName
