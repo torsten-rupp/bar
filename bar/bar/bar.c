@@ -3496,7 +3496,6 @@ Server *getFTPServerSettings(const String     hostName,
   ServerNode *serverNode;
 
   assert(hostName != NULL);
-  assert(jobOptions != NULL);
   assert(ftpServer != NULL);
 
   // find FTP server
@@ -3511,8 +3510,8 @@ Server *getFTPServerSettings(const String     hostName,
   }
 
   // get FTP server settings
-  ftpServer->loginName = !String_isEmpty(jobOptions->ftpServer.loginName ) ? jobOptions->ftpServer.loginName : ((serverNode != NULL) ? serverNode->server.ftpServer.loginName : globalOptions.defaultFTPServer->ftpServer.loginName);
-  ftpServer->password  = !Password_isEmpty(jobOptions->ftpServer.password) ? jobOptions->ftpServer.password  : ((serverNode != NULL) ? serverNode->server.ftpServer.password  : globalOptions.defaultFTPServer->ftpServer.password );
+  ftpServer->loginName = ((jobOptions != NULL) && !String_isEmpty(jobOptions->ftpServer.loginName) ) ? jobOptions->ftpServer.loginName : ((serverNode != NULL) ? serverNode->server.ftpServer.loginName : globalOptions.defaultFTPServer->ftpServer.loginName);
+  ftpServer->password  = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->ftpServer.password)) ? jobOptions->ftpServer.password  : ((serverNode != NULL) ? serverNode->server.ftpServer.password  : globalOptions.defaultFTPServer->ftpServer.password );
 
   return (serverNode != NULL) ? &serverNode->server : &defaultFTPServer;
 }
@@ -3525,7 +3524,6 @@ Server *getSSHServerSettings(const String     hostName,
   ServerNode *serverNode;
 
   assert(hostName != NULL);
-  assert(jobOptions != NULL);
   assert(sshServer != NULL);
 
   // find SSH server
@@ -3540,11 +3538,11 @@ Server *getSSHServerSettings(const String     hostName,
   }
 
   // get SSH server settings
-  sshServer->port               = (jobOptions->sshServer.port != 0                        ) ? jobOptions->sshServer.port               : ((serverNode != NULL) ? serverNode->server.sshServer.port               : globalOptions.defaultSSHServer->sshServer.port              );
-  sshServer->loginName          = !String_isEmpty(jobOptions->sshServer.loginName         ) ? jobOptions->sshServer.loginName          : ((serverNode != NULL) ? serverNode->server.sshServer.loginName          : globalOptions.defaultSSHServer->sshServer.loginName         );
-  sshServer->password           = !Password_isEmpty(jobOptions->sshServer.password        ) ? jobOptions->sshServer.password           : ((serverNode != NULL) ? serverNode->server.sshServer.password           : globalOptions.defaultSSHServer->sshServer.password          );
-  sshServer->publicKeyFileName  = !String_isEmpty(jobOptions->sshServer.publicKeyFileName ) ? jobOptions->sshServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->server.sshServer.publicKeyFileName  : globalOptions.defaultSSHServer->sshServer.publicKeyFileName );
-  sshServer->privateKeyFileName = !String_isEmpty(jobOptions->sshServer.privateKeyFileName) ? jobOptions->sshServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->server.sshServer.privateKeyFileName : globalOptions.defaultSSHServer->sshServer.privateKeyFileName);
+  sshServer->port               = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                        ) ? jobOptions->sshServer.port               : ((serverNode != NULL) ? serverNode->server.sshServer.port               : globalOptions.defaultSSHServer->sshServer.port              );
+  sshServer->loginName          = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.loginName)         ) ? jobOptions->sshServer.loginName          : ((serverNode != NULL) ? serverNode->server.sshServer.loginName          : globalOptions.defaultSSHServer->sshServer.loginName         );
+  sshServer->password           = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->sshServer.password)        ) ? jobOptions->sshServer.password           : ((serverNode != NULL) ? serverNode->server.sshServer.password           : globalOptions.defaultSSHServer->sshServer.password          );
+  sshServer->publicKeyFileName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.publicKeyFileName) ) ? jobOptions->sshServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->server.sshServer.publicKeyFileName  : globalOptions.defaultSSHServer->sshServer.publicKeyFileName );
+  sshServer->privateKeyFileName = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.privateKeyFileName)) ? jobOptions->sshServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->server.sshServer.privateKeyFileName : globalOptions.defaultSSHServer->sshServer.privateKeyFileName);
 
   return (serverNode != NULL) ? &serverNode->server : &defaultSSHServer;
 }
@@ -3557,7 +3555,6 @@ Server *getWebDAVServerSettings(const String     hostName,
   ServerNode *serverNode;
 
   assert(hostName != NULL);
-  assert(jobOptions != NULL);
   assert(webDAVServer != NULL);
 
   // find WebDAV server
@@ -3572,11 +3569,11 @@ Server *getWebDAVServerSettings(const String     hostName,
   }
 
   // get WebDAV server settings
-//  webDAVServer->port               = (jobOptions->webDAVServer.port != 0                        ) ? jobOptions->webDAVServer.port               : ((serverNode != NULL) ? serverNode->webDAVServer.port               : globalOptions.defaultWebDAVServer->port              );
-  webDAVServer->loginName          = !String_isEmpty(jobOptions->webDAVServer.loginName         ) ? jobOptions->webDAVServer.loginName          : ((serverNode != NULL) ? serverNode->server.webDAVServer.loginName          : globalOptions.defaultWebDAVServer->webDAVServer.loginName         );
-  webDAVServer->password           = !Password_isEmpty(jobOptions->webDAVServer.password        ) ? jobOptions->webDAVServer.password           : ((serverNode != NULL) ? serverNode->server.webDAVServer.password           : globalOptions.defaultWebDAVServer->webDAVServer.password          );
-  webDAVServer->publicKeyFileName  = !String_isEmpty(jobOptions->webDAVServer.publicKeyFileName ) ? jobOptions->webDAVServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->server.webDAVServer.publicKeyFileName  : globalOptions.defaultWebDAVServer->webDAVServer.publicKeyFileName );
-  webDAVServer->privateKeyFileName = !String_isEmpty(jobOptions->webDAVServer.privateKeyFileName) ? jobOptions->webDAVServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->server.webDAVServer.privateKeyFileName : globalOptions.defaultWebDAVServer->webDAVServer.privateKeyFileName);
+//  webDAVServer->port               = ((jobOptions != NULL) && (jobOptions->webDAVServer.port != 0) ? jobOptions->webDAVServer.port : ((serverNode != NULL) ? serverNode->webDAVServer.port : globalOptions.defaultWebDAVServer->port );
+  webDAVServer->loginName          = ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.loginName)         ) ? jobOptions->webDAVServer.loginName          : ((serverNode != NULL) ? serverNode->server.webDAVServer.loginName          : globalOptions.defaultWebDAVServer->webDAVServer.loginName         );
+  webDAVServer->password           = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->webDAVServer.password)        ) ? jobOptions->webDAVServer.password           : ((serverNode != NULL) ? serverNode->server.webDAVServer.password           : globalOptions.defaultWebDAVServer->webDAVServer.password          );
+  webDAVServer->publicKeyFileName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.publicKeyFileName) ) ? jobOptions->webDAVServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->server.webDAVServer.publicKeyFileName  : globalOptions.defaultWebDAVServer->webDAVServer.publicKeyFileName );
+  webDAVServer->privateKeyFileName = ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.privateKeyFileName)) ? jobOptions->webDAVServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->server.webDAVServer.privateKeyFileName : globalOptions.defaultWebDAVServer->webDAVServer.privateKeyFileName);
 
   return (serverNode != NULL) ? &serverNode->server : &defaultWebDAVServer;
 }
@@ -3585,72 +3582,69 @@ void getCDSettings(const JobOptions *jobOptions,
                    OpticalDisk      *opticalDisk
                   )
 {
-  assert(jobOptions != NULL);
   assert(opticalDisk != NULL);
 
-  opticalDisk->defaultDeviceName       = (jobOptions->opticalDisk.defaultDeviceName       != NULL) ? jobOptions->opticalDisk.defaultDeviceName       : globalOptions.cd.defaultDeviceName;
-  opticalDisk->requestVolumeCommand    = (jobOptions->opticalDisk.requestVolumeCommand    != NULL) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.cd.requestVolumeCommand;
-  opticalDisk->unloadVolumeCommand     = (jobOptions->opticalDisk.unloadVolumeCommand     != NULL) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.cd.unloadVolumeCommand;
-  opticalDisk->loadVolumeCommand       = (jobOptions->opticalDisk.loadVolumeCommand       != NULL) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.cd.loadVolumeCommand;
-  opticalDisk->volumeSize              = (jobOptions->opticalDisk.volumeSize              != 0LL ) ? jobOptions->opticalDisk.volumeSize              : globalOptions.cd.volumeSize;
-  opticalDisk->imagePreProcessCommand  = (jobOptions->opticalDisk.imagePreProcessCommand  != NULL) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.cd.imagePreProcessCommand;
-  opticalDisk->imagePostProcessCommand = (jobOptions->opticalDisk.imagePostProcessCommand != NULL) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.cd.imagePostProcessCommand;
-  opticalDisk->imageCommand            = (jobOptions->opticalDisk.imageCommand            != NULL) ? jobOptions->opticalDisk.imageCommand            : globalOptions.cd.imageCommand;
-  opticalDisk->eccPreProcessCommand    = (jobOptions->opticalDisk.eccPreProcessCommand    != NULL) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.cd.eccPreProcessCommand;
-  opticalDisk->eccPostProcessCommand   = (jobOptions->opticalDisk.eccPostProcessCommand   != NULL) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.cd.eccPostProcessCommand;
-  opticalDisk->eccCommand              = (jobOptions->opticalDisk.eccCommand              != NULL) ? jobOptions->opticalDisk.eccCommand              : globalOptions.cd.eccCommand;
-  opticalDisk->writePreProcessCommand  = (jobOptions->opticalDisk.writePreProcessCommand  != NULL) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.cd.writePreProcessCommand;
-  opticalDisk->writePostProcessCommand = (jobOptions->opticalDisk.writePostProcessCommand != NULL) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.cd.writePostProcessCommand;
-  opticalDisk->writeCommand            = (jobOptions->opticalDisk.writeCommand            != NULL) ? jobOptions->opticalDisk.writeCommand            : globalOptions.cd.writeCommand;
-  opticalDisk->writeImageCommand       = (jobOptions->opticalDisk.writeImageCommand       != NULL) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.cd.writeImageCommand;
+  opticalDisk->defaultDeviceName       = ((jobOptions != NULL) && (jobOptions->opticalDisk.defaultDeviceName       != NULL)) ? jobOptions->opticalDisk.defaultDeviceName       : globalOptions.cd.defaultDeviceName;
+  opticalDisk->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.requestVolumeCommand    != NULL)) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.cd.requestVolumeCommand;
+  opticalDisk->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.cd.unloadVolumeCommand;
+  opticalDisk->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.loadVolumeCommand       != NULL)) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.cd.loadVolumeCommand;
+  opticalDisk->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize              != 0LL )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.cd.volumeSize;
+  opticalDisk->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.cd.imagePreProcessCommand;
+  opticalDisk->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePostProcessCommand != NULL)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.cd.imagePostProcessCommand;
+  opticalDisk->imageCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.imageCommand            != NULL)) ? jobOptions->opticalDisk.imageCommand            : globalOptions.cd.imageCommand;
+  opticalDisk->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.cd.eccPreProcessCommand;
+  opticalDisk->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.cd.eccPostProcessCommand;
+  opticalDisk->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.cd.eccCommand;
+  opticalDisk->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.cd.writePreProcessCommand;
+  opticalDisk->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.cd.writePostProcessCommand;
+  opticalDisk->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.cd.writeCommand;
+  opticalDisk->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.cd.writeImageCommand;
 }
 
 void getDVDSettings(const JobOptions *jobOptions,
                     OpticalDisk      *opticalDisk
                    )
 {
-  assert(jobOptions != NULL);
   assert(opticalDisk != NULL);
 
-  opticalDisk->defaultDeviceName       = (jobOptions->opticalDisk.defaultDeviceName       != NULL) ? jobOptions->opticalDisk.defaultDeviceName       : globalOptions.dvd.defaultDeviceName;
-  opticalDisk->requestVolumeCommand    = (jobOptions->opticalDisk.requestVolumeCommand    != NULL) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.dvd.requestVolumeCommand;
-  opticalDisk->unloadVolumeCommand     = (jobOptions->opticalDisk.unloadVolumeCommand     != NULL) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.dvd.unloadVolumeCommand;
-  opticalDisk->loadVolumeCommand       = (jobOptions->opticalDisk.loadVolumeCommand       != NULL) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.dvd.loadVolumeCommand;
-  opticalDisk->volumeSize              = (jobOptions->opticalDisk.volumeSize              != 0LL ) ? jobOptions->opticalDisk.volumeSize              : globalOptions.dvd.volumeSize;
-  opticalDisk->imagePreProcessCommand  = (jobOptions->opticalDisk.imagePreProcessCommand  != NULL) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.dvd.imagePreProcessCommand;
-  opticalDisk->imagePostProcessCommand = (jobOptions->opticalDisk.imagePostProcessCommand != NULL) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.dvd.imagePostProcessCommand;
-  opticalDisk->imageCommand            = (jobOptions->opticalDisk.imageCommand            != NULL) ? jobOptions->opticalDisk.imageCommand            : globalOptions.dvd.imageCommand;
-  opticalDisk->eccPreProcessCommand    = (jobOptions->opticalDisk.eccPreProcessCommand    != NULL) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.dvd.eccPreProcessCommand;
-  opticalDisk->eccPostProcessCommand   = (jobOptions->opticalDisk.eccPostProcessCommand   != NULL) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.dvd.eccPostProcessCommand;
-  opticalDisk->eccCommand              = (jobOptions->opticalDisk.eccCommand              != NULL) ? jobOptions->opticalDisk.eccCommand              : globalOptions.dvd.eccCommand;
-  opticalDisk->writePreProcessCommand  = (jobOptions->opticalDisk.writePreProcessCommand  != NULL) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.dvd.writePreProcessCommand;
-  opticalDisk->writePostProcessCommand = (jobOptions->opticalDisk.writePostProcessCommand != NULL) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.dvd.writePostProcessCommand;
-  opticalDisk->writeCommand            = (jobOptions->opticalDisk.writeCommand            != NULL) ? jobOptions->opticalDisk.writeCommand            : globalOptions.dvd.writeCommand;
-  opticalDisk->writeImageCommand       = (jobOptions->opticalDisk.writeImageCommand       != NULL) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.dvd.writeImageCommand;
+  opticalDisk->defaultDeviceName       = ((jobOptions != NULL) && (jobOptions->opticalDisk.defaultDeviceName       != NULL)) ? jobOptions->opticalDisk.defaultDeviceName       : globalOptions.dvd.defaultDeviceName;
+  opticalDisk->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.requestVolumeCommand    != NULL)) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.dvd.requestVolumeCommand;
+  opticalDisk->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.dvd.unloadVolumeCommand;
+  opticalDisk->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.loadVolumeCommand       != NULL)) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.dvd.loadVolumeCommand;
+  opticalDisk->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize              != 0LL )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.dvd.volumeSize;
+  opticalDisk->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.dvd.imagePreProcessCommand;
+  opticalDisk->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePostProcessCommand != NULL)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.dvd.imagePostProcessCommand;
+  opticalDisk->imageCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.imageCommand            != NULL)) ? jobOptions->opticalDisk.imageCommand            : globalOptions.dvd.imageCommand;
+  opticalDisk->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.dvd.eccPreProcessCommand;
+  opticalDisk->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.dvd.eccPostProcessCommand;
+  opticalDisk->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.dvd.eccCommand;
+  opticalDisk->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.dvd.writePreProcessCommand;
+  opticalDisk->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.dvd.writePostProcessCommand;
+  opticalDisk->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.dvd.writeCommand;
+  opticalDisk->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.dvd.writeImageCommand;
 }
 
 void getBDSettings(const JobOptions *jobOptions,
                    OpticalDisk      *opticalDisk
                   )
 {
-  assert(jobOptions != NULL);
   assert(opticalDisk != NULL);
 
-  opticalDisk->defaultDeviceName       = (jobOptions->opticalDisk.defaultDeviceName       != NULL) ? jobOptions->opticalDisk.defaultDeviceName       : globalOptions.bd.defaultDeviceName;
-  opticalDisk->requestVolumeCommand    = (jobOptions->opticalDisk.requestVolumeCommand    != NULL) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.bd.requestVolumeCommand;
-  opticalDisk->unloadVolumeCommand     = (jobOptions->opticalDisk.unloadVolumeCommand     != NULL) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.bd.unloadVolumeCommand;
-  opticalDisk->loadVolumeCommand       = (jobOptions->opticalDisk.loadVolumeCommand       != NULL) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.bd.loadVolumeCommand;
-  opticalDisk->volumeSize              = (jobOptions->opticalDisk.volumeSize              != 0LL ) ? jobOptions->opticalDisk.volumeSize              : globalOptions.bd.volumeSize;
-  opticalDisk->imagePreProcessCommand  = (jobOptions->opticalDisk.imagePreProcessCommand  != NULL) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.bd.imagePreProcessCommand;
-  opticalDisk->imagePostProcessCommand = (jobOptions->opticalDisk.imagePostProcessCommand != NULL) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.bd.imagePostProcessCommand;
-  opticalDisk->imageCommand            = (jobOptions->opticalDisk.imageCommand            != NULL) ? jobOptions->opticalDisk.imageCommand            : globalOptions.bd.imageCommand;
-  opticalDisk->eccPreProcessCommand    = (jobOptions->opticalDisk.eccPreProcessCommand    != NULL) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.bd.eccPreProcessCommand;
-  opticalDisk->eccPostProcessCommand   = (jobOptions->opticalDisk.eccPostProcessCommand   != NULL) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.bd.eccPostProcessCommand;
-  opticalDisk->eccCommand              = (jobOptions->opticalDisk.eccCommand              != NULL) ? jobOptions->opticalDisk.eccCommand              : globalOptions.bd.eccCommand;
-  opticalDisk->writePreProcessCommand  = (jobOptions->opticalDisk.writePreProcessCommand  != NULL) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.bd.writePreProcessCommand;
-  opticalDisk->writePostProcessCommand = (jobOptions->opticalDisk.writePostProcessCommand != NULL) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.bd.writePostProcessCommand;
-  opticalDisk->writeCommand            = (jobOptions->opticalDisk.writeCommand            != NULL) ? jobOptions->opticalDisk.writeCommand            : globalOptions.bd.writeCommand;
-  opticalDisk->writeImageCommand       = (jobOptions->opticalDisk.writeImageCommand       != NULL) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.bd.writeImageCommand;
+  opticalDisk->defaultDeviceName       = ((jobOptions != NULL) && (jobOptions->opticalDisk.defaultDeviceName       != NULL)) ? jobOptions->opticalDisk.defaultDeviceName       : globalOptions.bd.defaultDeviceName;
+  opticalDisk->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.requestVolumeCommand    != NULL)) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.bd.requestVolumeCommand;
+  opticalDisk->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.bd.unloadVolumeCommand;
+  opticalDisk->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.loadVolumeCommand       != NULL)) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.bd.loadVolumeCommand;
+  opticalDisk->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize              != 0LL )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.bd.volumeSize;
+  opticalDisk->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.bd.imagePreProcessCommand;
+  opticalDisk->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePostProcessCommand != NULL)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.bd.imagePostProcessCommand;
+  opticalDisk->imageCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.imageCommand            != NULL)) ? jobOptions->opticalDisk.imageCommand            : globalOptions.bd.imageCommand;
+  opticalDisk->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.bd.eccPreProcessCommand;
+  opticalDisk->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.bd.eccPostProcessCommand;
+  opticalDisk->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.bd.eccCommand;
+  opticalDisk->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.bd.writePreProcessCommand;
+  opticalDisk->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.bd.writePostProcessCommand;
+  opticalDisk->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.bd.writeCommand;
+  opticalDisk->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.bd.writeImageCommand;
 }
 
 void getDeviceSettings(const String     name,
@@ -3661,7 +3655,6 @@ void getDeviceSettings(const String     name,
   DeviceNode *deviceNode;
 
   assert(name != NULL);
-  assert(jobOptions != NULL);
   assert(device != NULL);
 
   deviceNode = globalOptions.deviceList->head;
@@ -3669,20 +3662,20 @@ void getDeviceSettings(const String     name,
   {
     deviceNode = deviceNode->next;
   }
-  device->defaultDeviceName       = (jobOptions->device.defaultDeviceName       != NULL) ? jobOptions->device.defaultDeviceName       : ((deviceNode != NULL) ? deviceNode->device.defaultDeviceName       : globalOptions.defaultDevice->defaultDeviceName      );
-  device->requestVolumeCommand    = (jobOptions->device.requestVolumeCommand    != NULL) ? jobOptions->device.requestVolumeCommand    : ((deviceNode != NULL) ? deviceNode->device.requestVolumeCommand    : globalOptions.defaultDevice->requestVolumeCommand   );
-  device->unloadVolumeCommand     = (jobOptions->device.unloadVolumeCommand     != NULL) ? jobOptions->device.unloadVolumeCommand     : ((deviceNode != NULL) ? deviceNode->device.unloadVolumeCommand     : globalOptions.defaultDevice->unloadVolumeCommand    );
-  device->loadVolumeCommand       = (jobOptions->device.loadVolumeCommand       != NULL) ? jobOptions->device.loadVolumeCommand       : ((deviceNode != NULL) ? deviceNode->device.loadVolumeCommand       : globalOptions.defaultDevice->loadVolumeCommand      );
-  device->volumeSize              = (jobOptions->device.volumeSize              != 0LL ) ? jobOptions->device.volumeSize              : ((deviceNode != NULL) ? deviceNode->device.volumeSize              : globalOptions.defaultDevice->volumeSize             );
-  device->imagePreProcessCommand  = (jobOptions->device.imagePreProcessCommand  != NULL) ? jobOptions->device.imagePreProcessCommand  : ((deviceNode != NULL) ? deviceNode->device.imagePreProcessCommand  : globalOptions.defaultDevice->imagePreProcessCommand );
-  device->imagePostProcessCommand = (jobOptions->device.imagePostProcessCommand != NULL) ? jobOptions->device.imagePostProcessCommand : ((deviceNode != NULL) ? deviceNode->device.imagePostProcessCommand : globalOptions.defaultDevice->imagePostProcessCommand);
-  device->imageCommand            = (jobOptions->device.imageCommand            != NULL) ? jobOptions->device.imageCommand            : ((deviceNode != NULL) ? deviceNode->device.imageCommand            : globalOptions.defaultDevice->imageCommand           );
-  device->eccPreProcessCommand    = (jobOptions->device.eccPreProcessCommand    != NULL) ? jobOptions->device.eccPreProcessCommand    : ((deviceNode != NULL) ? deviceNode->device.eccPreProcessCommand    : globalOptions.defaultDevice->eccPreProcessCommand   );
-  device->eccPostProcessCommand   = (jobOptions->device.eccPostProcessCommand   != NULL) ? jobOptions->device.eccPostProcessCommand   : ((deviceNode != NULL) ? deviceNode->device.eccPostProcessCommand   : globalOptions.defaultDevice->eccPostProcessCommand  );
-  device->eccCommand              = (jobOptions->device.eccCommand              != NULL) ? jobOptions->device.eccCommand              : ((deviceNode != NULL) ? deviceNode->device.eccCommand              : globalOptions.defaultDevice->eccCommand             );
-  device->writePreProcessCommand  = (jobOptions->device.writePreProcessCommand  != NULL) ? jobOptions->device.writePreProcessCommand  : ((deviceNode != NULL) ? deviceNode->device.writePreProcessCommand  : globalOptions.defaultDevice->writePreProcessCommand );
-  device->writePostProcessCommand = (jobOptions->device.writePostProcessCommand != NULL) ? jobOptions->device.writePostProcessCommand : ((deviceNode != NULL) ? deviceNode->device.writePostProcessCommand : globalOptions.defaultDevice->writePostProcessCommand);
-  device->writeCommand            = (jobOptions->device.writeCommand            != NULL) ? jobOptions->device.writeCommand            : ((deviceNode != NULL) ? deviceNode->device.writeCommand            : globalOptions.defaultDevice->writeCommand           );
+  device->defaultDeviceName       = ((jobOptions != NULL) && (jobOptions->device.defaultDeviceName       != NULL)) ? jobOptions->device.defaultDeviceName       : ((deviceNode != NULL) ? deviceNode->device.defaultDeviceName       : globalOptions.defaultDevice->defaultDeviceName      );
+  device->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->device.requestVolumeCommand    != NULL)) ? jobOptions->device.requestVolumeCommand    : ((deviceNode != NULL) ? deviceNode->device.requestVolumeCommand    : globalOptions.defaultDevice->requestVolumeCommand   );
+  device->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->device.unloadVolumeCommand     != NULL)) ? jobOptions->device.unloadVolumeCommand     : ((deviceNode != NULL) ? deviceNode->device.unloadVolumeCommand     : globalOptions.defaultDevice->unloadVolumeCommand    );
+  device->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->device.loadVolumeCommand       != NULL)) ? jobOptions->device.loadVolumeCommand       : ((deviceNode != NULL) ? deviceNode->device.loadVolumeCommand       : globalOptions.defaultDevice->loadVolumeCommand      );
+  device->volumeSize              = ((jobOptions != NULL) && (jobOptions->device.volumeSize              != 0LL )) ? jobOptions->device.volumeSize              : ((deviceNode != NULL) ? deviceNode->device.volumeSize              : globalOptions.defaultDevice->volumeSize             );
+  device->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->device.imagePreProcessCommand  != NULL)) ? jobOptions->device.imagePreProcessCommand  : ((deviceNode != NULL) ? deviceNode->device.imagePreProcessCommand  : globalOptions.defaultDevice->imagePreProcessCommand );
+  device->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->device.imagePostProcessCommand != NULL)) ? jobOptions->device.imagePostProcessCommand : ((deviceNode != NULL) ? deviceNode->device.imagePostProcessCommand : globalOptions.defaultDevice->imagePostProcessCommand);
+  device->imageCommand            = ((jobOptions != NULL) && (jobOptions->device.imageCommand            != NULL)) ? jobOptions->device.imageCommand            : ((deviceNode != NULL) ? deviceNode->device.imageCommand            : globalOptions.defaultDevice->imageCommand           );
+  device->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->device.eccPreProcessCommand    != NULL)) ? jobOptions->device.eccPreProcessCommand    : ((deviceNode != NULL) ? deviceNode->device.eccPreProcessCommand    : globalOptions.defaultDevice->eccPreProcessCommand   );
+  device->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->device.eccPostProcessCommand   != NULL)) ? jobOptions->device.eccPostProcessCommand   : ((deviceNode != NULL) ? deviceNode->device.eccPostProcessCommand   : globalOptions.defaultDevice->eccPostProcessCommand  );
+  device->eccCommand              = ((jobOptions != NULL) && (jobOptions->device.eccCommand              != NULL)) ? jobOptions->device.eccCommand              : ((deviceNode != NULL) ? deviceNode->device.eccCommand              : globalOptions.defaultDevice->eccCommand             );
+  device->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->device.writePreProcessCommand  != NULL)) ? jobOptions->device.writePreProcessCommand  : ((deviceNode != NULL) ? deviceNode->device.writePreProcessCommand  : globalOptions.defaultDevice->writePreProcessCommand );
+  device->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->device.writePostProcessCommand != NULL)) ? jobOptions->device.writePostProcessCommand : ((deviceNode != NULL) ? deviceNode->device.writePostProcessCommand : globalOptions.defaultDevice->writePostProcessCommand);
+  device->writeCommand            = ((jobOptions != NULL) && (jobOptions->device.writeCommand            != NULL)) ? jobOptions->device.writeCommand            : ((deviceNode != NULL) ? deviceNode->device.writeCommand            : globalOptions.defaultDevice->writeCommand           );
 }
 
 Errors inputCryptPassword(void         *userData,
