@@ -3520,7 +3520,7 @@ LOCAL Errors deleteEntity(const String jobName, DatabaseId entityId)
   error = Index_initListStorage(&indexQueryHandle,
                                 indexDatabaseHandle,
                                 NULL, // uuid
-                                DATABASE_ID_ANY, // entity id
+                                entityId,
                                 STORAGE_TYPE_ANY,
                                 NULL, // storageName
                                 NULL, // hostName
