@@ -206,7 +206,7 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *databaseHandle)
 {
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
-  String              uuid;
+  StaticString        (uuid,INDEX_UUID_LENGTH);
   uint64              createdDateTime;
   String              name1,name2;
   bool                done;
@@ -217,7 +217,6 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *databaseHandle)
   ulong               i;
 
   // init variables
-  uuid  = String_new();
   name1 = String_new();
   name2 = String_new();
 
@@ -231,7 +230,6 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *databaseHandle)
   {
     String_delete(name2);
     String_delete(name1);
-    String_delete(uuid);
     return error;
   }
 
@@ -281,13 +279,13 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *databaseHandle)
                                    bidFlag\
                                   ) \
                                 VALUES \
-                                 (\
-                                  %'S,\
-                                  '',\
-                                  %d,\
-                                  %d,\
-                                  %d\
-                                 ); \
+                                  (\
+                                   %'S,\
+                                   '',\
+                                   %d,\
+                                   %d,\
+                                   %d\
+                                  ); \
                                ",
                                uuid,
                                createdDateTime,
@@ -363,7 +361,6 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *databaseHandle)
   {
     String_delete(name2);
     String_delete(name1);
-    String_delete(uuid);
     return error;
   }
 
@@ -379,7 +376,6 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *databaseHandle)
     String_delete(name2);
     String_delete(name1);
     String_delete(created);
-    String_delete(uuid);
     return error;
   }
 #endif
@@ -387,7 +383,6 @@ LOCAL Errors upgradeToVersion4(DatabaseHandle *databaseHandle)
   // free resources
   String_delete(name2);
   String_delete(name1);
-  String_delete(uuid);
 
   return error;
 }
@@ -1354,10 +1349,10 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            "SELECT entities.jobUUID, \
                                    entities.scheduleUUID, \
                                    STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1)), \
-                                   (SELECT SUM(size) FROM storage WHERE storage.entityId=entities.id), \
+                                   (SELECT SUM(size) FROM storage LEFT JOIN entities AS storageEntities ON storage.entityId=storageEntities.id WHERE storageEntities.jobUUID=entities.jobUUID), \
                                    (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
                             FROM entities \
-                            GROUP BY jobUUID; \
+                            GROUP BY entities.jobUUID; \
                            "
                           );
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
@@ -1512,14 +1507,14 @@ Errors Index_newEntity(DatabaseHandle *databaseHandle,
                                bidFlag\
                               ) \
                             VALUES \
-                             (\
-                              %'S,\
-                              %'S,\
-                              DATETIME('now'),\
-                              %u,\
-                              '',\
-                              0\
-                             ); \
+                              (\
+                               %'S,\
+                               %'S,\
+                               DATETIME('now'),\
+                               %u,\
+                               '',\
+                               0\
+                              ); \
                            ",
                            jobUUID,
                            scheduleUUID,
@@ -1807,7 +1802,6 @@ Errors Index_newStorage(DatabaseHandle *databaseHandle,
     return error;
   }
   (*storageId) = Database_getLastRowId(databaseHandle);
-fprintf(stderr,"%s, %d: new storage id: %llu \n",__FILE__,__LINE__,*storageId);
 
   return ERROR_NONE;
 }
