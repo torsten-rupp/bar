@@ -3462,13 +3462,9 @@ LOCAL Errors deleteStorage(const String jobName, DatabaseId storageId)
         }
         if (resultError == ERROR_NONE)
         {
-#warning remove xxxxxxxxxxxx comment
-/*
           resultError = Storage_delete(&storageHandle,
                                        storageSpecifier.fileName
                                       );
-*/
-resultError = ERROR_NONE;
           if (resultError != ERROR_NONE)
           {
             String_format(resultString,"delete storage file: %s",Error_getText(resultError));
