@@ -1356,6 +1356,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            "
                           );
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   return error;
 }
@@ -1455,6 +1456,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                            offset
                           );
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   return error;
 }
@@ -1631,6 +1633,8 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                            entityId,
                            getIndexStateSetString(indexStateSetString,indexStateSet)
                           );
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
+
   String_delete(indexStateSetString);
 
   return error;
@@ -1916,6 +1920,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            regexpString,
                            storageIdsString
                           );
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   String_delete(storageIdsString);
   String_delete(regexpString);
@@ -2020,6 +2025,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                            regexpString,
                            storageIdsString
                           );
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   String_delete(storageIdsString);
   String_delete(regexpString);
@@ -2118,6 +2124,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                            regexpString,
                            storageIdsString
                           );
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   String_delete(storageIdsString);
   String_delete(regexpString);
@@ -2217,6 +2224,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            regexpString,
                            storageIdsString
                           );
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   String_delete(storageIdsString);
   String_delete(regexpString);
@@ -2320,6 +2328,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                            regexpString,
                            storageIdsString
                           );
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   String_delete(storageIdsString);
   String_delete(regexpString);
@@ -2424,6 +2433,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                            regexpString,
                            storageIdsString
                           );
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   String_delete(storageIdsString);
   String_delete(regexpString);
@@ -2473,6 +2483,8 @@ Errors Index_deleteSpecial(DatabaseHandle *databaseHandle,
 void Index_doneList(IndexQueryHandle *indexQueryHandle)
 {
   assert(indexQueryHandle != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(indexQueryHandle);
 
   Database_finalize(&indexQueryHandle->databaseQueryHandle);
   doneIndexQueryHandle(indexQueryHandle);
