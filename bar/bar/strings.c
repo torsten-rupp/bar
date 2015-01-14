@@ -413,7 +413,7 @@ LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
       }
       break;
     case STRING_TYPE_CONST:
-      fprintf(stderr,"FATAL ERROR: cannot modify constant string - program halted\n",string->maxLength);
+      fprintf(stderr,"FATAL ERROR: cannot modify constant string - program halted\n");
       exit(128);
       break; // not reached
     default:
