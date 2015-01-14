@@ -2737,7 +2737,8 @@ LOCAL Errors newArchiveFile(void           *userData,
   Errors        error;
 
   assert(createInfo != NULL);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+#warning XXXXXXXXXXXXXXX
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // set database storage name and uuid
   if (storageId != DATABASE_ID_NONE)
