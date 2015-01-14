@@ -1084,6 +1084,9 @@ String_delete(s);
   });
   if (error != ERROR_NONE)
   {
+    #ifndef NDEBUG
+      String_delete(databaseQueryHandle->sqlString);
+    #endif /* not NDEBUG */
     String_delete(sqlString);
     return error;
   }
