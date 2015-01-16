@@ -5893,6 +5893,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                                           archiveEntryInfo->file.chunkFileExtendedAttribute.value.data,
                                           archiveEntryInfo->file.chunkFileExtendedAttribute.value.length
                                          );
+
+                // close file extended attribute chunk
+                error = Chunk_close(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
               }
               else
               {
@@ -5922,11 +5929,19 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 || !Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm)
                )
             {
+              (void)Chunk_close(&archiveEntryInfo->file.chunkFileDelta.info);
               error = ERROR_INVALID_COMPRESS_ALGORITHM;
               break;
             }
             if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->file.chunkFileDelta.name);
             if (deltaSourceSize != NULL) (*deltaSourceSize) = archiveEntryInfo->file.chunkFileDelta.size;
+
+            // close file delta chunk
+            error = Chunk_close(&archiveEntryInfo->file.chunkFileDelta.info);
+            if (error != ERROR_NONE)
+            {
+              break;
+            }
             break;
           case CHUNK_ID_FILE_DATA:
             // read file data chunk
@@ -6420,11 +6435,19 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 || !Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm)
                )
             {
+              (void)Chunk_close(&archiveEntryInfo->image.chunkImageDelta.info);
               error = ERROR_INVALID_COMPRESS_ALGORITHM;
               break;
             }
             if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->image.chunkImageDelta.name);
             if (deltaSourceSize != NULL) (*deltaSourceSize) = archiveEntryInfo->image.chunkImageDelta.size;
+
+            // close image delta chunk
+            error = Chunk_close(&archiveEntryInfo->image.chunkImageDelta.info);
+            if (error != ERROR_NONE)
+            {
+              break;
+            }
             break;
           case CHUNK_ID_IMAGE_DATA:
             // read image data chunk
@@ -6800,7 +6823,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             {
               if (fileExtendedAttributeList != NULL)
               {
-                // read file extended attribute chunk
+                // read directory extended attribute chunk
                 error = Chunk_open(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,
                                    &subChunkHeader,
                                    subChunkHeader.size
@@ -6816,6 +6839,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                                           archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.value.data,
                                           archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.value.length
                                          );
+
+                // close directory extended attribute chunk
+                error = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
               }
               else
               {
@@ -7173,7 +7203,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             {
               if (fileExtendedAttributeList != NULL)
               {
-                // read file extended attribute chunk
+                // read link extended attribute chunk
                 error = Chunk_open(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,
                                    &subChunkHeader,
                                    subChunkHeader.size
@@ -7189,6 +7219,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                                           archiveEntryInfo->link.chunkLinkExtendedAttribute.value.data,
                                           archiveEntryInfo->link.chunkLinkExtendedAttribute.value.length
                                          );
+
+                // close link extended attribute chunk
+                error = Chunk_close(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
               }
               else
               {
@@ -7708,12 +7745,19 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             }
 
             StringList_append(fileNameList,archiveEntryInfo->hardLink.chunkHardLinkName.name);
+
+            // close hard link name chunk
+            error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
+            if (error != ERROR_NONE)
+            {
+              break;
+            }
             break;
           case CHUNK_ID_HARDLINK_EXTENDED_ATTRIBUTE:
             {
               if (fileExtendedAttributeList != NULL)
               {
-                // read file extended attribute chunk
+                // read hard link extended attribute chunk
                 error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,
                                    &subChunkHeader,
                                    subChunkHeader.size
@@ -7729,6 +7773,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                                           archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.value.data,
                                           archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.value.length
                                          );
+
+                // close hard link extended attribute name chunk
+                error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
               }
               else
               {
@@ -7758,11 +7809,19 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 || !Compress_isXDeltaCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm)
                )
             {
+              (void)Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
               error = ERROR_INVALID_COMPRESS_ALGORITHM;
               break;
             }
             if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->hardLink.chunkHardLinkDelta.name);
             if (deltaSourceSize != NULL) (*deltaSourceSize) = archiveEntryInfo->hardLink.chunkHardLinkDelta.size;
+
+            // close link extended attribute chunk
+            error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
+            if (error != ERROR_NONE)
+            {
+              break;
+            }
             break;
           case CHUNK_ID_HARDLINK_DATA:
             // read hard link data chunk
@@ -8145,7 +8204,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             {
               if (fileExtendedAttributeList != NULL)
               {
-                // read file extended attribute chunk
+                // read special extended attribute chunk
                 error = Chunk_open(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,
                                    &subChunkHeader,
                                    subChunkHeader.size
@@ -8161,6 +8220,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                                           archiveEntryInfo->special.chunkSpecialExtendedAttribute.value.data,
                                           archiveEntryInfo->special.chunkSpecialExtendedAttribute.value.length
                                          );
+
+                // close special extended attribute chunk
+                error = Chunk_close(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
               }
               else
               {
