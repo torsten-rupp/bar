@@ -599,42 +599,37 @@ LOCAL void initDefinition(const int *definition,
         case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-          (*((uint8*)((byte*)data+definition[i+1]))) = 0;
+          (*((uint*  )((byte*)data+definition[i+1]))) = 0;
+          (*((uint8**)((byte*)data+definition[i+2]))) = NULL;
 
           i += 3;
           break;
         case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-          (*((uint16*)((byte*)data+definition[i+1]))) = 0;
+          (*((uint*   )((byte*)data+definition[i+1]))) = 0;
+          (*((uint16**)((byte*)data+definition[i+2]))) = NULL;
 
           i += 3;
           break;
         case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-          (*((uint32*)((byte*)data+definition[i+1]))) = 0L;
+          (*((uint*   )((byte*)data+definition[i+1]))) = 0;
+          (*((uint32**)((byte*)data+definition[i+2]))) = NULL;
 
           i += 3;
           break;
         case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
-          (*((uint64*)((byte*)data+definition[i+1]))) = 0LL;
+          (*((uint*   )((byte*)data+definition[i+1]))) = 0;
+          (*((uint64**)((byte*)data+definition[i+2]))) = NULL;
 
           i += 3;
           break;
         case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
-          {
-            String string;
+          (*((uint*   )((byte*)data+definition[i+1]))) = 0;
+          (*((String**)((byte*)data+definition[i+2]))) = NULL;
 
-            string = String_new();
-            if (string == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-
-            (*((String*)((byte*)data+definition[i+1]))) = string;
-
-            i += 3;
-          }
+          i += 3;
           break;
 
         case CHUNK_DATATYPE_CRC32:
@@ -711,23 +706,46 @@ LOCAL Errors doneDefinition(const int  *definition,
         case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-          i += 3;
-          break;
         case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-          i += 3;
-          break;
         case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-          i += 3;
-          break;
         case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
-          i += 3;
+          {
+            uint arrayLength;
+            void *arrayData;
+
+            arrayLength = (*((uint* )((byte*)data+definition[i+1])));
+            arrayData   = (*((void**)((byte*)data+definition[i+2])));
+            if (arrayLength > 0)
+            {
+              assert(arrayData != NULL);
+              free(arrayData);
+            }
+            i += 3;
+          }
           break;
         case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
-          String_delete(*((String*)((byte*)data+definition[i+1])));
-          i += 3;
+          {
+            uint   arrayLength;
+            String *strings;
+            uint   z;
+
+            arrayLength = (*((uint*  )((byte*)data+definition[i+1])));
+            strings     = (*((String*)((byte*)data+definition[i+2])));
+
+            if (arrayLength > 0)
+            {
+              assert(strings != NULL);
+              for (z = 0; z < arrayLength; z++)
+              {
+                String_delete(strings[z]);
+              }
+              free(strings);
+            }
+            i += 3;
+          }
           break;
 
         case CHUNK_DATATYPE_CRC32:
@@ -973,7 +991,8 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
                   if (error != ERROR_NONE) break;
                   crc = crc32(crc,p,(ulong)arrayLength*size);
 
-                  arrayData = malloc((ulong)arrayLength*size);
+                  arrayData = (*((void**)((byte*)chunkData+definition[i+2])));
+                  arrayData = realloc(arrayData,(ulong)arrayLength*size);
                   if (arrayData == NULL)
                   {
                     snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)arrayLength*size);
@@ -993,7 +1012,8 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
                   uint16 stringLength;
 
                   // allocate string array
-                  strings = calloc((ulong)arrayLength,sizeof(String));
+                  strings = (*((String**)((byte*)chunkData+definition[i+2])));
+                  strings = realloc(strings,(ulong)arrayLength*sizeof(String));
                   if (strings == NULL)
                   {
                     snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)arrayLength*sizeof(String));
@@ -1824,6 +1844,8 @@ Errors Chunk_open(ChunkInfo         *chunkInfo,
     chunkInfo->parentChunkInfo->index += bytesRead;
   }
 
+  DEBUG_ADD_RESOURCE_TRACE("open chunk",&chunkInfo->mode);
+
   return ERROR_NONE;
 }
 
@@ -1905,6 +1927,8 @@ Errors Chunk_create(ChunkInfo *chunkInfo)
     }
   }
 
+  DEBUG_ADD_RESOURCE_TRACE("create chunk",&chunkInfo->mode);
+
   return ERROR_NONE;
 }
 
@@ -1926,6 +1950,8 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
     case CHUNK_MODE_UNKNOWN:
       break;
     case CHUNK_MODE_WRITE:
+      DEBUG_REMOVE_RESOURCE_TRACE(&chunkInfo->mode);
+
       // save offset
       error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
       if (error != ERROR_NONE)
@@ -1963,6 +1989,8 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       }
       break;
     case CHUNK_MODE_READ:
+      DEBUG_REMOVE_RESOURCE_TRACE(&chunkInfo->mode);
+
       // check chunk size value
       error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
       if (error != ERROR_NONE)
