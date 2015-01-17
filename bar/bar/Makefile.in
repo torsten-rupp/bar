@@ -63,6 +63,10 @@ LD_STATIC_LIBRARIES    = @STATIC_LIBRARIES@
 LD_STATIC_PREFIX       = -Wl,-Bstatic
 LD_DYNAMIC_PREFIX      = -Wl,-Bdynamic
 
+STRIP                  = @STRIP@
+OBJDUMP                = @OBJDUMP@
+OBJCOPY                = @OBJCOPY@
+
 XGETTEXT               = @XGETTEXT@
 XGETTEXT_FLAGS         = -L C -k -ktr
 MSGMERGE               = @MSGMERGE@
@@ -70,52 +74,54 @@ MSGFMT                 = @MSGFMT@
 
 #---------------------------------- commands----------------------------------
 
-ATTR          = @ATTR@
-CAT           = cat
-CD            = cd
-CHATTR        = chattr
-CHMOD         = chmod
-CP            = cp
-DD            = dd
-DDD           = ddd
-DIFF          = diff
-DUMP_SYMS     = @DUMP_SYMS@
-ECHO          = echo
-ECHO_NO_LF    = echo -n
-FIND          = find
-GREP          = grep
-INSTALL       = @INSTALL@
-LN            = ln
-LS            = ls
-MKDIR         = mkdir
-MKFIFO        = mkfifo
-NETCAT        = netcat
-PERL          = @PERL@
-READLINK      = readlink
-RMDIR         = rmdir
-RMF           = rm -f
-RMRF          = rm -rf
-SED           = sed
-SLEEP         = sleep
-SORT          = sort
-STAT          = stat
-TAR           = tar
-TIME          = @TIME@
-TOUCH         = touch
+ATTR           = @ATTR@
+CAT            = cat
+CD             = cd
+CHATTR         = chattr
+CHMOD          = chmod
+CP             = cp
+DD             = dd
+DDD            = ddd
+DIFF           = diff
+DUMP_SYMS      = @DUMP_SYMS@
+ECHO           = echo
+ECHO_NO_LF     = echo -n
+FIND           = find
+GREP           = grep
+INSTALL        = @INSTALL@
+LN             = ln
+LS             = ls
+MKDIR          = mkdir
+MKFIFO         = mkfifo
+NETCAT         = netcat
+PERL           = @PERL@
+READLINK       = readlink
+RMDIR          = rmdir
+RMF            = rm -f
+RMRF           = rm -rf
+SED            = sed
+SLEEP          = sleep
+SORT           = sort
+STAT           = stat
+TAR            = tar
+TIME           = @TIME@
+TOUCH          = touch
 
 # for tests only (create test devices)
-FSCK          = fsck
-LOSETUP       = /sbin/losetup
-MKFS          = /sbin/mkfs
-MOUNT         = /bin/mount
-UMOUNT        = /bin/umount
-SUDO          = sudo
-VALGRIND      = valgrind  
+FSCK           = fsck
+LOSETUP        = /sbin/losetup
+MKFS           = /sbin/mkfs
+MOUNT          = /bin/mount
+UMOUNT         = /bin/umount
+SUDO           = sudo
 
-LOOP0         = /dev/loop0
-LOOP1         = /dev/loop1
-DEVICE_ZERO   = /dev/zero
-DEVICE_RANDOM = /dev/urandom
+VALGRIND       = valgrind  
+VALGRIND_FLAGS =
+
+LOOP0          = /dev/loop0
+LOOP1          = /dev/loop1
+DEVICE_ZERO    = /dev/zero
+DEVICE_RANDOM  = /dev/urandom
 
 #------------------------ specific variables/settings ------------------------
 
@@ -341,8 +347,9 @@ INTERMEDIATE         = errors.c \
 
 TARGETS              = bar@EXEEXT@ \
                        bar-debug@EXEEXT@ \
+                       bar-valgrind@EXEEXT@ \
                        $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
-                       $(if @HAVE_BREAKPAD@,bar.sym bar-debug.sym) \
+                       $(if @HAVE_BREAKPAD@,release/bar.sym debug/bar.sym) \
                        bar-keygen \
                        destroyer@EXEEXT@
 
@@ -395,19 +402,19 @@ help:
 	@$(ECHO) "  rundev_jp"
 	@$(ECHO) "  rundev_ssl"
 	@$(ECHO) ""
-	@$(ECHO) "  test[-debug]"
+	@$(ECHO) "  test[-debug|-valgrind]"
 	@$(ECHO) "  show_debug_test_code"
 	@$(ECHO) "  run_debug_test_code"
-	@$(ECHO) "  test1[-debug], test_basic[-debug]"
-	@$(ECHO) "  test2[-debug], test_compress[-debug], test_delta_compress[-debug]"
-	@$(ECHO) "  test3[-debug], test_crypt[-debug]"
-	@$(ECHO) "  test4[-debug], test_asymmetric_crypt[-debug]"
-	@$(ECHO) "  test5[-debug], test_split[-debug]"
-	@$(ECHO) "  test6[-debug], test_image[-debug]"
-	@$(ECHO) "  test7[-debug], test_storage[-debug]"
-	@$(ECHO) "  test8[-debug], test_dvd[-debug]"
-	@$(ECHO) "  test_combined[-debug]"
-	@$(ECHO) "  test_parameters[-debug]"
+	@$(ECHO) "  test1[-debug|-valgrind], test_basic[-debug|-valgrind]"
+	@$(ECHO) "  test2[-debug|-valgrind], test_compress[-debug], test_delta_compress[-debug|-valgrind]"
+	@$(ECHO) "  test3[-debug|-valgrind], test_crypt[-debug|-valgrind]"
+	@$(ECHO) "  test4[-debug|-valgrind], test_asymmetric_crypt[-debug|-valgrind]"
+	@$(ECHO) "  test5[-debug|-valgrind], test_split[-debug|-valgrind]"
+	@$(ECHO) "  test6[-debug|-valgrind], test_image[-debug|-valgrind]"
+	@$(ECHO) "  test7[-debug|-valgrind], test_storage[-debug|-valgrind]"
+	@$(ECHO) "  test8[-debug|-valgrind], test_dvd[-debug|-valgrind]"
+	@$(ECHO) "  test_combined[-debug|-valgrind]"
+	@$(ECHO) "  test_parameters[-debug|-valgrind]"
 	@$(ECHO) ""
 	@$(ECHO) "  test_image_operations"
 	@$(ECHO) "  test_image_operations_raw"
@@ -496,13 +503,43 @@ po/jp/LC_MESSAGES/bar.mo: po/japanese.po
 
 # create BAR symbol files
 ifeq (@HAVE_BREAKPAD@,1)
-bar.sym: bar@EXEEXT@
+release/bar.sym: bar@EXEEXT@
 	$(DUMP_SYMS) ./bar@EXEEXT@ > $@
 endif
 
 ifeq (@HAVE_BREAKPAD@,1)
-bar-debug.sym: bar-debug@EXEEXT@
+release/bar.sym.o: release/bar.sym
+	(format=$(shell $(OBJDUMP) -a release/bar.o|grep 'file format'|sed 's/.*file format\s*//g'); \
+         name=$(subst .,_,$(subst /,_,$^)); \
+         $(OBJCOPY) \
+           -I binary \
+           -O $$format \
+           -B i386 \
+           --redefine-sym _binary_$${name}_start=_bar_symbols_start \
+           --redefine-sym _binary_$${name}_end=_bar_symbols_end \
+           --redefine-sym _binary_$${name}_size=_bar_symbols_size \
+           $^ $@; \
+        )
+endif
+
+ifeq (@HAVE_BREAKPAD@,1)
+debug/bar.sym: bar-debug@EXEEXT@
 	$(DUMP_SYMS) ./bar-debug@EXEEXT@ > $@
+endif
+
+ifeq (@HAVE_BREAKPAD@,1)
+debug/bar.sym.o: debug/bar.sym
+	(format=$(shell $(OBJDUMP) -a release/bar.o|grep 'file format'|sed 's/.*file format\s*//g'); \
+         name=$(subst .,_,$(subst /,_,$^)); \
+         $(OBJCOPY) \
+           -I binary \
+           -O $$format \
+           -B i386 \
+           --redefine-sym _binary_$${name}_start=_bar_symbols_start \
+           --redefine-sym _binary_$${name}_end=_bar_symbols_end \
+           --redefine-sym _binary_$${name}_size=_bar_symbols_size \
+           $^ $@; \
+        )
 endif
 
 # compile SQLite, xdelta C source without warning and debug flags
@@ -605,7 +642,7 @@ rundevddd: bar-debug@EXEEXT@
 
 rundevvalgrind: bar-valgrind
 	$(INSTALL) -d jobs
-	$(VALGRIND) ./bar-valgrind --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
+	$(VALGRIND) $(VALGRIND_FLAGS) ./bar-valgrind --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundev_en: bar@EXEEXT@
 	$(INSTALL) -d jobs
@@ -719,8 +756,10 @@ TEST_KEYS = test/key.public \
 .PHONY: test-debug test_win-debug
 .PHONY: test1 test2 test3 test4 test5 test6 test7 test8
 .PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug
+.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_storage test_dvd test_combined test_parameters
 .PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_parameters-debug
+.PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_split-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_parameters-valgrind
 .PHONY: clean_test show_debug_test_code run_debug_test_code
 test:
 	@$(MAKE) QUIET=1 --no-print-directory -s \
@@ -734,14 +773,17 @@ test:
           test_parameters
 
 test-debug:
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test
+
+test-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_VALGRIND) test
 
 test_win: $(TEST_BAR)
 	$(TEST_BAR) -o -c c:\\tmp\\x.bar -# c:\\users\\torsten
 	$(TEST_BAR) -L c:\\tmp\\x.bar 
 
 test-win-debug:
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test-win
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test-win
 
 clean_test:
 	$(RMRF) $(TEST_FILES_CLEAN)
@@ -782,7 +824,10 @@ test1 test_basic: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test1-debug test_basic-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test1
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test1
+
+test1-valgrind test_basic-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test1
 
 test2 test_compress: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 2: compress..."
@@ -811,7 +856,10 @@ test2 test_compress: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test2-debug test_compress-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test2
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test2
+
+test2-valgrind test_compress-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test2
 
 test_delta_compress: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 2: delta compress..."
@@ -840,7 +888,7 @@ test_delta_compress: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test_delta_compress-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test_delta_compress
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_delta_compress
 
 test3 test_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 3: crypt..."
@@ -869,7 +917,10 @@ test3 test_crypt: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test3-debug test_crypt-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test3
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test3
+
+test3-valgrind test_crypt-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test3
 
 test4 test_asymmetric_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
@@ -899,7 +950,10 @@ test4 test_asymmetric_crypt: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test4-debug test_asymmetric_crypt-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test4
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test4
+
+test4-valgrind test_asymmetric-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test4
 
 test5 test_split: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 5: split..."
@@ -916,7 +970,10 @@ test5 test_split: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test5-debug test_split-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test5
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test5
+
+test5-valgrind test_split-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test5
 
 test6 test_image: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 6: image..."
@@ -945,7 +1002,10 @@ test6 test_image: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test6-debug test_image-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test6
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test6
+
+test6-valgrind test_image-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test6
 
 test7 test_storage: $(TEST_BAR)
 	@$(call functionVerifyParameter,PASSWORD)
@@ -1024,7 +1084,10 @@ test7 test_storage: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test7-debug test_storage-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test7
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test7
+
+test7-valgrind test_storage-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test7
 
 test8 test_dvd: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 8: dvd..."
@@ -1037,7 +1100,10 @@ test8 test_dvd: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test8-debug test_dvd-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test8
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test8
+
+test8-valgrind test_dvd-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test8
 
 test_combined: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test combined..."
@@ -1077,7 +1143,10 @@ test_combined: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test_combined-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test_combined
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_combined
+
+test_combined-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_combined
 
 test_parameters: \
   $(TEST_BAR) \
@@ -1087,52 +1156,55 @@ test_parameters: \
 	@$(ECHO) "# test config" > test/test.cfg
 	#
 	# help
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -h 1>/dev/null $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) --help 1>/dev/null $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -h 1>/dev/null $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --help 1>/dev/null $(if $(QUIET),1>/dev/null))
 	#
 	# different options
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -H $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -L $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g -H -L $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -H -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g -H -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) --config=test/test.cfg -l test/test*.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 --dry-run $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -l cd://test*.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -t cd://test*.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -d cd://test*.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -l dvd://test*.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -t dvd://test*.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -d dvd://test*.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -l bd://test*.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -t bd://test*.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR) -d bd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -g $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -H $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -L $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -g -H -L $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -g -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -H -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -g -H -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --config=test/test.cfg -l test/test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 --dry-run $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l cd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t cd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d cd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l dvd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t dvd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d dvd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l bd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t bd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d bd://test*.bar $(if $(QUIET),1>/dev/null))
 	#
 	# wrong options
-	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR) --not-existing-option  $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --compress-algorithm=not-existing-compress  $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --crypt-algorithm=not-existing-compress $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --not-existing-option  $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar test/data --compress-algorithm=not-existing-compress  $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar test/data --crypt-algorithm=not-existing-compress $(if $(QUIET),1>/dev/null))
 ifeq (@HAVE_XDELTA@,1)
-	$(call functionTestCheckExitcode,1,1,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --delta-source=does-not-exists --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,1,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar test/data --delta-source=does-not-exists --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files $(if $(QUIET),1>/dev/null))
 endif
-	$(call functionTestCheckExitcode,6,6,SSH_ASKPASS= $(TEST_BAR) --config=test/test-not-exists.cfg -l test/test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,6,6,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --config=test/test-not-exists.cfg -l test/test*.bar $(if $(QUIET),1>/dev/null))
 	#
 	# test not implemented functions
-	$(call functionTestCheckExitcode,127,127,SSH_ASKPASS= $(TEST_BAR) device://test/test.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,127,127,SSH_ASKPASS= $(TEST_BAR) -t device://test/test.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,127,127,SSH_ASKPASS= $(TEST_BAR) -d device://test/test.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,127,127,SSH_ASKPASS= $(TEST_BAR) -x device://test/test.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,127,127,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) device://test/test.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,127,127,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t device://test/test.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,127,127,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d device://test/test.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,127,127,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x device://test/test.bar $(if $(QUIET),1>/dev/null))
 	#
 	@$(RMF) test/test.cfg
 	@$(ECHO) "ok"
 
 test_parameters-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_DEBUG) test_parameters
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_parameters
+
+test_parameters-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_parameters
 
 .PHONY: test_file_operations
 test_file_operations: \
@@ -1274,11 +1346,11 @@ test_file_operations_base: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar test/data $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -l $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar test/data $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r -x unreadable.dat -x link_not_existing_file.dat -x circular_link.dat -x circular_link.dat.marker -x fifo -x sub_ignore_dir -x nodump.dat test/data test/restore/test/data
 	$(READLINK) test/restore/test/data/link.dat 2>/dev/null $(if $(QUIET),1>/dev/null)
 	test `$(STAT) --format "%a" test/restore/test/data/file400.dat 2>/dev/null` = "400" $(if $(QUIET),1>/dev/null)
@@ -1298,37 +1370,37 @@ ifeq (@HAVE_XDELTA@,1)
 	@$(call functionVerifyParameter,BAR_PATTERN)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	($(CD) test/data/delta1; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-A.bar test.dat $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta1; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-A.bar test.dat $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	#
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar test.dat --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar test.dat --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
 	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
 	#
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
 	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
 	#
 ifeq (@HAVE_BZ2@,1)
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+bzip2 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+bzip2 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
 	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
 endif
 	#
 ifeq (@HAVE_LZMA@,1)
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+lzma9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+lzma9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
 	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
 endif
 endif
@@ -1341,12 +1413,12 @@ test_file_operations_incremental: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(INSTALL) -d test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
 
 test_file_operations_differential: \
   $(TEST_BAR) \
@@ -1356,12 +1428,12 @@ test_file_operations_differential: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(INSTALL) -d test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-differential.bar --differential --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-differential.bar --differential --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
 
 .PHONY: test_file_operations_destroyed
 test_file_operations_destroyed: \
@@ -1373,15 +1445,15 @@ test_file_operations_destroyed: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:16:FIL0 > $${fileName}_destroyed; done
-	- `SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
+	- `SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:20:XXXX > $${fileName}_destroyed; done
-	- `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
+	- `SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:32:XXXX > $${fileName}_destroyed; done
-	- `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
+	- `SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName d:1000:10 > $${fileName}_destroyed; done
-	- `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
+	- `SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 
 # helper function to create test file with data
 # call functionTestFileCreate,<data device>,<file>,<size>
@@ -2469,13 +2541,13 @@ test_image_operations_base: \
 	$(RMRF) $(TEST_FILES_CLEAN)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0),test/dev0)
-	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE).bar $(DEVICE0) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -m test/$(BAR_FILE).bar $(DEVICE0) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
 	#
 
@@ -2496,38 +2568,38 @@ test_image_operations_delta: \
 	$(RMRF) $(TEST_FILES_CLEAN)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A),test/dev0)
-	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 	@
 ifeq (@HAVE_XDELTA@,1)
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B),test/dev0)
-	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 endif
 	@
 	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	SSH_ASKPASS= $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
 	@
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A),test/dev0)
-	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --compress-algorithm=zip9 --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --compress-algorithm=zip9 --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 	@
 ifeq (@HAVE_XDELTA@,1)
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B),test/dev0)
-	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 endif
 	@
 	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	SSH_ASKPASS= $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
 	#
 
@@ -2587,15 +2659,15 @@ test_dvd_operations: \
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(SLEEP) 30
-	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	$(SLEEP) 30
-	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --ecc $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --ecc $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	#
 
 # ----------------------------------------------------------------------------
@@ -2629,7 +2701,7 @@ memcheck_extended: \
 memcheck1: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) \
+	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2645,7 +2717,7 @@ memcheck2: \
 memcheck2a: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) \
+	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2655,7 +2727,7 @@ memcheck2a: \
 memcheck2b: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) \
+	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2665,7 +2737,7 @@ memcheck2b: \
 memcheck2c: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) \
+	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2675,7 +2747,7 @@ memcheck2c: \
 memcheck2d: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) \
+	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2685,7 +2757,7 @@ memcheck2d: \
 memcheck2e: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) \
+	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2695,7 +2767,7 @@ memcheck2e: \
 memcheck2f: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) \
+	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2704,7 +2776,7 @@ memcheck2f: \
           $(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files --dry-run > /dev/null
 memcheck3: bar
 	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
-	$(VALGRIND) \
+	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2715,7 +2787,7 @@ memcheck4: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
-	$(VALGRIND) \
+	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2726,7 +2798,7 @@ memcheck5: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
-	$(VALGRIND) \
+	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2737,7 +2809,7 @@ memcheck6: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
-	$(VALGRIND) \
+	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2748,14 +2820,14 @@ memcheck7: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
-	-$(VALGRIND) \
+	-$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           $(TEST_BAR_VALGRIND) dvd:///dev/dvd $(BAR_OPTIONS) > /dev/null
-	-$(VALGRIND) \
+	-$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -2765,7 +2837,7 @@ memcheck7: \
 memcheck8: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) \
+	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
