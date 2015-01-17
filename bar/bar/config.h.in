@@ -139,6 +139,15 @@
 /* Define to 1 if you have the <grp.h> header file. */
 #undef HAVE_GRP_H
 
+/* inotify_add_watch() available */
+#undef HAVE_INOTIFY_ADD_WATCH
+
+/* inotify_init1() available */
+#undef HAVE_INOTIFY_INIT1
+
+/* inotify_rm_watch() available */
+#undef HAVE_INOTIFY_RM_WATCH
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -477,6 +486,9 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* The size of `ulong', as computed by sizeof. */
+#undef SIZEOF_ULONG
 
 /* The size of `void *', as computed by sizeof. */
 #undef SIZEOF_VOID_P

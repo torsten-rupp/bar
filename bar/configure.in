@@ -29,8 +29,8 @@ dnl --- set toolchain variables CFLAGS, CXXFLAGS, LDFALGS, LIBS
 dnl usage: AC_SET_TOOLCHAIN_SETTINGS(<CC_FLAGS>,<CXX_FLAGS>,<CC_DEFINES>,<CC_INCLUDES>,<LD_FLAGS>,<LIBRARY_PATHS>,<STATIC_LIBRARIES>,<LIBRARIES>)
 AC_DEFUN([AC_SET_TOOLCHAIN_SETTINGS],
 [
-  CFLAGS="$1"
-  CXXFLAGS="$2"
+  CFLAGS="$1 -v"
+  CXXFLAGS="$2 -v"
   for z in $3 ""; do
     if test -n "$z"; then
       CFLAGS="$CFLAGS -D$z"
@@ -618,6 +618,8 @@ AC_SUBST(LOCALE_DIR)                        dnl locale directory
 AC_SUBST(CC)                                dnl C compiler
 AC_SUBST(LD)                                dnl linker
 AC_SUBST(STRIP)                             dnl strip
+AC_SUBST(OBJDUMP)                           dnl objdump
+AC_SUBST(OBJCOPY)                           dnl objcopy
 
 AC_SUBST(CC_FLAGS)                          dnl C compiler flags
 AC_SUBST(CC_WARN_FLAGS)                     dnl C compiler warning flags
@@ -903,6 +905,12 @@ fi
 if test -z "$STRIP"; then
   AC_PATH_PROGS(STRIP,strip)
 fi
+if test -z "$OBJDUMP"; then
+  AC_PATH_PROGS(OBJDUMP,objdump)
+fi
+if test -z "$OBJCOPY"; then
+  AC_PATH_PROGS(OBJCOPY,objcopy)
+fi
 
 AC_PATH_PROGS(PERL,perl)
 if test -z "$PERL"; then
@@ -1151,7 +1159,7 @@ fi
 
 # add package include/library search directory
 CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
+LIBRARY_PATHS="$cwd/packages/lib $LIBRARY_PATHS"
 
 # set variables for compile packages
 AC_SET_TOOLCHAIN_SETTINGS($CC_FLAGS,
@@ -1462,6 +1470,7 @@ if test $ENABLE_LZ4 = "yes"; then
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
+        rm -f $cwd/packages/lib/liblz4*.so*
       fi
       if test $result -eq 1; then
         AC_MSG_RESULT([done])
@@ -2782,9 +2791,9 @@ dnl echo "ac_cv_sys_large_files~$ac_cv_sys_large_files"
 dnl echo "ac_cv_sys_largefile_CC=$ac_cv_sys_largefile_CC"
 dnl echo -----------
 AC_CHECK_LARGEFILE_DEFINES
+AC_CHECK_SIZEOF(ulong)
 AC_CHECK_SIZEOF(void *)
 
-AC_MSG_WARN([xxxhost=$host_os])
 AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"],,uuid/uuid.h)
 case $host_os in
   linux*)
@@ -2899,6 +2908,10 @@ AC_CHECK_FUNCTION(mkdtemp,      AC_DEFINE(HAVE_MKDTEMP,      1,[mkdtemp() availa
 AC_CHECK_FUNCTION(mkstemp,      AC_DEFINE(HAVE_MKSTEMP,      1,[mkstemp() available]),,io.h)
 AC_CHECK_FUNCTION(mktemp,       AC_DEFINE(HAVE_MKTEMP,       1,[mktemp() available]) ,,io.h)
 AC_CHECK_MKDIR_ARGUMENTS
+
+AC_CHECK_FUNCTION(inotify_init1,    AC_DEFINE(HAVE_INOTIFY_INIT1,    1,[inotify_init1() available]))
+AC_CHECK_FUNCTION(inotify_add_watch,AC_DEFINE(HAVE_INOTIFY_ADD_WATCH,1,[inotify_add_watch() available]))
+AC_CHECK_FUNCTION(inotify_rm_watch, AC_DEFINE(HAVE_INOTIFY_RM_WATCH, 1,[inotify_rm_watch() available]))
 
 AC_CHECK_FUNCTION(localtime_r,AC_DEFINE(HAVE_LOCALTIME_R,1,[localtime_r() available]))
 AC_CHECK_FUNCTION(getdate_r,  AC_DEFINE(HAVE_GETDATE_R,  1,[getdate_r() available]))
