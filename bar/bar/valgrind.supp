@@ -132,3 +132,117 @@
    obj:/lib*/libc-2.7*.so
    fun:ftello64
 }
+
+# lzma errors
+{
+   lzma1
+   Memcheck:Cond
+   fun:lzma_lzma_optimum_normal
+   fun:lzma_lzma_encode
+   fun:lzma2_encode
+   fun:lz_encode
+   fun:block_encode
+   fun:stream_encode
+   fun:lzma_code
+   fun:compressData
+   fun:Compress_getAvailableCompressedBlocks
+   fun:flushFileDataBlocks
+   fun:__Archive_closeEntry
+   fun:storeFileEntry.constprop.24
+}
+{
+   lzma2
+   Memcheck:Value8
+   fun:lzma_lzma_optimum_normal
+   fun:lzma_lzma_encode
+   fun:lzma2_encode
+   fun:lz_encode
+   fun:block_encode
+   fun:stream_encode
+   fun:lzma_code
+   fun:compressData
+   fun:Compress_getAvailableCompressedBlocks
+   fun:flushFileDataBlocks
+   fun:__Archive_closeEntry
+   fun:storeFileEntry.constprop.24
+}
+{
+   lzma3
+   Memcheck:Cond
+   fun:bt_find_func
+   fun:lzma_mf_bt4_find
+   fun:lzma_mf_find
+   fun:lzma_lzma_optimum_normal
+   fun:lzma_lzma_encode
+   fun:lzma2_encode
+   fun:lz_encode
+   fun:block_encode
+   fun:stream_encode
+   fun:lzma_code
+   fun:compressData
+   fun:Compress_getAvailableCompressedBlocks
+}
+{
+   lzma4
+   Memcheck:Value8
+   fun:bt_find_func
+   fun:lzma_mf_bt4_find
+   fun:lzma_mf_find
+   fun:lzma_lzma_optimum_normal
+   fun:lzma_lzma_encode
+   fun:lzma2_encode
+   fun:lz_encode
+   fun:block_encode
+   fun:stream_encode
+   fun:lzma_code
+   fun:compressData
+   fun:Compress_getAvailableCompressedBlocks
+}
+{
+   lzma5
+   Memcheck:Cond
+   fun:lzma_mf_bt4_find
+   fun:lzma_mf_find
+   fun:lzma_lzma_optimum_normal
+   fun:lzma_lzma_encode
+   fun:lzma2_encode
+   fun:lz_encode
+   fun:block_encode
+   fun:stream_encode
+   fun:lzma_code
+   fun:compressData
+   fun:Compress_getAvailableCompressedBlocks
+   fun:flushFileDataBlocks
+}
+{
+   lzma6
+   Memcheck:Cond
+   fun:lzma_mf_find
+   fun:lzma_lzma_optimum_normal
+   fun:lzma_lzma_encode
+   fun:lzma2_encode
+   fun:lz_encode
+   fun:block_encode
+   fun:stream_encode
+   fun:lzma_code
+   fun:compressData
+   fun:Compress_getAvailableCompressedBlocks
+   fun:flushFileDataBlocks
+   fun:__Archive_closeEntry
+}
+{
+   lzma7
+   Memcheck:Cond
+   fun:bt_skip_func
+   fun:lzma_mf_bt4_find
+   fun:lzma_mf_find
+   fun:lzma_lzma_optimum_normal
+   fun:lzma_lzma_encode
+   fun:lzma2_encode
+   fun:lz_encode
+   fun:block_encode
+   fun:stream_encode
+   fun:lzma_code
+   fun:compressData
+   fun:Compress_getAvailableCompressedBlocks
+}
