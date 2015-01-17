@@ -531,14 +531,14 @@ LOCAL Errors flushChunkBuffer(ChunkBuffer *chunkBuffer)
 * Name   : initDefinition
 * Purpose: init chunk definition
 * Input  : definition - chunk definition
-*          data       - chunk data
+*          chunkData  - chunk data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 LOCAL void initDefinition(const int *definition,
-                          void      *data
+                          void      *chunkData
                          )
 {
   uint i;
@@ -554,29 +554,25 @@ LOCAL void initDefinition(const int *definition,
         case CHUNK_DATATYPE_UINT8:
         case CHUNK_DATATYPE_INT8:
           // init 8bite value
-          (*((uint8*)((byte*)data+definition[i+1]))) = 0;
-
+          (*((uint8*)((byte*)chunkData+definition[i+1]))) = 0;
           i += 2;
           break;
         case CHUNK_DATATYPE_UINT16:
         case CHUNK_DATATYPE_INT16:
           // init 16bite value
-          (*((uint16*)((byte*)data+definition[i+1]))) = 0;
-
+          (*((uint16*)((byte*)chunkData+definition[i+1]))) = 0;
           i += 2;
           break;
         case CHUNK_DATATYPE_UINT32:
         case CHUNK_DATATYPE_INT32:
           // init 32bite value
-          (*((uint32*)((byte*)data+definition[i+1]))) = 0L;
-
+          (*((uint32*)((byte*)chunkData+definition[i+1]))) = 0L;
           i += 2;
           break;
         case CHUNK_DATATYPE_UINT64:
         case CHUNK_DATATYPE_INT64:
           // init 64bite value
-          (*((uint64*)((byte*)data+definition[i+1]))) = 0LL;
-
+          (*((uint64*)((byte*)chunkData+definition[i+1]))) = 0LL;
           i += 2;
           break;
         case CHUNK_DATATYPE_STRING:
@@ -590,60 +586,38 @@ LOCAL void initDefinition(const int *definition,
             }
 
             // init string value
-            (*((String*)((byte*)data+definition[i+1]))) = string;
+            (*((String*)((byte*)chunkData+definition[i+1]))) = string;
 
             i += 2;
           }
           break;
-
         case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-          (*((uint*  )((byte*)data+definition[i+1]))) = 0;
-          (*((uint8**)((byte*)data+definition[i+2]))) = NULL;
-
-          i += 3;
-          break;
         case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-          (*((uint*   )((byte*)data+definition[i+1]))) = 0;
-          (*((uint16**)((byte*)data+definition[i+2]))) = NULL;
-
-          i += 3;
-          break;
         case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-          (*((uint*   )((byte*)data+definition[i+1]))) = 0;
-          (*((uint32**)((byte*)data+definition[i+2]))) = NULL;
-
-          i += 3;
-          break;
         case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
-          (*((uint*   )((byte*)data+definition[i+1]))) = 0;
-          (*((uint64**)((byte*)data+definition[i+2]))) = NULL;
-
+          (*((uint* )((byte*)chunkData+definition[i+1]))) = 0;
+          (*((void**)((byte*)chunkData+definition[i+2]))) = NULL;
           i += 3;
           break;
         case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
-          (*((uint*   )((byte*)data+definition[i+1]))) = 0;
-          (*((String**)((byte*)data+definition[i+2]))) = NULL;
-
+          (*((uint*   )((byte*)chunkData+definition[i+1]))) = 0;
+          (*((String**)((byte*)chunkData+definition[i+2]))) = NULL;
           i += 3;
           break;
-
         case CHUNK_DATATYPE_CRC32:
           i += 2;
           break;
-
         case CHUNK_DATATYPE_DATA:
           i += 2;
           break;
-
         case CHUNK_ALIGN:
           i += 2;
           break;
-
         #ifndef NDEBUG
           default:
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -653,26 +627,26 @@ LOCAL void initDefinition(const int *definition,
     }
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("definition data",data);
+  DEBUG_ADD_RESOURCE_TRACE("definition data",chunkData);
 }
 
 /***********************************************************************\
 * Name   : doneDefinition
 * Purpose: done chunk definition
-* Input  : definition     - chunk definition
-*          data           - chunk data
+* Input  : definition - chunk definition
+*          chunkData  - chunk data
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors doneDefinition(const int  *definition,
-                            const void *data
+                            const void *chunkData
                            )
 {
   uint i;
 
-  DEBUG_REMOVE_RESOURCE_TRACE(data);
+  DEBUG_REMOVE_RESOURCE_TRACE(chunkData);
 
   if (definition != NULL)
   {
@@ -699,10 +673,94 @@ LOCAL Errors doneDefinition(const int  *definition,
           i += 2;
           break;
         case CHUNK_DATATYPE_STRING:
-          String_delete(*((String*)((byte*)data+definition[i+1])));
+          String_delete(*((String*)((byte*)chunkData+definition[i+1])));
           i += 2;
           break;
+        case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
+          i += 3;
+          break;
+        case CHUNK_DATATYPE_CRC32:
+          i += 2;
+          break;
+        case CHUNK_DATATYPE_DATA:
+          i += 2;
+          break;
+        case CHUNK_ALIGN:
+          i += 2;
+          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
+      }
+    }
+  }
 
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : freeDefinition
+* Purpose: free resources of chunk definition
+* Input  : definition - chunk definition
+*          chunkData  - chunk data
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeDefinition(const int *definition,
+                          void      *chunkData
+                         )
+{
+  uint i;
+
+  if (definition != NULL)
+  {
+    i = 0;
+    while (definition[i+0] != 0)
+    {
+      switch (definition[i+0])
+      {
+        case CHUNK_DATATYPE_BYTE:
+        case CHUNK_DATATYPE_UINT8:
+        case CHUNK_DATATYPE_INT8:
+          // init 8bite value
+          (*((uint8*)((byte*)chunkData+definition[i+1]))) = 0;
+          i += 2;
+          break;
+        case CHUNK_DATATYPE_UINT16:
+        case CHUNK_DATATYPE_INT16:
+          // init 16bite value
+          (*((uint16*)((byte*)chunkData+definition[i+1]))) = 0;
+          i += 2;
+          break;
+        case CHUNK_DATATYPE_UINT32:
+        case CHUNK_DATATYPE_INT32:
+          // init 32bite value
+          (*((uint32*)((byte*)chunkData+definition[i+1]))) = 0L;
+          i += 2;
+          break;
+        case CHUNK_DATATYPE_UINT64:
+        case CHUNK_DATATYPE_INT64:
+          // init 64bite value
+          (*((uint64*)((byte*)chunkData+definition[i+1]))) = 0LL;
+          i += 2;
+          break;
+        case CHUNK_DATATYPE_STRING:
+          String_clear(*((String*)((byte*)chunkData+definition[i+1])));
+          i += 2;
+          break;
         case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
@@ -716,13 +774,15 @@ LOCAL Errors doneDefinition(const int  *definition,
             uint arrayLength;
             void *arrayData;
 
-            arrayLength = (*((uint* )((byte*)data+definition[i+1])));
-            arrayData   = (*((void**)((byte*)data+definition[i+2])));
+            arrayLength = (*((uint* )((byte*)chunkData+definition[i+1])));
+            arrayData   = (*((void**)((byte*)chunkData+definition[i+2])));
             if (arrayLength > 0)
             {
               assert(arrayData != NULL);
               free(arrayData);
             }
+            (*((uint* )((byte*)chunkData+definition[i+1]))) = 0;
+            (*((void**)((byte*)chunkData+definition[i+2]))) = NULL;
             i += 3;
           }
           break;
@@ -732,9 +792,8 @@ LOCAL Errors doneDefinition(const int  *definition,
             String *strings;
             uint   z;
 
-            arrayLength = (*((uint*  )((byte*)data+definition[i+1])));
-            strings     = (*((String*)((byte*)data+definition[i+2])));
-
+            arrayLength = (*((uint*  )((byte*)chunkData+definition[i+1])));
+            strings     = (*((String*)((byte*)chunkData+definition[i+2])));
             if (arrayLength > 0)
             {
               assert(strings != NULL);
@@ -744,22 +803,20 @@ LOCAL Errors doneDefinition(const int  *definition,
               }
               free(strings);
             }
+            (*((uint* )((byte*)chunkData+definition[i+1]))) = 0;
+            (*((void**)((byte*)chunkData+definition[i+2]))) = NULL;
             i += 3;
           }
           break;
-
         case CHUNK_DATATYPE_CRC32:
           i += 2;
           break;
-
         case CHUNK_DATATYPE_DATA:
           i += 2;
           break;
-
         case CHUNK_ALIGN:
           i += 2;
           break;
-
         #ifndef NDEBUG
           default:
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -768,8 +825,6 @@ LOCAL Errors doneDefinition(const int  *definition,
       }
     }
   }
-
-  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -2002,15 +2057,18 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
         return ERROR_INVALID_CHUNK_SIZE;
       }
 
+      // seek to end of chunk
       if (chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size > offset)
       {
-        // seek to end of chunk
         error = chunkInfo->io->seek(chunkInfo->ioUserData,chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size);
         if (error != ERROR_NONE)
         {
           return error;
         }
       }
+
+      // free resources
+      freeDefinition(chunkInfo->definition,chunkInfo->data);
       break;
     #ifndef NDEBUG
       default:
