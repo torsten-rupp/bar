@@ -16,6 +16,7 @@ TESTCODE_EXITCODE     = 124
 
 #------------------------------------ paths ----------------------------------
 
+BASE_DIR           = $(PWD)
 SOURCE_DIR         = @srcdir@
 CONFIG_DIR         = @CONFIG_DIR@
 TLS_DIR            = @TLS_DIR@
@@ -116,7 +117,7 @@ UMOUNT         = /bin/umount
 SUDO           = sudo
 
 VALGRIND       = valgrind  
-VALGRIND_FLAGS =
+VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=123       
 
 LOOP0          = /dev/loop0
 LOOP1          = /dev/loop1
