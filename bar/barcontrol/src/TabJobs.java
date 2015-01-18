@@ -1522,7 +1522,7 @@ public class TabJobs
         }
       });
 
-      button = Widgets.newButton(composite,BARControl.tr("New")+"\u2026");
+      button = Widgets.newButton(composite,BARControl.tr("New\u2026"));
       button.setToolTipText(BARControl.tr("Create new job entry."));
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
@@ -1536,7 +1536,7 @@ public class TabJobs
         }
       });
 
-      button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
+      button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
       button.setToolTipText(BARControl.tr("Clone an existing job entry."));
       button.setEnabled(false);
       Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
@@ -1561,7 +1561,7 @@ public class TabJobs
         }
       });
 
-      button = Widgets.newButton(composite,BARControl.tr("Rename")+"\u2026");
+      button = Widgets.newButton(composite,BARControl.tr("Rename\u2026"));
       button.setToolTipText(BARControl.tr("Rename a job entry."));
       button.setEnabled(false);
       Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
@@ -1586,7 +1586,7 @@ public class TabJobs
         }
       });
 
-      button = Widgets.newButton(composite,BARControl.tr("Delete")+"\u2026");
+      button = Widgets.newButton(composite,BARControl.tr("Delete\u2026"));
       button.setToolTipText(BARControl.tr("Delete a job entry."));
       button.setEnabled(false);
       Widgets.layout(button,0,5,TableLayoutData.DEFAULT);
@@ -1774,7 +1774,7 @@ public class TabJobs
 
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItemOpenClose = Widgets.addMenuItem(menu,"Open/Close");
+          menuItemOpenClose = Widgets.addMenuItem(menu,BARControl.tr("Open/Close"));
           menuItemOpenClose.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1809,7 +1809,7 @@ public class TabJobs
 
           Widgets.addMenuSeparator(menu);
 
-          menuItem = Widgets.addMenuItem(menu,"Include");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Include"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1836,7 +1836,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Exclude");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Exclude"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1861,7 +1861,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"None");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("None"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1888,7 +1888,7 @@ public class TabJobs
 
           Widgets.addMenuSeparator(menu);
 
-          menuItem = Widgets.addMenuItem(menu,"Directory size");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Directory size"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2060,7 +2060,7 @@ public class TabJobs
 
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Include");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Include"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2080,7 +2080,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Exclude");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Exclude"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2098,7 +2098,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"None");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("None"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2198,6 +2198,7 @@ public class TabJobs
         widgetIncludeTable.setHeaderVisible(false);
         Widgets.addTableColumn(widgetIncludeTable,0,SWT.LEFT,20);
         Widgets.addTableColumn(widgetIncludeTable,1,SWT.LEFT,1024,true);
+//????
 // automatic column width calculation?
 //widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
         Widgets.layout(widgetIncludeTable,0,1,TableLayoutData.NSWE);
@@ -2238,7 +2239,7 @@ public class TabJobs
 
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Add\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2254,7 +2255,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Edit\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit\u2026"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2270,7 +2271,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Clone\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2286,7 +2287,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Remove\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2307,7 +2308,7 @@ public class TabJobs
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,1,TableLayoutData.W);
         {
-          widgetIncludeTableInsert = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
+          widgetIncludeTableInsert = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
           widgetIncludeTableInsert.setToolTipText(BARControl.tr("Add entry to included list."));
           Widgets.layout(widgetIncludeTableInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetIncludeTableInsert.addSelectionListener(new SelectionListener()
@@ -2325,7 +2326,7 @@ public class TabJobs
             }
           });
 
-          widgetIncludeTableEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"u2026");
+          widgetIncludeTableEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
           widgetIncludeTableEdit.setToolTipText(BARControl.tr("Edit entry in included list."));
           Widgets.layout(widgetIncludeTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetIncludeTableEdit.addSelectionListener(new SelectionListener()
@@ -2343,7 +2344,7 @@ public class TabJobs
             }
           });
 
-          widgetIncludeTableRemove = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
+          widgetIncludeTableRemove = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
           widgetIncludeTableRemove.setToolTipText(BARControl.tr("Clone entry in included list."));
           Widgets.layout(widgetIncludeTableRemove,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetIncludeTableRemove.addSelectionListener(new SelectionListener()
@@ -2361,7 +2362,7 @@ public class TabJobs
             }
           });
 
-          button = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
+          button = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
           button.setToolTipText(BARControl.tr("Remove entry from included list."));
           Widgets.layout(button,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
@@ -2422,7 +2423,7 @@ public class TabJobs
 
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Add\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2438,7 +2439,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Edit\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit\u2026"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2454,7 +2455,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Clone\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2470,7 +2471,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Remove\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2492,7 +2493,7 @@ public class TabJobs
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,3,1,TableLayoutData.W);
         {
-          widgetExcludeListInsert = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
+          widgetExcludeListInsert = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
           widgetExcludeListInsert.setToolTipText(BARControl.tr("Add entry to excluded list."));
           Widgets.layout(widgetExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetExcludeListInsert.addSelectionListener(new SelectionListener()
@@ -2510,7 +2511,7 @@ public class TabJobs
             }
           });
 
-          widgetExcludeListEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"\u2026");
+          widgetExcludeListEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
           widgetExcludeListEdit.setToolTipText(BARControl.tr("Edit entry in excluded list."));
           Widgets.layout(widgetExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetExcludeListEdit.addSelectionListener(new SelectionListener()
@@ -2528,7 +2529,7 @@ public class TabJobs
             }
           });
 
-          button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
+          button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
           button.setToolTipText(BARControl.tr("Clone entry in excluded list."));
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
@@ -2546,7 +2547,7 @@ public class TabJobs
             }
           });
 
-          widgetExcludeListRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
+          widgetExcludeListRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
           widgetExcludeListRemove.setToolTipText(BARControl.tr("Remove entry from excluded list."));
           Widgets.layout(widgetExcludeListRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetExcludeListRemove.addSelectionListener(new SelectionListener()
@@ -2725,7 +2726,7 @@ public class TabJobs
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,String.format(BARControl.tr("'%s' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB."),string));
+                  Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
                   widget.forceFocus();
                 }
               }
@@ -2747,7 +2748,7 @@ public class TabJobs
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,String.format(BARControl.tr("'%s' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB."),string));
+                  Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
                   widget.forceFocus();
                 }
               }
@@ -2777,7 +2778,7 @@ public class TabJobs
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,String.format(BARControl.tr("'%s' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB."),string));
+                  Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
                   widget.forceFocus();
                 }
               }
@@ -2929,10 +2930,10 @@ public class TabJobs
             {
               Button widget   = (Button)selectionEvent.widget;
               String fileName = Dialogs.fileSave(shell,
-                                                 "Select source file",
+                                                 BARControl.tr("Select source file"),
                                                  deltaSource.getString(),
-                                                 new String[]{"BAR files","*.bar",
-                                                              "All files","*",
+                                                 new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                              BARControl.tr("All files"),"*",
                                                              }
                                                 );
               if (fileName != null)
@@ -2997,7 +2998,7 @@ public class TabJobs
           });
           menu = Widgets.newPopupMenu(shell);
           {
-            menuItem = Widgets.addMenuItem(menu,"Add\u2026");
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3011,7 +3012,7 @@ public class TabJobs
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,"Add most used compressed file suffixes");
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add most used compressed file suffixes"));
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3039,7 +3040,7 @@ public class TabJobs
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,"Add most used multi-media file suffixes");
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add most used multi-media file suffixes"));
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3068,7 +3069,7 @@ public class TabJobs
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,"Add most used package file suffixes");
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add most used package file suffixes"));
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3089,7 +3090,7 @@ public class TabJobs
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,"Remove\u2026");
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3111,7 +3112,7 @@ public class TabJobs
           subComposite = Widgets.newComposite(composite,SWT.NONE,4);
           Widgets.layout(subComposite,1,0,TableLayoutData.W);
           {
-            widgetCompressExcludeListInsert = Widgets.newButton(subComposite,BARControl.tr("Add")+"\u2026");
+            widgetCompressExcludeListInsert = Widgets.newButton(subComposite,BARControl.tr("Add\u2026"));
             widgetCompressExcludeListInsert.setToolTipText(BARControl.tr("Add entry to compress exclude list."));
             Widgets.layout(widgetCompressExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListInsert,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
@@ -3136,7 +3137,7 @@ public class TabJobs
               }
             });
 
-            widgetCompressExcludeListEdit = Widgets.newButton(subComposite,BARControl.tr("Edit")+"\u2026");
+            widgetCompressExcludeListEdit = Widgets.newButton(subComposite,BARControl.tr("Edit\u2026"));
             widgetCompressExcludeListEdit.setToolTipText(BARControl.tr("Edit entry in compress exclude list."));
             Widgets.layout(widgetCompressExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListEdit,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
@@ -3161,7 +3162,7 @@ public class TabJobs
               }
             });
 
-            widgetCompressExcludeListRemove = Widgets.newButton(subComposite,BARControl.tr("Remove")+"\u2026");
+            widgetCompressExcludeListRemove = Widgets.newButton(subComposite,BARControl.tr("Remove\u2026"));
             widgetCompressExcludeListRemove.setToolTipText(BARControl.tr("Remove entry from compress exclude list."));
             Widgets.layout(widgetCompressExcludeListRemove,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListRemove,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
@@ -3366,10 +3367,10 @@ public class TabJobs
             {
               Button widget   = (Button)selectionEvent.widget;
               String fileName = Dialogs.fileOpen(shell,
-                                                 "Select public key file",
+                                                 BARControl.tr("Select public key file"),
                                                  cryptPublicKeyFileName.getString(),
-                                                 new String[]{"Public key","*.public",
-                                                              "All files","*",
+                                                 new String[]{BARControl.tr("Public key"),"*.public",
+                                                              BARControl.tr("All files"),"*",
                                                              }
                                                 );
               if (fileName != null)
@@ -3614,7 +3615,7 @@ public class TabJobs
               }
               else
               {
-                Dialogs.error(shell,"Crypt passwords are not equal!");
+                Dialogs.error(shell,BARControl.tr("Crypt passwords are not equal!"));
               }
             }
           });
@@ -3801,10 +3802,10 @@ public class TabJobs
               if (selectedJobData != null)
               {
                 String fileName = Dialogs.fileSave(shell,
-                                                   "Select storage file name",
+                                                   BARControl.tr("Select storage file name"),
                                                    storageFileName.getString(),
-                                                   new String[]{"BAR files","*.bar",
-                                                                "All files","*",
+                                                   new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                                BARControl.tr("All files"),"*",
                                                                }
                                                   );
                 if (fileName != null)
@@ -3879,10 +3880,10 @@ public class TabJobs
             {
               Button widget   = (Button)selectionEvent.widget;
               String fileName = Dialogs.fileSave(shell,
-                                                 "Select incremental file",
+                                                 BARControl.tr("Select incremental file"),
                                                  incrementalListFileName.getString(),
-                                                 new String[]{"BAR incremental data","*.bid",
-                                                              "All files","*",
+                                                 new String[]{BARControl.tr("BAR incremental data"),"*.bid",
+                                                              BARControl.tr("All files"),"*",
                                                              }
                                                 );
               if (fileName != null)
@@ -4034,14 +4035,14 @@ public class TabJobs
                   && !archivePartSizeFlag.getBoolean()
                  )
               {
-                Dialogs.warning(shell,"When writing to a CD without splitting enabled\nthe resulting archive file may not fit on medium.");
+                Dialogs.warning(shell,BARControl.tr("When writing to a CD without splitting enabled\nthe resulting archive file may not fit on medium."));
               }
               if (   changedFlag
                   && archivePartSizeFlag.getBoolean()
                   && (volumeSize.getLong() <= 0)
                  )
               {
-                Dialogs.warning(shell,"When writing to a CD without setting medium size\nthe resulting archive file may not fit on medium.");
+                Dialogs.warning(shell,BARControl.tr("When writing to a CD without setting medium size\nthe resulting archive file may not fit on medium."));
               }
               if (   changedFlag
                   && archivePartSizeFlag.getBoolean()
@@ -4050,7 +4051,7 @@ public class TabJobs
                   && ecc.getBoolean()
                  )
               {
-                Dialogs.warning(shell,"When writing to a CD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 250M, medium 500M\n- part size 140M, medium 560M\n");
+                Dialogs.warning(shell,BARControl.tr("When writing to a CD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 250M, medium 500M\n- part size 140M, medium 560M\n"));
               }
             }
           });
@@ -4081,14 +4082,14 @@ public class TabJobs
                   && !archivePartSizeFlag.getBoolean()
                  )
               {
-                Dialogs.warning(shell,"When writing to a DVD without splitting enabled\nthe resulting archive file may not fit on medium.");
+                Dialogs.warning(shell,BARControl.tr("When writing to a DVD without splitting enabled\nthe resulting archive file may not fit on medium."));
               }
               if (   changedFlag
                   && archivePartSizeFlag.getBoolean()
                   && (volumeSize.getLong() <= 0)
                  )
               {
-                Dialogs.warning(shell,"When writing to a DVD without setting medium size\nthe resulting archive file may not fit on medium.");
+                Dialogs.warning(shell,BARControl.tr("When writing to a DVD without setting medium size\nthe resulting archive file may not fit on medium."));
               }
               if (   changedFlag
                   && archivePartSizeFlag.getBoolean()
@@ -4097,7 +4098,7 @@ public class TabJobs
                   && ecc.getBoolean()
                  )
               {
-                Dialogs.warning(shell,"When writing to a DVD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 500M, medium 3.5G\n- part size 600M, medium 3.6G");
+                Dialogs.warning(shell,BARControl.tr("When writing to a DVD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 500M, medium 3.5G\n- part size 600M, medium 3.6G"));
               }
             }
           });
@@ -4128,14 +4129,14 @@ public class TabJobs
                   && !archivePartSizeFlag.getBoolean()
                  )
               {
-                Dialogs.warning(shell,"When writing to a BD without splitting enabled\nthe resulting archive file may not fit on medium.");
+                Dialogs.warning(shell,BARControl.tr("When writing to a BD without splitting enabled\nthe resulting archive file may not fit on medium."));
               }
               if (   changedFlag
                   && archivePartSizeFlag.getBoolean()
                   && (volumeSize.getLong() <= 0)
                  )
               {
-                Dialogs.warning(shell,"When writing to a BD without setting medium size\nthe resulting archive file may not fit on medium.");
+                Dialogs.warning(shell,BARControl.tr("When writing to a BD without setting medium size\nthe resulting archive file may not fit on medium."));
               }
               if (   changedFlag
                   && archivePartSizeFlag.getBoolean()
@@ -4144,7 +4145,7 @@ public class TabJobs
                   && ecc.getBoolean()
                  )
               {
-                Dialogs.warning(shell,"When writing to a BD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 1G, medium 20G\n- part size 5G, medium 20G\n");
+                Dialogs.warning(shell,BARControl.tr("When writing to a BD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 1G, medium 20G\n- part size 5G, medium 20G\n"));
               }
             }
           });
@@ -4259,7 +4260,7 @@ public class TabJobs
                 {
                   Button widget   = (Button)selectionEvent.widget;
                   String fileName = Dialogs.directory(shell,
-                                                      "Mount device name",
+                                                      BARControl.tr("Mount device name"),
                                                       mountDeviceName.getString()
                                                      );
                   if (fileName != null)
@@ -4658,7 +4659,7 @@ public class TabJobs
                     if (!(Boolean)widget.getData("showedErrorDialog"))
                     {
                       widget.setData("showedErrorDialog",true);
-                      Dialogs.error(shell,"'"+n+"' is out of range!\n\nEnter a number between 0 and 65535.");
+                      Dialogs.error(shell,BARControl.tr("''{0}'' is out of range!\n\nEnter a number between 0 and 65535.",n));
                       widget.forceFocus();
                     }
                   }
@@ -4668,7 +4669,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+string+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid port number!\n\nEnter a number between 0 and 65535.",string));
                     widget.forceFocus();
                   }
                 }
@@ -4702,7 +4703,7 @@ public class TabJobs
                     if (!(Boolean)widget.getData("showedErrorDialog"))
                     {
                       widget.setData("showedErrorDialog",true);
-                      Dialogs.error(shell,"'"+n+"' is out of range!\n\nEnter a number between 0 and 65535.");
+                      Dialogs.error(shell,BARControl.tr("''{0}'' is out of range!\n\nEnter a number between 0 and 65535.",n));
                       widget.forceFocus();
                     }
                   }
@@ -4712,7 +4713,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+string+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid port number!\n\nEnter a number between 0 and 65535.",string));
                     widget.forceFocus();
                   }
                 }
@@ -4782,10 +4783,10 @@ public class TabJobs
               {
                 Button widget   = (Button)selectionEvent.widget;
                 String fileName = Dialogs.fileOpen(shell,
-                                                   "Select SSH public key file",
+                                                   BARControl.tr("Select SSH public key file"),
                                                    incrementalListFileName.getString(),
-                                                   new String[]{"Public key files","*.pub",
-                                                                "All files","*",
+                                                   new String[]{BARControl.tr("Public key files"),"*.pub",
+                                                                BARControl.tr("All files"),"*",
                                                                }
                                                   );
                 if (fileName != null)
@@ -4858,9 +4859,9 @@ public class TabJobs
               {
                 Button widget   = (Button)selectionEvent.widget;
                 String fileName = Dialogs.fileOpen(shell,
-                                                   "Select SSH private key file",
+                                                   BARControl.tr("Select SSH private key file"),
                                                    incrementalListFileName.getString(),
-                                                   new String[]{"All files","*",
+                                                   new String[]{BARControl.tr("All files"),"*",
                                                                }
                                                   );
                 if (fileName != null)
@@ -5088,7 +5089,7 @@ public class TabJobs
                     if (!(Boolean)widget.getData("showedErrorDialog"))
                     {
                       widget.setData("showedErrorDialog",true);
-                      Dialogs.error(shell,"'"+n+"' is out of range!\n\nEnter a number between 0 and 65535.");
+                      Dialogs.error(shell,BARControl.tr("''{0}'' is out of range!\n\nEnter a number between 0 and 65535.",n));
                       widget.forceFocus();
                     }
                   }
@@ -5098,7 +5099,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+string+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid port number!\n\nEnter a number between 0 and 65535.",string));
                     widget.forceFocus();
                   }
                 }
@@ -5132,7 +5133,7 @@ public class TabJobs
                     if (!(Boolean)widget.getData("showedErrorDialog"))
                     {
                       widget.setData("showedErrorDialog",true);
-                      Dialogs.error(shell,"'"+n+"' is out of range!\n\nEnter a number between 0 and 65535.");
+                      Dialogs.error(shell,BARControl.tr("''{0}'' is out of range!\n\nEnter a number between 0 and 65535.",n));
                       widget.forceFocus();
                     }
                   }
@@ -5142,7 +5143,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+string+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid port number!\n\nEnter a number between 0 and 65535.",string));
                     widget.forceFocus();
                   }
                 }
@@ -5212,10 +5213,10 @@ public class TabJobs
               {
                 Button widget   = (Button)selectionEvent.widget;
                 String fileName = Dialogs.fileOpen(shell,
-                                                   "Select SSH public key file",
+                                                   BARControl.tr("Select SSH public key file"),
                                                    incrementalListFileName.getString(),
-                                                   new String[]{"Public key files","*.pub",
-                                                                "All files","*",
+                                                   new String[]{BARControl.tr("Public key files"),"*.pub",
+                                                                BARControl.tr("All files"),"*",
                                                                }
                                                   );
                 if (fileName != null)
@@ -5288,9 +5289,9 @@ public class TabJobs
               {
                 Button widget   = (Button)selectionEvent.widget;
                 String fileName = Dialogs.fileOpen(shell,
-                                                   "Select SSH private key file",
+                                                   BARControl.tr("Select SSH private key file"),
                                                    incrementalListFileName.getString(),
-                                                   new String[]{"All files","*",
+                                                   new String[]{BARControl.tr("All files"),"*",
                                                                }
                                                   );
                 if (fileName != null)
@@ -5435,9 +5436,9 @@ public class TabJobs
               {
                 Button widget   = (Button)selectionEvent.widget;
                 String fileName = Dialogs.fileOpen(shell,
-                                                   "Select device name",
+                                                   BARControl.tr("Select device name"),
                                                    incrementalListFileName.getString(),
-                                                   new String[]{"All files","*",
+                                                   new String[]{BARControl.tr("All files"),"*",
                                                                }
                                                   );
                 if (fileName != null)
@@ -5497,7 +5498,7 @@ public class TabJobs
                       && ecc.getBoolean()
                      )
                   {
-                    Dialogs.warning(shell,"When writing to a CD/DVD/BD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 140M, medium 560M\n- part size 500M, medium 3.5G\n- part size 600M, medium 3.6G");
+                    Dialogs.warning(shell,BARControl.tr("When writing to a CD/DVD/BD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 140M, medium 560M\n- part size 500M, medium 3.5G\n- part size 600M, medium 3.6G"));
                   }
                 }
                 catch (NumberFormatException exception)
@@ -5505,7 +5506,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -5528,7 +5529,7 @@ public class TabJobs
                       && ecc.getBoolean()
                      )
                   {
-                    Dialogs.warning(shell,"When writing to a CD/DVD/BD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 140M, medium 560M\n- part size 500M, medium 3.5G\n- part size 600M, medium 3.6G");
+                    Dialogs.warning(shell,BARControl.tr("When writing to a CD/DVD/BD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 140M, medium 560M\n- part size 500M, medium 3.5G\n- part size 600M, medium 3.6G"));
                   }
                 }
                 catch (NumberFormatException exception)
@@ -5536,7 +5537,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -5567,7 +5568,7 @@ public class TabJobs
                       && ecc.getBoolean()
                      )
                   {
-                    Dialogs.warning(shell,"When writing to a CD/DVD/BD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 140M, medium 560M\n- part size 500M, medium 3.5G\n- part size 600M, medium 3.6G");
+                    Dialogs.warning(shell,BARControl.tr("When writing to a CD/DVD/BD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 140M, medium 560M\n- part size 500M, medium 3.5G\n- part size 600M, medium 3.6G"));
                   }
                 }
                 catch (NumberFormatException exception)
@@ -5575,7 +5576,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -5620,7 +5621,7 @@ public class TabJobs
                     && ecc.getBoolean()
                    )
                 {
-                  Dialogs.warning(shell,"When writing to a CD/DVD/BD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 140M, medium 560M\n- part size 500M, medium 3.5G\n- part size 600M, medium 3.6G");
+                  Dialogs.warning(shell,BARControl.tr("When writing to a CD/DVD/BD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 140M, medium 560M\n- part size 500M, medium 3.5G\n- part size 600M, medium 3.6G"));
                 }
               }
             });
@@ -5718,9 +5719,9 @@ public class TabJobs
               {
                 Button widget   = (Button)selectionEvent.widget;
                 String fileName = Dialogs.fileOpen(shell,
-                                                   "Select device name",
+                                                   BARControl.tr("Select device name"),
                                                    incrementalListFileName.getString(),
-                                                   new String[]{"All files","*",
+                                                   new String[]{BARControl.tr("All files"),"*",
                                                                }
                                                   );
                 if (fileName != null)
@@ -5778,7 +5779,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -5799,7 +5800,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -5828,7 +5829,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -6014,7 +6015,7 @@ public class TabJobs
 
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Add\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6026,7 +6027,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Edit\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit\u2026"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6038,7 +6039,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Clone\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6050,7 +6051,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Remove\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6069,7 +6070,7 @@ public class TabJobs
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
-          widgetScheduleTableAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
+          widgetScheduleTableAdd = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
           widgetScheduleTableAdd.setToolTipText(BARControl.tr("Add new schedule entry."));
           Widgets.layout(widgetScheduleTableAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetScheduleTableAdd.addSelectionListener(new SelectionListener()
@@ -6083,7 +6084,7 @@ public class TabJobs
             }
           });
 
-          widgetScheduleTableEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"\u2026");
+          widgetScheduleTableEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
           widgetScheduleTableEdit.setToolTipText(BARControl.tr("Edit schedule entry."));
           Widgets.layout(widgetScheduleTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetScheduleTableEdit.addSelectionListener(new SelectionListener()
@@ -6097,7 +6098,7 @@ public class TabJobs
             }
           });
 
-          button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
+          button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
           button.setToolTipText(BARControl.tr("Clone schedule entry."));
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
@@ -6111,7 +6112,7 @@ public class TabJobs
             }
           });
 
-          widgetScheduleTableRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
+          widgetScheduleTableRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
           widgetScheduleTableRemove.setToolTipText(BARControl.tr("Remove schedule entry."));
           Widgets.layout(widgetScheduleTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           widgetScheduleTableRemove.addSelectionListener(new SelectionListener()
@@ -6227,7 +6228,7 @@ public class TabJobs
     Label     label;
     Button    button;
 
-    final Shell dialog = Dialogs.openModal(shell,"New job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("New job"),300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final Text   widgetJobName;
@@ -6307,14 +6308,14 @@ throw new Error("NYI");
             }
             else
             {
-              Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n")+resultErrorMessage[0]);
+              Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n{0}",resultErrorMessage[0]));
               widgetJobName.forceFocus();
               return;
             }
           }
           catch (CommunicationError error)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n")+error.getMessage());
+            Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n{0}",error.getMessage()));
             widgetJobName.forceFocus();
             return;
           }
@@ -6424,7 +6425,7 @@ throw new Error("NYI");
                                                 );
             if (error != Errors.NONE)
             {
-              Dialogs.error(shell,"Cannot clone job '"+jobData.name+"':\n\n"+resultErrorMessage[0]);
+              Dialogs.error(shell,BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",jobData.name,resultErrorMessage[0]));
               return;
             }
 
@@ -6434,7 +6435,7 @@ throw new Error("NYI");
           }
           catch (CommunicationError error)
           {
-            Dialogs.error(shell,"Cannot clone job '"+jobData.name+"':\n\n"+error.getMessage());
+            Dialogs.error(shell,BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",jobData.name,error.getMessage()));
           }
         }
         Dialogs.close(dialog,true);
@@ -6457,7 +6458,7 @@ throw new Error("NYI");
 
     assert jobData != null;
 
-    final Shell dialog = Dialogs.openModal(shell,"Rename job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Rename job"),300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final Text   widgetNewJobName;
@@ -6552,12 +6553,12 @@ throw new Error("NYI");
             }
             else
             {
-              Dialogs.error(shell,"Cannot rename job '"+jobData.name+"':\n\n"+resultErrorMessage[0]);
+              Dialogs.error(shell,BARControl.tr("Cannot rename job ''{0}'':\n\n{1}",jobData.name,resultErrorMessage[0]));
             }
           }
           catch (CommunicationError error)
           {
-            Dialogs.error(shell,"Cannot rename job '"+jobData.name+"':\n\n"+error.getMessage());
+            Dialogs.error(shell,BARControl.tr("Cannot rename job ''{0}'':\n\n{1}",jobData.name,error.getMessage()));
           }
         }
         Dialogs.close(dialog,true);
@@ -6576,7 +6577,7 @@ throw new Error("NYI");
   {
     assert jobData != null;
 
-    if (Dialogs.confirm(shell,"Delete job '"+jobData.name+"'?"))
+    if (Dialogs.confirm(shell,BARControl.tr("Delete job ''{0}''?",jobData.name)))
     {
       try
       {
@@ -6590,13 +6591,13 @@ throw new Error("NYI");
         }
         else
         {
-          Dialogs.error(shell,"Cannot delete job '"+jobData.name+"':\n\n"+result[0]);
+          Dialogs.error(shell,BARControl.tr("Cannot delete job ''{0}'':\n\n{1}",jobData.name,result[0]));
           return false;
         }
       }
       catch (CommunicationError error)
       {
-        Dialogs.error(shell,"Cannot delete job '"+jobData.name+"':\n\n"+error.getMessage());
+        Dialogs.error(shell,BARControl.tr("Cannot delete job ''{0}'':\n\n{1}",jobData.name,error.getMessage()));
         return false;
       }
     }
@@ -7146,7 +7147,7 @@ throw new Error("NYI");
     else
     {
 //Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTreeData.name,fileListResult,errorCode);
-       Dialogs.error(shell,"Cannot get file list (error: "+resultErrorMessage[0]+")");
+       Dialogs.error(shell,BARControl.tr("Cannot get file list:\n\n{0}",resultErrorMessage[0]));
     }
 
     shell.setCursor(null);
@@ -7274,7 +7275,7 @@ throw new Error("NYI");
     }
     else
     {
-      Dialogs.error(shell,"Cannot get device list:\n\n"+resultErrorMessage[0]);
+      Dialogs.error(shell,BARControl.tr("Cannot get device list:\n\n{0}",resultErrorMessage[0]));
     }
   }
 
@@ -7577,7 +7578,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             String pathName = Dialogs.directory(shell,
-                                                "Select path",
+                                                BARControl.tr("Select path"),
                                                 widgetPattern.getText()
                                                );
             if (pathName != null)
@@ -7698,7 +7699,7 @@ throw new Error("NYI");
                                         );
     if (error != Errors.NONE)
     {
-      Dialogs.error(shell,"Cannot add include entry:\n\n"+resultErrorMessage[0]);
+      Dialogs.error(shell,BARControl.tr("Cannot add include entry:\n\n{0}",resultErrorMessage[0]));
       return;
     }
 
@@ -7851,7 +7852,7 @@ throw new Error("NYI");
     }
     if (entryDataList.size() > 0)
     {
-      if ((entryDataList.size() == 1) || Dialogs.confirm(shell,"Remove "+entryDataList.size()+" include patterns?"))
+      if ((entryDataList.size() == 1) || Dialogs.confirm(shell,BARControl.tr("Remove {0} include patterns?",entryDataList.size())))
       {
         for (EntryData entryData : entryDataList)
         {
@@ -7904,7 +7905,7 @@ throw new Error("NYI");
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           String pathName = Dialogs.directory(shell,
-                                              "Select path",
+                                              BARControl.tr("Select path"),
                                               widgetPattern.getText()
                                              );
           if (pathName != null)
@@ -7987,7 +7988,7 @@ throw new Error("NYI");
                                         );
     if (error != Errors.NONE)
     {
-      Dialogs.error(shell,"Cannot add exclude entry:\n\n"+resultErrorMessage[0]);
+      Dialogs.error(shell,BARControl.tr("Cannot add exclude entry:\n\n{0}",resultErrorMessage[0]));
       return;
     }
 
@@ -8131,7 +8132,7 @@ throw new Error("NYI");
     String[] patterns = widgetExcludeList.getSelection();
     if (patterns.length > 0)
     {
-      if ((patterns.length == 1) || Dialogs.confirm(shell,"Remove "+patterns.length+" exclude patterns?"))
+      if ((patterns.length == 1) || Dialogs.confirm(shell,BARControl.tr("Remove {0} exclude patterns?",patterns.length)))
       {
         excludeListRemove(patterns);
       }
@@ -8181,7 +8182,7 @@ throw new Error("NYI");
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           String pathName = Dialogs.directory(shell,
-                                              "Select path",
+                                              BARControl.tr("Select path"),
                                               widgetPattern.getText()
                                              );
           if (pathName != null)
@@ -8263,7 +8264,7 @@ throw new Error("NYI");
                                           );
       if (error != Errors.NONE)
       {
-        Dialogs.error(shell,"Cannot add compress exclude entry:\n\n"+resultErrorMesage[0]);
+        Dialogs.error(shell,BARControl.tr("Cannot add compress exclude entry:\n\n{0}",resultErrorMesage[0]));
         return;
       }
 
@@ -8302,7 +8303,7 @@ throw new Error("NYI");
                                             );
         if (error != Errors.NONE)
         {
-          Dialogs.error(shell,"Cannot add compress exclude entry:\n\n"+resultErrorMessage[0]);
+          Dialogs.error(shell,BARControl.tr("Cannot add compress exclude entry:\n\n{0}",resultErrorMessage[0]));
           return;
         }
 
@@ -8416,7 +8417,7 @@ throw new Error("NYI");
     String[] patterns = widgetCompressExcludeList.getSelection();
     if (patterns.length > 0)
     {
-      if (Dialogs.confirm(shell,"Remove "+patterns.length+" selected compress exclude patterns?"))
+      if (Dialogs.confirm(shell,BARControl.tr("Remove {0} selected compress exclude patterns?",patterns.length)))
       {
         compressExcludeListRemove(patterns);
       }
@@ -9307,7 +9308,7 @@ throw new Error("NYI");
     assert selectedJobData != null;
 
     // create dialog
-    final Shell dialog = Dialogs.openModal(shell,"Edit storage file name",700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Edit storage file name"),700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final StorageFileNameEditor storageFileNameEditor;
@@ -9905,7 +9906,7 @@ throw new Error("NYI");
                                           );
       if (error != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot create new schedule:\n\n")+resultErrorMessage[0]);
+        Dialogs.error(shell,BARControl.tr("Cannot create new schedule:\n\n{0}",resultErrorMessage[0]));
         return;
       }
       scheduleData.uuid = resultMap.getString("scheduleUUID");
@@ -9997,7 +9998,7 @@ throw new Error("NYI");
                                             );
         if (error != Errors.NONE)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot clone new schedule:\n\n")+resultErrorMessage[0]);
+          Dialogs.error(shell,BARControl.tr("Cannot clone new schedule:\n\n{0}",resultErrorMessage[0]));
           return;
         }
         scheduleData.uuid = resultMap.getString("scheduleUUID");
@@ -10027,7 +10028,7 @@ throw new Error("NYI");
     TableItem[] tableItems = widgetScheduleTable.getSelection();
     if (tableItems.length > 0)
     {
-      if (Dialogs.confirm(shell,"Delete "+tableItems.length+" selected schedule entries?"))
+      if (Dialogs.confirm(shell,BARControl.tr("Delete {0} selected schedule entries?",tableItems.length)))
       {
         for (TableItem tableItem : tableItems)
         {
@@ -10038,7 +10039,7 @@ throw new Error("NYI");
           int error = BARServer.executeCommand(StringParser.format("SCHEDULE_DELETE jobUUID=%s scheduleUUID=%s",selectedJobData.uuid,scheduleData.uuid),0,resultErrorMessage);
           if (error != Errors.NONE)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot delete schedule:\n\n")+resultErrorMessage[0]);
+            Dialogs.error(shell,BARControl.tr("Cannot delete schedule:\n\n{0}",resultErrorMessage[0]));
             return;
           }
 

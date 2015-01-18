@@ -496,7 +496,7 @@ public class TabStatus
 
     menu = Widgets.newPopupMenu(shell);
     {
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Start")+"\u2026");
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Start\u2026"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -509,7 +509,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Abort")+"\u2026");
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Abort\u2026"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -563,7 +563,7 @@ public class TabStatus
 
       Widgets.addMenuSeparator(menu);
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("New")+"\u2026");
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("New\u2026"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -575,7 +575,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026");
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -587,7 +587,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Rename")+"\u2026");
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Rename\u2026"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -599,7 +599,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Delete")+"\u2026");
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Delete\u2026"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1011,7 +1011,7 @@ public class TabStatus
     composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0}));
     Widgets.layout(composite,2,0,TableLayoutData.WE);
     {
-      widgetButtonStart = Widgets.newButton(composite,null,BARControl.tr("Start")+"\u2026");
+      widgetButtonStart = Widgets.newButton(composite,null,BARControl.tr("Start\u2026"));
       widgetButtonStart.setToolTipText(BARControl.tr("Start selected job."));
       Widgets.layout(widgetButtonStart,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonStart.setEnabled(false);
@@ -1027,7 +1027,7 @@ public class TabStatus
         }
       });
 
-      widgetButtonAbort = Widgets.newButton(composite,null,BARControl.tr("Abort")+"\u2026");
+      widgetButtonAbort = Widgets.newButton(composite,null,BARControl.tr("Abort\u2026"));
       widgetButtonAbort.setToolTipText(BARControl.tr("Abort selected job."));
       Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonAbort.setEnabled(false);
@@ -1146,7 +1146,7 @@ public class TabStatus
                                             );
         if (error != Errors.NONE)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot get job list:\n\n")+resultErrorMessage);
+          Dialogs.error(shell,BARControl.tr("Cannot get job list:\n\n{0}",resultErrorMessage[0]));
           return;
         }
         for (ValueMap resultMap : resultMapList)
@@ -1273,7 +1273,7 @@ public class TabStatus
       }
       catch (CommunicationError error)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot get job list:\n\n")+error.getMessage());
+        Dialogs.error(shell,BARControl.tr("Cannot get job list:\n\n{0}",error.getMessage()));
         return;
       }
     }
@@ -1521,7 +1521,7 @@ public class TabStatus
     // get job mode
     mode = Dialogs.select(shell,
                           BARControl.tr("Confirmation"),
-                          BARControl.tr("Start job")+" '"+selectedJobData.name+"'?",
+                          BARControl.tr("Start job ''{0}''?",selectedJobData.name),
                           new String[]{BARControl.tr("Normal"),
                                        BARControl.tr("Full"),
                                        BARControl.tr("Incremental"),
@@ -1568,7 +1568,7 @@ public class TabStatus
                                           );
       if (error != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot start job (error: %s)"),resultErrorMessage[0]);
+        Dialogs.error(shell,BARControl.tr("Cannot start job (error: {0})",resultErrorMessage[0]));
         return;
       }
     }
@@ -1602,7 +1602,7 @@ public class TabStatus
   {
     assert selectedJobData != null;
 
-    if (!selectedJobData.state.equals("running") || Dialogs.confirm(shell,BARControl.tr("Abort running job")+" '"+selectedJobData.name+"'?",false))
+    if (!selectedJobData.state.equals("running") || Dialogs.confirm(shell,BARControl.tr("Abort running job ''{0}''?",selectedJobData.name),false))
     {
       final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Abort"),300,100,BARControl.tr("Abort job")+" '"+selectedJobData.name+"'...",BusyDialog.TEXT0);
       busyDialog.autoAnimate();
@@ -1636,7 +1636,7 @@ public class TabStatus
                 public void run()
                 {
                   busyDialog.close();
-                  Dialogs.error(shell,BARControl.tr("Cannot abort job (error: %s)"),resultErrorMessage[0]);
+                  Dialogs.error(shell,BARControl.tr("Cannot abort job (error: {0})",resultErrorMessage[0]));
                 }
               });
             }
@@ -1649,7 +1649,7 @@ public class TabStatus
               public void run()
               {
                 busyDialog.close();
-                Dialogs.error(shell,BARControl.tr("Communication error while deleting storage")+" (error: "+errorMessage+")");
+                Dialogs.error(shell,BARControl.tr("Communication error while deleting storage\n\n(error: {0})",errorMessage));
                }
             });
           }
@@ -1688,7 +1688,7 @@ public class TabStatus
                                           );
       if (error != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot pause job (error: %s)"),resultErrorMessage[0]);
+        Dialogs.error(shell,BARControl.tr("Cannot pause job (error: {0})",resultErrorMessage[0]));
       }
     }
   }
@@ -1707,7 +1707,7 @@ public class TabStatus
     }
     if (error != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot suspend job (error: %s)"),errorMessage[0]);
+      Dialogs.error(shell,BARControl.tr("Cannot suspend job (error: {0})",errorMessage[0]));
     }
   }
 
@@ -1720,7 +1720,7 @@ public class TabStatus
     long     volumeNumber = requestedVolumeNumber.getLong();
     String[] resultErrorMessage = new String[1];
     int      error              = Errors.NONE;
-    switch (Dialogs.select(shell,BARControl.tr("Volume request"),BARControl.tr("Load volume number")+" "+volumeNumber+".",new String[]{BARControl.tr("OK"),BARControl.tr("Unload tray"),BARControl.tr("Cancel")},0))
+    switch (Dialogs.select(shell,BARControl.tr("Volume request"),BARControl.tr("Load volume number {0}.",volumeNumber),new String[]{BARControl.tr("OK"),BARControl.tr("Unload tray"),BARControl.tr("Cancel")},0))
     {
       case 0:
         error = BARServer.executeCommand(StringParser.format("VOLUME_LOAD jobUUID=%s volumeNumber=%d",selectedJobData.uuid,volumeNumber),0,resultErrorMessage);
@@ -1733,7 +1733,7 @@ public class TabStatus
     }
     if (error != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot change volume job (error: %s)"),resultErrorMessage[0]);
+      Dialogs.error(shell,BARControl.tr("Cannot change volume job (error: {0})",resultErrorMessage[0]));
     }
   }
 

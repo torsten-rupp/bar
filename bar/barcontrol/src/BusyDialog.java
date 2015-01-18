@@ -9,6 +9,8 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+import java.text.MessageFormat;
+
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.SelectionEvent;
@@ -29,6 +31,9 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
+import org.xnap.commons.i18n.I18n;
+import org.xnap.commons.i18n.I18nFactory;
+
 /****************************** Classes ********************************/
 
 /** busy dialog
@@ -46,6 +51,8 @@ class BusyDialog
   public final static int LIST          = 1 << 4;
 
   // --------------------------- variables --------------------------------
+  private static I18n i18n;
+
   private Display     display;
 
   private int         animateInterval;
@@ -70,6 +77,31 @@ class BusyDialog
   // ------------------------ native functions ----------------------------
 
   // ---------------------------- methods ---------------------------------
+
+  /** init internationalization
+   * @param i18n internationlization instance
+   */
+  public static void init(I18n i18n)
+  {
+    BusyDialog.i18n = i18n;
+  }
+
+  /** get internationalized text
+   * @param text text
+   * @param arguments text
+   * @return internationalized text
+   */
+  public static String tr(String text, Object... arguments)
+  {
+    if (i18n != null)
+    {
+      return i18n.tr(text,arguments);
+    }
+    else
+    {
+      return MessageFormat.format(text,arguments);
+    }
+  }
 
   /** create busy dialog
    * @param parentShell parent shell
@@ -221,7 +253,7 @@ class BusyDialog
     composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4,4));
     {
       widgetAbortCloseButton = new Button(composite,SWT.CENTER|SWT.BORDER);
-      widgetAbortCloseButton.setText("Abort");
+      widgetAbortCloseButton.setText(BusyDialog.tr("Abort"));
       widgetAbortCloseButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
       widgetAbortCloseButton.addSelectionListener(new SelectionListener()
       {
@@ -307,6 +339,19 @@ class BusyDialog
   /** create busy dialog
    * @param parentShell parent shell
    * @param title dialog title
+   * @param size width/height of dialog
+   * @param message dialog message
+   * @param flags busy dialog flags
+   * @param maxListLength max. list length
+   */
+  public BusyDialog(Shell parentShell, String title, Point size, String message, int flags, int maxListLength)
+  {
+    this(parentShell,title,size.x,size.y,message,flags,maxListLength);
+  }
+
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
    * @param width,height width/height of dialog
    * @param message dialog message
    * @param flags busy dialog flags
@@ -314,6 +359,18 @@ class BusyDialog
   public BusyDialog(Shell parentShell, String title, int width, int height, String message, int flags)
   {
     this(parentShell,title,width,height,message,flags,10);
+  }
+
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
+   * @param size width/height of dialog
+   * @param message dialog message
+   * @param flags busy dialog flags
+   */
+  public BusyDialog(Shell parentShell, String title, Point size, String message, int flags)
+  {
+    this(parentShell,title,size.x,size.y,message,flags);
   }
 
   /** create busy dialog
@@ -330,6 +387,17 @@ class BusyDialog
   /** create busy dialog
    * @param parentShell parent shell
    * @param title dialog title
+   * @param size width/height of dialog
+   * @param message dialog message
+   */
+  public BusyDialog(Shell parentShell, String title, Point size, String message)
+  {
+    this(parentShell,title,size.x,size.y,message);
+  }
+
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
    * @param width,height width/height of dialog
    * @param flags busy dialog flags
    */
@@ -341,11 +409,32 @@ class BusyDialog
   /** create busy dialog
    * @param parentShell parent shell
    * @param title dialog title
+   * @param size width/height of dialog
+   * @param flags busy dialog flags
+   */
+  public BusyDialog(Shell parentShell, String title, Point size, int flags)
+  {
+    this(parentShell,title,size.x,size.y,flags);
+  }
+
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
    * @param width,height width/height of dialog
    */
   public BusyDialog(Shell parentShell, String title, int width, int height)
   {
     this(parentShell,title,width,height,NONE);
+  }
+
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
+   * @param size width/height of dialog
+   */
+  public BusyDialog(Shell parentShell, String title, Point size)
+  {
+    this(parentShell,title,size.x,size.y);
   }
 
   /** create busy dialog
@@ -400,6 +489,15 @@ class BusyDialog
     this(parentShell,title,NONE);
   }
 
+  /** add listener to dialog
+   * @param eventType event type
+   * @param listener listener to add
+   */
+  public void addListener(int eventType, Listener listener)
+  {
+    dialog.addListener(eventType,listener);
+  }
+
   /** close busy dialog
    */
   public void close()
@@ -425,8 +523,10 @@ class BusyDialog
    */
   public void done()
   {
+    stopAnimate();
     doneFlag = true;
-    widgetAbortCloseButton.setText("Close");
+    widgetAbortCloseButton.setText(BusyDialog.tr("Close"));
+    widgetAbortCloseButton.setEnabled(true);
   }
 
   /** check if "done"
@@ -441,8 +541,9 @@ class BusyDialog
    */
   public void abort()
   {
+    stopAnimate();
     abortedFlag = true;
-    widgetAbortCloseButton.setEnabled(false);
+    close();
   }
 
   /** check if "abort" button clicked
@@ -703,6 +804,7 @@ class BusyDialog
             String text = String.format(format,args);
 
             // add list text
+            if (widgetList == null) throw new InternalError("List not initialized");
             widgetList.add(text);
             while (widgetList.getItemCount() > maxListLength)
             {
@@ -780,11 +882,18 @@ class BusyDialog
     thread.start();
   }
 
-  /** auto animate dialog
+  /** auto animate
    */
   public void autoAnimate()
   {
     autoAnimate(250);
+  }
+
+  /** stop auto animate
+   */
+  public void stopAnimate()
+  {
+    animationQuit = true;
   }
 
   //-----------------------------------------------------------------------

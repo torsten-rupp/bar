@@ -12,6 +12,7 @@
 import java.lang.reflect.Field;
 import java.io.File;
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.BitSet;
 import java.util.List;
 
@@ -41,6 +42,9 @@ import org.eclipse.swt.widgets.Monitor;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.Text;
+
+import org.xnap.commons.i18n.I18n;
+import org.xnap.commons.i18n.I18nFactory;
 
 /****************************** Classes ********************************/
 
@@ -119,7 +123,7 @@ class SimpleBusyDialog
       composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));
       {
         button = new Button(composite,SWT.CENTER);
-        button.setText("Abort");
+        button.setText(Dialogs.tr("Abort"));
         button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
@@ -490,10 +494,36 @@ class Dialogs
   // --------------------------- constants --------------------------------
 
   // --------------------------- variables --------------------------------
+  private static I18n i18n;
 
   // ------------------------ native functions ----------------------------
 
   // ---------------------------- methods ---------------------------------
+
+  /** init internationalization
+   * @param i18n internationlization instance
+   */
+  public static void init(I18n i18n)
+  {
+    Dialogs.i18n = i18n;
+  }
+
+  /** get internationalized text
+   * @param text text
+   * @param arguments text
+   * @return internationalized text
+   */
+  public static String tr(String text, Object... arguments)
+  {
+    if (i18n != null)
+    {
+      return i18n.tr(text,arguments);
+    }
+    else
+    {
+      return MessageFormat.format(text,arguments);
+    }
+  }
 
   /** open a new dialog
    * @param parentShell parent shell
@@ -1185,7 +1215,7 @@ class Dialogs
           if (showAgainFieldFlag != null)
           {
             widgetShowAgain = new Button(composite,SWT.CHECK);
-            widgetShowAgain.setText("show again");
+            widgetShowAgain.setText(Dialogs.tr("show again"));
             widgetShowAgain.setSelection(true);
             widgetShowAgain.setLayoutData(new TableLayoutData(1,1,TableLayoutData.W));
           }
@@ -1201,7 +1231,7 @@ class Dialogs
         composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
         {
           button = new Button(composite,SWT.CENTER);
-          button.setText("Close");
+          button.setText(Dialogs.tr("Close"));
           button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
           {
@@ -1268,7 +1298,7 @@ class Dialogs
    */
   public static void info(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String message)
   {
-    info(parentShell,"Information",showAgainFieldFlag,message);
+    info(parentShell,Dialogs.tr("Information"),showAgainFieldFlag,message);
   }
 
   /** info dialog
@@ -1299,7 +1329,7 @@ class Dialogs
     {
       if (!parentShell.isDisposed())
       {
-        final Shell dialog = openModal(parentShell,"Error",300,70);
+        final Shell dialog = openModal(parentShell,Dialogs.tr("Error"),300,70);
         dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
         // message
@@ -1338,7 +1368,7 @@ class Dialogs
           {
             label = new Label(composite,SWT.LEFT);
 //TODO
-            label.setText("Extended error:");
+            label.setText(Dialogs.tr("Extended error:"));
             label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4)); row++;
 
             text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.READ_ONLY);
@@ -1349,7 +1379,7 @@ class Dialogs
           if (showAgainFieldFlag != null)
           {
             widgetShowAgain = new Button(composite,SWT.CHECK);
-            widgetShowAgain.setText("show again");
+            widgetShowAgain.setText(Dialogs.tr("show again"));
             widgetShowAgain.setSelection(true);
             widgetShowAgain.setLayoutData(new TableLayoutData(row,1,TableLayoutData.W)); row++;
           }
@@ -1365,7 +1395,7 @@ class Dialogs
         composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
         {
           button = new Button(composite,SWT.CENTER);
-          button.setText("Close");
+          button.setText(Dialogs.tr("Close"));
           button.setFocus();
           button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
@@ -1510,7 +1540,7 @@ class Dialogs
     {
       if (!parentShell.isDisposed())
       {
-        final Shell dialog = open(parentShell,"Warning",200,70);
+        final Shell dialog = open(parentShell,Dialogs.tr("Warning"),200,70);
         dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
         // message
@@ -1530,7 +1560,7 @@ class Dialogs
           if (showAgainFieldFlag != null)
           {
             widgetShowAgain = new Button(composite,SWT.CHECK);
-            widgetShowAgain.setText("show again");
+            widgetShowAgain.setText(Dialogs.tr("show again"));
             widgetShowAgain.setSelection(true);
             widgetShowAgain.setLayoutData(new TableLayoutData(1,1,TableLayoutData.W));
           }
@@ -1546,7 +1576,7 @@ class Dialogs
         composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
         {
           button = new Button(composite,SWT.CENTER);
-          button.setText("Close");
+          button.setText(Dialogs.tr("Close"));
           button.setFocus();
           button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
@@ -1649,7 +1679,7 @@ class Dialogs
           if (showAgainFieldFlag != null)
           {
             widgetShowAgain = new Button(composite,SWT.CHECK);
-            widgetShowAgain.setText("show again");
+            widgetShowAgain.setText(Dialogs.tr("show again"));
             widgetShowAgain.setSelection(true);
             widgetShowAgain.setLayoutData(new TableLayoutData(1,1,TableLayoutData.W));
           }
@@ -1774,7 +1804,7 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, String title, Image image, String message, String yesText)
   {
-    return confirm(parentShell,title,null,image,message,yesText,"Cancel");
+    return confirm(parentShell,title,null,image,message,yesText,Dialogs.tr("Cancel"));
   }
 
   /** confirmation dialog
@@ -1844,7 +1874,7 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, String title, String message, String yesText)
   {
-    return confirm(parentShell,title,(BooleanFieldUpdater)null,message,yesText,"Cancel");
+    return confirm(parentShell,title,(BooleanFieldUpdater)null,message,yesText,Dialogs.tr("Cancel"));
   }
 
   /** confirmation dialog
@@ -1856,7 +1886,7 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message, boolean defaultValue)
   {
-    return confirm(parentShell,title,showAgainFieldFlag,message,"Yes","No",defaultValue);
+    return confirm(parentShell,title,showAgainFieldFlag,message,Dialogs.tr("Yes"),Dialogs.tr("No"),defaultValue);
   }
 
   /** confirmation dialog
@@ -1879,7 +1909,7 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message)
   {
-    return confirm(parentShell,title,showAgainFieldFlag,message,"Yes","No",false);
+    return confirm(parentShell,title,showAgainFieldFlag,message,Dialogs.tr("Yes"),Dialogs.tr("No"),false);
   }
 
   /** confirmation dialog
@@ -1901,7 +1931,7 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String message, boolean defaultValue)
   {
-    return confirm(parentShell,"Confirmation",showAgainFieldFlag,message,defaultValue);
+    return confirm(parentShell,Dialogs.tr("Confirmation"),showAgainFieldFlag,message,defaultValue);
   }
 
   /** confirmation dialog
@@ -2345,7 +2375,7 @@ class Dialogs
    */
   public static BitSet selectMulti(Shell parentShell, String title, String message, String[] texts)
   {
-    return selectMulti(parentShell,title,message,texts,"OK","Cancel");
+    return selectMulti(parentShell,title,message,texts,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
 
   /** password dialog
@@ -2505,7 +2535,7 @@ class Dialogs
    */
   public static String password(Shell parentShell, String title, String message, String text1, String text2)
   {
-    return password(parentShell,title,message,text1,text2,"OK","Cancel");
+    return password(parentShell,title,message,text1,text2,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
 
   /** password dialog
@@ -2516,7 +2546,7 @@ class Dialogs
    */
   public static String password(Shell parentShell, String title, String message, String text)
   {
-    return password(parentShell,title,message,text,null,"OK","Cancel");
+    return password(parentShell,title,message,text,null,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
 
   /** password dialog
@@ -2538,7 +2568,7 @@ class Dialogs
   public static String password(Shell parentShell, String title)
   {
 //TODO
-    return password(parentShell,title,"Password:");
+    return password(parentShell,title,Dialogs.tr("Password:"));
   }
 
   /** open a file dialog
@@ -2811,7 +2841,7 @@ class Dialogs
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            String path = directory(dialog,"Select path");
+            String path = directory(dialog,Dialogs.tr("Select path"));
             if (path != null)
             {
               widgetPath.setText(path);
@@ -2901,7 +2931,7 @@ class Dialogs
    */
   public static String path(Shell parentShell, String title, String text, String value)
   {
-    return path(parentShell,title,text,value,"OK","Cancel");
+    return path(parentShell,title,text,value,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
 
   /** simple path dialog
@@ -3046,7 +3076,7 @@ class Dialogs
    */
   public static String string(Shell parentShell, String title, String text, String value, String okText)
   {
-    return string(parentShell,title,text,value,okText,"Cancel");
+    return string(parentShell,title,text,value,okText,Dialogs.tr("Cancel"));
   }
 
 
@@ -3059,7 +3089,7 @@ class Dialogs
    */
   public static String string(Shell parentShell, String title, String text, String value)
   {
-    return string(parentShell,title,text,value,"Save");
+    return string(parentShell,title,text,value,Dialogs.tr("Save"));
   }
 
   /** simple string dialog
@@ -3202,7 +3232,7 @@ class Dialogs
    */
   public static Integer integer(Shell parentShell, String title, String text, int value, int minValue, int maxValue)
   {
-    return integer(parentShell,title,text,value,minValue,maxValue,"OK","Cancel");
+    return integer(parentShell,title,text,value,minValue,maxValue,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
 
   /** open simple busy dialog
@@ -3235,7 +3265,7 @@ class Dialogs
    */
   public static SimpleBusyDialog openSimpleBusy(Shell parentShell, String message, boolean abortButton)
   {
-    return openSimpleBusy(parentShell,"Busy",message,abortButton);
+    return openSimpleBusy(parentShell,Dialogs.tr("Busy"),message,abortButton);
   }
 
   /** open simple busy dialog
@@ -3274,7 +3304,7 @@ class Dialogs
    */
   public static BusyDialog openBusy(Shell parentShell, String message)
   {
-    return openBusy(parentShell,"Busy",message);
+    return openBusy(parentShell,Dialogs.tr("Busy"),message);
   }
 
   /** close busy dialog
@@ -3304,7 +3334,7 @@ class Dialogs
    */
   public static SimpleProgressDialog openSimpleProgress(Shell parentShell, String message)
   {
-    return openSimpleProgress(parentShell,"Progress",message);
+    return openSimpleProgress(parentShell,Dialogs.tr("Progress"),message);
   }
 
   /** close simple progress dialog

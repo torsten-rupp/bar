@@ -3479,7 +3479,7 @@ break;
 
       menu = Widgets.newPopupMenu(shell);
       {
-        menuItem = Widgets.addMenuItem(menu,"Refresh index...");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh index\u2026"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3492,7 +3492,7 @@ break;
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Refresh all indizes with error...");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh all indizes with error\u2026"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3507,7 +3507,7 @@ break;
 
         Widgets.addMenuSeparator(menu);
 
-        menuItem = Widgets.addMenuItem(menu,"Add to index...");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add to index\u2026"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3520,7 +3520,7 @@ break;
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Remove from index...");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove from index\u2026"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3533,7 +3533,7 @@ break;
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Remove all indizes with error...");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove all indizes with error\u2026"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -3548,7 +3548,7 @@ break;
 
         Widgets.addMenuSeparator(menu);
 
-        menuItem = Widgets.addMenuItem(menu,"Mark all");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Mark all"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3561,7 +3561,7 @@ break;
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Unmark all");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Unmark all"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3576,7 +3576,7 @@ break;
 
         Widgets.addMenuSeparator(menu);
 
-        menuItem = Widgets.addMenuItem(menu,"Restore");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Restore"));
         Widgets.addEventListener(new WidgetEventListener(menuItem,checkedStorageEvent)
         {
           public void trigger(MenuItem menuItem)
@@ -3600,7 +3600,7 @@ break;
 
         Widgets.addMenuSeparator(menu);
 
-        menuItem = Widgets.addMenuItem(menu,"Delete...");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Delete\u2026"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4005,7 +4005,7 @@ break;
 
       menu = Widgets.newPopupMenu(shell);
       {
-        menuItem = Widgets.addMenuItem(menu,"Mark all");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Mark all"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4018,7 +4018,7 @@ break;
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Unmark all");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Unmark all"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4033,7 +4033,7 @@ break;
 
         Widgets.addMenuSeparator(menu);
 
-        menuItem = Widgets.addMenuItem(menu,"Restore");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Restore"));
         menuItem.setEnabled(false);
         Widgets.addEventListener(new WidgetEventListener(menuItem,checkedEntryEvent)
         {
@@ -4293,7 +4293,7 @@ break;
         {
           Button widget = (Button)selectionEvent.widget;
           String pathName = Dialogs.directory(shell,
-                                              "Select path",
+                                              BARControl.tr("Select path"),
                                               widgetRestoreTo.getText()
                                              );
           if (pathName != null)
@@ -4909,7 +4909,7 @@ break;
     getSelectedIndexData(indexDataHashSet);
     if (!indexDataHashSet.isEmpty())
     {
-      if (Dialogs.confirm(shell,"Really delete "+indexDataHashSet.size()+" indizes and storage files?"))
+      if (Dialogs.confirm(shell,BARControl.tr("Really delete {0} indizes and storage files?",indexDataHashSet.size())))
       {
         final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
         busyDialog.setMaximum(indexDataHashSet.size());
@@ -4983,9 +4983,9 @@ break;
                         public void run()
                         {
                           selection[0] = Dialogs.select(shell,
-                                                        "Confirmation",
-                                                        "Cannot delete storage\n\n'"+info+"'\n\n(error: "+resultErrorMessage[0]+")",
-                                                        new String[]{"Continue","Continue with all","Abort"},
+                                                        BARControl.tr("Confirmation"),
+                                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]),
+                                                        new String[]{BARControl.tr("Continue"),BARControl.tr("Continue with all"),BARControl.tr("Abort")},
                                                         0
                                                        );
                         }
@@ -4998,7 +4998,7 @@ break;
                         public void run()
                         {
                           Dialogs.error(shell,
-                                        "Cannot delete storage\n\n'"+info+"'\n\n(error: "+resultErrorMessage[0]+")"
+                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0])
                                        );
                         }
                       });
@@ -5046,7 +5046,7 @@ break;
                 public void run()
                 {
                   busyDialog.close();
-                  Dialogs.error(shell,"Communication error while deleting storage (error: "+errorMessage+")");
+                  Dialogs.error(shell,BARControl.tr("Communication error while deleting storage\n\n(error: {0})",errorMessage));
                  }
               });
             }
@@ -5074,7 +5074,7 @@ break;
     Button     widgetAdd;
 
     // create dialog
-    final Shell dialog = Dialogs.openModal(shell,"Add storage to index database",400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Add storage to index database"),400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     composite = Widgets.newComposite(dialog);
@@ -5100,10 +5100,10 @@ break;
         {
           Button widget   = (Button)selectionEvent.widget;
           String fileName = Dialogs.fileOpen(shell,
-                                             "Select local storage file",
+                                             BARControl.tr("Select local storage file"),
                                              widgetStorageName.getText(),
-                                             new String[]{"BAR files","*.bar",
-                                                          "All files","*",
+                                             new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                          BARControl.tr("All files"),"*",
                                                          }
                                             );
           if (fileName != null)
@@ -5167,7 +5167,7 @@ break;
       }
       else
       {
-        Dialogs.error(shell,"Cannot add index database for storage file\n\n'"+storageName+"'\n\n(error: "+resultErrorMessage[0]+")");
+        Dialogs.error(shell,BARControl.tr("Cannot add index database for storage file\n\n''{0}''\n\n(error: {1})",storageName,resultErrorMessage[0]));
       }
     }
   }
@@ -5182,9 +5182,9 @@ break;
     getSelectedIndexData(indexDataHashSet);
     if (!indexDataHashSet.isEmpty())
     {
-      if (Dialogs.confirm(shell,"Really remove index of "+indexDataHashSet.size()+" entries?"))
+      if (Dialogs.confirm(shell,BARControl.tr("Really remove index of {0} entries?",indexDataHashSet.size())))
       {
-        final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+        final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
         busyDialog.setMaximum(indexDataHashSet.size());
 
         new BackgroundTask(busyDialog,new Object[]{indexDataHashSet})
@@ -5246,7 +5246,7 @@ break;
                   {
                     public void run()
                     {
-                      Dialogs.error(shell,"Cannot remove index for\n\n'"+info+"'\n\n(error: "+resultErrorMessage[0]+")");
+                      Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]));
                     }
                   });
                 }
@@ -5278,7 +5278,7 @@ break;
                 public void run()
                 {
                   busyDialog.close();
-                  Dialogs.error(shell,"Communication error while removing database indizes (error: "+errorMessage+")");
+                  Dialogs.error(shell,BARControl.tr("Communication error while removing database indizes\n\n(error: {0})",errorMessage));
                  }
               });
             }
@@ -5315,7 +5315,7 @@ break;
         {
           public void run()
           {
-            Dialogs.error(shell,"Cannot get database indizes with error state (error: "+resultErrorMessage[0]+")");
+            Dialogs.error(shell,BARControl.tr("Cannot get database indizes with error state (error: {0})",resultErrorMessage[0]));
           }
         });
         return;
@@ -5324,7 +5324,7 @@ break;
 
       if (errorCount > 0)
       {
-        if (Dialogs.confirm(shell,String.format("Really remove %d indizes with error state?",errorCount)))
+        if (Dialogs.confirm(shell,BARControl.tr("Really remove {0} indizes with error state?",errorCount)))
         {
           final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes with error",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
           busyDialog.autoAnimate();
@@ -5376,7 +5376,7 @@ break;
                       public void run()
                       {
                         busyDialog.close();
-                        Dialogs.error(shell,"Cannot remove database indizes with error state (error: "+resultErrorMessage[0]+")");
+                        Dialogs.error(shell,BARControl.tr("Cannot remove database indizes with error state (error: {0})",resultErrorMessage[0]));
                       }
                     });
 
@@ -5409,7 +5409,7 @@ break;
                   public void run()
                   {
                     busyDialog.close();
-                    Dialogs.error(shell,"Communication error while removing database indizes (error: "+errorMessage+")");
+                    Dialogs.error(shell,BARControl.tr("Communication error while removing database indizes\n\n(error: {0})",errorMessage));
                    }
                 });
               }
@@ -5427,7 +5427,7 @@ break;
     }
     catch (CommunicationError error)
     {
-      Dialogs.error(shell,"Communication error while removing database indizes (error: "+error.toString()+")");
+      Dialogs.error(shell,BARControl.tr("Communication error while removing database indizes\n\n(error: {0})",error.toString()));
     }
 Dprintf.dprintf("");
   }
@@ -5444,7 +5444,7 @@ Dprintf.dprintf("");
       getSelectedIndexData(indexDataHashSet);
       if (!indexDataHashSet.isEmpty())
       {
-        if (Dialogs.confirm(shell,"Really refresh index for "+indexDataHashSet.size()+" entries?"))
+        if (Dialogs.confirm(shell,BARControl.tr("Really refresh index for {0} entries?",indexDataHashSet.size())))
         {
           for (IndexData indexData : indexDataHashSet)
           {
@@ -5488,7 +5488,7 @@ Dprintf.dprintf("");
             }
             else
             {
-              Dialogs.error(shell,"Cannot refresh index for\n\n'"+info+"'\n\n(error: "+resultErrorMessage[0]+")");
+              Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]));
             }
           }
         }
@@ -5496,7 +5496,7 @@ Dprintf.dprintf("");
     }
     catch (CommunicationError error)
     {
-      Dialogs.error(shell,"Communication error while refreshing index database (error: "+error.toString()+")");
+      Dialogs.error(shell,BARControl.tr("Communication error while refreshing index database\n\n(error: {0})",error.toString()));
     }
   }
 
@@ -5506,7 +5506,7 @@ Dprintf.dprintf("");
   {
     try
     {
-      if (Dialogs.confirm(shell,"Really refresh all indizes with error state?"))
+      if (Dialogs.confirm(shell,BARControl.tr("Really refresh all indizes with error state?")))
       {
         String[] resultErrorMessage = new String[1];
         int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
@@ -5522,13 +5522,13 @@ Dprintf.dprintf("");
         }
         else
         {
-          Dialogs.error(shell,"Cannot refresh database indizes with error state (error: "+resultErrorMessage[0]+")");
+          Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state (error: {0})",resultErrorMessage[0]));
         }
       }
     }
     catch (CommunicationError error)
     {
-      Dialogs.error(shell,"Communication error while refreshing database indizes (error: "+error.toString()+")");
+      Dialogs.error(shell,BARControl.tr("Communication error while refreshing database indizes\n\n(error: {0})",error.toString()));
     }
   }
 
@@ -5664,14 +5664,14 @@ Dprintf.dprintf("");
                 {
                   public void run()
                   {
-                    Dialogs.error(shell,"Cannot restore archive\n\n'"+storageName+"'\n\n(error: "+errorText+")");
+                    Dialogs.error(shell,BARControl.tr("Cannot restore archive\n\n''{0}''\n\n(error: {1})",storageName,errorText));
                   }
                 });
               }
             }
             else
             {
-              busyDialog.updateText("Aborting\u2026");
+              busyDialog.updateText(BARControl.tr("Aborting\u2026"));
               command.abort();
               break;
             }
@@ -5696,7 +5696,7 @@ Dprintf.dprintf("");
             {
               busyDialog.close();
               shell.setCursor(null);
-              Dialogs.error(shell,"Error while restoring archives:\n\n%s",errorMessage);
+              Dialogs.error(shell,BARControl.tr("Error while restoring archives:\n\n{0}",errorMessage));
              }
           });
         }
@@ -6016,7 +6016,7 @@ Dprintf.dprintf("");
                   {
                     String password = Dialogs.password(shell,
                                                        BARControl.tr("FTP login password"),
-                                                       BARControl.tr("Please enter FTP login password for")+": "+entryData.storageName+".",
+                                                       BARControl.tr("Please enter FTP login password for: {0}.",entryData.storageName),
                                                        BARControl.tr("Password")+":"
                                                       );
                     if (password != null)
@@ -6050,7 +6050,7 @@ Dprintf.dprintf("");
                   {
                     String password = Dialogs.password(shell,
                                                        BARControl.tr("SSH (TLS) login password"),
-                                                       BARControl.tr("Please enter SSH (TLS) login password for")+": "+entryData.storageName+".",
+                                                       BARControl.tr("Please enter SSH (TLS) login password for: {0}.",entryData.storageName),
                                                        BARControl.tr("Password")+":"
                                                       );
                     if (password != null)
@@ -6084,7 +6084,7 @@ Dprintf.dprintf("");
                   {
                     String password = Dialogs.password(shell,
                                                        BARControl.tr("Webdav login password"),
-                                                       BARControl.tr("Please enter Webdav login password for")+": "+entryData.storageName+".",
+                                                       BARControl.tr("Please enter Webdav login password for: {0}.",entryData.storageName),
                                                        BARControl.tr("Password")+":"
                                                       );
                     if (password != null)
@@ -6118,7 +6118,7 @@ Dprintf.dprintf("");
                   {
                     String password = Dialogs.password(shell,
                                                        BARControl.tr("Decrypt password"),
-                                                       BARControl.tr("Please enter decrypt password for")+": "+entryData.storageName+".",
+                                                       BARControl.tr("Please enter decrypt password for: {0}.",entryData.storageName),
                                                        BARControl.tr("Password")+":"
                                                       );
                     if (password != null)
@@ -6150,14 +6150,14 @@ Dprintf.dprintf("");
                 {
                   public void run()
                   {
-                    Dialogs.error(shell,"Cannot restore entry\n\n'"+entryData.name+"'\n\nfrom archive\n\n'"+entryData.storageName+"'\n\n(error: "+errorText+")");
+                    Dialogs.error(shell,BARControl.tr("Cannot restore entry\n\n''{0}''\n\nfrom archive\n\n''{1}''\n\n(error: {2})",entryData.name,entryData.storageName,errorText));
                   }
                 });
               }
             }
             else
             {
-              busyDialog.updateText("Aborting\u2026");
+              busyDialog.updateText(BARControl.tr("Aborting\u2026"));
               command.abort();
               break;
             }
@@ -6182,7 +6182,7 @@ Dprintf.dprintf("");
             {
               busyDialog.close();
               shell.setCursor(null);
-              Dialogs.error(shell,"Error while restoring entries:\n\n%s",errorMessage);
+              Dialogs.error(shell,BARControl.tr("Error while restoring entries:\n\n{0}",errorMessage));
              }
           });
         }
