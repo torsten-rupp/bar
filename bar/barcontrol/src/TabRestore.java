@@ -2893,16 +2893,16 @@ break;
           }
         }
       };
-      treeColumn = Widgets.addTreeColumn(widgetStorageTree,"Name",    SWT.LEFT, 450,true);
+      treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Name"),    SWT.LEFT, 450,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
-      treeColumn = Widgets.addTreeColumn(widgetStorageTree,"Size",    SWT.RIGHT,100,true);
+      treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Size"),    SWT.RIGHT,100,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for size."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
-      treeColumn = Widgets.addTreeColumn(widgetStorageTree,"Modified",SWT.LEFT, 160,true);
+      treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Modified"),SWT.LEFT, 160,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for modification date/time."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
-      treeColumn = Widgets.addTreeColumn(widgetStorageTree,"State",   SWT.LEFT,  60,true);
+      treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("State"),   SWT.LEFT,  60,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for state."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
 
@@ -4909,7 +4909,7 @@ break;
     getSelectedIndexData(indexDataHashSet);
     if (!indexDataHashSet.isEmpty())
     {
-      if (Dialogs.confirm(shell,BARControl.tr("Really delete {0} indizes and storage files?",indexDataHashSet.size())))
+      if (Dialogs.confirm(shell,BARControl.tr("Really delete {0} {0,choice,1#index/storage file|1<indizes and storage files}?",indexDataHashSet.size())))
       {
         final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
         busyDialog.setMaximum(indexDataHashSet.size());
@@ -5182,7 +5182,7 @@ break;
     getSelectedIndexData(indexDataHashSet);
     if (!indexDataHashSet.isEmpty())
     {
-      if (Dialogs.confirm(shell,BARControl.tr("Really remove index of {0} entries?",indexDataHashSet.size())))
+      if (Dialogs.confirm(shell,BARControl.tr("Really remove index of {0} {0,choice,1#entry|1<entries}?",indexDataHashSet.size())))
       {
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
         busyDialog.setMaximum(indexDataHashSet.size());
@@ -5324,7 +5324,7 @@ break;
 
       if (errorCount > 0)
       {
-        if (Dialogs.confirm(shell,BARControl.tr("Really remove {0} indizes with error state?",errorCount)))
+        if (Dialogs.confirm(shell,BARControl.tr("Really remove {0} {0,choice,1#index|1<indizes} with error state?",errorCount)))
         {
           final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes with error",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
           busyDialog.autoAnimate();
@@ -5444,7 +5444,7 @@ Dprintf.dprintf("");
       getSelectedIndexData(indexDataHashSet);
       if (!indexDataHashSet.isEmpty())
       {
-        if (Dialogs.confirm(shell,BARControl.tr("Really refresh index for {0} entries?",indexDataHashSet.size())))
+        if (Dialogs.confirm(shell,BARControl.tr("Really refresh index for {0} {0,choice,1#entry|1<entries}?",indexDataHashSet.size())))
         {
           for (IndexData indexData : indexDataHashSet)
           {
