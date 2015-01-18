@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-18 08:44+0100\n"
+"POT-Creation-Date: 2015-01-18 09:52+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -193,8 +193,9 @@ msgid "Jobs"
 msgstr ""
 
 #: src/TabJobs.java:1499 src/TabJobs.java:6240 src/TabJobs.java:6351
-#: src/TabRestore.java:3076 src/TabRestore.java:3157 src/TabRestore.java:3384
-#: src/TabRestore.java:3831 src/TabRestore.java:3960 src/TabStatus.java:472
+#: src/TabRestore.java:2896 src/TabRestore.java:3076 src/TabRestore.java:3157
+#: src/TabRestore.java:3384 src/TabRestore.java:3831 src/TabRestore.java:3960
+#: src/TabStatus.java:472
 msgid "Name"
 msgstr ""
 
@@ -979,8 +980,9 @@ msgstr ""
 msgid "Select device name"
 msgstr ""
 
-#: src/TabJobs.java:5453 src/TabJobs.java:5736 src/TabRestore.java:3187
-#: src/TabRestore.java:3414 src/TabRestore.java:3837 src/TabRestore.java:3970
+#: src/TabJobs.java:5453 src/TabJobs.java:5736 src/TabRestore.java:2899
+#: src/TabRestore.java:3187 src/TabRestore.java:3414 src/TabRestore.java:3837
+#: src/TabRestore.java:3970
 msgid "Size"
 msgstr ""
 
@@ -1216,7 +1218,7 @@ msgstr ""
 
 #: src/TabJobs.java:7855
 #, java-format
-msgid "Remove {0} include patterns?"
+msgid "Remove {0} include {0,choice,1#pattern|1<patterns}?"
 msgstr ""
 
 #: src/TabJobs.java:7894
@@ -1233,7 +1235,7 @@ msgstr ""
 
 #: src/TabJobs.java:8135
 #, java-format
-msgid "Remove {0} exclude patterns?"
+msgid "Remove {0} exclude {0,choice,1#pattern|1<patterns}?"
 msgstr ""
 
 #: src/TabJobs.java:8171
@@ -1250,7 +1252,7 @@ msgstr ""
 
 #: src/TabJobs.java:8420
 #, java-format
-msgid "Remove {0} selected compress exclude patterns?"
+msgid "Remove {0} selected compress exclude {0,choice,1#pattern|1<patterns}?"
 msgstr ""
 
 #: src/TabJobs.java:8635
@@ -1424,7 +1426,7 @@ msgstr ""
 
 #: src/TabJobs.java:10031
 #, java-format
-msgid "Delete {0} selected schedule entries?"
+msgid "Delete {0} selected schedule {0,choice,1#entry|1<entries}?"
 msgstr ""
 
 #: src/TabJobs.java:10042
@@ -1446,8 +1448,17 @@ msgid ""
 "used for list entries."
 msgstr ""
 
+#: src/TabRestore.java:2902
+msgid "Modified"
+msgstr ""
+
 #: src/TabRestore.java:2903 src/TabRestore.java:3283
 msgid "Click to sort for modification date/time."
+msgstr ""
+
+#: src/TabRestore.java:2905 src/TabRestore.java:3197 src/TabRestore.java:3424
+#: src/TabRestore.java:3709 src/TabStatus.java:475
+msgid "State"
 msgstr ""
 
 #: src/TabRestore.java:2906 src/TabRestore.java:3286 src/TabStatus.java:476
@@ -1477,11 +1488,6 @@ msgstr ""
 
 #: src/TabRestore.java:3167 src/TabRestore.java:3394 src/TabRestore.java:3937
 msgid "Created"
-msgstr ""
-
-#: src/TabRestore.java:3197 src/TabRestore.java:3424 src/TabRestore.java:3709
-#: src/TabStatus.java:475
-msgid "State"
 msgstr ""
 
 #: src/TabRestore.java:3207 src/TabRestore.java:3434
@@ -1618,7 +1624,9 @@ msgstr ""
 
 #: src/TabRestore.java:4912
 #, java-format
-msgid "Really delete {0} indizes and storage files?"
+msgid ""
+"Really delete {0} "
+"{0,choice,1#index/storage file|1<indizes and storage files}?"
 msgstr ""
 
 #: src/TabRestore.java:4987 src/TabRestore.java:5001
@@ -1680,7 +1688,7 @@ msgstr ""
 
 #: src/TabRestore.java:5185
 #, java-format
-msgid "Really remove index of {0} entries?"
+msgid "Really remove index of {0} {0,choice,1#entry|1<entries}?"
 msgstr ""
 
 #: src/TabRestore.java:5187
@@ -1712,7 +1720,7 @@ msgstr ""
 
 #: src/TabRestore.java:5327
 #, java-format
-msgid "Really remove {0} indizes with error state?"
+msgid "Really remove {0} {0,choice,1#index|1<indizes} with error state?"
 msgstr ""
 
 #: src/TabRestore.java:5379
@@ -1722,7 +1730,7 @@ msgstr ""
 
 #: src/TabRestore.java:5447
 #, java-format
-msgid "Really refresh index for {0} entries?"
+msgid "Really refresh index for {0} {0,choice,1#entry|1<entries}?"
 msgstr ""
 
 #: src/TabRestore.java:5491
