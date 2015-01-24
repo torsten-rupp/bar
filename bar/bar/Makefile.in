@@ -10,9 +10,10 @@
 
 #---------------------------------- settings ---------------------------------
 
-PLATFORM              = @PLATFORM@
+PLATFORM                = @PLATFORM@
 
-TESTCODE_EXITCODE     = 124
+VALGRIND_ERROR_EXITCODE = 123
+TESTCODE_EXITCODE       = 124
 
 #------------------------------------ paths ----------------------------------
 
@@ -73,6 +74,8 @@ XGETTEXT_FLAGS         = -L C -k -ktr
 MSGMERGE               = @MSGMERGE@
 MSGFMT                 = @MSGFMT@
 
+SVNVERSION             = svnversion
+
 #---------------------------------- commands----------------------------------
 
 ATTR           = @ATTR@
@@ -117,7 +120,7 @@ UMOUNT         = /bin/umount
 SUDO           = sudo
 
 VALGRIND       = valgrind  
-VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=123       
+VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)      
 
 LOOP0          = /dev/loop0
 LOOP1          = /dev/loop1
@@ -129,6 +132,7 @@ DEVICE_RANDOM  = /dev/urandom
 # major, minor version number
 VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
+VERSION_SVN   := $(shell $(SVNVERSION) .)
 
 # supported compress algorithms
 ifeq ($(COMPRESS_NAMES),)
@@ -204,32 +208,32 @@ vpath %.cpp $(SOURCE_DIR)
 
 # compile C source
 %.o: $(SOURCE_DIR)/%.c
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
 
 release/%.o: $(SOURCE_DIR)/%.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
 
 debug/%.o: $(SOURCE_DIR)/%.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
 
 valgrind/%.o: $(SOURCE_DIR)/%.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
 
 # compile C++ source
 %.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $*.o
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $*.o
 
 release/%.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $(@D)/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $(@D)/$*.o
 
 debug/%.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $(@D)/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $(@D)/$*.o
 
 valgrind/%.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $(@D)/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $(@D)/$*.o
 
 # link object files
 %@EXEEXT@: release/%.o
@@ -293,6 +297,9 @@ BAR_SOURCES          = bar.c \
                        bitmaps.c \
                        database.c
 
+BAR_HEADERS          = $(patsubst %.c,%.h,$(BAR_SOURCES)) \
+                       bar_global.h
+
 BAR_OBJECTS_RELEASE  = $(foreach z,$(BAR_SOURCES),release/$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
                        release/errors.o \
                        release/archive_format.o
@@ -307,6 +314,8 @@ BAR_OBJECTS_VALGRIND = $(foreach z,$(BAR_SOURCES),valgrind/$(patsubst %.c,%.o,$(
 
 EXTERN_SOURCES       = sqlite3.c
 
+EXTERN_HEADERS       = $(patsubst %.c,%.h,$(EXTERN_SOURCES))
+
 EXTERN_OBJECTS       = $(foreach z,$(EXTERN_SOURCES),$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
                        $(if @HAVE_XDELTA@,xdelta3.o)
 
@@ -315,6 +324,8 @@ DESTROYER_SOURCES    = destroyer.c \
                        cmdoptions.c \
                        lists.c \
                        strings.c \
+
+DESTROYER_HEADERS    = $(patsubst %.c,%.h,$(DESTROYER_SOURCES))
 
 DESTROYER_OBJECTS    = $(foreach z,$(DESTROYER_SOURCES),$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
 
@@ -3178,11 +3189,11 @@ ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/bar
 	$(INSTALL) -m 664 \
                    $(sort $(BAR_SOURCES) \
-                          $(patsubst %.c,%.h,$(BAR_SOURCES)) \
+                          $(BAR_HEADERS) \
                           $(EXTERN_SOURCES) \
-                          $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
+                          $(EXTERN_HEADERS) \
                           $(DESTROYER_SOURCES) \
-                          $(patsubst %.c,%.h,$(DESTROYER_SOURCES)) \
+                          $(DESTROYER_HEADERS) \
                           $(OTHER_SOURCES) \
                           Makefile.in \
                           config.h.in \
