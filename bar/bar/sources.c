@@ -1137,7 +1137,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
   // check if source can be restored from orginal archive in local file system
   if (!restoredFlag)
   {
-    if (   (sourceStorageName != NULL)
+    if (   !String_isEmpty(sourceStorageName)
         && File_isFile(sourceStorageName)
        )
     {
@@ -1202,7 +1202,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
   // check if source can be restored from original storage name
   if (!restoredFlag)
   {
-    if (sourceStorageName != NULL)
+    if (!String_isEmpty(sourceStorageName))
     {
       // parse storage name
       Storage_initSpecifier(&storageSpecifier);
@@ -1327,7 +1327,7 @@ Errors Source_getEntryDataBlock(SourceHandle *sourceHandle,
   assert(sourceHandle != NULL);
   assert(buffer != NULL);
   assert(bytesRead != NULL);
-//fprintf(stderr,"%s, %d: Source_getEntryDataBlock %d\n",__FILE__,__LINE__,offset);
+//fprintf(stderr,"%s, %d: Source_getEntryDataBlock %llu %lu\n",__FILE__,__LINE__,offset,length);
 
   error = File_seek(&sourceHandle->tmpFileHandle,sourceHandle->baseOffset+offset);
   if (error != ERROR_NONE)
