@@ -60,7 +60,7 @@
 
 #include "crypt.h"
 #include "passwords.h"
-#include "bar.h"
+#include "bar_global.h"
 
 /****************** Conditional compilation switches *******************/
 
