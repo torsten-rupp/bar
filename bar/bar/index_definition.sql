@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS meta(
   name  TEXT UNIQUE,
   value TEXT
 );
+INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$version);
+INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
 CREATE TABLE IF NOT EXISTS entities(
   id              INTEGER PRIMARY KEY,
@@ -21,6 +23,7 @@ CREATE TABLE IF NOT EXISTS entities(
   parentJobUUID   INTEGER,
   bidFlag         INTEGER
 );
+INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID) VALUES (0,'','');
 
 CREATE TABLE IF NOT EXISTS storage(
   id              INTEGER PRIMARY KEY,
