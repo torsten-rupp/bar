@@ -34,7 +34,7 @@
 #include "archive_format.h"
 #include "storage.h"
 #include "index.h"
-#include "bar.h"
+#include "bar_global.h"
 
 /****************** Conditional compilation switches *******************/
 

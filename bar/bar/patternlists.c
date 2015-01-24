@@ -29,7 +29,6 @@
 #include "strings.h"
 #include "stringlists.h"
 
-#include "bar.h"
 #include "patterns.h"
 
 #include "patternlists.h"

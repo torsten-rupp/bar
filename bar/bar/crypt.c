@@ -31,7 +31,6 @@
 #include "strings.h"
 #include "lists.h"
 
-#include "bar.h"
 #include "archive_format.h"
 #include "chunks.h"
 #include "files.h"

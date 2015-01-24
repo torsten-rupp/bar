@@ -28,6 +28,8 @@
 #include "semaphores.h"
 
 #include "compress.h"
+#include "passwords.h"
+#include "crypt.h"
 
 /****************** Conditional compilation switches *******************/
 

@@ -19,8 +19,6 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include "forward.h"         // required for JobOptions
-
 #include "global.h"
 #include "lists.h"
 #include "strings.h"
@@ -32,6 +30,7 @@
 #include "crypt.h"
 #include "misc.h"
 #include "index.h"
+#include "bar_global.h"
 
 /****************** Conditional compilation switches *******************/
 

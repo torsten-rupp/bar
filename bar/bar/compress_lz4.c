@@ -29,7 +29,6 @@
 #include "sources.h"
 #include "crypt.h"
 #include "storage.h"
-#include "bar.h"
 
 #include "compress.h"
 

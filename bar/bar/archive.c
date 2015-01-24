@@ -31,6 +31,8 @@
 #include "archive_format.h"
 #include "storage.h"
 #include "index.h"
+#include "bar_global.h"
+#include "bar.h"
 
 #include "archive.h"
 

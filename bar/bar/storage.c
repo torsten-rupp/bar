@@ -50,6 +50,7 @@
 #include "passwords.h"
 #include "misc.h"
 #include "archive.h"
+#include "bar_global.h"
 #include "bar.h"
 
 #include "storage.h"

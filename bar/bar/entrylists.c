@@ -29,7 +29,7 @@
 #include "strings.h"
 #include "stringlists.h"
 
-#include "bar.h"
+#include "bar_global.h"
 #include "patterns.h"
 
 #include "entrylists.h"
