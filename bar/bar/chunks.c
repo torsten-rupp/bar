@@ -537,9 +537,17 @@ LOCAL Errors flushChunkBuffer(ChunkBuffer *chunkBuffer)
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 LOCAL void initDefinition(const int *definition,
                           void      *chunkData
                          )
+#else /* not NDEBUG */
+LOCAL void initDefinition(const char    *__fileName__,
+                          ulong         __lineNb__,
+                          const int *definition,
+                          void      *chunkData
+                         )
+#endif /* NDEBUG */
 {
   uint i;
 
@@ -627,7 +635,7 @@ LOCAL void initDefinition(const int *definition,
     }
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("definition data",chunkData);
+  DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"definition data",chunkData);
 }
 
 /***********************************************************************\
@@ -640,13 +648,25 @@ LOCAL void initDefinition(const int *definition,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 LOCAL Errors doneDefinition(const int  *definition,
                             const void *chunkData
                            )
+#else /* not NDEBUG */
+LOCAL Errors doneDefinition(const char *__fileName__,
+                            ulong      __lineNb__,
+                            const int  *definition,
+                            const void *chunkData
+                           )
+#endif /* NDEBUG */
 {
   uint i;
 
-  DEBUG_REMOVE_RESOURCE_TRACE(chunkData);
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(chunkData);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkData);
+  #endif /* NDEBUG */
 
   if (definition != NULL)
   {
@@ -685,6 +705,8 @@ LOCAL Errors doneDefinition(const int  *definition,
         case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
+          i += 3;
+          break;
         case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
           i += 3;
           break;
@@ -710,8 +732,8 @@ LOCAL Errors doneDefinition(const int  *definition,
 }
 
 /***********************************************************************\
-* Name   : freeDefinition
-* Purpose: free resources of chunk definition
+* Name   : resetDefinition
+* Purpose: reset resources of chunk definition
 * Input  : definition - chunk definition
 *          chunkData  - chunk data
 * Output : -
@@ -719,9 +741,9 @@ LOCAL Errors doneDefinition(const int  *definition,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeDefinition(const int *definition,
-                          void      *chunkData
-                         )
+LOCAL void resetDefinition(const int *definition,
+                           void      *chunkData
+                          )
 {
   uint i;
 
@@ -771,6 +793,7 @@ LOCAL void freeDefinition(const int *definition,
         case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
           {
+#if 1
             uint arrayLength;
             void *arrayData;
 
@@ -781,6 +804,7 @@ LOCAL void freeDefinition(const int *definition,
               assert(arrayData != NULL);
               free(arrayData);
             }
+#endif
             (*((uint* )((byte*)chunkData+definition[i+1]))) = 0;
             (*((void**)((byte*)chunkData+definition[i+2]))) = NULL;
             i += 3;
@@ -788,6 +812,7 @@ LOCAL void freeDefinition(const int *definition,
           break;
         case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
           {
+#if 1
             uint   arrayLength;
             String *strings;
             uint   z;
@@ -803,12 +828,14 @@ LOCAL void freeDefinition(const int *definition,
               }
               free(strings);
             }
+#endif
             (*((uint* )((byte*)chunkData+definition[i+1]))) = 0;
             (*((void**)((byte*)chunkData+definition[i+2]))) = NULL;
             i += 3;
           }
           break;
         case CHUNK_DATATYPE_CRC32:
+          (*((uint32*)((byte*)chunkData+definition[i+1]))) = 0L;
           i += 2;
           break;
         case CHUNK_DATATYPE_DATA:
@@ -1704,7 +1731,11 @@ Errors __Chunk_init(const char    *__fileName__,
 
   chunkInfo->data            = data;
 
-  initDefinition(definition,data);
+  #ifdef NDEBUG
+    initDefinition(chunkInfo->definition,chunkInfo->data);
+  #else /* not NDEBUG */
+    initDefinition(__fileName__,__lineNb__,chunkInfo->definition,chunkInfo->data);
+  #endif /* NDEBUG */
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE("chunk",chunkInfo);
@@ -1732,7 +1763,15 @@ void __Chunk_done(const char *__fileName__,
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkInfo);
   #endif /* NDEBUG */
 
-  doneDefinition(chunkInfo->definition,chunkInfo->data);
+  if (chunkInfo->mode == CHUNK_MODE_READ)
+  {
+    resetDefinition(chunkInfo->definition,chunkInfo->data);
+  }
+  #ifdef NDEBUG
+    doneDefinition(chunkInfo->definition,chunkInfo->data);
+  #else /* not NDEBUG */
+    doneDefinition(__fileName__,__lineNb__,chunkInfo->definition,chunkInfo->data);
+  #endif /* NDEBUG */
 }
 
 Errors Chunk_next(const ChunkIO *chunkIO,
@@ -1880,6 +1919,7 @@ Errors Chunk_open(ChunkInfo         *chunkInfo,
   chunkInfo->index     = 0LL;
 
   // read chunk
+  resetDefinition(chunkInfo->definition,chunkInfo->data);
   error = readDefinition(chunkInfo->io,
                          chunkInfo->ioUserData,
                          chunkInfo->definition,
@@ -2066,9 +2106,6 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
           return error;
         }
       }
-
-      // free resources
-      freeDefinition(chunkInfo->definition,chunkInfo->data);
       break;
     #ifndef NDEBUG
       default:
