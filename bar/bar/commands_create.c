@@ -610,7 +610,7 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
   }
 
   // rename files
-  error = File_rename(tmpFileName,fileName);
+  error = File_rename(tmpFileName,fileName,NULL);
   if (error != ERROR_NONE)
   {
     File_delete(tmpFileName,FALSE);
@@ -2821,7 +2821,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
   if (storageId != DATABASE_ID_NONE)
   {
     printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,destinationFileName);
-    error = Index_update(indexDatabaseHandle,
+    error = Index_update(indexHandle,
                          storageId,
                          printableStorageName,
                          0LL   // size
@@ -2958,7 +2958,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                  {
                    storageInfoDecrement(createInfo,storageMsg.fileSize);
                    File_delete(storageMsg.fileName,FALSE);
-                   if (storageMsg.storageId != DATABASE_ID_NONE) Index_deleteStorage(indexDatabaseHandle,storageMsg.storageId);
+                   if (storageMsg.storageId != DATABASE_ID_NONE) Index_deleteStorage(indexHandle,storageMsg.storageId);
                    freeStorageMsg(&storageMsg,NULL);
                  }
                 );
@@ -3152,7 +3152,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // delete old indizes for same storage file
       oldStorageName = String_new();
       error = Index_initListStorage(&indexQueryHandle,
-                                    indexDatabaseHandle,
+                                    indexHandle,
                                     NULL, // uuid,
                                     DATABASE_ID_ANY, // jobId
                                     STORAGE_TYPE_ANY,
@@ -3181,7 +3181,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         if (oldStorageId != storageMsg.storageId)
         {
-          error = Index_deleteStorage(indexDatabaseHandle,oldStorageId);
+          error = Index_deleteStorage(indexHandle,oldStorageId);
           if (error != ERROR_NONE)
           {
             printError("Cannot delete old index for storage '%s' (error: %s)!\n",
@@ -3203,7 +3203,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
 
       // set database storage size
-      error = Index_update(indexDatabaseHandle,
+      error = Index_update(indexHandle,
                            storageMsg.storageId,
                            NULL, // storageName
                            fileInfo.size
@@ -3222,7 +3222,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       DEBUG_TESTCODE("storageThreadCode9") { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
 
       // set database state and time stamp
-      error = Index_setState(indexDatabaseHandle,
+      error = Index_setState(indexHandle,
                              storageMsg.storageId,
                              ((createInfo->failError == ERROR_NONE) && !isAborted(createInfo))
                                ? INDEX_STATE_OK
@@ -5141,7 +5141,7 @@ Errors Command_create(const String                    jobUUID,
                   );
 #if 0
 // NYI: must index be deleted on error?
-        if (   (indexDatabaseHandle != NULL)
+        if (   (indexHandle != NULL)
             && !archiveInfo->jobOptions->noIndexDatabaseFlag
             && !archiveInfo->jobOptions->dryRunFlag
             && !archiveInfo->jobOptions->noStorageFlag
@@ -5185,7 +5185,7 @@ Errors Command_create(const String                    jobUUID,
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
                          jobOptions,
-                         indexDatabaseHandle,
+                         indexHandle,
                          jobUUID,
                          scheduleUUID,
                          archiveType,
@@ -5201,7 +5201,7 @@ Errors Command_create(const String                    jobUUID,
               );
 #if 0
 // NYI: must index be deleted on error?
-    if (   (indexDatabaseHandle != NULL)
+    if (   (indexHandle != NULL)
         && !createInfo.archiveInfo->jobOptions->noIndexDatabaseFlag
         && !createInfo.archiveInfo->jobOptions->dryRunFlag
         && !createInfo.archiveInfo->jobOptions->noStorageFlag
@@ -5249,7 +5249,7 @@ createThreadCode(&createInfo);
               );
 #if 0
 // NYI: must index be deleted on error?
-    if (   (indexDatabaseHandle != NULL)
+    if (   (indexHandle != NULL)
         && !createInfo.archiveInfo->jobOptions->noIndexDatabaseFlag
         && !createInfo.archiveInfo->jobOptions->dryRunFlag
         && !createInfo.archiveInfo->jobOptions->noStorageFlag
@@ -5308,15 +5308,22 @@ createThreadCode(&createInfo);
     DEBUG_TESTCODE("command_create3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
     printInfo(1,"ok\n");
-    logMessage(LOG_TYPE_ALWAYS,"Create incremental file '%s'\n",String_cString(incrementalListFileName));
+    logMessage(LOG_TYPE_ALWAYS,"Updated incremental file '%s'\n",String_cString(incrementalListFileName));
   }
 
   // output statics
   if (createInfo.failError == ERROR_NONE)
   {
-    printInfo(1,"%lu file/image(s)/%llu bytes(s) included\n",createInfo.statusInfo.doneEntries,createInfo.statusInfo.doneBytes);
-    printInfo(2,"%lu file/image(s) skipped\n",createInfo.statusInfo.skippedEntries);
-    printInfo(2,"%lu file/image(s) with errors\n",createInfo.statusInfo.errorEntries);
+    printInfo(1,"%lu entries/%llu bytes(s) included\n",createInfo.statusInfo.doneEntries,createInfo.statusInfo.doneBytes);
+    printInfo(2,"%lu entries skipped\n",createInfo.statusInfo.skippedEntries);
+    printInfo(2,"%lu entries with errors\n",createInfo.statusInfo.errorEntries);
+    logMessage(LOG_TYPE_ALWAYS,
+               "%lu entries/%llu bytes(s) included, %lu entries skipped, %lu entries with errors\n",
+               createInfo.statusInfo.doneEntries,
+               createInfo.statusInfo.doneBytes,
+               createInfo.statusInfo.skippedEntries,
+               createInfo.statusInfo.errorEntries
+              );
   }
 
   // get error code
