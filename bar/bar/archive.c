@@ -3770,7 +3770,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
     archiveEntryInfo->file.chunkFileDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->file.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->file.chunkFileDelta.name,Source_getName(&archiveEntryInfo->file.sourceHandle));
-    archiveEntryInfo->file.chunkFileDelta.size = Source_getSize(&archiveEntryInfo->file.sourceHandle);
+    archiveEntryInfo->file.chunkFileDelta.size           = Source_getSize(&archiveEntryInfo->file.sourceHandle);
   }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileDelta.info,{ Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info); });
 
