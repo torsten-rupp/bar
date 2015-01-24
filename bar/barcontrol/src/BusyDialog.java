@@ -138,7 +138,7 @@ class BusyDialog
     dialog.setLayout(tableLayout);
     dialog.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
-    // message
+    // message/progress bar/list
     composite = new Composite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},4));
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
@@ -506,7 +506,10 @@ class BusyDialog
     {
       public void run()
       {
-        dialog.dispose();
+        if (!dialog.isDisposed())
+        {
+          dialog.dispose();
+        }
       }
     });
   }
@@ -525,8 +528,11 @@ class BusyDialog
   {
     stopAnimate();
     doneFlag = true;
-    widgetAbortCloseButton.setText(BusyDialog.tr("Close"));
-    widgetAbortCloseButton.setEnabled(true);
+    if (!widgetAbortCloseButton.isDisposed())
+    {
+      widgetAbortCloseButton.setText(BusyDialog.tr("Close"));
+      widgetAbortCloseButton.setEnabled(true);
+    }
   }
 
   /** check if "done"
