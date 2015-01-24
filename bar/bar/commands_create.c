@@ -149,12 +149,12 @@ typedef struct
 // storage message, send from main -> storage thread
 typedef struct
 {
-  DatabaseHandle *databaseHandle;
-  DatabaseId     entityId;                                        // database entity id
-  DatabaseId     storageId;                                       // database storage id
-  String         fileName;                                        // temporary archive name
-  uint64         fileSize;                                        // archive size
-  String         destinationFileName;                             // destination archive name
+  IndexHandle *indexHandle;
+  DatabaseId  entityId;                                           // database entity id
+  DatabaseId  storageId;                                          // database storage id
+  String      fileName;                                           // temporary archive name
+  uint64      fileSize;                                           // archive size
+  String      destinationFileName;                                // destination archive name
 } StorageMsg;
 
 /***************************** Variables *******************************/
@@ -2719,18 +2719,18 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 /***********************************************************************\
 * Name   : newArchiveFile
 * Purpose: call back for archive
-* Input  : userData       - user data
-*          databaseHandle - database handle or NULL if no database
-*          storageId      - database id of storage
+* Input  : userData    - user data
+*          indexHandle - index handle or NULL if no index
+*          storageId   - database id of storage
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors newArchiveFile(void           *userData,
-                            DatabaseHandle *databaseHandle,
-                            DatabaseId     entityId,
-                            DatabaseId     storageId
+LOCAL Errors newArchiveFile(void        *userData,
+                            IndexHandle *indexHandle,
+                            DatabaseId  entityId,
+                            DatabaseId  storageId
                            )
 {
   CreateInfo    *createInfo = (CreateInfo*)userData;
@@ -2751,26 +2751,26 @@ LOCAL Errors newArchiveFile(void           *userData,
 /***********************************************************************\
 * Name   : storeArchiveFile
 * Purpose: call back to store created archive
-* Input  : userData       - user data
-*          databaseHandle - database handle or NULL if no database
-*          entityId       - database id of entity
-*          storageId      - database id of storage
-*          fileName       - archive file name
-*          partNumber     - part number or ARCHIVE_PART_NUMBER_NONE for
-*                           single part
-*          lastPartFlag   - TRUE iff last archive part, FALSE otherwise
+* Input  : userData     - user data
+*          indexHandle  - index handle or NULL if no index
+*          entityId     - database id of entity
+*          storageId    - database id of storage
+*          fileName     - archive file name
+*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
+*                         single part
+*          lastPartFlag - TRUE iff last archive part, FALSE otherwise
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors storeArchiveFile(void           *userData,
-                              DatabaseHandle *databaseHandle,
-                              DatabaseId     entityId,
-                              DatabaseId     storageId,
-                              String         tmpFileName,
-                              int            partNumber,
-                              bool           lastPartFlag
+LOCAL Errors storeArchiveFile(void        *userData,
+                              IndexHandle *indexHandle,
+                              DatabaseId  entityId,
+                              DatabaseId  storageId,
+                              String      tmpFileName,
+                              int         partNumber,
+                              bool        lastPartFlag
                              )
 {
   CreateInfo    *createInfo = (CreateInfo*)userData;
@@ -2838,7 +2838,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
   }
 
   // send to storage controller
-  storageMsg.databaseHandle      = databaseHandle;
+  storageMsg.indexHandle         = indexHandle;
   storageMsg.entityId            = entityId;
   storageMsg.storageId           = storageId;
   storageMsg.fileName            = String_duplicate(tmpFileName);

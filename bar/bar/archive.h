@@ -67,44 +67,44 @@ typedef enum
 /******************************************************************** ***\
 * Name   : ArchiveNewFunction
 * Purpose: call back when archive file is created/written
-* Input  : userData       - user data
-*          databaseHandle - database handle or NULL if no database
-*          entityId       - database id of entity
-*          storageId      - database id of storage
+* Input  : userData    - user data
+*          indexHandle - index handle or NULL if no index
+*          entityId    - database id of entity
+*          storageId   - database id of storage
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveNewFunction)(void           *userData,
-                                    DatabaseHandle *databaseHandle,
-                                    DatabaseId     entityId,
-                                    DatabaseId     storageId
+typedef Errors(*ArchiveNewFunction)(void        *userData,
+                                    IndexHandle *indexHandle,
+                                    DatabaseId  entityId,
+                                    DatabaseId  storageId
                                    );
 
 /***********************************************************************\
 * Name   : ArchiveCreatedFunction
 * Purpose: call back when archive file is created/written
-* Input  : userData          - user data
-*          databaseHandle    - database handle or NULL if no database
-*          entityId          - database id of entity
-*          storageId         - database id of storage
-*          fileName          - archive file name
-*          partNumber        - part number or -1 if no parts
-*          lastPartFlag      - TRUE iff last archive part, FALSE
-*                              otherwise
+* Input  : userData     - user data
+*          indexHandle  - index handle or NULL if no index
+*          entityId     - database id of entity
+*          storageId    - database id of storage
+*          fileName     - archive file name
+*          partNumber   - part number or -1 if no parts
+*          lastPartFlag - TRUE iff last archive part, FALSE
+*                         otherwise
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveCreatedFunction)(void           *userData,
-                                        DatabaseHandle *databaseHandle,
-                                        DatabaseId     entityId,
-                                        DatabaseId     storageId,
-                                        String         fileName,
-                                        int            partNumber,
-                                        bool           lastPartFlag
+typedef Errors(*ArchiveCreatedFunction)(void        *userData,
+                                        IndexHandle *indexHandle,
+                                        DatabaseId  entityId,
+                                        DatabaseId  storageId,
+                                        String      fileName,
+                                        int         partNumber,
+                                        bool        lastPartFlag
                                        );
 
 /***********************************************************************\
@@ -173,7 +173,7 @@ typedef struct
   const ChunkIO                   *chunkIO;                            // chunk i/o functions
   void                            *chunkIOUserData;                    // chunk i/o functions data
 
-  DatabaseHandle                  *databaseHandle;                     // database handle
+  IndexHandle                     *indexHandle;                        // index handle
   DatabaseId                      entityId;                            // database id of entity
   DatabaseId                      storageId;                           // database id of storage
 
@@ -462,7 +462,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 #ifdef NDEBUG
   Errors Archive_create(ArchiveInfo                     *archiveInfo,
                         const JobOptions                *jobOptions,
-                        DatabaseHandle                  *databaseHandle,
+                        IndexHandle                     *indexHandle,
                         const String                    jobUUID,
                         const String                    scheduleUUID,
                         ArchiveTypes                    archiveType,
@@ -478,7 +478,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                           ulong                           __lineNb__,
                           ArchiveInfo                     *archiveInfo,
                           const JobOptions                *jobOptions,
-                          DatabaseHandle                  *databaseHandle,
+                          IndexHandle                     *indexHandle,
                           const String                    jobUUID,
                           const String                    scheduleUUID,
                           ArchiveTypes                    archiveType,
@@ -1228,17 +1228,17 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 /***********************************************************************\
 * Name   : Archive_addToIndex
 * Purpose: add storage index
-* Input  : databaseHandle          - database handle
-*          storageHandle           - storage handle
-*          storageName             - storage name
-*          indexMode               - index mode
-*          jobOptions              - job options
+* Input  : indexHandle   - index handle
+*          storageHandle - storage handle
+*          storageName   - storage name
+*          indexMode     - index mode
+*          jobOptions    - job options
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_addToIndex(DatabaseHandle    *databaseHandle,
+Errors Archive_addToIndex(IndexHandle       *indexHandle,
                           StorageHandle     *storageHandle,
                           const String      storageName,
                           IndexModes        indexMode,
@@ -1248,7 +1248,7 @@ Errors Archive_addToIndex(DatabaseHandle    *databaseHandle,
 /***********************************************************************\
 * Name   : Archive_updateIndex
 * Purpose: update storage index
-* Input  : databaseHandle          - database handle
+* Input  : indexHandle             - index handle
 *          storageId               - database id of storage
 *          storageHandle           - storage handle
 *          storageName             - storage name
@@ -1263,7 +1263,7 @@ Errors Archive_addToIndex(DatabaseHandle    *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
+Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            DatabaseId                   storageId,
                            StorageHandle                *storageHandle,
                            const String                 storageName,
@@ -1277,15 +1277,15 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 /***********************************************************************\
 * Name   : Archive_remIndex
 * Purpose: remove storage index
-* Input  : databaseHandle - database handle
-*          storageId      - database id of storage
+* Input  : indexHandle - index handle
+*          storageId   - database id of storage
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_remIndex(DatabaseHandle *databaseHandle,
-                        DatabaseId     storageId
+Errors Archive_remIndex(IndexHandle *indexHandle,
+                        DatabaseId  storageId
                        );
 
 #if 0

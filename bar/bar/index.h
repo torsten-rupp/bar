@@ -237,7 +237,7 @@ bool Index_isReady(IndexHandle *indexHandle);
 * Name   : Index_findById
 * Purpose: find index by id
 * Input  : indexHandle - index handle
-*          storageId      - database id of index
+*          storageId   - database id of index
 * Output : jobUUID        - unique job id (can be NULL)
 *          scheduleUUID   - unique schedule id (can be NULL)
 *          storageName          - storage name
