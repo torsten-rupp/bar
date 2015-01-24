@@ -26,7 +26,6 @@
 #include "errors.h"
 
 #include "storage.h"
-//#include "bar.h"
 
 /****************** Conditional compilation switches *******************/
 

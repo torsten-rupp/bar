@@ -23,7 +23,6 @@
 #include "filesystems.h"
 #include "errors.h"
 
-#include "bar.h"
 #include "storage.h"
 #include "index_definition.h"
 
