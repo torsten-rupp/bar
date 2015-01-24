@@ -942,7 +942,7 @@ Errors File_getDataCString(const char *fileName,
                           );
 
 /***********************************************************************\
-* Name   : File_delete
+* Name   : File_delete, File_deleteCString
 * Purpose: delete file/directory/link
 * Input  : fileName - file name
 * Output : -
@@ -951,12 +951,14 @@ Errors File_getDataCString(const char *fileName,
 \***********************************************************************/
 
 Errors File_delete(const String fileName, bool recursiveFlag);
+Errors File_deleteCString(const char *fileName, bool recursiveFlag);
 
 /***********************************************************************\
-* Name   : File_rename
+* Name   : File_rename, File_renameCString
 * Purpose: rename file/directory/link
-* Input  : oldFileName - old file name
-*          newFileName - new file name
+* Input  : oldFileName       - old file name
+*          newFileName       - new file name
+*          newBackupFileName - new backup file name (can be NULL)
 * Output : -
 * Return : TRUE if file/directory/link renamed, FALSE otherwise
 * Notes  : if files are not on the same logical device the file is
@@ -964,11 +966,16 @@ Errors File_delete(const String fileName, bool recursiveFlag);
 \***********************************************************************/
 
 Errors File_rename(const String oldFileName,
-                   const String newFileName
+                   const String newFileName,
+                   const String newBackupFileName
                   );
+Errors File_renameCString(const char *oldFileName,
+                          const char *newFileName,
+                          const char *newBackupFileName
+                         );
 
 /***********************************************************************\
-* Name   : File_copy
+* Name   : File_copy, File_copyCString
 * Purpose: copy files
 * Input  : sourceFileName      - source file name
 *          destinationFileName - destination file name
@@ -980,6 +987,9 @@ Errors File_rename(const String oldFileName,
 Errors File_copy(const String sourceFileName,
                  const String destinationFileName
                 );
+Errors File_copyCString(const char *sourceFileName,
+                        const char *destinationFileName
+                       );
 
 /***********************************************************************\
 * Name   : File_exists, File_existsCString

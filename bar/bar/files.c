@@ -2518,6 +2518,13 @@ Errors File_getDataCString(const char *fileName,
 
 Errors File_delete(const String fileName, bool recursiveFlag)
 {
+  assert(fileName != NULL);
+
+  return File_deleteCString(String_cString(fileName),recursiveFlag);
+}
+
+Errors File_deleteCString(const char *fileName, bool recursiveFlag)
+{
   FileStat      fileStat;
   Errors        error;
   StringList    directoryList;
@@ -2529,9 +2536,9 @@ Errors File_delete(const String fileName, bool recursiveFlag)
 
   assert(fileName != NULL);
 
-  if (LSTAT(String_cString(fileName),&fileStat) != 0)
+  if (LSTAT(fileName,&fileStat) != 0)
   {
-    return ERRORX_(IO_ERROR,errno,String_cString(fileName));
+    return ERRORX_(IO_ERROR,errno,fileName);
   }
 
   if      (   S_ISREG(fileStat.st_mode)
@@ -2540,9 +2547,9 @@ Errors File_delete(const String fileName, bool recursiveFlag)
            #endif /* S_ISLNK */
           )
   {
-    if (unlink(String_cString(fileName)) != 0)
+    if (unlink(fileName) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,String_cString(fileName));
+      return ERRORX_(IO_ERROR,errno,fileName);
     }
   }
   else if (S_ISDIR(fileStat.st_mode))
@@ -2552,7 +2559,7 @@ Errors File_delete(const String fileName, bool recursiveFlag)
     {
       // delete entries in directory
       StringList_init(&directoryList);
-      StringList_append(&directoryList,fileName);
+      StringList_appendCString(&directoryList,fileName);
       directoryName = File_newFileName();
       name = File_newFileName();
       while (!StringList_isEmpty(&directoryList) && (error == ERROR_NONE))
@@ -2614,9 +2621,9 @@ Errors File_delete(const String fileName, bool recursiveFlag)
     }
     else
     {
-      if (rmdir(String_cString(fileName)) != 0)
+      if (rmdir(fileName) != 0)
       {
-        error = ERRORX_(IO_ERROR,errno,String_cString(fileName));
+        error = ERRORX_(IO_ERROR,errno,fileName);
       }
     }
 
@@ -2627,28 +2634,73 @@ Errors File_delete(const String fileName, bool recursiveFlag)
 }
 
 Errors File_rename(const String oldFileName,
-                   const String newFileName
+                   const String newFileName,
+                   const String newBackupFileName
                   )
+{
+  assert(oldFileName != NULL);
+  assert(newFileName != NULL);
+
+  return File_renameCString(String_cString(oldFileName),
+                            String_cString(newFileName),
+                            String_cString(newBackupFileName)
+                           );
+}
+
+Errors File_renameCString(const char *oldFileName,
+                          const char *newFileName,
+                          const char *newBackupFileName
+                         )
 {
   Errors error;
 
   assert(oldFileName != NULL);
   assert(newFileName != NULL);
 
-  // try rename
-  if (rename(String_cString(oldFileName),String_cString(newFileName)) != 0)
+  if (newBackupFileName != NULL)
+  {
+    // try rename new -> backup
+    if (rename(newFileName,newBackupFileName) != 0)
+    {
+      // copy to backup file
+      error = File_copyCString(newFileName,newBackupFileName);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // delete new file
+      if (unlink(newFileName) != 0)
+      {
+        return ERRORX_(IO_ERROR,errno,newFileName);
+      }
+    }
+  }
+
+  // try rename old -> new
+  if (rename(oldFileName,newFileName) != 0)
   {
     // copy to new file
-    error = File_copy(oldFileName,newFileName);
+    error = File_copyCString(oldFileName,newFileName);
     if (error != ERROR_NONE)
     {
+      if (newBackupFileName != NULL)
+      {
+        (void)File_copyCString(newBackupFileName,newFileName);
+        (void)unlink(newBackupFileName);
+      }
       return error;
     }
 
     // delete old file
-    if (unlink(String_cString(oldFileName)) != 0)
+    if (unlink(oldFileName) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,String_cString(oldFileName));
+      if (newBackupFileName != NULL)
+      {
+        (void)File_copyCString(newBackupFileName,newFileName);
+        (void)unlink(newBackupFileName);
+      }
+      return ERRORX_(IO_ERROR,errno,oldFileName);
     }
   }
 
@@ -2658,6 +2710,16 @@ Errors File_rename(const String oldFileName,
 Errors File_copy(const String sourceFileName,
                  const String destinationFileName
                 )
+{
+  assert(sourceFileName != NULL);
+  assert(destinationFileName != NULL);
+
+  return File_copyCString(String_cString(sourceFileName),String_cString(destinationFileName));
+}
+
+Errors File_copyCString(const char *sourceFileName,
+                        const char *destinationFileName
+                       )
 {
   #define BUFFER_SIZE (1024*1024)
 
@@ -2678,17 +2740,17 @@ Errors File_copy(const String sourceFileName,
   }
 
   // open files
-  sourceFile = fopen(String_cString(sourceFileName),"r");
+  sourceFile = fopen(sourceFileName,"r");
   if (sourceFile == NULL)
   {
-    error = ERRORX_(OPEN_FILE,errno,String_cString(sourceFileName));
+    error = ERRORX_(OPEN_FILE,errno,sourceFileName);
     free(buffer);
     return error;
   }
-  destinationFile = fopen(String_cString(destinationFileName),"w");
+  destinationFile = fopen(destinationFileName,"w");
   if (destinationFile == NULL)
   {
-    error = ERRORX_(OPEN_FILE,errno,String_cString(destinationFileName));
+    error = ERRORX_(OPEN_FILE,errno,destinationFileName);
     fclose(sourceFile);
     free(buffer);
     return error;
@@ -2702,7 +2764,7 @@ Errors File_copy(const String sourceFileName,
     {
       if (fwrite(buffer,1,n,destinationFile) != n)
       {
-        error = ERRORX_(IO_ERROR,errno,String_cString(destinationFileName));
+        error = ERRORX_(IO_ERROR,errno,destinationFileName);
         fclose(destinationFile);
         fclose(sourceFile);
         free(buffer);
@@ -2713,7 +2775,7 @@ Errors File_copy(const String sourceFileName,
     {
       if (ferror(sourceFile))
       {
-        error = ERRORX_(IO_ERROR,errno,String_cString(sourceFileName));
+        error = ERRORX_(IO_ERROR,errno,sourceFileName);
         fclose(destinationFile);
         fclose(sourceFile);
         free(buffer);
@@ -2731,20 +2793,20 @@ Errors File_copy(const String sourceFileName,
   free(buffer);
 
   // copy permissions
-  if (LSTAT(String_cString(sourceFileName),&fileStat) != 0)
+  if (LSTAT(sourceFileName,&fileStat) != 0)
   {
-    return ERRORX_(IO_ERROR,errno,String_cString(sourceFileName));
+    return ERRORX_(IO_ERROR,errno,sourceFileName);
   }
   #ifdef HAVE_CHOWN
-    if (chown(String_cString(destinationFileName),fileStat.st_uid,fileStat.st_gid) != 0)
+    if (chown(destinationFileName,fileStat.st_uid,fileStat.st_gid) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,String_cString(destinationFileName));
+      return ERRORX_(IO_ERROR,errno,destinationFileName);
     }
   #endif /* HAVE_CHOWN */
   #ifdef HAVE_CHMOD
-    if (chmod(String_cString(destinationFileName),fileStat.st_mode) != 0)
+    if (chmod(destinationFileName,fileStat.st_mode) != 0)
     {
-      return ERRORX_(IO_ERROR,errno,String_cString(destinationFileName));
+      return ERRORX_(IO_ERROR,errno,destinationFileName);
     }
   #endif /* HAVE_CHMOD */
 
@@ -2755,11 +2817,9 @@ Errors File_copy(const String sourceFileName,
 
 bool File_exists(const String fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
-  return (LSTAT(String_cString(fileName),&fileStat) == 0);
+  return File_existsCString(String_cString(fileName));
 }
 
 bool File_existsCString(const char *fileName)
@@ -2773,13 +2833,9 @@ bool File_existsCString(const char *fileName)
 
 bool File_isFile(const String fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
-  return (   (STAT(String_cString(fileName),&fileStat) == 0)
-          && S_ISREG(fileStat.st_mode)
-         );
+  return File_isFileCString(String_cString(fileName));
 }
 
 bool File_isFileCString(const char *fileName)
@@ -2795,13 +2851,9 @@ bool File_isFileCString(const char *fileName)
 
 bool File_isDirectory(const String fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
-  return (   (STAT(String_cString(fileName),&fileStat) == 0)
-          && S_ISDIR(fileStat.st_mode)
-         );
+  return File_isDirectoryCString(String_cString(fileName));
 }
 
 bool File_isDirectoryCString(const char *fileName)
@@ -2817,13 +2869,9 @@ bool File_isDirectoryCString(const char *fileName)
 
 bool File_isDevice(const String fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
-  return (   (STAT(String_cString(fileName),&fileStat) == 0)
-          && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
-         );
+  return File_isDeviceCString(String_cString(fileName));
 }
 
 bool File_isDeviceCString(const char *fileName)
@@ -2839,6 +2887,8 @@ bool File_isDeviceCString(const char *fileName)
 
 bool File_isReadable(const String fileName)
 {
+  assert(fileName != NULL);
+
   return File_isReadableCString(String_cString(fileName));
 }
 
@@ -2863,6 +2913,8 @@ bool File_isReadableCString(const char *fileName)
 
 bool File_isWriteable(const String fileName)
 {
+  assert(fileName != NULL);
+
   return File_isWriteableCString(String_cString(fileName));
 }
 
