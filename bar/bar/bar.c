@@ -132,6 +132,10 @@
 
 #define MIN_PASSWORD_QUALITY_LEVEL            0.6
 
+// file name extensions
+#define FILE_NAME_EXTENSION_ARCHIVE_FILE      ".bar"
+#define FILE_NAME_EXTENSION_INCREMENTAL_FILE  ".bid"
+
 LOCAL const struct
 {
   const char   *name;
@@ -166,7 +170,7 @@ typedef enum
 /***************************** Variables *******************************/
 GlobalOptions          globalOptions;
 String                 tmpDirectory;
-DatabaseHandle         *indexDatabaseHandle;
+IndexHandle            *indexHandle;
 Semaphore              consoleLock;
 
 LOCAL Commands         command;
@@ -215,7 +219,7 @@ LOCAL const char       *pidFileName;
 LOCAL String           keyFileName;
 LOCAL uint             keyBits;
 
-LOCAL DatabaseHandle   databaseHandle;
+LOCAL IndexHandle      __indexHandle;
 
 /*---------------------------------------------------------------------*/
 
@@ -2636,7 +2640,7 @@ LOCAL Errors initAll(void)
   Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
   lastOutputLine                         = NULL;
 
-  indexDatabaseHandle                    = NULL;
+  indexHandle                            = NULL;
 
   // initialize default ssh keys
   fileName = String_new();
@@ -2680,7 +2684,7 @@ LOCAL void doneAll(void)
   ConfigValue_done(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
 
   // deinitialize variables
-  if (indexDatabaseHandle != NULL) Index_done(&databaseHandle);
+  if (indexHandle != NULL) Index_done(indexHandle);
   Semaphore_done(&consoleLock);
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
@@ -4949,8 +4953,7 @@ exit(1);
   if (indexDatabaseFileName != NULL)
   {
     // open index database
-    if (printInfoFlag) printf("Opening index database '%s'...",indexDatabaseFileName);
-    error = Index_init(&databaseHandle,indexDatabaseFileName);
+    error = Index_init(&__indexHandle,indexDatabaseFileName);
     if (error != ERROR_NONE)
     {
       if (printInfoFlag) printf("fail!\n");
@@ -4968,8 +4971,7 @@ exit(1);
       #endif /* not NDEBUG */
       return errorToExitcode(error);
     }
-    indexDatabaseHandle = &databaseHandle;
-    if (printInfoFlag) printf("ok\n");
+    indexHandle = &__indexHandle;
   }
 
   // create temporary directory
