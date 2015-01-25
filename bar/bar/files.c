@@ -198,8 +198,8 @@ LOCAL void fileCheckValid(const char *fileName,
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR_AT(fileName,
                              lineNb,
-                             "File 0x%08x was closed at %s, line %lu",
-                             fileHandle,
+                             "File 0x%08lx was closed at %s, line %lu",
+                             (ulong)fileHandle,
                              debugFileNode->closeFileName,
                              debugFileNode->closeLineNb
                             );
@@ -216,8 +216,8 @@ LOCAL void fileCheckValid(const char *fileName,
       #ifdef HAVE_BACKTRACE
         debugDumpCurrentStackTrace(stderr,"",0);
       #endif /* HAVE_BACKTRACE */
-      HALT_INTERNAL_ERROR("File 0x%08x is not open",
-                          fileHandle
+      HALT_INTERNAL_ERROR("File 0x%08lx is not open",
+                          (ulong)fileHandle
                          );
     }
   }
@@ -769,17 +769,16 @@ Errors __File_getTmpFileCString(const char   *__fileName__,
       }
       if (debugFileNode != NULL)
       {
-        fprintf(stderr,"DEBUG WARNING: file '%s' at %s, line %lu opened again at %s, line %u\n",
-                String_cString(debugFileNode->fileHandle->name),
-                debugFileNode->fileName,
-                debugFileNode->lineNb,
-                __fileName__,
-                __lineNb__
-               );
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("");
+        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %u",
+                            String_cString(debugFileNode->fileHandle->name),
+                            debugFileNode->fileName,
+                            debugFileNode->lineNb,
+                            __fileName__,
+                            __lineNb__
+                           );
       }
 
       // find file in closed-list; reuse or allocate new debug node
@@ -1447,7 +1446,7 @@ Errors __File_openDescriptor(const char *__fileName__,
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %lu",
+        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %u",
                             String_cString(debugFileNode->fileHandle->name),
                             debugFileNode->fileName,
                             debugFileNode->lineNb,
