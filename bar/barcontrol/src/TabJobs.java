@@ -7021,8 +7021,8 @@ throw new Error("NYI");
 
     String[]            resultErrorMessage = new String[1];
     ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("FILE_LIST storageDirectory=%S",
-                                                             "file://"+fileTreeData.name
+    int error = BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
+                                                             fileTreeData.name
                                                             ),
                                          0,
                                          resultErrorMessage,

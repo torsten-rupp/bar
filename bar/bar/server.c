@@ -6176,147 +6176,157 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
 * Notes  : Arguments:
 *            storageDirectory=<name>
 *          Result:
-*            type=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> backup=yes|no
-*            type=DIRECTORY name=<name> dateTime=<time stamp> backup=yes|no
-*            type=LINK name=<name> dateTime=<time stamp>
-*            type=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp>
-*            type=DEVICE CHARACTER name=<name> dateTime=<time stamp>
-*            type=DEVICE BLOCK name=<name> size=<n [bytes]> dateTime=<time stamp>
-*            type=FIFO name=<name> dateTime=<time stamp>
-*            type=SOCKET name=<name> dateTime=<time stamp>
-*            type=SPECIAL name=<name> dateTime=<time stamp>
+*            type=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
+*            type=DIRECTORY name=<name> dateTime=<time stamp> noBackup=yes|no noDump=yes|no
+*            type=LINK name=<name> dateTime=<time stamp> noDump=yes|no
+*            type=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
+*            type=DEVICE CHARACTER name=<name> dateTime=<time stamp> noDump=yes|no
+*            type=DEVICE BLOCK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
+*            type=FIFO name=<name> dateTime=<time stamp> noDump=yes|no
+*            type=SOCKET name=<name> dateTime=<time stamp> noDump=yes|no
+*            type=SPECIAL name=<name> dateTime=<time stamp> noDump=yes|no
 \***********************************************************************/
 
 LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String                     storageDirectory;
-  Errors                     error;
-  StorageSpecifier           storageSpecifier;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  String                     name;
-  FileInfo                   fileInfo;
+  String              directory;
+  Errors              error;
+  DirectoryListHandle directoryListHandle;
+  String              fileName;
+  String              noBackupFileName;
+  FileInfo            fileInfo;
+  bool                noBackupExists;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get URL name
-  storageDirectory = String_new();
-  if (!StringMap_getString(argumentMap,"storageDirectory",storageDirectory,NULL))
+  // get directory
+  directory = String_new();
+  if (!StringMap_getString(argumentMap,"directory",directory,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageDirectory=<name>");
-    return;
-  }
-
-  // parse storage name
-  Storage_initSpecifier(&storageSpecifier);
-  error = Storage_parseName(&storageSpecifier,storageDirectory);
-  if (error != ERROR_NONE)
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"invalid storage directory");
-    Storage_doneSpecifier(&storageSpecifier);
-    String_delete(storageDirectory);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected directory=<name>");
     return;
   }
 
   // open directory
-  error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                    &storageSpecifier,
-                                    &clientInfo->jobOptions,
-                                    SERVER_CONNECTION_PRIORITY_HIGH
-                                   );
+  error = File_openDirectoryList(&directoryListHandle,
+                                 directory
+                                );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"open storage directory fail: %s",Error_getText(error));
-    Storage_doneSpecifier(&storageSpecifier);
-    String_delete(storageDirectory);
+    sendClientResult(clientInfo,id,TRUE,error,"open directory fail: %s",Error_getText(error));
+    String_delete(directory);
     return;
   }
 
   // read directory entries
-  name = String_new();
-  while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
+  fileName         = String_new();
+  noBackupFileName = String_new();
+  while (!File_endOfDirectoryList(&directoryListHandle))
   {
-    error = Storage_readDirectoryList(&storageDirectoryListHandle,name,&fileInfo);
+    error = File_readDirectoryList(&directoryListHandle,fileName);
     if (error == ERROR_NONE)
     {
-      switch (fileInfo.type)
+      error = File_getFileInfo(&fileInfo,fileName);
+      if (error == ERROR_NONE)
       {
-        case FILE_TYPE_FILE:
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "fileType=FILE name=%'S size=%llu dateTime=%llu noBackupFlag=%y",
-                           name,
-                           fileInfo.size,
-                           fileInfo.timeModified,
-                           FALSE
-                          );
-          break;
-        case FILE_TYPE_DIRECTORY:
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "fileType=DIRECTORY name=%'S dateTime=%llu noBackupFlag=%y",
-                           name,
-                           fileInfo.timeModified,
-                           FALSE
-                          );
-          break;
-        case FILE_TYPE_LINK:
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "fileType=LINK name=%'S dateTime=%llu noBackupFlag=%y",
-                           name,
-                           fileInfo.timeModified,
-                           FALSE
-                          );
-          break;
-        case FILE_TYPE_HARDLINK:
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "fileType=HARDLINK name=%'S dateTime=%llu noBackupFlag=%y",
-                           name,
-                           fileInfo.timeModified,
-                           FALSE
-                          );
-          break;
-        case FILE_TYPE_SPECIAL:
-          switch (fileInfo.specialType)
-          {
-            case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
-              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%llu",
-                               name,
-                               fileInfo.timeModified
-                              );
-              break;
-            case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
-              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "fileType=SPECIAL name=%'S size=%llu specialType=DEVICE_BLOCK dateTime=%llu",
-                               name,
-                               fileInfo.size,
-                               fileInfo.timeModified
-                              );
-              break;
-            case FILE_SPECIAL_TYPE_FIFO:
-              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%llu",
-                               name,
-                               fileInfo.timeModified
-                              );
-              break;
-            case FILE_SPECIAL_TYPE_SOCKET:
-              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%llu",
-                               name,
-                               fileInfo.timeModified
-                              );
-              break;
-            default:
-              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%llu",
-                               name,
-                               fileInfo.timeModified
-                              );
-              break;
-          }
-          break;
-        default:
-          break;
+        switch (fileInfo.type)
+        {
+          case FILE_TYPE_FILE:
+            sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                             "fileType=FILE name=%'S size=%llu dateTime=%llu noDump=%y",
+                             fileName,
+                             fileInfo.size,
+                             fileInfo.timeModified,
+                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                            );
+            break;
+          case FILE_TYPE_DIRECTORY:
+            // check if .nobackup exists
+            noBackupExists = FALSE;
+            if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(String_set(noBackupFileName,fileName),".nobackup"));
+            if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(String_set(noBackupFileName,fileName),".NOBACKUP"));
+
+            sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                             "fileType=DIRECTORY name=%'S dateTime=%llu noBackup=%y noDump=%y",
+                             fileName,
+                             fileInfo.timeModified,
+                             noBackupExists,
+                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                            );
+            break;
+          case FILE_TYPE_LINK:
+            sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                             "fileType=LINK name=%'S dateTime=%llu noDump=%y",
+                             fileName,
+                             fileInfo.timeModified,
+                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                            );
+            break;
+          case FILE_TYPE_HARDLINK:
+            sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                             "fileType=HARDLINK name=%'S dateTime=%llu noDump=%y",
+                             fileName,
+                             fileInfo.timeModified,
+                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                            );
+            break;
+          case FILE_TYPE_SPECIAL:
+            switch (fileInfo.specialType)
+            {
+              case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
+                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                                 "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%llu noDump=%y",
+                                 fileName,
+                                 fileInfo.timeModified,
+                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                );
+                break;
+              case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
+                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                                 "fileType=SPECIAL name=%'S size=%llu specialType=DEVICE_BLOCK dateTime=%llu noDump=%y",
+                                 fileName,
+                                 fileInfo.size,
+                                 fileInfo.timeModified,
+                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                );
+                break;
+              case FILE_SPECIAL_TYPE_FIFO:
+                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                                 "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%llu noDump=%y",
+                                 fileName,
+                                 fileInfo.timeModified,
+                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                );
+                break;
+              case FILE_SPECIAL_TYPE_SOCKET:
+                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                                 "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%llu noDump=%y",
+                                 fileName,
+                                 fileInfo.timeModified,
+                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                );
+                break;
+              default:
+                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                                 "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%llu noDump=%y",
+                                 fileName,
+                                 fileInfo.timeModified,
+                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                );
+                break;
+            }
+            break;
+          default:
+            break;
+        }
+      }
+      else
+      {
+        sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                         "fileType=UNKNOWN error=%'s",
+                         Error_getText(error)
+                        );
       }
     }
     else
@@ -6327,16 +6337,15 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
                       );
     }
   }
-  String_delete(name);
+  String_delete(noBackupFileName);
+  String_delete(fileName);
 
   // close directory
-  Storage_closeDirectoryList(&storageDirectoryListHandle);
+  File_closeDirectoryList(&directoryListHandle);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  Storage_doneSpecifier(&storageSpecifier);
-  String_delete(storageDirectory);
 }
 
 /***********************************************************************\
