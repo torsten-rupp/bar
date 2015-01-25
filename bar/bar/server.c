@@ -3389,10 +3389,9 @@ NULL,//                                                        scheduleTitle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors deleteStorage(const String jobName, DatabaseId storageId)
+LOCAL Errors deleteStorage(DatabaseId storageId)
 {
   Errors           resultError;
-  String           resultString;
   StaticString     (jobUUID,INDEX_UUID_LENGTH);
   String           storageName;
   SemaphoreLock    semaphoreLock;
@@ -3402,11 +3401,10 @@ LOCAL Errors deleteStorage(const String jobName, DatabaseId storageId)
   StorageHandle    storageHandle;
 
   // init variables
-  resultError  = ERROR_UNKNOWN;
-  resultString = String_new();
+  resultError = ERROR_UNKNOWN;
+  storageName = String_new();
 
   // find storage
-  storageName = String_new();
   if (!Index_findById(indexHandle,
                       storageId,
                       jobUUID,
@@ -3417,6 +3415,7 @@ LOCAL Errors deleteStorage(const String jobName, DatabaseId storageId)
                      )
      )
   {
+    String_delete(storageName);
     return ERROR_ARCHIVE_NOT_FOUND;
   }
 
@@ -3477,23 +3476,11 @@ LOCAL Errors deleteStorage(const String jobName, DatabaseId storageId)
           resultError = Storage_delete(&storageHandle,
                                        storageSpecifier.fileName
                                       );
-          if (resultError != ERROR_NONE)
-          {
-            String_format(resultString,"delete storage file: %s",Error_getText(resultError));
-          }
 
           // close storage
           Storage_done(&storageHandle);
         }
-        else
-        {
-          String_format(resultString,"init storage: %s",Error_getText(resultError));
-        }
       }
-    }
-    else
-    {
-      String_format(resultString,"invalid storage name");
     }
     Storage_doneSpecifier(&storageSpecifier);
   }
@@ -3502,9 +3489,11 @@ LOCAL Errors deleteStorage(const String jobName, DatabaseId storageId)
   error = Index_deleteStorage(indexHandle,storageId);
   if (error != ERROR_NONE)
   {
-    String_delete(storageName);
-    return error;
+    resultError = error;
   }
+
+  // free resources
+  String_delete(storageName);
 
   return resultError;
 }
@@ -3518,7 +3507,7 @@ LOCAL Errors deleteStorage(const String jobName, DatabaseId storageId)
 * Notes  : No error is reported if a storage file cannot be deleted
 \***********************************************************************/
 
-LOCAL Errors deleteEntity(const String jobName, DatabaseId entityId)
+LOCAL Errors deleteEntity(DatabaseId entityId)
 {
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -3557,7 +3546,7 @@ LOCAL Errors deleteEntity(const String jobName, DatabaseId entityId)
                              )
         )
   {
-    (void)deleteStorage(NULL,storageId);
+    (void)deleteStorage(storageId);
   }
   Index_doneList(&indexQueryHandle);
 
@@ -3580,7 +3569,7 @@ LOCAL Errors deleteEntity(const String jobName, DatabaseId entityId)
 * Notes  : No error is reported if a storage file cannot be deleted
 \***********************************************************************/
 
-LOCAL Errors deleteUUID(const String jobName, const String jobUUID)
+LOCAL Errors deleteUUID(const String jobUUID)
 {
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -3609,7 +3598,7 @@ LOCAL Errors deleteUUID(const String jobName, const String jobUUID)
                             )
         )
   {
-    (void)deleteEntity(NULL,entityId);
+    (void)deleteEntity(entityId);
   }
   Index_doneList(&indexQueryHandle);
 
@@ -3621,6 +3610,23 @@ LOCAL Errors deleteUUID(const String jobName, const String jobUUID)
   }
 
   return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : waitIndexReady
+* Purpose: wait until index is ready to use or quit is signaled
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void waitIndexReady(void)
+{
+  while (!quitFlag && !Index_isReady(indexHandle))
+  {
+    Misc_udelay(10LL*MISC_US_PER_SECOND);
+  }
 }
 
 /***********************************************************************\
@@ -3733,7 +3739,7 @@ fprintf(stderr,"%s, %d: ----------------------- scheduleUUID=%s\n",__FILE__,__LI
               if (now > (createdDateTime+maxAge*SECONDS_PER_DAY))
               {
 fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-                error = deleteEntity(jobName,entityId);
+                error = deleteEntity(entityId);
                 if (error == ERROR_NONE)
                 {
                   Misc_formatDateTime(dateTime,createdDateTime,NULL);
@@ -3778,7 +3784,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
             {
 fprintf(stderr,"%s, %d: %lld %llu\n",__FILE__,__LINE__,entityId,createdDateTime);
 fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-              error = deleteEntity(jobName,entityId);
+              error = deleteEntity(entityId);
               if (error == ERROR_NONE)
               {
                 Misc_formatDateTime(dateTime,createdDateTime,NULL);
@@ -3825,6 +3831,9 @@ LOCAL void schedulerThreadCode(void)
   ScheduleNode *scheduleNode;
   bool         pendingFlag;
   int          z;
+
+  // wait for index become ready
+  waitIndexReady();
 
   while (!quitFlag)
   {
@@ -4511,6 +4520,23 @@ LOCAL void indexCleanup(void)
 }
 
 /***********************************************************************\
+* Name   : pauseIndexUpdate
+* Purpose: pause index update or quit is signaled
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void pauseIndexUpdate(void)
+{
+  while (pauseFlags.indexUpdate && !quitFlag)
+  {
+    Misc_udelay(500L*1000L);
+  }
+}
+
+/***********************************************************************\
 * Name   : indexThreadCode
 * Purpose: index thread entry
 * Input  : -
@@ -4539,19 +4565,20 @@ LOCAL void indexThreadCode(void)
   printableStorageName = String_new();
   List_init(&indexCryptPasswordList);
 
-  error = ERROR_NONE;
+  // wait for index become ready
+  waitIndexReady();
 
   // clean-up index
-  indexCleanup();
+  if (!quitFlag)
+  {
+    indexCleanup();
+  }
 
   // add/update index database
   while (!quitFlag)
   {
     // pause
-    while (pauseFlags.indexUpdate && !quitFlag)
-    {
-      Misc_udelay(500L*1000L);
-    }
+    pauseIndexUpdate();
 
     // get all job crypt passwords and crypt private keys (including no password and default crypt password)
     addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
@@ -4580,10 +4607,7 @@ LOCAL void indexThreadCode(void)
           )
     {
       // pause
-      while (pauseFlags.indexUpdate && !quitFlag)
-      {
-        Misc_udelay(500L*1000L);
-      }
+      pauseIndexUpdate();
 
       // parse storage name
       error = Storage_parseName(&storageSpecifier,storageName);
@@ -4742,23 +4766,6 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 }
 
 /***********************************************************************\
-* Name   : pauseIndexUpdate
-* Purpose: pause index update
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void pauseIndexUpdate(void)
-{
-  while (pauseFlags.indexUpdate && !quitFlag)
-  {
-    Misc_udelay(500L*1000L);
-  }
-}
-
-/***********************************************************************\
 * Name   : autoIndexUpdateThreadCode
 * Purpose: auto index update thread entry
 * Input  : -
@@ -4792,11 +4799,14 @@ LOCAL void autoIndexUpdateThreadCode(void)
 
   // initialize variables
   StringList_init(&storageDirectoryList);
-
-  // run continous check for index updates
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
   printableStorageName = String_new();
+
+  // wait for index become ready
+  waitIndexReady();
+
+  // run continous check for index updates
   while (!quitFlag)
   {
     // pause
@@ -9735,10 +9745,15 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
     return;
   }
 
-  // check if database is available
+  // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    return;
+  }
+  if (!Index_isReady(indexHandle))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
     return;
   }
 
@@ -9873,17 +9888,22 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     return;
   }
 
-  // check if database is available
+  // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    return;
+  }
+  if (!Index_isReady(indexHandle))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
     return;
   }
 
   if (!String_isEmpty(jobUUID))
   {
     // delete all storage with specified job UUID
-    error = deleteUUID(NULL,jobUUID);
+    error = deleteUUID(jobUUID);
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"delete entities fail: %s",Error_getText(error));
@@ -9894,7 +9914,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   if (entityId != DATABASE_ID_NONE)
   {
     // delete entity
-    error = deleteEntity(NULL,entityId);
+    error = deleteEntity(entityId);
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"delete entity fail: %s",Error_getText(error));
@@ -9905,7 +9925,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   if (storageId != DATABASE_ID_NONE)
   {
     // delete storage
-    error = deleteStorage(NULL,storageId);
+    error = deleteStorage(storageId);
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,error,"delete storage fail: %s",Error_getText(error));
@@ -10159,11 +10179,16 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     return;
   }
 
-  // check if database is available
+  // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
     String_delete(pattern);
+    return;
+  }
+  if (!Index_isReady(indexHandle))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
     return;
   }
 
@@ -10307,10 +10332,15 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
     return;
   }
 
-  // check if database is available
+  // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    return;
+  }
+  if (!Index_isReady(indexHandle))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
     return;
   }
 
@@ -10394,10 +10424,15 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 
   UNUSED_VARIABLE(argumentMap);
 
-  // check if database is available
+  // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    return;
+  }
+  if (!Index_isReady(indexHandle))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
     return;
   }
 
@@ -10522,11 +10557,16 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     return;
   }
 
-  // check if database is available
+  // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
     String_delete(pattern);
+    return;
+  }
+  if (!Index_isReady(indexHandle))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
     return;
   }
 
@@ -10666,11 +10706,16 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
     return;
   }
 
-  // check if database is available
+  // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
     String_delete(storageName);
+    return;
+  }
+  if (!Index_isReady(indexHandle))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
     return;
   }
 
@@ -10754,11 +10799,16 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     return;
   }
 
-  // check if database is available
+  // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
     String_delete(jobUUID);
+    return;
+  }
+  if (!Index_isReady(indexHandle))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
     return;
   }
 
@@ -11015,11 +11065,16 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     return;
   }
 
-  // check if database is available
+  // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
     String_delete(jobUUID);
+    return;
+  }
+  if (!Index_isReady(indexHandle))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
     return;
   }
 
@@ -11574,11 +11629,16 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     return;
   }
 
-  // check if database is available
+  // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
     String_delete(entryPattern);
+    return;
+  }
+  if (!Index_isReady(indexHandle))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
     return;
   }
 
