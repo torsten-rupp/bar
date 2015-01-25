@@ -1730,7 +1730,6 @@ public class TabJobs
               }
             }
           }
-
           public void mouseDown(final MouseEvent mouseEvent)
           {
             TreeItem treeItem = widgetFileTree.getItem(new Point(mouseEvent.x,mouseEvent.y));
@@ -1740,7 +1739,6 @@ public class TabJobs
               menuItemOpenClose.setEnabled(fileTreeData.fileType == FileTypes.DIRECTORY);
             }
           }
-
           public void mouseUp(final MouseEvent mouseEvent)
           {
           }
@@ -1750,11 +1748,9 @@ public class TabJobs
           public void mouseEnter(MouseEvent mouseEvent)
           {
           }
-
           public void mouseExit(MouseEvent mouseEvent)
           {
           }
-
           public void mouseHover(MouseEvent mouseEvent)
           {
             Tree tree = (Tree)mouseEvent.widget;
@@ -1803,6 +1799,38 @@ public class TabJobs
               Point point = tree.toDisplay(mouseEvent.x+16,mouseEvent.y);
               widgetFileTreeToolTip.setBounds(point.x,point.y,size.x,size.y);
               widgetFileTreeToolTip.setVisible(true);
+            }
+          }
+        });
+        widgetFileTree.addKeyListener(new KeyListener()
+        {
+          public void keyPressed(KeyEvent keyEvent)
+          {
+          }
+          public void keyReleased(KeyEvent keyEvent)
+          {
+            if (Widgets.isAccelerator(keyEvent,SWT.CR))
+            {
+              TreeItem treeItem =  widgetFileTree.getSelection()[0];
+              if (treeItem != null)
+              {
+                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                if (fileTreeData.fileType == FileTypes.DIRECTORY)
+                {
+                  Event treeEvent = new Event();
+                  treeEvent.item = treeItem;
+                  if (treeItem.getExpanded())
+                  {
+                    widgetFileTree.notifyListeners(SWT.Collapse,treeEvent);
+                    treeItem.setExpanded(false);
+                  }
+                  else
+                  {
+                    widgetFileTree.notifyListeners(SWT.Expand,treeEvent);
+                    treeItem.setExpanded(true);
+                  }
+                }
+              }
             }
           }
         });
@@ -1871,31 +1899,84 @@ public class TabJobs
             }
           });
 
-          menuItemExclude = Widgets.addMenuRadio(menu,BARControl.tr("Exclude"));
-          menuItemExclude.addSelectionListener(new SelectionListener()
+          Menu subMenu = Widgets.addMenu(menu,"Exclude by");
           {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            menuItemExclude = Widgets.addMenuRadio(subMenu,BARControl.tr("list"));
+            menuItemExclude.addSelectionListener(new SelectionListener()
             {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              for (TreeItem treeItem : widgetFileTree.getSelection())
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeListRemove(fileTreeData.name);
-                excludeListAdd(fileTreeData.name);
-                switch (fileTreeData.fileType)
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                for (TreeItem treeItem : widgetFileTree.getSelection())
                 {
-                  case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
-                  case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                  case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                  includeListRemove(fileTreeData.name);
+                  excludeListAdd(fileTreeData.name);
+                  switch (fileTreeData.fileType)
+                  {
+                    case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                    case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
+                    case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                    case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                    case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  }
                 }
               }
-            }
-          });
+            });
+
+            menuItem = Widgets.addMenuRadio(subMenu,BARControl.tr(".nobackup"));
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                for (TreeItem treeItem : widgetFileTree.getSelection())
+                {
+                  FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                  includeListRemove(fileTreeData.name);
+                  excludeListAdd(fileTreeData.name);
+                  switch (fileTreeData.fileType)
+                  {
+                    case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                    case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
+                    case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                    case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                    case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  }
+                }
+              }
+            });
+
+            menuItem = Widgets.addMenuRadio(subMenu,BARControl.tr("no dump"));
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                for (TreeItem treeItem : widgetFileTree.getSelection())
+                {
+                  FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                  includeListRemove(fileTreeData.name);
+                  excludeListAdd(fileTreeData.name);
+                  switch (fileTreeData.fileType)
+                  {
+                    case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                    case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
+                    case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                    case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                    case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  }
+                }
+              }
+            });
 //???
+          }
 
           menuItemNone = Widgets.addMenuRadio(menu,BARControl.tr("None"));
           menuItemNone.addSelectionListener(new SelectionListener()
