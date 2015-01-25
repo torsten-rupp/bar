@@ -73,8 +73,9 @@ typedef uint64 IndexModeSet;
 // index handle
 typedef struct
 {
+  const char     *databaseFileName;
   DatabaseHandle databaseHandle;
-  bool           readyFlag;
+  bool           initFlag;
 } IndexHandle;
 
 // index query handle
@@ -101,7 +102,6 @@ typedef struct
 #define INDEX_STATE_SET(indexState) (1 << indexState)
 
 #ifndef NDEBUG
-  #define Index_init(...) __Index_init(__FILE__,__LINE__,__VA_ARGS__)
   #define Index_done(...) __Index_done(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
@@ -191,17 +191,9 @@ bool Index_parseMode(const char *name, IndexModes *indexMode);
 * Notes  : -
 \***********************************************************************/
 
-#ifdef NDEBUG
-  Errors Index_init(IndexHandle *indexHandle,
-                    const char  *databaseFileName
-                   );
-#else /* not NDEBUG */
-  Errors __Index_init(const char  *__fileName__,
-                      uint        __lineNb__,
-                      IndexHandle *indexHandle,
-                      const char  *databaseFileName
-                     );
-#endif /* NDEBUG */
+Errors Index_init(IndexHandle *indexHandle,
+                  const char  *databaseFileName
+                 );
 
 /***********************************************************************\
 * Name   : Index_done

@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __INDEX_IMPLEMENATION__
+
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -17,6 +19,7 @@
 #include <assert.h>
 
 #include "global.h"
+#include "threads.h"
 #include "strings.h"
 #include "database.h"
 #include "files.h"
@@ -59,6 +62,7 @@ LOCAL const struct
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
+LOCAL Thread initThread;
 
 /****************************** Macros *********************************/
 
@@ -631,198 +635,11 @@ LOCAL Errors upgradeToVersion3(const char *databaseFileName)
 
 LOCAL Errors upgradeToVersion4(const char *databaseFileName)
 {
-#if 0
-  Errors              error;
-  IndexHandle         indexHandle;
-  DatabaseQueryHandle databaseQueryHandle;
-  StaticString        (uuid,INDEX_UUID_LENGTH);
-  uint64              createdDateTime;
-  String              name1,name2;
-  bool                done;
-  DatabaseId          lastStorageId;
-  DatabaseId          storageId;
-  DatabaseId          entityId;
-  bool                equalsFlag;
-  ulong               i;
-
-  // init variables
-  name1 = String_new();
-  name2 = String_new();
-
-  // add entityId to storage
-  error = Database_addColumn(&indexHandle.databaseHandle,
-                             "storage",
-                             "entityId",
-                             DATABASE_TYPE_FOREIGN_KEY
-                            );
-  if (error != ERROR_NONE)
-  {
-    String_delete(name2);
-    String_delete(name1);
-    return error;
-  }
-
-  // set entityId in storage entries
-  done          = FALSE;
-  lastStorageId = DATABASE_ID_NONE;
-  while (!done)
-  {
-    // get next storage entry with not set entity id
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle.databaseHandle,
-                             "SELECT id, \
-                                     uuid, \
-                                     name, \
-                                     created \
-                              FROM storage \
-                              WHERE     entityId=0 \
-                                    AND id > %d \
-                              ORDER BY id,created ASC \
-                             ",
-                             lastStorageId
-                            );
-    if (error != ERROR_NONE)
-    {
-      break;
-    }
-    if (Database_getNextRow(&databaseQueryHandle,
-                            "%lld %S %S %lld",
-                            &storageId,
-                            uuid,
-                            name1,
-                            &createdDateTime
-                           )
-       )
-    {
-      lastStorageId = storageId;
-
-      // insert entity
-      error = Database_execute(&indexHandle.databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "INSERT INTO entities \
-                                  (\
-                                   jobUUID,\
-                                   scheduleUUID, \
-                                   created,\
-                                   type,\
-                                   bidFlag\
-                                  ) \
-                                VALUES \
-                                  (\
-                                   %'S,\
-                                   '',\
-                                   %d,\
-                                   %d,\
-                                   %d\
-                                  ); \
-                 g              ",
-                               uuid,
-                               createdDateTime,
-                               ARCHIVE_TYPE_FULL,
-                               0
-                              );
-      if (error == ERROR_NONE)
-      {
-        // get entity id
-        entityId = Database_getLastRowId(&indexHandle);
-
-        // assign entity id for all storage entries with same uuid and matching name (equals except digits)
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle.databaseHandle,
-                                 "SELECT id, \
-                                         name \
-                                  FROM storage \
-                                  WHERE     entityId=0 \
-                                        AND uuid=%'S \
-                                 ",
-                                 uuid
-                                );
-        if (error != ERROR_NONE)
-        {
-          break;
-        }
-        while (Database_getNextRow(&databaseQueryHandle,
-                                   "%lld %S",
-                                   &storageId,
-                                   name2
-                                  )
-              )
-        {
-          // compare names (equals except digits)
-          equalsFlag = String_length(name1) == String_length(name2);
-          i = STRING_BEGIN;
-          while (equalsFlag
-                 && (i < String_length(name1))
-                 && (   isdigit(String_index(name1,i))
-                     || (String_index(name1,i) == String_index(name2,i))
-                    )
-                )
-          {
-            i++;
-          }
-          if (equalsFlag)
-          {
-            // assign entity id
-            (void)Database_execute(&indexHandle.databaseHandle,
-                                   CALLBACK(NULL,NULL),
-                                   "UPDATE storage \
-                                    SET entityId=%llu \
-                                    WHERE id=%llu; \
-                                   ",
-                                   entityId,
-                                   storageId
-                                  );
-          }
-        }
-      }
-      else
-      {
-        done = TRUE;
-      }
-    }
-    else
-    {
-      done = TRUE;
-    }
-    Database_finalize(&databaseQueryHandle);
-  }
-  if (error != ERROR_NONE)
-  {
-    String_delete(name2);
-    String_delete(name1);
-    return error;
-  }
-
-#warning remove #if 0
-#if 0
-  // remove uuid from storage
-  error = Database_removeColumn(&indexHandle.databaseHandle,
-                                "storage",
-                                "uuid"
-                               );
-  if (error != ERROR_NONEg)
-  {
-    String_delete(name2);
-    String_delete(name1);
-    String_delete(created);
-    return error;
-  }
-#endif
-
-  // free resources
-  String_delete(name2);
-  String_delete(name1);
-
-  return error;
-#endif
-
   String              newDatabaseFileName,backupDatabaseFileName;
   Errors              error;
   IndexHandle         indexHandle,newIndexHandle;
   String              name1,name2;
-  bool                done;
-  DatabaseQueryHandle databaseQueryHandle;
-  DatabaseId          lastStorageId;
+  DatabaseQueryHandle databaseQueryHandle1,databaseQueryHandle2;
   DatabaseId          storageId;
   StaticString        (uuid,INDEX_UUID_LENGTH);
   uint64              createdDateTime;
@@ -854,10 +671,9 @@ LOCAL Errors upgradeToVersion4(const char *databaseFileName)
   Database_setEnabledForeignKeys(&newIndexHandle.databaseHandle,FALSE);
 
   // transfer data to new database
-//asm("int3");
 #ifndef NDEBUG
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 Database_debugEnable(false);
+//Database_debugEnable(true);
 #endif
   if (error == ERROR_NONE)
   {
@@ -867,7 +683,7 @@ Database_debugEnable(false);
                               );
   }
 #ifndef NDEBUG
-Database_debugEnable(true);
+//Database_debugEnable(false);
 #endif
   if (error == ERROR_NONE)
   {
@@ -912,9 +728,8 @@ Database_debugEnable(true);
                               );
   }
 #ifndef NDEBUG
-Database_debugEnable(true);
+//Database_debugEnable(true);
 #endif
-fprintf(stderr,"%s, %d:------------------------- \n",__FILE__,__LINE__);
   if (error != ERROR_NONE)
   {
     (void)closeIndex(&newIndexHandle);
@@ -925,17 +740,15 @@ fprintf(stderr,"%s, %d:------------------------- \n",__FILE__,__LINE__);
     return error;
   }
 
+Database_debugEnable(true);
   // set entityId in storage entries
-  name1         = String_new();
-  name2         = String_new();
-  done          = FALSE;
-  lastStorageId = DATABASE_ID_NONE;
-  // get next storage entry with not set entity id
-  error = Database_prepare(&databaseQueryHandle,
+  name1 = String_new();
+  name2 = String_new();
+  error = Database_prepare(&databaseQueryHandle1,
                            &indexHandle.databaseHandle,
                            "SELECT uuid, \
                                    name, \
-                                   created \
+                                   STRFTIME('%%s',created) \
                             FROM storage \
                             GROUP BY uuid \
                             ORDER BY id,created ASC \
@@ -943,7 +756,7 @@ fprintf(stderr,"%s, %d:------------------------- \n",__FILE__,__LINE__);
                           );
   if (error == ERROR_NONE)
   {
-    while (Database_getNextRow(&databaseQueryHandle,
+    while (Database_getNextRow(&databaseQueryHandle1,
                                "%S %S %lld",
                                uuid,
                                name1,
@@ -966,7 +779,7 @@ fprintf(stderr,"%s, %d:------------------------- \n",__FILE__,__LINE__);
                                   (\
                                    %'S,\
                                    '',\
-                                   %ld,\
+                                   DATETIME(%llu,'unixepoch'),\
                                    %d,\
                                    %d\
                                   ); \
@@ -981,9 +794,10 @@ fprintf(stderr,"%s, %d:------------------------- \n",__FILE__,__LINE__);
         // get entity id
         entityId = Database_getLastRowId(&newIndexHandle.databaseHandle);
 
-  #if 0
+Database_debugEnable(false);
+#if 1
         // assign entity id for all storage entries with same uuid and matching name (equals except digits)
-        error = Database_prepare(&databaseQueryHandle,
+        error = Database_prepare(&databaseQueryHandle2,
                                  &indexHandle.databaseHandle,
                                  "SELECT id, \
                                          name \
@@ -994,7 +808,7 @@ fprintf(stderr,"%s, %d:------------------------- \n",__FILE__,__LINE__);
                                 );
         if (error == ERROR_NONE)
         {
-          while (Database_getNextRow(&databaseQueryHandle,
+          while (Database_getNextRow(&databaseQueryHandle2,
                                      "%lld %S",
                                      &storageId,
                                      name2
@@ -1016,7 +830,7 @@ fprintf(stderr,"%s, %d:------------------------- \n",__FILE__,__LINE__);
             if (equalsFlag)
             {
               // assign entity id
-              (void)Database_execute(&newIndexHandle,
+              (void)Database_execute(&newIndexHandle.databaseHandle,
                                      CALLBACK(NULL,NULL),
                                      "UPDATE storage \
                                       SET entityId=%llu \
@@ -1027,11 +841,13 @@ fprintf(stderr,"%s, %d:------------------------- \n",__FILE__,__LINE__);
                                     );
             }
           }
+          Database_finalize(&databaseQueryHandle2);
         }
-  #endif
+#endif
+Database_debugEnable(true);
       }
     }
-    Database_finalize(&databaseQueryHandle);
+    Database_finalize(&databaseQueryHandle1);
   }
   String_delete(name2);
   String_delete(name1);
@@ -1039,7 +855,7 @@ fprintf(stderr,"%s, %d:------------------------- \n",__FILE__,__LINE__);
   {
     (void)closeIndex(&newIndexHandle);
     (void)closeIndex(&indexHandle);
-//    (void)File_delete(newDatabaseFileName,FALSE);
+    (void)File_delete(newDatabaseFileName,FALSE);
     String_delete(backupDatabaseFileName);
     String_delete(newDatabaseFileName);
     return error;
@@ -1048,7 +864,7 @@ fprintf(stderr,"%s, %d:------------------------- \n",__FILE__,__LINE__);
   // close new database
   (void)closeIndex(&newIndexHandle);
   (void)closeIndex(&indexHandle);
-exit(1);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // rename database files
   error = File_renameCString(String_cString(newDatabaseFileName),
@@ -1071,6 +887,95 @@ exit(1);
 }
 
 /***********************************************************************\
+* Name   : initThreadCode
+* Purpose: init index thread
+* Input  : indexHandle - index handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initThreadCode(IndexHandle *indexHandle)
+{
+  Errors error;
+  int64  indexVersion;
+
+  assert(indexHandle != NULL);
+  assert(!indexHandle->initFlag);
+
+  // open/create database
+  if (File_existsCString(indexHandle->databaseFileName))
+  {
+    do
+    {
+      // get index version
+      error = getIndexVersion(indexHandle->databaseFileName,&indexVersion);
+      if (error != ERROR_NONE)
+      {
+        return;
+      }
+
+      // upgrade index structure
+      if (indexVersion < INDEX_VERSION)
+      {
+        switch (indexVersion)
+        {
+          case 1:
+            error = upgradeToVersion2(indexHandle->databaseFileName);
+            indexVersion = 2;
+          case 2:
+            error = upgradeToVersion3(indexHandle->databaseFileName);
+            indexVersion = 3;
+            break;
+          case 3:
+            error = upgradeToVersion4(indexHandle->databaseFileName);
+            indexVersion = 4;
+            break;
+          default:
+            // assume correct database version if index is unknown
+            indexVersion = INDEX_VERSION;
+            break;
+        }
+        if (error != ERROR_NONE)
+        {
+          return;
+        }
+
+        // update index version
+        error = setIndexVersion(indexHandle->databaseFileName,indexVersion);
+        if (error != ERROR_NONE)
+        {
+          return;
+        }
+      }
+    }
+    while (indexVersion < INDEX_VERSION);
+
+    // open data base
+    error = openIndex(indexHandle,indexHandle->databaseFileName);
+    if (error != ERROR_NONE)
+    {
+      return;
+    }
+
+    // clean-up database
+    cleanUp(indexHandle);
+  }
+  else
+  {
+    // create index database
+    error = createIndex(indexHandle,indexHandle->databaseFileName);
+    if (error != ERROR_NONE)
+    {
+      return;
+    }
+  }
+
+  // init done
+  indexHandle->initFlag = TRUE;
+}
+
+/***********************************************************************\
 * Name   : initIndexQueryHandle
 * Purpose: init index query handle
 * Input  : indexQueryHandle - index query handle
@@ -1083,6 +988,8 @@ exit(1);
 LOCAL void initIndexQueryHandle(IndexQueryHandle *indexQueryHandle, IndexHandle *indexHandle)
 {
   assert(indexQueryHandle != NULL);
+  assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   indexQueryHandle->indexHandle                = indexHandle;
   indexQueryHandle->storage.type               = STORAGE_TYPE_NONE;
@@ -1105,6 +1012,8 @@ LOCAL void initIndexQueryHandle(IndexQueryHandle *indexQueryHandle, IndexHandle 
 LOCAL void doneIndexQueryHandle(IndexQueryHandle *indexQueryHandle)
 {
   assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+  assert(indexQueryHandle->indexHandle->initFlag);
 
   if (indexQueryHandle->storage.fileNamePattern    != NULL) Pattern_delete(indexQueryHandle->storage.fileNamePattern);
   if (indexQueryHandle->storage.deviceNamePattern  != NULL) Pattern_delete(indexQueryHandle->storage.deviceNamePattern);
@@ -1356,103 +1265,20 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
   }
 }
 
-#ifdef NDEBUG
-  Errors Index_init(IndexHandle *indexHandle,
-                    const char  *databaseFileName
-                   )
-#else /* not NDEBUG */
-  Errors __Index_init(const char  *__fileName__,
-                      uint        __lineNb__,
-                      IndexHandle *indexHandle,
-                      const char  *databaseFileName
-                     )
-#endif /* NDEBUG */
+Errors Index_init(IndexHandle *indexHandle,
+                  const char  *databaseFileName
+                 )
 {
-  Errors error;
-  bool   indexVersionFlag;
-  int64  indexVersion;
+  assert(indexHandle != NULL);
+  assert(databaseFileName != NULL);
 
-  // open/create database
-  if (File_existsCString(databaseFileName))
+  // init variables
+  indexHandle->databaseFileName = databaseFileName;
+  indexHandle->initFlag         = FALSE;
+
+  if (!Thread_init(&initThread,"Index init",0,initThreadCode,indexHandle))
   {
-    printInfo(1,"Upgrade index database...");
-    do
-    {
-      // get index version
-      error = getIndexVersion(databaseFileName,&indexVersion);
-      if (error != ERROR_NONE)
-      {
-        printInfo(1,"FAIL\n");
-        return error;
-      }
-
-      // upgrade index structure
-      if (indexVersion < INDEX_VERSION)
-      {
-        switch (indexVersion)
-        {
-          case 1:
-            error = upgradeToVersion2(databaseFileName);
-            indexVersion = 2;
-          case 2:
-            error = upgradeToVersion3(databaseFileName);
-            indexVersion = 3;
-            break;
-          case 3:
-            error = upgradeToVersion4(databaseFileName);
-            indexVersion = 4;
-            break;
-          default:
-            // assume correct database version if index is unknown
-            indexVersion = INDEX_VERSION;
-            break;
-        }
-        if (error != ERROR_NONE)
-        {
-          printInfo(1,"FAIL\n");
-          return error;
-        }
-
-        // update index version
-        error = setIndexVersion(databaseFileName,indexVersion);
-        if (error != ERROR_NONE)
-        {
-          printInfo(1,"FAIL\n");
-          return error;
-        }
-      }
-    }
-    while (indexVersion < INDEX_VERSION);
-    printInfo(1,"ok\n");
-
-    // open data base
-    printInfo(1,"Opening index database '%s'...",databaseFileName);
-    #ifdef NDEBUG
-      error = openIndex(indexHandle,databaseFileName);
-    #else /* not NDEBUG */
-      error = __openIndex(__fileName__,__lineNb__,indexHandle,databaseFileName);
-    #endif /* NDEBUG */
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    printInfo(1,"ok\n");
-
-    // clean-up database
-    cleanUp(indexHandle);
-  }
-  else
-  {
-    // create index database
-    #ifdef NDEBUG
-      error = createIndex(indexHandle,databaseFileName);
-    #else /* not NDEBUG */
-      error = __createIndex(__fileName__,__lineNb__,indexHandle,databaseFileName);
-    #endif /* NDEBUG */
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    HALT_FATAL_ERROR("Cannot initialize index init thread!");
   }
 
   return ERROR_NONE;
@@ -1480,7 +1306,7 @@ bool Index_isReady(IndexHandle *indexHandle)
 {
   assert(indexHandle != NULL);
 
-  return indexHandle->readyFlag;
+  return indexHandle->initFlag;
 }
 
 bool Index_findById(IndexHandle *indexHandle,
@@ -1497,6 +1323,7 @@ bool Index_findById(IndexHandle *indexHandle,
   bool                result;
 
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -1548,6 +1375,7 @@ bool Index_findByName(IndexHandle  *indexHandle,
   bool                foundFlag;
 
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
   assert(storageId != NULL);
 
   (*storageId) = DATABASE_ID_NONE;
@@ -1668,6 +1496,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
   bool                result;
 
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
   assert(storageId != NULL);
 
   (*storageId) = DATABASE_ID_NONE;
@@ -1714,6 +1543,7 @@ Errors Index_clear(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   // Note: do in single steps to avoid long-time-locking of database!
   error = Database_execute(&indexHandle->databaseHandle,
@@ -1764,6 +1594,7 @@ Errors Index_update(IndexHandle  *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   if (storageName != NULL)
   {
@@ -1808,6 +1639,9 @@ Errors Index_getState(IndexHandle *indexHandle,
   DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
 
+  assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
+
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT state, \
@@ -1851,6 +1685,7 @@ Errors Index_setState(IndexHandle *indexHandle,
   String  s;
 
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -1923,6 +1758,7 @@ long Index_countState(IndexHandle *indexHandle,
   long                count;
 
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -1958,6 +1794,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -1987,6 +1824,8 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                       )
 {
   assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+  assert(indexQueryHandle->indexHandle->initFlag);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%S %S %lld %lld %S",
@@ -2007,6 +1846,7 @@ Errors Index_deleteUUID(IndexHandle  *indexHandle,
   DatabaseId          entityId;
 
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   // delete entities of UUID
   error = Database_prepare(&databaseQueryHandle,
@@ -2046,6 +1886,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -2089,6 +1930,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                         )
 {
   assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+  assert(indexQueryHandle->indexHandle->initFlag);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %S %llu %u %lld %S",
@@ -2112,6 +1955,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
   assert(entityId != NULL);
 
   error = Database_execute(&indexHandle->databaseHandle,
@@ -2157,6 +2001,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
   DatabaseId          storageId;
 
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   // delete storage of entity
   error = Database_prepare(&databaseQueryHandle,
@@ -2212,7 +2057,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
-
+  assert(indexHandle->initFlag);
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   indexQueryHandle->storage.type = storageType;
@@ -2276,6 +2121,8 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   bool             foundFlag;
 
   assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+  assert(indexQueryHandle->indexHandle->initFlag);
 
   Storage_initSpecifier(&storageSpecifier);
   foundFlag = FALSE;
@@ -2388,6 +2235,7 @@ Errors Index_newStorage(IndexHandle  *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
   assert(storageId != NULL);
 
   error = Database_execute(&indexHandle->databaseHandle,
@@ -2434,6 +2282,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   // Note: do in single steps to avoid long-time-locking of database!
   error = Database_execute(&indexHandle->databaseHandle,
@@ -2496,6 +2345,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -2560,6 +2410,8 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
                       )
 {
   assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+  assert(indexQueryHandle->indexHandle->initFlag);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %llu %d %d %d %llu %llu",
@@ -2604,6 +2456,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -2662,6 +2515,8 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
                        )
 {
   assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+  assert(indexQueryHandle->indexHandle->initFlag);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %u %llu %llu %llu",
@@ -2703,6 +2558,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -2761,6 +2617,8 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
                            )
 {
   assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+  assert(indexQueryHandle->indexHandle->initFlag);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %d %d %d",
@@ -2802,6 +2660,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -2862,6 +2721,8 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
                       )
 {
   assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+  assert(indexQueryHandle->indexHandle->initFlag);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %S %llu %d %d %d",
@@ -2904,6 +2765,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -2968,6 +2830,8 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
                           )
 {
   assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+  assert(indexQueryHandle->indexHandle->initFlag);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %llu %d %d %d %llu %llu",
@@ -3012,6 +2876,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -3070,6 +2935,8 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
                          )
 {
   assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+  assert(indexQueryHandle->indexHandle->initFlag);
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %d %d %d",
@@ -3089,6 +2956,7 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
                           )
 {
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3122,6 +2990,7 @@ Errors Index_addFile(IndexHandle  *indexHandle,
                     )
 {
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
   assert(fileName != NULL);
 
   return Database_execute(&indexHandle->databaseHandle,
@@ -3180,6 +3049,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                      )
 {
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
   assert(imageName != NULL);
 
   return Database_execute(&indexHandle->databaseHandle,
@@ -3227,6 +3097,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                          )
 {
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
   assert(directoryName != NULL);
 
   return Database_execute(&indexHandle->databaseHandle,
@@ -3280,6 +3151,9 @@ Errors Index_addLink(IndexHandle  *indexHandle,
   assert(indexHandle != NULL);
   assert(linkName != NULL);
   assert(destinationName != NULL);
+
+  assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3335,6 +3209,7 @@ Errors Index_addHardLink(IndexHandle  *indexHandle,
                         )
 {
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
   assert(fileName != NULL);
 
   return Database_execute(&indexHandle->databaseHandle,
@@ -3397,6 +3272,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                        )
 {
   assert(indexHandle != NULL);
+  assert(indexHandle->initFlag);
   assert(name != NULL);
 
   return Database_execute(&indexHandle->databaseHandle,
