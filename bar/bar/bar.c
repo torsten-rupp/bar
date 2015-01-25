@@ -4953,10 +4953,11 @@ exit(1);
   if (indexDatabaseFileName != NULL)
   {
     // open index database
+    printInfo(1,"Opening index database '%s'...",indexDatabaseFileName);
     error = Index_init(&__indexHandle,indexDatabaseFileName);
     if (error != ERROR_NONE)
     {
-      if (printInfoFlag) printf("fail!\n");
+      if (printInfoFlag) printf("FAIL!\n");
       printError("Cannot open index database '%s' (error: %s)!\n",
                  indexDatabaseFileName,
                  Error_getText(error)
@@ -4972,6 +4973,7 @@ exit(1);
       return errorToExitcode(error);
     }
     indexHandle = &__indexHandle;
+    printInfo(1,"ok\n");
   }
 
   // create temporary directory
