@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS entities(
   parentJobUUID   INTEGER,
   bidFlag         INTEGER
 );
-INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID) VALUES (0,'','');
 
 CREATE TABLE IF NOT EXISTS storage(
   id              INTEGER PRIMARY KEY,
