@@ -307,7 +307,7 @@ if test $helpFlag -eq 1; then
   exit 0
 fi
 
-# check if wget, patch are available
+# check if required tools are available
 type $WGET 1>/dev/null 2>/dev/null && $WGET --version 1>/dev/null 2>/dev/null
 if test $? -gt 0; then
   $ECHO >&2 "ERROR: command 'wget' is not available"
@@ -329,7 +329,7 @@ if test $? -gt 10; then
   exit 1
 fi
 type $XZ 1>/dev/null 2>/dev/null && $XZ --version 1>/dev/null 2>/dev/null
-if test $? -gt 10; then
+if test $? -gt 0; then
   $ECHO >&2 "ERROR: command 'xz' is not available"
   exit 1
 fi
