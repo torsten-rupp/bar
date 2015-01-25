@@ -19,7 +19,7 @@
 #include <assert.h>
 
 #include "forward.h"         /* required for JobOptions. Do not include
-                                bar.h, because of circular dependency
+                                bar_global.h, because of circular dependency
                                 in JobOptions
                              */
 
