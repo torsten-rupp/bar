@@ -1352,6 +1352,9 @@ public class TabJobs
   private Combo        widgetJobList;
   private Tree         widgetFileTree;
   private MenuItem     menuItemOpenClose;
+  private MenuItem     menuItemInclude;
+  private MenuItem     menuItemExclude;
+  private MenuItem     menuItemNone;
   private Shell        widgetFileTreeToolTip = null;
   private Tree         widgetDeviceTree;
   private Table        widgetIncludeTable;
@@ -1670,6 +1673,32 @@ public class TabJobs
             new TreeItem(treeItem,SWT.NONE);
           }
         });
+        widgetFileTree.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            TreeItem treeItem = (TreeItem)selectionEvent.item;
+
+            if (treeItem != null)
+            {
+              FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+
+              boolean isIncluded = false;
+              boolean isExcluded = false;
+              boolean isNone     = false;
+              if      (includeHashMap.containsKey(fileTreeData.name)) isIncluded = true;
+              else if (excludeHashSet.contains(fileTreeData.name)   ) isExcluded = true;
+              else                                                    isNone     = true;
+
+              menuItemInclude.setSelection(isIncluded);
+              menuItemExclude.setSelection(isExcluded);
+              menuItemNone.setSelection(isNone);
+            }
+          }
+        });
         widgetFileTree.addMouseListener(new MouseListener()
         {
           public void mouseDoubleClick(final MouseEvent mouseEvent)
@@ -1809,8 +1838,8 @@ public class TabJobs
 
           Widgets.addMenuSeparator(menu);
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Include"));
-          menuItem.addSelectionListener(new SelectionListener()
+          menuItemInclude = Widgets.addMenuRadio(menu,BARControl.tr("Include"));
+          menuItemInclude.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1836,8 +1865,8 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Exclude"));
-          menuItem.addSelectionListener(new SelectionListener()
+          menuItemExclude = Widgets.addMenuRadio(menu,BARControl.tr("Exclude"));
+          menuItemExclude.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1860,9 +1889,10 @@ public class TabJobs
               }
             }
           });
+//???
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("None"));
-          menuItem.addSelectionListener(new SelectionListener()
+          menuItemNone = Widgets.addMenuRadio(menu,BARControl.tr("None"));
+          menuItemNone.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
