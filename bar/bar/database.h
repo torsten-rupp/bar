@@ -46,7 +46,9 @@ typedef enum
   DATABASE_TYPE_DOUBLE,
   DATABASE_TYPE_DATETIME,
   DATABASE_TYPE_TEXT,
-  DATABASE_TYPE_BLOB
+  DATABASE_TYPE_BLOB,
+
+  DATABASE_TYPE_UNKNOWN
 } DatabaseTypes;
 
 // special database ids
@@ -65,7 +67,10 @@ typedef enum
 // database handle
 typedef struct
 {
-  sqlite3   *handle;
+  sqlite3    *handle;
+  #ifndef NDEBUG
+    const char *fileName;
+  #endif /* not NDEBUG */
 } DatabaseHandle;
 
 // database query handle
@@ -74,7 +79,7 @@ typedef struct
   DatabaseHandle *databaseHandle;
   sqlite3_stmt   *handle;
   #ifndef NDEBUG
-    String sqlString;
+    String     sqlString;
   #endif /* not NDEBUG */
 } DatabaseQueryHandle;
 
@@ -88,8 +93,10 @@ typedef int64 DatabaseId;
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Database_open(...)  __Database_open(__FILE__,__LINE__,__VA_ARGS__)
-  #define Database_close(...) __Database_close(__FILE__,__LINE__,__VA_ARGS__)
+  #define Database_open(...)     __Database_open(__FILE__,__LINE__,__VA_ARGS__)
+  #define Database_close(...)    __Database_close(__FILE__,__LINE__,__VA_ARGS__)
+  #define Database_prepare(...)  __Database_prepare(__FILE__,__LINE__,__VA_ARGS__)
+  #define Database_finalize(...) __Database_finalize(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -141,6 +148,30 @@ typedef int64 DatabaseId;
                         DatabaseHandle *databaseHandle
                        );
 #endif /* NDEBUG */
+
+Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
+                               bool           enabled
+                              );
+
+Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
+                                      bool           enabled
+                                     );
+
+/***********************************************************************\
+* Name   : Database_copyTable
+* Purpose: copy table content
+* Input  : fromDatabaseHandle - from-database handle
+*          toDatabaseHandle   - fo-database handle
+*          tableName          - table name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_copyTable(DatabaseHandle *fromDatabaseHandle,
+                          DatabaseHandle *toDatabaseHandle,
+                          const char     *tableName
+                         );
 
 /***********************************************************************\
 * Name   : Database_addColumn
@@ -212,11 +243,21 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
-                        DatabaseHandle      *databaseHandle,
-                        const char          *command,
-                        ...
-                       );
+#ifdef NDEBUG
+  Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
+                          DatabaseHandle      *databaseHandle,
+                          const char          *command,
+                          ...
+                         );
+#else /* not NDEBUG */
+  Errors __Database_prepare(const char          *__fileName__,
+                            uint                __lineNb__,
+                            DatabaseQueryHandle *databaseQueryHandle,
+                            DatabaseHandle      *databaseHandle,
+                            const char          *command,
+                            ...
+                           );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Database_getNextRow
@@ -250,7 +291,14 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-void Database_finalize(DatabaseQueryHandle *databaseQueryHandle);
+#ifdef NDEBUG
+  void Database_finalize(DatabaseQueryHandle *databaseQueryHandle);
+#else /* not NDEBUG */
+  void __Database_finalize(const char        *__fileName__,
+                           uint              __lineNb__,
+                           DatabaseQueryHandle *databaseQueryHandle
+                          );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Database_getInteger64
@@ -354,6 +402,17 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
 int64 Database_getLastRowId(DatabaseHandle *databaseHandle);
 
 #ifndef NDEBUG
+
+/***********************************************************************\
+* Name   : Database_debugPrintQueryInfo
+* Purpose: print query info
+* Input  : databaseQueryHandle - database query handle
+* Output : -
+* Return : -
+* Notes  : For debugging only!
+\***********************************************************************/
+
+void Database_debugEnable(bool enabled);
 
 /***********************************************************************\
 * Name   : Database_debugPrintQueryInfo
