@@ -1351,11 +1351,14 @@ public class TabJobs
   private TabFolder    widgetTabFolder;
   private Combo        widgetJobList;
   private Tree         widgetFileTree;
+  private Shell        widgetFileTreeToolTip = null;
   private MenuItem     menuItemOpenClose;
   private MenuItem     menuItemInclude;
   private MenuItem     menuItemExclude;
   private MenuItem     menuItemNone;
-  private Shell        widgetFileTreeToolTip = null;
+  private Button       widgetInclude;
+  private Button       widgetExclude;
+  private Button       widgetNone;
   private Tree         widgetDeviceTree;
   private Table        widgetIncludeTable;
   private Button       widgetIncludeTableInsert,widgetIncludeTableEdit,widgetIncludeTableRemove;
@@ -1696,6 +1699,9 @@ public class TabJobs
               menuItemInclude.setSelection(isIncluded);
               menuItemExclude.setSelection(isExcluded);
               menuItemNone.setSelection(isNone);
+              widgetInclude.setEnabled(!isIncluded);
+              widgetExclude.setEnabled(!isExcluded);
+              widgetNone.setEnabled(!isNone);
             }
           }
         });
@@ -1943,10 +1949,10 @@ public class TabJobs
         composite.setLayout(new TableLayout(1.0,new double[]{1.0,1.0,1.0,0.0,0.0,0.0}));
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
-          button = Widgets.newButton(composite,BARControl.tr("Include"));
-          button.setToolTipText(BARControl.tr("Include entry in archive."));
-          Widgets.layout(button,0,0,TableLayoutData.WE);
-          button.addSelectionListener(new SelectionListener()
+          widgetInclude = Widgets.newButton(composite,BARControl.tr("Include"));
+          widgetInclude.setToolTipText(BARControl.tr("Include entry in archive."));
+          Widgets.layout(widgetInclude,0,0,TableLayoutData.WE);
+          widgetInclude.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1971,10 +1977,10 @@ public class TabJobs
             }
           });
 
-          button = Widgets.newButton(composite,BARControl.tr("Exclude"));
-          button.setToolTipText(BARControl.tr("Exclude entry from archive."));
-          Widgets.layout(button,0,1,TableLayoutData.WE);
-          button.addSelectionListener(new SelectionListener()
+          widgetExclude = Widgets.newButton(composite,BARControl.tr("Exclude"));
+          widgetExclude.setToolTipText(BARControl.tr("Exclude entry from archive."));
+          Widgets.layout(widgetExclude,0,1,TableLayoutData.WE);
+          widgetExclude.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1998,10 +2004,10 @@ public class TabJobs
             }
           });
 
-          button = Widgets.newButton(composite,BARControl.tr("None"));
-          button.setToolTipText(BARControl.tr("Do not include/exclude entry in/from archive."));
-          Widgets.layout(button,0,2,TableLayoutData.WE);
-          button.addSelectionListener(new SelectionListener()
+          widgetNone = Widgets.newButton(composite,BARControl.tr("None"));
+          widgetNone.setToolTipText(BARControl.tr("Do not include/exclude entry in/from archive."));
+          Widgets.layout(widgetNone,0,2,TableLayoutData.WE);
+          widgetNone.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
