@@ -844,7 +844,7 @@ class ReadThread extends Thread
 class BARServer
 {
   // --------------------------- constants --------------------------------
-  private final static int   PROTOCOL_VERSION_MAJOR = 2;
+  private final static int   PROTOCOL_VERSION_MAJOR = 3;
   private final static int   PROTOCOL_VERSION_MINOR = 0;
 
   public final static String JAVA_SSL_KEY_FILE_NAME = "bar.jks";  // default name Java TLS/SSL key
@@ -1145,11 +1145,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       if (valueMap.getInt("major") != PROTOCOL_VERSION_MAJOR)
       {
-        throw new CommunicationError("Incompatible protocol version for '"+hostname+"': expected "+PROTOCOL_VERSION_MAJOR+", got "+data[3]);
+        throw new CommunicationError("Incompatible protocol version for '"+hostname+"': expected "+PROTOCOL_VERSION_MAJOR+", got "+valueMap.getInt("major"));
       }
       if (valueMap.getInt("minor") != PROTOCOL_VERSION_MINOR)
       {
-        BARControl.printWarning("Incompatible minor protocol version for '"+hostname+"': expected "+PROTOCOL_VERSION_MINOR+", got "+data[4]);
+        BARControl.printWarning("Incompatible minor protocol version for '"+hostname+"': expected "+PROTOCOL_VERSION_MINOR+", got "+valueMap.getInt("minor"));
       }
 
       // get file separator character
@@ -1160,7 +1160,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                             ) != Errors.NONE
          )
       {
-        throw new ConnectionError("Get file separator character fail (error: "+data[3]+")");
+        throw new ConnectionError("Get file separator character fail (error: "+errorMessage+")");
       }
       fileSeparator = valueMap.getString("value","/").charAt(0);
     }

@@ -59,7 +59,7 @@
 
 /***************************** Constants *******************************/
 
-#define PROTOCOL_VERSION_MAJOR              2
+#define PROTOCOL_VERSION_MAJOR              3
 #define PROTOCOL_VERSION_MINOR              0
 
 #define SESSION_ID_LENGTH                   64      // max. length of session id
