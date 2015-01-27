@@ -36,12 +36,14 @@ INSTALL_TLS_DIR    = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
-CERTTOOL = @CERTTOOL@
-OPENSSL  = @OPENSSL@
-KEYTOOL  = @KEYTOOL@
+CERTTOOL   = @CERTTOOL@
+OPENSSL    = @OPENSSL@
+KEYTOOL    = @KEYTOOL@
 
-UNOCONV  = @UNOCONV@
-TXT2MAN  = @TXT2MAN@
+UNOCONV    = @UNOCONV@
+TXT2MAN    = @TXT2MAN@
+
+SVNVERSION = svnversion
 
 #---------------------------------- commands----------------------------------
 
@@ -525,10 +527,14 @@ $(DISTRIBUTION_NAME).tar.bz2: \
                    configure.in \
                    Makefile.in \
                    epm.list.in \
-                   version \
                    ToDo \
                    ChangeLog \
                    tmp/$(DISTRIBUTION_NAME)
+	( \
+          $(GREP) MINOR version; \
+          $(GREP) MAJOR version; \
+          $(ECHO) "RELEASE=$(shell $(SVNVERSION) .)"; \
+        ) > tmp/$(DISTRIBUTION_NAME)/version
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
 	$(INSTALL) -m 664 \
                    bin/config.guess \

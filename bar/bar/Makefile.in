@@ -132,7 +132,7 @@ DEVICE_RANDOM  = /dev/urandom
 # major, minor version number
 VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
-VERSION_SVN   := $(shell $(SVNVERSION) .)
+VERSION_SVN   := $(shell $(SVNVERSION) . 2>/dev/null || $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE|$(SED) 's/RELEASE=//g')
 
 # supported compress algorithms
 ifeq ($(COMPRESS_NAMES),)
@@ -295,29 +295,34 @@ BAR_SOURCES          = bar.c \
                        arrays.c \
                        dictionaries.c \
                        bitmaps.c \
-                       database.c
+                       database.c \
 
-BAR_HEADERS          = $(patsubst %.c,%.h,$(BAR_SOURCES)) \
-                       bar_global.h
+BAR_HEADERS          = $(patsubst %.c,%.h,$(filter %.c,$(BAR_SOURCES))) \
+                       $(patsubst %.cpp,%.h,$(filter %.cpp,$(BAR_SOURCES))) \
+                       bar_global.h \
 
-BAR_OBJECTS_RELEASE  = $(foreach z,$(BAR_SOURCES),release/$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
+BAR_OBJECTS_RELEASE  = $(foreach z,$(filter %.c,$(BAR_SOURCES)),release/$(patsubst %.c,%.o,$z)) \
+                       $(foreach z,$(filter %.cpp,$(BAR_SOURCES)),release/$(patsubst %.cpp,%.o,$z)) \
                        release/errors.o \
-                       release/archive_format.o
+                       release/archive_format.o \
 
-BAR_OBJECTS_DEBUG    = $(foreach z,$(BAR_SOURCES),debug/$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
+BAR_OBJECTS_DEBUG    = $(foreach z,$(filter %.c,$(BAR_SOURCES)),debug/$(patsubst %.c,%.o,$z)) \
+                       $(foreach z,$(filter %.cpp,$(BAR_SOURCES)),debug/$(patsubst %.cpp,%.o,$z)) \
                        debug/errors.o \
-                       debug/archive_format.o
+                       debug/archive_format.o \
 
-BAR_OBJECTS_VALGRIND = $(foreach z,$(BAR_SOURCES),valgrind/$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
+BAR_OBJECTS_VALGRIND = $(foreach z,$(filter %.c,$(BAR_SOURCES)),valgrind/$(patsubst %.c,%.o,$z)) \
+                       $(foreach z,$(filter %.cpp,$(BAR_SOURCES)),valgrind/$(patsubst %.cpp,%.o,$z)) \
                        valgrind/errors.o \
-                       valgrind/archive_format.o
+                       valgrind/archive_format.o \
 
-EXTERN_SOURCES       = sqlite3.c
+EXTERN_SOURCES       = sqlite3.c \
 
-EXTERN_HEADERS       = $(patsubst %.c,%.h,$(EXTERN_SOURCES))
+EXTERN_HEADERS       = $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
 
-EXTERN_OBJECTS       = $(foreach z,$(EXTERN_SOURCES),$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
-                       $(if @HAVE_XDELTA@,xdelta3.o)
+EXTERN_OBJECTS       = $(foreach z,$(filter %.c,$(EXTERN_SOURCES)),$(patsubst %.c,%.o,$z)) \
+                       $(foreach z,$(filter %.cpp,$(EXTERN_SOURCES)),$(patsubst %.cpp,%.o,$z)) \
+                       $(if @HAVE_XDELTA@,xdelta3.o) \
 
 DESTROYER_SOURCES    = destroyer.c \
                        global.c \
@@ -325,9 +330,10 @@ DESTROYER_SOURCES    = destroyer.c \
                        lists.c \
                        strings.c \
 
-DESTROYER_HEADERS    = $(patsubst %.c,%.h,$(DESTROYER_SOURCES))
+DESTROYER_HEADERS    = $(patsubst %.c,%.h,$(DESTROYER_SOURCES)) \
 
-DESTROYER_OBJECTS    = $(foreach z,$(DESTROYER_SOURCES),$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
+DESTROYER_OBJECTS    = $(foreach z,$(filter %.c,$(DESTROYER_SOURCES)),$(patsubst %.c,%.o,$z)) \
+                       $(foreach z,$(filter %.cpp,$(DESTROYER_SOURCES)),$(patsubst %.cpp,%.o,$z)) \
 
 OTHER_SOURCES        = forward.h \
                        \
@@ -363,7 +369,7 @@ TARGETS              = bar@EXEEXT@ \
                        $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
                        $(if @HAVE_BREAKPAD@,release/bar.sym debug/bar.sym) \
                        bar-keygen \
-                       destroyer@EXEEXT@
+                       destroyer@EXEEXT@ \
 
 #------------------------------ dependencies ---------------------------------
 
