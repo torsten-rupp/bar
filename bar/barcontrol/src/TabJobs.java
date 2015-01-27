@@ -145,6 +145,8 @@ public class TabJobs
     long         dateTime;
     String       title;
     SpecialTypes specialType;
+    boolean      noBackup;                 // true iff .nobackup exists in directory
+    boolean      noDump;                   // true iff no-dump attribute is set
 
     /** create file tree data
      * @param name file name
@@ -153,8 +155,10 @@ public class TabJobs
      * @param dateTime file date/time [s]
      * @param title title to display
      * @param specialType special type
+     * @param noBackup true iff .nobackup exists (directory)
+     * @param noDump true iff no-dump attribute is set
      */
-    FileTreeData(String name, FileTypes fileType, long size, long dateTime, String title, SpecialTypes specialType)
+    FileTreeData(String name, FileTypes fileType, long size, long dateTime, String title, SpecialTypes specialType, boolean noBackup, boolean noDump)
     {
       this.name        = name;
       this.fileType    = fileType;
@@ -162,6 +166,8 @@ public class TabJobs
       this.dateTime    = dateTime;
       this.title       = title;
       this.specialType = specialType;
+      this.noBackup    = noBackup;
+      this.noDump      = noDump;
     }
 
     /** create file tree data
@@ -170,10 +176,12 @@ public class TabJobs
      * @param size file size [bytes]
      * @param dateTime file date/time [s]
      * @param title title to display
+     * @param noBackup true iff .nobackup exists (directory)
+     * @param noDump true iff no-dump attribute is set
      */
-    FileTreeData(String name, FileTypes fileType, long size, long dateTime, String title)
+    FileTreeData(String name, FileTypes fileType, long size, long dateTime, String title, boolean noBackup, boolean noDump)
     {
-      this(name,fileType,size,dateTime,title,SpecialTypes.NONE);
+      this(name,fileType,size,dateTime,title,SpecialTypes.NONE,noBackup,noDump);
     }
 
     /** create file tree data
@@ -181,20 +189,24 @@ public class TabJobs
      * @param fileType file type
      * @param dateTime file date/time [s]
      * @param title title to display
+     * @param noBackup true iff .nobackup exists (directory)
+     * @param noDump true iff no-dump attribute is set
      */
-    FileTreeData(String name, FileTypes fileType, long dateTime, String title)
+    FileTreeData(String name, FileTypes fileType, long dateTime, String title, boolean noBackup, boolean noDump)
     {
-      this(name,fileType,0L,dateTime,title);
+      this(name,fileType,0L,dateTime,title,noBackup,noDump);
     }
 
     /** create file tree data
      * @param name file name
      * @param fileType file type
      * @param title title to display
+     * @param noBackup true iff .nobackup exists (directory)
+     * @param noDump true iff no-dump attribute is set
      */
-    FileTreeData(String name, FileTypes fileType, String title)
+    FileTreeData(String name, FileTypes fileType, String title, boolean noBackup, boolean noDump)
     {
-      this(name,fileType,0L,title);
+      this(name,fileType,0L,title,noBackup,noDump);
     }
 
     /** create file tree data
@@ -203,10 +215,12 @@ public class TabJobs
      * @param size file size [bytes]
      * @param dateTime file date/time [s]
      * @param title title to display
+     * @param noBackup true iff .nobackup exists (directory)
+     * @param noDump true iff no-dump attribute is set
      */
-    FileTreeData(String name, SpecialTypes specialType, long size, long dateTime, String title)
+    FileTreeData(String name, SpecialTypes specialType, long size, long dateTime, String title, boolean noBackup, boolean noDump)
     {
-      this(name,FileTypes.SPECIAL,size,dateTime,title,specialType);
+      this(name,FileTypes.SPECIAL,size,dateTime,title,specialType,noBackup,noDump);
     }
 
     /** create file tree data
@@ -214,12 +228,120 @@ public class TabJobs
      * @param specialType special type
      * @param dateTime file date/time [s]
      * @param title title to display
+     * @param noBackup true iff .nobackup exists (directory)
+     * @param noDump true iff no-dump attribute is set
      */
-    FileTreeData(String name, SpecialTypes specialType, long dateTime, String title)
+    FileTreeData(String name, SpecialTypes specialType, long dateTime, String title, boolean noBackup, boolean noDump)
     {
-      this(name,FileTypes.SPECIAL,0L,dateTime,title,specialType);
+      this(name,FileTypes.SPECIAL,0L,dateTime,title,specialType,noBackup,noDump);
     }
 
+    /** get image for entry data
+     * @return image
+     */
+    Image getImage()
+    {
+      Image image = null;
+      if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
+      {
+        switch (fileType)
+        {
+          case FILE:      image = IMAGE_FILE_INCLUDED;      break;
+          case DIRECTORY: image = IMAGE_DIRECTORY_INCLUDED; break;
+          case LINK:      image = IMAGE_LINK_INCLUDED;      break;
+          case HARDLINK:  image = IMAGE_LINK_INCLUDED;      break;
+          case SPECIAL:   image = IMAGE_FILE_INCLUDED;      break;
+        }
+      }
+      else if (excludeHashSet.contains(name) || noBackup || noDump )
+      {
+        switch (fileType)
+        {
+          case FILE:      image = IMAGE_FILE_EXCLUDED;      break;
+          case DIRECTORY: image = IMAGE_DIRECTORY_EXCLUDED; break;
+          case LINK:      image = IMAGE_LINK_EXCLUDED;      break;
+          case HARDLINK:  image = IMAGE_LINK_EXCLUDED;      break;
+          case SPECIAL:   image = IMAGE_FILE_EXCLUDED;      break;
+        }
+      }
+      else
+      {
+        switch (fileType)
+        {
+          case FILE:      image = IMAGE_FILE;      break;
+          case DIRECTORY: image = IMAGE_DIRECTORY; break;
+          case LINK:      image = IMAGE_LINK;      break;
+          case HARDLINK:  image = IMAGE_LINK;      break;
+          case SPECIAL:
+            switch (specialType)
+            {
+              case CHARACTER_DEVICE: image = IMAGE_FILE;      break;
+              case BLOCK_DEVICE:     image = IMAGE_FILE;      break;
+              case FIFO:             image = IMAGE_FILE;      break;
+              case SOCKET:           image = IMAGE_FILE;      break;
+              case OTHER:            image = IMAGE_FILE;      break;
+            }
+            break;
+        }
+      }
+
+      return image;
+    }
+
+    public void include()
+    {
+      includeListAdd(new EntryData(EntryTypes.FILE,name));
+      excludeListRemove(name);
+      if (fileType == FileTypes.DIRECTORY) setNoBackup(name,false);
+      setNoDump(name,false);
+
+      noBackup = false;
+      noDump   = false;
+    }
+
+    public void excludeByList()
+    {
+      includeListRemove(name);
+      excludeListAdd(name);
+      if (fileType == FileTypes.DIRECTORY) setNoBackup(name,false);
+      setNoDump(name,false);
+
+      noBackup = false;
+      noDump   = false;
+    }
+
+    public void excludeByNoBackup()
+    {
+      includeListRemove(name);
+      excludeListRemove(name);
+      if (fileType == FileTypes.DIRECTORY) setNoBackup(name,true);
+      setNoDump(name,false);
+
+      noBackup = true;
+      noDump   = false;
+    }
+
+    public void excludeByNoDump()
+    {
+      includeListRemove(name);
+      excludeListRemove(name);
+      if (fileType == FileTypes.DIRECTORY) setNoBackup(name,false);
+      setNoDump(name,true);
+
+      noBackup = false;
+      noDump   = true;
+    }
+
+    public void none()
+    {
+      includeListRemove(name);
+      excludeListRemove(name);
+      if (fileType == FileTypes.DIRECTORY) setNoBackup(name,false);
+      setNoDump(name,false);
+
+      noBackup = false;
+      noDump   = false;
+    }
 
     /** convert data to string
      * @return string
@@ -355,6 +477,40 @@ public class TabJobs
     {
       this.name = name;
       this.size = 0;
+    }
+
+    public void include()
+    {
+      includeListAdd(new EntryData(EntryTypes.IMAGE,name));
+      excludeListRemove(name);
+    }
+
+    public void exclude()
+    {
+      includeListRemove(name);
+      excludeListAdd(name);
+    }
+
+    public void none()
+    {
+      includeListRemove(name);
+      excludeListRemove(name);
+    }
+
+    /** get image for entry data
+     * @return image
+     */
+    Image getImage()
+    {
+      Image image = null;
+      if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
+        image = IMAGE_DEVICE_INCLUDED;
+      else if (excludeHashSet.contains(name))
+        image = IMAGE_DEVICE;
+      else
+        image = IMAGE_DEVICE;
+
+      return image;
     }
 
     /** convert data to string
@@ -552,12 +708,12 @@ public class TabJobs
               // command execution fail or parsing error; ignore request
               continue;
             }
-            final long    count       = resultMap.getLong   ("count"      );
-            final long    size        = resultMap.getLong   ("size"       );
-            final boolean timeoutFlag = resultMap.getBoolean("timeoutFlag");
+            final long    count    = resultMap.getLong   ("count"   );
+            final long    size     = resultMap.getLong   ("size"    );
+            final boolean timedOut = resultMap.getBoolean("timedOut");
 
             // update view
-//Dprintf.dprintf("name=%s count=%d size=%d timeout=%s\n",directoryInfoRequest.name,count,size,timeoutFlag);
+//Dprintf.dprintf("name=%s count=%d size=%d timedOut=%s\n",directoryInfoRequest.name,count,size,timedOut);
             display.syncExec(new Runnable()
             {
               public void run()
@@ -571,12 +727,12 @@ public class TabJobs
 
 //Dprintf.dprintf("update %s\n",treeItem.isDisposed());
                   treeItem.setText(2,Units.formatByteSize(size));
-                  treeItem.setForeground(2,timeoutFlag?COLOR_RED:COLOR_BLACK);
+                  treeItem.setForeground(2,timedOut ? COLOR_RED : COLOR_BLACK);
                 }
               }
             });
 
-            if (timeoutFlag)
+            if (timedOut)
             {
               // timeout -> increase timmeout and re-insert in list if not beyond max. timeout
               if (directoryInfoRequest.timeout+TIMEOUT_DETLA <= MAX_TIMEOUT)
@@ -764,6 +920,7 @@ public class TabJobs
     String  customText;
     int     minKeep,maxKeep;
     int     maxAge;
+    boolean noStorage;
     boolean enabled;
 
     /** create schedule data
@@ -779,9 +936,10 @@ public class TabJobs
      * @param minKeep min. number of archives to keep
      * @param maxKeep max. number of archives to keep
      * @param maxAge max. age to keep archives [days]
-     * @param enabled enabled state
+     * @param noStorage true to skip storage
+     * @param enabled true iff enabled
      */
-    ScheduleData(String uuid, int year, int month, int day, int weekDays, int hour, int minute, String archiveType, String customText, int minKeep, int maxKeep, int maxAge, boolean enabled)
+    ScheduleData(String uuid, int year, int month, int day, int weekDays, int hour, int minute, String archiveType, String customText, int minKeep, int maxKeep, int maxAge, boolean noStorage, boolean enabled)
     {
       this.uuid        = uuid;
       this.year        = year;
@@ -795,6 +953,7 @@ public class TabJobs
       this.minKeep     = minKeep;
       this.maxKeep     = maxKeep;
       this.maxAge      = maxAge;
+      this.noStorage   = noStorage;
       this.enabled     = enabled;
     }
 
@@ -802,7 +961,7 @@ public class TabJobs
      */
     ScheduleData()
     {
-      this(null,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,"*","",0,0,0,true);
+      this(null,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,"*","",0,0,0,false,true);
     }
 
     /** create schedule data
@@ -810,9 +969,10 @@ public class TabJobs
      * @param weekDays week days string; values separated by ','
      * @param time time string (<hour>:<minute>)
      * @param archiveType archive type string
-     * @param enabled enabled state
+     * @param noStorage true to skip storage
+     * @param enabled true iff enabled
      */
-    ScheduleData(String uuid, String date, String weekDays, String time, String archiveType, String customText, int minKeep, int maxKeep, int maxAge, boolean enabled)
+    ScheduleData(String uuid, String date, String weekDays, String time, String archiveType, String customText, int minKeep, int maxKeep, int maxAge, boolean noStorage, boolean enabled)
     {
       this.uuid        = uuid;
       setDate(date);
@@ -823,6 +983,7 @@ public class TabJobs
       this.minKeep     = minKeep;
       this.maxKeep     = maxKeep;
       this.maxAge      = maxAge;
+      this.noStorage   = noStorage;
       this.enabled     = enabled;
     }
 
@@ -843,6 +1004,7 @@ public class TabJobs
                               minKeep,
                               maxKeep,
                               maxAge,
+                              noStorage,
                               enabled
                              );
     }
@@ -1183,6 +1345,14 @@ public class TabJobs
       this.maxAge = maxAge;
     }
 
+    /** check if no-storage option set
+     * @return TRUE iff no-storage option is set
+    */
+    boolean isNoStorage()
+    {
+      return noStorage;
+    }
+
     /** check if enabled
      * @return TRUE iff enabled
      */
@@ -1195,12 +1365,14 @@ public class TabJobs
      */
     public String toString()
     {
-      return "Schedule {"+uuid+", "+getDate()+", "+getWeekDays()+", "+getTime()+", "+archiveType+", "+enabled+"}";
+      return "Schedule {"+uuid+", "+getDate()+", "+getWeekDays()+", "+getTime()+", "+archiveType+", "+noStorage+", "+enabled+"}";
     }
 
-    /**
-     * @param
-     * @return
+    /** get valid string
+     * @param string string
+     * @param validStrings valid strings
+     * @param defaultString default string
+     * @return valid string or default string
      */
     private String getValidString(String string, String[] validStrings, String defaultString)
     {
@@ -1354,7 +1526,9 @@ public class TabJobs
   private Shell        widgetFileTreeToolTip = null;
   private MenuItem     menuItemOpenClose;
   private MenuItem     menuItemInclude;
-  private MenuItem     menuItemExclude;
+  private MenuItem     menuItemExcludeByList;
+  private MenuItem     menuItemExcludeByNoBackup;
+  private MenuItem     menuItemExcludeByNoDump;
   private MenuItem     menuItemNone;
   private Button       widgetInclude;
   private Button       widgetExclude;
@@ -1689,18 +1863,31 @@ public class TabJobs
             {
               FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
 
-              boolean isIncluded = false;
-              boolean isExcluded = false;
-              boolean isNone     = false;
-              if      (includeHashMap.containsKey(fileTreeData.name)) isIncluded = true;
-              else if (excludeHashSet.contains(fileTreeData.name)   ) isExcluded = true;
-              else                                                    isNone     = true;
+              boolean isIncluded           = false;
+              boolean isExcludedByList     = false;
+              boolean isExcludedByNoDump   = false;
+              boolean isExcludedByNoBackup = false;
+              boolean isNone               = false;
+              if      (includeHashMap.containsKey(fileTreeData.name) && !excludeHashSet.contains(fileTreeData.name))
+                isIncluded = true;
+              else if (fileTreeData.noBackup)
+                isExcludedByNoBackup = true;
+              else if (fileTreeData.noDump)
+                isExcludedByNoDump = true;
+              else if (excludeHashSet.contains(fileTreeData.name))
+                isExcludedByList = true;
+              else
+                isNone     = true;
 
+              menuItemOpenClose.setEnabled(fileTreeData.fileType == FileTypes.DIRECTORY);
               menuItemInclude.setSelection(isIncluded);
-              menuItemExclude.setSelection(isExcluded);
+              menuItemExcludeByList.setSelection(isExcludedByList);
+              menuItemExcludeByNoBackup.setSelection(isExcludedByNoBackup);
+              menuItemExcludeByNoDump.setSelection(isExcludedByNoDump);
               menuItemNone.setSelection(isNone);
+
               widgetInclude.setEnabled(!isIncluded);
-              widgetExclude.setEnabled(!isExcluded);
+              widgetExclude.setEnabled(!isExcludedByList && !isExcludedByNoBackup && !isExcludedByNoDump);
               widgetNone.setEnabled(!isNone);
             }
           }
@@ -1732,12 +1919,6 @@ public class TabJobs
           }
           public void mouseDown(final MouseEvent mouseEvent)
           {
-            TreeItem treeItem = widgetFileTree.getItem(new Point(mouseEvent.x,mouseEvent.y));
-            if (treeItem != null)
-            {
-              FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-              menuItemOpenClose.setEnabled(fileTreeData.fileType == FileTypes.DIRECTORY);
-            }
           }
           public void mouseUp(final MouseEvent mouseEvent)
           {
@@ -1885,8 +2066,7 @@ public class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeListAdd(new EntryData(EntryTypes.FILE,fileTreeData.name));
-                excludeListRemove(fileTreeData.name);
+                fileTreeData.include();
                 switch (fileTreeData.fileType)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
@@ -1899,84 +2079,77 @@ public class TabJobs
             }
           });
 
-          Menu subMenu = Widgets.addMenu(menu,"Exclude by");
+          menuItemExcludeByList = Widgets.addMenuRadio(menu,BARControl.tr("Exclude by list"));
+          menuItemExcludeByList.addSelectionListener(new SelectionListener()
           {
-            menuItemExclude = Widgets.addMenuRadio(subMenu,BARControl.tr("list"));
-            menuItemExclude.addSelectionListener(new SelectionListener()
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              for (TreeItem treeItem : widgetFileTree.getSelection())
               {
-              }
-              public void widgetSelected(SelectionEvent selectionEvent)
-              {
-                for (TreeItem treeItem : widgetFileTree.getSelection())
+                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                fileTreeData.excludeByList();
+                switch (fileTreeData.fileType)
                 {
-                  FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                  includeListRemove(fileTreeData.name);
-                  excludeListAdd(fileTreeData.name);
-                  switch (fileTreeData.fileType)
-                  {
-                    case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                    case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
-                    case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                    case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                    case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                  }
+                  case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
+                  case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                  case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                 }
               }
-            });
+            }
+          });
 
-            menuItem = Widgets.addMenuRadio(subMenu,BARControl.tr(".nobackup"));
-            menuItem.addSelectionListener(new SelectionListener()
+          menuItemExcludeByNoBackup = Widgets.addMenuRadio(menu,BARControl.tr("Exclude by .nobackup"));
+          menuItemExcludeByNoBackup.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              for (TreeItem treeItem : widgetFileTree.getSelection())
               {
-              }
-              public void widgetSelected(SelectionEvent selectionEvent)
-              {
-                for (TreeItem treeItem : widgetFileTree.getSelection())
+                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                fileTreeData.excludeByNoBackup();
+                switch (fileTreeData.fileType)
                 {
-                  FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                  includeListRemove(fileTreeData.name);
-                  excludeListAdd(fileTreeData.name);
-                  switch (fileTreeData.fileType)
-                  {
-                    case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                    case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
-                    case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                    case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                    case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                  }
+                  case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
+                  case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                  case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                 }
               }
-            });
+            }
+          });
 
-            menuItem = Widgets.addMenuRadio(subMenu,BARControl.tr("no dump"));
-            menuItem.addSelectionListener(new SelectionListener()
+          menuItemExcludeByNoDump = Widgets.addMenuRadio(menu,BARControl.tr("Exclude by no dump"));
+          menuItemExcludeByNoDump.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              for (TreeItem treeItem : widgetFileTree.getSelection())
               {
-              }
-              public void widgetSelected(SelectionEvent selectionEvent)
-              {
-                for (TreeItem treeItem : widgetFileTree.getSelection())
+                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                fileTreeData.excludeByNoDump();
+                switch (fileTreeData.fileType)
                 {
-                  FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                  includeListRemove(fileTreeData.name);
-                  excludeListAdd(fileTreeData.name);
-                  switch (fileTreeData.fileType)
-                  {
-                    case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                    case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
-                    case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                    case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                    case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                  }
+                  case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
+                  case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                  case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                 }
               }
-            });
-//???
-          }
+            }
+          });
 
           menuItemNone = Widgets.addMenuRadio(menu,BARControl.tr("None"));
           menuItemNone.addSelectionListener(new SelectionListener()
@@ -1989,8 +2162,7 @@ public class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeListRemove(fileTreeData.name);
-                excludeListRemove(fileTreeData.name);
+                fileTreeData.none();
                 switch (fileTreeData.fileType)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE);      break;
@@ -2044,8 +2216,7 @@ public class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeListAdd(new EntryData(EntryTypes.FILE,fileTreeData.name));
-                excludeListRemove(fileTreeData.name);
+                fileTreeData.include();
                 switch (fileTreeData.fileType)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
@@ -2071,8 +2242,7 @@ public class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeListRemove(fileTreeData.name);
-                excludeListAdd(fileTreeData.name);
+                fileTreeData.excludeByList();
                 switch (fileTreeData.fileType)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
@@ -2098,8 +2268,7 @@ public class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeListRemove(fileTreeData.name);
-                excludeListRemove(fileTreeData.name);
+                fileTreeData.none();
                 switch (fileTreeData.fileType)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE);      break;
@@ -2190,8 +2359,7 @@ public class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeListAdd(new EntryData(EntryTypes.IMAGE,deviceTreeData.name));
-                excludeListRemove(deviceTreeData.name);
+                deviceTreeData.include();
                 treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
@@ -2208,8 +2376,7 @@ public class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeListRemove(deviceTreeData.name);
-                excludeListAdd(deviceTreeData.name);
+                deviceTreeData.exclude();
                 treeItem.setImage(IMAGE_DEVICE_EXCLUDED);
               }
             }
@@ -2254,8 +2421,7 @@ public class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeListAdd(new EntryData(EntryTypes.IMAGE,deviceTreeData.name));
-                excludeListRemove(deviceTreeData.name);
+                deviceTreeData.include();
                 treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
@@ -2274,8 +2440,7 @@ public class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeListRemove(deviceTreeData.name);
-                excludeListAdd(deviceTreeData.name);
+                deviceTreeData.exclude();
                 treeItem.setImage(IMAGE_DEVICE_EXCLUDED);
               }
             }
@@ -2294,6 +2459,7 @@ public class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
+                deviceTreeData.none();
                 includeListRemove(deviceTreeData.name);
                 excludeListRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE);
@@ -6903,7 +7069,7 @@ throw new Error("NYI");
   private void addDirectoryRootDevices()
   {
     TreeItem treeItem = Widgets.addTreeItem(widgetFileTree,
-                                            new FileTreeData("/",FileTypes.DIRECTORY,"/"),
+                                            new FileTreeData("/",FileTypes.DIRECTORY,"/",false,false),
                                             IMAGE_DIRECTORY,
                                             true,
                                             "/"//
@@ -7039,19 +7205,19 @@ throw new Error("NYI");
           {
             case FILE:
               {
-                String  name         = resultMap.getString ("name"              );
-                long    size         = resultMap.getLong   ("size"              );
-                long    dateTime     = resultMap.getLong   ("dateTime"          );
-                boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
+                String  name         = resultMap.getString ("name"         );
+                long    size         = resultMap.getLong   ("size"         );
+                long    dateTime     = resultMap.getLong   ("dateTime"     );
+                boolean noDumpFlag   = resultMap.getBoolean("noDump", false);
 
                 // create file tree data
-                fileTreeData = new FileTreeData(name,FileTypes.FILE,size,dateTime,new File(name).getName());
+                fileTreeData = new FileTreeData(name,FileTypes.FILE,size,dateTime,new File(name).getName(),false,noDumpFlag);
 
                 // add entry
                 Image image;
-                if      (includeHashMap.containsKey(name))
+                if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
                   image = IMAGE_FILE_INCLUDED;
-                else if (excludeHashSet.contains(name))
+                else if (excludeHashSet.contains(name) || noDumpFlag)
                   image = IMAGE_FILE_EXCLUDED;
                 else
                   image = IMAGE_FILE;
@@ -7069,18 +7235,19 @@ throw new Error("NYI");
               break;
             case DIRECTORY:
               {
-                String  name         = resultMap.getString ("name"              );
-                long    dateTime     = resultMap.getLong   ("dateTime"          );
-                boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
+                String  name         = resultMap.getString ("name"          );
+                long    dateTime     = resultMap.getLong   ("dateTime"      );
+                boolean noBackupFlag = resultMap.getBoolean("noBackup",false);
+                boolean noDumpFlag   = resultMap.getBoolean("noDump",  false);
 
                 // create file tree data
-                fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,dateTime,new File(name).getName());
+                fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,dateTime,new File(name).getName(),noBackupFlag,noDumpFlag);
 
                 // add entry
                 Image   image;
-                if      (includeHashMap.containsKey(name))
+                if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
                   image = IMAGE_DIRECTORY_INCLUDED;
-                else if (excludeHashSet.contains(name))
+                else if (excludeHashSet.contains(name) || noBackupFlag || noDumpFlag)
                   image = IMAGE_DIRECTORY_EXCLUDED;
                 else
                   image = IMAGE_DIRECTORY;
@@ -7102,18 +7269,18 @@ throw new Error("NYI");
               break;
             case LINK:
               {
-                String  name         = resultMap.getString ("name"              );
-                long    dateTime     = resultMap.getLong   ("dateTime"          );
-                boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
+                String  name         = resultMap.getString ("name"    );
+                long    dateTime     = resultMap.getLong   ("dateTime");
+                boolean noDumpFlag   = resultMap.getBoolean("noDump", false);
 
                 // create file tree data
-                fileTreeData = new FileTreeData(name,FileTypes.LINK,dateTime,new File(name).getName());
+                fileTreeData = new FileTreeData(name,FileTypes.LINK,dateTime,new File(name).getName(),false,noDumpFlag);
 
                 // add entry
                 Image image;
-                if      (includeHashMap.containsKey(name))
+                if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
                   image = IMAGE_LINK_INCLUDED;
-                else if (excludeHashSet.contains(name))
+                else if (excludeHashSet.contains(name) || noDumpFlag)
                   image = IMAGE_LINK_EXCLUDED;
                 else
                   image = IMAGE_LINK;
@@ -7132,19 +7299,19 @@ throw new Error("NYI");
               break;
             case HARDLINK:
               {
-                String  name         = resultMap.getString ("name"              );
-                long    size         = resultMap.getLong   ("size"              );
-                long    dateTime     = resultMap.getLong   ("dateTime"          );
-                boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
+                String  name         = resultMap.getString ("name"    );
+                long    size         = resultMap.getLong   ("size"    );
+                long    dateTime     = resultMap.getLong   ("dateTime");
+                boolean noDumpFlag   = resultMap.getBoolean("noDump", false);
 
                 // create file tree data
-                fileTreeData = new FileTreeData(name,FileTypes.HARDLINK,size,dateTime,new File(name).getName());
+                fileTreeData = new FileTreeData(name,FileTypes.HARDLINK,size,dateTime,new File(name).getName(),false,noDumpFlag);
 
                 // add entry
                 Image image;
-                if      (includeHashMap.containsKey(name))
+                if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
                   image = IMAGE_FILE_INCLUDED;
-                else if (excludeHashSet.contains(name))
+                else if (excludeHashSet.contains(name) || noDumpFlag)
                   image = IMAGE_FILE_EXCLUDED;
                 else
                   image = IMAGE_FILE;
@@ -7163,16 +7330,18 @@ throw new Error("NYI");
               break;
             case SPECIAL:
               {
-                String  name     = resultMap.getString("name"    );
-                long    size     = resultMap.getLong  ("size", 0L);
-                long    dateTime = resultMap.getLong  ("dateTime");
+                String  name         = resultMap.getString ("name"          );
+                long    size         = resultMap.getLong   ("size",    0L   );
+                long    dateTime     = resultMap.getLong   ("dateTime"      );
+                boolean noBackupFlag = resultMap.getBoolean("noBackup",false);
+                boolean noDumpFlag   = resultMap.getBoolean("noDump",  false);
 
                 SpecialTypes specialType = resultMap.getEnum("specialType",SpecialTypes.class);
                 switch (specialType)
                 {
                   case CHARACTER_DEVICE:
                     // create file tree data
-                    fileTreeData = new FileTreeData(name,SpecialTypes.CHARACTER_DEVICE,dateTime,name);
+                    fileTreeData = new FileTreeData(name,SpecialTypes.CHARACTER_DEVICE,dateTime,name,false,noDumpFlag);
 
                     // insert entry
                     Widgets.insertTreeItem(treeItem,
@@ -7187,7 +7356,7 @@ throw new Error("NYI");
                     break;
                   case BLOCK_DEVICE:
                     // create file tree data
-                    fileTreeData = new FileTreeData(name,SpecialTypes.BLOCK_DEVICE,size,dateTime,name);
+                    fileTreeData = new FileTreeData(name,SpecialTypes.BLOCK_DEVICE,size,dateTime,name,false,noDumpFlag);
 
                     // insert entry
                     Widgets.insertTreeItem(treeItem,
@@ -7203,7 +7372,7 @@ throw new Error("NYI");
                     break;
                   case FIFO:
                     // create file tree data
-                    fileTreeData = new FileTreeData(name,SpecialTypes.FIFO,dateTime,name);
+                    fileTreeData = new FileTreeData(name,SpecialTypes.FIFO,dateTime,name,false,noDumpFlag);
 
                     // insert entry
                     Widgets.insertTreeItem(treeItem,
@@ -7219,7 +7388,7 @@ throw new Error("NYI");
                     break;
                   case SOCKET:
                     // create file tree data
-                    fileTreeData = new FileTreeData(name,SpecialTypes.SOCKET,dateTime,name);
+                    fileTreeData = new FileTreeData(name,SpecialTypes.SOCKET,dateTime,name,false,noDumpFlag);
 
                     // insert entry
                     Widgets.insertTreeItem(treeItem,
@@ -7234,7 +7403,7 @@ throw new Error("NYI");
                     break;
                   case OTHER:
                     // create file tree data
-                    fileTreeData = new FileTreeData(name,SpecialTypes.OTHER,dateTime,name);
+                    fileTreeData = new FileTreeData(name,SpecialTypes.OTHER,dateTime,name,false,noDumpFlag);
 
                     // insert entry
                     Widgets.insertTreeItem(treeItem,
@@ -7298,7 +7467,7 @@ throw new Error("NYI");
           case SPECIAL:   image = IMAGE_FILE_INCLUDED;      break;
         }
       }
-      else if (excludeHashSet.contains(fileTreeData.name))
+      else if (excludeHashSet.contains(fileTreeData.name) || fileTreeData.noBackup || fileTreeData.noDump )
       {
         switch (fileTreeData.fileType)
         {
@@ -7362,9 +7531,9 @@ throw new Error("NYI");
       {
         try
         {
-          long    size        = resultMap.getLong   ("size"       );
-          boolean mountedFlag = resultMap.getBoolean("mountedFlag");
-          String  name        = resultMap.getString ("name"       );
+          long    size    = resultMap.getLong   ("size"   );
+          boolean mounted = resultMap.getBoolean("mounted");
+          String  name    = resultMap.getString ("name"   );
 
           // create device data
           DeviceTreeData deviceTreeData = new DeviceTreeData(name,size);
@@ -7514,18 +7683,6 @@ throw new Error("NYI");
         if (!pattern.equals(""))
         {
           EntryData entryData = new EntryData(entryType,pattern);
-
-/*
-          // add entry
-          Image image;
-          if      (includeHashMap.containsKey(name))
-            image = IMAGE_DEVICE_INCLUDED;
-          else if (excludeHashSet.contains(name))
-            image = IMAGE_FILE_EXCLUDED;
-          else
-            image = IMAGE_DEVICE;
-Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
-*/
 
           includeHashMap.put(pattern,entryData);
           Widgets.insertTableItem(widgetIncludeTable,
@@ -8254,6 +8411,72 @@ throw new Error("NYI");
         excludeListRemove(patterns);
       }
     }
+  }
+
+  /** set/clear .nobackup file for directory
+   * @param name directory name
+   * @param enabled true to set/false to remove .nobackup
+   * @return true iff set
+   */
+  private boolean setNoBackup(String name, boolean enabled)
+  {
+    assert selectedJobData != null;
+
+    // update exclude list
+    String[] resultErrorMessage = new String[1];
+    int error = BARServer.executeCommand(StringParser.format("%s jobUUID=%s attribute=%s name=%'S",
+                                                             enabled ? "FILE_ATTRIBUTE_SET" : "FILE_ATTRIBUTE_CLEAR",
+                                                             selectedJobData.uuid,
+                                                             "NOBACKUP",
+                                                             name
+                                                            ),
+                                         0,
+                                         resultErrorMessage
+                                        );
+    if (error != Errors.NONE)
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot set/remove .nobackup for {0}:\n\n{1}",name,resultErrorMessage[0]));
+      return false;
+    }
+
+    // update file tree/device images
+    updateFileTreeImages();
+    updateDeviceImages();
+
+    return true;
+  }
+
+  /** set/clear no-dump attribute for file
+   * @param name directory name
+   * @param enabled true to set/clear no-dump attribute
+   * @return true iff set
+   */
+ private boolean setNoDump(String name, boolean enabled)
+  {
+    assert selectedJobData != null;
+
+    // update exclude list
+    String[] resultErrorMessage = new String[1];
+    int error = BARServer.executeCommand(StringParser.format("%s jobUUID=%s attribute=%s name=%'S",
+                                                             enabled ? "FILE_ATTRIBUTE_SET" : "FILE_ATTRIBUTE_CLEAR",
+                                                             selectedJobData.uuid,
+                                                             "NODUMP",
+                                                             name
+                                                            ),
+                                         0,
+                                         resultErrorMessage
+                                        );
+    if (error != Errors.NONE)
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot set/clear no-dump attribute for {0}:\n\n{1}",name,resultErrorMessage[0]));
+      return false;
+    }
+
+    // update file tree/device images
+    updateFileTreeImages();
+    updateDeviceImages();
+
+    return true;
   }
 
   //-----------------------------------------------------------------------
@@ -9559,7 +9782,8 @@ throw new Error("NYI");
           int     minKeep      = resultMap.getInt    ("minKeep"     );
           int     maxKeep      = resultMap.getInt    ("maxKeep"     );
           int     maxAge       = resultMap.getInt    ("maxAge"      );
-          boolean enabled      = resultMap.getBoolean("enabledFlag" );
+          boolean noStorage    = resultMap.getBoolean("noStorage"   );
+          boolean enabled      = resultMap.getBoolean("enabled"     );
 
           ScheduleData scheduleData = scheduleDataMap.get(scheduleUUID);
           if (scheduleData != null)
@@ -9572,6 +9796,7 @@ throw new Error("NYI");
             scheduleData.minKeep     = minKeep;
             scheduleData.maxKeep     = maxKeep;
             scheduleData.maxAge      = maxAge;
+            scheduleData.noStorage   = noStorage;
             scheduleData.enabled     = enabled;
           }
           else
@@ -9585,6 +9810,7 @@ throw new Error("NYI");
                                             minKeep,
                                             maxKeep,
                                             maxAge,
+                                            noStorage,
                                             enabled
                                            );
           }
@@ -9623,7 +9849,7 @@ throw new Error("NYI");
                                           scheduleData.getTime(),
                                           scheduleData.archiveType,
                                           scheduleData.customText,
-                                          scheduleData.enabled ? "yes" : "no"
+                                          scheduleData.enabled ? BARControl.tr("yes") : BARControl.tr("no")
                                          );
 
                   // keep table item
@@ -9640,7 +9866,7 @@ throw new Error("NYI");
                                                       scheduleData.getTime(),
                                                       scheduleData.archiveType,
                                                       scheduleData.customText,
-                                                      scheduleData.enabled ? "yes" : "no"
+                                                      scheduleData.enabled ? BARControl.tr("yes") : BARControl.tr("no")
                                                      );
                   tableItem.setData(scheduleData);
                 }
@@ -9689,6 +9915,7 @@ throw new Error("NYI");
     final Text     widgetCustomText;
     final Combo    widgetMinKeep,widgetMaxKeep;
     final Combo    widgetMaxAge;
+    final Button   widgetNoStorage;
     final Button   widgetEnabled;
     final Button   widgetAdd;
     composite = Widgets.newComposite(dialog,SWT.NONE);
@@ -9915,8 +10142,12 @@ throw new Error("NYI");
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,7,1,TableLayoutData.WE);
       {
+        widgetNoStorage = Widgets.newCheckbox(subComposite,BARControl.tr("no storage"));
+        Widgets.layout(widgetNoStorage,0,0,TableLayoutData.W);
+        widgetNoStorage.setSelection(scheduleData.noStorage);
+
         widgetEnabled = Widgets.newCheckbox(subComposite,BARControl.tr("enabled"));
-        Widgets.layout(widgetEnabled,0,0,TableLayoutData.W);
+        Widgets.layout(widgetEnabled,0,1,TableLayoutData.W);
         widgetEnabled.setSelection(scheduleData.enabled);
       }
     }
@@ -9985,6 +10216,7 @@ throw new Error("NYI");
         scheduleData.minKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep);
         scheduleData.maxKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep);
         scheduleData.maxAge     = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge);
+        scheduleData.noStorage  = widgetNoStorage.getSelection();
         scheduleData.enabled    = widgetEnabled.getSelection();
 
         Dialogs.close(dialog,true);
@@ -10037,7 +10269,7 @@ throw new Error("NYI");
                                                     scheduleData.getTime(),
                                                     scheduleData.archiveType,
                                                     scheduleData.customText,
-                                                    scheduleData.enabled ? "yes" : "no"
+                                                    scheduleData.enabled ? BARControl.tr("yes") : BARControl.tr("no")
                                                    );
       tableItem.setData(scheduleData);
     }
@@ -10055,7 +10287,7 @@ throw new Error("NYI");
       TableItem tableItem       = widgetScheduleTable.getItem(index);
       ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
-      if (scheduleEdit(scheduleData,"Edit schedule","Save"))
+      if (scheduleEdit(scheduleData,BARControl.tr("Edit schedule"),BARControl.tr("Save")))
       {
         BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"date",scheduleData.getDate());
         BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"weekdays",scheduleData.getWeekDays());
@@ -10065,6 +10297,7 @@ throw new Error("NYI");
         BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"min-keep",scheduleData.minKeep);
         BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"max-keep",scheduleData.maxKeep);
         BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"max-age",scheduleData.maxAge);
+        BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"no-storage",scheduleData.noStorage);
         BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
 
         Widgets.updateTableItem(tableItem,
@@ -10074,7 +10307,7 @@ throw new Error("NYI");
                                 scheduleData.getTime(),
                                 scheduleData.archiveType,
                                 scheduleData.customText,
-                                scheduleData.enabled ? "yes" : "no"
+                                scheduleData.enabled ? BARControl.tr("yes") : BARControl.tr("no")
                                );
       }
     }
@@ -10129,7 +10362,7 @@ throw new Error("NYI");
                                                          newScheduleData.getTime(),
                                                          newScheduleData.archiveType,
                                                          newScheduleData.customText,
-                                                         newScheduleData.enabled ? "yes" : "no"
+                                                         newScheduleData.enabled ? BARControl.tr("yes") : BARControl.tr("no")
                                                         );
         tableItem.setData(newScheduleData);
       }
