@@ -84,7 +84,7 @@ typedef struct
   DevicePermission permission;               // permission flags
   uint32           major,minor;              // special type major/minor number
   uint64           id;                       // unique id (e. g. inode number)
-  bool             mountedFlag;              // TRUE iff device is currently mounted
+  bool             mounted;                  // TRUE iff device is currently mounted
 } DeviceInfo;
 
 /***************************** Variables *******************************/

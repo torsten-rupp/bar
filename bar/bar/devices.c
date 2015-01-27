@@ -455,14 +455,14 @@ Errors Device_umount(const String deviceName)
 
 bool Device_isMounted(const String deviceName)
 {
-  bool          mountedFlag;
+  bool          mounted;
   FILE          *mtab;
   struct mntent mountEntry;
   char          buffer[4096];
 
   assert(deviceName != NULL);
 
-  mountedFlag = FALSE;
+  mounted = FALSE;
 
   mtab = setmntent("/etc/mtab","r");
   if (mtab != NULL)
@@ -473,14 +473,14 @@ bool Device_isMounted(const String deviceName)
           || String_equalsCString(deviceName,mountEntry.mnt_dir)
          )
       {
-        mountedFlag = TRUE;
+        mounted = TRUE;
         break;
       }
     }
     endmntent(mtab);
   }
 
-  return mountedFlag;
+  return mounted;
 }
 
 /*---------------------------------------------------------------------*/
@@ -643,7 +643,7 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
   deviceInfo->blockSize   = 0L;
 //  deviceInfo->freeBlocks  = 0LL;
 //  deviceInfo->totalBlocks = 0LL;
-  deviceInfo->mountedFlag = FALSE;
+  deviceInfo->mounted     = FALSE;
 
   // get device meta data
   if (LSTAT(String_cString(deviceName),&fileStat) == 0)
@@ -694,7 +694,7 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
     {
       if (String_equalsCString(deviceName,mountEntry.mnt_fsname))
       {
-        deviceInfo->mountedFlag = TRUE;
+        deviceInfo->mounted = TRUE;
         break;
       }
     }
