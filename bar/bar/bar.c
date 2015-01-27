@@ -72,7 +72,8 @@
 #define __VERSION_TO_STRING_TMP(z) #z
 #define VERSION_MAJOR_STRING __VERSION_TO_STRING(VERSION_MAJOR)
 #define VERSION_MINOR_STRING __VERSION_TO_STRING(VERSION_MINOR)
-#define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING
+#define VERSION_SVN_STRING __VERSION_TO_STRING(VERSION_SVN)
+#define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING " (rev. " VERSION_SVN_STRING ")"
 
 #define DEFAULT_CONFIG_FILE_NAME              "bar.cfg"
 #define DEFAULT_TMP_DIRECTORY                 FILE_TMP_DIRECTORY
@@ -1472,7 +1473,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   assert(fileName != NULL);
 
   // check file permissions
-  error = File_getFileInfo(&fileInfo,fileName);
+  error = File_getFileInfo(fileName,&fileInfo);
   if (error == ERROR_NONE)
   {
     if ((fileInfo.permission & (FILE_PERMISSION_GROUP_READ|FILE_PERMISSION_OTHER_READ)) != 0)
@@ -4950,32 +4951,6 @@ exit(1);
     return errorToExitcode(error);
   }
 
-  if (indexDatabaseFileName != NULL)
-  {
-    // open index database
-    printInfo(1,"Opening index database '%s'...",indexDatabaseFileName);
-    error = Index_init(&__indexHandle,indexDatabaseFileName);
-    if (error != ERROR_NONE)
-    {
-      if (printInfoFlag) printf("FAIL!\n");
-      printError("Cannot open index database '%s' (error: %s)!\n",
-                 indexDatabaseFileName,
-                 Error_getText(error)
-                );
-      doneAll();
-      #ifndef NDEBUG
-        debugResourceDone();
-        File_debugDone();
-        Array_debugDone();
-        String_debugDone();
-        List_debugDone();
-      #endif /* not NDEBUG */
-      return errorToExitcode(error);
-    }
-    indexHandle = &__indexHandle;
-    printInfo(1,"ok\n");
-  }
-
   // create temporary directory
   error = File_getTmpDirectoryNameCString(tmpDirectory,"bar-XXXXXX",globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
@@ -4995,16 +4970,47 @@ exit(1);
   error = ERROR_NONE;
   if      (daemonFlag)
   {
-    // create session log file
-    File_setFileName(tmpLogFileName,tmpDirectory);
-    File_appendFileNameCString(tmpLogFileName,"log.txt");
-    tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
-
     // open log file
     if (logFileName != NULL)
     {
       logFile = fopen(logFileName,"a");
       if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
+    }
+
+    // create session log file
+    File_setFileName(tmpLogFileName,tmpDirectory);
+    File_appendFileNameCString(tmpLogFileName,"log.txt");
+    tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
+
+    if (!stringIsEmpty(indexDatabaseFileName))
+    {
+      // open index database
+      printInfo(1,"Opening index database '%s'...",indexDatabaseFileName);
+      error = Index_init(&__indexHandle,indexDatabaseFileName);
+      if (error != ERROR_NONE)
+      {
+        if (printInfoFlag) printf("FAIL!\n");
+        printError("Cannot open index database '%s' (error: %s)!\n",
+                   indexDatabaseFileName,
+                   Error_getText(error)
+                  );
+        // close log files
+        if (logFile != NULL) fclose(logFile);
+        fclose(tmpLogFile); (void)unlink(String_cString(tmpLogFileName));
+        File_delete(tmpLogFileName,FALSE);
+        CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
+        doneAll();
+        #ifndef NDEBUG
+          debugResourceDone();
+          File_debugDone();
+          Array_debugDone();
+          String_debugDone();
+          List_debugDone();
+        #endif /* not NDEBUG */
+        return errorToExitcode(error);
+      }
+      indexHandle = &__indexHandle;
+      printInfo(1,"ok\n");
     }
 
     // daemon mode -> run server with network
@@ -5125,6 +5131,22 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   {
     // interactive mode
     globalOptions.runMode = RUN_MODE_INTERACTIVE;
+
+    // wait for index become ready
+    if (indexHandle != NULL)
+    {
+      while (!Index_isReady(indexHandle))
+      {
+        Misc_udelay(10LL*MISC_US_PER_SECOND);
+      }
+      if (indexHandle->error != ERROR_NONE)
+      {
+#warning xxxxxxxxxxxxxxx
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+        logMessage(LOG_TYPE_ALWAYS,"Cannot intialize index database (error: %s)!",Error_getText(indexHandle->error));
+        indexHandle = NULL;
+      }
+    }
 
     switch (command)
     {
