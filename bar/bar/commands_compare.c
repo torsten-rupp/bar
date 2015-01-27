@@ -875,7 +875,7 @@ Errors Command_compare(const StringList                *storageNameList,
 
 #if 0
               // get local file info
-              error = File_getFileInfo(&localFileInfo,directoryName);
+              error = File_getFileInfo(directoryName,&localFileInfo);
               if (error != ERROR_NONE)
               {
                 printError("Cannot read local directory '%s' (error: %s)!\n",
@@ -1019,7 +1019,7 @@ Errors Command_compare(const StringList                *storageNameList,
 
 #if 0
               // get local file info
-              error = File_getFileInfo(&localFileInfo,linkName);
+              error = File_getFileInfo(linkName,&localFileInfo);
               if (error != ERROR_NONE)
               {
                 printError("Cannot read local file '%s' (error: %s)!\n",
@@ -1419,7 +1419,7 @@ Errors Command_compare(const StringList                *storageNameList,
               }
 
               // check special settings
-              error = File_getFileInfo(&localFileInfo,fileName);
+              error = File_getFileInfo(fileName,&localFileInfo);
               if (error != ERROR_NONE)
               {
                 printError("Cannot read local file '%s' (error: %s)!\n",

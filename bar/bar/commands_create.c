@@ -1602,7 +1602,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
          )
       {
         // read file info
-        error = File_getFileInfo(&fileInfo,name);
+        error = File_getFileInfo(name,&fileInfo);
         if (error != ERROR_NONE)
         {
           continue;
@@ -1690,7 +1690,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                          )
                       {
                         // read file info
-                        error = File_getFileInfo(&fileInfo,fileName);
+                        error = File_getFileInfo(fileName,&fileInfo);
                         if (error != ERROR_NONE)
                         {
                           continue;
@@ -2044,7 +2044,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
          )
       {
         // read file info
-        error = File_getFileInfo(&fileInfo,name);
+        error = File_getFileInfo(name,&fileInfo);
         if (error != ERROR_NONE)
         {
           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
@@ -2156,7 +2156,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                          )
                       {
                         // read file info
-                        error = File_getFileInfo(&fileInfo,fileName);
+                        error = File_getFileInfo(fileName,&fileInfo);
                         if (error != ERROR_NONE)
                         {
                           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
@@ -2789,7 +2789,7 @@ LOCAL Errors storeArchiveFile(void        *userData,
 
   // get file info
 // TODO replace by getFileSize()
-  error = File_getFileInfo(&fileInfo,tmpFileName);
+  error = File_getFileInfo(tmpFileName,&fileInfo);
   if (error != ERROR_NONE)
   {
     return error;
@@ -2985,7 +2985,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     String_set(storageName,Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.destinationFileName));
 
     // get file info
-    error = File_getFileInfo(&fileInfo,storageMsg.fileName);
+    error = File_getFileInfo(storageMsg.fileName,&fileInfo);
     if (error != ERROR_NONE)
     {
       printError("Cannot get information for file '%s' (error: %s)!\n",
@@ -3412,7 +3412,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
   printInfo(1,"Add '%s'...",String_cString(fileName));
 
   // get file info, file extended attributes
-  error = File_getFileInfo(&fileInfo,fileName);
+  error = File_getFileInfo(fileName,&fileInfo);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -4067,7 +4067,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo   *createInfo,
   printInfo(1,"Add '%s'...",String_cString(directoryName));
 
   // get file info, file extended attributes
-  error = File_getFileInfo(&fileInfo,directoryName);
+  error = File_getFileInfo(directoryName,&fileInfo);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -4208,7 +4208,7 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
   printInfo(1,"Add '%s'...",String_cString(linkName));
 
   // get file info, file extended attributes
-  error = File_getFileInfo(&fileInfo,linkName);
+  error = File_getFileInfo(linkName,&fileInfo);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -4402,7 +4402,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   printInfo(1,"Add '%s'...",String_cString(StringList_first(nameList,NULL)));
 
   // get file info, file extended attributes
-  error = File_getFileInfo(&fileInfo,StringList_first(nameList,NULL));
+  error = File_getFileInfo(StringList_first(nameList,NULL),&fileInfo);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -4699,7 +4699,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo   *createInfo,
   printInfo(1,"Add '%s'...",String_cString(fileName));
 
   // get file info, file extended attributes
-  error = File_getFileInfo(&fileInfo,fileName);
+  error = File_getFileInfo(fileName,&fileInfo);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
