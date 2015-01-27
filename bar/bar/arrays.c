@@ -198,7 +198,7 @@ void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction
           #ifdef HAVE_BACKTRACE
             debugDumpCurrentStackTrace(stderr,"",0);
           #endif /* HAVE_BACKTRACE */
-          HALT_INTERNAL_ERROR("");
+          HALT_INTERNAL_ERROR("array not found");
         }
       }
       pthread_mutex_unlock(&debugArrayLock);
