@@ -817,8 +817,8 @@ LOCAL void resetDefinition(const int *definition,
             String *strings;
             uint   z;
 
-            arrayLength = (*((uint*  )((byte*)chunkData+definition[i+1])));
-            strings     = (*((String*)((byte*)chunkData+definition[i+2])));
+            arrayLength = (*((uint*   )((byte*)chunkData+definition[i+1])));
+            strings     = (*((String**)((byte*)chunkData+definition[i+2])));
             if (arrayLength > 0)
             {
               assert(strings != NULL);
