@@ -4655,7 +4655,7 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
                 StringList_done(&stderrList);
                 break;
               }
-              File_getFileInfo(&fileInfo,imageFileName);
+              File_getFileInfo(imageFileName,&fileInfo);
               printInfo(0,"ok (%llu bytes)\n",fileInfo.size);
 
               if (storageHandle->jobOptions->errorCorrectionCodesFlag)
@@ -4677,12 +4677,12 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
                   StringList_done(&stderrList);
                   break;
                 }
-                File_getFileInfo(&fileInfo,imageFileName);
+                File_getFileInfo(imageFileName,&fileInfo);
                 printInfo(0,"ok (%llu bytes)\n",fileInfo.size);
               }
 
               // get number of image sectors
-              if (File_getFileInfo(&fileInfo,imageFileName) == ERROR_NONE)
+              if (File_getFileInfo(imageFileName,&fileInfo) == ERROR_NONE)
               {
                 TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",(ulong)(fileInfo.size/2048LL));
               }
@@ -10409,7 +10409,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       {
         if (fileInfo != NULL)
         {
-          (void)File_getFileInfo(fileInfo,fileName);
+          (void)File_getFileInfo(fileName,fileInfo);
         }
       }
       break;
