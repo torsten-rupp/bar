@@ -113,7 +113,8 @@ typedef struct ScheduleNode
   String             customText;               // custom text
   uint               minKeep,maxKeep;          // min./max keep count
   uint               maxAge;                   // max. age [days]
-  bool               enabledFlag;              // TRUE iff enabled
+  bool               noStorage;                // TRUE to skip storage, only create incremental data file
+  bool               enabled;                  // TRUE iff enabled
 } ScheduleNode;
 
 typedef struct
@@ -657,7 +658,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_INTEGER  ("min-keep",                ScheduleNode,minKeep,                           0,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_INTEGER  ("max-keep",                ScheduleNode,maxKeep,                           0,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_INTEGER  ("max-age",                 ScheduleNode,maxAge,                            0,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("enabled",                 ScheduleNode,enabledFlag                        ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("no-storage",              ScheduleNode,noStorage                          ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("enabled",                 ScheduleNode,enabled                            ),
   CONFIG_VALUE_END_SECTION(),
 
   // old/obsolete
@@ -786,7 +788,8 @@ LOCAL ScheduleNode *newScheduleNode(void)
   scheduleNode->minKeep     = 0;
   scheduleNode->maxKeep     = 0;
   scheduleNode->maxAge      = 0;
-  scheduleNode->enabledFlag = FALSE;
+  scheduleNode->noStorage   = FALSE;
+  scheduleNode->enabled     = FALSE;
 
   return scheduleNode;
 }
@@ -828,7 +831,8 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
   scheduleNode->minKeep     = fromScheduleNode->minKeep;
   scheduleNode->maxKeep     = fromScheduleNode->maxKeep;
   scheduleNode->maxAge      = fromScheduleNode->maxAge;
-  scheduleNode->enabledFlag = fromScheduleNode->enabledFlag;
+  scheduleNode->noStorage   = fromScheduleNode->noStorage;
+  scheduleNode->enabled     = fromScheduleNode->enabled;
 
   return scheduleNode;
 }
@@ -864,47 +868,52 @@ LOCAL int equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleNo
   assert(scheduleNode1 != NULL);
   assert(scheduleNode2 != NULL);
 
-  if      (   (scheduleNode1->date.year  != scheduleNode2->date.year )
-           || (scheduleNode1->date.month != scheduleNode2->date.month)
-           || (scheduleNode1->date.day   != scheduleNode2->date.day  )
-          )
+  if (   (scheduleNode1->date.year  != scheduleNode2->date.year )
+      || (scheduleNode1->date.month != scheduleNode2->date.month)
+      || (scheduleNode1->date.day   != scheduleNode2->date.day  )
+     )
   {
     return 0;
   }
 
-  if      (scheduleNode1->weekDaySet != scheduleNode2->weekDaySet)
+  if (scheduleNode1->weekDaySet != scheduleNode2->weekDaySet)
   {
     return 0;
   }
 
-  if      (   (scheduleNode1->time.hour   != scheduleNode2->time.hour )
-           || (scheduleNode1->time.minute != scheduleNode2->time.minute)
-          )
+  if (   (scheduleNode1->time.hour   != scheduleNode2->time.hour )
+      || (scheduleNode1->time.minute != scheduleNode2->time.minute)
+     )
   {
     return 0;
   }
 
-  if      (scheduleNode1->archiveType != scheduleNode2->archiveType)
+  if (scheduleNode1->archiveType != scheduleNode2->archiveType)
   {
     return 0;
   }
 
-  if      (!String_equals(scheduleNode1->customText,scheduleNode2->customText))
+  if (!String_equals(scheduleNode1->customText,scheduleNode2->customText))
   {
     return 0;
   }
 
-  if      (!scheduleNode1->minKeep == scheduleNode2->minKeep)
+  if (scheduleNode1->minKeep != scheduleNode2->minKeep)
   {
     return 0;
   }
 
-  if      (!scheduleNode1->maxKeep == scheduleNode2->maxKeep)
+  if (scheduleNode1->maxKeep != scheduleNode2->maxKeep)
   {
     return 0;
   }
 
-  if      (!scheduleNode1->maxAge == scheduleNode2->maxAge)
+  if (scheduleNode1->maxAge != scheduleNode2->maxAge)
+  {
+    return 0;
+  }
+
+  if (scheduleNode1->noStorage != scheduleNode2->noStorage)
   {
     return 0;
   }
@@ -1442,7 +1451,7 @@ LOCAL ScheduleNode *parseSchedule(const String s)
    known?
 */
 if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string value fail - C compiler bug?");
-    scheduleNode->enabledFlag = b;
+    scheduleNode->enabled = b;
   }
   else
   {
@@ -3613,23 +3622,6 @@ LOCAL Errors deleteUUID(const String jobUUID)
 }
 
 /***********************************************************************\
-* Name   : waitIndexReady
-* Purpose: wait until index is ready to use or quit is signaled
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void waitIndexReady(void)
-{
-  while (!quitFlag && !Index_isReady(indexHandle))
-  {
-    Misc_udelay(10LL*MISC_US_PER_SECOND);
-  }
-}
-
-/***********************************************************************\
 * Name   : cleanExpiredStorage
 * Purpose: clean expired/surplus storage
 * Input  : -
@@ -3812,6 +3804,25 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
 }
 
 /***********************************************************************\
+* Name   : waitIndexReady
+* Purpose: wait until index is read or quit
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void waitIndexReady(void)
+{
+  assert(indexHandle != NULL);
+
+  while (!quitFlag && !Index_isReady(indexHandle))
+  {
+    Misc_udelay(10LL*MISC_US_PER_SECOND);
+  }
+}
+
+/***********************************************************************\
 * Name   : schedulerThreadCode
 * Purpose: schedule thread entry
 * Input  : -
@@ -3887,7 +3898,7 @@ LOCAL void schedulerThreadCode(void)
                   && ((scheduleNode->weekDaySet    == SCHEDULE_WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)   )
                   && ((scheduleNode->time.hour     == SCHEDULE_ANY            ) || (scheduleNode->time.hour   == (int)hour  ) )
                   && ((scheduleNode->time.minute   == SCHEDULE_ANY            ) || (scheduleNode->time.minute == (int)minute) )
-                  && scheduleNode->enabledFlag
+                  && scheduleNode->enabled
                  )
               {
                 executeScheduleNode = scheduleNode;
@@ -5479,7 +5490,7 @@ LOCAL DirectoryInfoNode *findDirectoryInfo(DirectoryInfoList *directoryInfoList,
 *          timeout   - timeout [ms] or -1 for no timeout
 * Output : fileCount     - number of files
 *          totalFileSize - total file size (bytes)
-*          timeoutFlag   - TRUE iff timeout, FALSE otherwise
+*          timedOut      - TRUE iff timed out, FALSE otherwise
 * Return : -
 * Notes  : -
 \***********************************************************************/
@@ -5488,7 +5499,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
                             long              timeout,
                             uint64            *fileCount,
                             uint64            *totalFileSize,
-                            bool              *timeoutFlag
+                            bool              *timedOut
                            )
 {
   uint64   startTimestamp;
@@ -5507,11 +5518,11 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
 
   pathName = String_new();
   fileName = String_new();
-  if (timeoutFlag != NULL) (*timeoutFlag) = FALSE;
+  if (timedOut != NULL) (*timedOut) = FALSE;
   while (   (   !StringList_isEmpty(&directoryInfoNode->pathNameList)
              || directoryInfoNode->directoryOpenFlag
             )
-         && ((timeoutFlag == NULL) || !(*timeoutFlag))
+         && ((timedOut == NULL) || !(*timedOut))
          && !quitFlag
         )
   {
@@ -5531,7 +5542,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
 
     // read directory content
     while (   !File_endOfDirectoryList(&directoryInfoNode->directoryListHandle)
-           && ((timeoutFlag == NULL) || !(*timeoutFlag))
+           && ((timedOut == NULL) || !(*timedOut))
            && !quitFlag
           )
     {
@@ -5542,7 +5553,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
         continue;
       }
       directoryInfoNode->fileCount++;
-      error = File_getFileInfo(&fileInfo,fileName);
+      error = File_getFileInfo(fileName,&fileInfo);
       if (error != ERROR_NONE)
       {
         continue;
@@ -5568,13 +5579,13 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
       }
 
       // check for timeout
-      if ((timeout >= 0) && (timeoutFlag != NULL))
+      if ((timeout >= 0) && (timedOut != NULL))
       {
-        (*timeoutFlag) = (Misc_getTimestamp() >= (startTimestamp+timeout*1000));
+        (*timedOut) = (Misc_getTimestamp() >= (startTimestamp+timeout*1000));
       }
     }
 
-    if ((timeoutFlag == NULL) || !(*timeoutFlag))
+    if ((timedOut == NULL) || !(*timedOut))
     {
       // close diretory
       directoryInfoNode->directoryOpenFlag = FALSE;
@@ -5582,9 +5593,9 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
     }
 
     // check for timeout
-    if ((timeout >= 0) && (timeoutFlag != NULL))
+    if ((timeout >= 0) && (timedOut != NULL))
     {
-      (*timeoutFlag) = (Misc_getTimestamp() >= (startTimestamp+timeout*1000));
+      (*timedOut) = (Misc_getTimestamp() >= (startTimestamp+timeout*1000));
     }
   }
   String_delete(pathName);
@@ -6096,7 +6107,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const StringM
 *          Result:
 *            name=<name>
 *            size=<n [bytes]>
-*            mountedFlag=yes|no
+*            mounted=yes|no
 \***********************************************************************/
 
 LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -6149,10 +6160,10 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
     {
       sendClientResult(clientInfo,
                        id,FALSE,ERROR_NONE,
-                       "name=%'S size=%lld mountedFlag=%y",
+                       "name=%'S size=%lld mounted=%y",
                        deviceName,
                        deviceInfo.size,
-                       deviceInfo.mountedFlag
+                       deviceInfo.mounted
                       );
     }
   }
@@ -6227,7 +6238,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
     error = File_readDirectoryList(&directoryListHandle,fileName);
     if (error == ERROR_NONE)
     {
-      error = File_getFileInfo(&fileInfo,fileName);
+      error = File_getFileInfo(fileName,&fileInfo);
       if (error == ERROR_NONE)
       {
         switch (fileInfo.type)
@@ -6244,8 +6255,8 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
           case FILE_TYPE_DIRECTORY:
             // check if .nobackup exists
             noBackupExists = FALSE;
-            if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(String_set(noBackupFileName,fileName),".nobackup"));
-            if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(String_set(noBackupFileName,fileName),".NOBACKUP"));
+            if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,fileName),".nobackup"));
+            if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,fileName),".NOBACKUP"));
 
             sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                              "fileType=DIRECTORY name=%'S dateTime=%llu noBackup=%y noDump=%y",
@@ -6349,6 +6360,379 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
 }
 
 /***********************************************************************\
+* Name   : serverCommand_fileAttributeGet
+* Purpose: get file attribute
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            attribute=NOBACKUP|NODUMP
+*            name=<name>
+*          Result:
+*            value=<value>
+\***********************************************************************/
+
+LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
+  String        attribute;
+  String        name;
+  SemaphoreLock semaphoreLock;
+  const JobNode *jobNode;
+  String        noBackupFileName;
+  bool          noBackupExists;
+  Errors        error;
+  FileInfo      fileInfo;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, name
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  attribute = String_new();
+  if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(attribute);
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(name);
+      String_delete(attribute);
+      return;
+    }
+
+    // send attribute value
+    if      (String_equalsCString(attribute,"NOBACKUP"))
+    {
+      noBackupFileName = String_new();
+
+      noBackupExists = FALSE;
+      if (File_isDirectory(name))
+      {
+        if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
+        if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
+      }
+      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%y",FALSE);
+
+      String_delete(noBackupFileName);
+    }
+    else if (String_equalsCString(attribute,"NODUMP"))
+    {
+      error = File_getFileInfo(name,&fileInfo);
+      if (error == ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%y",(fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP);
+      }
+      else
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"get file info fail for '%S': %s",attribute,name,Error_getText(error));
+      }
+    }
+    else
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute %S for '%S'",attribute,name);
+    }
+  }
+
+  // free resources
+  String_delete(name);
+  String_delete(attribute);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_fileAttributeSet
+* Purpose: set file attribute
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            attribute=NOBACKUP|NODUMP
+*            name=<name>
+*            value=<value>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
+  String        attribute;
+  String        name;
+  String        value;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  String        noBackupFileName;
+  Errors        error;
+  FileInfo      fileInfo;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, name, value
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  attribute = String_new();
+  if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(attribute);
+    return;
+  }
+  value = String_new();
+  StringMap_getString(argumentMap,"value",value,NULL);
+//TODO: value still not used
+UNUSED_VARIABLE(value);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(value);
+      String_delete(name);
+      String_delete(attribute);
+      return;
+    }
+
+    // set attribute
+    if      (String_equalsCString(attribute,"NOBACKUP"))
+    {
+      if (!File_isDirectory(name))
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
+        String_delete(value);
+        String_delete(name);
+        String_delete(attribute);
+        return;
+      }
+
+      noBackupFileName = String_new();
+      File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup");
+      if (!File_exists(noBackupFileName))
+      {
+        error = File_touch(noBackupFileName);
+        if (error != ERROR_NONE)
+        {
+          sendClientResult(clientInfo,id,TRUE,error,"can not create .nobackup file: %s",Error_getText(error));
+          String_delete(noBackupFileName);
+          Semaphore_unlock(&jobList.lock);
+          String_delete(value);
+          String_delete(name);
+          String_delete(attribute);
+          return;
+        }
+      }
+      String_delete(noBackupFileName);
+
+      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    }
+    else if (String_equalsCString(attribute,"NODUMP"))
+    {
+      error = File_getFileInfo(name,&fileInfo);
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
+        Semaphore_unlock(&jobList.lock);
+        String_delete(value);
+        String_delete(name);
+        String_delete(attribute);
+        return;
+      }
+
+      fileInfo.attributes |= FILE_ATTRIBUTE_NO_DUMP;
+      error = File_setFileInfo(name,&fileInfo);
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+        Semaphore_unlock(&jobList.lock);
+        String_delete(value);
+        String_delete(name);
+        String_delete(attribute);
+        return;
+      }
+
+      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    }
+    else
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute %S for '%S'",attribute,name);
+    }
+  }
+
+  // free resources
+  String_delete(value);
+  String_delete(name);
+  String_delete(attribute);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_fileAttributeClear
+* Purpose: clear file attribute
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            attribute=NOBACKUP|NODUMP
+*            name=<name>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
+  String        attribute;
+  String        name;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  String        noBackupFileName;
+  Errors        error;
+  FileInfo      fileInfo;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, name
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  attribute = String_new();
+  if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(attribute);
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(name);
+      String_delete(attribute);
+      return;
+    }
+
+    // clear attribute
+    if      (String_equalsCString(attribute,"NOBACKUP"))
+    {
+      if (!File_isDirectory(name))
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
+        String_delete(name);
+        String_delete(attribute);
+        return;
+      }
+
+      noBackupFileName = String_new();
+      File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup");
+      if (File_exists(noBackupFileName))
+      {
+        error = File_delete(noBackupFileName,FALSE);
+        if (error != ERROR_NONE)
+        {
+          sendClientResult(clientInfo,id,TRUE,error,"can not delete .nobackup file: %s",Error_getText(error));
+          String_delete(noBackupFileName);
+          Semaphore_unlock(&jobList.lock);
+          String_delete(name);
+          String_delete(attribute);
+          return;
+        }
+      }
+      String_delete(noBackupFileName);
+
+      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    }
+    else if (String_equalsCString(attribute,"NODUMP"))
+    {
+      error = File_getFileInfo(name,&fileInfo);
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
+        Semaphore_unlock(&jobList.lock);
+        String_delete(name);
+        String_delete(attribute);
+        return;
+      }
+
+      fileInfo.attributes &= ~FILE_ATTRIBUTE_NO_DUMP;
+      error = File_setFileInfo(name,&fileInfo);
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+        Semaphore_unlock(&jobList.lock);
+        String_delete(name);
+        String_delete(attribute);
+        return;
+      }
+
+      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    }
+    else
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute %S for '%S'",attribute,name);
+    }
+  }
+
+  // free resources
+  String_delete(name);
+  String_delete(attribute);
+}
+
+/***********************************************************************\
 * Name   : serverCommand_directoryInfo
 * Purpose: get directory info
 * Input  : clientInfo    - client info
@@ -6358,10 +6742,10 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <directory>
-*            <timeout [s]>
+*            name=<directory>
+*            timeout=<n [s]>
 *          Result:
-*            <file count> <total file size> <timeout flag>
+*            count=<file count> size=<total file size> timedOut=yes|no
 \***********************************************************************/
 
 LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -6371,7 +6755,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
   DirectoryInfoNode *directoryInfoNode;
   uint64            fileCount;
   uint64            fileSize;
-  bool              timeoutFlag;
+  bool              timedOut;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6399,10 +6783,10 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
                    timeout,
                    &fileCount,
                    &fileSize,
-                   &timeoutFlag
+                   &timedOut
                   );
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%llu size=%llu timeoutFlag=%y",fileCount,fileSize,timeoutFlag);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%llu size=%llu timedOut=%y",fileCount,fileSize,timedOut);
 
   // free resources
   String_delete(name);
@@ -8069,7 +8453,8 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 *            minKeep=<n>|0 \
 *            maxKeep=<n>|0 \
 *            maxAage=<n>|0 \
-*            enabledFlag=yes|no \
+*            noStorage=yes|no \
+*            enabled=yes|no \
 *            ...
 \***********************************************************************/
 
@@ -8175,7 +8560,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
       }
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "scheduleUUID=%S date=%S weekDays=%S time=%S archiveType=%s customText=%'S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
+                       "scheduleUUID=%S date=%S weekDays=%S time=%S archiveType=%s customText=%'S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
                        scheduleNode->uuid,
                        date,
                        weekDays,
@@ -8185,7 +8570,8 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
                        scheduleNode->minKeep,
                        scheduleNode->maxKeep,
                        scheduleNode->maxAge,
-                       scheduleNode->enabledFlag
+                       scheduleNode->noStorage,
+                       scheduleNode->enabled
                       );
     }
     String_delete(time);
@@ -8215,7 +8601,8 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 *            minKeep=<n>|0
 *            maxKeep=<n>|0
 *            maxAage=<n>|0
-*            enabledFlag=yes|no
+*            noStorage=yes|no
+*            enabled=yes|no
 *          Result:
 *            scheduleUUID=<uuid>
 \***********************************************************************/
@@ -8231,7 +8618,8 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   ArchiveTypes  archiveType;
   uint          minKeep,maxKeep;
   uint          maxAge;
-  bool          enabledFlag;
+  bool          noStorage;
+  bool          enabled;
   SemaphoreLock semaphoreLock;
   ScheduleNode  *scheduleNode;
   JobNode       *jobNode;
@@ -8322,9 +8710,19 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
     String_delete(title);
     return;
   }
-  if (!StringMap_getBool(argumentMap,"enabledFlag",&enabledFlag,FALSE))
+  if (!StringMap_getBool(argumentMap,"noStorage",&noStorage,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected enabledFlag=yes|no");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected noStorage=yes|no");
+    String_delete(customText);
+    String_delete(time);
+    String_delete(weekDays);
+    String_delete(date);
+    String_delete(title);
+    return;
+  }
+  if (!StringMap_getBool(argumentMap,"enabled",&enabled,FALSE))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected enabled=yes|no");
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -8358,10 +8756,11 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   }
   scheduleNode->archiveType = archiveType;
   String_set(scheduleNode->customText,customText);
-  scheduleNode->minKeep     = minKeep;
-  scheduleNode->maxKeep     = maxKeep;
-  scheduleNode->maxAge      = maxAge;
-  scheduleNode->enabledFlag = enabledFlag;
+  scheduleNode->minKeep   = minKeep;
+  scheduleNode->maxKeep   = maxKeep;
+  scheduleNode->maxAge    = maxAge;
+  scheduleNode->noStorage = noStorage;
+  scheduleNode->enabled   = enabled;
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -8769,10 +9168,6 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <storage name>
-*            <destination directory>
-*            <overwrite flag>
-*            <files>...
 *          Result:
 \***********************************************************************/
 
@@ -9957,7 +10352,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 * Notes  : Arguments:
 *            storageName=<name>
 *            destinationDirectory=<name>
-*            overwriteFlag=yes|no
+*            isOverwrite=yes|no
 *            name=<name>
 *          Result:
 \***********************************************************************/
@@ -10032,9 +10427,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
     String_delete(storageName);
     return;
   }
-  if (!StringMap_getBool(argumentMap,"overwriteFilesFlag",&clientInfo->jobOptions.overwriteFilesFlag,FALSE))
+  if (!StringMap_getBool(argumentMap,"overwriteFiles",&clientInfo->jobOptions.overwriteFilesFlag,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected overwriteFilesFlag=yes|no");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected overwriteFiles=yes|no");
     String_delete(storageName);
     return;
   }
@@ -11261,9 +11656,9 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            checkedStorageOnlyFlag=0|1
+*            isCheckedStorageOnly=0|1
 *            entryMaxCount=<n>|0
-*            newestEntriesOnlyFlag=0|1
+*            isNewestEntriesOnly=0|1
 *            entryPattern=<pattern>
 *          Result:
 *            entryType=FILE storageName=<name> storageDateTime=<time stamp> name=<name> size=<n [bytes]> dateTime=<time stamp> \
@@ -11586,9 +11981,9 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   }
 
   String           entryPattern;
-  bool             checkedStorageOnlyFlag;
+  bool             checkedStorageOnly;
   uint             entryMaxCount;
-  bool             newestEntriesOnlyFlag;
+  bool             newestEntriesOnly;
   uint             entryCount;
   IndexList        indexList;
   IndexNode        *indexNode;
@@ -11619,9 +12014,9 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     String_delete(entryPattern);
     return;
   }
-  if (!StringMap_getBool(argumentMap,"checkedStorageOnlyFlag",&checkedStorageOnlyFlag,FALSE))
+  if (!StringMap_getBool(argumentMap,"checkedStorageOnly",&checkedStorageOnly,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected checkedStorageOnlyFlag=yes|no");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected checkedStorageOnly=yes|no");
     String_delete(entryPattern);
     return;
   }
@@ -11631,9 +12026,9 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     String_delete(entryPattern);
     return;
   }
-  if (!StringMap_getBool(argumentMap,"newestEntriesOnlyFlag",&newestEntriesOnlyFlag,FALSE))
+  if (!StringMap_getBool(argumentMap,"newestEntriesOnly",&newestEntriesOnly,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestEntriesOnlyFlag=yes|no");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestEntriesOnly=yes|no");
     String_delete(entryPattern);
     return;
   }
@@ -11661,7 +12056,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   // collect index data
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
-    if (checkedStorageOnlyFlag)
+    if (checkedStorageOnly)
     {
       error = Index_initListFiles(&indexQueryHandle,
                                   indexHandle,
@@ -11706,7 +12101,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                )
           )
     {
-      if (newestEntriesOnlyFlag)
+      if (newestEntriesOnly)
       {
         // find/allocate index node
         indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,name);
@@ -11742,7 +12137,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
 
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
-    if (checkedStorageOnlyFlag)
+    if (checkedStorageOnly)
     {
       error = Index_initListImages(&indexQueryHandle,
                                    indexHandle,
@@ -11784,7 +12179,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                 )
           )
     {
-      if (newestEntriesOnlyFlag)
+      if (newestEntriesOnly)
       {
         // find/allocate index node
         indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,name);
@@ -11818,7 +12213,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
 
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
-    if (checkedStorageOnlyFlag)
+    if (checkedStorageOnly)
     {
       error = Index_initListDirectories(&indexQueryHandle,
                                         indexHandle,
@@ -11860,7 +12255,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                     )
           )
     {
-      if (newestEntriesOnlyFlag)
+      if (newestEntriesOnly)
       {
         // find/allocate index node
         indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,name);
@@ -11893,7 +12288,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
 
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
-    if (checkedStorageOnlyFlag)
+    if (checkedStorageOnly)
     {
       error = Index_initListLinks(&indexQueryHandle,
                                   indexHandle,
@@ -11937,7 +12332,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                )
           )
     {
-      if (newestEntriesOnlyFlag)
+      if (newestEntriesOnly)
       {
         // find/allocate index node
         indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,name);
@@ -11972,7 +12367,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
 
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
-    if (checkedStorageOnlyFlag)
+    if (checkedStorageOnly)
     {
       error = Index_initListHardLinks(&indexQueryHandle,
                                       indexHandle,
@@ -12018,7 +12413,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                    )
           )
     {
-      if (newestEntriesOnlyFlag)
+      if (newestEntriesOnly)
       {
         // find/allocate index node
         indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,name);
@@ -12055,7 +12450,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
 
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
-    if (checkedStorageOnlyFlag)
+    if (checkedStorageOnly)
     {
       error = Index_initListSpecial(&indexQueryHandle,
                                     indexHandle,
@@ -12097,7 +12492,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                   )
           )
     {
-      if (newestEntriesOnlyFlag)
+      if (newestEntriesOnly)
       {
         // find/allocate index node
         indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,name);
@@ -12343,6 +12738,9 @@ SERVER_COMMANDS[] =
   { "CONTINUE",                   serverCommand_continue,                AUTHORIZATION_STATE_OK      },
   { "DEVICE_LIST",                serverCommand_deviceList,              AUTHORIZATION_STATE_OK      },
   { "FILE_LIST",                  serverCommand_fileList,                AUTHORIZATION_STATE_OK      },
+  { "FILE_ATTRIBUTE_GET",         serverCommand_fileAttributeGet,        AUTHORIZATION_STATE_OK      },
+  { "FILE_ATTRIBUTE_SET",         serverCommand_fileAttributeSet,        AUTHORIZATION_STATE_OK      },
+  { "FILE_ATTRIBUTE_CLEAR",       serverCommand_fileAttributeClear,      AUTHORIZATION_STATE_OK      },
   { "DIRECTORY_INFO",             serverCommand_directoryInfo,           AUTHORIZATION_STATE_OK      },
   { "JOB_LIST",                   serverCommand_jobList,                 AUTHORIZATION_STATE_OK      },
   { "JOB_INFO",                   serverCommand_jobInfo,                 AUTHORIZATION_STATE_OK      },
