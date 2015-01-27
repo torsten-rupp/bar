@@ -333,7 +333,7 @@ LOCAL Errors getAttributes(const String fileName, FileAttributes *fileAttributes
 
     // close file
     close(handle);
-  #else /* FS_IOC_GETFLAGS */
+  #else /* not FS_IOC_GETFLAGS */
     UNUSED_VARIABLE(fileName);
   #endif /* FS_IOC_GETFLAGS */
 
@@ -351,6 +351,79 @@ LOCAL Errors getAttributes(const String fileName, FileAttributes *fileAttributes
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   : setAttributes
+* Purpose: set file attributes
+* Input  : fileName - file name
+* Output : attributes - file attributes
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors setAttributes(const String fileName, FileAttributes fileAttributes)
+{
+  long   attributes;
+  #ifdef FS_IOC_GETFLAGS
+    int    handle;
+    Errors error;
+  #endif /* FS_IOC_GETFLAGS */
+  #ifndef HAVE_O_NOATIME
+    struct stat stat;
+    bool   atimeFlag;
+    struct timespec atime;
+  #endif /* not HAVE_O_NOATIME */
+
+  assert(fileName != NULL);
+
+  #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
+    // open file (first try with O_NOATIME)
+    #ifdef HAVE_O_NOATIME
+      handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK|O_NOATIME);
+      if (handle == -1)
+      {
+        handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
+      }
+    #else /* not HAVE_O_NOATIME */
+      handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
+    #endif /* HAVE_O_NOATIME */
+    if (handle == -1)
+    {
+      return ERRORX_(IO_ERROR,errno,String_cString(fileName));
+    }
+
+    // set attributes
+    if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
+    {
+      error = ERRORX_(IO_ERROR,errno,String_cString(fileName));
+      close(handle);
+      return error;
+    }
+    attributes &= ~(FILE_ATTRIBUTE_COMPRESS|FILE_ATTRIBUTE_NO_COMPRESS|FILE_ATTRIBUTE_NO_DUMP);
+    #ifdef HAVE_FS_COMPR_FL
+      if ((fileAttributes & FILE_ATTRIBUTE_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_COMPRESS;
+    #endif
+    #ifdef HAVE_FS_NOCOMP_FL
+      if ((fileAttributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_NO_COMPRESS;
+    #endif
+    #ifdef HAVE_FS_NODUMP_FL
+      if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) != 0LL) attributes |= FILE_ATTRIBUTE_NO_DUMP;
+    #endif
+    if (ioctl(handle,FS_IOC_SETFLAGS,&attributes) != 0)
+    {
+      error = ERRORX_(IO_ERROR,errno,String_cString(fileName));
+      close(handle);
+      return error;
+    }
+
+    // close file
+    close(handle);
+  #else /* not FS_IOC_GETFLAGS && FS_IOC_SETFLAGS */
+    UNUSED_VARIABLE(fileName);
+  #endif /* FS_IOC_GETFLAGS && FS_IOC_SETFLAGS */
+
+
+  return ERROR_NONE;
+}
 /***********************************************************************\
 * Name   : freeExtendedAttributeNode
 * Purpose: free allocated extended attribute node
@@ -2053,6 +2126,22 @@ Errors File_dropCaches(FileHandle *fileHandle,
   return ERROR_NONE;
 }
 
+Errors File_touch(const String fileName)
+{
+  int handle;
+
+  assert(fileName != NULL);
+
+  handle = open(String_cString(fileName),O_WRONLY|O_CREAT|O_NOCTTY|O_NONBLOCK,0666);
+  if (handle == -1)
+  {
+    return ERROR_(CREATE_FILE,errno);
+  }
+  close(handle);
+
+  return ERROR_NONE;
+}
+
 /*---------------------------------------------------------------------*/
 
 Errors File_openDirectoryList(DirectoryListHandle *directoryListHandle,
@@ -2937,8 +3026,8 @@ bool File_isWriteableCString(const char *fileName)
   #endif /* PLATFORM_... */
 }
 
-Errors File_getFileInfo(FileInfo     *fileInfo,
-                        const String fileName
+Errors File_getFileInfo(const String fileName,
+                        FileInfo     *fileInfo
                        )
 {
   FileStat   fileStat;
@@ -3042,12 +3131,12 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
   return ERROR_NONE;
 }
 
-Errors File_setFileInfo(const String fileName,
-                        FileInfo     *fileInfo
+Errors File_setFileInfo(const String   fileName,
+                        const FileInfo *fileInfo
                        )
 {
   struct utimbuf utimeBuffer;
-//  Errors         error;
+  Errors         error;
 
   assert(fileName != NULL);
   assert(fileInfo != NULL);
@@ -3091,6 +3180,13 @@ Errors File_setFileInfo(const String fileName,
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
       #endif /* NDEBUG */
       break; /* not reached */
+  }
+
+  // set attributes
+  error = setAttributes(fileName,fileInfo->attributes);
+  if (error != ERROR_NONE)
+  {
+    return error;
   }
 
 #if 0

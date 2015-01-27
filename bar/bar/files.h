@@ -806,6 +806,17 @@ Errors File_dropCaches(FileHandle *fileHandle,
                        bool       syncFlag
                       );
 
+/***********************************************************************\
+* Name   : File_touch
+* Purpose: touch file
+* Input  : fileName - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_touch(const String fileName);
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
@@ -1068,15 +1079,15 @@ bool File_isWriteableCString(const char *fileName);
 /***********************************************************************\
 * Name   : File_getInfo
 * Purpose: get file info
-* Input  : fileInfo - file info variable
-*          fileName - file name
+* Input  : fileName - file name
+*          fileInfo - file info variable
 * Output : fileInfo - file info
 * Return : ERROR_NONE or error code
 * Notes  : fileInfo must _not_ be initialized
 \***********************************************************************/
 
-Errors File_getFileInfo(FileInfo     *fileInfo,
-                        const String fileName
+Errors File_getFileInfo(const String fileName,
+                        FileInfo     *fileInfo
                        );
 
 /***********************************************************************\
@@ -1084,13 +1095,14 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
 * Purpose: set file info (time, owner, permission)
 * Input  : fileName - file name
 *          fileInfo - file info
+*
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors File_setFileInfo(const String fileName,
-                        FileInfo     *fileInfo
+Errors File_setFileInfo(const String   fileName,
+                        const FileInfo *fileInfo
                        );
 
 /***********************************************************************\
