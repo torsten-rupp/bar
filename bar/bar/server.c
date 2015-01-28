@@ -178,6 +178,7 @@ typedef struct JobNode
   {
     String       uuid;                         // UUID or empty
     String       customText;                   // custom text or empty
+    bool         noStorage;                    // TRUE to skip storage, only create incremental data file
   } schedule;
   bool         requestedAbortFlag;             // request abort
   uint         requestedVolumeNumber;          // requested volume number
@@ -777,12 +778,12 @@ LOCAL ScheduleNode *newScheduleNode(void)
   }
   scheduleNode->uuid        = String_new();
   scheduleNode->parentUUID  = NULL;
-  scheduleNode->date.year   = SCHEDULE_ANY;
-  scheduleNode->date.month  = SCHEDULE_ANY;
-  scheduleNode->date.day    = SCHEDULE_ANY;
-  scheduleNode->weekDaySet  = SCHEDULE_WEEKDAY_SET_ANY;
-  scheduleNode->time.hour   = SCHEDULE_ANY;
-  scheduleNode->time.minute = SCHEDULE_ANY;
+  scheduleNode->date.year   = DATE_ANY;
+  scheduleNode->date.month  = DATE_ANY;
+  scheduleNode->date.day    = DATE_ANY;
+  scheduleNode->weekDaySet  = WEEKDAY_SET_ANY;
+  scheduleNode->time.hour   = TIME_ANY;
+  scheduleNode->time.minute = TIME_ANY;
   scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
   scheduleNode->customText  = String_new();
   scheduleNode->minKeep     = 0;
@@ -1040,7 +1041,7 @@ LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, 
   scheduleDate = (const ScheduleDate*)(*formatUserData);
   if (scheduleDate != NULL)
   {
-    if (scheduleDate->year != SCHEDULE_ANY)
+    if (scheduleDate->year != DATE_ANY)
     {
       String_format(line,"%d",scheduleDate->year);
     }
@@ -1049,7 +1050,7 @@ LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, 
       String_appendCString(line,"*");
     }
     String_appendChar(line,'-');
-    if (scheduleDate->month != SCHEDULE_ANY)
+    if (scheduleDate->month != DATE_ANY)
     {
       String_format(line,"%d",scheduleDate->month);
     }
@@ -1058,7 +1059,7 @@ LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, 
       String_appendCString(line,"*");
     }
     String_appendChar(line,'-');
-    if (scheduleDate->day != SCHEDULE_ANY)
+    if (scheduleDate->day != DATE_ANY)
     {
       String_format(line,"%d",scheduleDate->day);
     }
@@ -1179,7 +1180,7 @@ LOCAL bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *user
   scheduleWeekDaySet = (ScheduleWeekDaySet*)(*formatUserData);
   if (scheduleWeekDaySet != NULL)
   {
-    if ((*scheduleWeekDaySet) != SCHEDULE_WEEKDAY_SET_ANY)
+    if ((*scheduleWeekDaySet) != WEEKDAY_SET_ANY)
     {
       names = String_new();
 
@@ -1324,7 +1325,7 @@ LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, 
   scheduleTime = (const ScheduleTime*)(*formatUserData);
   if (scheduleTime != NULL)
   {
-    if (scheduleTime->hour != SCHEDULE_ANY)
+    if (scheduleTime->hour != TIME_ANY)
     {
       String_format(line,"%d",scheduleTime->hour);
     }
@@ -1333,7 +1334,7 @@ LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, 
       String_appendCString(line,"*");
     }
     String_appendChar(line,':');
-    if (scheduleTime->minute != SCHEDULE_ANY)
+    if (scheduleTime->minute != TIME_ANY)
     {
       String_format(line,"%d",scheduleTime->minute);
     }
@@ -1730,6 +1731,7 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
   jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
   jobNode->schedule.uuid                  = String_new();
   jobNode->schedule.customText            = String_new();
+  jobNode->schedule.noStorage             = FALSE;
   jobNode->requestedAbortFlag             = FALSE;
   jobNode->requestedVolumeNumber          = 0;
   jobNode->volumeNumber                   = 0;
@@ -1799,6 +1801,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
   newJobNode->schedule.uuid                  = String_new();
   newJobNode->schedule.customText            = String_new();
+  newJobNode->schedule.noStorage             = FALSE;
   newJobNode->requestedAbortFlag             = FALSE;
   newJobNode->requestedVolumeNumber          = 0;
   newJobNode->volumeNumber                   = 0;
@@ -3091,10 +3094,10 @@ LOCAL void jobThreadCode(void)
   PatternList      excludePatternList;
   PatternList      deltaSourcePatternList;
   PatternList      compressExcludePatternList;
-  StaticString     (scheduleUUID,INDEX_UUID_LENGTH);
-  String           scheduleCustomText;
   JobOptions       jobOptions;
   ArchiveTypes     archiveType;
+  StaticString     (scheduleUUID,INDEX_UUID_LENGTH);
+  String           scheduleCustomText;
   StringList       archiveFileNameList;
   TextMacro        textMacros[1];
 
@@ -3146,11 +3149,13 @@ LOCAL void jobThreadCode(void)
     {
       String_set(scheduleUUID,      jobNode->schedule.uuid);
       String_set(scheduleCustomText,jobNode->schedule.customText);
+      jobOptions.noStorageFlag = jobNode->schedule.noStorage;
     }
     else
     {
       String_clear(scheduleUUID);
       String_clear(scheduleCustomText);
+      jobOptions.noStorageFlag = FALSE;
     }
 
     // unlock (Note: job is now protected by running state)
@@ -3892,12 +3897,12 @@ LOCAL void schedulerThreadCode(void)
             scheduleNode = jobNode->scheduleList.head;
             while ((scheduleNode != NULL) && (executeScheduleNode == NULL))
             {
-              if (   ((scheduleNode->date.year     == SCHEDULE_ANY            ) || (scheduleNode->date.year   == (int)year  ) )
-                  && ((scheduleNode->date.month    == SCHEDULE_ANY            ) || (scheduleNode->date.month  == (int)month ) )
-                  && ((scheduleNode->date.day      == SCHEDULE_ANY            ) || (scheduleNode->date.day    == (int)day   ) )
-                  && ((scheduleNode->weekDaySet    == SCHEDULE_WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)   )
-                  && ((scheduleNode->time.hour     == SCHEDULE_ANY            ) || (scheduleNode->time.hour   == (int)hour  ) )
-                  && ((scheduleNode->time.minute   == SCHEDULE_ANY            ) || (scheduleNode->time.minute == (int)minute) )
+              if (   ((scheduleNode->date.year     == DATE_ANY       ) || (scheduleNode->date.year   == (int)year  ) )
+                  && ((scheduleNode->date.month    == DATE_ANY       ) || (scheduleNode->date.month  == (int)month ) )
+                  && ((scheduleNode->date.day      == DATE_ANY       ) || (scheduleNode->date.day    == (int)day   ) )
+                  && ((scheduleNode->weekDaySet    == WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)   )
+                  && ((scheduleNode->time.hour     == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ) )
+                  && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute) )
                   && scheduleNode->enabled
                  )
               {
@@ -8495,7 +8500,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
     {
       // get date string
       String_clear(date);
-      if (scheduleNode->date.year != SCHEDULE_ANY)
+      if (scheduleNode->date.year != DATE_ANY)
       {
         String_format(date,"%d",scheduleNode->date.year);
       }
@@ -8504,7 +8509,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
         String_appendCString(date,"*");
       }
       String_appendChar(date,'-');
-      if (scheduleNode->date.month != SCHEDULE_ANY)
+      if (scheduleNode->date.month != DATE_ANY)
       {
         String_format(date,"%02d",scheduleNode->date.month);
       }
@@ -8513,7 +8518,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
         String_appendCString(date,"*");
       }
       String_appendChar(date,'-');
-      if (scheduleNode->date.day != SCHEDULE_ANY)
+      if (scheduleNode->date.day != DATE_ANY)
       {
         String_format(date,"%02d",scheduleNode->date.day);
       }
@@ -8524,7 +8529,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 
       // get weekdays string
       String_clear(weekDays);
-      if (scheduleNode->weekDaySet != SCHEDULE_WEEKDAY_SET_ANY)
+      if (scheduleNode->weekDaySet != WEEKDAY_SET_ANY)
       {
         if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_MON)) { String_joinCString(weekDays,"Mon",','); }
         if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_TUE)) { String_joinCString(weekDays,"Tue",','); }
@@ -8541,7 +8546,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 
       // get time string
       String_clear(time);
-      if (scheduleNode->time.hour != SCHEDULE_ANY)
+      if (scheduleNode->time.hour != TIME_ANY)
       {
         String_format(time,"%02d",scheduleNode->time.hour);
       }
@@ -8550,7 +8555,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
         String_appendCString(time,"*");
       }
       String_appendChar(time,':');
-      if (scheduleNode->time.minute != SCHEDULE_ANY)
+      if (scheduleNode->time.minute != TIME_ANY)
       {
         String_format(time,"%02d",scheduleNode->time.minute);
       }

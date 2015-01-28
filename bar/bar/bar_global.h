@@ -79,8 +79,12 @@ typedef enum
    | SET_VALUE(WEEKDAY_SUN) \
   )
 
-#define SCHEDULE_ANY             -1
-#define SCHEDULE_WEEKDAY_SET_ANY WEEKDAY_SET_ANY
+//#define SCHEDULE_ANY             -1
+//#define SCHEDULE_WEEKDAY_SET_ANY WEEKDAY_SET_ANY
+
+#define DATE_ANY -1
+#define TIME_ANY -1
+
 
 // password mode
 typedef enum
@@ -107,12 +111,12 @@ typedef struct BandWidthNode
 {
   LIST_NODE_HEADER(struct BandWidthNode);
 
-  int        year;                                       // valid year or SCHEDULE_ANY
-  int        month;                                      // valid month or SCHEDULE_ANY
-  int        day;                                        // valid day or SCHEDULE_ANY
-  int        hour;                                       // valid hour or SCHEDULE_ANY
-  int        minute;                                     // valid minute or SCHEDULE_ANY
-  WeekDaySet weekDaySet;                                 // valid weekday set or SCHEDULE_WEEKDAY_SET_ANY
+  int        year;                                       // valid year or DATE_ANY
+  int        month;                                      // valid month or DATE_ANY
+  int        day;                                        // valid day or DATE_ANY
+  int        hour;                                       // valid hour or TIME_ANY
+  int        minute;                                     // valid minute or TIME_ANY
+  WeekDaySet weekDaySet;                                 // valid weekday set or WEEKDAY_SET_ANY
   ulong      n;                                          // band with limit [bits/s]
   String     fileName;                                   // file to read band width from
 } BandWidthNode;

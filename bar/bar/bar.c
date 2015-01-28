@@ -1817,12 +1817,12 @@ LOCAL BandWidthNode *newBandWidthNode(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  bandWidthNode->year        = SCHEDULE_ANY;
-  bandWidthNode->month       = SCHEDULE_ANY;
-  bandWidthNode->day         = SCHEDULE_ANY;
-  bandWidthNode->hour        = SCHEDULE_ANY;
-  bandWidthNode->minute      = SCHEDULE_ANY;
-  bandWidthNode->weekDaySet  = SCHEDULE_WEEKDAY_SET_ANY;
+  bandWidthNode->year        = DATE_ANY;
+  bandWidthNode->month       = DATE_ANY;
+  bandWidthNode->day         = DATE_ANY;
+  bandWidthNode->hour        = TIME_ANY;
+  bandWidthNode->minute      = TIME_ANY;
+  bandWidthNode->weekDaySet  = WEEKDAY_SET_ANY;
   bandWidthNode->n           = 0L;
   bandWidthNode->fileName    = NULL;
 
@@ -3256,28 +3256,28 @@ ulong getBandWidth(BandWidthList *bandWidthList)
 
     // match date
     dateMatchFlag =       (matchingBandWidthNode == NULL)
-                       || (   (   (bandWidthNode->year == SCHEDULE_ANY)
+                       || (   (   (bandWidthNode->year == DATE_ANY)
                                || (   (currentYear >= (uint)bandWidthNode->year)
-                                   && (   (matchingBandWidthNode->year == SCHEDULE_ANY)
+                                   && (   (matchingBandWidthNode->year == DATE_ANY)
                                        || (bandWidthNode->year > matchingBandWidthNode->year)
                                       )
                                   )
                               )
-                           && (   (bandWidthNode->month == SCHEDULE_ANY)
-                               || (   (bandWidthNode->year == SCHEDULE_ANY)
+                           && (   (bandWidthNode->month == DATE_ANY)
+                               || (   (bandWidthNode->year == DATE_ANY)
                                    || (currentYear > (uint)bandWidthNode->year)
                                    || (   (currentMonth >= (uint)bandWidthNode->month)
-                                       && (   (matchingBandWidthNode->month == SCHEDULE_ANY)
+                                       && (   (matchingBandWidthNode->month == DATE_ANY)
                                            || (bandWidthNode->month > matchingBandWidthNode->month)
                                           )
                                       )
                                   )
                               )
-                           && (   (bandWidthNode->day    == SCHEDULE_ANY)
-                               || (   (bandWidthNode->month == SCHEDULE_ANY)
+                           && (   (bandWidthNode->day    == DATE_ANY)
+                               || (   (bandWidthNode->month == DATE_ANY)
                                    || (currentMonth > (uint)bandWidthNode->month)
                                    || (   (currentDay >= (uint)bandWidthNode->day)
-                                       && (   (matchingBandWidthNode->day == SCHEDULE_ANY)
+                                       && (   (matchingBandWidthNode->day == DATE_ANY)
                                            || (bandWidthNode->day > matchingBandWidthNode->day)
                                           )
                                       )
@@ -3287,24 +3287,24 @@ ulong getBandWidth(BandWidthList *bandWidthList)
 
     // check week day
     weekDayMatchFlag =    (matchingBandWidthNode == NULL)
-                       || (   (bandWidthNode->weekDaySet == SCHEDULE_WEEKDAY_SET_ANY)
+                       || (   (bandWidthNode->weekDaySet == WEEKDAY_SET_ANY)
                            && IN_SET(bandWidthNode->weekDaySet,currentWeekDay)
                           );
 
     // check time
     timeMatchFlag =    (matchingBandWidthNode == NULL)
-                    || (   (   (bandWidthNode->hour  == SCHEDULE_ANY)
+                    || (   (   (bandWidthNode->hour  == TIME_ANY)
                             || (   (currentHour >= (uint)bandWidthNode->hour)
-                                && (   (matchingBandWidthNode->hour == SCHEDULE_ANY)
+                                && (   (matchingBandWidthNode->hour == TIME_ANY)
                                     || (bandWidthNode->hour > matchingBandWidthNode->hour)
                                     )
                                )
                            )
-                        && (   (bandWidthNode->minute == SCHEDULE_ANY)
-                            || (   (bandWidthNode->hour == SCHEDULE_ANY)
+                        && (   (bandWidthNode->minute == TIME_ANY)
+                            || (   (bandWidthNode->hour == TIME_ANY)
                                 || (currentHour > (uint)bandWidthNode->hour)
                                 || (   (currentMinute >= (uint)bandWidthNode->minute)
-                                    && (   (matchingBandWidthNode->minute == SCHEDULE_ANY)
+                                    && (   (matchingBandWidthNode->minute == TIME_ANY)
                                         || (bandWidthNode->minute > matchingBandWidthNode->minute)
                                        )
                                    )
@@ -3833,7 +3833,7 @@ bool parseDateTimeNumber(const String s, int *n)
   // init variables
   if   (String_equalsCString(s,"*"))
   {
-    (*n) = SCHEDULE_ANY;
+    (*n) = TIME_ANY;
   }
   else
   {
@@ -3859,7 +3859,7 @@ bool parseDateMonth(const String s, int *month)
   name = String_toLower(String_duplicate(s));
   if      (String_equalsCString(s,"*"))
   {
-    (*month) = SCHEDULE_ANY;
+    (*month) = DATE_ANY;
   }
   else if (String_equalsIgnoreCaseCString(name,"jan")) (*month) = MONTH_JAN;
   else if (String_equalsIgnoreCaseCString(name,"feb")) (*month) = MONTH_FEB;
