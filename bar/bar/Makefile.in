@@ -77,7 +77,6 @@ MSGFMT                 = @MSGFMT@
 SVNVERSION             = svnversion
 
 DUMP_SYMS              = @DUMP_SYMS@
-MINIDUMP_STACKWALK     = @MINIDUMP_STACKWALK@
 
 #---------------------------------- commands----------------------------------
 

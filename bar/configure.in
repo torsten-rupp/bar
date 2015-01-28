@@ -19,7 +19,7 @@ AC_DEFUN([AC_MSG_COMPILE],
 dnl --- output log file
 AC_DEFUN([AC_MSG_OUTPUT_LOG],
 [
-  echo --- error log -------------------------------------------------------------------------  
+  echo --- error log -------------------------------------------------------------------------
   cat $1 | while read s; do echo "  $s"; done
   echo ---------------------------------------------------------------------------------------
 ])
@@ -741,7 +741,7 @@ case "$host_os" in
       CPU_CORES=`nproc`
     else
       CPU_CORES=1
-    fi    
+    fi
     ;;
   windows*)
     PLATFORM=WINDOWS
@@ -898,6 +898,9 @@ if test -z "$CC"; then
 fi
 if test -z "$CXX"; then
   AC_PATH_PROGS(CXX,g++ c++)
+fi
+if test -z "$CXX"; then
+  AC_WARN([No C++ compiler - compiling third-party packages may fail])
 fi
 if test -z "$LD"; then
   AC_PATH_PROGS(LD,ld gcc)
@@ -2677,7 +2680,8 @@ if test $ENABLE_BREAKPAD = "yes"; then
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
-        cp -r breakpad/src $cwd/packages/include/breakpad 1>$tmpFile 2>&1
+        install -d $cwd/packages/include/breakpad
+        (cd breakpad/src; find . -type f -name '*.h'|xargs cp --parents -t $cwd/packages/include/breakpad) 1>$tmpFile 2>&1
       fi
       if test $result -eq 1; then
         AC_MSG_RESULT([done])
@@ -2692,7 +2696,7 @@ if test $ENABLE_BREAKPAD = "yes"; then
       STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
       AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed (local)])
 
-      AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/packages/breakpad/src/tools/linux)
+      AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/packages/bin)
     fi
   else
     dnl search for installed breakpad library

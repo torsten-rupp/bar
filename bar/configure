@@ -2846,6 +2846,10 @@ fi
 done
 
 fi
+if test -z "$CXX"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: No C++ compiler - compiling third-party packages may fail" >&5
+$as_echo "$as_me: WARNING: No C++ compiler - compiling third-party packages may fail" >&2;}
+fi
 if test -z "$LD"; then
   for ac_prog in ld gcc
 do
@@ -11459,7 +11463,11 @@ $as_echo "fail (install)" >&6; }
 
           result=0
         fi
-        cp -r breakpad/src $cwd/packages/include/breakpad 1>$tmpFile 2>&1
+set -x
+        install -d $cwd/packages/include/breakpad
+        (cd breakpad/src; find . -type f -name '*.h'|xargs cp --parents -t $cwd/packages/include/breakpad)
+# 1>$tmpFile 2>&1
+set +x
       fi
       if test $result -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
