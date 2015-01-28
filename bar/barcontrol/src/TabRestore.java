@@ -2157,13 +2157,13 @@ public class TabRestore
    */
   class UpdateEntryListThread extends Thread
   {
-    private Object  trigger                = new Object();   // trigger update object
-    private boolean triggeredFlag          = false;
+    private Object  trigger            = new Object();   // trigger update object
+    private boolean triggeredFlag      = false;
 
-    private boolean checkedStorageOnlyFlag = false;
-    private int     entryMaxCount          = 100;
-    private String  entryPattern           = null;
-    private boolean newestEntriesOnlyFlag  = false;
+    private boolean checkedStorageOnly = false;
+    private int     entryMaxCount      = 100;
+    private String  entryPattern       = null;
+    private boolean newestEntriesOnly  = false;
 
     /** create update entry list thread
      */
@@ -2247,25 +2247,25 @@ public class TabRestore
     }
 
     /** trigger update of entry list
-     * @param checkedStorageOnlyFlag checked storage only or null
+     * @param checkedStorageOnly checked storage only or null
      * @param entryPattern new entry pattern or null
-     * @param newestEntriesOnlyFlag flag for newest entries only or null
+     * @param newestEntriesOnly flag for newest entries only or null
      * @param entryMaxCount max. entries in list or null
      */
-    public void triggerUpdate(boolean checkedStorageOnlyFlag, String entryPattern, boolean newestEntriesOnlyFlag, int entryMaxCount)
+    public void triggerUpdate(boolean checkedStorageOnly, String entryPattern, boolean newestEntriesOnly, int entryMaxCount)
     {
       synchronized(trigger)
       {
-        if (   (this.checkedStorageOnlyFlag != checkedStorageOnlyFlag)
+        if (   (this.checkedStorageOnly != checkedStorageOnly)
             || (this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern)
-            || (this.newestEntriesOnlyFlag != newestEntriesOnlyFlag)
+            || (this.newestEntriesOnly != newestEntriesOnly)
             || (this.entryMaxCount != entryMaxCount)
            )
         {
-          this.checkedStorageOnlyFlag = checkedStorageOnlyFlag;
-          this.entryPattern           = entryPattern;
-          this.newestEntriesOnlyFlag  = newestEntriesOnlyFlag;
-          this.entryMaxCount          = entryMaxCount;
+          this.checkedStorageOnly = checkedStorageOnly;
+          this.entryPattern       = entryPattern;
+          this.newestEntriesOnly  = newestEntriesOnly;
+          this.entryMaxCount      = entryMaxCount;
 
           triggeredFlag = true;
           trigger.notify();
@@ -2291,16 +2291,16 @@ public class TabRestore
     }
 
     /** trigger update of entry list
-     * @param checkedStorageOnlyFlag checked storage only or null
-     * @param newestEntriesOnlyFlag flag for newest entries only or null
+     * @param checkedStorageOnly checked storage only or null
+     * @param newestEntriesOnly flag for newest entries only or null
      */
-    public void triggerUpdateCheckedStorageOnly(boolean checkedStorageOnlyFlag)
+    public void triggerUpdateCheckedStorageOnly(boolean checkedStorageOnly)
     {
       synchronized(trigger)
       {
-        if (this.checkedStorageOnlyFlag != checkedStorageOnlyFlag)
+        if (this.checkedStorageOnly != checkedStorageOnly)
         {
-          this.checkedStorageOnlyFlag = checkedStorageOnlyFlag;
+          this.checkedStorageOnly = checkedStorageOnly;
 
           triggeredFlag = true;
           trigger.notify();
@@ -2309,15 +2309,15 @@ public class TabRestore
     }
 
     /** trigger update of entry list
-     * @param newestEntriesOnlyFlag flag for newest entries only or null
+     * @param newestEntriesOnly flag for newest entries only or null
      */
-    public void triggerUpdateNewestEntriesOnly(boolean newestEntriesOnlyFlag)
+    public void triggerUpdateNewestEntriesOnly(boolean newestEntriesOnly)
     {
       synchronized(trigger)
       {
-        if (this.newestEntriesOnlyFlag != newestEntriesOnlyFlag)
+        if (this.newestEntriesOnly != newestEntriesOnly)
         {
-          this.newestEntriesOnlyFlag  = newestEntriesOnlyFlag;
+          this.newestEntriesOnly  = newestEntriesOnly;
 
           triggeredFlag = true;
           trigger.notify();
@@ -2380,11 +2380,11 @@ public class TabRestore
       // update table
       if ((entryPattern != null) && !entryPattern.isEmpty())
       {
-        Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S checkedStorageOnlyFlag=%y entryMaxCount=%d newestEntriesOnlyFlag=%y",
+        Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S checkedStorageOnly=%y entryMaxCount=%d newestEntriesOnly=%y",
                                                                    entryPattern,
-                                                                   checkedStorageOnlyFlag,
+                                                                   checkedStorageOnly,
                                                                    entryMaxCount,
-                                                                   newestEntriesOnlyFlag
+                                                                   newestEntriesOnly
                                                                   ),
                                                0
                                               );
@@ -2842,8 +2842,8 @@ break;
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
-        boolean checkedStorageOnlyFlag = widget.getSelection();
-        updateEntryListThread.triggerUpdateCheckedStorageOnly(checkedStorageOnlyFlag);
+        boolean checkedStorageOnly = widget.getSelection();
+        updateEntryListThread.triggerUpdateCheckedStorageOnly(checkedStorageOnly);
       }
     });
 
@@ -3342,7 +3342,7 @@ break;
           }
 
           // show if table item available and mouse is in the left side
-          if ((tableItem != null) && (mouseEvent.x < 64))
+          if ((tableItem != null) && (mouseEvent.x < table.getBounds().width/2))
           {
             StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
             Label            label;
@@ -4161,8 +4161,8 @@ break;
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
-            boolean newestEntriesOnlyFlag = widget.getSelection();
-            updateEntryListThread.triggerUpdateNewestEntriesOnly(newestEntriesOnlyFlag);
+            boolean newestEntriesOnly = widget.getSelection();
+            updateEntryListThread.triggerUpdateNewestEntriesOnly(newestEntriesOnly);
           }
         });
 
@@ -5535,21 +5535,21 @@ Dprintf.dprintf("");
   /** restore archives
    * @param storageNamesHashSet storage name hash set
    * @param directory destination directory or ""
-   * @param overwriteEntries true to overwrite existing entries
+   * @param overwriteFiles true to overwrite existing files
    */
-  private void restoreArchives(HashSet<String> storageNamesHashSet, String directory, boolean overwriteEntries)
+  private void restoreArchives(HashSet<String> storageNamesHashSet, String directory, boolean overwriteFiles)
   {
     shell.setCursor(waitCursor);
 
     final BusyDialog busyDialog = new BusyDialog(shell,"Restore archives",500,100,null,BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR1);
 
-    new BackgroundTask(busyDialog,new Object[]{storageNamesHashSet,directory,overwriteEntries})
+    new BackgroundTask(busyDialog,new Object[]{storageNamesHashSet,directory,overwriteFiles})
     {
       public void run(final BusyDialog busyDialog, Object userData)
       {
         final HashSet<String> storageNamesHashSet = (HashSet<String>)((Object[])userData)[0];
         final String          directory           = (String         )((Object[])userData)[1];
-        final boolean         overwriteEntries    = (Boolean        )((Object[])userData)[2];
+        final boolean         overwriteFiles      = (Boolean        )((Object[])userData)[2];
 
         int errorCode;
 
@@ -5575,10 +5575,10 @@ Dprintf.dprintf("");
               retryFlag = false;
 
               // start restore
-              command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destination=%'S overwriteFilesFlag=%y",
+              command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destination=%'S overwriteFiles=%y",
                                                                  storageName,
                                                                  directory,
-                                                                 overwriteEntries
+                                                                 overwriteFiles
                                                                 ),
                                              0
                                             );
@@ -5908,24 +5908,24 @@ Dprintf.dprintf("");
   /** restore entries
    * @param entryData entries to restore
    * @param directory destination directory or ""
-   * @param overwriteEntries true to overwrite existing entries
+   * @param overwriteFiles true to overwrite existing files
    */
-  private void restoreEntries(EntryData entryData[], String directory, boolean overwriteEntries)
+  private void restoreEntries(EntryData entryData[], String directory, boolean overwriteFiles)
   {
     shell.setCursor(waitCursor);
 
     final BusyDialog busyDialog = new BusyDialog(shell,"Restore entries",500,100,null,BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR1);
 
-    new BackgroundTask(busyDialog,new Object[]{entryData,directory,overwriteEntries})
+    new BackgroundTask(busyDialog,new Object[]{entryData,directory,overwriteFiles})
     {
       public void run(final BusyDialog busyDialog, Object userData)
       {
         final String[] MAP_FROM = new String[]{"\n","\r","\\"};
         final String[] MAP_TO   = new String[]{"\\n","\\r","\\\\"};
 
-        final EntryData[] entryData_       = (EntryData[])((Object[])userData)[0];
-        final String      directory        = (String     )((Object[])userData)[1];
-        final boolean     overwriteEntries = (Boolean    )((Object[])userData)[2];
+        final EntryData[] entryData_     = (EntryData[])((Object[])userData)[0];
+        final String      directory      = (String     )((Object[])userData)[1];
+        final boolean     overwriteFiles = (Boolean    )((Object[])userData)[2];
 
         int errorCode;
 
@@ -5954,10 +5954,10 @@ Dprintf.dprintf("");
               retryFlag = false;
 
               // start restore
-              command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destination=%'S overwriteFilesFlag=%y name=%'S",
+              command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destination=%'S overwriteFiles=%y name=%'S",
                                                                  entryData.storageName,
                                                                  directory,
-                                                                 overwriteEntries,
+                                                                 overwriteFiles,
                                                                  entryData.name
                                                                 ),
                                              0
