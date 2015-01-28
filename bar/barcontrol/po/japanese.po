@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-27 22:43+0100\n"
+"POT-Creation-Date: 2015-01-28 20:18+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -175,7 +175,7 @@ msgstr ""
 msgid "Select path"
 msgstr ""
 
-#: src/Dialogs.java:3092 src/TabJobs.java:9666 src/TabJobs.java:10290
+#: src/Dialogs.java:3092 src/TabJobs.java:9666 src/TabJobs.java:10291
 msgid "Save"
 msgstr ""
 
@@ -1115,7 +1115,7 @@ msgstr ""
 msgid "New job"
 msgstr ""
 
-#: src/TabJobs.java:6535 src/TabJobs.java:10236 src/TabJobs.java:10329
+#: src/TabJobs.java:6535 src/TabJobs.java:10236 src/TabJobs.java:10330
 #: src/TabRestore.java:5122
 msgid "Add"
 msgstr ""
@@ -1302,13 +1302,13 @@ msgstr ""
 msgid "Edit storage file name"
 msgstr ""
 
-#: src/TabJobs.java:9852 src/TabJobs.java:9869 src/TabJobs.java:10272
-#: src/TabJobs.java:10310 src/TabJobs.java:10365
+#: src/TabJobs.java:9852 src/TabJobs.java:9869 src/TabJobs.java:10273
+#: src/TabJobs.java:10311 src/TabJobs.java:10367
 msgid "yes"
 msgstr ""
 
-#: src/TabJobs.java:9852 src/TabJobs.java:9869 src/TabJobs.java:10272
-#: src/TabJobs.java:10310 src/TabJobs.java:10365
+#: src/TabJobs.java:9852 src/TabJobs.java:9869 src/TabJobs.java:10273
+#: src/TabJobs.java:10311 src/TabJobs.java:10367
 msgid "no"
 msgstr ""
 
@@ -1445,7 +1445,7 @@ msgstr ""
 msgid "New schedule"
 msgstr ""
 
-#: src/TabJobs.java:10258
+#: src/TabJobs.java:10259
 #, java-format
 msgid ""
 "Cannot create new schedule:\n"
@@ -1453,15 +1453,15 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:10290
+#: src/TabJobs.java:10291
 msgid "Edit schedule"
 msgstr ""
 
-#: src/TabJobs.java:10329
+#: src/TabJobs.java:10330
 msgid "Clone schedule"
 msgstr ""
 
-#: src/TabJobs.java:10351
+#: src/TabJobs.java:10353
 #, java-format
 msgid ""
 "Cannot clone new schedule:\n"
@@ -1469,12 +1469,12 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:10381
+#: src/TabJobs.java:10383
 #, java-format
 msgid "Delete {0} selected schedule {0,choice,1#entry|1<entries}?"
 msgstr ""
 
-#: src/TabJobs.java:10392
+#: src/TabJobs.java:10394
 #, java-format
 msgid ""
 "Cannot delete schedule:\n"

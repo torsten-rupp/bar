@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-27 22:43+0100\n"
+"POT-Creation-Date: 2015-01-28 20:18+0100\n"
 "PO-Revision-Date: 2015-01-18 10:00+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -183,7 +183,7 @@ msgstr "Verschlüsselungspasswort:"
 msgid "Select path"
 msgstr "Pfad auswählen"
 
-#: src/Dialogs.java:3092 src/TabJobs.java:9666 src/TabJobs.java:10290
+#: src/Dialogs.java:3092 src/TabJobs.java:9666 src/TabJobs.java:10291
 msgid "Save"
 msgstr "Speichern"
 
@@ -1228,7 +1228,7 @@ msgstr "Eintrag aus der Zeitplanung entfernen."
 msgid "New job"
 msgstr "Neuer Auftrag"
 
-#: src/TabJobs.java:6535 src/TabJobs.java:10236 src/TabJobs.java:10329
+#: src/TabJobs.java:6535 src/TabJobs.java:10236 src/TabJobs.java:10330
 #: src/TabRestore.java:5122
 msgid "Add"
 msgstr "Hinzufügen"
@@ -1455,14 +1455,14 @@ msgstr "MIt Ziehen und Ablegen, um einen Namensteil hinzu zu fügen."
 msgid "Edit storage file name"
 msgstr "Archivedateiname editieren"
 
-#: src/TabJobs.java:9852 src/TabJobs.java:9869 src/TabJobs.java:10272
-#: src/TabJobs.java:10310 src/TabJobs.java:10365
+#: src/TabJobs.java:9852 src/TabJobs.java:9869 src/TabJobs.java:10273
+#: src/TabJobs.java:10311 src/TabJobs.java:10367
 #, fuzzy
 msgid "yes"
 msgstr "Bytes"
 
-#: src/TabJobs.java:9852 src/TabJobs.java:9869 src/TabJobs.java:10272
-#: src/TabJobs.java:10310 src/TabJobs.java:10365
+#: src/TabJobs.java:9852 src/TabJobs.java:9869 src/TabJobs.java:10273
+#: src/TabJobs.java:10311 src/TabJobs.java:10367
 msgid "no"
 msgstr ""
 
@@ -1601,7 +1601,7 @@ msgstr "markiert"
 msgid "New schedule"
 msgstr "Neuer Zeitplan"
 
-#: src/TabJobs.java:10258
+#: src/TabJobs.java:10259
 #, java-format
 msgid ""
 "Cannot create new schedule:\n"
@@ -1612,16 +1612,16 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:10290
+#: src/TabJobs.java:10291
 #, fuzzy
 msgid "Edit schedule"
 msgstr "Eintrag in der Zeitplanung ändern."
 
-#: src/TabJobs.java:10329
+#: src/TabJobs.java:10330
 msgid "Clone schedule"
 msgstr "Zeitplanung duplizieren."
 
-#: src/TabJobs.java:10351
+#: src/TabJobs.java:10353
 #, java-format
 msgid ""
 "Cannot clone new schedule:\n"
@@ -1632,13 +1632,13 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:10381
+#: src/TabJobs.java:10383
 #, java-format
 msgid "Delete {0} selected schedule {0,choice,1#entry|1<entries}?"
 msgstr ""
 "{0} {0,choice,1#ausgewählte Zeitplanung|1<ausgewählte Zeitplanungen} löschen?"
 
-#: src/TabJobs.java:10392
+#: src/TabJobs.java:10394
 #, java-format
 msgid ""
 "Cannot delete schedule:\n"
