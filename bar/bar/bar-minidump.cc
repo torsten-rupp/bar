@@ -128,11 +128,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     UNUSED_VARIABLE(codeModule);
     UNUSED_VARIABLE(systemInfo);
 
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     (*symbolFileName) = mSymbolFileName;
-  //asm("int3");
 
-    if (codeModule->code_file().find("bar-debug") == codeModule->code_file().length()-9)
+    if (codeModule->debug_file().find("bar") == 0)
     {
       // read symbol file into C++-string
       string symbolDataString;
