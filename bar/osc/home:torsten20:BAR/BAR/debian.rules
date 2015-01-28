@@ -39,6 +39,7 @@ build-stamp:
 	ln -s `find packages -maxdepth 1 -type d -name 'mxml-*'|head -1` mxml
 	ln -s `find packages -maxdepth 1 -type d -name 'libcdio-*'|head -1` libcdio
 	ln -s `find packages -maxdepth 1 -type d -name 'pcre-*'|head -1` pcre
+	ln -s `find packages -maxdepth 1 -type d -name 'breakpad'|head -1` breakpad
 	ls -la
 	ls -la packages
 	./configure --enable-package-check

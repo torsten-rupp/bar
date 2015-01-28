@@ -116,6 +116,11 @@ mkdir packages
   (cd packages; tar xjf pcre-*.tar.bz2)
   ln -s `find packages -type d -name 'pcre-*'|head -1` pcre
 )
+(
+  cp %{_sourcedir}/breakpad.tar.bz2 packages
+  (cd packages; tar xjf breakpad.tar.bz2)
+  ln -s `find packages -type d -name 'breakpad'|head -1` breakpad
+)
 
 %configure --enable-package-check
 %{__make} OPTFLAGS="%{optflags} ${rpm_opt_flags}"
