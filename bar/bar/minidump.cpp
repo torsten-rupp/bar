@@ -326,7 +326,8 @@ bool MiniDump_init(void)
     initFlag = TRUE;
   #endif /* HAVE_BREAKPAD */
 
-crash();
+// test crash
+//{ volatile int* a = (int*)(NULL); *a = 1; }
 
   return TRUE;
 }
