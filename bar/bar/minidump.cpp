@@ -67,6 +67,137 @@ LOCAL void printString(const char *s)
   (void)write(STDERR_FILENO,s,strlen(s));
 }
 
+LOCAL char tarBlock[512];
+
+/***********************************************************************\
+* Name   : writeTarHeader
+* Purpose: write tar archive header
+* Input  : handle - tar file handle
+*          name   - entry name
+*          size   - size of data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void writeTarHeader(int handle, const char *name, ulong size)
+{
+  // see http://www.gnu.org/software/tar/manual/tar.html#SEC183
+  typedef struct
+  {                              /* byte offset */
+    char name[100];               /*   0 */
+    char mode[8];                 /* 100 */
+    char uid[8];                  /* 108 */
+    char gid[8];                  /* 116 */
+    char size[12];                /* 124 */
+    char mtime[12];               /* 136 */
+    char chksum[8];               /* 148 */
+    char typeflag;                /* 156 */
+    char linkname[100];           /* 157 */
+    char magic[6];                /* 257 */
+    char version[2];              /* 263 */
+    char uname[32];               /* 265 */
+    char gname[32];               /* 297 */
+    char devmajor[8];             /* 329 */
+    char devminor[8];             /* 337 */
+    char prefix[155];             /* 345 */
+    char pad[12];                 /* 500 */
+  } TARHeader;
+
+  TARHeader      *tarHeader = (TARHeader*)tarBlock;
+  struct timeval tv;
+  uint           z;
+  uint           chksum;
+
+  // init header
+  memset(tarHeader,0,sizeof(TARHeader));
+  strncpy(tarHeader->name,name,sizeof(tarHeader->name));
+  snprintf(tarHeader->mode,sizeof(tarHeader->mode),"%07o",0664);
+  snprintf(tarHeader->size,sizeof(tarHeader->size),"%011lo",size);
+  gettimeofday(&tv,NULL);
+  snprintf(tarHeader->mtime,sizeof(tarHeader->mtime),"%011lo",tv.tv_sec);
+  memcpy(&tarHeader->magic[0],"ustar ",sizeof(tarHeader->magic));
+  tarHeader->version[0] = ' ';
+  memcpy(&tarHeader->chksum[0],"        ",sizeof(tarHeader->chksum));
+  tarHeader->typeflag = '0';
+
+  // calculate checksum
+  chksum = 0;
+  for (z = 0; z < sizeof(tarBlock); z++)
+  {
+    chksum += (uint)tarBlock[z];
+  }
+  snprintf(tarHeader->chksum,sizeof(tarHeader->chksum),"%07o",chksum);
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  // write header data
+  (void)write(handle,tarHeader,sizeof(TARHeader));
+}
+
+/***********************************************************************\
+* Name   : addToTarArchive
+* Purpose: add data block to tar archive
+* Input  : handle - tar file handle
+*          name   - entry name
+*          buffer - data
+*          size   - size of data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void addToTarArchive(int handle, const char *name, const void *buffer, ulong size)
+{
+  ulong n;
+
+  // write header
+  writeTarHeader(handle,name,size);
+
+  // write data
+  while (size > 0)
+  {
+    n = (size > sizeof(tarBlock)) ? sizeof(tarBlock) : size;
+
+    memcpy(&tarBlock[0],buffer,n);
+    memset(&tarBlock[n],0,sizeof(tarBlock)-n);
+    (void)write(handle,tarBlock,sizeof(tarBlock));
+
+    size -= n;
+  }
+}
+
+/***********************************************************************\
+* Name   : copyToTarArchive
+* Purpose: copy file to tar archive
+* Input  : handle     - tar file handle
+*          name       - entry name
+*          fromHandle - file handle
+*          size       - size of file
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void copyToTarArchive(int handle, const char *name, int fromHandle, ulong size)
+{
+  ulong n;
+
+  // write header
+  writeTarHeader(handle,name,size);
+
+  // write data
+  while (size > 0)
+  {
+    n = (size > sizeof(tarBlock)) ? sizeof(tarBlock) : size;
+
+    (void)read(fromHandle,&tarBlock[0],n);
+    memset(&tarBlock[n],0,sizeof(tarBlock)-n);
+    (void)write(handle,tarBlock,sizeof(tarBlock));
+
+    size -= n;
+  }
+}
+
 /***********************************************************************\
 * Name   : minidumpCallback
 * Purpose: minidump call back
@@ -83,6 +214,8 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
                             bool                                      succeeded
                            )
 {
+  int    handle;
+  off_t  n;
   struct utsname utsname;
 
   #define __TO_STRING(z) __TO_STRING_TMP(z)
@@ -92,17 +225,40 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
   #define VERSION_SVN_STRING __TO_STRING(VERSION_SVN)
   #define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING " (rev. " VERSION_SVN_STRING ")"
 
-  close(minidumpFileDescriptor);
-
-  uname(&utsname);
+  UNUSED_VARIABLE(&minidumpDescriptor);
+  UNUSED_VARIABLE(context);
 
   // Note: do not use fprintf; it does not work here
+
+  // create crash dump tar file (tar archive)
+  handle = open(minidumpFileName,O_CREAT|O_RDWR,0660);
+  if (handle != -1)
+  {
+addToTarArchive(handle,"hello","hello",5);
+
+    // add mini dump file
+    n = lseek(minidumpFileDescriptor,0,SEEK_END);
+    lseek(minidumpFileDescriptor,0,SEEK_SET);
+    copyToTarArchive(handle,"bar.mdmp",minidumpFileDescriptor,n);
+
+    // add symbol file
+//    addToTarArchive(handle,"bar.sym",NULL,5);
+
+    // close crash dump file
+    close(handle);
+  }
+
+  // output info
+  uname(&utsname);
   printString("+++ BAR CRASH DUMP ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
   printString("Dump file   : "); printString(minidumpFileName); printString("\n");
   printString("Version     : "); printString(VERSION_STRING); printString("\n");
   printString("OS          : "); printString(utsname.sysname); printString(", "); printString(utsname.release); printString(", "); printString(utsname.machine);  printString("\n");
   printString("Please send the crash dump file and this information to torsten.rupp@gmx.net\n");
   printString("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+
+  // free resources
+  close(minidumpFileDescriptor);
 
   return succeeded;
 
@@ -117,7 +273,7 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
 
 /*---------------------------------------------------------------------*/
 
-//LOCAL void crash() { volatile int* a = (int*)(NULL); *a = 1; }
+LOCAL void crash() { volatile int* a = (int*)(NULL); *a = 1; }
 
 bool MiniDump_init(void)
 {
@@ -130,13 +286,13 @@ bool MiniDump_init(void)
              MINIDUMP_FILENAME
     );
 
-    // open minidump file./src/google_breakpad/processor/minidump_processor.h
+    // open temporary minidump file
     minidumpFileDescriptor = open(minidumpFileName,O_CREAT|O_RDWR,0660);
     if (minidumpFileDescriptor == -1)
     {
-      (void)unlink(minidumpFileName);
       return FALSE;
     }
+    unlink(minidumpFileName);
 
     // init minidump
     minidumpDescriptor = new google_breakpad::MinidumpDescriptor(minidumpFileDescriptor);
@@ -164,7 +320,7 @@ bool MiniDump_init(void)
     initFlag = TRUE;
   #endif /* HAVE_BREAKPAD */
 
-//crash();
+crash();
 
   return TRUE;
 }
