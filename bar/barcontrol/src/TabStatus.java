@@ -1013,7 +1013,7 @@ public class TabStatus
     {
       widgetButtonStart = Widgets.newButton(composite,null,BARControl.tr("Start\u2026"));
       widgetButtonStart.setToolTipText(BARControl.tr("Start selected job."));
-      Widgets.layout(widgetButtonStart,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetButtonStart,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonStart.setEnabled(false);
       widgetButtonStart.addSelectionListener(new SelectionListener()
       {
@@ -1029,7 +1029,7 @@ public class TabStatus
 
       widgetButtonAbort = Widgets.newButton(composite,null,BARControl.tr("Abort\u2026"));
       widgetButtonAbort.setToolTipText(BARControl.tr("Abort selected job."));
-      Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonAbort.setEnabled(false);
       widgetButtonAbort.addSelectionListener(new SelectionListener()
       {
@@ -1060,7 +1060,7 @@ public class TabStatus
 
       widgetButtonSuspendContinue = Widgets.newButton(composite,null,BARControl.tr("Continue"));
       widgetButtonSuspendContinue.setToolTipText(BARControl.tr("Suspend selected job for an infinite time."));
-      Widgets.layout(widgetButtonSuspendContinue,0,3,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{BARControl.tr("Suspend"),BARControl.tr("Continue")}));
+      Widgets.layout(widgetButtonSuspendContinue,0,3,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{BARControl.tr("Suspend"),BARControl.tr("Continue")}));
       widgetButtonSuspendContinue.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1075,7 +1075,7 @@ public class TabStatus
 
       widgetButtonVolume = Widgets.newButton(composite,null,BARControl.tr("Volume"));
       widgetButtonVolume.setToolTipText(BARControl.tr("Click when a new volume is available in drive."));
-      Widgets.layout(widgetButtonVolume,0,4,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetButtonVolume,0,4,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonVolume.setEnabled(false);
       widgetButtonVolume.addSelectionListener(new SelectionListener()
       {
