@@ -79,12 +79,8 @@ typedef enum
    | SET_VALUE(WEEKDAY_SUN) \
   )
 
-//#define SCHEDULE_ANY             -1
-//#define SCHEDULE_WEEKDAY_SET_ANY WEEKDAY_SET_ANY
-
 #define DATE_ANY -1
 #define TIME_ANY -1
-
 
 // password mode
 typedef enum

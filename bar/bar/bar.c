@@ -169,6 +169,7 @@ typedef enum
 } Commands;
 
 /***************************** Variables *******************************/
+
 GlobalOptions          globalOptions;
 String                 tmpDirectory;
 IndexHandle            *indexHandle;
