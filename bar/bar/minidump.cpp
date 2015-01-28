@@ -33,7 +33,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define MINIDUMP_FILENAME "bar.mdmp"
+#define DUMP_FILENAME "bar.dump"
 
 /***************************** Datatypes *******************************/
 
@@ -72,15 +72,15 @@ LOCAL char tarBlock[512];
 /***********************************************************************\
 * Name   : writeTarHeader
 * Purpose: write tar archive header
-* Input  : handle - tar file handle
-*          name   - entry name
-*          size   - size of data
+* Input  : tarHandle - tar file handle
+*          name      - entry name
+*          size      - size of data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void writeTarHeader(int handle, const char *name, ulong size)
+LOCAL void writeTarHeader(int tarHandle, const char *name, ulong size)
 {
   // see http://www.gnu.org/software/tar/manual/tar.html#SEC183
   typedef struct
@@ -129,9 +129,8 @@ LOCAL void writeTarHeader(int handle, const char *name, ulong size)
   }
   snprintf(tarHeader->chksum,sizeof(tarHeader->chksum),"%07o",chksum);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // write header data
-  (void)write(handle,tarHeader,sizeof(TARHeader));
+  (void)write(tarHandle,tarHeader,sizeof(TARHeader));
 }
 
 /***********************************************************************\
@@ -146,22 +145,25 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addToTarArchive(int handle, const char *name, const void *buffer, ulong size)
+LOCAL void addToTarArchive(int tarHandle, const char *name, const void *buffer, ulong size)
 {
+  byte  *p;
   ulong n;
 
   // write header
-  writeTarHeader(handle,name,size);
+  writeTarHeader(tarHandle,name,size);
 
   // write data
+  p = (byte*)buffer;
   while (size > 0)
   {
     n = (size > sizeof(tarBlock)) ? sizeof(tarBlock) : size;
 
-    memcpy(&tarBlock[0],buffer,n);
+    memcpy(&tarBlock[0],p,n);
     memset(&tarBlock[n],0,sizeof(tarBlock)-n);
-    (void)write(handle,tarBlock,sizeof(tarBlock));
+    (void)write(tarHandle,tarBlock,sizeof(tarBlock));
 
+    p += n;
     size -= n;
   }
 }
@@ -169,30 +171,30 @@ LOCAL void addToTarArchive(int handle, const char *name, const void *buffer, ulo
 /***********************************************************************\
 * Name   : copyToTarArchive
 * Purpose: copy file to tar archive
-* Input  : handle     - tar file handle
-*          name       - entry name
-*          fromHandle - file handle
-*          size       - size of file
+* Input  : tarHandle - tar file handle
+*          name      - entry name
+*          handle    - file handle
+*          size      - size of file
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void copyToTarArchive(int handle, const char *name, int fromHandle, ulong size)
+LOCAL void copyToTarArchive(int tarHandle, const char *name, int handle, ulong size)
 {
   ulong n;
 
   // write header
-  writeTarHeader(handle,name,size);
+  writeTarHeader(tarHandle,name,size);
 
   // write data
   while (size > 0)
   {
     n = (size > sizeof(tarBlock)) ? sizeof(tarBlock) : size;
 
-    (void)read(fromHandle,&tarBlock[0],n);
+    (void)read(handle,&tarBlock[0],n);
     memset(&tarBlock[n],0,sizeof(tarBlock)-n);
-    (void)write(handle,tarBlock,sizeof(tarBlock));
+    (void)write(tarHandle,tarBlock,sizeof(tarBlock));
 
     size -= n;
   }
@@ -214,6 +216,9 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
                             bool                                      succeeded
                            )
 {
+  extern int _minidump_symbols_start __attribute__((weak));
+  extern int _minidump_symbols_size __attribute__((weak));
+
   int    handle;
   off_t  n;
   struct utsname utsname;
@@ -230,19 +235,20 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
 
   // Note: do not use fprintf; it does not work here
 
-  // create crash dump tar file (tar archive)
+  // create crash dump file (tar archive)
   handle = open(minidumpFileName,O_CREAT|O_RDWR,0660);
   if (handle != -1)
   {
-addToTarArchive(handle,"hello","hello",5);
-
     // add mini dump file
     n = lseek(minidumpFileDescriptor,0,SEEK_END);
     lseek(minidumpFileDescriptor,0,SEEK_SET);
     copyToTarArchive(handle,"bar.mdmp",minidumpFileDescriptor,n);
 
     // add symbol file
-//    addToTarArchive(handle,"bar.sym",NULL,5);
+    if ((&_minidump_symbols_start != NULL) && (((size_t)&_minidump_symbols_size) > 0))
+    {
+      addToTarArchive(handle,"bar.sym.bz2",&_minidump_symbols_start,(size_t)&_minidump_symbols_size);
+    }
 
     // close crash dump file
     close(handle);
@@ -283,7 +289,7 @@ bool MiniDump_init(void)
              "%s%c%s",
              FILE_TMP_DIRECTORY,
              FILES_PATHNAME_SEPARATOR_CHAR,
-             MINIDUMP_FILENAME
+             DUMP_FILENAME
     );
 
     // open temporary minidump file
