@@ -6,8 +6,13 @@
   * barcontrol: added new/clone/rename/delete to status tab
     option menu
   * added pre-/post-command
+  * improved crash reporting
   * barcontrol: added scripts
   * barcontrol: added archive tree view to restore tab
+  * added "entities" for set of created storage files:
+    keep set of storage in the internal database and show
+    created backups in a tree view in barcontrol
+  * started localization support (English, German, Japanese)
 
 2014-09-26 0.18c
   * fixed server network connection wait time in pselect();
