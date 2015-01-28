@@ -10237,7 +10237,7 @@ throw new Error("NYI");
     {
       String[] resultErrorMessage = new String[1];
       ValueMap resultMap          = new ValueMap();
-      int error = BARServer.executeCommand(StringParser.format("SCHEDULE_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
+      int error = BARServer.executeCommand(StringParser.format("SCHEDULE_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
                                                                selectedJobData.uuid,
                                                                scheduleData.getDate(),
                                                                scheduleData.getWeekDays(),
@@ -10247,6 +10247,7 @@ throw new Error("NYI");
                                                                scheduleData.minKeep,
                                                                scheduleData.maxKeep,
                                                                scheduleData.maxAge,
+                                                               scheduleData.noStorage,
                                                                scheduleData.enabled
                                                               ),
                                            0,
@@ -10330,7 +10331,7 @@ throw new Error("NYI");
       {
         String[] resultErrorMessage = new String[1];
         ValueMap resultMap          = new ValueMap();
-        int error = BARServer.executeCommand(StringParser.format("SCHEDULE_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d enabledFlag=%y",
+        int error = BARServer.executeCommand(StringParser.format("SCHEDULE_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
                                                                  selectedJobData.uuid,
                                                                  newScheduleData.getDate(),
                                                                  newScheduleData.getWeekDays(),
@@ -10340,6 +10341,7 @@ throw new Error("NYI");
                                                                  newScheduleData.minKeep,
                                                                  newScheduleData.maxKeep,
                                                                  newScheduleData.maxAge,
+                                                                 newScheduleData.noStorage,
                                                                  newScheduleData.enabled
                                                                 ),
                                              0,
