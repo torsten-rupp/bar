@@ -1182,11 +1182,11 @@ public class BARControl
     }
   }
 
-  /** get job id
+  /** get job UUID
    * @param jobName job name
-   * @return job id or -1 if not found
+   * @return job UUID or null if not found
    */
-  private static int getJobId(String jobName)
+  private static String getJobUUID(String jobName)
   {
     String[]            errorMessage  = new String[1];
     ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
@@ -1199,12 +1199,12 @@ public class BARControl
     {
       for (ValueMap resultMap : resultMapList)
       {
-        int    jobId = resultMap.getInt   ("jobId");
-        String name  = resultMap.getString("name" );
+        String jobUUID = resultMap.getString("jobUUID");
+        String name    = resultMap.getString("name" );
 
         if (jobName.equalsIgnoreCase(name))
         {
-          return jobId;
+          return jobUUID;
         }
       }
     }
@@ -1218,7 +1218,7 @@ public class BARControl
       }
     }
 
-    return -1;
+    return null;
   }
 
   /** server/password dialog
@@ -1734,9 +1734,9 @@ System.exit(1);
           String[] errorMessage  = new String[1];
           int      errorCode;
 
-          // get job id
-          int jobId = getJobId(Settings.runJobName);
-          if (jobId < 0)
+          // get job UUID
+          String jobUUID = getJobUUID(Settings.runJobName);
+          if (jobUUID == null)
           {
             printError("job '%s' not found",Settings.runJobName);
             BARServer.disconnect();
@@ -1744,8 +1744,8 @@ System.exit(1);
           }
 
           // start job
-          errorCode = BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=%s",
-                                                                   jobId,
+          errorCode = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s type=%s",
+                                                                   jobUUID,
                                                                    Settings.archiveType.toString()
                                                                   ),
                                                0,
@@ -2047,8 +2047,8 @@ System.exit(1);
           int      errorCode;
 
           // get job id
-          int jobId = getJobId(Settings.abortJobName);
-          if (jobId < 0)
+          String jobUUID = getJobUUID(Settings.abortJobName);
+          if (jobUUID == null)
           {
             printError("job '%s' not found",Settings.abortJobName);
             BARServer.disconnect();
@@ -2056,7 +2056,7 @@ System.exit(1);
           }
 
           // abort job
-          errorCode = BARServer.executeCommand(StringParser.format("JOB_ABORT jobId=%d",jobId),
+          errorCode = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",jobUUID),
                                                0,
                                                errorMessage
                                               );
@@ -2122,7 +2122,7 @@ System.exit(1);
           for (ValueMap resultMap_ : resultMapList)
           {
             // get data
-            int    jobId                  = resultMap_.getInt   ("jobId"                 );
+            String jobUUID                = resultMap_.getString("jobUUID"               );
             String name                   = resultMap_.getString("name"                  );
             String state                  = resultMap_.getString("state"                 );
             String archiveType            = resultMap_.getString("archiveType"           );
@@ -2147,8 +2147,7 @@ System.exit(1);
               cryptPasswordMode = "-";
             }
 
-            System.out.println(String.format("%2d: %-40s %-10s %-11s %12d %-25s %-12s %-10s %-8s %s %8d",
-                                             jobId,
+            System.out.println(String.format("%-40s %-10s %-11s %12d %-25s %-12s %-10s %-8s %s %8d",
                                              name,
                                              (serverState == null)?state:serverState,
                                              type,
