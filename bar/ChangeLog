@@ -1,4 +1,4 @@
-2014-??-?? 0.19
+2015-??-?? 0.19
   * added LZO compression
   * added LZ4 compression
   * do not modify atime of files when creating or compare
@@ -13,6 +13,9 @@
     keep set of storage in the internal database and show
     created backups in a tree view in barcontrol
   * started localization support (English, German, Japanese)
+  * added no-storage to schedule: schedule just to create
+    .bid file
+  * improved crash dump support: include symbol file
 
 2014-09-26 0.18c
   * fixed server network connection wait time in pselect();
