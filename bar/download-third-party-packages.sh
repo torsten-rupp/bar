@@ -51,8 +51,8 @@ libssh2Flag=0
 gnutlsFlag=0
 libcdioFlag=0
 pcreFlag=0
-pthreadsW32Flag=0
 breakpadFlag=0
+pthreadsW32Flag=0
 epmFlag=0
 launch4jFlag=0
 jreWindowsFlag=0
@@ -150,13 +150,13 @@ while test $# != 0; do
           allFlag=0
           libcdioFlag=1
           ;;
-        breakpad|minidump)
-          allFlag=0
-          breakpadFlag=1
-          ;;
         pcre)
           allFlag=0
           pcreFlag=1
+          ;;
+        breakpad|minidump)
+          allFlag=0
+          breakpadFlag=1
           ;;
         pthreads-w32|pthreads-W32|pthreadsw32|pthreadsW32)
           allFlag=0
@@ -245,13 +245,13 @@ while test $# != 0; do
       allFlag=0
       libcdioFlag=1
       ;;
-    breakpad|minidump)
-      allFlag=0
-      breakpadFlag=1
-      ;;
     pcre)
       allFlag=0
       pcreFlag=1
+      ;;
+    breakpad|minidump)
+      allFlag=0
+      breakpadFlag=1
       ;;
     pthreads-w32|pthreads-W32|pthreadsw32|pthreadsW32)
       allFlag=0
@@ -297,11 +297,11 @@ if test $helpFlag -eq 1; then
   $ECHO " gnutls"
   $ECHO " libcdio"
   $ECHO " pcre"
+  $ECHO " breakpad"
   $ECHO ""
   $ECHO "Additional packages:"
   $ECHO ""
   $ECHO " epm"
-  $ECHO " breakpad"
   $ECHO " launch4j"
   $ECHO " jre-windows"
   exit 0
@@ -723,24 +723,6 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  if test $breakpadFlag -eq 1; then
-    # breakpad
-    (
-     if test -n "$destination"; then
-       cd $destination
-     else
-       cd $tmpDirectory
-     fi
-
-     if test ! -d breakpad; then
-       $ECHO_NO_NEW_LINE "Checkout 'http://google-breakpad.googlecode.com/svn/trunk'..."
-       $SVN checkout 'http://google-breakpad.googlecode.com/svn/trunk' breakpad >/dev/null
-       $ECHO "done"
-     fi
-    )
-    $LN -f -s $tmpDirectory/breakpad breakpad
-  fi
-
   if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
     # pcre
     (
@@ -758,6 +740,24 @@ if test $cleanFlag -eq 0; then
      fi
     )
     $LN -f -s $tmpDirectory/pcre-$PCRE_VERSION pcre
+  fi
+
+  if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
+    # breakpad
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+
+     if test ! -d breakpad; then
+       $ECHO_NO_NEW_LINE "Checkout 'http://google-breakpad.googlecode.com/svn/trunk'..."
+       $SVN checkout 'http://google-breakpad.googlecode.com/svn/trunk' breakpad >/dev/null
+       $ECHO "done"
+     fi
+    )
+    $LN -f -s $tmpDirectory/breakpad breakpad
   fi
 
   if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
@@ -958,16 +958,16 @@ else
     $RMF libcdio
   fi
 
-  if test $breakpadFlag -eq 1; then
-    # breakpad
-    $RMRF $tmpDirectory/breakpad
-    $RMF breakpad
-  fi
-
   if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
     # pcre
     $RMRF $tmpDirectory/pcre-*
     $RMF pcre
+  fi
+
+  if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
+    # breakpad
+    $RMRF $tmpDirectory/breakpad
+    $RMF breakpad
   fi
 
   if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
