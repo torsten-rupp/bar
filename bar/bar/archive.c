@@ -3955,9 +3955,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList,archiveEntryInfo->image.byteBuffer,{ free(archiveEntryInfo->image.byteBuffer); });
   archiveEntryInfo->image.deltaBufferSize = MAX_BUFFER_SIZE;
   archiveEntryInfo->image.deltaBuffer = (byte*)malloc(archiveEntryInfo->image.deltaBufferSize);
-  AUTOFREE_ADD(&autoFreeList,archiveEntryInfo->image.byteBuffer,{ free(archiveEntryInfo->image.byteBuffer); });
   if (archiveEntryInfo->image.deltaBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -4737,12 +4737,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.byteBuffer,{ free(archiveEntryInfo->hardLink.byteBuffer); });
   archiveEntryInfo->hardLink.deltaBufferSize = MAX_BUFFER_SIZE;
   archiveEntryInfo->hardLink.deltaBuffer = (byte*)malloc(archiveEntryInfo->hardLink.deltaBufferSize);
   if (archiveEntryInfo->hardLink.deltaBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.deltaBuffer,{ free(archiveEntryInfo->hardLink.deltaBuffer); });
 
   // get source for delta-compression
   if (deltaCompressFlag)
@@ -6214,9 +6216,9 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->image.byteBuffer,{ free(archiveEntryInfo->image.byteBuffer); });
   archiveEntryInfo->image.deltaBufferSize = MAX_BUFFER_SIZE;
   archiveEntryInfo->image.deltaBuffer = (byte*)malloc(archiveEntryInfo->image.deltaBufferSize);
-  AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->image.byteBuffer,{ free(archiveEntryInfo->image.byteBuffer); });
   if (archiveEntryInfo->image.deltaBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -7473,9 +7475,9 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->hardLink.byteBuffer,{ free(archiveEntryInfo->hardLink.byteBuffer); });
   archiveEntryInfo->hardLink.deltaBufferSize = MAX_BUFFER_SIZE;
   archiveEntryInfo->hardLink.deltaBuffer = (byte*)malloc(archiveEntryInfo->hardLink.deltaBufferSize);
-  AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->hardLink.byteBuffer,{ free(archiveEntryInfo->hardLink.byteBuffer); });
   if (archiveEntryInfo->hardLink.deltaBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
