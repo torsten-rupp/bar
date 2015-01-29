@@ -115,6 +115,7 @@ void __dprintf__(const char *__fileName__,
 {
   va_list arguments;
 
+  fprintf(stdout,"DEBUG %s, %u: ",__fileName__,__lineNb__);
   va_start(arguments,format);
   vfprintf(stdout,format,arguments);
   va_end(arguments);
@@ -375,7 +376,7 @@ void debugAddResourceTrace(const char *__fileName__,
       #ifdef HAVE_BACKTRACE
         debugDumpCurrentStackTrace(stderr,"",0);
       #endif /* HAVE_BACKTRACE */
-      HALT_INTERNAL_ERROR("");
+      HALT_INTERNAL_ERROR("add resource trace fail");
     }
 
     // find resource in free-list; reuse or allocate new debug node
@@ -450,7 +451,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
         debugDumpStackTrace(stderr,"allocated at",2,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize);
         debugDumpStackTrace(stderr,"deleted at",2,debugResourceNode->deleteStackTrace,debugResourceNode->deleteStackTraceSize);
       #endif /* HAVE_BACKTRACE */
-      HALT_INTERNAL_ERROR("");
+      HALT_INTERNAL_ERROR("remove resource trace fail");
     }
 
     // remove resource from allocated list, add resource to free-list, shorten list
@@ -489,7 +490,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
       #ifdef HAVE_BACKTRACE
         debugDumpCurrentStackTrace(stderr,"",0);
       #endif /* HAVE_BACKTRACE */
-      HALT_INTERNAL_ERROR("");
+      HALT_INTERNAL_ERROR("remove resource trace fail");
     }
   }
   pthread_mutex_unlock(&debugResourceLock);
@@ -548,7 +549,7 @@ void debugCheckResourceTrace(const char *__fileName__,
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
       }
-      HALT_INTERNAL_ERROR("");
+      HALT_INTERNAL_ERROR("check resource trace fail");
     }
   }
   pthread_mutex_unlock(&debugResourceLock);
