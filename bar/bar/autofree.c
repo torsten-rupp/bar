@@ -208,7 +208,7 @@ void __AutoFree_remove(const char   *__fileName__,
                 resource
                );
       #endif /* not NDEBUG */
-      HALT_INTERNAL_ERROR("");
+      HALT_INTERNAL_ERROR("auto-free remove fail");
     }
   }
   pthread_mutex_unlock(&autoFreeList->lock);
