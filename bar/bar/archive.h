@@ -90,6 +90,8 @@ typedef Errors(*ArchiveNewFunction)(void        *userData,
 *          entityId     - database id of entity
 *          storageId    - database id of storage
 *          fileName     - archive file name
+*          entries      - number of entries
+*          size         - size of archive [bytes]
 *          partNumber   - part number or -1 if no parts
 *          lastPartFlag - TRUE iff last archive part, FALSE
 *                         otherwise
@@ -103,6 +105,8 @@ typedef Errors(*ArchiveCreatedFunction)(void        *userData,
                                         DatabaseId  entityId,
                                         DatabaseId  storageId,
                                         String      fileName,
+                                        uint64      entries,
+                                        uint64      size,
                                         int         partNumber,
                                         bool        lastPartFlag
                                        );
@@ -177,6 +181,7 @@ typedef struct
   DatabaseId                      entityId;                            // database id of entity
   DatabaseId                      storageId;                           // database id of storage
 
+  uint64                          entries;                             // number of entries
   uint                            partNumber;                          // file part number
 
   Errors                          pendingError;                        // pending error or ERROR_NONE
@@ -1213,6 +1218,25 @@ uint64 Archive_tell(ArchiveInfo *archiveInfo);
 Errors Archive_seek(ArchiveInfo *archiveInfo,
                     uint64      offset
                    );
+
+/***********************************************************************\
+* Name   : Archive_getEntries
+* Purpose: get number of entries in archive file
+* Input  : archiveInfo - archive info data
+* Output : -
+* Return : number of entries
+* Notes  : -
+\***********************************************************************/
+
+INLINE uint64 Archive_getEntries(const ArchiveInfo *archiveInfo);
+#if defined(NDEBUG) || defined(__ARCHIVE_IMPLEMENATION__)
+INLINE uint64 Archive_getEntries(const ArchiveInfo *archiveInfo)
+{
+  assert(archiveInfo != NULL);
+
+  return archiveInfo->entries;
+}
+#endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Archive_getSize

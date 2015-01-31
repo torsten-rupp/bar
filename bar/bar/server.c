@@ -3552,6 +3552,7 @@ LOCAL Errors deleteEntity(DatabaseId entityId)
                               NULL, // archive type
                               NULL, // storageName
                               NULL, // createdDateTime
+                              NULL, // entries
                               NULL, // size
                               NULL, // indexState
                               NULL, // indexMode
@@ -3607,6 +3608,7 @@ LOCAL Errors deleteUUID(const String jobUUID)
                              NULL,  // scheduleUUID,
                              NULL,  // createdDateTime,
                              NULL,  // archiveType,
+                             NULL,  // totalEntries,
                              NULL,  // totalSize,
                              NULL   // lastErrorMessage
                             )
@@ -3652,7 +3654,7 @@ LOCAL void cleanExpiredStorage(void)
   const ScheduleNode *scheduleNode;
   uint64             createdDateTime;
   ArchiveTypes       archiveType;
-  uint64             totalSize;
+  uint64             totalEntries,totalSize;
   String             dateTime;
 
   // init variables
@@ -3675,6 +3677,7 @@ LOCAL void cleanExpiredStorage(void)
                               jobUUID,
                               scheduleUUID,
                               NULL,  // lastCreatedDateTime
+                              NULL,  // totalEntries
                               NULL,  // totalSize
                               NULL   // lastErrorMessage
                              )
@@ -3728,6 +3731,7 @@ fprintf(stderr,"%s, %d: ----------------------- scheduleUUID=%s\n",__FILE__,__LI
                                           NULL,  // scheduleUUID
                                           &createdDateTime,
                                           &archiveType,
+                                          &totalEntries,
                                           &totalSize,
                                           NULL   // lastErrorMessage
                                          )
@@ -3742,10 +3746,11 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                   Misc_formatDateTime(dateTime,createdDateTime,NULL);
                   plogMessage(LOG_TYPE_INDEX,
                               "INDEX",
-                              "Deleted expired entity of job '%s': %s, created at %s, %llu bytes\n",
+                              "Deleted expired entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
                               String_cString(jobName),
                               archiveTypeToString(archiveType,"unknown"),
                               String_cString(dateTime),
+                              totalEntries,
                               totalSize
                              );
                 }
@@ -3774,6 +3779,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                                           NULL,  // scheduleUUID
                                           &createdDateTime,
                                           &archiveType,
+                                          &totalEntries,
                                           &totalSize,
                                           NULL   // lastErrorMessage
                                          )
@@ -3787,7 +3793,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                 Misc_formatDateTime(dateTime,createdDateTime,NULL);
                 plogMessage(LOG_TYPE_INDEX,
                             "INDEX",
-                            "Deleted surplus entity of job '%s': %s, created at %s, %llu bytes\n",
+                            "Deleted surplus entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
                             String_cString(jobName),
                             archiveTypeToString(archiveType,"unknown"),
                             String_cString(dateTime),
@@ -4308,6 +4314,7 @@ LOCAL void indexCleanup(void)
                                 NULL, // archive type
                                 storageName,
                                 NULL, // createdDateTime
+                                NULL, // entries
                                 NULL, // size
                                 NULL, // indexState
                                 NULL, // indexMode
@@ -4431,6 +4438,7 @@ LOCAL void indexCleanup(void)
                                 NULL, // archive type
                                 storageName,
                                 NULL, // createdDateTime
+                                NULL, // entries
                                 NULL, // size
                                 NULL, // indexState
                                 NULL, // indexMode
@@ -4461,6 +4469,7 @@ LOCAL void indexCleanup(void)
                                     NULL, // archive type
                                     duplicateStorageName,
                                     NULL, // createdDateTime
+                                    NULL, // entries
                                     NULL, // size
                                     NULL, // indexState
                                     NULL, // indexMode
@@ -4958,6 +4967,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                   NULL, // archive type
                                   storageName,
                                   &createdDateTime,
+                                  NULL, // entries
                                   NULL, // size
                                   &indexState,
                                   &indexMode,
@@ -10195,6 +10205,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                 NULL, // archive type
                                 NULL, // storageName
                                 NULL, // createdDateTime
+                                NULL, // entries
                                 NULL, // size
                                 NULL, // indexState
                                 NULL, // indexMode
@@ -10236,6 +10247,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                 NULL, // archive type
                                 NULL, // storageName
                                 NULL, // createdDateTime
+                                NULL, // entries
                                 NULL, // size
                                 NULL, // indexState
                                 NULL, // indexMode
@@ -10485,9 +10497,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 *            jobUUID=<uuid>
 *            scheduleUUID=<uuid>
 *            name=<name>
-*            lastDateTime=<created time stamp>
-*            totalSize=<size>
-*            lastErrorMessage=<error message>
+*            lastDateTime=<created date/time>
+*            totalEntries=<n>
+*            totalSize=<n>
+*            lastErrorMessage=<text>
 *            ...
 \***********************************************************************/
 
@@ -10502,6 +10515,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     String scheduleUUID;
     String name;
     uint64 lastCreatedDateTime;
+    uint64 totalEntries;
     uint64 totalSize;
     String lastErrorMessage;
   } UUIDDataNode;
@@ -10550,7 +10564,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   * Notes  : -
   \***********************************************************************/
 
-  // compare job data nodes
   int compareUUIDDataNode(UUIDDataNode *uuidDataNode1, UUIDDataNode *uuidDataNode2, void *userData)
   {
     assert(uuidDataNode1 != NULL);
@@ -10569,7 +10582,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   IndexQueryHandle indexQueryHandle;
   String           jobUUID,scheduleUUID;
   uint64           lastCreatedDateTime;
-  uint64           totalSize;
+  uint64           totalEntries,totalSize;
   String           lastErrorMessage;
   SemaphoreLock    semaphoreLock;
   JobNode          *jobNode;
@@ -10628,6 +10641,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
                               jobUUID,
                               scheduleUUID,
                               &lastCreatedDateTime,
+                              &totalEntries,
                               &totalSize,
                               lastErrorMessage
                              )
@@ -10652,6 +10666,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     uuidDataNode->scheduleUUID        = String_duplicate(scheduleUUID);
     uuidDataNode->name                = String_duplicate(jobUUID);
     uuidDataNode->lastCreatedDateTime = lastCreatedDateTime;
+    uuidDataNode->totalEntries        = totalEntries;
     uuidDataNode->totalSize           = totalSize;
     uuidDataNode->lastErrorMessage    = String_duplicate(lastErrorMessage);
 
@@ -10677,11 +10692,12 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   LIST_ITERATE(&uuidDataList,uuidDataNode)
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "jobUUID=%S scheduleUUID=%S name=%'S lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
+                     "jobUUID=%S scheduleUUID=%S name=%'S lastDateTime=%llu totalEntries=%llu totalSize=%llu lastErrorMessage=%'S",
                      uuidDataNode->jobUUID,
                      uuidDataNode->scheduleUUID,
                      uuidDataNode->name,
                      uuidDataNode->lastCreatedDateTime,
+                     uuidDataNode->totalEntries,
                      uuidDataNode->totalSize,
                      uuidDataNode->lastErrorMessage
                     );
@@ -10726,7 +10742,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   IndexQueryHandle indexQueryHandle;
   DatabaseId       entityId;
   uint64           createdDateTime;
-  uint64           totalSize;
+  uint64           totalEntries,totalSize;
   StaticString     (scheduleUUID,INDEX_UUID_LENGTH);
   ArchiveTypes     archiveType;
   String           lastErrorMessage;
@@ -10778,18 +10794,20 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
                                 scheduleUUID,
                                 &createdDateTime,
                                 &archiveType,
+                                &totalEntries,
                                 &totalSize,
                                 lastErrorMessage
                                )
         )
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "entityId=%lld jobUUID=%S scheduleUUID=%S type=%s lastDateTime=%llu totalSize=%llu lastErrorMessage=%'S",
+                     "entityId=%lld jobUUID=%S scheduleUUID=%S type=%s lastDateTime=%llu totalEntries=%llu totalSize=%llu lastErrorMessage=%'S",
                      entityId,
                      jobUUID,
                      scheduleUUID,
                      archiveTypeToString(archiveType,"NONE"),
                      createdDateTime,
+                     totalEntries,
                      totalSize,
                      lastErrorMessage
                     );
@@ -10894,13 +10912,13 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 *            jobUUID=<uuid>
 *            scheduleUUID=<uuid>
 *            name=<name>
-*            dateTime=<created time stamp>
-*            size=<size>
+*            dateTime=<date/time>
+*            entries=<n>
+*            size=<n>
 *            indexState=<state>
 *            indexMode=<mode>
-*            lastCheckedDateTime=<last checked date/time>
-*            errorMessage=<error message>
-*            ...
+*            lastCheckedDateTime=<date/time>
+*            errorMessage=<text>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -10924,7 +10942,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   DatabaseId       storageId;
   ArchiveTypes     archiveType;
   uint64           dateTime;
-  uint64           size;
+  uint64           entries,size;
   IndexStates      indexState;
   IndexModes       indexMode;
   uint64           lastCheckedDateTime;
@@ -11023,6 +11041,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                  &archiveType,
                                  storageName,
                                  &dateTime,
+                                 &entries,
                                  &size,
                                  &indexState,
                                  &indexMode,
@@ -11054,7 +11073,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     }
 
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "storageId=%llu jobUUID=%S scheduleUUID=%S jobName=%'S archiveType='%s' name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
+                     "storageId=%llu jobUUID=%S scheduleUUID=%S jobName=%'S archiveType='%s' name=%'S dateTime=%llu entries=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                      storageId,
                      jobUUID,
                      scheduleUUID,
@@ -11062,6 +11081,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                      archiveTypeToString(archiveType,"NONE"),
                      printableStorageName,
                      dateTime,
+                     entries,
                      size,
                      Index_stateToString(indexState,"unknown"),
                      Index_modeToString(indexMode,"unknown"),
@@ -11259,6 +11279,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
                                    NULL, // archive type
                                    storageName,
                                    NULL, // createdDateTime
+                                   NULL, // entries
                                    NULL, // size
                                    &indexState,
                                    NULL, // indexMode
@@ -11333,6 +11354,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
                                   NULL, // archive type
                                   NULL, // storageName
                                   NULL, // createdDateTime
+                                  NULL, // entries
                                   NULL, // size
                                   NULL, // indexState
                                   NULL, // indexMode
@@ -11379,6 +11401,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
                                   NULL, // archive type
                                   NULL, // storageName
                                   NULL, // createdDateTime
+                                  NULL, // entries
                                   NULL, // size
                                   NULL, // indexState
                                   NULL, // indexMode
@@ -11516,6 +11539,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
                                    NULL, // archive type
                                    NULL, // storageName
                                    NULL, // createdDateTime
+                                   NULL, // entries
                                    NULL, // size
                                    &indexState,
                                    NULL, // indexMode
@@ -11567,6 +11591,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
                                 NULL, // archive type
                                 NULL, // storageName
                                 NULL, // createdDateTime
+                                NULL, // entries
                                 NULL, // size
                                 NULL, // indexState
                                 NULL, // indexMode
@@ -11615,6 +11640,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
                                 NULL, // archive type
                                 NULL, // storageName
                                 NULL, // createdDateTime
+                                NULL, // entries
                                 NULL, // size
                                 NULL, // indexState
                                 NULL, // indexMode

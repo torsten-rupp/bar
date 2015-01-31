@@ -153,7 +153,8 @@ typedef struct
   DatabaseId  entityId;                                           // database entity id
   DatabaseId  storageId;                                          // database storage id
   String      fileName;                                           // temporary archive name
-  uint64      fileSize;                                           // archive size
+  uint64      entries;                                            // number of entries in archive
+  uint64      size;                                               // archive size [bytes]
   String      destinationFileName;                                // destination archive name
 } StorageMsg;
 
@@ -2755,7 +2756,9 @@ LOCAL Errors newArchiveFile(void        *userData,
 *          indexHandle  - index handle or NULL if no index
 *          entityId     - database id of entity
 *          storageId    - database id of storage
-*          fileName     - archive file name
+*          tmpFileName  - temporary archive file name
+*          entries      - number of entries
+*          size         - size of archive
 *          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
 *                         single part
 *          lastPartFlag - TRUE iff last archive part, FALSE otherwise
@@ -2769,6 +2772,8 @@ LOCAL Errors storeArchiveFile(void        *userData,
                               DatabaseId  entityId,
                               DatabaseId  storageId,
                               String      tmpFileName,
+                              uint64      entries,
+                              uint64      size,
                               int         partNumber,
                               bool        lastPartFlag
                              )
@@ -2824,6 +2829,7 @@ LOCAL Errors storeArchiveFile(void        *userData,
     error = Index_update(indexHandle,
                          storageId,
                          printableStorageName,
+                         0LL,  // entries
                          0LL   // size
                         );
     if (error != ERROR_NONE)
@@ -2842,7 +2848,8 @@ LOCAL Errors storeArchiveFile(void        *userData,
   storageMsg.entityId            = entityId;
   storageMsg.storageId           = storageId;
   storageMsg.fileName            = String_duplicate(tmpFileName);
-  storageMsg.fileSize            = fileInfo.size;
+  storageMsg.entries             = entries;
+  storageMsg.size                = size;
   storageMsg.destinationFileName = destinationFileName;
   storageInfoIncrement(createInfo,fileInfo.size);
   if (!MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
@@ -2956,7 +2963,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   {
     AUTOFREE_ADD(&autoFreeList,&storageMsg,
                  {
-                   storageInfoDecrement(createInfo,storageMsg.fileSize);
+                   storageInfoDecrement(createInfo,storageMsg.size);
                    File_delete(storageMsg.fileName,FALSE);
                    if (storageMsg.storageId != DATABASE_ID_NONE) Index_deleteStorage(indexHandle,storageMsg.storageId);
                    freeStorageMsg(&storageMsg,NULL);
@@ -3171,6 +3178,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                   NULL, // archive type
                                   oldStorageName,
                                   NULL, // createdDateTime
+                                  NULL, // entries
                                   NULL, // size
                                   NULL, // indexState,
                                   NULL, // indexMode,
@@ -3206,6 +3214,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = Index_update(indexHandle,
                            storageMsg.storageId,
                            NULL, // storageName
+                           storageMsg.entries,
                            fileInfo.size
                           );
       if (error != ERROR_NONE)
@@ -3280,7 +3289,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     }
 
     // update storage info
-    storageInfoDecrement(createInfo,storageMsg.fileSize);
+    storageInfoDecrement(createInfo,storageMsg.size);
 
     // free resources
     freeStorageMsg(&storageMsg,NULL);

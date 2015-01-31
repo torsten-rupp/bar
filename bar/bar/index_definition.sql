@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS storage(
   entityId        INTEGER,
   name            TEXT NOT NULL,
   created         INTEGER,
+  entries         INTEGER,
   size            INTEGER,
   state           INTEGER,
   mode            INTEGER,

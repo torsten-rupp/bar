@@ -830,8 +830,8 @@ Database_debugEnable(false);
               (void)Database_execute(&newIndexHandle.databaseHandle,
                                      CALLBACK(NULL,NULL),
                                      "UPDATE storage \
-                                      SET entityId=%llu \
-                                      WHERE id=%llu; \
+                                      SET entityId=%lld \
+                                      WHERE id=%lld; \
                                      ",
                                      entityId,
                                      storageId
@@ -1538,37 +1538,37 @@ Errors Index_clear(IndexHandle *indexHandle,
   // Note: do in single steps to avoid long-time-locking of database!
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM files WHERE storageId=%ld;",
+                           "DELETE FROM files WHERE storageId=%lld;",
                            storageId
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM images WHERE storageId=%ld;",
+                           "DELETE FROM images WHERE storageId=%lld;",
                            storageId
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM directories WHERE storageId=%ld;",
+                           "DELETE FROM directories WHERE storageId=%lld;",
                            storageId
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM links WHERE storageId=%ld;",
+                           "DELETE FROM links WHERE storageId=%lld;",
                            storageId
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM hardlinks WHERE storageId=%ld;",
+                           "DELETE FROM hardlinks WHERE storageId=%lld;",
                            storageId
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM special WHERE storageId=%ld;",
+                           "DELETE FROM special WHERE storageId=%lld;",
                            storageId
                           );
 
@@ -1578,6 +1578,7 @@ Errors Index_clear(IndexHandle *indexHandle,
 Errors Index_update(IndexHandle  *indexHandle,
                     DatabaseId   storageId,
                     const String storageName,
+                    uint64       entries,
                     uint64       size
                    )
 {
@@ -1592,7 +1593,7 @@ Errors Index_update(IndexHandle  *indexHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
                               SET name=%'S \
-                              WHERE id=%ld;\
+                              WHERE id=%lld;\
                              ",
                              storageName,
                              storageId
@@ -1605,9 +1606,11 @@ Errors Index_update(IndexHandle  *indexHandle,
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "UPDATE storage \
-                            SET size=%ld \
-                            WHERE id=%ld;\
+                            SET entries=%llu, \
+                                size=%llu \
+                            WHERE id=%lld;\
                            ",
+                           entries,
                            size,
                            storageId
                           );
@@ -1638,7 +1641,7 @@ Errors Index_getState(IndexHandle *indexHandle,
                                    STRFTIME('%%s',lastChecked), \
                                    errorMessage \
                             FROM storage \
-                            WHERE id=%ld \
+                            WHERE id=%lld \
                            ",
                            storageId
                           );
@@ -1682,7 +1685,7 @@ Errors Index_setState(IndexHandle *indexHandle,
                            "UPDATE storage \
                             SET state=%d, \
                                 errorMessage=NULL \
-                            WHERE id=%ld; \
+                            WHERE id=%lld; \
                            ",
                            indexState,
                            storageId
@@ -1698,7 +1701,7 @@ Errors Index_setState(IndexHandle *indexHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
                               SET lastChecked=DATETIME(%llu,'unixepoch') \
-                              WHERE id=%ld; \
+                              WHERE id=%lld; \
                              ",
                              lastCheckedTimestamp,
                              storageId
@@ -1719,7 +1722,7 @@ Errors Index_setState(IndexHandle *indexHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
                               SET errorMessage=%'S \
-                              WHERE id=%ld; \
+                              WHERE id=%lld; \
                              ",
                              s,
                              storageId
@@ -1793,6 +1796,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            "SELECT entities.jobUUID, \
                                    entities.scheduleUUID, \
                                    STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1)), \
+                                   (SELECT SUM(entries) FROM storage LEFT JOIN entities AS storageEntities ON storage.entityId=storageEntities.id WHERE storageEntities.jobUUID=entities.jobUUID), \
                                    (SELECT SUM(size) FROM storage LEFT JOIN entities AS storageEntities ON storage.entityId=storageEntities.id WHERE storageEntities.jobUUID=entities.jobUUID), \
                                    (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
                             FROM entities \
@@ -1809,6 +1813,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        String           jobUUID,
                        String           scheduleUUID,
                        uint64           *lastCreatedDateTime,
+                       uint64           *totalEntries,
                        uint64           *totalSize,
                        String           lastErrorMessage
                       )
@@ -1818,10 +1823,11 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   assert(Index_isReady(indexQueryHandle->indexHandle));
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%S %S %lld %lld %S",
+                             "%S %S %llu %llu %llu %S",
                              jobUUID,
                              scheduleUUID,
                              lastCreatedDateTime,
+                             totalEntries,
                              totalSize,
                              lastErrorMessage
                             );
@@ -1887,6 +1893,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                    entities.scheduleUUID, \
                                    STRFTIME('%%s',entities.created), \
                                    entities.type, \
+                                   (SELECT SUM(entries) FROM storage WHERE storage.entityId=entities.id), \
                                    (SELECT SUM(size) FROM storage WHERE storage.entityId=entities.id), \
                                    (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
                             FROM entities \
@@ -1915,6 +1922,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          String           scheduleUUID,
                          uint64           *createdDateTime,
                          ArchiveTypes     *archiveType,
+                         uint64           *totalEntries,
                          uint64           *totalSize,
                          String           lastErrorMessage
                         )
@@ -1924,12 +1932,13 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   assert(Index_isReady(indexQueryHandle->indexHandle));
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%lld %S %S %llu %u %lld %S",
+                             "%lld %S %S %llu %u %llu %llu %S",
                              databaseId,
                              jobUUID,
                              scheduleUUID,
                              createdDateTime,
                              archiveType,
+                             totalEntries,
                              totalSize,
                              lastErrorMessage
                             );
@@ -1998,7 +2007,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id \
                             FROM storage \
-                            WHERE entityId=%ld; \
+                            WHERE entityId=%lld; \
                            ",
                            entityId
                           );
@@ -2021,7 +2030,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM entities WHERE id=%ld;",
+                             "DELETE FROM entities WHERE id=%lld;",
                              entityId
                             );
   }
@@ -2067,6 +2076,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                                    entities.type, \
                                    storage.name, \
                                    STRFTIME('%%s',storage.created), \
+                                   storage.entries, \
                                    storage.size, \
                                    storage.state, \
                                    storage.mode, \
@@ -2075,7 +2085,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                             FROM storage \
                             LEFT JOIN entities ON entities.id=storage.entityId \
                             WHERE     (%d OR (entities.jobUUID='%S')) \
-                                  AND (%d OR (storage.entityId=%ld)) \
+                                  AND (%d OR (storage.entityId=%lld)) \
                                   AND storage.state IN (%S) \
                             ORDER BY storage.created DESC \
                            ",
@@ -2100,6 +2110,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           ArchiveTypes     *archiveType,
                           String           storageName,
                           uint64           *createdDateTime,
+                          uint64           *entries,
                           uint64           *size,
                           IndexStates      *indexState,
                           IndexModes       *indexMode,
@@ -2118,7 +2129,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   foundFlag = FALSE;
   while (   !foundFlag
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                                "%lld %lld %S %S %d %S %llu %llu %d %d %llu %S",
+                                "%lld %lld %S %S %d %S %llu %llu %llu %d %d %llu %S",
                                 storageId,
                                 entityId,
                                 jobUUID,
@@ -2126,6 +2137,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                                 archiveType,
                                 storageName,
                                 createdDateTime,
+                                entries,
                                 size,
                                 indexState,
                                 indexMode,
@@ -2277,43 +2289,43 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   // Note: do in single steps to avoid long-time-locking of database!
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM files WHERE storageId=%ld;",
+                           "DELETE FROM files WHERE storageId=%lld;",
                            storageId
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM images WHERE storageId=%ld;",
+                           "DELETE FROM images WHERE storageId=%lld;",
                            storageId
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM directories WHERE storageId=%ld;",
+                           "DELETE FROM directories WHERE storageId=%lld;",
                            storageId
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM links WHERE storageId=%ld;",
+                           "DELETE FROM links WHERE storageId=%lld;",
                            storageId
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM hardlinks WHERE storageId=%ld;",
+                           "DELETE FROM hardlinks WHERE storageId=%lld;",
                            storageId
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM special WHERE storageId=%ld;",
+                           "DELETE FROM special WHERE storageId=%lld;",
                            storageId
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM storage WHERE id=%ld;",
+                           "DELETE FROM storage WHERE id=%lld;",
                            storageId
                           );
   if (error != ERROR_NONE) return error;
@@ -2427,7 +2439,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
-                          "DELETE FROM files WHERE id=%ld;",
+                          "DELETE FROM files WHERE id=%lld;",
                           databaseId
                          );
 }
@@ -2529,7 +2541,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
-                          "DELETE FROM files WHERE id=%ld;",
+                          "DELETE FROM files WHERE id=%lld;",
                           databaseId
                          );
 }
@@ -2631,7 +2643,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
-                          "DELETE FROM directories WHERE id=%ld;",
+                          "DELETE FROM directories WHERE id=%lld;",
                           databaseId
                          );
 }
@@ -2736,7 +2748,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
-                          "DELETE FROM links WHERE id=%ld;",
+                          "DELETE FROM links WHERE id=%lld;",
                           databaseId
                          );
 }
@@ -2847,7 +2859,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
-                          "DELETE FROM hardlinks WHERE id=%ld;",
+                          "DELETE FROM hardlinks WHERE id=%lld;",
                           databaseId
                          );
 }
@@ -2950,7 +2962,7 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
-                          "DELETE FROM special WHERE id=%ld;",
+                          "DELETE FROM special WHERE id=%lld;",
                           databaseId
                          );
 }

@@ -324,6 +324,7 @@ Errors Index_clear(IndexHandle *indexHandle,
 * Input  : indexHandle - index handle
 *          storageId   - database id of storage
 *          storageName - storage name (can be NULL)
+*          entries     - number of entries
 *          size        - size [bytes]
 * Output : -
 * Return : ERROR_NONE or error code
@@ -333,6 +334,7 @@ Errors Index_clear(IndexHandle *indexHandle,
 Errors Index_update(IndexHandle  *indexHandle,
                     DatabaseId   storageId,
                     const String storageName,
+                    uint64       entries,
                     uint64       size
                    );
 
@@ -415,6 +417,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 * Output : jobUUID             - unique job id (can be NULL)
 *          scheduleUUID        - unique schedule id (can be NULL)
 *          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
+*          totalEntries        - total number of entries (can be NULL)
 *          totalSize           - total storage size [bytes] (can be NULL)
 *          lastErrorMessage    - last storage error message (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
@@ -425,6 +428,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        String           jobUUID,
                        String           scheduleUUID,
                        uint64           *lastCreatedDateTime,
+                       uint64           *totalEntries,
                        uint64           *totalSize,
                        String           lastErrorMessage
                       );
@@ -470,6 +474,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 *          scheduleUUID     - unique schedule id (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          archiveType      - archive type (can be NULL)
+*          totalEntries     - total number of entries (can be NULL)
 *          totalSize        - total storage size [bytes] (can be NULL)
 *          lastErrorMessage - last storage error message (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
@@ -482,6 +487,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          String           scheduleUUID,
                          uint64           *createdDateTime,
                          ArchiveTypes     *archiveType,
+                         uint64           *totalEntries,
                          uint64           *totalSize,
                          String           lastErrorMessage
                         );
@@ -559,8 +565,9 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
 *          scheduleUUID        - unique schedule UUID (can be NULL)
 *          archiveType         - archive type (can be NULL)
 *          storageName         - storage name (can be NULL)
-*          createdDateTime     - date/time stamp [s]
-*          size                - size [bytes]
+*          createdDateTime     - date/time stamp [s] (can be NULL)
+*          entries             - number of entries (can be NULL)
+*          size                - size [bytes] (can be NULL)
 *          indexState          - index state (can be NULL)
 *          indexMode           - index mode (can be NULL)
 *          lastCheckedDateTime - last checked date/time stamp [s] (can be NULL)
@@ -577,6 +584,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           ArchiveTypes     *archiveType,
                           String           storageName,
                           uint64           *createdDateTime,
+                          uint64           *entries,
                           uint64           *size,
                           IndexStates      *indexState,
                           IndexModes       *indexMode,

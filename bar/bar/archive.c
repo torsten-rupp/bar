@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __ARCHIVE_IMPLEMENATION__
+
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -969,6 +971,8 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
                                                     archiveInfo->entityId,
                                                     archiveInfo->storageId,
                                                     archiveInfo->file.fileName,
+                                                    Archive_getEntries(archiveInfo),
+                                                    Archive_getSize(archiveInfo),
                                                     (archiveInfo->jobOptions->archivePartSize > 0LL)
                                                       ? (int)archiveInfo->partNumber
                                                       : ARCHIVE_PART_NUMBER_NONE,
@@ -2923,6 +2927,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->entityId                        = DATABASE_ID_NONE;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
 
+  archiveInfo->entries                         = 0LL;
   archiveInfo->partNumber                      = 0;
 
   archiveInfo->pendingError                    = ERROR_NONE;
@@ -3099,6 +3104,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->entityId                        = DATABASE_ID_NONE;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
 
+  archiveInfo->entries                         = 0LL;
   archiveInfo->partNumber                      = 0;
 
   archiveInfo->pendingError                    = ERROR_NONE;
@@ -9144,6 +9150,11 @@ archiveEntryInfo->image.chunkImageEntry.blockSize
     #endif /* NDEBUG */
   }
 
+  if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
+  {
+    archiveEntryInfo->archiveInfo->entries++;
+  }
+
   return error;
 }
 
@@ -10577,11 +10588,12 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
           break; /* not reached */
       }
 
-      // update temporary size (ignore error)
+      // update temporary entires, size (ignore error)
       Index_update(indexHandle,
                    storageId,
                    NULL, // storageName
-                   Archive_tell(&archiveInfo)
+                   Archive_getEntries(&archiveInfo),
+                   Archive_getSize(&archiveInfo)
                   );
     }
 
@@ -10644,6 +10656,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     error = Index_update(indexHandle,
                          storageId,
                          storageName,
+                         Archive_getEntries(&archiveInfo),
                          Archive_getSize(&archiveInfo)
                         );
     if (error != ERROR_NONE)
@@ -10714,9 +10727,8 @@ Errors Archive_copy(const String                    storageName,
   // create destination
   error = Archive_create(&destinationArchiveInfo,
                          jobOptions,
-  archiveInfo->archiveNewFunction              = NULL;
-  archiveInfo->archiveNewUserData              = NULL;
-
+archiveInfo->archiveNewFunction              = NULL;
+archiveInfo->archiveNewUserData              = NULL;
                          ArchiveCreatedFunction          archiveCreatedFunction,
                          void                            *archiveNewFileUserData,
                          CALLBACK(NULL,NULL)
