@@ -572,6 +572,7 @@ AC_SUBST(PLATFORM)                          dnl platform name
 AC_SUBST(FILE_SEPARATOR_CHAR)               dnl file separator path character (/ or \\)
 AC_SUBST(FILE_SEPARATOR_STRING)             dnl file separator path character as string (/ or \\)
 
+AC_SUBST(OBJEXT)                            dnl object extension
 AC_SUBST(EXEEXT)                            dnl executable extension
 AC_SUBST(SHELLEXT)                          dnl shell extension
 
@@ -943,6 +944,8 @@ if test -z "$MSGFMT"; then
   AC_MSG_ERROR([Cannot find a 'msgfmt' in PATH. Please check your PATH environment variable.])
 fi
 
+AC_PATH_PROGS(SVNVERSION,svnversion)
+
 if test -d epm -o -d "`readlink epm`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
     dnl compile epm
@@ -1087,8 +1090,10 @@ if test "$ENABLE_GUI" = "yes"; then
         ;;
       1.7*)
         ;;
+      1.8*)
+        ;;
       *)
-        AC_MSG_WARN([Insufficient Java version (found $JAVA_VERSION, require 1.6 or newer) - disabled compile GUI])
+        AC_MSG_WARN([Insufficient Java version (found $JAVA_VERSION, require 1.6, 1.7 or 1.8) - disabled compile GUI])
         ENABLE_GUI="no"
         ENABLE_GUI_I18N="no"
         ;;
@@ -2680,8 +2685,22 @@ if test $ENABLE_BREAKPAD = "yes"; then
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
+
+        # fix broken install of breakpad: does not install all header files?
+set -x
         install -d $cwd/packages/include/breakpad
-        (cd breakpad/src; find . -type f -name '*.h'|xargs cp --parents -t $cwd/packages/include/breakpad) 1>$tmpFile 2>&1
+        install -d $cwd/packages/include/breakpad/google_breakpad/processor
+        install breakpad/src/google_breakpad/processor/*.h $cwd/packages/include/breakpad/google_breakpad/processor
+        install -d $cwd/packages/include/breakpad/client/linux/handler
+        install breakpad/src/client/linux/handler/*.h $cwd/packages/include/breakpad/client/linux
+        install -d $cwd/packages/include/breakpad/client/linux/minidump_writer
+        install breakpad/src/client/linux/minidump_writer/*.h $cwd/packages/include/breakpad/client/linux/minidump_writer
+        install -d $cwd/packages/include/breakpad/client/linux/dump_writer_common
+        install breakpad/src/client/linux/dump_writer_common/*.h $cwd/packages/include/breakpad/client/linux/dump_writer_common
+        install breakpad/src/third_party/libdisasm/libdisasm.a $cwd/packages/lib
+# 1>$tmpFile 2>&1
+find $cwd/packages/include/breakpad -type f -name '*.h'
+set +x
       fi
       if test $result -eq 1; then
         AC_MSG_RESULT([done])
