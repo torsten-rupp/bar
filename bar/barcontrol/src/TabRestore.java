@@ -514,6 +514,7 @@ public class TabRestore
   {
     public String jobUUID;                       // job UUID
     public String scheduleUUID;                  // schedule UUID
+    public long   totalEntries;                  // total number of entries
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -536,14 +537,16 @@ public class TabRestore
      * @param scheduleUUID schedule UUID
      * @param name job name
      * @param lastDateTime last date/time (timestamp) when storage was created
+     * @param totalEntries total number of entresi of storage
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    UUIDIndexData(String jobUUID, String scheduleUUID, String name, long lastDateTime, long totalSize, String lastErrorMessage)
+    UUIDIndexData(String jobUUID, String scheduleUUID, String name, long lastDateTime, long totalEntries, long totalSize, String lastErrorMessage)
     {
       super(name,lastDateTime,totalSize,name,lastErrorMessage);
       this.jobUUID      = jobUUID;
       this.scheduleUUID = scheduleUUID;
+      this.totalEntries = totalEntries;
     }
 
     /** set tree item reference
@@ -619,8 +622,9 @@ public class TabRestore
    */
   class EntityIndexData extends IndexData
   {
-    long                  entityId;
-    Settings.ArchiveTypes archiveType;
+    public long                  entityId;
+    public Settings.ArchiveTypes archiveType;
+    public long                  totalEntries;
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -642,14 +646,16 @@ public class TabRestore
      * @param entityId entity id
      * @param name name of storage
      * @param lastDateTime last date/time (timestamp) when storage was created
+     * @param totalEntries total number of entresi of storage
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    EntityIndexData(long entityId, Settings.ArchiveTypes archiveType, long lastDateTime, long totalSize, String lastErrorMessage)
+    EntityIndexData(long entityId, Settings.ArchiveTypes archiveType, long lastDateTime, long totalEntries, long totalSize, String lastErrorMessage)
     {
       super("",lastDateTime,totalSize,"",lastErrorMessage);
-      this.entityId    = entityId;
-      this.archiveType = archiveType;
+      this.entityId     = entityId;
+      this.archiveType  = archiveType;
+      this.totalEntries = totalEntries;
     }
 
     /** set tree item reference
@@ -728,6 +734,7 @@ public class TabRestore
     public long                  storageId;                // database storage id
     public String                jobName;                  // job name or null
     public Settings.ArchiveTypes archiveType;              // archive type
+    public long                  entries;                  // number of entries
     public IndexModes            indexMode;                // mode of index
     public long                  lastCheckedDateTime;      // last checked date/time
 
@@ -769,6 +776,7 @@ public class TabRestore
      * @param archiveType archive type
      * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
+     * @param entries number of entries
      * @param size size of storage [byte]
      * @param title title to show
      * @param indexState storage index state
@@ -776,12 +784,13 @@ public class TabRestore
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    StorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    StorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, long entries, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       super(name,dateTime,size,title,errorMessage);
       this.storageId           = storageId;
       this.jobName             = jobName;
       this.archiveType         = archiveType;
+      this.entries             = entries;
       this.indexState          = indexState;
       this.indexMode           = indexMode;
       this.lastCheckedDateTime = lastCheckedDateTime;
@@ -798,7 +807,7 @@ public class TabRestore
      */
     StorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, String title, long lastCheckedDateTime)
     {
-      this(storageId,jobName,archiveType,name,dateTime,0L,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+      this(storageId,jobName,archiveType,name,dateTime,0L,0L,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
     }
 
     /** create storage data
@@ -928,10 +937,11 @@ public class TabRestore
      * @param scheduleUUID schedule UUID
      * @param name job name
      * @param lastDateTime last date/time (timestamp) when storage was created
+     * @param totalEntries total number of entresi of storage
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    synchronized public UUIDIndexData updateUUIDIndexData(String jobUUID, String scheduleUUID, String name, long lastDateTime, long totalSize, String lastErrorMessage)
+    synchronized public UUIDIndexData updateUUIDIndexData(String jobUUID, String scheduleUUID, String name, long lastDateTime, long totalEntries, long totalSize, String lastErrorMessage)
     {
       UUIDIndexData uuidIndexData = uuidIndexDataMap.get(jobUUID);
       if (uuidIndexData != null)
@@ -939,6 +949,7 @@ public class TabRestore
         uuidIndexData.scheduleUUID = scheduleUUID;
         uuidIndexData.name         = name;
         uuidIndexData.dateTime     = lastDateTime;
+        uuidIndexData.totalEntries = totalEntries;
         uuidIndexData.size         = totalSize;
         uuidIndexData.errorMessage = lastErrorMessage;
       }
@@ -948,6 +959,7 @@ public class TabRestore
                                           scheduleUUID,
                                           name,
                                           lastDateTime,
+                                          totalEntries,
                                           totalSize,
                                           lastErrorMessage
                                          );
@@ -984,10 +996,11 @@ public class TabRestore
      * @param entityId job id
      * @param name name of storage
      * @param lastDateTime last date/time (timestamp) when storage was created
+     * @param totalEntries total number of entresi of storage
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    public synchronized EntityIndexData updateEntityIndexData(long entityId, Settings.ArchiveTypes archiveType, long lastDateTime, long totalSize, String lastErrorMessage)
+    public synchronized EntityIndexData updateEntityIndexData(long entityId, Settings.ArchiveTypes archiveType, long lastDateTime, long totalEntries, long totalSize, String lastErrorMessage)
     {
       EntityIndexData entityIndexData = entityIndexDataMap.get(entityId);
       if (entityIndexData != null)
@@ -995,6 +1008,7 @@ public class TabRestore
         entityIndexData.entityId     = entityId;
         entityIndexData.archiveType  = archiveType;
         entityIndexData.dateTime     = lastDateTime;
+        entityIndexData.totalEntries = totalEntries;
         entityIndexData.size         = totalSize;
         entityIndexData.errorMessage = lastErrorMessage;
       }
@@ -1003,6 +1017,7 @@ public class TabRestore
         entityIndexData = new EntityIndexData(entityId,
                                               archiveType,
                                               lastDateTime,
+                                              totalEntries,
                                               totalSize,
                                               lastErrorMessage
                                              );
@@ -1027,13 +1042,14 @@ public class TabRestore
      * @param archiveType archive type
      * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
+     * @param entries number of entries
      * @param size size of storage [byte]
      * @param indexState storage index state
      * @param indexMode storage index mode
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    public synchronized StorageIndexData updateStorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, long size, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    public synchronized StorageIndexData updateStorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, long entries, long size, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       StorageIndexData storageIndexData = storageIndexDataMap.get(storageId);
       if (storageIndexData != null)
@@ -1042,6 +1058,7 @@ public class TabRestore
         storageIndexData.archiveType         = archiveType;
         storageIndexData.name                = name;
         storageIndexData.dateTime            = dateTime;
+        storageIndexData.entries             = entries;
         storageIndexData.size                = size;
         storageIndexData.title               = new File(name).getName();
         storageIndexData.indexState          = indexState;
@@ -1056,6 +1073,7 @@ public class TabRestore
                                                 archiveType,
                                                 name,
                                                 dateTime,
+                                                entries,
                                                 size,
                                                 new File(name).getName(),
                                                 indexState,
@@ -1411,6 +1429,7 @@ public class TabRestore
             String scheduleUUID     = resultMap.getString("scheduleUUID"    );
             String name             = resultMap.getString("name"            );
             long   lastDateTime     = resultMap.getLong  ("lastDateTime"    );
+            long   totalEntries     = resultMap.getLong  ("totalEntries"    );
             long   totalSize        = resultMap.getLong  ("totalSize"       );
             String lastErrorMessage = resultMap.getString("lastErrorMessage");
 
@@ -1419,6 +1438,7 @@ public class TabRestore
                                                                                  scheduleUUID,
                                                                                  name,
                                                                                  lastDateTime,
+                                                                                 totalEntries,
                                                                                  totalSize,
                                                                                  lastErrorMessage
                                                                                 );
@@ -1535,6 +1555,7 @@ public class TabRestore
             String                scheduleUUID     = resultMap.getString("scheduleUUID"                    );
             Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("type",Settings.ArchiveTypes.class);
             long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                    );
+            long                  totalEntries     = resultMap.getLong  ("totalEntries"                    );
             long                  totalSize        = resultMap.getLong  ("totalSize"                       );
             String                lastErrorMessage = resultMap.getString("lastErrorMessage"                );
 
@@ -1542,6 +1563,7 @@ public class TabRestore
             final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
                                                                                        archiveType,
                                                                                        lastDateTime,
+                                                                                       totalEntries,
                                                                                        totalSize,
                                                                                        lastErrorMessage
                                                                                       );
@@ -1672,6 +1694,7 @@ public class TabRestore
             Settings.ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
             String                name                = resultMap.getString("name"                                   );
             long                  dateTime            = resultMap.getLong  ("dateTime"                               );
+            long                  entries             = resultMap.getLong  ("entries"                                );
             long                  size                = resultMap.getLong  ("size"                                   );
             IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
             IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
@@ -1684,6 +1707,7 @@ public class TabRestore
                                                                                           archiveType,
                                                                                           name,
                                                                                           dateTime,
+                                                                                          entries,
                                                                                           size,
                                                                                           indexState,
                                                                                           indexMode,
@@ -1817,6 +1841,7 @@ public class TabRestore
             Settings.ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
             String                name                = resultMap.getString("name"                                   );
             long                  dateTime            = resultMap.getLong  ("dateTime"                               );
+            long                  entries             = resultMap.getLong  ("entries"                                );
             long                  size                = resultMap.getLong  ("size"                                   );
             IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
             IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
@@ -1829,6 +1854,7 @@ public class TabRestore
                                                                                           archiveType,
                                                                                           name,
                                                                                           dateTime,
+                                                                                          entries,
                                                                                           size,
                                                                                           indexState,
                                                                                           indexMode,
@@ -3093,25 +3119,35 @@ break;
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,1,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),entityIndexData.size,Units.formatByteSize(entityIndexData.size)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format("%d",entityIndexData.totalEntries));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,3,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.errorMessage);
+              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),entityIndexData.size,Units.formatByteSize(entityIndexData.size)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,3,1,TableLayoutData.WE);
+
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
+              label.setForeground(COLOR_FORGROUND);
+              label.setBackground(COLOR_BACKGROUND);
+              Widgets.layout(label,4,0,TableLayoutData.W);
+
+              label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.errorMessage);
+              label.setForeground(COLOR_FORGROUND);
+              label.setBackground(COLOR_BACKGROUND);
+              Widgets.layout(label,4,1,TableLayoutData.WE);
 
               Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
               Point point = tree.toDisplay(mouseEvent.x+16,treeItem.getBounds(0).y);
@@ -3184,45 +3220,55 @@ break;
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,3,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Size")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Entries")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,4,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageIndexData.size,Units.formatByteSize(storageIndexData.size)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format("%d",storageIndexData.entries));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,4,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("State")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Size")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,5,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.indexState.toString());
+              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageIndexData.size,Units.formatByteSize(storageIndexData.size)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,5,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last checked")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("State")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,6,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.indexState.toString());
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,6,1,TableLayoutData.WE);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Error")+":");
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last checked")+":");
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,7,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.errorMessage);
+              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,7,1,TableLayoutData.WE);
+
+              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Error")+":");
+              label.setForeground(COLOR_FORGROUND);
+              label.setBackground(COLOR_BACKGROUND);
+              Widgets.layout(label,8,0,TableLayoutData.W);
+
+              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.errorMessage);
+              label.setForeground(COLOR_FORGROUND);
+              label.setBackground(COLOR_BACKGROUND);
+              Widgets.layout(label,8,1,TableLayoutData.WE);
 
               Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
               Point point = tree.toDisplay(mouseEvent.x+16,treeItem.getBounds(0).y);
@@ -3411,45 +3457,55 @@ break;
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Size")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Entries")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageIndexData.size,Units.formatByteSize(storageIndexData.size)));
+            label = Widgets.newLabel(widgetStorageTableToolTip,String.format("%d",storageIndexData.entries));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("State")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Size")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,5,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.indexState.toString());
+            label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageIndexData.size,Units.formatByteSize(storageIndexData.size)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,5,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Last checked")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("State")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,6,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000)));
+            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.indexState.toString());
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,6,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Error")+":");
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Last checked")+":");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,7,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.errorMessage);
+            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,7,1,TableLayoutData.WE);
+
+            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Error")+":");
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,8,0,TableLayoutData.W);
+
+            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.errorMessage);
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,8,1,TableLayoutData.WE);
 
             Point size = widgetStorageTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
             Rectangle bounds = tableItem.getBounds(0);
@@ -4685,6 +4741,7 @@ break;
               String                scheuduleUUID    = resultMap.getString("scheduleUUID"                    );
               Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("type",Settings.ArchiveTypes.class);
               long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                    );
+              long                  totalEntries     = resultMap.getLong  ("totalEntries"                    );
               long                  totalSize        = resultMap.getLong  ("totalSize"                       );
               String                lastErrorMessage = resultMap.getString("lastErrorMessage"                );
 
@@ -4692,6 +4749,7 @@ break;
               final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
                                                                                          archiveType,
                                                                                          lastDateTime,
+                                                                                         totalEntries,
                                                                                          totalSize,
                                                                                          lastErrorMessage
                                                                                         );
@@ -4794,6 +4852,7 @@ break;
               Settings.ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
               String                name                = resultMap.getString("name"                                   );
               long                  dateTime            = resultMap.getLong  ("dateTime"                               );
+              long                  entries             = resultMap.getLong  ("entries"                                );
               long                  size                = resultMap.getLong  ("size"                                   );
               IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
               IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
@@ -4806,6 +4865,7 @@ break;
                                                                                             archiveType,
                                                                                             name,
                                                                                             dateTime,
+                                                                                            entries,
                                                                                             size,
                                                                                             indexState,
                                                                                             indexMode,
