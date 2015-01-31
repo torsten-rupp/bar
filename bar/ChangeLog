@@ -16,6 +16,10 @@
   * added no-storage to schedule: schedule just to create
     .bid file
   * improved crash dump support: include symbol file
+  * barcontrol: show tooltip in restore tab in left
+    halfe of tree/table
+  * barcontrol: show number of entries in entity and
+    storage (tooltip info)
 
 2014-09-26 0.18c
   * fixed server network connection wait time in pselect();
