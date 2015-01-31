@@ -607,6 +607,33 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig
 	($(CD) tmp/$(DISTRIBUTION_NAME).orig; $(TAR) --strip-components=1 -xjf ../../$(DISTRIBUTION_NAME).tar.bz2)
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/packages
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/packages
+        # copy existing packages to avoid download (which may fail because of an instable Internet)
+	$(INSTALL) \
+          packages/bzip2-*.tar.gz \
+          packages/c-ares-*.tar.gz \
+          packages/curl-*.tar.bz2 \
+          packages/epm-*-source.tar.bz2 \
+          packages/ftplib-*.tar.gz \
+          packages/gmp-*.tar.bz2 \
+          packages/gnutls-*.tar.xz \
+          packages/launch4j-*.tgz \
+          packages/libcdio-*.tar.gz \
+          packages/libgcrypt-*.tar.bz2 \
+          packages/libgpg-error-*.tar.bz2 \
+          packages/libssh2-*.tar.gz \
+          packages/lz4-*.tar.gz \
+          packages/lzo-*.tar.gz \
+          packages/mxml-*.tar.gz \
+          packages/nettle-*.tar.gz \
+          packages/openssl-*.tar.gz \
+          packages/pcre-*.tar.bz2 \
+          packages/pthreads-w32-*.tar.gz \
+          packages/xdelta*.tar.gz \
+          packages/xz-*.tar.gz \
+          packages/zlib-*.tar.gz \
+          tmp/$(DISTRIBUTION_NAME).orig/packages
+        # download not existing packages and extract archives
 	./download-third-party-packages.sh -d tmp/$(DISTRIBUTION_NAME).orig/packages
 	($(CD) tmp; $(TAR) czf ../$@ $(DISTRIBUTION_NAME).orig)
 	$(RMRF) tmp/$(DISTRIBUTION_NAME).orig
