@@ -7396,26 +7396,110 @@ private static void printTree(Tree tree)
 
   /** create new menu
    * @param menu menu bar
+   * @param data data structure
    * @param text menu text
    * @return new menu
    */
-  public static Menu addMenu(Menu menu, String text)
+  public static Menu insertMenu(Menu menu, int index, final Object data, String text)
   {
-    MenuItem menuItem = new MenuItem(menu,SWT.CASCADE);
+    MenuItem menuItem;
+    if (index >= 0)
+    {
+      menuItem = new MenuItem(menu,SWT.CASCADE,index);
+    }
+    else
+    {
+      menuItem = new MenuItem(menu,SWT.CASCADE);
+    }
     menuItem.setText(text);
+    menuItem.setData(data);
     Menu subMenu = new Menu(menu.getShell(),SWT.DROP_DOWN);
+    subMenu.setData(data);
     menuItem.setMenu(subMenu);
 
     return subMenu;
   }
 
-  /** add new menu item
+  /** create new menu
+   * @param menu menu bar
+   * @param data data structure
+   * @param text menu text
+   * @return new menu
+   */
+  public static Menu addMenu(Menu menu, final Object data, String text)
+  {
+    return insertMenu(menu,-1,data,text);
+  }
+
+  /** create new menu
+   * @param menu menu bar
+   * @param text menu text
+   * @return new menu
+   */
+  public static Menu addMenu(Menu menu, String text)
+  {
+    return addMenu(menu,null,text);
+  }
+
+  /** get menu item
    * @param menu menu
+   * @param data data structure
+   * @return menu item
+   */
+  public static Menu getMenu(Menu menu, final Object data)
+  {
+    for (MenuItem menuItem : menu.getItems())
+    {
+      Menu subMenu = menuItem.getMenu();
+      if (subMenu != null)
+      {
+        if (subMenu.getData() == data)
+        {
+          return subMenu;
+        }
+        else
+        {
+          subMenu = getMenu(subMenu,data);
+          if (subMenu != null)
+          {
+            return subMenu;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /** remove menu item
+   * @param menu menu
+   * @param data data structure
+   */
+  public static void removeMenu(Menu menu, final Object data)
+  {
+    if (menu.getData() == data)
+    {
+      menu.dispose();
+    }
+    else
+    {
+      Menu subMenu = getMenu(menu,data);
+      if (subMenu != null)
+      {
+        menu.dispose();
+      }
+    }
+  }
+
+  /** insert new menu item
+   * @param menu menu
+   * @param index index [0..n-1] or -1
+   * @param data data structure
    * @param text menu item text
    * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem addMenuItem(Menu menu, String text, int index, int accelerator)
+  public static MenuItem insertMenuItem(Menu menu, int index, final Object data, String text, int accelerator)
   {
     if (accelerator != SWT.NONE)
     {
@@ -7436,10 +7520,46 @@ private static void printTree(Tree tree)
     {
       menuItem = new MenuItem(menu,SWT.DROP_DOWN);
     }
+    menuItem.setData(data);
     menuItem.setText(text);
     if (accelerator != SWT.NONE) menuItem.setAccelerator(accelerator);
 
     return menuItem;
+  }
+
+  /** insert new menu item
+   * @param menu menu
+   * @param index index [0..n-1] or -1
+   * @param data data structure
+   * @param text menu item text
+   * @return new menu item
+   */
+  public static MenuItem insertMenuItem(Menu menu, int index, final Object data, String text)
+  {
+    return insertMenuItem(menu,index,data,text,SWT.NONE);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param data data structure
+   * @param text menu item text
+   * @param accelerator accelerator key or SWT.NONE
+   * @return new menu item
+   */
+  public static MenuItem addMenuItem(Menu menu, Object data, String text, int accelerator)
+  {
+    return insertMenuItem(menu,-1,data,text,accelerator);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param data data structure
+   * @param text menu item text
+   * @return new menu item
+   */
+  public static MenuItem addMenuItem(Menu menu, Object data, String text)
+  {
+    return addMenuItem(menu,data,text,SWT.NONE);
   }
 
   /** add new menu item
@@ -7450,12 +7570,13 @@ private static void printTree(Tree tree)
    */
   public static MenuItem addMenuItem(Menu menu, String text, int accelerator)
   {
-    return addMenuItem(menu,text,-1,accelerator);
+    return addMenuItem(menu,null,text,accelerator);
   }
 
   /** add new menu item
    * @param menu menu
    * @param text menu item text
+   * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
   public static MenuItem addMenuItem(Menu menu, String text)
@@ -7463,17 +7584,17 @@ private static void printTree(Tree tree)
     return addMenuItem(menu,text,SWT.NONE);
   }
 
-  /** add new menu item
+  /** insert new menu item
    * @param menu menu
-   * @param text menu item text
+   * @param index index [0..n-1] or -1
    * @param data data structure to store checkbox value or null
+   * @param text menu item text
    * @param field field name in data structure to set on selection
    * @param value value for checkbox button
-   * @param index index [0..n-1] or -1
    * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, String text, final Object data, final String field, final Object value, int index, int accelerator)
+  public static MenuItem insertMenuCheckbox(Menu menu, int index, final Object data, String text, final String field, final Object value, int accelerator)
   {
     if (accelerator != SWT.NONE)
     {
@@ -7485,7 +7606,16 @@ private static void printTree(Tree tree)
       }
       text = text+"\t"+menuAcceleratorToText(accelerator);
     }
-    MenuItem menuItem = new MenuItem(menu,SWT.CHECK);
+    MenuItem menuItem;
+    if (index >= 0)
+    {
+      menuItem = new MenuItem(menu,SWT.CHECK,index);
+    }
+    else
+    {
+      menuItem = new MenuItem(menu,SWT.CHECK);
+    }
+    menuItem.setData(data);
     menuItem.setText(text);
     if (data != null)
     {
@@ -7507,32 +7637,46 @@ private static void printTree(Tree tree)
     return menuItem;
   }
 
-  /** add new menu item
+  /** insert new menu item
    * @param menu menu
-   * @param text menu item text
+   * @param index index [0..n-1] or -1
    * @param data data structure to store checkbox value or null
+   * @param text menu item text
    * @param field field name in data structure to set on selection
    * @param value value for checkbox button
-   * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, String text, final Object data, final String field, final Object value, int accelerator)
+  public static MenuItem insertMenuCheckbox(Menu menu, int index, final Object data, String text, final String field, final Object value)
   {
-    return addMenuCheckbox(menu,text,data,field,value,-1,accelerator);
+    return insertMenuCheckbox(menu,index,data,text,field,value);
   }
 
   /** add new menu item
    * @param menu menu
-   * @param text menu item text
    * @param data data structure to store checkbox value or null
+   * @param text menu item text
    * @param field field name in data structure to set on selection
    * @param value value for checkbox button
    * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, String text, final Object data, final String field, final Object value)
+  public static MenuItem addMenuCheckbox(Menu menu, final Object data, String text, final String field, final Object value, int accelerator)
   {
-    return addMenuCheckbox(menu,text,data,field,value,SWT.NONE);
+    return insertMenuCheckbox(menu,-1,data,text,field,value,accelerator);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param data data structure to store checkbox value or null
+   * @param text menu item text
+   * @param field field name in data structure to set on selection
+   * @param value value for checkbox button
+   * @param accelerator accelerator key or SWT.NONE
+   * @return new menu item
+   */
+  public static MenuItem addMenuCheckbox(Menu menu, final Object data, String text, final String field, final Object value)
+  {
+    return addMenuCheckbox(menu,data,text,field,value,SWT.NONE);
   }
 
   /** add new menu item
@@ -7543,7 +7687,7 @@ private static void printTree(Tree tree)
    */
   public static MenuItem addMenuCheckbox(Menu menu, String text, boolean selected)
   {
-    MenuItem menuItem = addMenuCheckbox(menu,text,null,null,null);
+    MenuItem menuItem = addMenuCheckbox(menu,null,text,null,null);
     menuItem.setSelection(selected);
     return menuItem;
   }
@@ -7560,15 +7704,15 @@ private static void printTree(Tree tree)
 
   /** add new menu item
    * @param menu menu
+   * @param index index [0..n-1] or -1
    * @param text menu item text
    * @param data data structure to store radio value or null
    * @param field field name in data structure to set on selection
    * @param value value for radio button
-   * @param index index [0..n-1] or -1
    * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem addMenuRadio(Menu menu, String text, final Object data, final String field, final Object value, int index, int accelerator)
+  public static MenuItem insertMenuRadio(Menu menu, int index, final Object data, String text, final String field, final Object value, int accelerator)
   {
     if (accelerator != SWT.NONE)
     {
@@ -7580,7 +7724,16 @@ private static void printTree(Tree tree)
       }
       text = text+"\t"+menuAcceleratorToText(accelerator);
     }
-    MenuItem menuItem = new MenuItem(menu,SWT.RADIO);
+    MenuItem menuItem;
+    if (index >= 0)
+    {
+      menuItem = new MenuItem(menu,SWT.RADIO,index);
+    }
+    else
+    {
+      menuItem = new MenuItem(menu,SWT.RADIO);
+    }
+    menuItem.setData(data);
     menuItem.setText(text);
     if (data != null)
     {
@@ -7604,29 +7757,43 @@ private static void printTree(Tree tree)
 
   /** add new menu item
    * @param menu menu
+   * @param index index [0..n-1] or -1
    * @param text menu item text
    * @param data data structure to store radio value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for radio button
+   * @return new menu item
+   */
+  public static MenuItem insertMenuRadio(Menu menu, int index, final Object data, String text, final String field, final Object value)
+  {
+    return insertMenuRadio(menu,index,data,text,field,value,SWT.NONE);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param data data structure to store radio value or null
+   * @param text menu item text
    * @param field field name in data structure to set on selection
    * @param value value for radio button
    * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem addMenuRadio(Menu menu, String text, final Object data, final String field, final Object value, int accelerator)
+  public static MenuItem addMenuRadio(Menu menu, final Object data, String text, final String field, final Object value, int accelerator)
   {
-    return addMenuRadio(menu,text,data,field,value,-1,accelerator);
+    return insertMenuRadio(menu,-1,data,text,field,value,accelerator);
   }
 
   /** add new menu item
    * @param menu menu
-   * @param text menu item text
    * @param data data structure to store radio value or null
+   * @param text menu item text
    * @param field field name in data structure to set on selection
    * @param value value for radio button
    * @return new menu item
    */
   public static MenuItem addMenuRadio(Menu menu, String text, final Object data, final String field, final Object value)
   {
-    return addMenuRadio(menu,text,data,field,value,SWT.NONE);
+    return addMenuRadio(menu,data,text,field,value,SWT.NONE);
   }
 
   /** add new menu item
@@ -7661,6 +7828,66 @@ private static void printTree(Tree tree)
     MenuItem menuItem = new MenuItem(menu,SWT.SEPARATOR);
 
     return menuItem;
+  }
+
+  /** get menu item
+   * @param menu menu
+   * @param data data structure
+   * @return menu item
+   */
+  public static MenuItem getMenuItem(Menu menu, final Object data)
+  {
+    Menu     subMenu;
+    MenuItem subMenuItem;
+
+    for (MenuItem menuItem : menu.getItems())
+    {
+      if (menuItem.getData() == data)
+      {
+        return menuItem;
+      }
+      else
+      {
+        subMenu = menuItem.getMenu();
+        if (subMenu != null)
+        {
+          subMenuItem = getMenuItem(subMenu,data);
+          if (subMenuItem != null)
+          {
+            return subMenuItem;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /** update menu item
+   * @param menu menu
+   * @param data data structure
+   * @param text text
+   */
+  public static void updateMenuItem(Menu menu, final Object data, String text)
+  {
+    MenuItem menuItem = getMenuItem(menu,data);
+    if (menuItem != null)
+    {
+      menuItem.setText(text);
+    }
+  }
+
+  /** remove menu item
+   * @param menu menu
+   * @param data data structure
+   */
+  public static void removeMenuItem(Menu menu, final Object data)
+  {
+    MenuItem menuItem = getMenuItem(menu,data);
+    if (menuItem != null)
+    {
+      menuItem.dispose();
+    }
   }
 
   //-----------------------------------------------------------------------
