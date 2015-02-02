@@ -48,6 +48,8 @@ import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.events.MenuListener;
+import org.eclipse.swt.events.MenuEvent;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.MouseEvent;
@@ -2195,6 +2197,20 @@ public class TabJobs
             }
           });
         }
+        menu.addMenuListener(new MenuListener()
+        {
+          public void menuShown(MenuEvent menuEvent)
+          {
+            if (widgetFileTreeToolTip != null)
+            {
+              widgetFileTreeToolTip.dispose();
+              widgetFileTreeToolTip = null;
+            }
+          }
+          public void menuHidden(MenuEvent menuEvent)
+          {
+          }
+        });
         widgetFileTree.setMenu(menu);
 
         // buttons
