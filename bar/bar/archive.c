@@ -594,7 +594,7 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
   assert(archiveInfo != NULL);
   assert(chunkHeader != NULL);
 
-  // create key chunk
+  // init key chunk
   error = Chunk_init(&chunkInfoKey,
                      NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
@@ -700,7 +700,7 @@ LOCAL Errors writeFileInfo(ArchiveInfo *archiveInfo)
 
   assert(archiveInfo != NULL);
 
-  // create key chunk
+  // init BAR chunk
   error = Chunk_init(&chunkInfoBar,
                      NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
@@ -754,7 +754,7 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
   assert(archiveInfo != NULL);
   assert(Semaphore_isOwned(&archiveInfo->chunkIOLock));
 
-  // create key chunk
+  // init key chunk
   error = Chunk_init(&chunkInfoKey,
                      NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
@@ -1249,7 +1249,11 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
       // create new part (if not already created)
       if (!archiveEntryInfo->file.headerWrittenFlag)
       {
-        writeFileChunks(archiveEntryInfo);
+        error = writeFileChunks(archiveEntryInfo);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
       }
 
       // get max. number of byte-compressed data blocks to write
@@ -1277,7 +1281,11 @@ close(h);
         // create new part (if not already created)
         if (!archiveEntryInfo->file.headerWrittenFlag)
         {
-          writeFileChunks(archiveEntryInfo);
+          error = writeFileChunks(archiveEntryInfo);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
         }
 
         // encrypt block
@@ -1386,7 +1394,11 @@ close(h);
           // create new part (if not already created)
           if (!archiveEntryInfo->file.headerWrittenFlag)
           {
-            writeFileChunks(archiveEntryInfo);
+            error = writeFileChunks(archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
           }
 
           // encrypt block
@@ -1567,7 +1579,11 @@ close(h);
           // create new part (if not already created)
           if (!archiveEntryInfo->file.headerWrittenFlag)
           {
-            writeFileChunks(archiveEntryInfo);
+            error = writeFileChunks(archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
           }
 
           // encrypt block
@@ -3857,7 +3873,12 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   }
 
   // create new part
-  writeFileChunks(archiveEntryInfo);
+  error = writeFileChunks(archiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
 
   // done resources
   AutoFree_done(&autoFreeList);
@@ -10184,9 +10205,9 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   }
 
   // clear index
-  error = Index_clear(indexHandle,
-                      storageId
-                     );
+  error = Index_clearStorage(indexHandle,
+                             storageId
+                            );
   if (error != ERROR_NONE)
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
@@ -10588,13 +10609,13 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
           break; /* not reached */
       }
 
-      // update temporary entires, size (ignore error)
-      Index_update(indexHandle,
-                   storageId,
-                   NULL, // storageName
-                   Archive_getEntries(&archiveInfo),
-                   Archive_getSize(&archiveInfo)
-                  );
+      // update temporary entries, size (ignore error)
+      Index_storageUpdate(indexHandle,
+                          storageId,
+                          NULL,              // storageName
+                          Archive_getEntries(&archiveInfo),
+                          Archive_getSize(&archiveInfo)
+                         );
     }
 
     // check if aborted, check if server allocation pending
@@ -10652,13 +10673,13 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                    NULL
                   );
 
-    // update name/size
-    error = Index_update(indexHandle,
-                         storageId,
-                         storageName,
-                         Archive_getEntries(&archiveInfo),
-                         Archive_getSize(&archiveInfo)
-                        );
+    // update name/entries/size
+    error = Index_storageUpdate(indexHandle,
+                                storageId,
+                                storageName,
+                                Archive_getEntries(&archiveInfo),
+                                Archive_getSize(&archiveInfo)
+                               );
     if (error != ERROR_NONE)
     {
       Index_setState(indexHandle,
