@@ -31,6 +31,8 @@ import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.MenuListener;
+import org.eclipse.swt.events.MenuEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
@@ -265,6 +267,10 @@ public class TabRestore
     {
       public abstract void update(TableItem tableItem, IndexData indexData);
     }
+    abstract class MenuItemUpdateRunnable
+    {
+      public abstract void update(MenuItem menuItem, IndexData indexData);
+    }
 
     public String                   name;                     // name
     public long                     dateTime;                 // date/time when storage was created or last time some storage was created
@@ -277,6 +283,9 @@ public class TabRestore
     private TreeItemUpdateRunnable  treeItemUpdateRunnable;
     private TableItem               tableItem;                // reference table item or null
     private TableItemUpdateRunnable tableItemUpdateRunnable;
+    private Menu                    subMenu;                  // reference sub-menu or null
+    private MenuItem                menuItem;                 // reference menu item or null
+    private MenuItemUpdateRunnable  menuItemUpdateRunnable;
     private boolean                 checked;                  // true iff storage entry is tagged
 
     /** create index data
@@ -296,6 +305,8 @@ public class TabRestore
       this.errorMessage  = errorMessage;
       this.treeItem      = null;
       this.tableItem     = null;
+      this.subMenu       = null;
+      this.menuItem      = null;
       this.checked       = false;
     }
 
@@ -352,6 +363,46 @@ public class TabRestore
     public void clearTableItem()
     {
       this.tableItem = null;
+    }
+
+    /** get sub-menu reference
+     * @return sub-menu
+     */
+    public Menu getSubMenu()
+    {
+      return this.subMenu;
+    }
+
+    /** set sub-menu reference
+     * @param setSubMenu sub-menu
+     */
+    public void setSubMenu(Menu subMenu)
+    {
+      this.subMenu = subMenu;
+    }
+
+    /** clear sub-menu reference
+     */
+    public void clearSubMenu()
+    {
+      this.subMenu = null;
+    }
+
+    /** set menu item reference
+     * @param menuItem menu item
+     * @param menuItemUpdateRunnable menu item update runnable
+     */
+    public void setMenuItem(MenuItem menuItem, MenuItemUpdateRunnable menuItemUpdateRunnable)
+    {
+      this.menuItem               = menuItem;
+      this.menuItemUpdateRunnable = menuItemUpdateRunnable;
+    }
+
+    /** clear table item reference
+     */
+    public void clearMenuItem()
+    {
+      this.menuItem = null;
     }
 
     /** set index state
@@ -526,9 +577,19 @@ public class TabRestore
                                (Object)uuidIndexData,
                                uuidIndexData.name,
                                Units.formatByteSize(uuidIndexData.size),
-                               simpleDateFormat.format(new Date(uuidIndexData.dateTime*1000)),
+                               simpleDateFormat.format(new Date(uuidIndexData.dateTime*1000L)),
                                ""
                               );
+      }
+    };
+
+    private final MenuItemUpdateRunnable menuItemUpdateRunnable = new MenuItemUpdateRunnable()
+    {
+      public void update(MenuItem menuItem, IndexData indexData)
+      {
+        UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
+
+        menuItem.setText(uuidIndexData.name);
       }
     };
 
@@ -555,6 +616,14 @@ public class TabRestore
     public void setTreeItem(TreeItem treeItem)
     {
       setTreeItem(treeItem,treeItemUpdateRunnable);
+    }
+
+    /** set menu item reference
+     * @param menuItem menu item
+     */
+    public void setMenuItem(MenuItem menuItem)
+    {
+      setMenuItem(menuItem,menuItemUpdateRunnable);
     }
 
     /** get info string
@@ -636,9 +705,19 @@ public class TabRestore
                                (Object)entityIndexData,
                                entityIndexData.archiveType.toString(),
                                Units.formatByteSize(entityIndexData.size),
-                               simpleDateFormat.format(new Date(entityIndexData.dateTime*1000)),
+                               simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L)),
                                ""
                               );
+      }
+    };
+
+    private final MenuItemUpdateRunnable menuItemUpdateRunnable = new MenuItemUpdateRunnable()
+    {
+      public void update(MenuItem menuItem, IndexData indexData)
+      {
+        EntityIndexData entityIndexData = (EntityIndexData)indexData;
+
+        menuItem.setText(entityIndexData.name);
       }
     };
 
@@ -664,6 +743,14 @@ public class TabRestore
     public void setTreeItem(TreeItem treeItem)
     {
       setTreeItem(treeItem,treeItemUpdateRunnable);
+    }
+
+    /** set menu item reference
+     * @param menuItem menu item
+     */
+    public void setMenuItem(MenuItem menuItem)
+    {
+      setMenuItem(menuItem,menuItemUpdateRunnable);
     }
 
     /** get info string
@@ -748,7 +835,7 @@ public class TabRestore
                                (Object)storageIndexData,
                                storageIndexData.name,
                                Units.formatByteSize(storageIndexData.size),
-                               simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)),
+                               simpleDateFormat.format(new Date(storageIndexData.dateTime*1000L)),
                                storageIndexData.indexState.toString()
                               );
       }
@@ -764,7 +851,7 @@ public class TabRestore
                                  (Object)storageIndexData,
                                  storageIndexData.name,
                                  Units.formatByteSize(storageIndexData.size),
-                                 simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)),
+                                 simpleDateFormat.format(new Date(storageIndexData.dateTime*1000L)),
                                  storageIndexData.indexState.toString()
                                 );
       }
@@ -1148,6 +1235,49 @@ public class TabRestore
     return index;
   }
 
+  /** find index for insert of item in sorted storage menu
+   * @param uuidIndexData UUID index data
+   * @return index in menu
+   */
+  private int findStorageMenuIndex(UUIDIndexData uuidIndexData)
+  {
+    MenuItem            menuItems[]         = widgetStorageTreeAssignToMenu.getItems();
+    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
+
+    int index = 0;
+    while (   (index < menuItems.length)
+           && (indexDataComparator.compare(uuidIndexData,(UUIDIndexData)menuItems[index].getData()) > 0)
+          )
+    {
+      index++;
+    }
+Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
+
+    return index;
+  }
+
+  /** find index for insert of item in sorted storage menu
+   * @param subMenu sub-menu
+   * @param entityIndexData entity index data
+   * @return index in menu
+   */
+  private int findStorageMenuIndex(Menu subMenu, EntityIndexData entityIndexData)
+  {
+    MenuItem            menuItems[]         = subMenu.getItems();
+    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
+
+    int index = 4;
+    while (   (index < menuItems.length)
+           && (indexDataComparator.compare(entityIndexData,(EntityIndexData)menuItems[index].getData()) > 0)
+          )
+    {
+      index++;
+    }
+Dprintf.dprintf("entityIndexData=%s: %d",entityIndexData,index);
+
+    return index;
+  }
+
   /** find index for insert of item in sorted storage data table
    * @param storageIndexData data of tree item
    * @return index in table
@@ -1160,6 +1290,26 @@ public class TabRestore
     int index = 0;
     while (   (index < tableItems.length)
            && (indexDataComparator.compare(storageIndexData,(StorageIndexData)tableItems[index].getData()) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
+  }
+
+  /** find index for insert of item in sorted storage menu
+   * @param storageIndexData data of tree item
+   * @return index in menu
+   */
+  private int findStorageMenuIndex(StorageIndexData storageIndexData)
+  {
+    MenuItem            menuItems[]         = widgetStorageTableAssignToMenu.getItems();
+    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable);
+
+    int index = 0;
+    while (   (index < menuItems.length)
+           && (indexDataComparator.compare(storageIndexData,(StorageIndexData)menuItems[index].getData()) > 0)
           )
     {
       index++;
@@ -1210,7 +1360,7 @@ public class TabRestore
             });
           }
 
-          // update entries
+          // update tree/table
           try
           {
             HashSet<TreeItem> uuidTreeItems = new HashSet<TreeItem>();
@@ -1234,6 +1384,26 @@ public class TabRestore
             {
               updateStorageTableItems();
             }
+          }
+          catch (CommunicationError error)
+          {
+            // ignored
+          }
+          catch (Exception exception)
+          {
+            if (Settings.debugLevel > 0)
+            {
+              BARServer.disconnect();
+              System.err.println("ERROR: "+exception.getMessage());
+              BARControl.printStackTrace(exception);
+              System.exit(1);
+            }
+          }
+
+          // update menues
+          try
+          {
+            updateUUIDMenus();
           }
           catch (CommunicationError error)
           {
@@ -1550,14 +1720,14 @@ public class TabRestore
         {
           try
           {
-            long                  entityId         = resultMap.getLong  ("entityId"                        );
-            String                jobUUID          = resultMap.getString("jobUUID"                         );
-            String                scheduleUUID     = resultMap.getString("scheduleUUID"                    );
-            Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("type",Settings.ArchiveTypes.class);
-            long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                    );
-            long                  totalEntries     = resultMap.getLong  ("totalEntries"                    );
-            long                  totalSize        = resultMap.getLong  ("totalSize"                       );
-            String                lastErrorMessage = resultMap.getString("lastErrorMessage"                );
+            long                  entityId         = resultMap.getLong  ("entityId"                               );
+            String                jobUUID          = resultMap.getString("jobUUID"                                );
+            String                scheduleUUID     = resultMap.getString("scheduleUUID"                           );
+            Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+            long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                           );
+            long                  totalEntries     = resultMap.getLong  ("totalEntries"                           );
+            long                  totalSize        = resultMap.getLong  ("totalSize"                              );
+            String                lastErrorMessage = resultMap.getString("lastErrorMessage"                       );
 
             // add/update job data index
             final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
@@ -1912,6 +2082,303 @@ public class TabRestore
           }
         }
       });
+    }
+
+    /** update UUID menus
+     */
+    private void updateUUIDMenus()
+    {
+      final HashSet<Menu>          removeUUIDMenuSet       = new HashSet<Menu>();
+      final HashSet<UUIDIndexData> uuidIndexDataSet        = new HashSet<UUIDIndexData>();
+      final HashSet<MenuItem>      removeEntityMenuItemSet = new HashSet<MenuItem>();
+      Command                      command;
+      String[]                     resultErrorMessage      = new String[1];
+      ValueMap                     resultMap               = new ValueMap();
+
+      // get UUID menus
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          for (MenuItem menuItem : widgetStorageTreeAssignToMenu.getItems())
+          {
+            assert menuItem.getData() instanceof UUIDIndexData;
+            removeUUIDMenuSet.add(menuItem.getMenu());
+          }
+        }
+      });
+      if (triggeredFlag) return;
+
+      // update UUIDs
+      command = BARServer.runCommand(StringParser.format("INDEX_UUID_LIST pattern=*"),
+                                     0
+                                    );
+      while (!command.endOfData() && !triggeredFlag)
+      {
+        if (command.getNextResult(resultErrorMessage,
+                                  resultMap,
+                                  Command.TIMEOUT
+                                 ) == Errors.NONE
+           )
+        {
+          try
+          {
+            String jobUUID          = resultMap.getString("jobUUID"         );
+            String scheduleUUID     = resultMap.getString("scheduleUUID"    );
+            String name             = resultMap.getString("name"            );
+            long   lastDateTime     = resultMap.getLong  ("lastDateTime"    );
+            long   totalEntries     = resultMap.getLong  ("totalEntries"    );
+            long   totalSize        = resultMap.getLong  ("totalSize"       );
+            String lastErrorMessage = resultMap.getString("lastErrorMessage");
+
+            // add/update index map
+            final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
+                                                                                 scheduleUUID,
+                                                                                 name,
+                                                                                 lastDateTime,
+                                                                                 totalEntries,
+                                                                                 totalSize,
+                                                                                 lastErrorMessage
+                                                                                );
+
+            // update/insert menu item
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                Menu subMenu = Widgets.getMenu(widgetStorageTreeAssignToMenu,uuidIndexData);
+                if (subMenu == null)
+                {
+                  MenuItem menuItem;
+
+                  // insert sub-menu
+                  subMenu = Widgets.insertMenu(widgetStorageTreeAssignToMenu,
+                                               findStorageMenuIndex(uuidIndexData),
+                                               (Object)uuidIndexData,
+                                               uuidIndexData.name
+                                              );
+                  menuItem = Widgets.addMenuItem(subMenu,
+                                                 null,
+                                                 BARControl.tr("new full")
+                                                );
+                  menuItem.addSelectionListener(new SelectionListener()
+                  {
+                    public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                    {
+                    }
+                    public void widgetSelected(SelectionEvent selectionEvent)
+                    {
+                      MenuItem widget = (MenuItem)selectionEvent.widget;
+
+Dprintf.dprintf("");
+//                      assignStorage(indexData);
+                    }
+                  });
+                  menuItem = Widgets.addMenuItem(subMenu,
+                                                 null,
+                                                 BARControl.tr("new incremental")
+                                                );
+                  menuItem.addSelectionListener(new SelectionListener()
+                  {
+                    public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                    {
+                    }
+                    public void widgetSelected(SelectionEvent selectionEvent)
+                    {
+                      MenuItem widget = (MenuItem)selectionEvent.widget;
+
+Dprintf.dprintf("");
+//                      assignStorage(indexData);
+                    }
+                  });
+                  menuItem = Widgets.addMenuItem(subMenu,
+                                                 null,
+                                                 BARControl.tr("new differenial")
+                                                );
+                  menuItem.addSelectionListener(new SelectionListener()
+                  {
+                    public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                    {
+                    }
+                    public void widgetSelected(SelectionEvent selectionEvent)
+                    {
+                      MenuItem widget = (MenuItem)selectionEvent.widget;
+
+Dprintf.dprintf("");
+//                      assignStorage(indexData);
+                    }
+                  });
+                  Widgets.addMenuSeparator(subMenu);
+
+                  uuidIndexData.setSubMenu(subMenu);
+                }
+                else
+                {
+                  assert subMenu.getData() instanceof UUIDIndexData;
+
+                  // keep menu item
+                  removeUUIDMenuSet.remove(subMenu);
+                }
+
+                uuidIndexDataSet.add(uuidIndexData);
+              }
+            });
+
+          }
+          catch (IllegalArgumentException exception)
+          {
+            if (Settings.debugLevel > 0)
+            {
+              System.err.println("ERROR: "+exception.getMessage());
+            }
+          }
+        }
+      }
+      if (triggeredFlag) return;
+
+      // remove not existing UUID menus
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          for (Menu menu : removeUUIDMenuSet)
+          {
+Dprintf.dprintf("menu=%s",menu);
+            UUIDIndexData uuidIndexData = (UUIDIndexData)menu.getData();
+            Widgets.removeMenu(widgetStorageTreeAssignToMenu,menu);
+            uuidIndexData.clearSubMenu();
+          }
+        }
+      });
+
+      // get entity menu items
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          for (UUIDIndexData uuidIndexData : uuidIndexDataSet)
+          {
+            Menu subMenu = uuidIndexData.getSubMenu();
+            assert subMenu != null;
+
+            MenuItem menuItems[] = subMenu.getItems();
+            for (int i =4; i < menuItems.length; i++)
+            {
+Dprintf.dprintf("menuItem=%s: %s",menuItems[i],menuItems[i].getData());
+              assert menuItems[i].getData() instanceof EntityIndexData;
+              removeEntityMenuItemSet.add(menuItems[i]);
+            }
+          }
+        }
+      });
+      if (triggeredFlag) return;
+
+      // update entities
+      for (UUIDIndexData uuidIndexData : uuidIndexDataSet)
+      {
+        final Menu subMenu = uuidIndexData.getSubMenu();
+
+        command = BARServer.runCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S pattern=*",
+                                                           uuidIndexData.jobUUID
+                                                          ),
+                                       0
+                                      );
+        while (!command.endOfData() && !triggeredFlag)
+        {
+          if (command.getNextResult(resultErrorMessage,
+                                    resultMap,
+                                    Command.TIMEOUT
+                                   ) == Errors.NONE
+             )
+          {
+            try
+            {
+              long                  entityId         = resultMap.getLong  ("entityId"                               );
+              String                jobUUID          = resultMap.getString("jobUUID"                                );
+              String                scheduleUUID     = resultMap.getString("scheduleUUID"                           );
+              Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+              long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                           );
+              long                  totalEntries     = resultMap.getLong  ("totalEntries"                           );
+              long                  totalSize        = resultMap.getLong  ("totalSize"                              );
+              String                lastErrorMessage = resultMap.getString("lastErrorMessage"                       );
+
+              // add/update job data index
+              final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
+                                                                                         archiveType,
+                                                                                         lastDateTime,
+                                                                                         totalEntries,
+                                                                                         totalSize,
+                                                                                         lastErrorMessage
+                                                                                        );
+
+              // update/insert menu item
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  MenuItem menuItem = Widgets.getMenuItem(subMenu,entityIndexData);
+                  if (menuItem == null)
+                  {
+                    // insert menu item
+                    menuItem = Widgets.insertMenuItem(subMenu,
+                                                      findStorageMenuIndex(subMenu,entityIndexData),
+                                                      (Object)entityIndexData,
+                                                      simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L))+", "+entityIndexData.archiveType.toString()
+                                                     );
+                    menuItem.addSelectionListener(new SelectionListener()
+                    {
+                      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                      {
+                      }
+                      public void widgetSelected(SelectionEvent selectionEvent)
+                      {
+                        MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                        EntityIndexData entityIndexData = (EntityIndexData)widget.getData();
+Dprintf.dprintf("entityIndexData=%s",entityIndexData);
+
+                        assignStorage(entityIndexData);
+                      }
+                    });
+                    entityIndexData.setMenuItem(menuItem);
+                  }
+                  else
+                  {
+                    assert menuItem.getData() instanceof EntityIndexData;
+
+                    // keep menu item
+                    removeEntityMenuItemSet.remove(menuItem);
+                  }
+                }
+              });
+            }
+            catch (IllegalArgumentException exception)
+            {
+              if (Settings.debugLevel > 0)
+              {
+                System.err.println("ERROR: "+exception.getMessage());
+              }
+            }
+          }
+        }
+        if (triggeredFlag) return;
+      }
+
+      // remove not existing entity menu items
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          for (MenuItem menuItem : removeEntityMenuItemSet)
+          {
+Dprintf.dprintf("menuItem=%s",menuItem);
+            EntityIndexData entityIndexData = (EntityIndexData)menuItem.getData();
+            Widgets.removeMenuItem(widgetStorageTreeAssignToMenu,menuItem);
+            entityIndexData.clearMenuItem();
+          }
+        }
+      });
+
     }
   }
 
@@ -2470,7 +2937,7 @@ public class TabRestore
                                                 entryData.name,
                                                 "FILE",
                                                 Units.formatByteSize(entryData.size),
-                                                simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                                simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                                );
                       }
                     });
@@ -2517,7 +2984,7 @@ public class TabRestore
                                                 entryData.name,
                                                 "IMAGE",
                                                 Units.formatByteSize(entryData.size),
-                                                simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                                simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                                );
                       }
                     });
@@ -2562,7 +3029,7 @@ public class TabRestore
                                                 entryData.name,
                                                 "DIR",
                                                 "",
-                                                simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                                simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                                );
                       }
                     });
@@ -2608,7 +3075,7 @@ public class TabRestore
                                                 entryData.name,
                                                 "LINK",
                                                 "",
-                                                simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                                simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                                );
                       }
                     });
@@ -2656,7 +3123,7 @@ public class TabRestore
                                                 entryData.name,
                                                 "HARDLINK",
                                                 Units.formatByteSize(entryData.size),
-                                                simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                                simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                                );
                       }
                     });
@@ -2701,7 +3168,7 @@ public class TabRestore
                                                 entryData.name,
                                                 "DEVICE",
                                                 Units.formatByteSize(entryData.size),
-                                                simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                                simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                                );
                       }
                     });
@@ -2784,8 +3251,10 @@ break;
   private TabFolder           widgetStorageTabFolder;
   private Tree                widgetStorageTree;
   private Shell               widgetStorageTreeToolTip = null;
+  private Menu                widgetStorageTreeAssignToMenu;
   private Table               widgetStorageTable;
   private Shell               widgetStorageTableToolTip = null;
+  private Menu                widgetStorageTableAssignToMenu;
   private Text                widgetStoragePattern;
   private Combo               widgetStorageState;
   private Combo               widgetStorageMaxCount;
@@ -3114,7 +3583,7 @@ break;
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,1,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(entityIndexData.dateTime*1000)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,1,1,TableLayoutData.WE);
@@ -3205,7 +3674,7 @@ break;
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageIndexData.dateTime*1000L)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,2,1,TableLayoutData.WE);
@@ -3255,7 +3724,7 @@ break;
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,7,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000)));
+              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000L)));
               label.setForeground(COLOR_FORGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,7,1,TableLayoutData.WE);
@@ -3442,7 +3911,7 @@ break;
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,2,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.dateTime*1000)));
+            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.dateTime*1000L)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,2,1,TableLayoutData.WE);
@@ -3492,7 +3961,7 @@ break;
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,7,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000)));
+            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000L)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,7,1,TableLayoutData.WE);
@@ -3560,6 +4029,10 @@ break;
             refreshAllWithErrorStorageIndex();
           }
         });
+
+        widgetStorageTreeAssignToMenu = Widgets.addMenu(menu,BARControl.tr("Assign to job\u2026"));
+        {
+        }
 
         Widgets.addMenuSeparator(menu);
 
@@ -3668,6 +4141,25 @@ break;
           }
         });
       }
+      menu.addMenuListener(new MenuListener()
+      {
+        public void menuShown(MenuEvent menuEvent)
+        {
+          if (widgetStorageTreeToolTip != null)
+          {
+            widgetStorageTreeToolTip.dispose();
+            widgetStorageTreeToolTip = null;
+          }
+          if (widgetStorageTableToolTip != null)
+          {
+            widgetStorageTableToolTip.dispose();
+            widgetStorageTableToolTip = null;
+          }
+        }
+        public void menuHidden(MenuEvent menuEvent)
+        {
+        }
+      });
       widgetStorageTree.setMenu(menu);
       widgetStorageTable.setMenu(menu);
 
@@ -3995,7 +4487,7 @@ break;
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryData.storageDateTime*1000)));
+            label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryData.storageDateTime*1000L)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,1,TableLayoutData.WE);
@@ -4038,7 +4530,7 @@ break;
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,6,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryData.dateTime*1000)));
+            label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryData.dateTime*1000L)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,6,1,TableLayoutData.WE);
@@ -4113,6 +4605,20 @@ break;
           }
         });
       }
+      menu.addMenuListener(new MenuListener()
+      {
+        public void menuShown(MenuEvent menuEvent)
+        {
+          if (widgetEntryTableToolTip != null)
+          {
+            widgetEntryTableToolTip.dispose();
+            widgetEntryTableToolTip = null;
+          }
+        }
+        public void menuHidden(MenuEvent menuEvent)
+        {
+        }
+      });
       widgetEntryTable.setMenu(menu);
 
       // entry list filters
@@ -4736,14 +5242,14 @@ break;
           {
             try
             {
-              long                  entityId         = resultMap.getLong  ("entityId"                        );
-              String                jobUUID          = resultMap.getString("jobUUID"                         );
-              String                scheuduleUUID    = resultMap.getString("scheduleUUID"                    );
-              Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("type",Settings.ArchiveTypes.class);
-              long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                    );
-              long                  totalEntries     = resultMap.getLong  ("totalEntries"                    );
-              long                  totalSize        = resultMap.getLong  ("totalSize"                       );
-              String                lastErrorMessage = resultMap.getString("lastErrorMessage"                );
+              long                  entityId         = resultMap.getLong  ("entityId"                               );
+              String                jobUUID          = resultMap.getString("jobUUID"                                );
+              String                scheuduleUUID    = resultMap.getString("scheduleUUID"                           );
+              Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+              long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                           );
+              long                  totalEntries     = resultMap.getLong  ("totalEntries"                           );
+              long                  totalSize        = resultMap.getLong  ("totalSize"                              );
+              String                lastErrorMessage = resultMap.getString("lastErrorMessage"                       );
 
               // add/update job data index
               final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
@@ -4959,167 +5465,168 @@ break;
     }
   }
 
-  /** delete storage
+  /** assing storage to entity
    */
-  private void deleteStorage()
+  private void assignStorage(EntityIndexData entityIndexData)
   {
-    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
-
-    getCheckedIndexData(indexDataHashSet);
-    getSelectedIndexData(indexDataHashSet);
-    if (!indexDataHashSet.isEmpty())
+    try
     {
-      if (Dialogs.confirm(shell,BARControl.tr("Really delete {0} {0,choice,1#index/storage file|1<indizes and storage files}?",indexDataHashSet.size())))
+      HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+
+      getCheckedIndexData(indexDataHashSet);
+      getSelectedIndexData(indexDataHashSet);
+      if (!indexDataHashSet.isEmpty())
       {
-        final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
-        busyDialog.setMaximum(indexDataHashSet.size());
-
-        new BackgroundTask(busyDialog,new Object[]{indexDataHashSet})
+        for (IndexData indexData : indexDataHashSet)
         {
-          public void run(final BusyDialog busyDialog, Object userData)
+          final String info = indexData.getInfo();
+
+          String[] resultErrorMessage = new String[1];
+          int errorCode = Errors.UNKNOWN;
+          if      (indexData instanceof UUIDIndexData)
           {
-            HashSet<IndexData> indexDataHashSet = (HashSet<IndexData>)((Object[])userData)[0];
+            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEnityId=%lld jobUUID=%'S",
+                                                                     entityIndexData.entityId,
+                                                                     ((UUIDIndexData)indexData).jobUUID
+                                                                    ),
+                                                 0,
+                                                 resultErrorMessage
+                                                );
+          }
+          else if (indexData instanceof EntityIndexData)
+          {
+            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN state=%s entityId=%d",
+                                                                     "*",
+                                                                     ((EntityIndexData)indexData).entityId
+                                                                    ),
+                                                 0,
+                                                 resultErrorMessage
+                                                );
+          }
+          else if (indexData instanceof StorageIndexData)
+          {
+            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN state=%s storageId=%d",
+                                                                     "*",
+                                                                     ((StorageIndexData)indexData).storageId
+                                                                    ),
+                                                 0,
+                                                 resultErrorMessage
+                                                );
+          }
+          if (errorCode == Errors.NONE)
+          {
+            indexData.setState(IndexStates.UPDATE_REQUESTED);
+          }
+          else
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]));
+          }
+        }
+      }
+    }
+    catch (CommunicationError error)
+    {
+      Dialogs.error(shell,BARControl.tr("Communication error while assigning index database\n\n(error: {0})",error.toString()));
+    }
+  }
 
-            try
+  /** refresh storage from index database
+   */
+  private void refreshStorageIndex()
+  {
+    try
+    {
+      HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+
+      getCheckedIndexData(indexDataHashSet);
+      getSelectedIndexData(indexDataHashSet);
+      if (!indexDataHashSet.isEmpty())
+      {
+        if (Dialogs.confirm(shell,BARControl.tr("Really refresh index for {0} {0,choice,1#entry|1<entries}?",indexDataHashSet.size())))
+        {
+          for (IndexData indexData : indexDataHashSet)
+          {
+            final String info = indexData.getInfo();
+
+            String[] resultErrorMessage = new String[1];
+            int errorCode = Errors.UNKNOWN;
+            if      (indexData instanceof UUIDIndexData)
             {
-              boolean ignoreAllErrorsFlag = false;
-              boolean abortFlag           = false;
-              long    n                   = 0;
-              for (IndexData indexData : indexDataHashSet)
-              {
-                // get index info
-                final String info = indexData.getInfo();
-
-                // update busy dialog
-                busyDialog.updateText(info);
-
-                // delete storage
-                final String[] resultErrorMessage = new String[1];
-                int errorCode = Errors.UNKNOWN;
-                if      (indexData instanceof UUIDIndexData)
-                {
-                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE jobUUID=%'S",
-                                                                           ((UUIDIndexData)indexData).jobUUID
-                                                                          ),
-                                                       0,
-                                                       resultErrorMessage
-                                                      );
-                }
-                else if (indexData instanceof EntityIndexData)
-                {
-                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE entityId=%d",
-                                                                           ((EntityIndexData)indexData).entityId
-                                                                          ),
-                                                       0,
-                                                       resultErrorMessage
-                                                      );
-                }
-                else if (indexData instanceof StorageIndexData)
-                {
-                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%d",
-                                                                           ((StorageIndexData)indexData).storageId
-                                                                          ),
-                                                       0,
-                                                       resultErrorMessage
-                                                      );
-                }
-                if (errorCode == Errors.NONE)
-                {
-                  indexDataMap.remove(indexData);
-                  Widgets.removeTreeItem(widgetStorageTree,indexData);
-                  indexData.clearTreeItem();
-                  Widgets.removeTableItem(widgetStorageTable,indexData);
-                  indexData.clearTableItem();
-                }
-                else
-                {
-                  if (!ignoreAllErrorsFlag)
-                  {
-                    final int[] selection = new int[1];
-                    if (indexDataHashSet.size() > (n+1))
-                    {
-                      display.syncExec(new Runnable()
-                      {
-                        public void run()
-                        {
-                          selection[0] = Dialogs.select(shell,
-                                                        BARControl.tr("Confirmation"),
-                                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]),
-                                                        new String[]{BARControl.tr("Continue"),BARControl.tr("Continue with all"),BARControl.tr("Abort")},
-                                                        0
-                                                       );
-                        }
-                      });
-                    }
-                    else
-                    {
-                      display.syncExec(new Runnable()
-                      {
-                        public void run()
-                        {
-                          Dialogs.error(shell,
-                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0])
-                                       );
-                        }
-                      });
-                    }
-                    switch (selection[0])
-                    {
-                      case 0:
-                        break;
-                      case 1:
-                        ignoreAllErrorsFlag = true;
-                        break;
-                      case 2:
-                        abortFlag = true;
-                        break;
-                      default:
-                        break;
-                    }
-                  }
-                }
-
-                // update progress bar
-                n++;
-                busyDialog.updateProgressBar(n);
-
-                // check for abort
-                if (abortFlag || busyDialog.isAborted()) break;
-              }
-
-              // close busy dialog
-              display.syncExec(new Runnable()
-              {
-                public void run()
-                {
-                  busyDialog.close();
-                }
-              });
-
-              updateStorageThread.triggerUpdate();
+              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s jobUUID=%'S",
+                                                                       "*",
+                                                                       ((UUIDIndexData)indexData).jobUUID
+                                                                      ),
+                                                   0,
+                                                   resultErrorMessage
+                                                  );
             }
-            catch (CommunicationError error)
+            else if (indexData instanceof EntityIndexData)
             {
-              final String errorMessage = error.getMessage();
-              display.syncExec(new Runnable()
-              {
-                public void run()
-                {
-                  busyDialog.close();
-                  Dialogs.error(shell,BARControl.tr("Communication error while deleting storage\n\n(error: {0})",errorMessage));
-                 }
-              });
+              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s entityId=%d",
+                                                                       "*",
+                                                                       ((EntityIndexData)indexData).entityId
+                                                                      ),
+                                                   0,
+                                                   resultErrorMessage
+                                                  );
             }
-            catch (Exception exception)
+            else if (indexData instanceof StorageIndexData)
             {
-              BARServer.disconnect();
-              System.err.println("ERROR: "+exception.getMessage());
-              BARControl.printStackTrace(exception);
-              System.exit(1);
+              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
+                                                                       "*",
+                                                                       ((StorageIndexData)indexData).storageId
+                                                                      ),
+                                                   0,
+                                                   resultErrorMessage
+                                                  );
+            }
+            if (errorCode == Errors.NONE)
+            {
+              indexData.setState(IndexStates.UPDATE_REQUESTED);
+            }
+            else
+            {
+              Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]));
             }
           }
-        };
+        }
       }
+    }
+    catch (CommunicationError error)
+    {
+      Dialogs.error(shell,BARControl.tr("Communication error while refreshing index database\n\n(error: {0})",error.toString()));
+    }
+  }
+
+  /** refresh all storage from index database with error
+   */
+  private void refreshAllWithErrorStorageIndex()
+  {
+    try
+    {
+      if (Dialogs.confirm(shell,BARControl.tr("Really refresh all indizes with error state?")))
+      {
+        String[] resultErrorMessage = new String[1];
+        int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
+                                                                     "ERROR",
+                                                                     0
+                                                                    ),
+                                                 0,
+                                                 resultErrorMessage
+                                                );
+        if (errorCode == Errors.NONE)
+        {
+          updateStorageThread.triggerUpdate();
+        }
+        else
+        {
+          Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state (error: {0})",resultErrorMessage[0]));
+        }
+      }
+    }
+    catch (CommunicationError error)
+    {
+      Dialogs.error(shell,BARControl.tr("Communication error while refreshing database indizes\n\n(error: {0})",error.toString()));
     }
   }
 
@@ -5492,103 +5999,167 @@ break;
 Dprintf.dprintf("");
   }
 
-  /** refresh storage from index database
+  /** delete storage
    */
-  private void refreshStorageIndex()
+  private void deleteStorage()
   {
-    try
+    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+
+    getCheckedIndexData(indexDataHashSet);
+    getSelectedIndexData(indexDataHashSet);
+    if (!indexDataHashSet.isEmpty())
     {
-      HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
-
-      getCheckedIndexData(indexDataHashSet);
-      getSelectedIndexData(indexDataHashSet);
-      if (!indexDataHashSet.isEmpty())
+      if (Dialogs.confirm(shell,BARControl.tr("Really delete {0} {0,choice,1#index/storage file|1<indizes and storage files}?",indexDataHashSet.size())))
       {
-        if (Dialogs.confirm(shell,BARControl.tr("Really refresh index for {0} {0,choice,1#entry|1<entries}?",indexDataHashSet.size())))
-        {
-          for (IndexData indexData : indexDataHashSet)
-          {
-            final String info = indexData.getInfo();
+        final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+        busyDialog.setMaximum(indexDataHashSet.size());
 
-            String[] resultErrorMessage = new String[1];
-            int errorCode = Errors.UNKNOWN;
-            if      (indexData instanceof UUIDIndexData)
+        new BackgroundTask(busyDialog,new Object[]{indexDataHashSet})
+        {
+          public void run(final BusyDialog busyDialog, Object userData)
+          {
+            HashSet<IndexData> indexDataHashSet = (HashSet<IndexData>)((Object[])userData)[0];
+
+            try
             {
-              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s jobUUID=%'S",
-                                                                       "*",
-                                                                       ((UUIDIndexData)indexData).jobUUID
-                                                                      ),
-                                                   0,
-                                                   resultErrorMessage
-                                                  );
+              boolean ignoreAllErrorsFlag = false;
+              boolean abortFlag           = false;
+              long    n                   = 0;
+              for (IndexData indexData : indexDataHashSet)
+              {
+                // get index info
+                final String info = indexData.getInfo();
+
+                // update busy dialog
+                busyDialog.updateText(info);
+
+                // delete storage
+                final String[] resultErrorMessage = new String[1];
+                int errorCode = Errors.UNKNOWN;
+                if      (indexData instanceof UUIDIndexData)
+                {
+                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE jobUUID=%'S",
+                                                                           ((UUIDIndexData)indexData).jobUUID
+                                                                          ),
+                                                       0,
+                                                       resultErrorMessage
+                                                      );
+                }
+                else if (indexData instanceof EntityIndexData)
+                {
+                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE entityId=%d",
+                                                                           ((EntityIndexData)indexData).entityId
+                                                                          ),
+                                                       0,
+                                                       resultErrorMessage
+                                                      );
+                }
+                else if (indexData instanceof StorageIndexData)
+                {
+                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%d",
+                                                                           ((StorageIndexData)indexData).storageId
+                                                                          ),
+                                                       0,
+                                                       resultErrorMessage
+                                                      );
+                }
+                if (errorCode == Errors.NONE)
+                {
+                  indexDataMap.remove(indexData);
+                  Widgets.removeTreeItem(widgetStorageTree,indexData);
+                  indexData.clearTreeItem();
+                  Widgets.removeTableItem(widgetStorageTable,indexData);
+                  indexData.clearTableItem();
+                }
+                else
+                {
+                  if (!ignoreAllErrorsFlag)
+                  {
+                    final int[] selection = new int[1];
+                    if (indexDataHashSet.size() > (n+1))
+                    {
+                      display.syncExec(new Runnable()
+                      {
+                        public void run()
+                        {
+                          selection[0] = Dialogs.select(shell,
+                                                        BARControl.tr("Confirmation"),
+                                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]),
+                                                        new String[]{BARControl.tr("Continue"),BARControl.tr("Continue with all"),BARControl.tr("Abort")},
+                                                        0
+                                                       );
+                        }
+                      });
+                    }
+                    else
+                    {
+                      display.syncExec(new Runnable()
+                      {
+                        public void run()
+                        {
+                          Dialogs.error(shell,
+                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0])
+                                       );
+                        }
+                      });
+                    }
+                    switch (selection[0])
+                    {
+                      case 0:
+                        break;
+                      case 1:
+                        ignoreAllErrorsFlag = true;
+                        break;
+                      case 2:
+                        abortFlag = true;
+                        break;
+                      default:
+                        break;
+                    }
+                  }
+                }
+
+                // update progress bar
+                n++;
+                busyDialog.updateProgressBar(n);
+
+                // check for abort
+                if (abortFlag || busyDialog.isAborted()) break;
+              }
+
+              // close busy dialog
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  busyDialog.close();
+                }
+              });
+
+              updateStorageThread.triggerUpdate();
             }
-            else if (indexData instanceof EntityIndexData)
+            catch (CommunicationError error)
             {
-              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s entityId=%d",
-                                                                       "*",
-                                                                       ((EntityIndexData)indexData).entityId
-                                                                      ),
-                                                   0,
-                                                   resultErrorMessage
-                                                  );
+              final String errorMessage = error.getMessage();
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  busyDialog.close();
+                  Dialogs.error(shell,BARControl.tr("Communication error while deleting storage\n\n(error: {0})",errorMessage));
+                 }
+              });
             }
-            else if (indexData instanceof StorageIndexData)
+            catch (Exception exception)
             {
-              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
-                                                                       "*",
-                                                                       ((StorageIndexData)indexData).storageId
-                                                                      ),
-                                                   0,
-                                                   resultErrorMessage
-                                                  );
-            }
-            if (errorCode == Errors.NONE)
-            {
-              indexData.setState(IndexStates.UPDATE_REQUESTED);
-            }
-            else
-            {
-              Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]));
+              BARServer.disconnect();
+              System.err.println("ERROR: "+exception.getMessage());
+              BARControl.printStackTrace(exception);
+              System.exit(1);
             }
           }
-        }
+        };
       }
-    }
-    catch (CommunicationError error)
-    {
-      Dialogs.error(shell,BARControl.tr("Communication error while refreshing index database\n\n(error: {0})",error.toString()));
-    }
-  }
-
-  /** refresh all storage from index database with error
-   */
-  private void refreshAllWithErrorStorageIndex()
-  {
-    try
-    {
-      if (Dialogs.confirm(shell,BARControl.tr("Really refresh all indizes with error state?")))
-      {
-        String[] resultErrorMessage = new String[1];
-        int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
-                                                                     "ERROR",
-                                                                     0
-                                                                    ),
-                                                 0,
-                                                 resultErrorMessage
-                                                );
-        if (errorCode == Errors.NONE)
-        {
-          updateStorageThread.triggerUpdate();
-        }
-        else
-        {
-          Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state (error: {0})",resultErrorMessage[0]));
-        }
-      }
-    }
-    catch (CommunicationError error)
-    {
-      Dialogs.error(shell,BARControl.tr("Communication error while refreshing database indizes\n\n(error: {0})",error.toString()));
     }
   }
 
@@ -5867,7 +6438,7 @@ Dprintf.dprintf("");
                                     entryData.name,
                                     "FILE",
                                     Units.formatByteSize(entryData.size),
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                    );
             break;
           case IMAGE:
@@ -5878,7 +6449,7 @@ Dprintf.dprintf("");
                                     entryData.name,
                                     "IMAGE",
                                     Units.formatByteSize(entryData.size),
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                    );
             break;
           case DIRECTORY:
@@ -5889,7 +6460,7 @@ Dprintf.dprintf("");
                                     entryData.name,
                                     "DIR",
                                     "",
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                    );
             break;
           case LINK:
@@ -5900,7 +6471,7 @@ Dprintf.dprintf("");
                                     entryData.name,
                                     "LINK",
                                     "",
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                    );
             break;
           case SPECIAL:
@@ -5911,7 +6482,7 @@ Dprintf.dprintf("");
                                     entryData.name,
                                     "SPECIAL",
                                     Units.formatByteSize(entryData.size),
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                    );
             break;
           case DEVICE:
@@ -5922,7 +6493,7 @@ Dprintf.dprintf("");
                                     entryData.name,
                                     "DEVICE",
                                     Units.formatByteSize(entryData.size),
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                    );
             break;
           case SOCKET:
@@ -5933,7 +6504,7 @@ Dprintf.dprintf("");
                                     entryData.name,
                                     "SOCKET",
                                     "",
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000))
+                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                    );
             break;
         }
