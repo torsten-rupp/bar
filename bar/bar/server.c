@@ -10167,7 +10167,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
@@ -10312,7 +10312,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
@@ -10580,7 +10580,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   UUIDDataList     uuidDataList;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
-  String           jobUUID,scheduleUUID;
+  StaticString     (jobUUID,INDEX_UUID_LENGTH);
+  StaticString     (scheduleUUID,INDEX_UUID_LENGTH);
   uint64           lastCreatedDateTime;
   uint64           totalEntries,totalSize;
   String           lastErrorMessage;
@@ -10604,7 +10605,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
     String_delete(pattern);
     return;
   }
@@ -10616,8 +10617,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 
   // initialize variables
   List_init(&uuidDataList);
-  jobUUID          = String_new();
-  scheduleUUID     = String_new();
   lastErrorMessage = String_new();
 
   // get uuids
@@ -10627,8 +10626,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   if (error != ERROR_NONE)
   {
     String_delete(lastErrorMessage);
-    String_delete(scheduleUUID);
-    String_delete(jobUUID);
     List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
 
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init uuid list fail: %s",Error_getText(error));
@@ -10652,8 +10649,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     {
       Index_doneList(&indexQueryHandle);
       String_delete(lastErrorMessage);
-      String_delete(scheduleUUID);
-      String_delete(jobUUID);
       List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
 
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get uuid list fail: insufficient memory");
@@ -10707,8 +10702,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 
   // free resources
   String_delete(lastErrorMessage);
-  String_delete(scheduleUUID);
-  String_delete(jobUUID);
   List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
   String_delete(pattern);
 }
@@ -10728,9 +10721,10 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 *            entityId=<id>
 *            jobUUID=<uuid>
 *            scheduleUUID=<uuid>
-*            name=<name>
+*            archiveType=<type>
 *            lastDateTime=<created time stamp>
-*            totalSize=<size>
+*            totalEntries=<n>
+*            totalSize=<n>
 *            lastErrorMessage=<error message>
 *            ...
 \***********************************************************************/
@@ -10760,7 +10754,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
@@ -10801,7 +10795,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
         )
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "entityId=%lld jobUUID=%S scheduleUUID=%S type=%s lastDateTime=%llu totalEntries=%llu totalSize=%llu lastErrorMessage=%'S",
+                     "entityId=%lld jobUUID=%S scheduleUUID=%S archiveType=%s lastDateTime=%llu totalEntries=%llu totalSize=%llu lastErrorMessage=%'S",
                      entityId,
                      jobUUID,
                      scheduleUUID,
@@ -10854,7 +10848,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
@@ -10987,7 +10981,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
     String_delete(pattern);
     return;
   }
@@ -11138,7 +11132,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
     String_delete(storageName);
     return;
   }
@@ -11180,9 +11174,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
 * Return : -
 * Notes  : Arguments:
 *            <state>|*
-*            jobUUID=<uuid>|"" and/or
-*            entityId=<id>|0 and/or
-*            storageId=<id>|0
+*            jobUUID=<uuid>|"" or entityId=<id>|0 or storageId=<id>|0
 *          Result:
 \***********************************************************************/
 
@@ -11190,7 +11182,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 {
   bool             stateAny;
   IndexStates      state;
-  String           jobUUID;
+  StaticString     (jobUUID,INDEX_UUID_LENGTH);
   DatabaseId       entityId;
   DatabaseId       storageId;
   Errors           error;
@@ -11217,22 +11209,19 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  jobUUID = String_new();
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
      )
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
-    String_delete(jobUUID);
     return;
   }
 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
-    String_delete(jobUUID);
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
@@ -11267,7 +11256,6 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
       String_delete(printableStorageName);
       String_delete(storageName);
       Storage_doneSpecifier(&storageSpecifier);
-      String_delete(jobUUID);
       return;
     }
     while (   !isCommandAborted(clientInfo,id)
@@ -11315,7 +11303,6 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
         {
           sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
           Index_doneList(&indexQueryHandle);
-          String_delete(jobUUID);
           return;
         }
       }
@@ -11368,7 +11355,6 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
         if (error != ERROR_NONE)
         {
           sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
-          String_delete(jobUUID);
           return;
         }
       }
@@ -11415,7 +11401,6 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
         if (error != ERROR_NONE)
         {
           sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
-          String_delete(jobUUID);
           return;
         }
       }
@@ -11430,7 +11415,6 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
-      String_delete(jobUUID);
       return;
     }
   }
@@ -11438,7 +11422,182 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(jobUUID);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_indexStorageAssign
+* Purpose: assign index database for storage
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            toJobUUID=<uuid>|"" or toEntityId=<id>|0
+*            jobUUID=<uuid>|"" or entityId=<id>|0 or storageId=<id>|0
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_indexStorageAssign(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString     (toJobUUID,INDEX_UUID_LENGTH);
+  DatabaseId       toEntityId;
+  StaticString     (jobUUID,INDEX_UUID_LENGTH);
+  DatabaseId       entityId;
+  DatabaseId       storageId;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexStates      indexState;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get toUUID, toEnityId
+  if (   !StringMap_getString(argumentMap,"jobUUID",toJobUUID,NULL)
+      && !StringMap_getInt64(argumentMap,"entityId",&toEntityId,DATABASE_ID_NONE)
+     )
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected toJobUUID=<uuid> or toEntityId=<id>");
+    return;
+  }
+  // get uuid, enityId, or storageId
+  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
+     )
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
+    return;
+  }
+
+  // check if index database is available, check if index database is ready
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
+    return;
+  }
+  if (!Index_isReady(indexHandle))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
+    return;
+  }
+
+  if (!String_isEmpty(jobUUID))
+  {
+    // add all storage ids with specified uuid
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexHandle,
+                                  jobUUID,
+                                  DATABASE_ID_ANY, // entity id
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      return;
+    }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
+                                NULL, // archive type
+                                NULL, // storageName
+                                NULL, // createdDateTime
+                                NULL, // entries
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+    //????
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  if (entityId != DATABASE_ID_NONE)
+  {
+    // add all storage ids with job id
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexHandle,
+                                  NULL, // uuid
+                                  entityId,
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      return;
+    }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
+                                NULL, // archive type
+                                NULL, // storageName
+                                NULL, // createdDateTime
+                                NULL, // entries
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+    //????
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  if (storageId != DATABASE_ID_NONE)
+  {
+    if      (entityId != DATABASE_ID_NONE)
+    {
+      // assign to other entity
+      error = Index_storageAssignTo(indexHandle,
+                                    storageId,
+                                    entityId
+                                   );
+    }
+    else if (!String_isEmpty(jobUUID))
+    {
+      // create entity for other UUID
+///???
+
+      // assign to other entity
+      error = Index_storageAssignTo(indexHandle,
+                                    storageId,
+                                    entityId
+                                   );
+    }
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+      return;
+    }
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
 }
 
 /***********************************************************************\
@@ -11462,7 +11621,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
 {
   bool             stateAny;
   IndexStates      state;
-  String           jobUUID;
+  StaticString     (jobUUID,INDEX_UUID_LENGTH);
   DatabaseId       entityId;
   DatabaseId       storageId;
   Errors           error;
@@ -11486,22 +11645,19 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  jobUUID = String_new();
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
      )
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
-    String_delete(jobUUID);
     return;
   }
 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
-    String_delete(jobUUID);
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
@@ -11527,7 +11683,6 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      String_delete(jobUUID);
       return;
     }
     while (   !isCommandAborted(clientInfo,id)
@@ -11580,7 +11735,6 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      String_delete(jobUUID);
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
@@ -11629,7 +11783,6 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      String_delete(jobUUID);
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
@@ -11674,7 +11827,6 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(jobUUID);
 }
 
 /***********************************************************************\
@@ -12067,7 +12219,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
     String_delete(entryPattern);
     return;
   }
@@ -12830,6 +12982,7 @@ SERVER_COMMANDS[] =
   { "INDEX_STORAGE_LIST",         serverCommand_indexStorageList,        AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_ADD",          serverCommand_indexStorageAdd,         AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_REMOVE",       serverCommand_indexStorageRemove,      AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_ASSIGN",       serverCommand_indexStorageAssign,      AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_REFRESH",      serverCommand_indexStorageRefresh,     AUTHORIZATION_STATE_OK      },
 
   { "INDEX_ENTRIES_LIST",         serverCommand_indexEntriesList,        AUTHORIZATION_STATE_OK      },
