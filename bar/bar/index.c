@@ -1526,102 +1526,6 @@ bool Index_findByState(IndexHandle   *indexHandle,
   return result;
 }
 
-Errors Index_clear(IndexHandle *indexHandle,
-                   DatabaseId  storageId
-                  )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(Index_isReady(indexHandle));
-
-  // Note: do in single steps to avoid long-time-locking of database!
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM files WHERE storageId=%lld;",
-                           storageId
-                          );
-  if (error != ERROR_NONE) return error;
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM images WHERE storageId=%lld;",
-                           storageId
-                          );
-  if (error != ERROR_NONE) return error;
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM directories WHERE storageId=%lld;",
-                           storageId
-                          );
-  if (error != ERROR_NONE) return error;
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM links WHERE storageId=%lld;",
-                           storageId
-                          );
-  if (error != ERROR_NONE) return error;
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM hardlinks WHERE storageId=%lld;",
-                           storageId
-                          );
-  if (error != ERROR_NONE) return error;
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM special WHERE storageId=%lld;",
-                           storageId
-                          );
-
-  return ERROR_NONE;
-}
-
-Errors Index_update(IndexHandle  *indexHandle,
-                    DatabaseId   storageId,
-                    const String storageName,
-                    uint64       entries,
-                    uint64       size
-                   )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(Index_isReady(indexHandle));
-
-  if (storageName != NULL)
-  {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "UPDATE storage \
-                              SET name=%'S \
-                              WHERE id=%lld;\
-                             ",
-                             storageName,
-                             storageId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "UPDATE storage \
-                            SET entries=%llu, \
-                                size=%llu \
-                            WHERE id=%lld;\
-                           ",
-                           entries,
-                           size,
-                           storageId
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  return ERROR_NONE;
-}
-
 Errors Index_getState(IndexHandle *indexHandle,
                       DatabaseId  storageId,
                       IndexStates *indexState,
@@ -2329,6 +2233,130 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            storageId
                           );
   if (error != ERROR_NONE) return error;
+
+  return ERROR_NONE;
+}
+
+Errors Index_clearStorage(IndexHandle *indexHandle,
+                          DatabaseId  storageId
+                         )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
+
+  // Note: do in single steps to avoid long-time-locking of database!
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM files WHERE storageId=%lld;",
+                           storageId
+                          );
+  if (error != ERROR_NONE) return error;
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM images WHERE storageId=%lld;",
+                           storageId
+                          );
+  if (error != ERROR_NONE) return error;
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM directories WHERE storageId=%lld;",
+                           storageId
+                          );
+  if (error != ERROR_NONE) return error;
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM links WHERE storageId=%lld;",
+                           storageId
+                          );
+  if (error != ERROR_NONE) return error;
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM hardlinks WHERE storageId=%lld;",
+                           storageId
+                          );
+  if (error != ERROR_NONE) return error;
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM special WHERE storageId=%lld;",
+                           storageId
+                          );
+
+  return ERROR_NONE;
+}
+
+
+Errors Index_storageAssignTo(IndexHandle *indexHandle,
+                             DatabaseId  storageId,
+                             DatabaseId  entityId
+                            )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "UPDATE storage \
+                            SET enityId=%lld \
+                            WHERE id=%lld;\
+                           ",
+                           entityId,
+                           storageId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Index_storageUpdate(IndexHandle  *indexHandle,
+                           DatabaseId   storageId,
+                           const String storageName,
+                           uint64       entries,
+                           uint64       size
+                          )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
+
+  if (storageName != NULL)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "UPDATE storage \
+                              SET name=%'S \
+                              WHERE id=%lld;\
+                             ",
+                             storageName,
+                             storageId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "UPDATE storage \
+                            SET entries=%llu, \
+                                size=%llu \
+                            WHERE id=%lld;\
+                           ",
+                           entries,
+                           size,
+                           storageId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   return ERROR_NONE;
 }

@@ -305,40 +305,6 @@ bool Index_findByState(IndexHandle   *indexHandle,
                       );
 
 /***********************************************************************\
-* Name   : Index_clear
-* Purpose: clear index content
-* Input  : indexHandle - index handle
-*          storageId   - database id of index
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_clear(IndexHandle *indexHandle,
-                   DatabaseId  storageId
-                  );
-
-/***********************************************************************\
-* Name   : Index_update
-* Purpose: update index name/size
-* Input  : indexHandle - index handle
-*          storageId   - database id of storage
-*          storageName - storage name (can be NULL)
-*          entries     - number of entries
-*          size        - size [bytes]
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_update(IndexHandle  *indexHandle,
-                    DatabaseId   storageId,
-                    const String storageName,
-                    uint64       entries,
-                    uint64       size
-                   );
-
-/***********************************************************************\
 * Name   : Index_getState
 * Purpose: get index state
 * Input  : indexHandle - index handle
@@ -625,6 +591,56 @@ Errors Index_newStorage(IndexHandle  *indexHandle,
 
 Errors Index_deleteStorage(IndexHandle *indexHandle,
                            DatabaseId  databaseId
+                          );
+
+/***********************************************************************\
+* Name   : Index_clearStorage
+* Purpose: clear index storage content
+* Input  : indexHandle - index handle
+*          storageId   - database id of storage index
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_clearStorage(IndexHandle *indexHandle,
+                          DatabaseId  storageId
+                         );
+
+/***********************************************************************\
+* Name   : Index_storageAssignTo
+* Purpose: assign storage to entity
+* Input  : indexHandle - index handle
+*          storageId   - database id of storage index
+*          entityId    - entity id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_storageAssignTo(IndexHandle *indexHandle,
+                             DatabaseId  storageId,
+                             DatabaseId  entityId
+                            );
+
+/***********************************************************************\
+* Name   : Index_updateStorage
+* Purpose: update storage index name/entries/size
+* Input  : indexHandle - index handle
+*          storageId   - database id of storage index
+*          storageName - storage name (can be NULL)
+*          entries     - number of entries
+*          size        - size [bytes]
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_updateStorage(IndexHandle  *indexHandle,
+                           DatabaseId   storageId,
+                           const String storageName,
+                           uint64       entries,
+                           uint64       size
                           );
 
 /***********************************************************************\

@@ -2826,12 +2826,12 @@ LOCAL Errors storeArchiveFile(void        *userData,
   if (storageId != DATABASE_ID_NONE)
   {
     printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,destinationFileName);
-    error = Index_update(indexHandle,
-                         storageId,
-                         printableStorageName,
-                         0LL,  // entries
-                         0LL   // size
-                        );
+    error = Index_storageUpdate(indexHandle,
+                                storageId,
+                                printableStorageName,
+                                0LL,               // entries
+                                0LL                // size
+                               );
     if (error != ERROR_NONE)
     {
       printError("Cannot update index for storage '%s' (error: %s)!\n",
@@ -3211,12 +3211,12 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
 
       // set database storage size
-      error = Index_update(indexHandle,
-                           storageMsg.storageId,
-                           NULL, // storageName
-                           storageMsg.entries,
-                           fileInfo.size
-                          );
+      error = Index_storageUpdate(indexHandle,
+                                  storageMsg.storageId,
+                                  NULL,              // storageName
+                                  storageMsg.entries,
+                                  fileInfo.size
+                                 );
       if (error != ERROR_NONE)
       {
         printError("Cannot update index for storage '%s' (error: %s)!\n",
