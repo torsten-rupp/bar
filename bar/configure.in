@@ -916,6 +916,11 @@ if test -z "$OBJCOPY"; then
   AC_PATH_PROGS(OBJCOPY,objcopy)
 fi
 
+AC_PATH_PROGS(MAKE,make)
+if test -z "$MAKE"; then
+  AC_MSG_ERROR([Cannot find a 'make' in PATH. Please check your PATH environment variable.])
+fi
+
 AC_PATH_PROGS(PERL,perl)
 if test -z "$PERL"; then
   AC_MSG_ERROR([Cannot find a 'perl' in PATH. Please check your PATH environment variable.])
