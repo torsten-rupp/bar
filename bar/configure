@@ -17907,6 +17907,27 @@ rm -f core conftest.err conftest.$ac_objext \
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
+             #include "gmp.h"
+
+int
+main ()
+{
+printf("%s\n",gmp_version);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_GMP=`./conftest$ac_exeext`
+else
+  VERSION_GMP=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
              #include "gnutls/gnutls.h"
 
 int
@@ -18760,6 +18781,7 @@ host="$host"
                    VERSION_CURL="$VERSION_CURL"
                    VERSION_OPENSSL="$VERSION_OPENSSL"
                    VERSION_LIBSSH2="$VERSION_LIBSSH2"
+                   VERSION_GMP="$VERSION_GMP"
                    VERSION_GNUTLS="$VERSION_GNUTLS"
                    VERSION_CDIO="$VERSION_CDIO"
                    VERSION_PCRE="$VERSION_PCRE"
@@ -19354,7 +19376,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  FTP support       : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
                     echo "  curl support      : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
                     echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
-                    echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
+                    echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
                     echo "  Crash dump support: `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
