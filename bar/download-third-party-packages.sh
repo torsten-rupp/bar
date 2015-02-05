@@ -26,6 +26,7 @@ WGET_OPTIONS="--timeout=30 --tries=3"
 UNZIP="unzip"
 XZ="xz"
 
+GMP_VERSION=6.0.0a
 PCRE_VERSION=8.36
 
 # --------------------------------- variables --------------------------------
@@ -359,7 +360,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s `find $tmpDirectory -type d -name "zlib-*"` zlib
+      if test -n "$destination"; then
+        $LN -f -s `find $destination -type d -name "zlib-*"` zlib
+      else
+        $LN -f -s `find $tmpDirectory -type d -name "zlib-*"` zlib
+      fi
     fi
   fi
 
@@ -379,7 +384,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/bzip2-1.0.5 bzip2
+      if test -n "$destination"; then
+        $LN -f -s $destination/bzip2-1.0.5 bzip2
+      else
+        $LN -f -s $tmpDirectory/bzip2-1.0.5 bzip2
+      fi
     fi
   fi
 
@@ -401,7 +410,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s `find $tmpDirectory -type d -name "xz-*"` xz
+      if test -n "$destination"; then
+        $LN -f -s `find $destination -type d -name "xz-*"` xz
+      else
+        $LN -f -s `find $tmpDirectory -type d -name "xz-*"` xz
+      fi
     fi
   fi
 
@@ -421,7 +434,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/lzo-2.06 lzo
+      if test -n "$destination"; then
+        $LN -f -s $destination/lzo-2.06 lzo
+      else
+        $LN -f -s $tmpDirectory/lzo-2.06 lzo
+      fi
     fi
   fi
 
@@ -447,7 +464,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s `find $tmpDirectory -type d -name "lz4-*"` lz4
+      if test -n "$destination"; then
+        $LN -f -s `find $destination -type d -name "lz4-*"` lz4
+      else
+        $LN -f -s `find $tmpDirectory -type d -name "lz4-*"` lz4
+      fi
     fi
   fi
 
@@ -473,7 +494,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s `find $tmpDirectory -type d -name "xdelta3*"` xdelta3
+      if test -n "$destination"; then
+        $LN -f -s `find $destination -type d -name "xdelta3*"` xdelta3
+      else
+        $LN -f -s `find $tmpDirectory -type d -name "xdelta3*"` xdelta3
+      fi
     fi
   fi
 
@@ -503,8 +528,13 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/libgpg-error-1.10 libgpg-error
-      $LN -f -s $tmpDirectory/libgcrypt-1.5.0 libgcrypt
+      if test -n "$destination"; then
+        $LN -f -s $destination/libgpg-error-1.10 libgpg-error
+        $LN -f -s $destination/libgcrypt-1.5.0 libgcrypt
+      else
+        $LN -f -s $tmpDirectory/libgpg-error-1.10 libgpg-error
+        $LN -f -s $tmpDirectory/libgcrypt-1.5.0 libgcrypt
+      fi
     fi
   fi
 
@@ -538,7 +568,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/ftplib-4.0 ftplib
+      if test -n "$destination"; then
+        $LN -f -s $destination/ftplib-4.0 ftplib
+      else
+        $LN -f -s $tmpDirectory/ftplib-4.0 ftplib
+      fi
     fi
   fi
 
@@ -558,7 +592,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/c-ares-1.10.0 c-ares
+      if test -n "$destination"; then
+        $LN -f -s $destination/c-ares-1.10.0 c-ares
+      else
+        $LN -f -s $tmpDirectory/c-ares-1.10.0 c-ares
+      fi
     fi
 
     # curl 7.28.1
@@ -576,7 +614,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/curl-7.28.1 curl
+      if test -n "$destination"; then
+        $LN -f -s $destination/curl-7.28.1 curl
+      else
+        $LN -f -s $tmpDirectory/curl-7.28.1 curl
+      fi
     fi
   fi
 
@@ -596,7 +638,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/mxml-2.7 mxml
+      if test -n "$destination"; then
+        $LN -f -s $destination/mxml-2.7 mxml
+      else
+        $LN -f -s $tmpDirectory/mxml-2.7 mxml
+      fi
     fi
   fi
 
@@ -616,7 +662,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/openssl-1.0.1g openssl
+      if test -n "$destination"; then
+        $LN -f -s $destination/openssl-1.0.1g openssl
+      else
+        $LN -f -s $tmpDirectory/openssl-1.0.1g openssl
+      fi
     fi
   fi
 
@@ -641,7 +691,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/libssh2-1.4.2 libssh2
+      if test -n "$destination"; then
+        $LN -f -s $destination/libssh2-1.4.2 libssh2
+      else
+        $LN -f -s $tmpDirectory/libssh2-1.4.2 libssh2
+      fi
     fi
   fi
 
@@ -661,25 +715,33 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/nettle-2.6 nettle
+      if test -n "$destination"; then
+        $LN -f -s $destination/nettle-2.6 nettle
+      else
+        $LN -f -s $tmpDirectory/nettle-2.6 nettle
+      fi
     fi
 
-    # gmp 5.1.3
+    # gmp
     (
      if test -n "$destination"; then
        cd $destination
      else
        cd $tmpDirectory
      fi
-     if test ! -f gmp-5.1.3.tar.bz2; then
-       $WGET $WGET_OPTIONS 'https://gmplib.org/download/gmp/gmp-5.1.3.tar.bz2'
+     if test ! -f gmp-$GMP_VERSION.tar.bz2; then
+       $WGET $WGET_OPTIONS "https://gmplib.org/download/gmp/gmp-$GMP_VERSION.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xjf gmp-5.1.3.tar.bz2
+       $TAR xjf gmp-$GMP_VERSION.tar.bz2
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/gmp-5.1.3 gmp
+      if test -n "$destination"; then
+        $LN -f -s `find $destination -type d -name "gmp-*"` gmp
+      else
+        $LN -f -s `find $tmpDirectory -type d -name "gmp-*"` gmp
+      fi
     fi
 
     # gnutls 3.1.18
@@ -698,7 +760,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/gnutls-3.1.18 gnutls
+      if test -n "$destination"; then
+        $LN -f -s $destination/gnutls-3.1.18 gnutls
+      else
+        $LN -f -s $tmpDirectory/gnutls-3.1.18 gnutls
+      fi
     fi
   fi
 
@@ -719,7 +785,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/libcdio-0.92 libcdio
+      if test -n "$destination"; then
+        $LN -f -s $destination/libcdio-0.92 libcdio
+      else
+        $LN -f -s $tmpDirectory/libcdio-0.92 libcdio
+      fi
     fi
   fi
 
@@ -739,7 +809,13 @@ if test $cleanFlag -eq 0; then
        $TAR xjf pcre-$PCRE_VERSION.tar.bz2
      fi
     )
-    $LN -f -s $tmpDirectory/pcre-$PCRE_VERSION pcre
+    if test $noDecompressFlag -eq 0; then
+      if test -n "$destination"; then
+        $LN -f -s $destination/pcre-$PCRE_VERSION pcre
+      else
+        $LN -f -s $tmpDirectory/pcre-$PCRE_VERSION pcre
+      fi
+    fi
   fi
 
   if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
@@ -757,7 +833,13 @@ if test $cleanFlag -eq 0; then
        $ECHO "done"
      fi
     )
-    $LN -f -s $tmpDirectory/breakpad breakpad
+    if test $noDecompressFlag -eq 0; then
+      if test -n "$destination"; then
+        $LN -f -s $destination/breakpad breakpad
+      else
+        $LN -f -s $tmpDirectory/breakpad breakpad
+      fi
+    fi
   fi
 
   if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
@@ -776,7 +858,13 @@ if test $cleanFlag -eq 0; then
        $TAR xzf pthreads-w32-2-9-1-release.tar.gz
      fi
     )
-    $LN -f -s $tmpDirectory/pthreads-w32-2-9-1-release pthreads-w32
+    if test $noDecompressFlag -eq 0; then
+      if test -n "$destination"; then
+        $LN -f -s $destination/pthreads-w32-2-9-1-release pthreads-w32
+      else
+        $LN -f -s $tmpDirectory/pthreads-w32-2-9-1-release pthreads-w32
+      fi
+    fi
   fi
 
   if test $epmFlag -eq 1; then
@@ -799,7 +887,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/epm-4.2 epm
+      if test -n "$destination"; then
+        $LN -f -s $destination/epm-4.2 epm
+      else
+        $LN -f -s $tmpDirectory/epm-4.2 epm
+      fi
     fi
   fi
 
@@ -819,7 +911,11 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/launch4j launch4j
+      if test -n "$destination"; then
+        $LN -f -s $destination/launch4j launch4j
+      else
+        $LN -f -s $tmpDirectory/launch4j launch4j
+      fi
     fi
   fi
 
@@ -845,8 +941,13 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows
-      $LN -f -s $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64
+      if test -n "$destination"; then
+        $LN -f -s $destination/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows
+        $LN -f -s $destination/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64
+      else
+        $LN -f -s $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows
+        $LN -f -s $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64
+      fi
     fi
   fi
 else
