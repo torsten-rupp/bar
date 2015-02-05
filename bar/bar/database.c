@@ -515,7 +515,7 @@ LOCAL Errors getTableColumnList(ColumnList     *columnList,
 {
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle1,databaseQueryHandle2;
-  const char          *name,*type;
+  const char          *name,*type1,*type2;
   bool                primaryKey;
   ColumnNode          *columnNode;
 
@@ -537,7 +537,7 @@ LOCAL Errors getTableColumnList(ColumnList     *columnList,
                              "%d %p %p %d %b",
                              NULL,
                              &name,
-                             NULL, // type,
+                             &type1,
                              NULL,
                              &primaryKey
                             )
@@ -546,6 +546,7 @@ LOCAL Errors getTableColumnList(ColumnList     *columnList,
     error = Database_prepare(&databaseQueryHandle2,
                              databaseHandle,
                              "SELECT TYPEOF(%s) FROM %s \
+                              LIMIT 0,1 \
                              ",
                              name,
                              tableName
@@ -556,9 +557,16 @@ LOCAL Errors getTableColumnList(ColumnList     *columnList,
       List_done(columnList,CALLBACK((ListNodeFreeFunction)freeColumnNode,NULL));
       return error;
     }
-    if (!Database_getNextRow(&databaseQueryHandle2,"%p",&type))
+    if (Database_getNextRow(&databaseQueryHandle2,"%p",&type2))
     {
-      type = NULL;
+      if (stringEqualsIgnoreCase(type2,"NULL"))
+      {
+        type2 = NULL;
+      }
+    }
+    else
+    {
+      type2 = NULL;
     }
 
     columnNode = LIST_NEW_NODE(ColumnNode);
@@ -569,36 +577,65 @@ LOCAL Errors getTableColumnList(ColumnList     *columnList,
     }
 
     columnNode->name = strdup(name);
-    if      (type == NULL)
+    if      (type2 != NULL)
     {
-      columnNode->type = DATABASE_TYPE_UNKNOWN;
-    }
-    else if (stringEqualsIgnoreCase(type,"INTEGER"))
-    {
-      if (primaryKey)
+      if (stringEqualsIgnoreCase(type2,"INTEGER"))
       {
-        columnNode->type = DATABASE_TYPE_PRIMARY_KEY;
+        if (primaryKey)
+        {
+          columnNode->type = DATABASE_TYPE_PRIMARY_KEY;
+        }
+        else
+        {
+          columnNode->type = DATABASE_TYPE_INT64;
+        }
+      }
+      else if (stringEqualsIgnoreCase(type2,"REAL"))
+      {
+        columnNode->type = DATABASE_TYPE_DOUBLE;
+      }
+      else if (stringEqualsIgnoreCase(type2,"TEXT"))
+      {
+        columnNode->type = DATABASE_TYPE_TEXT;
+      }
+      else if (stringEqualsIgnoreCase(type2,"BLOB"))
+      {
+        columnNode->type = DATABASE_TYPE_BLOB;
       }
       else
       {
-        columnNode->type = DATABASE_TYPE_INT64;
+        HALT_INTERNAL_ERROR("Unknown database data type %s",type2);
       }
-    }
-    else if (stringEqualsIgnoreCase(type,"REAL"))
-    {
-      columnNode->type = DATABASE_TYPE_DOUBLE;
-    }
-    else if (stringEqualsIgnoreCase(type,"TEXT"))
-    {
-      columnNode->type = DATABASE_TYPE_TEXT;
-    }
-    else if (stringEqualsIgnoreCase(type,"BLOB"))
-    {
-      columnNode->type = DATABASE_TYPE_BLOB;
     }
     else
     {
-      HALT_INTERNAL_ERROR("Unknown database data type %s",type);
+      if (stringEqualsIgnoreCase(type1,"INTEGER"))
+      {
+        if (primaryKey)
+        {
+          columnNode->type = DATABASE_TYPE_PRIMARY_KEY;
+        }
+        else
+        {
+          columnNode->type = DATABASE_TYPE_INT64;
+        }
+      }
+      else if (stringEqualsIgnoreCase(type1,"REAL"))
+      {
+        columnNode->type = DATABASE_TYPE_DOUBLE;
+      }
+      else if (stringEqualsIgnoreCase(type1,"TEXT"))
+      {
+        columnNode->type = DATABASE_TYPE_TEXT;
+      }
+      else if (stringEqualsIgnoreCase(type1,"BLOB"))
+      {
+        columnNode->type = DATABASE_TYPE_BLOB;
+      }
+      else
+      {
+        HALT_INTERNAL_ERROR("Unknown database data type %s",type1);
+      }
     }
 
     List_append(columnList,columnNode);
