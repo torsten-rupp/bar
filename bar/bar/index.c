@@ -28,6 +28,7 @@
 
 #include "storage.h"
 #include "index_definition.h"
+#include "bar.h"
 
 #include "index.h"
 
@@ -62,7 +63,7 @@ LOCAL const struct
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL Thread initThread;
+LOCAL Thread initIndexThread;
 
 /****************************** Macros *********************************/
 
@@ -654,6 +655,36 @@ LOCAL Errors upgradeToVersion4(const char *databaseFileName)
     return error;
   }
 
+  // fix possible broken ids
+  (void)Database_execute(&indexHandle.databaseHandle,
+                         CALLBACK(NULL,NULL),
+                         "UPDATE storage SET id=rowId WHERE id IS NULL;"
+                        );
+  (void)Database_execute(&indexHandle.databaseHandle,
+                         CALLBACK(NULL,NULL),
+                         "UPDATE files SET id=rowId WHERE id IS NULL;"
+                        );
+  (void)Database_execute(&indexHandle.databaseHandle,
+                         CALLBACK(NULL,NULL),
+                         "UPDATE images SET id=rowId WHERE id IS NULL;"
+                        );
+  (void)Database_execute(&indexHandle.databaseHandle,
+                         CALLBACK(NULL,NULL),
+                         "UPDATE directories SET id=rowId WHERE id IS NULL;"
+                        );
+  (void)Database_execute(&indexHandle.databaseHandle,
+                         CALLBACK(NULL,NULL),
+                         "UPDATE links SET id=rowId WHERE id IS NULL;"
+                        );
+  (void)Database_execute(&indexHandle.databaseHandle,
+                         CALLBACK(NULL,NULL),
+                         "UPDATE hardlinks SET id=rowId WHERE id IS NULL;"
+                        );
+  (void)Database_execute(&indexHandle.databaseHandle,
+                         CALLBACK(NULL,NULL),
+                         "UPDATE special SET id=rowId WHERE id IS NULL;"
+                        );
+
   // create new empty index, temporary disable foreign key contrains
   newDatabaseFileName    = String_new();
   backupDatabaseFileName = String_new();
@@ -881,7 +912,7 @@ Database_debugEnable(false);
 }
 
 /***********************************************************************\
-* Name   : initThreadCode
+* Name   : initIndexThreadCode
 * Purpose: init index thread
 * Input  : indexHandle - index handle
 * Output : -
@@ -889,12 +920,14 @@ Database_debugEnable(false);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initThreadCode(IndexHandle *indexHandle)
+LOCAL void initIndexThreadCode(IndexHandle *indexHandle)
 {
   Errors error;
   int64  indexVersion;
 
   assert(indexHandle != NULL);
+
+  plogMessage(LOG_TYPE_INDEX,"INDEX","Start init index database\n");
 
   // open/create database
   if (File_existsCString(indexHandle->databaseFileName))
@@ -931,6 +964,7 @@ LOCAL void initThreadCode(IndexHandle *indexHandle)
         }
         if (error != ERROR_NONE)
         {
+          plogMessage(LOG_TYPE_INDEX,"INDEX","Init index database fail: %s\n",Error_getText(error));
           return;
         }
 
@@ -948,6 +982,7 @@ LOCAL void initThreadCode(IndexHandle *indexHandle)
     indexHandle->error = openIndex(indexHandle,indexHandle->databaseFileName);
     if (indexHandle->error != ERROR_NONE)
     {
+      plogMessage(LOG_TYPE_INDEX,"INDEX","Init index database fail: %s\n",Error_getText(indexHandle->error));
       return;
     }
 
@@ -960,9 +995,12 @@ LOCAL void initThreadCode(IndexHandle *indexHandle)
     indexHandle->error = createIndex(indexHandle,indexHandle->databaseFileName);
     if (indexHandle->error != ERROR_NONE)
     {
+      plogMessage(LOG_TYPE_INDEX,"INDEX","Init index database fail: %s\n",Error_getText(indexHandle->error));
       return;
     }
   }
+
+  plogMessage(LOG_TYPE_INDEX,"INDEX","Done init index database\n");
 }
 
 /***********************************************************************\
@@ -1266,7 +1304,7 @@ Errors Index_init(IndexHandle *indexHandle,
   indexHandle->databaseFileName = databaseFileName;
   indexHandle->error            = ERROR_UNKNOWN;
 
-  if (!Thread_init(&initThread,"Index init",0,initThreadCode,indexHandle))
+  if (!Thread_init(&initIndexThread,"Index init",0,initIndexThreadCode,indexHandle))
   {
     HALT_FATAL_ERROR("Cannot initialize index init thread!");
   }
@@ -1377,7 +1415,7 @@ bool Index_findByName(IndexHandle  *indexHandle,
                                    storage.id, \
                                    storage.name, \
                                    storage.state, \
-                                   STRFTIME('%%s',storagelastChecked) \
+                                   STRFTIME('%%s',storage.lastChecked) \
                             FROM storage \
                             LEFT JOIN entities ON storage.entityId=entities.id \
                            "
@@ -2300,7 +2338,7 @@ Errors Index_storageAssignTo(IndexHandle *indexHandle,
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "UPDATE storage \
-                            SET enityId=%lld \
+                            SET entityId=%lld \
                             WHERE id=%lld;\
                            ",
                            entityId,
