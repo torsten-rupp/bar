@@ -174,6 +174,7 @@ typedef struct JobNode
   // job running state
   JobStates    state;                          // current state of job
   ArchiveTypes archiveType;                    // archive type to create
+  bool         dryRun;                         // TRUE iff dry-run (no storage, no index update)
   struct                                       // schedule data which triggered job
   {
     String       uuid;                         // UUID or empty
@@ -694,14 +695,14 @@ LOCAL bool                  quitFlag;              // TRUE iff quit requested
 
 /****************************** Macros *********************************/
 
-#define CHECK_JOB_IS_ACTIVE(jobNode) (   (jobNode->state == JOB_STATE_WAITING) \
-                                      || (jobNode->state == JOB_STATE_RUNNING) \
-                                      || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
-                                     )
+#define IS_JOB_ACTIVE(jobNode) (   (jobNode->state == JOB_STATE_WAITING) \
+                                || (jobNode->state == JOB_STATE_RUNNING) \
+                                || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
+                               )
 
-#define CHECK_JOB_IS_RUNNING(jobNode) (   (jobNode->state == JOB_STATE_RUNNING) \
-                                       || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
-                                      )
+#define IS_JOB_RUNNING(jobNode) (   (jobNode->state == JOB_STATE_RUNNING) \
+                                 || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
+                                )
 
 /***************************** Forwards ********************************/
 
@@ -1729,6 +1730,7 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
 
   jobNode->state                          = JOB_STATE_NONE;
   jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
+  jobNode->dryRun                         = FALSE;
   jobNode->schedule.uuid                  = String_new();
   jobNode->schedule.customText            = String_new();
   jobNode->schedule.noStorage             = FALSE;
@@ -1799,6 +1801,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
 
   newJobNode->state                          = JOB_STATE_NONE;
   newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
+  newJobNode->dryRun                         = FALSE;
   newJobNode->schedule.uuid                  = String_new();
   newJobNode->schedule.customText            = String_new();
   newJobNode->schedule.noStorage             = FALSE;
@@ -2785,7 +2788,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
           List_append(&jobList,jobNode);
         }
 
-        if (   !CHECK_JOB_IS_ACTIVE(jobNode)
+        if (   !IS_JOB_ACTIVE(jobNode)
             && (jobNode->timeModified < File_getFileTimeModified(fileName))
            )
         {
@@ -3100,6 +3103,8 @@ LOCAL void jobThreadCode(void)
   String           scheduleCustomText;
   StringList       archiveFileNameList;
   TextMacro        textMacros[1];
+  StaticString     (s,64);
+  uint             n;
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
@@ -3145,6 +3150,7 @@ LOCAL void jobThreadCode(void)
     PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,NULL,NULL);
     initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
     archiveType = jobNode->archiveType;
+    jobOptions.dryRunFlag = jobNode->dryRun;
     if (!String_isEmpty(jobNode->schedule.uuid))
     {
       String_set(scheduleUUID,      jobNode->schedule.uuid);
@@ -3237,9 +3243,29 @@ LOCAL void jobThreadCode(void)
         switch (jobNode->jobType)
         {
           case JOB_TYPE_CREATE:
+            String_clear(s);
+            if (jobOptions.dryRunFlag || jobOptions.noStorageFlag)
+            {
+              String_appendCString(s," (");
+              n = 0;
+              if (jobOptions.dryRunFlag)
+              {
+                if (n > 0) String_appendCString(s,", ");
+                String_appendCString(s,"dry-run");
+                n++;
+              }
+              if (jobOptions.noStorageFlag)
+              {
+                if (n > 0) String_appendCString(s,", ");
+                String_appendCString(s,"no-storage");
+                n++;
+              }
+              String_appendCString(s,")");
+            }
             logMessage(LOG_TYPE_ALWAYS,
-                       "Start job '%s'\n",
-                       String_cString(jobNode->name)
+                       "Start job '%s'%s\n",
+                       String_cString(jobNode->name),
+                       !String_isEmpty(s) ? String_cString(s) : ""
                       );
 
             // create archive
@@ -3685,7 +3711,6 @@ LOCAL void cleanExpiredStorage(void)
   {
     if (!String_isEmpty(scheduleUUID))
     {
-fprintf(stderr,"%s, %d: ----------------------- scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(scheduleUUID));
       // get job name, schedule min./max. keep, max. age
       minKeep = 0;
       maxKeep = 0;
@@ -3739,7 +3764,6 @@ fprintf(stderr,"%s, %d: ----------------------- scheduleUUID=%s\n",__FILE__,__LI
             {
               if (now > (createdDateTime+maxAge*SECONDS_PER_DAY))
               {
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                 error = deleteEntity(entityId);
                 if (error == ERROR_NONE)
                 {
@@ -3785,8 +3809,6 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                                          )
                   )
             {
-fprintf(stderr,"%s, %d: %lld %llu\n",__FILE__,__LINE__,entityId,createdDateTime);
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
               error = deleteEntity(entityId);
               if (error == ERROR_NONE)
               {
@@ -3797,6 +3819,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                             String_cString(jobName),
                             archiveTypeToString(archiveType,"unknown"),
                             String_cString(dateTime),
+                            totalEntries,
                             totalSize
                            );
               }
@@ -3878,7 +3901,7 @@ LOCAL void schedulerThreadCode(void)
       {
         // check if job have to be executed
         executeScheduleNode = NULL;
-        if (!CHECK_JOB_IS_ACTIVE(jobNode))
+        if (!IS_JOB_ACTIVE(jobNode))
         {
           dateTime = currentDateTime;
           while (   ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
@@ -3939,8 +3962,10 @@ LOCAL void schedulerThreadCode(void)
           // set state
           jobNode->state                 = JOB_STATE_WAITING;
           jobNode->archiveType           = executeScheduleNode->archiveType;
+          jobNode->dryRun                = FALSE;
           String_set(jobNode->schedule.uuid,executeScheduleNode->uuid);
           String_set(jobNode->schedule.customText,executeScheduleNode->customText);
+          jobNode->schedule.noStorage    = executeScheduleNode->noStorage;
           jobNode->requestedAbortFlag    = FALSE;
           jobNode->requestedVolumeNumber = 0;
           jobNode->volumeNumber          = 0;
@@ -4106,6 +4131,7 @@ LOCAL void indexCleanup(void)
   DatabaseId       storageId;
   IndexQueryHandle indexQueryHandle;
   DatabaseId       databaseId;
+  bool             deletedIndex;
   IndexQueryHandle indexQueryHandle1,indexQueryHandle2;
   StorageSpecifier storageSpecifier;
   String           storageName,printableStorageName;
@@ -4117,7 +4143,7 @@ LOCAL void indexCleanup(void)
   storageName          = String_new();
   printableStorageName = String_new();
 
-  plogMessage(LOG_TYPE_INDEX,"INDEX","Start clean-up database\n");
+  plogMessage(LOG_TYPE_INDEX,"INDEX","Start clean-up index database\n");
 
   // delete orphaned entries (entries without storage)
   error = Index_initListFiles(&indexQueryHandle,
@@ -4416,37 +4442,46 @@ LOCAL void indexCleanup(void)
 
   // delete duplicate storage entries
   duplicateStorageName = String_new();
-  error = Index_initListStorage(&indexQueryHandle1,
-                                indexHandle,
-                                NULL, // uuid
-                                DATABASE_ID_ANY, // entity id
-                                STORAGE_TYPE_ANY,
-                                NULL, // storageName
-                                NULL, // hostName
-                                NULL, // loginName
-                                NULL, // deviceName
-                                NULL, // fileName
-                                INDEX_STATE_SET_ALL
-                               );
-  if (error == ERROR_NONE)
+  do
   {
-    while (Index_getNextStorage(&indexQueryHandle1,
-                                &storageId,
-                                NULL, // entity id
-                                NULL, // job UUID
-                                NULL, // schedule UUID
-                                NULL, // archive type
-                                storageName,
-                                NULL, // createdDateTime
-                                NULL, // entries
-                                NULL, // size
-                                NULL, // indexState
-                                NULL, // indexMode
-                                NULL, // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
+    deletedIndex = FALSE;
+
+    // get storage entry
+    error = Index_initListStorage(&indexQueryHandle1,
+                                  indexHandle,
+                                  NULL, // uuid
+                                  DATABASE_ID_ANY, // entity id
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error != ERROR_NONE)
+    {
+      break;
+    }
+    while (   !deletedIndex
+           && Index_getNextStorage(&indexQueryHandle1,
+                                   &storageId,
+                                   NULL, // entity id
+                                   NULL, // job UUID
+                                   NULL, // schedule UUID
+                                   NULL, // archive type
+                                   storageName,
+                                   NULL, // createdDateTime
+                                   NULL, // entries
+                                   NULL, // size
+                                   NULL, // indexState
+                                   NULL, // indexMode
+                                   NULL, // lastCheckedDateTime
+                                   NULL  // errorMessage
+                                  )
           )
     {
+      // check for duplicate entry
       error = Index_initListStorage(&indexQueryHandle2,
                                     indexHandle,
                                     NULL, // uuid
@@ -4459,57 +4494,62 @@ LOCAL void indexCleanup(void)
                                     NULL, // fileName
                                     INDEX_STATE_SET_ALL
                                    );
-      if (error == ERROR_NONE)
+      if (error != ERROR_NONE)
       {
-        while (Index_getNextStorage(&indexQueryHandle2,
-                                    &duplicateStorageId,
-                                    NULL, // entity id
-                                    NULL, // job UUID
-                                    NULL, // schedule UUID
-                                    NULL, // archive type
-                                    duplicateStorageName,
-                                    NULL, // createdDateTime
-                                    NULL, // entries
-                                    NULL, // size
-                                    NULL, // indexState
-                                    NULL, // indexMode
-                                    NULL, // lastCheckedDateTime
-                                    NULL  // errorMessage
-                                   )
-              )
-        {
-          if (   (storageId != duplicateStorageId)
-              && Storage_equalNames(storageName,duplicateStorageName)
-             )
-          {
-            // get printable name (if possible)
-            error = Storage_parseName(&storageSpecifier,storageName);
-            if (error == ERROR_NONE)
-            {
-              String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
-            }
-            else
-            {
-              String_set(printableStorageName,storageName);
-            }
-
-            error = Index_deleteStorage(indexHandle,duplicateStorageId);
-            if (error == ERROR_NONE)
-            {
-              plogMessage(LOG_TYPE_INDEX,
-                          "INDEX",
-                          "Deleted duplicate index #%lld: %s\n",
-                          duplicateStorageId,
-                          String_cString(printableStorageName)
-                         );
-            }
-          }
-        }
-        Index_doneList(&indexQueryHandle2);
+        continue;
       }
+      while (Index_getNextStorage(&indexQueryHandle2,
+                                  &duplicateStorageId,
+                                  NULL, // entity id
+                                  NULL, // job UUID
+                                  NULL, // schedule UUID
+                                  NULL, // archive type
+                                  duplicateStorageName,
+                                  NULL, // createdDateTime
+                                  NULL, // entries
+                                  NULL, // size
+                                  NULL, // indexState
+                                  NULL, // indexMode
+                                  NULL, // lastCheckedDateTime
+                                  NULL  // errorMessage
+                                 )
+            )
+      {
+        if (   (storageId != duplicateStorageId)
+            && Storage_equalNames(storageName,duplicateStorageName)
+           )
+        {
+          // get printable name (if possible)
+          error = Storage_parseName(&storageSpecifier,storageName);
+          if (error == ERROR_NONE)
+          {
+            String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+          }
+          else
+          {
+            String_set(printableStorageName,storageName);
+          }
+
+          error = Index_deleteStorage(indexHandle,duplicateStorageId);
+          if (error == ERROR_NONE)
+          {
+            plogMessage(LOG_TYPE_INDEX,
+                        "INDEX",
+                        "Deleted duplicate index #%lld: '%s'\n",
+                        duplicateStorageId,
+                        String_cString(printableStorageName)
+                       );
+            break;
+          }
+          deletedIndex = TRUE;
+          break;
+        }
+      }
+      Index_doneList(&indexQueryHandle2);
     }
     Index_doneList(&indexQueryHandle1);
   }
+  while (deletedIndex);
   String_delete(duplicateStorageName);
   plogMessage(LOG_TYPE_INDEX,"INDEX","Cleaned duplicates\n");
 
@@ -4536,7 +4576,7 @@ LOCAL void indexCleanup(void)
     }
   }
 
-  plogMessage(LOG_TYPE_ALWAYS,"INDEX","Done clean-up database\n");
+  plogMessage(LOG_TYPE_ALWAYS,"INDEX","Done clean-up index database\n");
 
   // free resources
   String_delete(printableStorageName);
@@ -4582,6 +4622,7 @@ LOCAL void indexThreadCode(void)
   Errors                 error;
   JobNode                *jobNode;
   IndexCryptPasswordNode *indexCryptPasswordNode;
+  uint64                 totalEntries,totalSize;
   int                    z;
 
   // initialize variables
@@ -4658,12 +4699,6 @@ LOCAL void indexThreadCode(void)
                           );
       if (error == ERROR_NONE)
       {
-        plogMessage(LOG_TYPE_INDEX,
-                    "INDEX",
-                    "Start create index for '%s'\n",
-                    String_cString(printableStorageName)
-                   );
-
         // try to create index
         LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
         {
@@ -4676,6 +4711,8 @@ LOCAL void indexThreadCode(void)
                                       &storageHandle,
                                       storageName,
                                       &jobOptions,
+                                      &totalEntries,
+                                      &totalSize,
                                       CALLBACK(indexPauseCallback,NULL),
                                       CALLBACK(indexAbortCallback,NULL)
                                      );
@@ -4711,23 +4748,27 @@ LOCAL void indexThreadCode(void)
         {
           plogMessage(LOG_TYPE_INDEX,
                       "INDEX",
-                      "Created index #%lld for '%s'\n",
-                      storageId,
-                      String_cString(printableStorageName)
+                      "Created index for '%s', %llu entries/%llu bytes\n",
+                      String_cString(printableStorageName),
+                      totalEntries,
+                      totalSize
                      );
         }
         else if (Error_getCode(error) == ERROR_INTERRUPTED)
         {
+#warning needed?
+#if 0
           plogMessage(LOG_TYPE_INDEX,
                       "INDEX",
                       "Interrupted create index for '%s' - postpone\n",
                       String_cString(printableStorageName),
                       Error_getText(error)
                      );
+#endif
         }
         else
         {
-          plogMessage(LOG_TYPE_ERROR,
+          plogMessage(LOG_TYPE_INDEX,
                       "INDEX",
                       "Cannot create index for '%s' (error: %s)\n",
                       String_cString(printableStorageName),
@@ -4824,6 +4865,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
 
   // initialize variables
   StringList_init(&storageDirectoryList);
+  fileName             = String_new();
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
   printableStorageName = String_new();
@@ -4864,7 +4906,6 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                            );
           if (error == ERROR_NONE)
           {
-            fileName = String_new();
             while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && !quitFlag)
             {
               // read next directory entry
@@ -4917,7 +4958,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
               }
               else
               {
-                // create index
+                // add to index
                 error = Index_newStorage(indexHandle,
                                          DATABASE_ID_NONE, // entityId
                                          printableStorageName,
@@ -4929,10 +4970,9 @@ LOCAL void autoIndexUpdateThreadCode(void)
                 {
                   continue;
                 }
-                pprintInfo(4,"INDEX: ","Requested auto-index for '%s'\n",String_cString(printableStorageName));
+                pprintInfo(4,"INDEX: ","Added auto-index request for '%s'\n",String_cString(printableStorageName));
               }
             }
-            String_delete(fileName);
 
             // close directory
             Storage_closeDirectoryList(&storageDirectoryListHandle);
@@ -5017,11 +5057,12 @@ LOCAL void autoIndexUpdateThreadCode(void)
       z += 10;
     }
   }
+
+  // free resources
   String_delete(printableStorageName);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
-
-  // free resources
+  String_delete(fileName);
   StringList_done(&storageDirectoryList);
 }
 
@@ -6566,7 +6607,7 @@ UNUSED_VARIABLE(value);
         error = File_touch(noBackupFileName);
         if (error != ERROR_NONE)
         {
-          sendClientResult(clientInfo,id,TRUE,error,"can not create .nobackup file: %s",Error_getText(error));
+          sendClientResult(clientInfo,id,TRUE,error,"Cannot create .nobackup file: %s",Error_getText(error));
           String_delete(noBackupFileName);
           Semaphore_unlock(&jobList.lock);
           String_delete(value);
@@ -6699,7 +6740,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, uint id, con
         error = File_delete(noBackupFileName,FALSE);
         if (error != ERROR_NONE)
         {
-          sendClientResult(clientInfo,id,TRUE,error,"can not delete .nobackup file: %s",Error_getText(error));
+          sendClientResult(clientInfo,id,TRUE,error,"Cannot delete .nobackup file: %s",Error_getText(error));
           String_delete(noBackupFileName);
           Semaphore_unlock(&jobList.lock);
           String_delete(name);
@@ -7539,7 +7580,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
     }
 
     // remove job in list if not running or requested volume
-    if (CHECK_JOB_IS_RUNNING(jobNode))
+    if (IS_JOB_RUNNING(jobNode))
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job %S running",jobUUID);
       Semaphore_unlock(&jobList.lock);
@@ -7591,7 +7632,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
   StaticString  (jobUUID,INDEX_UUID_LENGTH);
   char          s[64];
   ArchiveTypes  archiveType;
-  bool          dryRunFlag;
+  bool          dryRun;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -7614,7 +7655,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
   if (stringEqualsIgnoreCase(s,"dry-run"))
   {
     archiveType = ARCHIVE_TYPE_NORMAL;
-    dryRunFlag  = TRUE;
+    dryRun      = TRUE;
   }
   else
   {
@@ -7623,7 +7664,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
       sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|DRY-RUN");
       return;
     }
-    dryRunFlag = FALSE;
+    dryRun = FALSE;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -7638,14 +7679,15 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
     }
 
     // run job
-    if  (!CHECK_JOB_IS_ACTIVE(jobNode))
+    if  (!IS_JOB_ACTIVE(jobNode))
     {
       // set state
-      jobNode->jobOptions.dryRunFlag = dryRunFlag;
       jobNode->state                 = JOB_STATE_WAITING;
       jobNode->archiveType           = archiveType;
+      jobNode->dryRun                = dryRun;
       String_clear(jobNode->schedule.uuid);
       String_clear(jobNode->schedule.customText);
+      jobNode->schedule.noStorage    = FALSE;
       jobNode->requestedAbortFlag    = FALSE;
       jobNode->requestedVolumeNumber = 0;
       jobNode->volumeNumber          = 0;
@@ -7699,15 +7741,15 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const StringM
     }
 
     // abort job
-    if      (CHECK_JOB_IS_RUNNING(jobNode))
+    if      (IS_JOB_RUNNING(jobNode))
     {
       jobNode->requestedAbortFlag = TRUE;
-      while (CHECK_JOB_IS_RUNNING(jobNode))
+      while (IS_JOB_RUNNING(jobNode))
       {
         Semaphore_waitModified(&jobList.lock,SEMAPHORE_WAIT_FOREVER);
       }
     }
-    else if (CHECK_JOB_IS_ACTIVE(jobNode))
+    else if (IS_JOB_ACTIVE(jobNode))
     {
       jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
       jobNode->state                = JOB_STATE_NONE;
@@ -9171,6 +9213,89 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
 
   // free resources
   String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_scheduleTrigger
+* Purpose: trigger job schedule
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,INDEX_UUID_LENGTH);
+  StaticString  (scheduleUUID,INDEX_UUID_LENGTH);
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  ScheduleNode  *scheduleNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, schdule UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // find schedule
+    scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+    if (scheduleNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // check if active
+    if (IS_JOB_ACTIVE(jobNode))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job already scheduled");
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // trigger
+    jobNode->state                 = JOB_STATE_WAITING;
+    jobNode->archiveType           = scheduleNode->archiveType;
+    jobNode->dryRun                = FALSE;
+    String_set(jobNode->schedule.uuid,scheduleNode->uuid);
+    String_set(jobNode->schedule.customText,scheduleNode->customText);
+    jobNode->schedule.noStorage    = scheduleNode->noStorage;
+    jobNode->requestedAbortFlag    = FALSE;
+    jobNode->requestedVolumeNumber = 0;
+    jobNode->volumeNumber          = 0;
+    jobNode->volumeUnloadFlag      = FALSE;
+    resetJobRunningInfo(jobNode);
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -11195,7 +11320,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get state and jobUUID, enityId, or storageId
+  // get state and jobUUID, entityId, or storageId
   if      (stringEquals(StringMap_getTextCString(argumentMap,"state","*"),"*"))
   {
     stateAny = TRUE;
@@ -11453,15 +11578,15 @@ LOCAL void serverCommand_indexStorageAssign(ClientInfo *clientInfo, uint id, con
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get toUUID, toEnityId
-  if (   !StringMap_getString(argumentMap,"jobUUID",toJobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"entityId",&toEntityId,DATABASE_ID_NONE)
+  // get toUUID, toEntityId
+  if (   !StringMap_getString(argumentMap,"toJobUUID",toJobUUID,NULL)
+      && !StringMap_getInt64(argumentMap,"toEntityId",&toEntityId,DATABASE_ID_NONE)
      )
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected toJobUUID=<uuid> or toEntityId=<id>");
     return;
   }
-  // get uuid, enityId, or storageId
+  // get uuid, entityId, or storageId
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
@@ -11631,7 +11756,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // state and uuid, enityId, or storageId
+  // state and uuid, entityId, or storageId
   if      (stringEquals(StringMap_getTextCString(argumentMap,"state","*"),"*"))
   {
     stateAny = TRUE;
@@ -12886,7 +13011,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, uint id, co
   handle = fopen("bar-memory.dump","w");
   if (handle == NULL)
   {
-    sendClientResult(clientInfo,id,FALSE,ERROR_CREATE_FILE,"can not create 'bar-memory.dump'");
+    sendClientResult(clientInfo,id,FALSE,ERROR_CREATE_FILE,"Cannot create 'bar-memory.dump'");
     return;
   }
 
@@ -12955,6 +13080,7 @@ SERVER_COMMANDS[] =
   { "SCHEDULE_OPTION_GET",        serverCommand_scheduleOptionGet,       AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_OPTION_SET",        serverCommand_scheduleOptionSet,       AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_OPTION_DELETE",     serverCommand_scheduleOptionDelete,    AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_TRIGGER",           serverCommand_scheduleTrigger,         AUTHORIZATION_STATE_OK      },
   { "DECRYPT_PASSWORD_CLEAR",     serverCommand_decryptPasswordsClear,   AUTHORIZATION_STATE_OK      },
   { "DECRYPT_PASSWORD_ADD",       serverCommand_decryptPasswordAdd,      AUTHORIZATION_STATE_OK      },
   { "FTP_PASSWORD",               serverCommand_ftpPassword,             AUTHORIZATION_STATE_OK      },
@@ -13697,6 +13823,9 @@ Errors Server_run(uint             port,
     printError("'%s' is not a directory!\n",serverJobsDirectory);
     return ERROR_NOT_A_DIRECTORY;
   }
+
+  // read job list
+  rereadAllJobs(serverJobsDirectory);
 
   // init server sockets
   serverFlag    = FALSE;
