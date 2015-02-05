@@ -10077,7 +10077,9 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
                           StorageHandle    *storageHandle,
                           const String     storageName,
                           IndexModes       indexMode,
-                          const JobOptions *jobOptions
+                          const JobOptions *jobOptions,
+                          uint64           *totalEntries,
+                          uint64           *totalSize
                          )
 {
   Errors     error;
@@ -10105,6 +10107,8 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
                               storageHandle,
                               storageName,
                               jobOptions,
+                              totalEntries,
+                              totalSize,
                               CALLBACK(NULL,NULL),
                               CALLBACK(NULL,NULL)
                              );
@@ -10122,6 +10126,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            StorageHandle                *storageHandle,
                            const String                 storageName,
                            const JobOptions             *jobOptions,
+                           uint64                       *totalEntries,
+                           uint64                       *totalSize,
                            ArchivePauseCallbackFunction pauseCallback,
                            void                         *pauseUserData,
                            ArchiveAbortCallbackFunction abortCallback,
@@ -10691,6 +10697,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                      Error_getCode(error)
                     );
     }
+    if (totalEntries != NULL) (*totalEntries) = Archive_getEntries(&archiveInfo);
+    if (totalSize != NULL) (*totalSize) = Archive_getSize(&archiveInfo);
   }
 
   // close archive

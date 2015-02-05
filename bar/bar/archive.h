@@ -1257,16 +1257,19 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 *          storageName   - storage name
 *          indexMode     - index mode
 *          jobOptions    - job options
-* Output : -
+* Output : totalEntries - total entries (can be NULL)
+*          totalSize    - total size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_addToIndex(IndexHandle       *indexHandle,
-                          StorageHandle     *storageHandle,
-                          const String      storageName,
-                          IndexModes        indexMode,
-                          const JobOptions  *jobOptions
+Errors Archive_addToIndex(IndexHandle      *indexHandle,
+                          StorageHandle    *storageHandle,
+                          const String     storageName,
+                          IndexModes       indexMode,
+                          const JobOptions *jobOptions,
+                          uint64           *totalEntries,
+                          uint64           *totalSize
                          );
 
 /***********************************************************************\
@@ -1276,13 +1279,13 @@ Errors Archive_addToIndex(IndexHandle       *indexHandle,
 *          storageId               - database id of storage
 *          storageHandle           - storage handle
 *          storageName             - storage name
-*          cryptPassword           - encryption password
-*          cryptPrivateKeyFileName - encryption private key file name
+*          jobOptions              - job options
 *          pauseCallback           - pause check callback (can be NULL)
 *          pauseUserData           - pause user data
 *          abortCallback           - abort check callback (can be NULL)
 *          abortUserData           - abort user data
-* Output : -
+* Output : totalEntries - total entries (can be NULL)
+*          totalSize    - total size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1292,6 +1295,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            StorageHandle                *storageHandle,
                            const String                 storageName,
                            const JobOptions             *jobOptions,
+                           uint64                       *totalEntries,
+                           uint64                       *totalSize,
                            ArchivePauseCallbackFunction pauseCallback,
                            void                         *pauseUserData,
                            ArchiveAbortCallbackFunction abortCallback,
