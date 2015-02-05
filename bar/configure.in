@@ -1703,6 +1703,7 @@ if test $ENABLE_TLS = "yes"; then
             --prefix=$cwd/packages \
             --disable-shared \
             --enable-static \
+            --enable-fat \
             ABI=64 \
           ) 1>$tmpFile 2>&1
         else
@@ -1710,6 +1711,7 @@ if test $ENABLE_TLS = "yes"; then
             --prefix=$cwd/packages \
             --disable-shared \
             --enable-static \
+            --enable-fat \
             ABI=32 \
           ) 1>$tmpFile 2>&1
         fi

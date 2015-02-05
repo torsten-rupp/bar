@@ -8389,6 +8389,7 @@ $as_echo "$as_me: WARNING: gcrypt is missing. Compiling or linking gnutls may fa
             --prefix=$cwd/packages \
             --disable-shared \
             --enable-static \
+            --enable-fat \
             ABI=64 \
           ) 1>$tmpFile 2>&1
         else
@@ -8396,6 +8397,7 @@ $as_echo "$as_me: WARNING: gcrypt is missing. Compiling or linking gnutls may fa
             --prefix=$cwd/packages \
             --disable-shared \
             --enable-static \
+            --enable-fat \
             ABI=32 \
           ) 1>$tmpFile 2>&1
         fi
