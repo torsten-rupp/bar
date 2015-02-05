@@ -1273,7 +1273,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
     {
       index++;
     }
-Dprintf.dprintf("entityIndexData=%s: %d",entityIndexData,index);
+//Dprintf.dprintf("entityIndexData=%s: %d",entityIndexData,index);
 
     return index;
   }
@@ -1302,7 +1302,7 @@ Dprintf.dprintf("entityIndexData=%s: %d",entityIndexData,index);
    * @param storageIndexData data of tree item
    * @return index in menu
    */
-  private int findStorageMenuIndex(StorageIndexData storageIndexData)
+  private int XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXfindStorageMenuIndex(StorageIndexData storageIndexData)
   {
     MenuItem            menuItems[]         = widgetStorageTableAssignToMenu.getItems();
     IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable);
@@ -2264,7 +2264,6 @@ Dprintf.dprintf("menu=%s",menu);
             MenuItem menuItems[] = subMenu.getItems();
             for (int i =4; i < menuItems.length; i++)
             {
-Dprintf.dprintf("menuItem=%s: %s",menuItems[i],menuItems[i].getData());
               assert menuItems[i].getData() instanceof EntityIndexData;
               removeEntityMenuItemSet.add(menuItems[i]);
             }
@@ -2371,7 +2370,7 @@ Dprintf.dprintf("entityIndexData=%s",entityIndexData);
         {
           for (MenuItem menuItem : removeEntityMenuItemSet)
           {
-Dprintf.dprintf("menuItem=%s",menuItem);
+Dprintf.dprintf("menuItem=%s: %s",menuItem,(EntityIndexData)menuItem.getData());
             EntityIndexData entityIndexData = (EntityIndexData)menuItem.getData();
             Widgets.removeMenuItem(widgetStorageTreeAssignToMenu,menuItem);
             entityIndexData.clearMenuItem();
@@ -5485,7 +5484,7 @@ break;
           int errorCode = Errors.UNKNOWN;
           if      (indexData instanceof UUIDIndexData)
           {
-            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEnityId=%lld jobUUID=%'S",
+            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld jobUUID=%'S",
                                                                      entityIndexData.entityId,
                                                                      ((UUIDIndexData)indexData).jobUUID
                                                                     ),
@@ -5495,8 +5494,9 @@ break;
           }
           else if (indexData instanceof EntityIndexData)
           {
-            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN state=%s entityId=%d",
-                                                                     "*",
+Dprintf.dprintf("indexData=%s",indexData);
+            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld entityId=%lld",
+                                                                     entityIndexData.entityId,
                                                                      ((EntityIndexData)indexData).entityId
                                                                     ),
                                                  0,
@@ -5505,8 +5505,8 @@ break;
           }
           else if (indexData instanceof StorageIndexData)
           {
-            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN state=%s storageId=%d",
-                                                                     "*",
+            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld storageId=%lld",
+                                                                     entityIndexData.entityId,
                                                                      ((StorageIndexData)indexData).storageId
                                                                     ),
                                                  0,
