@@ -6362,6 +6362,20 @@ public class TabJobs
               scheduleDelete();
             }
           });
+
+          Widgets.addMenuSeparator(menu);
+
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Trigger now"));
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              scheduleTrigger();
+            }
+          });
         }
         widgetScheduleTable.setMenu(menu);
 
@@ -10414,6 +10428,29 @@ throw new Error("NYI");
           scheduleDataMap.remove(scheduleData.uuid);
           tableItem.dispose();
         }
+      }
+    }
+  }
+
+  /** trigger schedule entry
+   */
+  private void scheduleTrigger()
+  {
+    assert selectedJobData != null;
+
+    int index = widgetScheduleTable.getSelectionIndex();
+    if (index >= 0)
+    {
+      TableItem    tableItem    = widgetScheduleTable.getItem(index);
+      ScheduleData scheduleData = (ScheduleData)tableItem.getData();
+
+      String[] resultErrorMessage = new String[1];
+      ValueMap resultMap          = new ValueMap();
+      int error = BARServer.executeCommand(StringParser.format("SCHEDULE_TRIGGER jobUUID=%s scheduleUUID=%s",selectedJobData.uuid,scheduleData.uuid),0,resultErrorMessage);
+      if (error != Errors.NONE)
+      {
+        Dialogs.error(shell,BARControl.tr("Cannot trigger schedule of job {0}:\n\n{1}",selectedJobData.name,resultErrorMessage[0]));
+        return;
       }
     }
   }
