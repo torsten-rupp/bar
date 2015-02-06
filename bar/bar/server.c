@@ -7647,24 +7647,15 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
   }
 
   // get archive type, dry-run
-  if (!StringMap_getCString(argumentMap,"type",s,sizeof(s),NULL))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|DRY-RUN");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
   }
-  if (stringEqualsIgnoreCase(s,"dry-run"))
+  if (!StringMap_getBool(argumentMap,"dryRun",&dryRun,FALSE))
   {
-    archiveType = ARCHIVE_TYPE_NORMAL;
-    dryRun      = TRUE;
-  }
-  else
-  {
-    if (!parseArchiveType(s,&archiveType))
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|DRY-RUN");
-      return;
-    }
-    dryRun = FALSE;
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected dryRun=yes|no");
+    return;
   }
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -7930,12 +7921,12 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,0))
+  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,ENTRY_TYPE_UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,0))
+  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=");
     return;
@@ -8110,7 +8101,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,0))
+  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=GLOB|REGEX|EXTENDED_REGEX");
     return;
@@ -8286,7 +8277,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,0))
+  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected patternType=GLOB|REGEX|EXTENDED_REGEX");
     return;
@@ -8458,7 +8449,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,0))
+  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected patternType=GLOB|REGEX|EXTENDED_REGEX");
     return;
@@ -8725,7 +8716,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   }
   else
   {
-    if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,0))
+    if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
       String_delete(time);
@@ -11020,7 +11011,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            entityId=<id>|*
+*            entityId=<id>|0|*
 *            pattern=<pattern>
 *            maxCount=<n>|0
 *            indexState=<state>|*
@@ -11085,12 +11076,12 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     entityId = (DatabaseId)n;
   }
   StringMap_getUInt(argumentMap,"maxCount",&maxCount,0);
-  if (!StringMap_getEnumSet(argumentMap,"indexState",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",0))
+  if (!StringMap_getEnumSet(argumentMap,"indexState",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  if (!StringMap_getEnumSet(argumentMap,"indexMode",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_ALL,"|",0))
+  if (!StringMap_getEnumSet(argumentMap,"indexMode",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_ALL,"|",INDEX_MODE_UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO|*");
     return;
@@ -11325,7 +11316,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
   {
     stateAny = TRUE;
   }
-  else if (StringMap_getEnum(argumentMap,"state",&state,(StringMapParseEnumFunction)Index_parseState,0))
+  else if (StringMap_getEnum(argumentMap,"state",&state,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
   {
     stateAny = FALSE;
   }
@@ -11568,17 +11559,18 @@ LOCAL void serverCommand_indexStorageAssign(ClientInfo *clientInfo, uint id, con
 {
   StaticString     (toJobUUID,INDEX_UUID_LENGTH);
   DatabaseId       toEntityId;
+  ArchiveTypes     archiveType;
   StaticString     (jobUUID,INDEX_UUID_LENGTH);
   DatabaseId       entityId;
   DatabaseId       storageId;
   Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexStates      indexState;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get toUUID, toEntityId
+  // get toJobUUID, toEntityId, archiveType
+  String_clear(toJobUUID);
+  toEntityId = DATABASE_ID_NONE;
   if (   !StringMap_getString(argumentMap,"toJobUUID",toJobUUID,NULL)
       && !StringMap_getInt64(argumentMap,"toEntityId",&toEntityId,DATABASE_ID_NONE)
      )
@@ -11586,7 +11578,25 @@ LOCAL void serverCommand_indexStorageAssign(ClientInfo *clientInfo, uint id, con
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected toJobUUID=<uuid> or toEntityId=<id>");
     return;
   }
-  // get uuid, entityId, or storageId
+fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(toJobUUID),toEntityId);
+  if (String_isEmpty(toJobUUID) && (toEntityId == DATABASE_ID_NONE))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected non-empty toJobUUID or toEntityId");
+    return;
+  }
+  archiveType = ARCHIVE_TYPE_UNKNOWN;
+  if (toEntityId == DATABASE_ID_NONE)
+  {
+    if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
+      return;
+    }
+  }
+  // get jobUUID, entityId, or storageId
+  String_clear(jobUUID);
+  entityId  = DATABASE_ID_NONE;
+  storageId = DATABASE_ID_NONE;
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
@@ -11610,113 +11620,148 @@ LOCAL void serverCommand_indexStorageAssign(ClientInfo *clientInfo, uint id, con
 
   if (!String_isEmpty(jobUUID))
   {
-    // add all storage ids with specified uuid
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  jobUUID,
-                                  DATABASE_ID_ANY, // entity id
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL
-                                 );
-    if (error != ERROR_NONE)
+    // assign all entities of a job to another entity
+    if      (toEntityId != DATABASE_ID_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      return;
+      // assign to entity
+      error = Index_storageAssignTo(indexHandle,
+                                    jobUUID,
+                                    DATABASE_ID_NONE,  // entityId,
+                                    DATABASE_ID_NONE,  // storageId
+                                    toEntityId
+                                   );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        return;
+      }
     }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                &storageId,
-                                NULL, // entity id
-                                NULL, // job UUID
-                                NULL, // schedule UUID
-                                NULL, // archive type
-                                NULL, // storageName
-                                NULL, // createdDateTime
-                                NULL, // entries
-                                NULL, // size
-                                NULL, // indexState
-                                NULL, // indexMode
-                                NULL, // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
-          )
+    else if (!String_isEmpty(toJobUUID))
     {
-    //????
+      // create entity for job UUID
+      error = Index_newEntity(indexHandle,
+                              toJobUUID,
+                              NULL,  // scheduleUUID
+                              archiveType,
+                              &toEntityId
+                             );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
+        return;
+      }
+fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,String_cString(toJobUUID),toEntityId,archiveType);
+
+      // assign to entity
+      error = Index_storageAssignTo(indexHandle,
+                                    jobUUID,
+                                    DATABASE_ID_NONE,  // entityId
+                                    DATABASE_ID_NONE,  // storageId
+                                    toEntityId
+                                   );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        return;
+      }
     }
-    Index_doneList(&indexQueryHandle);
   }
 
   if (entityId != DATABASE_ID_NONE)
   {
-    // add all storage ids with job id
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  NULL, // uuid
-                                  entityId,
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL
-                                 );
-    if (error != ERROR_NONE)
+    // assign entity to another entity
+    if      (toEntityId != DATABASE_ID_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      return;
+      // assign to entity
+      error = Index_storageAssignTo(indexHandle,
+                                    NULL,  // jobUUID
+                                    entityId,
+                                    DATABASE_ID_NONE,  // storageId
+                                    toEntityId
+                                   );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        return;
+      }
     }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                &storageId,
-                                NULL, // entity id
-                                NULL, // job UUID
-                                NULL, // schedule UUID
-                                NULL, // archive type
-                                NULL, // storageName
-                                NULL, // createdDateTime
-                                NULL, // entries
-                                NULL, // size
-                                NULL, // indexState
-                                NULL, // indexMode
-                                NULL, // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
-          )
+    else if (!String_isEmpty(toJobUUID))
     {
-    //????
+      // create entity for job UUID
+      error = Index_newEntity(indexHandle,
+                              toJobUUID,
+                              NULL,  // scheduleUUID
+                              archiveType,
+                              &toEntityId
+                             );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
+        return;
+      }
+fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,String_cString(toJobUUID),toEntityId,archiveType);
+
+      // assign to entity
+      error = Index_storageAssignTo(indexHandle,
+                                    NULL,  // jobUUID
+                                    DATABASE_ID_NONE,  // entityId
+                                    storageId,
+                                    toEntityId
+                                   );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        return;
+      }
     }
-    Index_doneList(&indexQueryHandle);
   }
 
   if (storageId != DATABASE_ID_NONE)
   {
-    if      (entityId != DATABASE_ID_NONE)
+    // assign storage to another entity
+    if      (toEntityId != DATABASE_ID_NONE)
     {
-      // assign to other entity
+      // assign to entity
       error = Index_storageAssignTo(indexHandle,
+                                    NULL,  // jobUUID
+                                    DATABASE_ID_NONE,  // entityId
                                     storageId,
-                                    entityId
+                                    toEntityId
                                    );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        return;
+      }
     }
-    else if (!String_isEmpty(jobUUID))
+    else if (!String_isEmpty(toJobUUID))
     {
-      // create entity for other UUID
-///???
+      // create entity for job UUID
+      error = Index_newEntity(indexHandle,
+                              toJobUUID,
+                              NULL,
+                              archiveType,
+                              &toEntityId
+                             );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
+        return;
+      }
+fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,String_cString(toJobUUID),toEntityId,archiveType);
 
-      // assign to other entity
+      // assign to entity
       error = Index_storageAssignTo(indexHandle,
+                                    NULL,  // jobUUID
+                                    DATABASE_ID_NONE,  // entityId
                                     storageId,
-                                    entityId
+                                    toEntityId
                                    );
-    }
-    if (error != ERROR_NONE)
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
-      return;
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        return;
+      }
     }
   }
 
@@ -11761,7 +11806,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
   {
     stateAny = TRUE;
   }
-  else if (StringMap_getEnum(argumentMap,"state",&state,(StringMapParseEnumFunction)Index_parseState,0))
+  else if (StringMap_getEnum(argumentMap,"state",&state,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
   {
     stateAny = FALSE;
   }

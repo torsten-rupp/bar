@@ -464,6 +464,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 * Input  : indexHandle  - index handle
 *          jobUUID      - unique job id (can be NULL)
 *          scheduleUUID - unique schedule id (can be NULL)
+*          archiveType  - archive type
 * Output : entityId - database id of new entity index
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -611,16 +612,22 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
 * Name   : Index_storageAssignTo
 * Purpose: assign storage to entity
 * Input  : indexHandle - index handle
-*          storageId   - database id of storage index
-*          entityId    - entity id
+*          jobUUID     - job UUID (can be NULL)
+*          entityId    - database id of entity index (can be
+*                        DATABASE_ID_NONE)
+*          storageId   - database id of storage index (can be
+*                        DATABASE_ID_NONE)
+*          toEntityId  - to entity id
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_storageAssignTo(IndexHandle *indexHandle,
-                             DatabaseId  storageId,
-                             DatabaseId  entityId
+Errors Index_storageAssignTo(IndexHandle  *indexHandle,
+                             const String jobUUID,
+                             DatabaseId   entityId,
+                             DatabaseId   storageId,
+                             DatabaseId   toEntityId
                             );
 
 /***********************************************************************\

@@ -2325,28 +2325,123 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
 }
 
 
-Errors Index_storageAssignTo(IndexHandle *indexHandle,
-                             DatabaseId  storageId,
-                             DatabaseId  entityId
+Errors Index_storageAssignTo(IndexHandle  *indexHandle,
+                             const String jobUUID,
+                             DatabaseId   entityId,
+                             DatabaseId   storageId,
+                             DatabaseId   toEntityId
                             )
 {
-  Errors error;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
 
   assert(indexHandle != NULL);
   assert(Index_isReady(indexHandle));
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "UPDATE storage \
-                            SET entityId=%lld \
-                            WHERE id=%lld;\
-                           ",
-                           entityId,
-                           storageId
-                          );
-  if (error != ERROR_NONE)
+  if (storageId != DATABASE_ID_NONE)
   {
-    return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "UPDATE storage \
+                              SET entityId=%lld \
+                              WHERE id=%lld;\
+                             ",
+                             toEntityId,
+                             storageId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
+  if (entityId != DATABASE_ID_NONE)
+  {
+    // assign to other entity
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "UPDATE storage \
+                              SET entityId=%lld \
+                              WHERE entityId=%lld;\
+                             ",
+                             toEntityId,
+                             entityId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    if (entityId != toEntityId)
+    {
+      // delete entity
+      error - Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM entities WHERE id=%lld;",
+                               entityId
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+  }
+
+  if (!String_isEmpty(jobUUID))
+  {
+    error = Index_initListEntities(&indexQueryHandle,
+                                   indexHandle,
+                                   jobUUID,
+                                   NULL, // scheduldUUID
+                                   DATABASE_ORDERING_ASCENDING,
+                                   0LL   // offset
+                                  );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    while (Index_getNextEntity(&indexQueryHandle,
+                               &entityId,
+                               NULL,  // jobUUID,
+                               NULL,  // scheduleUUID,
+                               NULL,  // createdDateTime,
+                               NULL,  // archiveType,
+                               NULL,  // totalEntries,
+                               NULL,  // totalSize,
+                               NULL   // lastErrorMessage
+                              )
+          )
+    {
+      // assign to other entity
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "UPDATE storage \
+                                SET entityId=%lld \
+                                WHERE entityId=%lld;\
+                               ",
+                               toEntityId,
+                               entityId
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      if (entityId != toEntityId)
+      {
+        // delete entity
+        error - Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "DELETE FROM entities WHERE id=%lld;",
+                                 entityId
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+    }
   }
 
   return ERROR_NONE;
