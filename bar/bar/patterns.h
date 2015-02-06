@@ -44,7 +44,8 @@ typedef enum
 {
   PATTERN_TYPE_GLOB,                    // * and ?
   PATTERN_TYPE_REGEX,                   // regular expressions
-  PATTERN_TYPE_EXTENDED_REGEX           // extended regular expressions
+  PATTERN_TYPE_EXTENDED_REGEX,          // extended regular expressions
+  PATTERN_TYPE_UNKNOWN
 } PatternTypes;
 
 // pattern flags
