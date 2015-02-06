@@ -160,6 +160,15 @@ public class TabRestore
     }
   };
 
+  /** entity states
+   */
+  enum EntityStates
+  {
+    NONE,
+    OK,
+    ANY
+  };
+
   /** index state set
    */
   class IndexStateSet
@@ -1327,6 +1336,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
     private int           storageMaxCount      = 100;
     private String        storagePattern       = null;
     private IndexStateSet storageIndexStateSet = INDEX_STATE_SET_ALL;
+    private EntityStates  storageEntityState   = EntityStates.ANY;
     private boolean       setUpdateIndicator   = false;          // true to set color/cursor at update
 
     /** create update storage list thread
@@ -1465,19 +1475,21 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
     /** trigger update of storage list
      * @param storagePattern new storage pattern
      * @param storageIndexStateSet new storage index state set
+     * @param storageEntityState new storage entity state
      * @param storageMaxCount new max. entries in list
      */
-    public void triggerUpdate(String storagePattern, IndexStateSet storageIndexStateSet, int storageMaxCount)
+    public void triggerUpdate(String storagePattern, IndexStateSet storageIndexStateSet, EntityStates storageEntityState, int storageMaxCount)
     {
       synchronized(trigger)
       {
         if (   (this.storagePattern == null) || (storagePattern == null) || !this.storagePattern.equals(storagePattern)
-            || (this.storageIndexStateSet != storageIndexStateSet)
+            || (this.storageIndexStateSet != storageIndexStateSet) || (this.storageEntityState != storageEntityState)
             || (this.storageMaxCount != storageMaxCount)
            )
         {
           this.storagePattern       = storagePattern;
           this.storageIndexStateSet = storageIndexStateSet;
+          this.storageEntityState   = storageEntityState;
           this.storageMaxCount      = storageMaxCount;
           this.setUpdateIndicator   = true;
 
@@ -1507,14 +1519,16 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
 
     /** trigger update of storage list
      * @param storageIndexStateSet new storage index state set
+     * @param storageEntityState new storage entity state
      */
-    public void triggerUpdateIndexStateSet(IndexStateSet storageIndexStateSet)
+    public void triggerUpdateStorageState(IndexStateSet storageIndexStateSet, EntityStates storageEntityState)
     {
       synchronized(trigger)
       {
-        if (this.storageIndexStateSet != storageIndexStateSet)
+        if ((this.storageIndexStateSet != storageIndexStateSet) || (this.storageEntityState != storageEntityState))
         {
           this.storageIndexStateSet = storageIndexStateSet;
+          this.storageEntityState   = storageEntityState;
           this.setUpdateIndicator   = true;
 
           triggeredFlag = true;
@@ -1986,7 +2000,8 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
       if (triggeredFlag) return;
 
       // update storage table
-      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* maxCount=%d indexState=%s indexMode=%s pattern=%'S",
+      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s maxCount=%d indexState=%s indexMode=%s pattern=%'S",
+                                                         (storageEntityState != EntityStates.NONE) ? "*" : "0",
                                                          storageMaxCount,
                                                          storageIndexStateSet.nameList("|"),
                                                          "*",
@@ -2170,8 +2185,8 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
                     {
                       MenuItem widget = (MenuItem)selectionEvent.widget;
 
-Dprintf.dprintf("");
-//                      assignStorage(indexData);
+                      UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
+                      assignStorage(uuidIndexData,Settings.ArchiveTypes.FULL);
                     }
                   });
                   menuItem = Widgets.addMenuItem(subMenu,
@@ -2187,8 +2202,8 @@ Dprintf.dprintf("");
                     {
                       MenuItem widget = (MenuItem)selectionEvent.widget;
 
-Dprintf.dprintf("");
-//                      assignStorage(indexData);
+                      UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
+                      assignStorage(uuidIndexData,Settings.ArchiveTypes.INCREMENTAL);
                     }
                   });
                   menuItem = Widgets.addMenuItem(subMenu,
@@ -2204,8 +2219,8 @@ Dprintf.dprintf("");
                     {
                       MenuItem widget = (MenuItem)selectionEvent.widget;
 
-Dprintf.dprintf("");
-//                      assignStorage(indexData);
+                      UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
+                      assignStorage(uuidIndexData,Settings.ArchiveTypes.DIFFERENTIAL);
                     }
                   });
                   Widgets.addMenuSeparator(subMenu);
@@ -4258,7 +4273,7 @@ break;
 
         widgetStorageState = Widgets.newOptionMenu(composite);
         widgetStorageState.setToolTipText(BARControl.tr("Storage states filter."));
-        widgetStorageState.setItems(new String[]{"*","ok","error","update","update requested","update/update requested","error/update/update requested"});
+        widgetStorageState.setItems(new String[]{"*","ok","error","update","update requested","update/update requested","error/update/update requested","not assigned"});
         widgetStorageState.setText("*");
         Widgets.layout(widgetStorageState,0,4,TableLayoutData.W);
         widgetStorageState.addSelectionListener(new SelectionListener()
@@ -4270,22 +4285,24 @@ break;
           {
             Combo widget = (Combo)selectionEvent.widget;
             IndexStateSet storageIndexStateSet;
+            EntityStates storageEntityState;
             switch (widget.getSelectionIndex())
             {
-              case 0:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  break;
-              case 1:  storageIndexStateSet = new IndexStateSet(IndexStates.OK);                                                    break;
-              case 2:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR);                                                 break;
-              case 3:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE);                                                break;
-              case 4:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE_REQUESTED);                                      break;
-              case 5:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);                   break;
-              case 6:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED); break;
-              default: storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               break;
+              case 0:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.ANY;  break;
+              case 1:  storageIndexStateSet = new IndexStateSet(IndexStates.OK);                                                    storageEntityState = EntityStates.ANY;  break;
+              case 2:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR);                                                 storageEntityState = EntityStates.ANY;  break;
+              case 3:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE);                                                storageEntityState = EntityStates.ANY;  break;
+              case 4:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE_REQUESTED);                                      storageEntityState = EntityStates.ANY;  break;
+              case 5:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);                   storageEntityState = EntityStates.ANY;  break;
+              case 6:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED); storageEntityState = EntityStates.ANY;  break;
+              case 7:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
+              default: storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               storageEntityState = EntityStates.ANY;  break;
 
             }
-            updateStorageThread.triggerUpdateIndexStateSet(storageIndexStateSet);
+            updateStorageThread.triggerUpdateStorageState(storageIndexStateSet,storageEntityState);
           }
         });
-        updateStorageThread.triggerUpdateIndexStateSet(INDEX_STATE_SET_ALL);
+        updateStorageThread.triggerUpdateStorageState(INDEX_STATE_SET_ALL,EntityStates.ANY);
 
         label = Widgets.newLabel(composite,BARControl.tr("Max")+":");
         Widgets.layout(label,0,5,TableLayoutData.W);
@@ -4319,7 +4336,7 @@ break;
         button = Widgets.newButton(composite,BARControl.tr("Restore"));
         button.setToolTipText(BARControl.tr("Start restoring selected archives."));
         button.setEnabled(false);
-        Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+        Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,80,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedStorageEvent)
         {
           public void trigger(Control control)
@@ -4759,7 +4776,7 @@ break;
         button = Widgets.newButton(composite,BARControl.tr("Restore"));
         button.setToolTipText(BARControl.tr("Start restoring selected entries."));
         button.setEnabled(false);
-        Widgets.layout(button,0,6,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+        Widgets.layout(button,0,6,TableLayoutData.DEFAULT,0,0,0,0,80,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedEntryEvent)
         {
           public void trigger(Control control)
@@ -5465,16 +5482,18 @@ break;
   }
 
   /** assing storage to entity
+   * @param toUUIDIndexData UUID index data
+   * @param archiveType archive type
    */
-  private void assignStorage(EntityIndexData entityIndexData)
+  private void assignStorage(UUIDIndexData toUUIDIndexData, Settings.ArchiveTypes archiveType)
   {
-    try
-    {
-      HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
 
-      getCheckedIndexData(indexDataHashSet);
-      getSelectedIndexData(indexDataHashSet);
-      if (!indexDataHashSet.isEmpty())
+    getCheckedIndexData(indexDataHashSet);
+    getSelectedIndexData(indexDataHashSet);
+    if (!indexDataHashSet.isEmpty())
+    {
+      try
       {
         for (IndexData indexData : indexDataHashSet)
         {
@@ -5484,8 +5503,9 @@ break;
           int errorCode = Errors.UNKNOWN;
           if      (indexData instanceof UUIDIndexData)
           {
-            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld jobUUID=%'S",
-                                                                     entityIndexData.entityId,
+            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s jobUUID=%'S",
+                                                                     toUUIDIndexData.jobUUID,
+                                                                     archiveType.toString(),
                                                                      ((UUIDIndexData)indexData).jobUUID
                                                                     ),
                                                  0,
@@ -5495,8 +5515,9 @@ break;
           else if (indexData instanceof EntityIndexData)
           {
 Dprintf.dprintf("indexData=%s",indexData);
-            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld entityId=%lld",
-                                                                     entityIndexData.entityId,
+            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s entityId=%lld",
+                                                                     toUUIDIndexData.jobUUID,
+                                                                     archiveType.toString(),
                                                                      ((EntityIndexData)indexData).entityId
                                                                     ),
                                                  0,
@@ -5505,8 +5526,9 @@ Dprintf.dprintf("indexData=%s",indexData);
           }
           else if (indexData instanceof StorageIndexData)
           {
-            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld storageId=%lld",
-                                                                     entityIndexData.entityId,
+            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s storageId=%lld",
+                                                                     toUUIDIndexData.jobUUID,
+                                                                     archiveType.toString(),
                                                                      ((StorageIndexData)indexData).storageId
                                                                     ),
                                                  0,
@@ -5523,10 +5545,79 @@ Dprintf.dprintf("indexData=%s",indexData);
           }
         }
       }
+      catch (CommunicationError error)
+      {
+        Dialogs.error(shell,BARControl.tr("Communication error while assigning index database\n\n(error: {0})",error.toString()));
+      }
+      updateStorageThread.triggerUpdate();
     }
-    catch (CommunicationError error)
+  }
+
+  /** assing storage to entity
+   * @param toEntityIndexData entity index data
+   */
+  private void assignStorage(EntityIndexData toEntityIndexData)
+  {
+    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+
+    getCheckedIndexData(indexDataHashSet);
+    getSelectedIndexData(indexDataHashSet);
+    if (!indexDataHashSet.isEmpty())
     {
-      Dialogs.error(shell,BARControl.tr("Communication error while assigning index database\n\n(error: {0})",error.toString()));
+      try
+      {
+        for (IndexData indexData : indexDataHashSet)
+        {
+          final String info = indexData.getInfo();
+
+          String[] resultErrorMessage = new String[1];
+          int errorCode = Errors.UNKNOWN;
+          if      (indexData instanceof UUIDIndexData)
+          {
+            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld jobUUID=%'S",
+                                                                     toEntityIndexData.entityId,
+                                                                     ((UUIDIndexData)indexData).jobUUID
+                                                                    ),
+                                                 0,
+                                                 resultErrorMessage
+                                                );
+          }
+          else if (indexData instanceof EntityIndexData)
+          {
+Dprintf.dprintf("indexData=%s",indexData);
+            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld entityId=%lld",
+                                                                     toEntityIndexData.entityId,
+                                                                     ((EntityIndexData)indexData).entityId
+                                                                    ),
+                                                 0,
+                                                 resultErrorMessage
+                                                );
+          }
+          else if (indexData instanceof StorageIndexData)
+          {
+            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld storageId=%lld",
+                                                                     toEntityIndexData.entityId,
+                                                                     ((StorageIndexData)indexData).storageId
+                                                                    ),
+                                                 0,
+                                                 resultErrorMessage
+                                                );
+          }
+          if (errorCode == Errors.NONE)
+          {
+            indexData.setState(IndexStates.UPDATE_REQUESTED);
+          }
+          else
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]));
+          }
+        }
+      }
+      catch (CommunicationError error)
+      {
+        Dialogs.error(shell,BARControl.tr("Communication error while assigning index database\n\n(error: {0})",error.toString()));
+      }
+      updateStorageThread.triggerUpdate();
     }
   }
 

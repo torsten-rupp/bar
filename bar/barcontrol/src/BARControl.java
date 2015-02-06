@@ -1744,7 +1744,7 @@ System.exit(1);
           }
 
           // start job
-          errorCode = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s type=%s",
+          errorCode = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=%s dryRun=no",
                                                                    jobUUID,
                                                                    Settings.archiveType.toString()
                                                                   ),

@@ -1577,19 +1577,19 @@ public class TabStatus
     switch (mode)
     {
       case 0:
-        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s type=normal",selectedJobData.uuid),0);
+        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=no",selectedJobData.uuid),0);
         break;
       case 1:
-        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s type=full",selectedJobData.uuid),0);
+        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=full dryRun=no",selectedJobData.uuid),0);
         break;
       case 2:
-        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s type=incremental",selectedJobData.uuid),0);
+        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=incremental dryRun=no",selectedJobData.uuid),0);
         break;
       case 3:
-        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s type=differential",selectedJobData.uuid),0);
+        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=differential dryRun=no",selectedJobData.uuid),0);
         break;
       case 4:
-        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s type=dry-run",selectedJobData.uuid),0);
+        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=yes",selectedJobData.uuid),0);
         break;
       case 5:
         break;
