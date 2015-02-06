@@ -1636,6 +1636,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     break;
                   case ENTRY_TYPE_IMAGE:
                     break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
                 }
               }
               break;
@@ -1663,6 +1668,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       break;
                     case ENTRY_TYPE_IMAGE:
                       break;
+                    default:
+                      #ifndef NDEBUG
+                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                      #endif /* NDEBUG */
+                      break; /* not reached */
                   }
 
                   // open directory contents
@@ -1724,6 +1734,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     break;
                                   case ENTRY_TYPE_IMAGE:
                                     break;
+                                  default:
+                                    #ifndef NDEBUG
+                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                    #endif /* NDEBUG */
+                                    break; /* not reached */
                                 }
                               }
                               break;
@@ -1748,6 +1763,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                   break;
                                 case ENTRY_TYPE_IMAGE:
                                   break;
+                                default:
+                                  #ifndef NDEBUG
+                                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                  #endif /* NDEBUG */
+                                  break; /* not reached */
                               }
                               break;
                             case FILE_TYPE_HARDLINK:
@@ -1768,6 +1788,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                   break;
                                 case ENTRY_TYPE_IMAGE:
                                   break;
+                                default:
+                                  #ifndef NDEBUG
+                                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                  #endif /* NDEBUG */
+                                  break; /* not reached */
                               }
                               break;
                             case FILE_TYPE_SPECIAL:
@@ -1803,6 +1828,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     }
                                   }
                                   break;
+                                default:
+                                  #ifndef NDEBUG
+                                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                  #endif /* NDEBUG */
+                                  break; /* not reached */
                               }
                               break;
                             default:
@@ -1840,6 +1870,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     break;
                   case ENTRY_TYPE_IMAGE:
                     break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
                 }
               }
               break;
@@ -1865,6 +1900,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     break;
                   case ENTRY_TYPE_IMAGE:
                     break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
                 }
               }
               break;
@@ -1906,6 +1946,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       }
                     }
                     break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
                 }
               }
               break;
@@ -2089,6 +2134,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     break;
                   case ENTRY_TYPE_IMAGE:
                     break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
                 }
               }
               break;
@@ -2120,6 +2170,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       break;
                     case ENTRY_TYPE_IMAGE:
                       break;
+                    default:
+                      #ifndef NDEBUG
+                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                      #endif /* NDEBUG */
+                      break; /* not reached */
                   }
 
                   // open directory contents
@@ -2200,6 +2255,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                     break;
                                   case ENTRY_TYPE_IMAGE:
                                     break;
+                                  default:
+                                    #ifndef NDEBUG
+                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                    #endif /* NDEBUG */
+                                    break; /* not reached */
                                 }
                               }
                               break;
@@ -2232,6 +2292,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                     break;
                                   case ENTRY_TYPE_IMAGE:
                                     break;
+                                  default:
+                                    #ifndef NDEBUG
+                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                    #endif /* NDEBUG */
+                                    break; /* not reached */
                                 }
                               }
                               break;
@@ -2310,6 +2375,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                     break;
                                   case ENTRY_TYPE_IMAGE:
                                     break;
+                                  default:
+                                    #ifndef NDEBUG
+                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                    #endif /* NDEBUG */
+                                    break; /* not reached */
                                 }
                               }
                               break;
@@ -2346,6 +2416,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                               );
                                     }
                                     break;
+                                  default:
+                                    #ifndef NDEBUG
+                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                    #endif /* NDEBUG */
+                                    break; /* not reached */
                                 }
                               }
                               break;
@@ -2434,6 +2509,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     break;
                   case ENTRY_TYPE_IMAGE:
                     break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
                 }
               }
               break;
@@ -2516,6 +2596,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     break;
                   case ENTRY_TYPE_IMAGE:
                     break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
                 }
               }
               break;
@@ -2569,6 +2654,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                               );
                     }
                     break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
                 }
               }
               break;
@@ -4966,6 +5056,11 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               break;
             case ENTRY_TYPE_IMAGE:
               break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
           }
           break;
         case FILE_TYPE_DIRECTORY:
@@ -4979,6 +5074,11 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               break;
             case ENTRY_TYPE_IMAGE:
               break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
           }
           break;
         case FILE_TYPE_LINK:
@@ -4992,6 +5092,11 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               break;
             case ENTRY_TYPE_IMAGE:
               break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
           }
           break;
         case FILE_TYPE_HARDLINK:
@@ -5007,6 +5112,11 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               break;
             case ENTRY_TYPE_IMAGE:
               break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
           }
           break;
         case FILE_TYPE_SPECIAL:
@@ -5026,6 +5136,11 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
                                      );
               if (error != ERROR_NONE) createInfo->failError = error;
               break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
           }
           break;
         default:
