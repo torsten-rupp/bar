@@ -4134,11 +4134,11 @@ bool configValueFormatFileEntry(void **formatUserData, void *userData, String li
       case PATTERN_TYPE_EXTENDED_REGEX:
         String_format(line,"x:%'S",fileName);
         break;
-      #ifndef NDEBUG
-        default:
+      default:
+        #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
+        #endif /* NDEBUG */
+        break;
     }
     String_delete(fileName);
 
@@ -4178,11 +4178,11 @@ bool configValueFormatImageEntry(void **formatUserData, void *userData, String l
       case PATTERN_TYPE_EXTENDED_REGEX:
         String_format(line,"x:%'S",entryNode->string);
         break;
-      #ifndef NDEBUG
-        default:
+      default:
+        #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
+        #endif /* NDEBUG */
+        break;
     }
 
     (*formatUserData) = entryNode->next;
@@ -4260,11 +4260,11 @@ bool configValueFormatPattern(void **formatUserData, void *userData, String line
       case PATTERN_TYPE_EXTENDED_REGEX:
         String_format(line,"x:%'S",patternNode->string);
         break;
-      #ifndef NDEBUG
-        default:
+      default:
+        #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
+        #endif /* NDEBUG */
+        break;
     }
 
     (*formatUserData) = patternNode->next;
