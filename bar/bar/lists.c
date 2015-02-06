@@ -376,7 +376,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
           debugDumpStackTrace(stderr,"allocated at",2,debugListNode->stackTrace,debugListNode->stackTraceSize);
           debugDumpStackTrace(stderr,"deleted at",2,debugListNode->deleteStackTrace,debugListNode->deleteStackTraceSize);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("");
+        HALT_INTERNAL_ERROR("delete node");
       }
 
       // remove node from allocated list, add node to free-list, shorten list
@@ -415,7 +415,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("");
+        HALT_INTERNAL_ERROR("delete node");
       }
     }
     pthread_mutex_unlock(&debugListLock);
