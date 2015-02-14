@@ -259,8 +259,8 @@ public class TableLayout extends Layout
   {
     super();
 
-    this.rowWeight         = rowWeight;
-    this.columnWeights     = columnWeights;
+    this.rowWeights        = rowWeights;
+    this.columnWeight      = columnWeight;
     this.marginTop         = margin;
     this.marginBottom      = margin;
     this.marginLeft        = margin;
@@ -279,8 +279,8 @@ public class TableLayout extends Layout
   {
     super();
 
-    this.rowWeights        = rowWeights;
-    this.columnWeight      = columnWeight;
+    this.rowWeight         = rowWeight;
+    this.columnWeights     = columnWeights;
     this.marginTop         = margin;
     this.marginBottom      = margin;
     this.marginLeft        = margin;
