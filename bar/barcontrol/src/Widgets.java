@@ -6688,13 +6688,25 @@ private static void printTree(Tree tree)
 
   /** create new pane widget
    * @param composite composite widget
-   * @param count ???
+   * @param count number of pane sections
    * @param style style
    * @return new pane widget
    */
   public static Pane newPane(Composite composite, int count, int style)
   {
     Pane pane = new Pane(composite,count,style);
+
+    return pane;
+  }
+
+  /** create new pane widget
+   * @param composite composite widget
+   * @param count number of pane sections
+   * @return new pane widget
+   */
+  public static Pane newPane(Composite composite, int count)
+  {
+    Pane pane = new Pane(composite,count,SWT.NONE);
 
     return pane;
   }
