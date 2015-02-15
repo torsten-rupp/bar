@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /tmp/cvs/onzen/src/Pane.java,v $
-* $Revision: 970 $
+* $Revision: 1257 $
 * $Author: torsten $
 * Contents: pane widget
 * Systems: all
@@ -9,6 +9,8 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+import java.util.Arrays;
+
 import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.MouseEvent;
@@ -23,36 +25,51 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Layout;
+import org.eclipse.swt.widgets.Listener;
 
 /****************************** Classes ********************************/
 
 /** pane widget (vertical, horizontal)
  */
-class Pane extends Composite
+public class Pane extends Canvas
 {
   // --------------------------- constants --------------------------------
-  private final int SIZE          = 8;   // total width/height of slider
-  private final int SLIDER_SIZE   = 8;   // width/height of slider button
-  private final int SLIDER_OFFSET = 8;   // offset from end of slider line
-  private final int OFFSET_X      = 0;
-  private final int OFFSET_Y      = 0;
+  private final int    SIZE          = 12;   // total width/height of slider
+  private final int    SLIDER_SIZE   =  8;   // width/height of slider button
+  private final int    SLIDER_OFFSET =  8;   // offset from end of slider line
+  private final int    OFFSET_X      =  2;
+  private final int    OFFSET_Y      =  2;
+
+  private final Color  COLOR_GRAY;
+  private final Color  COLOR_WHITE;
+  private final Color  COLOR_NORMAL_SHADOW;
+  private final Color  COLOR_HIGHLIGHT_SHADOW;
+
+  private final Cursor CURSOR;
 
   // --------------------------- variables --------------------------------
-  private int     style;                 // style flags
-  private Pane    prevPane;              // previous pane or null
-  private Pane    nextPane;              // next pane or null
-  private int     delta;                 // current pane delta
-  private boolean dragFlag;              // TRUE iff drag slider in progress
-  private int     dragStart;             // drag start value
-  private int     dragDelta;             // current drag delta value
+  private Composite composites[];
+  private int       offsets[];               // offset of composites
+  private int       count;                   // number of composites
+  private int       style;                   // style flags
+  private int       dragIndex;               // index of sash if dragging is in progress, otherwise -1
+  private int       dragStart;               // drag start value
+  private int       dragDelta;               // current drag delta value
 
-  private Color   colorGray;
-  private Color   colorWhite;
-  private Color   colorNormalShadow;
-  private Color   colorHighlightShadow;
+  /* offsets:
 
-  private Cursor  cursor;
+     +----+----+----+
+     |    |    |    |
+     +----+----+----+
+                    \- offset[0]
+               \------ offset[1]
+          \----------- offset[2]
+
+  */
 
   // ------------------------ native functions ----------------------------
 
@@ -62,37 +79,101 @@ class Pane extends Composite
    * @param parent parent widget
    * @param style style flags (support VERTICAL, HORIZONTAL)
    */
-  Pane(Composite parent, int style, Pane prevPane)
+  Pane(Composite parent, int count, int style)
   {
     super(parent,SWT.NONE);
 
-    // initialize variables
-    this.style                = style;
-    this.prevPane             = prevPane;
-    this.nextPane             = null;
-    this.delta                = 0;
-    this.dragFlag             = false;
+    // check arguments
+    if (count <= 1) throw new IllegalArgumentException();
 
-    this.colorWhite           = getDisplay().getSystemColor(SWT.COLOR_WHITE);
-    this.colorGray            = getDisplay().getSystemColor(SWT.COLOR_GRAY);
-    this.colorNormalShadow    = getDisplay().getSystemColor(SWT.COLOR_WIDGET_NORMAL_SHADOW);
-    this.colorHighlightShadow = getDisplay().getSystemColor(SWT.COLOR_WIDGET_HIGHLIGHT_SHADOW);
+    // get colors
+    this.COLOR_WHITE            = getDisplay().getSystemColor(SWT.COLOR_WHITE);
+    this.COLOR_GRAY             = getDisplay().getSystemColor(SWT.COLOR_GRAY);
+    this.COLOR_NORMAL_SHADOW    = getDisplay().getSystemColor(SWT.COLOR_WIDGET_NORMAL_SHADOW);
+    this.COLOR_HIGHLIGHT_SHADOW = getDisplay().getSystemColor(SWT.COLOR_WIDGET_HIGHLIGHT_SHADOW);
 
+    // get cursor
     if ((style & SWT.VERTICAL) == SWT.VERTICAL)
     {
-      this.cursor = new Cursor(getDisplay(),SWT.CURSOR_SIZEWE);
+      this.CURSOR = new Cursor(getDisplay(),SWT.CURSOR_SIZEWE);
     }
     else
     {
-      this.cursor = new Cursor(getDisplay(),SWT.CURSOR_SIZENS);
+      this.CURSOR = new Cursor(getDisplay(),SWT.CURSOR_SIZENS);
     }
 
-    // add paint listener
+    // initialize variables
+    this.composites = new Composite[count];
+    this.offsets    = new int[count];
+    this.count      = count;
+    this.style      = style;
+    this.dragIndex  = -1;
+
+    // create sashes
+    Rectangle bounds = getBounds();
+    int dw     = (bounds.width -(count-1)*SIZE)/count;
+    int dh     = (bounds.height-(count-1)*SIZE)/count;
+    int x      = 0;
+    int y      = 0;
+    int width  = 0;
+    int height = 0;
+    for (int i = 0; i < count; i++)
+    {
+      composites[i] = new Composite(this,SWT.NONE);
+      if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+      {
+        composites[i].setBounds(x,0,dw,bounds.height);
+        x += dw + SIZE;
+        offsets[i] = x;
+      }
+      else
+      {
+        composites[i].setBounds(0,y,bounds.width,dh);
+        y += dh + SIZE;
+        offsets[i] = y;
+      }
+    }
+
+    // add paint listeners
     addPaintListener(new PaintListener()
     {
       public void paintControl(PaintEvent paintEvent)
       {
         Pane.this.paint(paintEvent);
+      }
+    });
+
+    // add resize listeners
+    addListener(SWT.Resize, new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        Pane      pane   = Pane.this;
+        Rectangle bounds = pane.getClientArea();
+//Dprintf.dprintf("SWT.Resize this=%s bounds=%s %s",event.widget,bounds,pane.getBounds());
+
+        int dw     = (bounds.width -(pane.count-1)*SIZE)/pane.count;
+        int dh     = (bounds.height-(pane.count-1)*SIZE)/pane.count;
+        int x      = 0;
+        int y      = 0;
+        int width  = 0;
+        int height = 0;
+        for (int i = 0; i < pane.count; i++)
+        {
+          if ((pane.style & SWT.VERTICAL) == SWT.VERTICAL)
+          {
+            pane.composites[i].setBounds(x,0,dw,bounds.height);
+            x += dw + SIZE;
+            pane.offsets[i] = x;
+          }
+          else
+          {
+            pane.composites[i].setBounds(0,y,bounds.width,dh);
+            y += dh + SIZE;
+            pane.offsets[i] = y;
+          }
+//Dprintf.dprintf("pane.composites[i]=%s",pane.composites[i].getBounds());
+        }
       }
     });
 
@@ -104,24 +185,22 @@ class Pane extends Composite
       }
       public void mouseDown(MouseEvent mouseEvent)
       {
-//        Pane pane = Pane.this;
-        Pane pane = (Pane)mouseEvent.widget;
+        Pane pane = Pane.this;
 
-        // start dragging slider
-        pane.dragFlag  = true;
-        pane.dragStart = ((pane.style & SWT.VERTICAL) == SWT.VERTICAL) ? mouseEvent.x : mouseEvent.y;
-        pane.dragDelta = 0;
+        pane.dragIndex = getSashAt(mouseEvent.x,mouseEvent.y);
+        if (pane.dragIndex != -1)
+        {
+          // start dragging slider
+          pane.dragStart = ((pane.style & SWT.VERTICAL) == SWT.VERTICAL) ? mouseEvent.x : mouseEvent.y;
+          pane.dragDelta = 0;
+        }
       }
       public void mouseUp(MouseEvent mouseEvent)
       {
-//        Pane pane = Pane.this;
-        Pane pane = (Pane)mouseEvent.widget;
-
-        // save dragging delta
-        pane.delta += pane.dragDelta;
+        Pane pane = Pane.this;
 
         // stop dragging slider
-        pane.dragFlag  = false;
+        pane.dragIndex = -1;
         pane.dragDelta = 0;
       }
     });
@@ -129,17 +208,12 @@ class Pane extends Composite
     {
       public void mouseEnter(MouseEvent mouseEvent)
       {
-//        Pane pane = Pane.this;
-        Pane pane = (Pane)mouseEvent.widget;
-
-        setCursor(pane.checkInside(mouseEvent.x,mouseEvent.y) ? cursor : null);
       }
       public void mouseExit(MouseEvent mouseEvent)
       {
-//        Pane pane = Pane.this;
-        Pane pane = (Pane)mouseEvent.widget;
+        Pane pane = Pane.this;
 
-        pane.setCursor(null);
+        setCursor(null);
       }
       public void mouseHover(MouseEvent mouseEvent)
       {
@@ -149,130 +223,202 @@ class Pane extends Composite
     {
       public void mouseMove(MouseEvent mouseEvent)
       {
-//        Pane      pane = Pane.this;
-        Pane pane = (Pane)mouseEvent.widget;
-        Point     size;
+        Composite composite = (Composite)mouseEvent.widget;
+        Pane pane = Pane.this;
+        Rectangle bounds0,bounds1;
         Rectangle bounds;
         int       dragDelta;
-        int       n;
-        int       min,max;
 
         // set cursor
-        setCursor(pane.checkInside(mouseEvent.x,mouseEvent.y) ? cursor : null);
+        setCursor(Pane.this.isInsideSash(mouseEvent.x,mouseEvent.y) ? CURSOR : null);
 
         // drag
-        if (pane.dragFlag)
+        if (pane.dragIndex >= 0)
         {
-          // get current size of pane
-          size = pane.computeSize(SWT.DEFAULT,SWT.DEFAULT,false);
-
           // get available space from parent
-          bounds = pane.getParent().getBounds();
+          bounds = pane.getBounds();
 //Dprintf.dprintf("size=%s bounds=%s",size,bounds);
+
+          // get bounds of sashes
+          bounds0 = composites[pane.dragIndex+0].getBounds();
+          bounds1 = composites[pane.dragIndex+1].getBounds();
 
           if ((pane.style & SWT.VERTICAL) == SWT.VERTICAL)
           {
             dragDelta = mouseEvent.x-pane.dragStart;
-            n         = size.x;
-            min       = SIZE;
-            max       = bounds.width-SIZE;
+
+            if (dragDelta != 0)
+            {
+              // limit drag delta
+              if ((bounds0.width+dragDelta) < 0) dragDelta = -bounds0.width;
+              if ((bounds1.width-dragDelta) < 0) dragDelta =  bounds1.width;
+//Dprintf.dprintf("dragDelta=%d",dragDelta);
+
+              // shrink/expand sashes
+              bounds0.width  += dragDelta;
+              bounds1.x      += dragDelta;
+              bounds1.width  -= dragDelta;
+              composites[pane.dragIndex+0].setBounds(bounds0);
+              composites[pane.dragIndex+1].setBounds(bounds1);
+              offsets[pane.dragIndex+0] += dragDelta;
+
+              // redraw sash
+              redraw();
+
+              // reset drag start
+              pane.dragStart = mouseEvent.x;
+            }
           }
           else
           {
             dragDelta = mouseEvent.y-pane.dragStart;
-            n         = size.y;
-            min       = SIZE;
-            max       = bounds.height-SIZE;
-          }
-//Dprintf.dprintf("delta=%d dragDelta=%d n=%d min=%d max=%d",pane.delta,pane.dragDelta,n,min,max);
 
-          if (   (dragDelta != pane.dragDelta)
-              && ((n+(dragDelta-pane.dragDelta)) > min)
-              && ((n+(dragDelta-pane.dragDelta)) < max)
-             )
-          {
-            pane.dragDelta = dragDelta;
-            pane.getShell().layout(true,true);
+            if (dragDelta != 0)
+            {
+              // limit drag delta
+              if ((bounds0.height+dragDelta) < 0) dragDelta = -bounds0.height;
+              if ((bounds1.height-dragDelta) < 0) dragDelta =  bounds1.height;
+
+              // shrink/expand sashes
+              bounds0.height += dragDelta;
+              bounds1.y      += dragDelta;
+              bounds1.height -= dragDelta;
+              composites[pane.dragIndex+0].setBounds(bounds0);
+              composites[pane.dragIndex+1].setBounds(bounds1);
+              offsets[pane.dragIndex+0] += dragDelta;
+
+              // redraw sash
+              redraw();
+
+              // reset drag start
+              pane.dragStart = mouseEvent.y;
+            }
           }
         }
       }
     });
-
-    if (prevPane != null)
-    {
-      prevPane.nextPane = this;
-    }
   }
 
-  /** compute trim
-   * Note: required?
-   * @param x,y position
-   * @param width,height size
-   * @return reduced rectangle
+  /** get sash composite
+   * @param i index [0..count-1]
+   * @return composite
    */
-  public Rectangle computeTrim(int x, int y, int width, int height)
+  public Composite getComposite(int i)
   {
-//Dprintf.dprintf("computeTrim %d %d %d %d",x,y,width,height);
-    Rectangle trim;
+    return composites[i];
+  }
+
+  /** get sizes of sashes
+   * @return width array [%]
+   */
+  public double[] getSizes()
+  {
+    double sizes[] = new double[count];
+
+    // set sizes of sashes
+    Rectangle bounds = getBounds();
     if ((style & SWT.VERTICAL) == SWT.VERTICAL)
     {
-      trim = new Rectangle(0,0,width-SLIDER_SIZE-OFFSET_X,height);
+      int width = bounds.width-(count-1)*SIZE;
+//Dprintf.dprintf("width=%d",width);
+
+      int w;
+      for (int i = 0; i < count; i++)
+      {
+        w = offsets[i]-((i > 0) ? offsets[i-1] : 0)-SIZE;
+//Dprintf.dprintf("w=%d",w);
+        sizes[i] = (double)w/(double)width;
+      }
     }
     else
     {
-      trim = new Rectangle(0,0,width,height-SLIDER_SIZE-OFFSET_Y);
-    }
-//Dprintf.dprintf("trim=%s",trim);
+      int height = bounds.height-(count-1)*SIZE;
 
-    return trim;
+      int h;
+      for (int i = 0; i < count; i++)
+      {
+        h = offsets[i]-((i > 0) ? offsets[i-1] : 0)-SIZE;
+        sizes[i] = (double)h/(double)height;
+      }
+    }
+
+    return sizes;
   }
 
-  /** get size of client area
-   * @return client area size
+  /** set sizes of sashes
+   * @param widths width array [%]
    */
-  public Rectangle getClientArea()
+  public void setSizes(double sizes[])
   {
-//Dprintf.dprintf("getClientArea");
-    Rectangle bounds = super.getClientArea();
-    if (nextPane != null)
+    // adjust array size
+    if (sizes.length != count)
     {
-      if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+      double newSizes[] = Arrays.copyOf(sizes,count);
+      if (newSizes.length > sizes.length)
       {
-        bounds.width -= (OFFSET_X+SLIDER_SIZE);
+        for (int i = sizes.length; i < newSizes.length; i++)
+        {
+          newSizes[i] = 1.0;
+        }
       }
-      else
+      sizes = newSizes;
+    }
+
+    // get normalize factor
+    double normalizeFactor = 0.0;
+    for (int i = 0; i < count; i++)
+    {
+      normalizeFactor += sizes[i];
+    }
+    if (normalizeFactor < 0.0) normalizeFactor = 1.0/(double)(count-1);
+
+    // set sizes of sashes
+    Rectangle bounds = getBounds();
+    if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+    {
+      int width = bounds.width-(count-1)*SIZE;
+
+      int x = 0;
+      int w;
+      for (int i = 0; i < count; i++)
       {
-        bounds.height -= (OFFSET_Y+SLIDER_SIZE);
+        w = (int)((double)width*sizes[i]/normalizeFactor);
+
+        bounds = composites[i].getBounds();
+        bounds.x     = x;
+        bounds.width = w;
+        composites[i].setBounds(bounds);
+        x += w+SIZE;
+        offsets[i] = x;
       }
     }
-//Dprintf.dprintf(this+" getClientArea end "+bounds);
+    else
+    {
+      int height = bounds.height-(count-1)*SIZE;
 
-    return bounds;
+      int y = 0;
+      int h;
+      for (int i = 0; i < count; i++)
+      {
+        h = (int)((double)height*sizes[i]/normalizeFactor);
+
+        bounds = composites[i].getBounds();
+        bounds.y      = y;
+        bounds.height = h;
+        composites[i].setBounds(bounds);
+        y += h+SIZE;
+        offsets[i] = y;
+      }
+    }
   }
 
-  /** compute size of pane
-   * @param wHint,hHint width/height hint
-   * @param changed TRUE iff no cache values should be used
-   * @return size
+  /** set layout
+   * Note: Pane cannot have a layout. Always throw UnsupportedOperationException.
+   * @param layout layout
    */
-  public Point computeSize(int wHint, int hHint, boolean changed)
+  public void setLayout(Layout layout)
   {
-//Dprintf.dprintf(this+" computeSize begin");
-    Point size = super.computeSize(wHint,hHint,changed);
-    if (nextPane != null)
-    {
-      if ((style & SWT.VERTICAL) == SWT.VERTICAL)
-      {
-        size.x += OFFSET_X+SLIDER_SIZE+delta+dragDelta;
-      }
-      else
-      {
-        size.y += OFFSET_Y+SLIDER_SIZE+delta+dragDelta;
-      }
-    }
-//Dprintf.dprintf(this+" computeSize end "+size+" "+delta+", "+dragDelta);
-
-    return size;
+    throw new UnsupportedOperationException("Pane cannot have a layout");
   }
 
   /** get string
@@ -280,14 +426,7 @@ class Pane extends Composite
    */
   public String toString()
   {
-    return "{pane@"+hashCode()+", "+delta+"}";
-  }
-
-  /** free allocated resources
-   * @param disposeEvent dispose event
-   */
-  private void widgetDisposed(DisposeEvent disposeEvent)
-  {
+    return "Pane@"+hashCode()+" {"+count+", "+(((style & SWT.VERTICAL) == SWT.VERTICAL) ? "vertical" : "horizontal")+"}";
   }
 
   /** paint slider
@@ -297,20 +436,29 @@ class Pane extends Composite
   {
     GC        gc;
     Rectangle bounds;
-    int       x,y,w,h;
+    int       x0,y0;
+    int       w,h;
+    int       x,y;
 
+//Dprintf.dprintf("+++ %s",this);
     if (!isDisposed())
     {
-      if (nextPane != null)
+      gc     = paintEvent.gc;
+      bounds = getBounds();
+//Dprintf.dprintf("bounds=%s %s",bounds,((style & SWT.VERTICAL) == SWT.VERTICAL)?"ver":"hor");
+      x0     = bounds.x;
+      y0     = bounds.y;
+      w      = bounds.width;
+      h      = bounds.height;
+
+      for (int i = 0; i < count-1; i++)
       {
-        gc     = paintEvent.gc;
-        bounds = getBounds();
-        w      = bounds.width;
-        h      = bounds.height;
+        bounds = composites[i].getBounds();
+//Dprintf.dprintf("i=%d bounds=%s w=%d h=%d",i,bounds,w,h);
 
         if ((style & SWT.VERTICAL) == SWT.VERTICAL)
         {
-          x = w-OFFSET_X-SLIDER_SIZE;
+          x = bounds.x+bounds.width+OFFSET_X;
           y = h-OFFSET_Y-SLIDER_OFFSET-SLIDER_SIZE;
 
           /* vertical slider
@@ -322,16 +470,16 @@ class Pane extends Composite
              # = highlight shadow
              o = shadow
           */
-          gc.setForeground(colorHighlightShadow);
+          gc.setForeground(COLOR_HIGHLIGHT_SHADOW);
           gc.drawLine(x+SLIDER_SIZE/2-1,0,x+SLIDER_SIZE/2-1,h-1);
           gc.drawLine(x+SLIDER_SIZE/2  ,0,x+SLIDER_SIZE/2  ,0  );
-          gc.setForeground(colorNormalShadow);
+          gc.setForeground(COLOR_NORMAL_SHADOW);
           gc.drawLine(x+SLIDER_SIZE/2  ,1,x+SLIDER_SIZE/2  ,h-1);
         }
         else
         {
           x = w-OFFSET_X-SLIDER_OFFSET-SLIDER_SIZE;
-          y = h-OFFSET_Y-SLIDER_SIZE;
+          y = bounds.y+bounds.height+OFFSET_Y;
 
           /* horizonal slider
              ####
@@ -340,10 +488,10 @@ class Pane extends Composite
              # = highlight shadow
              o = shadow
           */
-          gc.setForeground(colorHighlightShadow);
+          gc.setForeground(COLOR_HIGHLIGHT_SHADOW);
           gc.drawLine(0,y+SLIDER_SIZE/2-1,w-1,y+SLIDER_SIZE/2-1);
           gc.drawLine(0,y+SLIDER_SIZE/2  ,1  ,y+SLIDER_SIZE/2  );
-          gc.setForeground(colorNormalShadow);
+          gc.setForeground(COLOR_NORMAL_SHADOW);
           gc.drawLine(1,y+SLIDER_SIZE/2  ,w-1,y+SLIDER_SIZE/2  );
         }
 
@@ -358,38 +506,83 @@ class Pane extends Composite
            o = shadow
 
         */
-        gc.setForeground(colorWhite);
+        gc.setForeground(COLOR_WHITE);
         gc.drawLine(x,y,  x+SLIDER_SIZE-1,y              );
         gc.drawLine(x,y+1,x              ,y+SLIDER_SIZE-1);
-        gc.setForeground(colorGray);
+        gc.setForeground(COLOR_GRAY);
         gc.fillRectangle(x+1,y+1,SLIDER_SIZE-2,SLIDER_SIZE-2);
-        gc.setForeground(colorNormalShadow);
+        gc.setForeground(COLOR_NORMAL_SHADOW);
         gc.drawLine(x+SLIDER_SIZE-1,y+1            ,x+SLIDER_SIZE-1,y+SLIDER_SIZE-1);
         gc.drawLine(x+1            ,y+SLIDER_SIZE-1,x+SLIDER_SIZE-2,y+SLIDER_SIZE-1);
       }
     }
+//Dprintf.dprintf("--- %s",this);
+  }
+
+  /** get bounds of sash
+   * @param i sash index [0..count-2]
+   * @return bounds
+   */
+  private Rectangle getSashBounds(int i)
+  {
+    Rectangle bounds  = getBounds();
+//Dprintf.dprintf("%s = %s",composite.getBounds(),getBounds());
+    Rectangle bounds0 = composites[i+0].getBounds();
+    Rectangle bounds1 = composites[i+1].getBounds();
+
+    if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+    {
+      bounds.x      = offsets[i]-SIZE; //bounds0.x+bounds0.width;
+      bounds.y      = bounds0.y;
+      bounds.width  = SIZE; //((i < count-1) ? offsets[i+1] : bounds.width)-offsets[i]; // bounds1.x-(bounds0.x+bounds0.width);
+    }
+    else
+    {
+      bounds.x      = bounds0.x;
+      bounds.y      = offsets[i]-SIZE; //bounds0.y+bounds0.height;
+      bounds.height = SIZE; // ((i < count-1) ? offsets[i+1] : bounds.height)-offsets[i]; //bounds1.y-(bounds0.y+bounds0.height);
+    }
+//Dprintf.dprintf("sash %d bounds: %s",i,bounds);
+
+    return bounds;
+  }
+
+  /** check if x,y is inside sash area
+   * @param i sash index [0..count-2]
+   * @param x,y coordinates
+   * @return true iff x,y is inside sash area
+   */
+  private boolean isInsideSash(int i, int x, int y)
+  {
+    return getSashBounds(i).contains(x,y);
   }
 
   /** check if x,y is inside slider area
    * @param x,y coordinates
    * @return true iff x,y is inside slider area
    */
-  private boolean checkInside(int x, int y)
+  private boolean isInsideSash(int x, int y)
   {
-    Rectangle bounds = getBounds();
+    for (int i = 0; i < count-1; i++)
+    {
+      if (isInsideSash(i,x,y)) return true;
+    }
 
-    if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+    return false;
+  }
+
+  /** get sash at x,y
+   * @param x,y coordinates
+   * @return sash index [0..count-2] or -1 if no sash found
+   */
+  private int getSashAt(int x, int y)
+  {
+    for (int i = 0; i < count-1; i++)
     {
-      return (   (x >= (bounds.width -OFFSET_X-SLIDER_SIZE))
-              && (x <= (bounds.width -OFFSET_X            ))
-             );
+      if (isInsideSash(i,x,y)) return i;
     }
-    else
-    {
-      return (   (y >= (bounds.height-OFFSET_Y-SLIDER_SIZE))
-              && (y <= (bounds.height-OFFSET_Y            ))
-             );
-    }
+
+    return -1;
   }
 }
 

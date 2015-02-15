@@ -153,6 +153,7 @@ public class TableLayoutData
     StringBuffer s;
 
     s = new StringBuffer();
+    s.append("TableLayoutData {");
     s.append("row="+row);
     s.append(" column="+column);
     s.append(" style=(");
@@ -166,6 +167,7 @@ public class TableLayoutData
     s.append(" size=("+width+","+height+")");
     s.append(" min=("+minWidth+","+minHeight+")");
     s.append(" max=("+maxWidth+","+maxHeight+")");
+    s.append("}");
 
     return s.toString();
   }

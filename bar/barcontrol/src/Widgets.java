@@ -6706,9 +6706,7 @@ private static void printTree(Tree tree)
    */
   public static Pane newPane(Composite composite, int count)
   {
-    Pane pane = new Pane(composite,count,SWT.NONE);
-
-    return pane;
+    return newPane(composite,count,SWT.NONE);
   }
 
   //-----------------------------------------------------------------------
