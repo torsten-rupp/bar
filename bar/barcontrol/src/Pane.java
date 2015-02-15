@@ -10,6 +10,7 @@
 
 /****************************** Imports ********************************/
 import java.util.Arrays;
+import java.util.HashSet;
 
 import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
@@ -38,27 +39,29 @@ import org.eclipse.swt.widgets.Listener;
 public class Pane extends Canvas
 {
   // --------------------------- constants --------------------------------
-  private final int    SIZE          = 12;   // total width/height of slider
-  private final int    SLIDER_SIZE   =  8;   // width/height of slider button
-  private final int    SLIDER_OFFSET =  8;   // offset from end of slider line
-  private final int    OFFSET_X      =  2;
-  private final int    OFFSET_Y      =  2;
+  public  final static int SIZE          = 12;   // total width/height of slider
 
-  private final Color  COLOR_GRAY;
-  private final Color  COLOR_WHITE;
-  private final Color  COLOR_NORMAL_SHADOW;
-  private final Color  COLOR_HIGHLIGHT_SHADOW;
+  private final static int SLIDER_SIZE   =  8;   // width/height of slider button
+  private final static int SLIDER_OFFSET =  8;   // offset from end of slider line
+  private final static int OFFSET_X      =  2;
+  private final static int OFFSET_Y      =  2;
 
-  private final Cursor CURSOR;
+  private final Color      COLOR_GRAY;
+  private final Color      COLOR_WHITE;
+  private final Color      COLOR_NORMAL_SHADOW;
+  private final Color      COLOR_HIGHLIGHT_SHADOW;
+
+  private final Cursor     CURSOR;
 
   // --------------------------- variables --------------------------------
-  private Composite composites[];
-  private int       offsets[];               // offset of composites
-  private int       count;                   // number of composites
-  private int       style;                   // style flags
-  private int       dragIndex;               // index of sash if dragging is in progress, otherwise -1
-  private int       dragStart;               // drag start value
-  private int       dragDelta;               // current drag delta value
+  private Composite         composites[];
+  private int               offsets[];               // offset of composites
+  private int               count;                   // number of composites
+  private int               style;                   // style flags
+  private int               dragIndex;               // index of sash if dragging is in progress, otherwise -1
+  private int               dragStart;               // drag start value
+  private int               dragDelta;               // current drag delta value
+  private HashSet<Listener> resizeListenerSet = new HashSet<Listener>();
 
   /* offsets:
 
@@ -198,6 +201,11 @@ public class Pane extends Canvas
       public void mouseUp(MouseEvent mouseEvent)
       {
         Pane pane = Pane.this;
+
+        // notify
+        notifyResize(pane.dragIndex,
+                     pane.offsets[pane.dragIndex]-((pane.dragIndex > 0) ? offsets[pane.dragIndex-1] : 0)-SIZE
+                    );
 
         // stop dragging slider
         pane.dragIndex = -1;
@@ -421,6 +429,22 @@ public class Pane extends Canvas
     throw new UnsupportedOperationException("Pane cannot have a layout");
   }
 
+  /** add selection listener
+   * @param selectionListerner listener to add
+   */
+  public void addResizeListener(Listener listener)
+  {
+    resizeListenerSet.add(listener);
+  }
+
+  /** remove selection listener
+   * @param selectionListerner listener to remove
+   */
+  public void removeResizeListener(Listener listener)
+  {
+    resizeListenerSet.remove(listener);
+  }
+
   /** get string
    * @return pane object string
    */
@@ -583,6 +607,24 @@ public class Pane extends Canvas
     }
 
     return -1;
+  }
+
+  /** notify resize listeners
+   * @param index [0..count-2]
+   * @param size new size
+   */
+  private void notifyResize(int i, int size)
+  {
+    Event event = new Event();
+    event.type   = SWT.Resize;
+    event.widget = this;
+    event.detail = size;
+    event.doit   = true;
+    for (Listener listener : resizeListenerSet)
+    {
+      listener.handleEvent(event);
+      if (!event.doit) break;
+    }
   }
 }
 
