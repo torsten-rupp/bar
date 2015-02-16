@@ -109,7 +109,7 @@ typedef struct
       __STATIC_STRING_IDENTIFIER1(name,_data), \
       STRING_CHECKSUM(0,(length)+1,__STATIC_STRING_IDENTIFIER1(name,_data)) \
     }; \
-    String name = &(__STATIC_STRING_IDENTIFIER1(name,_string))
+    String const name = &(__STATIC_STRING_IDENTIFIER1(name,_string))
 #else /* NDEBUG */
   #define StaticString(name,length) \
     char __STATIC_STRING_IDENTIFIER1(name,_data)[(length)+1] = { [0] = '\0' }; \
@@ -120,7 +120,7 @@ typedef struct
       STRING_TYPE_STATIC, \
       __STATIC_STRING_IDENTIFIER1(name,_data) \
     }; \
-    String name = &(__STATIC_STRING_IDENTIFIER1(name,_string))
+    String const name = &(__STATIC_STRING_IDENTIFIER1(name,_string))
 #endif /* not NDEBUG */
 
 // debugging
