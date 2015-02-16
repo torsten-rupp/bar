@@ -7630,7 +7630,6 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
 LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,INDEX_UUID_LENGTH);
-  char          s[64];
   ArchiveTypes  archiveType;
   bool          dryRun;
   SemaphoreLock semaphoreLock;
@@ -10880,7 +10879,6 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   }
 
   // initialize variables
-  scheduleUUID     = String_new();
   lastErrorMessage = String_new();
 
   // get entities
