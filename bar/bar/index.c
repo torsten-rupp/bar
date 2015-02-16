@@ -1168,7 +1168,7 @@ LOCAL String getREGEXPString(String string, const char *columnName, const String
 
 LOCAL const char *getOrderingString(DatabaseOrdering ordering)
 {
-  const char *s;
+  const char *s = NULL;
 
   switch (ordering)
   {
@@ -2375,7 +2375,7 @@ Errors Index_storageAssignTo(IndexHandle  *indexHandle,
     if (entityId != toEntityId)
     {
       // delete entity
-      error - Database_execute(&indexHandle->databaseHandle,
+      error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
                                "DELETE FROM entities WHERE id=%lld;",
                                entityId
@@ -2431,7 +2431,7 @@ Errors Index_storageAssignTo(IndexHandle  *indexHandle,
       if (entityId != toEntityId)
       {
         // delete entity
-        error - Database_execute(&indexHandle->databaseHandle,
+        error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "DELETE FROM entities WHERE id=%lld;",
                                  entityId

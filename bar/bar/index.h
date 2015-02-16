@@ -631,7 +631,7 @@ Errors Index_storageAssignTo(IndexHandle  *indexHandle,
                             );
 
 /***********************************************************************\
-* Name   : Index_updateStorage
+* Name   : Index_storageUpdate
 * Purpose: update storage index name/entries/size
 * Input  : indexHandle - index handle
 *          storageId   - database id of storage index
@@ -643,7 +643,7 @@ Errors Index_storageAssignTo(IndexHandle  *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_updateStorage(IndexHandle  *indexHandle,
+Errors Index_storageUpdate(IndexHandle  *indexHandle,
                            DatabaseId   storageId,
                            const String storageName,
                            uint64       entries,
