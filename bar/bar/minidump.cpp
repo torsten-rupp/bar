@@ -279,8 +279,6 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
 
 /*---------------------------------------------------------------------*/
 
-LOCAL void crash() { volatile int* a = (int*)(NULL); *a = 1; }
-
 bool MiniDump_init(void)
 {
   #ifdef HAVE_BREAKPAD
