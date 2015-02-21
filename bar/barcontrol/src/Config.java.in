@@ -17,6 +17,7 @@ public class Config
   // --------------------------- constants --------------------------------
   public static final String VERSION_MAJOR = "@VERSION_MAJOR@";
   public static final String VERSION_MINOR = "@VERSION_MINOR@";
+  public static final String VERSION_SVN   = "@VERSION_SVN@";
 
   public static final String INSTALL_DIR   = "@INSTALL_DIR@";
   public static final String CONFIG_DIR    = "@CONFIG_DIR@";
