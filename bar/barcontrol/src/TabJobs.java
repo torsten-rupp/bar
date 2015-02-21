@@ -8156,7 +8156,7 @@ throw new Error("NYI");
     }
     if (entryDataList.size() > 0)
     {
-      if ((entryDataList.size() == 1) || Dialogs.confirm(shell,BARControl.tr("Remove {0} include {0,choice,1#pattern|1<patterns}?",entryDataList.size())))
+      if ((entryDataList.size() == 1) || Dialogs.confirm(shell,BARControl.tr("Remove {0} include {0,choice,0#patterns|1#pattern|1<patterns}?",entryDataList.size())))
       {
         for (EntryData entryData : entryDataList)
         {
@@ -8436,7 +8436,7 @@ throw new Error("NYI");
     String[] patterns = widgetExcludeList.getSelection();
     if (patterns.length > 0)
     {
-      if ((patterns.length == 1) || Dialogs.confirm(shell,BARControl.tr("Remove {0} exclude {0,choice,1#pattern|1<patterns}?",patterns.length)))
+      if ((patterns.length == 1) || Dialogs.confirm(shell,BARControl.tr("Remove {0} exclude {0,choice,0#patterns|1#pattern|1<patterns}?",patterns.length)))
       {
         excludeListRemove(patterns);
       }
@@ -8787,7 +8787,7 @@ throw new Error("NYI");
     String[] patterns = widgetCompressExcludeList.getSelection();
     if (patterns.length > 0)
     {
-      if (Dialogs.confirm(shell,BARControl.tr("Remove {0} selected compress exclude {0,choice,1#pattern|1<patterns}?",patterns.length)))
+      if (Dialogs.confirm(shell,BARControl.tr("Remove {0} selected compress exclude {0,choice,0#patterns|1#pattern|1<patterns}?",patterns.length)))
       {
         compressExcludeListRemove(patterns);
       }
@@ -10410,7 +10410,7 @@ throw new Error("NYI");
     TableItem[] tableItems = widgetScheduleTable.getSelection();
     if (tableItems.length > 0)
     {
-      if (Dialogs.confirm(shell,BARControl.tr("Delete {0} selected schedule {0,choice,1#entry|1<entries}?",tableItems.length)))
+      if (Dialogs.confirm(shell,BARControl.tr("Delete {0} selected schedule {0,choice,0#entries|1#entry|1<entries}?",tableItems.length)))
       {
         for (TableItem tableItem : tableItems)
         {
