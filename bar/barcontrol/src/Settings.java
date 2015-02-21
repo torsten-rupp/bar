@@ -85,7 +85,8 @@ public class Settings
   public static int              debugLevel                      = 0;
   public static boolean          debugQuitServerFlag             = false;
 
-  // help
+  // version, help
+  public static boolean          versionFlag                     = false;
   public static boolean          helpFlag                        = false;
 
   // ------------------------ native functions ----------------------------

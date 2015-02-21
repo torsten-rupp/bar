@@ -971,6 +971,7 @@ public class BARControl
     new Option("--debug",                      "-d",Options.Types.INCREMENT,  "debugLevel"),
     new Option("--debug-quit-server",          null,Options.Types.BOOLEAN,    "debugQuitServerFlag"),
 
+    new Option("--version",                    null,Options.Types.BOOLEAN,    "versionFlag"),
     new Option("--help",                       "-h",Options.Types.BOOLEAN,    "helpFlag"),
 
     // ignored
@@ -1074,8 +1075,6 @@ public class BARControl
   // ----------------------------------------------------------------------
 
   /** print program usage
-   * @param
-   * @return
    */
   private void printUsage()
   {
@@ -1110,6 +1109,13 @@ public class BARControl
     System.out.println("         -l|--list                                  - list jobs");
     System.out.println("");
     System.out.println("         -h|--help                                  - print this help");
+  }
+
+  /** print program version
+   */
+  private void printVersion()
+  {
+    System.out.println("barcontrol "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR);
   }
 
   /** parse arguments
@@ -1147,6 +1153,13 @@ public class BARControl
     if (Settings.helpFlag)
     {
       printUsage();
+      System.exit(0);
+    }
+
+    // version
+    if (Settings.versionFlag)
+    {
+      printVersion();
       System.exit(0);
     }
 
