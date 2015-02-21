@@ -1115,7 +1115,7 @@ public class BARControl
    */
   private void printVersion()
   {
-    System.out.println("barcontrol "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR);
+    System.out.println("barcontrol "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+" ("+Config.VERSION_SVN+")");
   }
 
   /** parse arguments
