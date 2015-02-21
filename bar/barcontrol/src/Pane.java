@@ -191,7 +191,7 @@ public class Pane extends Canvas
         Pane pane = Pane.this;
 
         pane.dragIndex = getSashAt(mouseEvent.x,mouseEvent.y);
-        if (pane.dragIndex != -1)
+        if (pane.dragIndex >= 0)
         {
           // start dragging slider
           pane.dragStart = ((pane.style & SWT.VERTICAL) == SWT.VERTICAL) ? mouseEvent.x : mouseEvent.y;
@@ -202,10 +202,13 @@ public class Pane extends Canvas
       {
         Pane pane = Pane.this;
 
-        // notify
-        notifyResize(pane.dragIndex,
-                     pane.offsets[pane.dragIndex]-((pane.dragIndex > 0) ? offsets[pane.dragIndex-1] : 0)-SIZE
-                    );
+        if (pane.dragIndex >= 0)
+        {
+          // notify
+          notifyResize(pane.dragIndex,
+                       pane.offsets[pane.dragIndex]-((pane.dragIndex > 0) ? offsets[pane.dragIndex-1] : 0)-SIZE
+                      );
+        }
 
         // stop dragging slider
         pane.dragIndex = -1;
@@ -302,6 +305,11 @@ public class Pane extends Canvas
               pane.dragStart = mouseEvent.y;
             }
           }
+
+          // notify
+          notifyResize(pane.dragIndex,
+                       pane.offsets[pane.dragIndex]-((pane.dragIndex > 0) ? offsets[pane.dragIndex-1] : 0)-SIZE
+                      );
         }
       }
     });
