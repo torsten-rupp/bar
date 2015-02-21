@@ -6248,10 +6248,31 @@ public class TabJobs
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
-        // list
-        widgetScheduleTable = Widgets.newTable(tab);
+        // schedule table
+        widgetScheduleTable = Widgets.newTable(tab,SWT.CHECK);
         widgetScheduleTable.setToolTipText(BARControl.tr("List with schedule entries.\nDouble-click to edit entry, right-click to open context menu."));
         Widgets.layout(widgetScheduleTable,0,0,TableLayoutData.NSWE);
+        widgetScheduleTable.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Table table = (Table)selectionEvent.widget;
+
+            int index = table.getSelectionIndex();
+            if (index >= 0)
+            {
+              TableItem    tableItem    = table.getItem(index);
+              ScheduleData scheduleData = (ScheduleData)tableItem.getData();
+
+              scheduleData.enabled = tableItem.getChecked();
+
+              BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
+            }
+          }
+        });
         widgetScheduleTable.addMouseListener(new MouseListener()
         {
           public void mouseDoubleClick(final MouseEvent mouseEvent)
@@ -6286,7 +6307,7 @@ public class TabJobs
             }
           }
         });
-        SelectionListener scheduleListColumnSelectionListener = new SelectionListener()
+        SelectionListener scheduleTableColumnSelectionListener = new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
@@ -6299,18 +6320,16 @@ public class TabJobs
           }
         };
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,0,BARControl.tr("Date"),        SWT.LEFT,100,false);
-        tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,1,BARControl.tr("Week day"),    SWT.LEFT,250,true );
         Widgets.sortTableColumn(widgetScheduleTable,tableColumn,new ScheduleDataComparator(widgetScheduleTable,tableColumn));
-        tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,2,BARControl.tr("Time"),        SWT.LEFT,100,false);
-        tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,3,BARControl.tr("Archive type"),SWT.LEFT,100,true );
-        tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,4,BARControl.tr("Custom text"), SWT.LEFT, 90,true );
-        tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleTable,5,BARControl.tr("Enabled"),     SWT.LEFT, 60,false);
-        tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
 
         menu = Widgets.newPopupMenu(shell);
         {
@@ -7032,7 +7051,7 @@ throw new Error("NYI");
       updateIncludeList();
       updateExcludeList();
       updateCompressExcludeList();
-      updateScheduleList();
+      updateScheduleTable();
     }
   }
 
@@ -9736,12 +9755,11 @@ throw new Error("NYI");
    */
   private TableItem getScheduleTableItemByUUID(String scheduleUUID)
   {
-    TableItem tableItems[] = widgetScheduleTable.getItems();
-    for (int i = 0; i < tableItems.length; i++)
+    for (TableItem tableItem : widgetScheduleTable.getItems())
     {
-      if (((ScheduleData)tableItems[i].getData()).uuid.equals(scheduleUUID))
+      if (((ScheduleData)tableItem.getData()).uuid.equals(scheduleUUID))
       {
-        return tableItems[i];
+        return tableItem;
       }
     }
 
@@ -9768,9 +9786,9 @@ throw new Error("NYI");
     return index;
   }
 
-  /** clear schedule list
+  /** clear schedule table
    */
-  private void clearScheduleList()
+  private void clearScheduleTable()
   {
     synchronized(scheduleDataMap)
     {
@@ -9779,9 +9797,9 @@ throw new Error("NYI");
     }
   }
 
-  /** update schedule list
+  /** update schedule table
    */
-  private void updateScheduleList()
+  private void updateScheduleTable()
   {
     if (!widgetScheduleTable.isDisposed())
     {
@@ -9848,18 +9866,16 @@ throw new Error("NYI");
         }
         scheduleDataMap = newScheduleDataMap;
 
-        // update schedule list
+        // update schedule table
         display.syncExec(new Runnable()
         {
           public void run()
           {
             synchronized(scheduleDataMap)
             {
-              TableItem[] tableItems = widgetScheduleTable.getItems();
-
               // get table items
               HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
-              for (TableItem tableItem : tableItems)
+              for (TableItem tableItem : widgetScheduleTable.getItems())
               {
                 removeTableItemSet.add(tableItem);
               }
@@ -9878,9 +9894,9 @@ throw new Error("NYI");
                                           scheduleData.getWeekDays(),
                                           scheduleData.getTime(),
                                           scheduleData.archiveType,
-                                          scheduleData.customText,
-                                          scheduleData.enabled ? BARControl.tr("yes") : BARControl.tr("no")
+                                          scheduleData.customText
                                          );
+                  tableItem.setChecked(scheduleData.enabled);
 
                   // keep table item
                   removeTableItemSet.remove(tableItem);
@@ -9895,9 +9911,9 @@ throw new Error("NYI");
                                                       scheduleData.getWeekDays(),
                                                       scheduleData.getTime(),
                                                       scheduleData.archiveType,
-                                                      scheduleData.customText,
-                                                      scheduleData.enabled ? BARControl.tr("yes") : BARControl.tr("no")
+                                                      scheduleData.customText
                                                      );
+                  tableItem.setChecked(scheduleData.enabled);
                   tableItem.setData(scheduleData);
                 }
               }
@@ -10299,9 +10315,9 @@ throw new Error("NYI");
                                                     scheduleData.getWeekDays(),
                                                     scheduleData.getTime(),
                                                     scheduleData.archiveType,
-                                                    scheduleData.customText,
-                                                    scheduleData.enabled ? BARControl.tr("yes") : BARControl.tr("no")
+                                                    scheduleData.customText
                                                    );
+      tableItem.setChecked(scheduleData.enabled);
       tableItem.setData(scheduleData);
     }
   }
@@ -10337,9 +10353,9 @@ throw new Error("NYI");
                                 scheduleData.getWeekDays(),
                                 scheduleData.getTime(),
                                 scheduleData.archiveType,
-                                scheduleData.customText,
-                                scheduleData.enabled ? BARControl.tr("yes") : BARControl.tr("no")
+                                scheduleData.customText
                                );
+        tableItem.setChecked(scheduleData.enabled);
       }
     }
   }
@@ -10393,9 +10409,9 @@ throw new Error("NYI");
                                                          newScheduleData.getWeekDays(),
                                                          newScheduleData.getTime(),
                                                          newScheduleData.archiveType,
-                                                         newScheduleData.customText,
-                                                         newScheduleData.enabled ? BARControl.tr("yes") : BARControl.tr("no")
+                                                         newScheduleData.customText
                                                         );
+        tableItem.setChecked(scheduleData.enabled);
         tableItem.setData(newScheduleData);
       }
     }
@@ -10463,7 +10479,7 @@ throw new Error("NYI");
   {
     clearJobData();
     clearFileTree();
-    clearScheduleList();
+    clearScheduleTable();
   }
 
   /** update all data
@@ -10471,7 +10487,7 @@ throw new Error("NYI");
   private void update()
   {
     updateJobData();
-    updateScheduleList();
+    updateScheduleTable();
   }
 }
 
