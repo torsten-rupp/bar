@@ -6764,15 +6764,18 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, uint id, con
         return;
       }
 
-      fileInfo.attributes &= ~FILE_ATTRIBUTE_NO_DUMP;
-      error = File_setFileInfo(name,&fileInfo);
-      if (error != ERROR_NONE)
+      if ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
       {
-        sendClientResult(clientInfo,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
-        Semaphore_unlock(&jobList.lock);
-        String_delete(name);
-        String_delete(attribute);
-        return;
+        fileInfo.attributes &= ~FILE_ATTRIBUTE_NO_DUMP;
+        error = File_setFileInfo(name,&fileInfo);
+        if (error != ERROR_NONE)
+        {
+          sendClientResult(clientInfo,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+          Semaphore_unlock(&jobList.lock);
+          String_delete(name);
+          String_delete(attribute);
+          return;
+        }
       }
 
       sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
