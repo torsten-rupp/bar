@@ -8524,6 +8524,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
   uint64           totalSize;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
+  uint64           createdDateTime;
   uint64           entries,size;
 
   assert(clientInfo != NULL);
@@ -8620,7 +8621,6 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
       }
 
       // get last executed date/time, total entities, entries, size
-#warning lastExecutedDateTime
       lastExecutedDateTime = 0LL;
       totalEntities        = 0LL;
       totalEntries         = 0LL;
@@ -8640,7 +8640,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
                                      NULL,  // entityId,
                                      NULL,  // jobUUID,
                                      NULL,  // scheduleUUID,
-                                     NULL,  // createdDateTime,
+                                     &createdDateTime,  // createdDateTime,
                                      NULL,  // archiveType,
                                      &entries,
                                      &size,
@@ -8648,6 +8648,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
                                     )
                 )
           {
+            if (createdDateTime > lastExecutedDateTime) lastExecutedDateTime = createdDateTime;
             totalEntities += 1;
             totalEntries  += entries;
             totalSize     += size;
