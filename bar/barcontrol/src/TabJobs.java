@@ -6405,7 +6405,7 @@ public class TabJobs
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,0,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetScheduleTableToolTip,simpleDateFormat.format(new Date(scheduleData.lastExecutedDateTime*1000L)));
+              label = Widgets.newLabel(widgetScheduleTableToolTip,(scheduleData.lastExecutedDateTime > 0) ? simpleDateFormat.format(new Date(scheduleData.lastExecutedDateTime*1000L)) : "-");
               label.setForeground(COLOR_INFO_FORGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,0,1,TableLayoutData.WE);
