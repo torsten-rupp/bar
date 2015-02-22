@@ -1511,12 +1511,11 @@ public class TabStatus
    */
   private void jobStart()
   {
-    int mode;
-    int errorCode;
+    int      mode;
+    int      error;
+    String[] resultErrorMessage = new String[1];
 
     assert selectedJobData != null;
-
-    errorCode = Errors.UNKNOWN;
 
     // get job mode
     mode = Dialogs.select(shell,
@@ -1557,42 +1556,50 @@ public class TabStatus
       }
 
       // set crypt password
-      String[] resultErrorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("CRYPT_PASSWORD jobUUID=%s encryptType=%s encryptedPassword=%S",
-                                                               selectedJobData.uuid,
-                                                               BARServer.getPasswordEncryptType(),
-                                                               BARServer.encryptPassword(password)
-                                                              ),
-                                           0,
-                                           resultErrorMessage
-                                          );
+      error = BARServer.executeCommand(StringParser.format("CRYPT_PASSWORD jobUUID=%s encryptType=%s encryptedPassword=%S",
+                                                            selectedJobData.uuid,
+                                                            BARServer.getPasswordEncryptType(),
+                                                            BARServer.encryptPassword(password)
+                                                           ),
+                                       0,
+                                       resultErrorMessage
+                                      );
       if (error != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot start job (error: {0})",resultErrorMessage[0]));
+        Dialogs.error(shell,BARControl.tr("Cannot set crypt password for job ''{0}'' (error: {1})",selectedJobData.name,resultErrorMessage[0]));
         return;
       }
     }
 
-    // start (ignore error code here; error is reported via state-update)
+    // start
     switch (mode)
     {
       case 0:
-        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=no",selectedJobData.uuid),0);
+        error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
         break;
       case 1:
-        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=full dryRun=no",selectedJobData.uuid),0);
+        error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=full dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
         break;
       case 2:
-        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=incremental dryRun=no",selectedJobData.uuid),0);
+        error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=incremental dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
         break;
       case 3:
-        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=differential dryRun=no",selectedJobData.uuid),0);
+        error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=differential dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
         break;
       case 4:
-        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=yes",selectedJobData.uuid),0);
+        error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=yes",selectedJobData.uuid),0,resultErrorMessage);
         break;
       case 5:
+        error = Errors.NONE;
         break;
+      default:
+        error = Errors.NONE;
+        break;
+    }
+    if (error != Errors.NONE)
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot start job ''{0}'' (error: {1})",selectedJobData.name,resultErrorMessage[0]));
+      return;
     }
   }
 

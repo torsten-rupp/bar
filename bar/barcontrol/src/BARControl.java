@@ -1203,12 +1203,12 @@ public class BARControl
   {
     String[]            errorMessage  = new String[1];
     ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
-    int errorCode = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                             0,
-                                             errorMessage,
-                                             resultMapList
-                                            );
-    if (errorCode == Errors.NONE)
+    int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                         0,
+                                         errorMessage,
+                                         resultMapList
+                                        );
+    if (error == Errors.NONE)
     {
       for (ValueMap resultMap : resultMapList)
       {
@@ -1558,8 +1558,8 @@ public class BARControl
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           String[] errorMessage = new String[1];
-          int errorCode = BARServer.executeCommand(StringParser.format("PASSWORDS_CLEAR"),0,errorMessage);
-          if (errorCode != Errors.NONE)
+          int error = BARServer.executeCommand(StringParser.format("PASSWORDS_CLEAR"),0,errorMessage);
+          if (error != Errors.NONE)
           {
             Dialogs.error(shell,BARControl.tr("Cannot clear passwords on server:\n\n")+errorMessage[0]);
           }
@@ -1744,8 +1744,8 @@ System.exit(1);
         // execute commands
         if (Settings.runJobName != null)
         {
+          int      error;
           String[] errorMessage  = new String[1];
-          int      errorCode;
 
           // get job UUID
           String jobUUID = getJobUUID(Settings.runJobName);
@@ -1757,14 +1757,14 @@ System.exit(1);
           }
 
           // start job
-          errorCode = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=%s dryRun=no",
-                                                                   jobUUID,
-                                                                   Settings.archiveType.toString()
-                                                                  ),
-                                               0,
-                                               errorMessage
-                                              );
-          if (errorCode != Errors.NONE)
+          error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=%s dryRun=no",
+                                                               jobUUID,
+                                                               Settings.archiveType.toString()
+                                                              ),
+                                           0,
+                                           errorMessage
+                                          );
+          if (error != Errors.NONE)
           {
             printError("cannot start job '%s' (error: %s)",Settings.runJobName,errorMessage[0]);
             BARServer.disconnect();
@@ -1773,15 +1773,15 @@ System.exit(1);
         }
         if (Settings.indexDatabaseAddStorageName != null)
         {
+          int      error;
           String[] errorMessage  = new String[1];
-          int      errorCode;
 
           // add index for storage
-          errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD name=%S",Settings.indexDatabaseAddStorageName),
-                                               0,
-                                               errorMessage
-                                              );
-          if (errorCode != Errors.NONE)
+          error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD name=%S",Settings.indexDatabaseAddStorageName),
+                                           0,
+                                           errorMessage
+                                          );
+          if (error != Errors.NONE)
           {
             printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,errorMessage[0]);
             BARServer.disconnect();
@@ -1790,15 +1790,15 @@ System.exit(1);
         }
         if (Settings.indexDatabaseRemoveStorageName != null)
         {
+          int      error;
           String[] errorMessage  = new String[1];
-          int      errorCode;
 
           // remote index for storage
-          errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE name=%S",Settings.indexDatabaseRemoveStorageName),
-                                               0,
-                                               errorMessage
-                                              );
-          if (errorCode != Errors.NONE)
+          error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE name=%S",Settings.indexDatabaseRemoveStorageName),
+                                           0,
+                                           errorMessage
+                                          );
+          if (error != Errors.NONE)
           {
             printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,errorMessage[0]);
             BARServer.disconnect();
@@ -1813,7 +1813,6 @@ System.exit(1);
           String[]            errorMessage  = new String[1];
           ValueMap            resultMap     = new ValueMap();
           ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
-          int                 errorCode;
 
           // list storage index
           Command command = BARServer.runCommand("INDEX_STORAGE_LIST 0 * * "+StringUtils.escape(Settings.indexDatabaseStorageListPattern),0);
@@ -1874,7 +1873,6 @@ System.exit(1);
         if (Settings.indexDatabaseEntriesListPattern != null)
         {
           String[] errorMessage = new String[1];
-          int      errorCode;
 
           // list storage index
           if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S checkedStorageOnlyFlag=%y entryMaxCount=%d newestEntriesOnlyFlag=%y",
@@ -2000,22 +1998,21 @@ System.exit(1);
             BARServer.disconnect();
             System.exit(1);
           }
-//                                           "INDEX_ENTRIES_LIST 0 * 0 "+StringUtils.escape(Settings.indexDatabaseEntriesListPattern));
         }
         if (Settings.pauseTime > 0)
         {
+          int      error;
           String[] errorMessage  = new String[1];
-          int      errorCode;
 
           // pause
-          errorCode = BARServer.executeCommand(StringParser.format("PAUSE time=%d modeMask=%s",
-                                                                   Settings.pauseTime,
-                                                                   "ALL"
-                                                                  ),
-                                               0,
-                                               errorMessage
-                                              );
-          if (errorCode != Errors.NONE)
+          error = BARServer.executeCommand(StringParser.format("PAUSE time=%d modeMask=%s",
+                                                               Settings.pauseTime,
+                                                               "ALL"
+                                                              ),
+                                           0,
+                                           errorMessage
+                                          );
+          if (error != Errors.NONE)
           {
             printError("cannot pause (error: %s)",errorMessage[0]);
             BARServer.disconnect();
@@ -2028,12 +2025,12 @@ System.exit(1);
         }
         if (Settings.suspendFlag)
         {
+          int      error;
           String[] errorMessage  = new String[1];
-          int      errorCode;
 
           // suspend
-          errorCode = BARServer.executeCommand(StringParser.format("SUSPEND"),0,errorMessage);
-          if (errorCode != Errors.NONE)
+          error = BARServer.executeCommand(StringParser.format("SUSPEND"),0,errorMessage);
+          if (error != Errors.NONE)
           {
             printError("cannot suspend (error: %s)",Settings.runJobName,errorMessage[0]);
             BARServer.disconnect();
@@ -2042,12 +2039,12 @@ System.exit(1);
         }
         if (Settings.continueFlag)
         {
+          int      error;
           String[] errorMessage  = new String[1];
-          int      errorCode;
 
           // continue
-          errorCode = BARServer.executeCommand(StringParser.format("CONTINUE"),0,errorMessage);
-          if (errorCode != Errors.NONE)
+          error = BARServer.executeCommand(StringParser.format("CONTINUE"),0,errorMessage);
+          if (error != Errors.NONE)
           {
             printError("cannot continue (error: %s)",Settings.runJobName,errorMessage[0]);
             BARServer.disconnect();
@@ -2056,8 +2053,8 @@ System.exit(1);
         }
         if (Settings.abortJobName != null)
         {
+          int      error;
           String[] errorMessage  = new String[1];
-          int      errorCode;
 
           // get job id
           String jobUUID = getJobUUID(Settings.abortJobName);
@@ -2069,11 +2066,11 @@ System.exit(1);
           }
 
           // abort job
-          errorCode = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",jobUUID),
-                                               0,
-                                               errorMessage
-                                              );
-          if (errorCode != Errors.NONE)
+          error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",jobUUID),
+                                           0,
+                                           errorMessage
+                                          );
+          if (error != Errors.NONE)
           {
             printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,errorMessage[0]);
             BARServer.disconnect();
@@ -2082,19 +2079,19 @@ System.exit(1);
         }
         if (Settings.listFlag)
         {
+          int                 error;
           String[]            errorMessage  = new String[1];
           ValueMap            resultMap     = new ValueMap();
           ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
-          int                 errorCode;
 
           // get server state
           String serverState = null;
-          errorCode = BARServer.executeCommand(StringParser.format("STATUS"),
+          error = BARServer.executeCommand(StringParser.format("STATUS"),
                                                0,
                                                errorMessage,
                                                resultMap
                                               );
-          if (errorCode != Errors.NONE)
+          if (error != Errors.NONE)
           {
             printError("cannot get state (error: %s)",errorMessage[0]);
             BARServer.disconnect();
@@ -2121,12 +2118,12 @@ System.exit(1);
           }
 
           // get joblist
-          errorCode = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                               0,
-                                               errorMessage,
-                                               resultMapList
-                                              );
-          if (errorCode != Errors.NONE)
+          error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                           0,
+                                           errorMessage,
+                                           resultMapList
+                                          );
+          if (error != Errors.NONE)
           {
             printError("cannot get job list (error: %s)",errorMessage[0]);
             BARServer.disconnect();

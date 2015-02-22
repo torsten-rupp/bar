@@ -1601,10 +1601,32 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param jobUUID job UUID
    * @param name option name of value
    * @param b value
+   * @param errorMessage error message or ""
    */
-  public static void setJobOption(String jobUUID, String name, boolean b)
+  public static int setJobOption(String jobUUID, String name, boolean b, String errorMessage[])
   {
-    executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",jobUUID,name,b ? "yes" : "no"),0);
+    return executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",jobUUID,name,b ? "yes" : "no"),0,errorMessage);
+  }
+
+  /** set boolean job option value on BAR server
+   * @param jobUUID job UUID
+   * @param name option name of value
+   * @param b value
+   */
+  public static int setJobOption(String jobUUID, String name, boolean b)
+  {
+    return setJobOption(jobUUID,name,b,null);
+  }
+
+  /** set long job option value on BAR server
+   * @param jobUUID job UUID
+   * @param name option name of value
+   * @param n value
+   * @param errorMessage error message or ""
+   */
+  public static int setJobOption(String jobUUID, String name, long n, String errorMessage[])
+  {
+    return executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",jobUUID,name,n),0,errorMessage);
   }
 
   /** set long job option value on BAR server
@@ -1612,9 +1634,20 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param name option name of value
    * @param n value
    */
-  public static void setJobOption(String jobUUID, String name, long n)
+  public static int setJobOption(String jobUUID, String name, long n)
   {
-    executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",jobUUID,name,n),0);
+    return setJobOption(jobUUID,name,n,null);
+  }
+
+  /** set string job option value on BAR server
+   * @param jobUUID job UUID
+   * @param name option name of value
+   * @param s value
+   * @param errorMessage error message or ""
+   */
+  public static int setJobOption(String jobUUID, String name, String s, String errorMessage[])
+  {
+    return executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%S",jobUUID,name,s),0,errorMessage);
   }
 
   /** set string job option value on BAR server
@@ -1622,9 +1655,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param name option name of value
    * @param s value
    */
-  public static void setJobOption(String jobUUID, String name, String s)
+  public static int setJobOption(String jobUUID, String name, String s)
   {
-    executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%S",jobUUID,name,s),0);
+    return setJobOption(jobUUID,name,s,null);
   }
 
   /** get schedule option value from BAR server
@@ -1668,10 +1701,34 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param scheduleUUID schedule UUID
    * @param name option name of value
    * @param b value
+   * @param errorMessage error message or ""
    */
-  public static void setScheduleOption(String jobUUID, String scheduleUUID, String name, boolean b)
+  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, boolean b, String errorMessage[])
   {
-    executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%s",jobUUID,scheduleUUID,name,b ? "yes" : "no"),0);
+    return executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%s",jobUUID,scheduleUUID,name,b ? "yes" : "no"),0);
+  }
+
+  /** set boolean schedule option value on BAR server
+   * @param jobUUID job UUID
+   * @param scheduleUUID schedule UUID
+   * @param name option name of value
+   * @param b value
+   */
+  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, boolean b)
+  {
+    return setScheduleOption(jobUUID,scheduleUUID,name,b,null);
+  }
+
+  /** set long schedule option value on BAR server
+   * @param jobUUID job UUID
+   * @param scheduleUUID schedule UUID
+   * @param name option name of value
+   * @param n value
+   * @param errorMessage error message or ""
+   */
+  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, long n, String errorMessage[])
+  {
+    return executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%d",jobUUID,scheduleUUID,name,n),0);
   }
 
   /** set long schedule option value on BAR server
@@ -1680,9 +1737,21 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param name option name of value
    * @param n value
    */
-  public static void setScheduleOption(String jobUUID, String scheduleUUID, String name, long n)
+  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, long n)
   {
-    executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%d",jobUUID,scheduleUUID,name,n),0);
+    return setScheduleOption(jobUUID,scheduleUUID,name,n,null);
+  }
+
+  /** set string schedule option value on BAR server
+   * @param jobUUID job UUID
+   * @param scheduleUUID schedule UUID
+   * @param name option name of value
+   * @param s value
+   * @param errorMessage error message or ""
+   */
+  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, String s, String errorMessage[])
+  {
+    return executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%S",jobUUID,scheduleUUID,name,s),0,errorMessage);
   }
 
   /** set string schedule option value on BAR server
@@ -1691,9 +1760,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param name option name of value
    * @param s value
    */
-  public static void setScheduleOption(String jobUUID, String scheduleUUID, String name, String s)
+  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, String s)
   {
-    executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%S",jobUUID,scheduleUUID,name,s),0);
+    return setScheduleOption(jobUUID,scheduleUUID,name,s,null);
   }
 
   /** get password encrypt type
