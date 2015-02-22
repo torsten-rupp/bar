@@ -8494,7 +8494,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *          Result:
-*            scheduleUUID=<uuid>
+*            scheduleUUID=<uuid> \
 *            date=<year>|*-<month>|*-<day>|* \
 *            weekDay=<week day>|* \
 *            time=<hour>|*:<minute>|* \
@@ -8505,16 +8505,26 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 *            maxAage=<n>|0 \
 *            noStorage=yes|no \
 *            enabled=yes|no \
+*            totalEntities=<n>|0 \
+*            totalEntries=<n>|0 \
+*            totalSize=<n>|0 \
 *            ...
 \***********************************************************************/
 
 LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,INDEX_UUID_LENGTH);
-  SemaphoreLock semaphoreLock;
-  const JobNode *jobNode;
-  ScheduleNode  *scheduleNode;
-  String        date,weekDays,time;
+  StaticString     (jobUUID,INDEX_UUID_LENGTH);
+  SemaphoreLock    semaphoreLock;
+  const JobNode    *jobNode;
+  ScheduleNode     *scheduleNode;
+  String           date,weekDays,time;
+  uint64           lastExecutedDateTime;
+  uint64           totalEntities;
+  uint64           totalEntries;
+  uint64           totalSize;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  uint64           entries,size;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8609,8 +8619,45 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
         String_appendCString(time,"*");
       }
 
+      // get last executed date/time, total entities, entries, size
+#warning lastExecutedDateTime
+      lastExecutedDateTime = 0LL;
+      totalEntities        = 0LL;
+      totalEntries         = 0LL;
+      totalSize            = 0LL;
+      if (indexHandle != NULL)
+      {
+        error = Index_initListEntities(&indexQueryHandle,
+                                       indexHandle,
+                                       NULL, // jobUUID,
+                                       scheduleNode->uuid,
+                                       DATABASE_ORDERING_ASCENDING,
+                                       0LL   // offset
+                                      );
+        if (error == ERROR_NONE)
+        {
+          while (Index_getNextEntity(&indexQueryHandle,
+                                     NULL,  // entityId,
+                                     NULL,  // jobUUID,
+                                     NULL,  // scheduleUUID,
+                                     NULL,  // createdDateTime,
+                                     NULL,  // archiveType,
+                                     &entries,
+                                     &size,
+                                     NULL   // lastErrorMessage
+                                    )
+                )
+          {
+            totalEntities += 1;
+            totalEntries  += entries;
+            totalSize     += size;
+          }
+          Index_doneList(&indexQueryHandle);
+        }
+      }
+
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "scheduleUUID=%S date=%S weekDays=%S time=%S archiveType=%s customText=%'S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
+                       "scheduleUUID=%S date=%S weekDays=%S time=%S archiveType=%s customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%llu totalEntities=%llu totalEntries=%llu totalSize=%llu",
                        scheduleNode->uuid,
                        date,
                        weekDays,
@@ -8621,7 +8668,11 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
                        scheduleNode->maxKeep,
                        scheduleNode->maxAge,
                        scheduleNode->noStorage,
-                       scheduleNode->enabled
+                       scheduleNode->enabled,
+                       lastExecutedDateTime,
+                       totalEntities,
+                       totalEntries,
+                       totalSize
                       );
     }
     String_delete(time);
@@ -10612,13 +10663,13 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 * Notes  : Arguments:
 *            pattern=<pattern>
 *          Result:
-*            jobUUID=<uuid>
-*            scheduleUUID=<uuid>
-*            name=<name>
-*            lastDateTime=<created date/time>
-*            totalEntries=<n>
-*            totalSize=<n>
-*            lastErrorMessage=<text>
+*            jobUUID=<uuid> \
+*            scheduleUUID=<uuid> \
+*            name=<name> \
+*            lastDateTime=<created date/time> \
+*            totalEntries=<n> \
+*            totalSize=<n> \
+*            lastErrorMessage=<text> \
 *            ...
 \***********************************************************************/
 
@@ -10836,13 +10887,13 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 * Notes  : Arguments:
 *            jobUUID=<uuid>|*
 *          Result:
-*            entityId=<id>
-*            jobUUID=<uuid>
-*            scheduleUUID=<uuid>
-*            archiveType=<type>
-*            lastDateTime=<created time stamp>
-*            totalEntries=<n>
-*            totalSize=<n>
+*            entityId=<id> \
+*            jobUUID=<uuid> \
+*            scheduleUUID=<uuid> \
+*            archiveType=<type> \
+*            lastDateTime=<created time stamp> \
+*            totalEntries=<n> \
+*            totalSize=<n> \
 *            lastErrorMessage=<error message>
 *            ...
 \***********************************************************************/
