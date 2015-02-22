@@ -217,6 +217,9 @@ help:
 	@$(ECHO) ""
 	@$(ECHO) "  compile"
 	@$(ECHO) ""
+	@$(ECHO) "  poeditde"
+	@$(ECHO) "  poeditjp"
+	@$(ECHO) ""
 	@$(ECHO) "  run [O|OPTIONS=<options>]"
 	@$(ECHO) "  runde [O|OPTIONS=<options>]"
 	@$(ECHO) "  runjp [O|OPTIONS=<options>]"
@@ -272,6 +275,14 @@ classes/app/i18n/Messages_de.class: po/german.po
 
 classes/app/i18n/Messages_jp.class: po/japanese.po
 	$(MSGFMT) --java2 -d classes -r app.i18n.Messages -l jp po/japanese.po
+
+.PHONE: poeditde
+poeditde:
+	poedit po/german.po
+
+.PHONE: poeditjp
+poeditjp:
+	poedit po/japanese.po
 
 # jars
 .PHONY: jars clean_jars
