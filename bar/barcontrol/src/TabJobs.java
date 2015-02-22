@@ -924,6 +924,8 @@ public class TabJobs
     int     maxAge;
     boolean noStorage;
     boolean enabled;
+    long    lastExecutedDateTime;
+    long    totalEntities,totalEntries,totalSize;
 
     /** create schedule data
      * @param uuid schedule UUID
@@ -940,30 +942,56 @@ public class TabJobs
      * @param maxAge max. age to keep archives [days]
      * @param noStorage true to skip storage
      * @param enabled true iff enabled
+     * @param lastExecutedDateTime date/time of last execution
+     * @param totalEntities total number of existing entities for schedule
+     * @param totalEntries total number of existing entries for schedule
+     * @param totalSize total size of existing entities for schedule [bytes]
      */
-    ScheduleData(String uuid, int year, int month, int day, int weekDays, int hour, int minute, String archiveType, String customText, int minKeep, int maxKeep, int maxAge, boolean noStorage, boolean enabled)
+    ScheduleData(String  uuid,
+                 int     year,
+                 int     month,
+                 int     day,
+                 int     weekDays,
+                 int     hour,
+                 int     minute,
+                 String  archiveType,
+                 String  customText,
+                 int     minKeep,
+                 int     maxKeep,
+                 int     maxAge,
+                 boolean noStorage,
+                 boolean enabled,
+                 long    lastExecutedDateTime,
+                 long    totalEntities,
+                 long    totalEntries,
+                 long    totalSize
+                )
     {
-      this.uuid        = uuid;
-      this.year        = year;
-      this.month       = month;
-      this.day         = day;
-      this.weekDays    = weekDays;
-      this.hour        = hour;
-      this.minute      = minute;
-      this.archiveType = archiveType;
-      this.customText  = customText;
-      this.minKeep     = minKeep;
-      this.maxKeep     = maxKeep;
-      this.maxAge      = maxAge;
-      this.noStorage   = noStorage;
-      this.enabled     = enabled;
+      this.uuid                 = uuid;
+      this.year                 = year;
+      this.month                = month;
+      this.day                  = day;
+      this.weekDays             = weekDays;
+      this.hour                 = hour;
+      this.minute               = minute;
+      this.archiveType          = archiveType;
+      this.customText           = customText;
+      this.minKeep              = minKeep;
+      this.maxKeep              = maxKeep;
+      this.maxAge               = maxAge;
+      this.noStorage            = noStorage;
+      this.enabled              = enabled;
+      this.lastExecutedDateTime = lastExecutedDateTime;
+      this.totalEntities        = totalEntities;
+      this.totalEntries         = totalEntries;
+      this.totalSize            = totalSize;
     }
 
     /** create schedule data
      */
     ScheduleData()
     {
-      this(null,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,"*","",0,0,0,false,true);
+      this(null,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,"*","",0,0,0,false,true,0,0,0,0);
     }
 
     /** create schedule data
@@ -971,22 +999,46 @@ public class TabJobs
      * @param weekDays week days string; values separated by ','
      * @param time time string (<hour>:<minute>)
      * @param archiveType archive type string
+     * @param customText custom text
      * @param noStorage true to skip storage
      * @param enabled true iff enabled
+     * @param lastExecutedDateTime date/time of last execution
+     * @param totalEntities total number of existing entities for schedule
+     * @param totalEntries total number of existing entries for schedule
+     * @param totalSize total size of existing entities for schedule [bytes]
      */
-    ScheduleData(String uuid, String date, String weekDays, String time, String archiveType, String customText, int minKeep, int maxKeep, int maxAge, boolean noStorage, boolean enabled)
+    ScheduleData(String  uuid,
+                 String  date,
+                 String  weekDays,
+                 String  time,
+                 String  archiveType,
+                 String  customText,
+                 int     minKeep,
+                 int     maxKeep,
+                 int     maxAge,
+                 boolean noStorage,
+                 boolean enabled,
+                 long    lastExecutedDateTime,
+                 long    totalEntities,
+                 long    totalEntries,
+                 long    totalSize
+                )
     {
-      this.uuid        = uuid;
+      this.uuid                 = uuid;
       setDate(date);
       setWeekDays(weekDays);
       setTime(time);
-      this.archiveType = getValidString(archiveType,new String[]{"*","full","incremental","differential"},"*");
-      this.customText  = customText;
-      this.minKeep     = minKeep;
-      this.maxKeep     = maxKeep;
-      this.maxAge      = maxAge;
-      this.noStorage   = noStorage;
-      this.enabled     = enabled;
+      this.archiveType          = getValidString(archiveType,new String[]{"*","full","incremental","differential"},"*");
+      this.customText           = customText;
+      this.minKeep              = minKeep;
+      this.maxKeep              = maxKeep;
+      this.maxAge               = maxAge;
+      this.noStorage            = noStorage;
+      this.enabled              = enabled;
+      this.lastExecutedDateTime = lastExecutedDateTime;
+      this.totalEntities        = totalEntities;
+      this.totalEntries         = totalEntries;
+      this.totalSize            = totalSize;
     }
 
     /** clone schedule data object
@@ -1007,7 +1059,11 @@ public class TabJobs
                               maxKeep,
                               maxAge,
                               noStorage,
-                              enabled
+                              enabled,
+                              lastExecutedDateTime,
+                              totalEntities,
+                              totalEntries,
+                              totalSize
                              );
     }
 
@@ -1491,6 +1547,8 @@ public class TabJobs
   private final Color  COLOR_WHITE;
   private final Color  COLOR_RED;
   private final Color  COLOR_MODIFIED;
+  private final Color  COLOR_INFO_FORGROUND;
+  private final Color  COLOR_INFO_BACKGROUND;
 
   // images
   private final Image  IMAGE_DIRECTORY;
@@ -1548,6 +1606,7 @@ public class TabJobs
   private Combo        widgetSCPSFTPMaxBandWidth;
   private Combo        widgetWebdavMaxBandWidth;
   private Table        widgetScheduleTable;
+  private Shell        widgetScheduleTableToolTip = null;
   private Button       widgetScheduleTableAdd,widgetScheduleTableEdit,widgetScheduleTableRemove;
 
   // BAR variables
@@ -1639,10 +1698,12 @@ public class TabJobs
     display = shell.getDisplay();
 
     // get colors
-    COLOR_BLACK    = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-    COLOR_WHITE    = shell.getDisplay().getSystemColor(SWT.COLOR_WHITE);
-    COLOR_RED      = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
-    COLOR_MODIFIED = new Color(null,0xFF,0xA0,0xA0);
+    COLOR_BLACK           = display.getSystemColor(SWT.COLOR_BLACK);
+    COLOR_WHITE           = display.getSystemColor(SWT.COLOR_WHITE);
+    COLOR_RED             = display.getSystemColor(SWT.COLOR_RED);
+    COLOR_MODIFIED        = new Color(null,0xFF,0xA0,0xA0);
+    COLOR_INFO_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+    COLOR_INFO_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 
     // get images
     IMAGE_DIRECTORY          = Widgets.loadImage(display,"directory.png");
@@ -6250,7 +6311,6 @@ public class TabJobs
       {
         // schedule table
         widgetScheduleTable = Widgets.newTable(tab,SWT.CHECK);
-        widgetScheduleTable.setToolTipText(BARControl.tr("List with schedule entries.\nDouble-click to edit entry, right-click to open context menu."));
         Widgets.layout(widgetScheduleTable,0,0,TableLayoutData.NSWE);
         widgetScheduleTable.addSelectionListener(new SelectionListener()
         {
@@ -6284,6 +6344,107 @@ public class TabJobs
           }
           public void mouseUp(final MouseEvent mouseEvent)
           {
+          }
+        });
+        widgetScheduleTable.addMouseTrackListener(new MouseTrackListener()
+        {
+          public void mouseEnter(MouseEvent mouseEvent)
+          {
+          }
+
+          public void mouseExit(MouseEvent mouseEvent)
+          {
+            if (widgetScheduleTableToolTip != null)
+            {
+              widgetScheduleTableToolTip.dispose();
+              widgetScheduleTableToolTip = null;
+            }
+          }
+
+          public void mouseHover(MouseEvent mouseEvent)
+          {
+            Table     table     = (Table)mouseEvent.widget;
+            TableItem tableItem = table.getItem(new Point(mouseEvent.x,mouseEvent.y));
+//Dprintf.dprintf("table=%s %d %d",table,mouseEvent.x,table.getBounds().width/2);
+
+            if (widgetScheduleTableToolTip != null)
+            {
+              widgetScheduleTableToolTip.dispose();
+              widgetScheduleTableToolTip = null;
+            }
+
+            // show if tree item available and mouse is in the left side
+            if ((tableItem != null) && (mouseEvent.x < table.getBounds().width/2))
+            {
+              ScheduleData scheduleData = (ScheduleData)tableItem.getData();
+              Label        label;
+
+              widgetScheduleTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+              widgetScheduleTableToolTip.setBackground(COLOR_INFO_BACKGROUND);
+              widgetScheduleTableToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+              Widgets.layout(widgetScheduleTableToolTip,0,0,TableLayoutData.NSWE);
+              widgetScheduleTableToolTip.addMouseTrackListener(new MouseTrackListener()
+              {
+                public void mouseEnter(MouseEvent mouseEvent)
+                {
+                }
+
+                public void mouseExit(MouseEvent mouseEvent)
+                {
+                  widgetScheduleTableToolTip.dispose();
+                  widgetScheduleTableToolTip = null;
+                }
+
+                public void mouseHover(MouseEvent mouseEvent)
+                {
+                }
+              });
+
+              label = Widgets.newLabel(widgetScheduleTableToolTip,BARControl.tr("Last executed")+":");
+              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,0,0,TableLayoutData.W);
+
+              label = Widgets.newLabel(widgetScheduleTableToolTip,simpleDateFormat.format(new Date(scheduleData.lastExecutedDateTime*1000L)));
+              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,0,1,TableLayoutData.WE);
+
+              label = Widgets.newLabel(widgetScheduleTableToolTip,BARControl.tr("Total entities")+":");
+              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,1,0,TableLayoutData.W);
+
+              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format("%d",scheduleData.totalEntities));
+              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,1,1,TableLayoutData.WE);
+
+              label = Widgets.newLabel(widgetScheduleTableToolTip,BARControl.tr("Total entries")+":");
+              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,2,0,TableLayoutData.W);
+
+              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format("%d",scheduleData.totalEntries));
+              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,2,1,TableLayoutData.WE);
+
+              label = Widgets.newLabel(widgetScheduleTableToolTip,BARControl.tr("Total size")+":");
+              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,3,0,TableLayoutData.W);
+
+              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),scheduleData.totalSize,Units.formatByteSize(scheduleData.totalSize)));
+              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setBackground(COLOR_INFO_BACKGROUND);
+              Widgets.layout(label,3,1,TableLayoutData.WE);
+
+              Point size = widgetScheduleTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+              Point point = widgetScheduleTable.toDisplay(mouseEvent.x+16,mouseEvent.y);
+              widgetScheduleTableToolTip.setBounds(point.x,point.y,size.x,size.y);
+              widgetScheduleTableToolTip.setVisible(true);
+            }
           }
         });
         widgetScheduleTable.addKeyListener(new KeyListener()
@@ -9821,17 +9982,21 @@ throw new Error("NYI");
         for (ValueMap resultMap : resultMapList)
         {
           // get data
-          String  scheduleUUID = resultMap.getString ("scheduleUUID");
-          String  date         = resultMap.getString ("date"        );
-          String  weekDays     = resultMap.getString ("weekDays"    );
-          String  time         = resultMap.getString ("time"        );
-          String  archiveType  = resultMap.getString ("archiveType" );
-          String  customText   = resultMap.getString ("customText"  );
-          int     minKeep      = resultMap.getInt    ("minKeep"     );
-          int     maxKeep      = resultMap.getInt    ("maxKeep"     );
-          int     maxAge       = resultMap.getInt    ("maxAge"      );
-          boolean noStorage    = resultMap.getBoolean("noStorage"   );
-          boolean enabled      = resultMap.getBoolean("enabled"     );
+          String  scheduleUUID         = resultMap.getString ("scheduleUUID"        );
+          String  date                 = resultMap.getString ("date"                );
+          String  weekDays             = resultMap.getString ("weekDays"            );
+          String  time                 = resultMap.getString ("time"                );
+          String  archiveType          = resultMap.getString ("archiveType"         );
+          String  customText           = resultMap.getString ("customText"          );
+          int     minKeep              = resultMap.getInt    ("minKeep"             );
+          int     maxKeep              = resultMap.getInt    ("maxKeep"             );
+          int     maxAge               = resultMap.getInt    ("maxAge"              );
+          boolean noStorage            = resultMap.getBoolean("noStorage"           );
+          boolean enabled              = resultMap.getBoolean("enabled"             );
+          long    lastExecutedDateTime = resultMap.getLong   ("lastExecutedDateTime");
+          long    totalEntities        = resultMap.getLong   ("totalEntities"       );
+          long    totalEntries         = resultMap.getLong   ("totalEntries"        );
+          long    totalSize            = resultMap.getLong   ("totalSize"           );
 
           ScheduleData scheduleData = scheduleDataMap.get(scheduleUUID);
           if (scheduleData != null)
@@ -9839,13 +10004,17 @@ throw new Error("NYI");
             scheduleData.setDate(date);
             scheduleData.setWeekDays(weekDays);
             scheduleData.setTime(time);
-            scheduleData.archiveType = archiveType;
-            scheduleData.customText  = customText;
-            scheduleData.minKeep     = minKeep;
-            scheduleData.maxKeep     = maxKeep;
-            scheduleData.maxAge      = maxAge;
-            scheduleData.noStorage   = noStorage;
-            scheduleData.enabled     = enabled;
+            scheduleData.archiveType          = archiveType;
+            scheduleData.customText           = customText;
+            scheduleData.minKeep              = minKeep;
+            scheduleData.maxKeep              = maxKeep;
+            scheduleData.maxAge               = maxAge;
+            scheduleData.lastExecutedDateTime = lastExecutedDateTime;
+            scheduleData.totalEntities        = totalEntities;
+            scheduleData.totalEntries         = totalEntries;
+            scheduleData.totalSize            = totalSize;
+            scheduleData.noStorage            = noStorage;
+            scheduleData.enabled              = enabled;
           }
           else
           {
@@ -9859,7 +10028,11 @@ throw new Error("NYI");
                                             maxKeep,
                                             maxAge,
                                             noStorage,
-                                            enabled
+                                            enabled,
+                                            lastExecutedDateTime,
+                                            totalEntities,
+                                            totalEntries,
+                                            totalSize
                                            );
           }
           newScheduleDataMap.put(scheduleUUID,scheduleData);
@@ -10339,7 +10512,7 @@ throw new Error("NYI");
         int    error          = Errors.NONE;
         String errorMessage[] = new String[1];
 
-        error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"Xdate",scheduleData.getDate(),         errorMessage);
+        error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"date",scheduleData.getDate(),         errorMessage);
         error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"weekdays",scheduleData.getWeekDays(),  errorMessage);
         error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"time",scheduleData.getTime(),          errorMessage);
         error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"archive-type",scheduleData.archiveType,errorMessage);
