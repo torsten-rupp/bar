@@ -11631,7 +11631,6 @@ LOCAL void serverCommand_indexStorageAssign(ClientInfo *clientInfo, uint id, con
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected toJobUUID=<uuid> or toEntityId=<id>");
     return;
   }
-fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(toJobUUID),toEntityId);
   if (String_isEmpty(toJobUUID) && (toEntityId == DATABASE_ID_NONE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected non-empty toJobUUID or toEntityId");
@@ -11703,7 +11702,6 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(toJobUUID),toE
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
         return;
       }
-fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,String_cString(toJobUUID),toEntityId,archiveType);
 
       // assign to entity
       error = Index_storageAssignTo(indexHandle,
@@ -11752,7 +11750,6 @@ fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,String_cString(toJobUUID),
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
         return;
       }
-fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,String_cString(toJobUUID),toEntityId,archiveType);
 
       // assign to entity
       error = Index_storageAssignTo(indexHandle,
@@ -11801,7 +11798,6 @@ fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,String_cString(toJobUUID),
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
         return;
       }
-fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,String_cString(toJobUUID),toEntityId,archiveType);
 
       // assign to entity
       error = Index_storageAssignTo(indexHandle,
