@@ -3029,7 +3029,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   }
 
   // create index
-  if (indexHandle != NULL)
+  if (   (archiveInfo->indexHandle != NULL)
+      && !archiveInfo->jobOptions->noIndexDatabaseFlag
+      && !archiveInfo->jobOptions->dryRunFlag
+      && !archiveInfo->jobOptions->noStorageFlag
+     )
   {
     error = Index_newEntity(indexHandle,
                             jobUUID,
@@ -3872,12 +3876,15 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                                         );
   }
 
-  // create new part
-  error = writeFileChunks(archiveEntryInfo);
-  if (error != ERROR_NONE)
+  if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
+    // create new part
+    error = writeFileChunks(archiveEntryInfo);
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
   }
 
   // done resources
@@ -4206,8 +4213,16 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                                          );
   }
 
-  // create new part
-  writeImageChunks(archiveEntryInfo);
+  if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
+  {
+    // create new part
+    error = writeImageChunks(archiveEntryInfo);
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+  }
 
   // done resources
   AutoFree_done(&autoFreeList);
@@ -5058,8 +5073,16 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                                             );
   }
 
-  // create new part
-  writeHardLinkChunks(archiveEntryInfo);
+  if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
+  {
+    // create new part
+    error = writeHardLinkChunks(archiveEntryInfo);
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+  }
 
   // done resources
   AutoFree_done(&autoFreeList);
@@ -5614,7 +5637,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
     if (error != ERROR_NONE)
     {
-      Chunk_done(&archiveEntryInfo->file.chunkFile.info);
       AutoFree_cleanup(&autoFreeList1);
       return error;
     }
@@ -9171,7 +9193,7 @@ archiveEntryInfo->image.chunkImageEntry.blockSize
     #endif /* NDEBUG */
   }
 
-  if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
+  if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag);
   {
     archiveEntryInfo->archiveInfo->entries++;
   }
