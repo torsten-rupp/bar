@@ -131,8 +131,10 @@ typedef struct ChunkInfo
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Chunk_init(...) __Chunk_init(__FILE__,__LINE__,__VA_ARGS__)
-  #define Chunk_done(...) __Chunk_done(__FILE__,__LINE__,__VA_ARGS__)
+  #define Chunk_init(...)   __Chunk_init(__FILE__,__LINE__,__VA_ARGS__)
+  #define Chunk_done(...)   __Chunk_done(__FILE__,__LINE__,__VA_ARGS__)
+  #define Chunk_open(...)   __Chunk_open(__FILE__,__LINE__,__VA_ARGS__)
+  #define Chunk_create(...) __Chunk_create(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -329,10 +331,19 @@ Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 Errors Chunk_open(ChunkInfo         *chunkInfo,
                   const ChunkHeader *chunkHeader,
                   ulong             dataSize
                  );
+#else /* not NDEBUG */
+Errors __Chunk_open(const char        *__fileName__,
+                    ulong             __lineNb__,
+                    ChunkInfo         *chunkInfo,
+                    const ChunkHeader *chunkHeader,
+                    ulong             dataSize
+                   );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Chunk_create
@@ -343,7 +354,14 @@ Errors Chunk_open(ChunkInfo         *chunkInfo,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 Errors Chunk_create(ChunkInfo *chunkInfo);
+#else /* not NDEBUG */
+Errors __Chunk_create(const char *__fileName__,
+                      ulong      __lineNb__,
+                      ChunkInfo  *chunkInfo
+                     );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Chunk_close

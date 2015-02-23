@@ -1898,10 +1898,19 @@ Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index)
   return error;
 }
 
+#ifdef NDEBUG
 Errors Chunk_open(ChunkInfo         *chunkInfo,
                   const ChunkHeader *chunkHeader,
                   ulong             dataSize
                  )
+#else /* not NDEBUG */
+Errors __Chunk_open(const char *__fileName__,
+                    ulong      __lineNb__,
+                    ChunkInfo         *chunkInfo,
+                    const ChunkHeader *chunkHeader,
+                    ulong             dataSize
+                  )
+#endif /* NDEBUG */
 {
   Errors error;
   ulong  bytesRead;
@@ -1939,12 +1948,23 @@ Errors Chunk_open(ChunkInfo         *chunkInfo,
     chunkInfo->parentChunkInfo->index += bytesRead;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("open chunk",&chunkInfo->mode);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE("open chunk",&chunkInfo->mode);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"open chunk",&chunkInfo->mode);
+  #endif /* NDEBUG */
 
   return ERROR_NONE;
 }
 
+#ifdef NDEBUG
 Errors Chunk_create(ChunkInfo *chunkInfo)
+#else /* not NDEBUG */
+Errors __Chunk_create(const char *__fileName__,
+                      ulong      __lineNb__,
+                      ChunkInfo  *chunkInfo
+                     )
+#endif /* NDEBUG */
 {
   Errors      error;
   uint64      offset;
@@ -2022,7 +2042,11 @@ Errors Chunk_create(ChunkInfo *chunkInfo)
     }
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("create chunk",&chunkInfo->mode);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE("create chunk",&chunkInfo->mode);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"create chunk",&chunkInfo->mode);
+  #endif /* NDEBUG */
 
   return ERROR_NONE;
 }
