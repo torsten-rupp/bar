@@ -6,6 +6,7 @@
 VERSION = 4;
 
 PRAGMA foreign_keys = ON;
+PRAGMA auto_vacuum = INCREMENTAL;
 
 CREATE TABLE IF NOT EXISTS meta(
   name  TEXT UNIQUE,
