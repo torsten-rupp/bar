@@ -149,7 +149,6 @@ typedef struct
 // storage message, send from main -> storage thread
 typedef struct
 {
-  IndexHandle *indexHandle;
   DatabaseId  entityId;                                           // database entity id
   DatabaseId  storageId;                                          // database storage id
   String      fileName;                                           // temporary archive name
@@ -660,7 +659,7 @@ LOCAL void pauseCreate(const CreateInfo *createInfo)
          && !isAborted(createInfo)
         )
   {
-    Misc_udelay(500L*1000L);
+    Misc_udelay(500LL*MISC_US_PER_MS);
   }
 }
 
@@ -681,7 +680,26 @@ LOCAL void pauseStorage(const CreateInfo *createInfo)
          && !isAborted(createInfo)
         )
   {
-    Misc_udelay(500L*1000L);
+    Misc_udelay(500LL*MISC_US_PER_MS);
+  }
+}
+
+/***********************************************************************\
+* Name   : waitIndexReady
+* Purpose: wait until index is read or quit
+* Input  : createInfo - create info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void waitIndexReady(const CreateInfo *createInfo)
+{
+  assert(indexHandle != NULL);
+
+  while (!isAborted(createInfo) && !Index_isReady(indexHandle))
+  {
+    Misc_udelay(10LL*MISC_US_PER_SECOND);
   }
 }
 
@@ -2912,9 +2930,12 @@ LOCAL Errors storeArchiveFile(void        *userData,
   String_set(storageName,Storage_getName(createInfo->storageSpecifier,destinationFileName));
   DEBUG_TESTCODE("storeArchiveFile1") { String_delete(storageName); String_delete(destinationFileName); return DEBUG_TESTCODE_ERROR(); }
 
-  // set database storage name
   if (storageId != DATABASE_ID_NONE)
   {
+    // wait for index become ready
+    waitIndexReady(createInfo);
+
+    // set database storage name
     printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,destinationFileName);
     error = Index_storageUpdate(indexHandle,
                                 storageId,
@@ -2934,7 +2955,6 @@ LOCAL Errors storeArchiveFile(void        *userData,
   }
 
   // send to storage controller
-  storageMsg.indexHandle         = indexHandle;
   storageMsg.entityId            = entityId;
   storageMsg.storageId           = storageId;
   storageMsg.fileName            = String_duplicate(tmpFileName);
@@ -3246,6 +3266,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // update index database and set state
     if (storageMsg.storageId != DATABASE_ID_NONE)
     {
+      // wait for index become ready
+      waitIndexReady(createInfo);
+
       // delete old indizes for same storage file
       oldStorageName = String_new();
       error = Index_initListStorage(&indexQueryHandle,
@@ -5344,6 +5367,9 @@ Errors Command_create(const String                    jobUUID,
                   );
 #if 0
 // NYI: must index be deleted on error?
+        // wait for index become ready
+        waitIndexReady(createInfo);
+
         if (   (indexHandle != NULL)
             && !archiveInfo->jobOptions->noIndexDatabaseFlag
             && !archiveInfo->jobOptions->dryRunFlag
@@ -5404,6 +5430,9 @@ Errors Command_create(const String                    jobUUID,
               );
 #if 0
 // NYI: must index be deleted on error?
+    // wait for index become ready
+    waitIndexReady(createInfo);
+
     if (   (indexHandle != NULL)
         && !createInfo.archiveInfo->jobOptions->noIndexDatabaseFlag
         && !createInfo.archiveInfo->jobOptions->dryRunFlag
@@ -5452,6 +5481,9 @@ createThreadCode(&createInfo);
               );
 #if 0
 // NYI: must index be deleted on error?
+    // wait for index become ready
+    waitIndexReady(createInfo);
+
     if (   (indexHandle != NULL)
         && !createInfo.archiveInfo->jobOptions->noIndexDatabaseFlag
         && !createInfo.archiveInfo->jobOptions->dryRunFlag
