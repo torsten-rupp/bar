@@ -141,7 +141,8 @@ abstract class ProcessResult
 class Command
 {
   // --------------------------- constants --------------------------------
-  public final static int TIMEOUT = 5*1000;
+  public final static int TIMEOUT      = 5*1000;   // default timeout [ms]
+  public final static int WAIT_FOREVER = -1;
 
   // --------------------------- variables --------------------------------
   public  ProcessResult      processResult;
@@ -167,7 +168,7 @@ class Command
   Command(long id, int timeout, int debugLevel, ProcessResult processResult)
   {
     this.id               = id;
-    this.errorCode        = -1;
+    this.errorCode        = Errors.UNKNOWN;
     this.errorText        = "";
     this.completedFlag    = false;
     this.processResult    = processResult;
@@ -274,7 +275,7 @@ class Command
    */
   public synchronized boolean waitForResult()
   {
-    return waitForResult(-1);
+    return waitForResult(WAIT_FOREVER);
   }
 
   /** wait until command completed
@@ -332,7 +333,7 @@ class Command
    */
   public synchronized void waitCompleted()
   {
-    waitCompleted(-1);
+    waitCompleted(WAIT_FOREVER);
   }
 
   /** get error code
@@ -424,7 +425,7 @@ class Command
    * @param errorMessage error message
    * @param valueMap value map
    * @param unknownValueMap unknown values map or null
-   * @param timeout timeout or -1 [ms]
+   * @param timeout timeout or WAIT_FOREVER [ms]
    * @return error code
    */
   public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap, int timeout)
@@ -477,7 +478,7 @@ class Command
    * @param typeMap type map
    * @param errorMessage error message
    * @param valueMap value map
-   * @param timeout timeout or -1 [ms]
+   * @param timeout timeout or WAIT_FOREVER [ms]
    * @return error code
    */
   public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap, int timeout)
@@ -1277,7 +1278,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     readThread.commandRemove(command);
 
     // set abort error
-    command.errorCode     = -2;
+    command.errorCode     = Errors.ABORTED;
     command.errorText     = "aborted";
     command.completedFlag = true;
     command.result.clear();
@@ -1294,8 +1295,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
     readThread.commandRemove(command);
 
-    // set abort error
-    command.errorCode     = -3;
+    // set timeoout error
+    command.errorCode     = Errors.NETWORK_TIMEOUT;
     command.errorText     = "timeout";
     command.completedFlag = true;
     command.result.clear();
@@ -1989,7 +1990,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       if (busyIndicator != null)
       {
         busyIndicator.busy(0);
-        if (busyIndicator.isAborted()) return -1;
+        if (busyIndicator.isAborted()) return Errors.ABORTED;
       }
 
       // add new command
@@ -2006,7 +2007,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       catch (IOException exception)
       {
         readThread.commandRemove(command);
-        return -1;
+        if (Settings.debugLevel > 0)
+        {
+          BARControl.printStackTrace(exception);
+        }
+        return Errors.NETWORK_SEND;
       }
       if (busyIndicator != null)
       {
