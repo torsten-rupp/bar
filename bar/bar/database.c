@@ -604,7 +604,7 @@ LOCAL Errors getTableColumnList(ColumnList     *columnList,
       }
       else
       {
-        HALT_INTERNAL_ERROR("Unknown database data type %s",type2);
+        HALT_INTERNAL_ERROR("Unknown database data type '%s' for '%s'",type2,name);
       }
     }
     else
@@ -634,7 +634,7 @@ LOCAL Errors getTableColumnList(ColumnList     *columnList,
       }
       else
       {
-        HALT_INTERNAL_ERROR("Unknown database data type %s",type1);
+        HALT_INTERNAL_ERROR("Unknown database data type '%s' for '%s'",type1,name);
       }
     }
 
