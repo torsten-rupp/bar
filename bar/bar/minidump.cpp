@@ -15,6 +15,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/utsname.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <assert.h>
 
 #ifdef HAVE_BREAKPAD
@@ -169,8 +172,8 @@ LOCAL void addToTarArchive(int tarHandle, const char *name, const void *buffer, 
 }
 
 /***********************************************************************\
-* Name   : copyToTarArchive
-* Purpose: copy file to tar archive
+* Name   : addFileHandleToTarArchive
+* Purpose: add data from file handle to tar archive
 * Input  : tarHandle - tar file handle
 *          name      - entry name
 *          handle    - file handle
@@ -180,7 +183,7 @@ LOCAL void addToTarArchive(int tarHandle, const char *name, const void *buffer, 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void copyToTarArchive(int tarHandle, const char *name, int handle, ulong size)
+LOCAL void addFileHandleToTarArchive(int tarHandle, const char *name, int handle, ulong size)
 {
   ulong n;
 
@@ -197,6 +200,55 @@ LOCAL void copyToTarArchive(int tarHandle, const char *name, int handle, ulong s
     (void)write(tarHandle,tarBlock,sizeof(tarBlock));
 
     size -= n;
+  }
+}
+
+/***********************************************************************\
+* Name   : addFileToTarArchive
+* Purpose: add data from file to tar archive
+* Input  : tarHandle - tar file handle
+*          name      - entry name
+*          handle    - file handle
+*          fileName  - file name
+* Output : -
+* Return : -
+* Notes  : max. 64kB
+\***********************************************************************/
+
+LOCAL void addFileToTarArchive(int tarHandle, const char *name, const char *fileName)
+{
+  static char buffer[64*1024];
+
+  int        handle;
+  ulong      size;
+  const char *p;
+  ulong      n;
+
+  // get file content
+  size = 0;
+  handle = open(fileName,O_RDONLY);
+  if (handle == -1)
+  {
+    return;
+  }
+  size = (ulong)read(handle,buffer,sizeof(buffer));
+  close(handle);
+
+  // write header
+  writeTarHeader(tarHandle,name,size);
+
+  // write data
+  p = buffer;
+  while (size > 0)
+  {
+    n = (size > sizeof(tarBlock)) ? sizeof(tarBlock) : size;
+
+    memcpy(&tarBlock[0],p,n);
+    memset(&tarBlock[n],0,sizeof(tarBlock)-n);
+    (void)write(tarHandle,tarBlock,sizeof(tarBlock));
+
+    size -= n;
+    p += n;
   }
 }
 
@@ -242,13 +294,19 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
     // add mini dump file
     n = lseek(minidumpFileDescriptor,0,SEEK_END);
     lseek(minidumpFileDescriptor,0,SEEK_SET);
-    copyToTarArchive(handle,"bar.mdmp",minidumpFileDescriptor,n);
+    addFileHandleToTarArchive(handle,"bar.mdmp",minidumpFileDescriptor,n);
 
     // add symbol file
     if ((&_minidump_symbols_start != NULL) && (((size_t)&_minidump_symbols_size) > 0))
     {
       addToTarArchive(handle,"bar.sym.bz2",&_minidump_symbols_start,(size_t)&_minidump_symbols_size);
     }
+
+    // add version info
+    addFileToTarArchive(handle,"osinfo.txt","/proc/version");
+
+    // add cpu info
+    addFileToTarArchive(handle,"cpuinfo.txt","/proc/cpuinfo");
 
     // close crash dump file
     close(handle);
