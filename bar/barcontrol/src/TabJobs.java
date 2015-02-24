@@ -10646,7 +10646,7 @@ throw new Error("NYI");
       int error = BARServer.executeCommand(StringParser.format("SCHEDULE_TRIGGER jobUUID=%s scheduleUUID=%s",selectedJobData.uuid,scheduleData.uuid),0,resultErrorMessage);
       if (error != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot trigger schedule of job {0}:\n\n{1}",selectedJobData.name,resultErrorMessage[0]));
+        Dialogs.error(shell,BARControl.tr("Cannot trigger schedule of job ''{0}'':\n\n{1}",selectedJobData.name,resultErrorMessage[0]));
         return;
       }
     }
