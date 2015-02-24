@@ -5133,22 +5133,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     // interactive mode
     globalOptions.runMode = RUN_MODE_INTERACTIVE;
 
-    // wait for index become ready
-    if (indexHandle != NULL)
-    {
-      while (!Index_isReady(indexHandle))
-      {
-        Misc_udelay(10LL*MISC_US_PER_SECOND);
-      }
-      if (indexHandle->error != ERROR_NONE)
-      {
-#warning xxxxxxxxxxxxxxx
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-        logMessage(LOG_TYPE_ALWAYS,"Cannot intialize index database (error: %s)!",Error_getText(indexHandle->error));
-        indexHandle = NULL;
-      }
-    }
-
     switch (command)
     {
       case COMMAND_CREATE_FILES:
