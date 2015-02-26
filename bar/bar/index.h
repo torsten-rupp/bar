@@ -75,7 +75,8 @@ typedef struct
 {
   const char     *databaseFileName;
   DatabaseHandle databaseHandle;
-  Errors         error;
+  bool           isReady;
+  bool           quitFlag;
 } IndexHandle;
 
 // index query handle

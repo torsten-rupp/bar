@@ -63,7 +63,8 @@ LOCAL const struct
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL Thread initIndexThread;
+LOCAL Thread cleanupIndexThread;    // clean-up thread
+LOCAL bool   quitFlag;              // TRUE iff quit requested
 
 /****************************** Macros *********************************/
 
@@ -151,7 +152,7 @@ LOCAL Thread initIndexThread;
   assert(databaseFileName != NULL);
 
   // open index database
-  File_deleteCString(databaseFileName,FALSE);
+  (void)File_deleteCString(databaseFileName,FALSE);
   #ifdef NDEBUG
     error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE);
   #else /* not NDEBUG */
@@ -163,14 +164,14 @@ LOCAL Thread initIndexThread;
   }
 
   // disable synchronous mode and journal to increase transaction speed
-  Database_execute(&indexHandle->databaseHandle,
-                   CALLBACK(NULL,NULL),
-                   "PRAGMA synchronous=OFF;"
-                  );
-  Database_execute(&indexHandle->databaseHandle,
-                   CALLBACK(NULL,NULL),
-                   "PRAGMA journal_mode=OFF;"
-                  );
+  (void)Database_execute(&indexHandle->databaseHandle,
+                         CALLBACK(NULL,NULL),
+                         "PRAGMA synchronous=OFF;"
+                        );
+  (void)Database_execute(&indexHandle->databaseHandle,
+                         CALLBACK(NULL,NULL),
+                         "PRAGMA journal_mode=OFF;"
+                        );
 
   // create tables
   error = Database_execute(&indexHandle->databaseHandle,
@@ -377,7 +378,7 @@ LOCAL void cleanUp(IndexHandle *indexHandle)
 }
 
 /***********************************************************************\
-* Name   : upgradeToVersion2
+* Name   : upgradeIndexToVersion2
 * Purpose: upgrade index to version 2
 * Input  : indexHandle - index handle
 * Output : -
@@ -385,7 +386,7 @@ LOCAL void cleanUp(IndexHandle *indexHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeToVersion2(const char *databaseFileName)
+LOCAL Errors upgradeIndexToVersion2(const char *databaseFileName)
 {
   String      newDatabaseFileName,backupDatabaseFileName;
   Errors      error;
@@ -491,7 +492,7 @@ LOCAL Errors upgradeToVersion2(const char *databaseFileName)
 }
 
 /***********************************************************************\
-* Name   : upgradeToVersion3
+* Name   : upgradeIndexToVersion3
 * Purpose: upgrade index to version 3
 * Input  : indexHandle - index handle
 * Output : -
@@ -499,7 +500,7 @@ LOCAL Errors upgradeToVersion2(const char *databaseFileName)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeToVersion3(const char *databaseFileName)
+LOCAL Errors upgradeIndexToVersion3(const char *databaseFileName)
 {
 #if 0
   Errors      error;
@@ -626,7 +627,7 @@ LOCAL Errors upgradeToVersion3(const char *databaseFileName)
 }
 
 /***********************************************************************\
-* Name   : upgradeToVersion4
+* Name   : upgradeIndexToVersion4
 * Purpose: upgrade index to version 4
 * Input  : indexHandle - index handle
 * Output : -
@@ -634,7 +635,7 @@ LOCAL Errors upgradeToVersion3(const char *databaseFileName)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeToVersion4(const char *databaseFileName)
+LOCAL Errors upgradeIndexToVersion4(const char *databaseFileName)
 {
   String              newDatabaseFileName,backupDatabaseFileName;
   Errors              error;
@@ -912,95 +913,128 @@ Database_debugEnable(false);
 }
 
 /***********************************************************************\
-* Name   : initIndexThreadCode
-* Purpose: init index thread
+* Name   : upgradeIndex
+* Purpose: upgrade index
 * Input  : indexHandle - index handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initIndexThreadCode(IndexHandle *indexHandle)
+LOCAL Errors upgradeIndex(IndexHandle *indexHandle)
 {
   Errors error;
   int64  indexVersion;
 
-  assert(indexHandle != NULL);
-
-  plogMessage(LOG_TYPE_INDEX,"INDEX","Start init index database\n");
-
-  // open/create database
-  if (File_existsCString(indexHandle->databaseFileName))
+  do
   {
-    do
+    // get index version
+    error = getIndexVersion(indexHandle->databaseFileName,&indexVersion);
+    if (error != ERROR_NONE)
     {
-      // get index version
-      error = getIndexVersion(indexHandle->databaseFileName,&indexVersion);
+      return error;
+    }
+
+    // upgrade index structure
+    if (indexVersion < INDEX_VERSION)
+    {
+      switch (indexVersion)
+      {
+        case 1:
+          error = upgradeIndexToVersion2(indexHandle->databaseFileName);
+          indexVersion = 2;
+        case 2:
+          error = upgradeIndexToVersion3(indexHandle->databaseFileName);
+          indexVersion = 3;
+          break;
+        case 3:
+          error = upgradeIndexToVersion4(indexHandle->databaseFileName);
+          indexVersion = 4;
+          break;
+        default:
+          // assume correct database version if index is unknown
+          indexVersion = INDEX_VERSION;
+          break;
+      }
       if (error != ERROR_NONE)
       {
-        break;
+        plogMessage(LOG_TYPE_INDEX,"INDEX","Init index database fail: %s\n",Error_getText(error));
+        return error;
       }
 
-      // upgrade index structure
-      if (indexVersion < INDEX_VERSION)
+      // update index version
+      error = setIndexVersion(indexHandle->databaseFileName,indexVersion);
+      if (error != ERROR_NONE)
       {
-        switch (indexVersion)
-        {
-          case 1:
-            error = upgradeToVersion2(indexHandle->databaseFileName);
-            indexVersion = 2;
-          case 2:
-            error = upgradeToVersion3(indexHandle->databaseFileName);
-            indexVersion = 3;
-            break;
-          case 3:
-            error = upgradeToVersion4(indexHandle->databaseFileName);
-            indexVersion = 4;
-            break;
-          default:
-            // assume correct database version if index is unknown
-            indexVersion = INDEX_VERSION;
-            break;
-        }
-        if (error != ERROR_NONE)
-        {
-          plogMessage(LOG_TYPE_INDEX,"INDEX","Init index database fail: %s\n",Error_getText(error));
-          return;
-        }
-
-        // update index version
-        error = setIndexVersion(indexHandle->databaseFileName,indexVersion);
-        if (error != ERROR_NONE)
-        {
-          break;
-        }
+        return error;
       }
     }
-    while (indexVersion < INDEX_VERSION);
+  }
+  while (indexVersion < INDEX_VERSION);
 
-    // open data base
-    indexHandle->error = openIndex(indexHandle,indexHandle->databaseFileName);
-    if (indexHandle->error != ERROR_NONE)
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : cleanupIndexThreadCode
+* Purpose: cleanup index thread
+* Input  : indexHandle - index handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+
+  // upgrade/create index
+  plogMessage(LOG_TYPE_INDEX,"INDEX","Start init index database\n");
+  if (File_existsCString(indexHandle->databaseFileName))
+  {
+    // upgrade index
+    error = upgradeIndex(indexHandle);
+    if (error != ERROR_NONE)
     {
-      plogMessage(LOG_TYPE_INDEX,"INDEX","Init index database fail: %s\n",Error_getText(indexHandle->error));
+      plogMessage(LOG_TYPE_INDEX,"INDEX","Upgrade index database fail: %s\n",Error_getText(error));
       return;
     }
 
-    // clean-up database
-    cleanUp(indexHandle);
+    // open database
+    error = openIndex(indexHandle,indexHandle->databaseFileName);
+    if (error != ERROR_NONE)
+    {
+      plogMessage(LOG_TYPE_INDEX,"INDEX","Open index database fail: %s\n",Error_getText(error));
+      return;
+    }
   }
   else
   {
-    // create index database
-    indexHandle->error = createIndex(indexHandle,indexHandle->databaseFileName);
-    if (indexHandle->error != ERROR_NONE)
+    // create database
+    error = createIndex(indexHandle,indexHandle->databaseFileName);
+    if (error != ERROR_NONE)
     {
-      plogMessage(LOG_TYPE_INDEX,"INDEX","Init index database fail: %s\n",Error_getText(indexHandle->error));
+      plogMessage(LOG_TYPE_INDEX,"INDEX","Create index database fail: %s\n",Error_getText(error));
       return;
     }
   }
-
+  indexHandle->isReady = TRUE;
   plogMessage(LOG_TYPE_INDEX,"INDEX","Done init index database\n");
+
+#warning TODO
+  while (!quitFlag)
+  {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    // clean-up database
+    plogMessage(LOG_TYPE_INDEX,"INDEX","Start clean-up index database\n");
+    cleanUp(indexHandle);
+    plogMessage(LOG_TYPE_INDEX,"INDEX","Done clean-up index database\n");
+
+    Misc_udelay(1LL*MISC_US_PER_HOUR);
+//Misc_udelay(10LL*MISC_US_PER_SECOND);
+  }
 }
 
 /***********************************************************************\
@@ -1017,7 +1051,7 @@ LOCAL void initIndexQueryHandle(IndexQueryHandle *indexQueryHandle, IndexHandle 
 {
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
-  assert(indexHandle->error == ERROR_NONE);
+  assert(indexHandle->isReady);
 
   indexQueryHandle->indexHandle                = indexHandle;
   indexQueryHandle->storage.type               = STORAGE_TYPE_NONE;
@@ -1041,7 +1075,7 @@ LOCAL void doneIndexQueryHandle(IndexQueryHandle *indexQueryHandle)
 {
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
-  assert(indexQueryHandle->indexHandle->error == ERROR_NONE);
+  assert(indexHandle->isReady);
 
   if (indexQueryHandle->storage.fileNamePattern    != NULL) Pattern_delete(indexQueryHandle->storage.fileNamePattern);
   if (indexQueryHandle->storage.deviceNamePattern  != NULL) Pattern_delete(indexQueryHandle->storage.deviceNamePattern);
@@ -1302,11 +1336,12 @@ Errors Index_init(IndexHandle *indexHandle,
 
   // init variables
   indexHandle->databaseFileName = databaseFileName;
-  indexHandle->error            = ERROR_UNKNOWN;
+  indexHandle->isReady          = FALSE;
+  indexHandle->quitFlag         = FALSE;
 
-  if (!Thread_init(&initIndexThread,"Index init",0,initIndexThreadCode,indexHandle))
+  if (!Thread_init(&cleanupIndexThread,"Index init",0,cleanupIndexThreadCode,indexHandle))
   {
-    HALT_FATAL_ERROR("Cannot initialize index init thread!");
+    HALT_FATAL_ERROR("Cannot initialize index cleanup thread!");
   }
 
   return ERROR_NONE;
@@ -1323,6 +1358,9 @@ Errors Index_init(IndexHandle *indexHandle,
 {
   assert(indexHandle != NULL);
 
+  indexHandle->quitFlag = TRUE;
+  Thread_join(&cleanupIndexThread);
+
   #ifdef NDEBUG
     (void)closeIndex(indexHandle);
   #else /* not NDEBUG */
@@ -1334,7 +1372,7 @@ bool Index_isReady(IndexHandle *indexHandle)
 {
   assert(indexHandle != NULL);
 
-  return indexHandle->error != ERROR_UNKNOWN;
+  return indexHandle->isReady;
 }
 
 bool Index_findById(IndexHandle *indexHandle,
