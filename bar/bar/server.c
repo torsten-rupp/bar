@@ -434,7 +434,6 @@ typedef struct
   ServerCommandFunction serverCommandFunction;
   AuthorizationStates   authorizationState;
   uint                  id;
-//  Array                 arguments;
   StringMap             argumentMap;
 } CommandMsg;
 
