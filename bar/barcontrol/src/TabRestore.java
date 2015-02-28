@@ -268,14 +268,20 @@ public class TabRestore
    */
   class IndexData
   {
+    /** tree item update runnable
+     */
     abstract class TreeItemUpdateRunnable
     {
       public abstract void update(TreeItem treeItem, IndexData indexData);
     }
+    /** table item update runnable
+     */
     abstract class TableItemUpdateRunnable
     {
       public abstract void update(TableItem tableItem, IndexData indexData);
     }
+    /** menu item update runnable
+     */
     abstract class MenuItemUpdateRunnable
     {
       public abstract void update(MenuItem menuItem, IndexData indexData);
@@ -1574,7 +1580,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
     {
       final HashSet<TreeItem> removeUUIDTreeItemSet = new HashSet<TreeItem>();
       Command                 command;
-      String[]                resultErrorMessage    = new String[1];
+      String[]                errorMessage          = new String[1];
       ValueMap                resultMap             = new ValueMap();
 
       uuidTreeItems.clear();
@@ -1601,7 +1607,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
                                     );
       while (!command.endOfData() && !triggeredFlag)
       {
-        if (command.getNextResult(resultErrorMessage,
+        if (command.getNextResult(errorMessage,
                                   resultMap,
                                   Command.TIMEOUT
                                  ) == Errors.NONE
@@ -1695,8 +1701,8 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
     {
       final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
       Command                 command;
-      String[]                resultErrorMessage   = new String[1];
-      ValueMap                resultMap            = new ValueMap();
+      String[]                errorMessage            = new String[1];
+      ValueMap                resultMap               = new ValueMap();
 
       // get job items, UUID index data
       final UUIDIndexData uuidIndexData[] = new UUIDIndexData[1];
@@ -1726,7 +1732,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
                                     );
       while (!command.endOfData())
       {
-        if (command.getNextResult(resultErrorMessage,
+        if (command.getNextResult(errorMessage,
                                   resultMap,
                                   Command.TIMEOUT
                                  ) == Errors.NONE
@@ -1831,8 +1837,8 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
     {
       final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
       Command                 command;
-      String[]                resultErrorMessage    = new String[1];
-      ValueMap                resultMap             = new ValueMap();
+      String[]                errorMessage             = new String[1];
+      ValueMap                resultMap                = new ValueMap();
 
       // get storage items, job index data
       final EntityIndexData entityIndexData[] = new EntityIndexData[1];
@@ -1863,7 +1869,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
                                     );
       while (!command.endOfData())
       {
-        if (command.getNextResult(resultErrorMessage,
+        if (command.getNextResult(errorMessage,
                                   resultMap,
                                   Command.TIMEOUT
                                  ) == Errors.NONE
@@ -1883,7 +1889,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
             IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
             IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
             long                  lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"                    );
-            String                errorMessage        = resultMap.getString("errorMessage"                           );
+            String                errorMessage_       = resultMap.getString("errorMessage"                           );
 
             // add/update storage data
             final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
@@ -1896,7 +1902,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
                                                                                           indexState,
                                                                                           indexMode,
                                                                                           lastCheckedDateTime,
-                                                                                          errorMessage
+                                                                                          errorMessage_
                                                                                          );
 
             // insert/update tree item
@@ -1982,8 +1988,8 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
     private void updateStorageTableItems()
     {
       Command  command;
-      String[] resultErrorMessage = new String[1];
-      ValueMap resultMap          = new ValueMap();
+      String[] errorMessage = new String[1];
+      ValueMap resultMap    = new ValueMap();
 
       // get current storage index data
       final HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
@@ -2011,7 +2017,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
                                     );
       while (!command.endOfData() && !triggeredFlag)
       {
-        if (command.getNextResult(resultErrorMessage,
+        if (command.getNextResult(errorMessage,
                                   resultMap,
                                   Command.TIMEOUT
                                  ) == Errors.NONE
@@ -2031,7 +2037,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
             IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
             IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
             long                  lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"                    );
-            String                errorMessage        = resultMap.getString("errorMessage"                           );
+            String                errorMessage_       = resultMap.getString("errorMessage"                           );
 
             // add/update to index map
             final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
@@ -2044,7 +2050,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
                                                                                           indexState,
                                                                                           indexMode,
                                                                                           lastCheckedDateTime,
-                                                                                          errorMessage
+                                                                                          errorMessage_
                                                                                          );
 
             // insert/update table item
@@ -2107,7 +2113,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
       final HashSet<UUIDIndexData> uuidIndexDataSet        = new HashSet<UUIDIndexData>();
       final HashSet<MenuItem>      removeEntityMenuItemSet = new HashSet<MenuItem>();
       Command                      command;
-      String[]                     resultErrorMessage      = new String[1];
+      String[]                     errorMessage            = new String[1];
       ValueMap                     resultMap               = new ValueMap();
 
       // get UUID menus
@@ -2130,7 +2136,7 @@ Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
                                     );
       while (!command.endOfData() && !triggeredFlag)
       {
-        if (command.getNextResult(resultErrorMessage,
+        if (command.getNextResult(errorMessage,
                                   resultMap,
                                   Command.TIMEOUT
                                  ) == Errors.NONE
@@ -2299,7 +2305,7 @@ Dprintf.dprintf("menu=%s",menu);
                                       );
         while (!command.endOfData() && !triggeredFlag)
         {
-          if (command.getNextResult(resultErrorMessage,
+          if (command.getNextResult(errorMessage,
                                     resultMap,
                                     Command.TIMEOUT
                                    ) == Errors.NONE
@@ -2895,11 +2901,11 @@ Dprintf.dprintf("menuItem=%s: %s",menuItem,(EntityIndexData)menuItem.getData());
                                                                   ),
                                                0
                                               );
-        String[] resultErrorMessage = new String[1];
-        ValueMap resultMap          = new ValueMap();
+        String[] errorMessage = new String[1];
+        ValueMap resultMap    = new ValueMap();
         while (!command.endOfData() && !triggeredFlag)
         {
-          if (command.getNextResult(resultErrorMessage,
+          if (command.getNextResult(errorMessage,
                                     resultMap,
                                     Command.TIMEOUT
                                    ) == Errors.NONE
@@ -3235,6 +3241,8 @@ break;
   // --------------------------- constants --------------------------------
   // colors
   private final Color COLOR_MODIFIED;
+  private final Color COLOR_INFO_FORGROUND;
+  private final Color COLOR_INFO_BACKGROUND;
 
   // images
   private final Image IMAGE_DIRECTORY;
@@ -3260,6 +3268,7 @@ break;
 
   // widgets
   public  Composite           widgetTab;
+  private Button              widgetConnectButton;
   private TabFolder           widgetTabFolder;
 
   private TabFolder           widgetStorageTabFolder;
@@ -3293,13 +3302,342 @@ break;
 
   // ---------------------------- methods ---------------------------------
 
+  /** show entry data tool tip
+   * @param entryIndexData entry index data
+   * @param x,y positions
+   */
+  private void showEntryToolTip(EntryData entryData, int x, int y)
+  {
+    Label label;
+    Control   control;
+
+    final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+    final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+
+    if (widgetEntryTableToolTip != null)
+    {
+      widgetEntryTableToolTip.dispose();
+    }
+    widgetEntryTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+    widgetEntryTableToolTip.setBackground(COLOR_BACKGROUND);
+    widgetEntryTableToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
+    Widgets.layout(widgetEntryTableToolTip,0,0,TableLayoutData.NSWE);
+    widgetEntryTableToolTip.addMouseTrackListener(new MouseTrackListener()
+    {
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+      }
+
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+        if (widgetEntryTableToolTip != null)
+        {
+          widgetEntryTableToolTip.dispose();
+          widgetEntryTableToolTip = null;
+        }
+      }
+
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+      }
+    });
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Storage")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,0,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,entryData.storageName);
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,0,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Created")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,1,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryData.storageDateTime*1000L)));
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,1,1,TableLayoutData.WE);
+
+    control = Widgets.newSpacer(widgetEntryTableToolTip);
+    Widgets.layout(control,2,0,TableLayoutData.WE,0,2,0,0,SWT.DEFAULT,1,SWT.DEFAULT,1,SWT.DEFAULT,1);
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Type")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,3,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,entryData.entryType.toString());
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,3,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Name")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,4,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,entryData.name);
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,4,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Size")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,5,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),entryData.size,Units.formatByteSize(entryData.size)));
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,5,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Date")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,6,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryData.dateTime*1000L)));
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,6,1,TableLayoutData.WE);
+
+    Point size = widgetEntryTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+    widgetEntryTableToolTip.setBounds(x,y,size.x,size.y);
+    widgetEntryTableToolTip.setVisible(true);
+  }
+
+  /** show entity index tool tip
+   * @param entityIndexData entity index data
+   * @param x,y positions
+   */
+  private void showEntityIndexToolTip(EntityIndexData entityIndexData, int x, int y)
+  {
+    Label label;
+
+    if (widgetStorageTreeToolTip != null)
+    {
+      widgetStorageTreeToolTip.dispose();
+    }
+    widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+    widgetStorageTreeToolTip.setBackground(COLOR_INFO_BACKGROUND);
+    widgetStorageTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+    Widgets.layout(widgetStorageTreeToolTip,0,0,TableLayoutData.NSWE);
+    widgetStorageTreeToolTip.addMouseTrackListener(new MouseTrackListener()
+    {
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+      }
+
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+        if (widgetStorageTreeToolTip != null)
+        {
+          widgetStorageTreeToolTip.dispose();
+          widgetStorageTreeToolTip = null;
+        }
+      }
+
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+      }
+    });
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Name")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,0,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.name);
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,0,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last created")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,1,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L)));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,1,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,2,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format("%d",entityIndexData.totalEntries));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,2,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,3,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),entityIndexData.size,Units.formatByteSize(entityIndexData.size)));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,3,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,4,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.errorMessage);
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,4,1,TableLayoutData.WE);
+
+    Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+    widgetStorageTreeToolTip.setBounds(x,y,size.x,size.y);
+    widgetStorageTreeToolTip.setVisible(true);
+  }
+
+  /** show storage index tool tip
+   * @param storageIndexData storage index data
+   * @param x,y positions
+   */
+  private void showStorageIndexToolTip(StorageIndexData storageIndexData, int x, int y)
+  {
+    Label label;
+
+    if (widgetStorageTableToolTip != null)
+    {
+      widgetStorageTableToolTip.dispose();
+    }
+    widgetStorageTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+    widgetStorageTableToolTip.setBackground(COLOR_INFO_BACKGROUND);
+    widgetStorageTableToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+    Widgets.layout(widgetStorageTableToolTip,0,0,TableLayoutData.NSWE);
+    widgetStorageTableToolTip.addMouseTrackListener(new MouseTrackListener()
+    {
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+      }
+
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+        if (widgetStorageTableToolTip != null)
+        {
+          widgetStorageTableToolTip.dispose();
+          widgetStorageTableToolTip = null;
+        }
+      }
+
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+      }
+    });
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Job")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,0,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.jobName);
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,0,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Name")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,1,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.name);
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,1,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Created")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,2,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.dateTime*1000L)));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,2,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Type")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,3,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.archiveType.toString());
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,3,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Entries")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,4,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,String.format("%d",storageIndexData.entries));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,4,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Size")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,5,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageIndexData.size,Units.formatByteSize(storageIndexData.size)));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,5,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("State")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,6,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.indexState.toString());
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,6,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Last checked")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,7,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000L)));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,7,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Error")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,8,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.errorMessage);
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,8,1,TableLayoutData.WE);
+
+    Point size = widgetStorageTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+    widgetStorageTableToolTip.setBounds(x,y,size.x,size.y);
+    widgetStorageTableToolTip.setVisible(true);
+  }
+
   /** create restore tab
    * @param parentTabFolder parent tab folder
    * @param accelerator keyboard shortcut to select tab
    */
   TabRestore(TabFolder parentTabFolder, int accelerator)
   {
-    Group       group;
     TabFolder   tabFolder;
     Composite   tab;
     Menu        menu;
@@ -3307,6 +3645,8 @@ break;
     Composite   composite,subComposite;
     Label       label;
     Button      button;
+    Pane        pane;
+    Group       group;
     Combo       combo;
     TreeColumn  treeColumn;
     TreeItem    treeItem;
@@ -3319,7 +3659,9 @@ break;
     display = shell.getDisplay();
 
     // get colors
-    COLOR_MODIFIED = shell.getDisplay().getSystemColor(SWT.COLOR_GRAY);
+    COLOR_MODIFIED        = display.getSystemColor(SWT.COLOR_GRAY);
+    COLOR_INFO_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+    COLOR_INFO_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 
     // get images
     IMAGE_DIRECTORY  = Widgets.loadImage(display,"directory.png");
@@ -3336,14 +3678,14 @@ break;
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Restore")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
-    widgetTab.setLayout(new TableLayout(new double[]{0.5,0.5,0.0},new double[]{0.0,1.0},2));
+    widgetTab.setLayout(new TableLayout(new double[]{1.0,0.0},new double[]{0.0,1.0},2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
 
     // connector button
-    button = Widgets.newCheckbox(widgetTab,IMAGE_CONNECT0,IMAGE_CONNECT1);
-    button.setToolTipText(BARControl.tr("When this connector is in state 'closed', only tagged storage archives are used for list entries."));
-    Widgets.layout(button,0,0,TableLayoutData.W,2,0);
-    button.addSelectionListener(new SelectionListener()
+    widgetConnectButton = Widgets.newCheckbox(widgetTab,IMAGE_CONNECT0,IMAGE_CONNECT1);
+    widgetConnectButton.setToolTipText(BARControl.tr("When this connector is in state 'closed', only tagged storage archives are used for list entries."));
+    Widgets.layout(widgetConnectButton,0,0,TableLayoutData.W);
+    widgetConnectButton.addSelectionListener(new SelectionListener()
     {
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
@@ -3356,10 +3698,26 @@ break;
       }
     });
 
+    // create pane
+    pane = Widgets.newPane(widgetTab,2,SWT.HORIZONTAL);
+    Widgets.layout(pane,0,1,TableLayoutData.NSWE);
+    pane.addResizeListener(new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        Rectangle bounds = widgetConnectButton.getBounds();
+        bounds.y = event.detail-bounds.height/2+Pane.SIZE/2;
+        widgetConnectButton.setBounds(bounds);
+      }
+    });
+
     // storage tree/list
-    group = Widgets.newGroup(widgetTab,BARControl.tr("Storage"));
+    composite = pane.getComposite(0);
+    composite.setLayout(new TableLayout(1.0,1.0));
+    Widgets.layout(composite,0,0,TableLayoutData.NSWE);
+    group = Widgets.newGroup(composite,BARControl.tr("Storage"));
     group.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,4));
-    Widgets.layout(group,0,1,TableLayoutData.NSWE);
+    Widgets.layout(group,0,0,TableLayoutData.NSWE);
     {
       // fix layout
       control = Widgets.newSpacer(group);
@@ -3533,13 +3891,15 @@ break;
 
         public void mouseExit(MouseEvent mouseEvent)
         {
+          if (widgetStorageTreeToolTip != null)
+          {
+            widgetStorageTreeToolTip.dispose();
+            widgetStorageTreeToolTip = null;
+          }
         }
 
         public void mouseHover(MouseEvent mouseEvent)
         {
-          final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
-          final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
-
           Tree     tree     = (Tree)mouseEvent.widget;
           TreeItem treeItem = tree.getItem(new Point(mouseEvent.x,mouseEvent.y));
 
@@ -3559,204 +3919,16 @@ break;
             else if (treeItem.getData() instanceof EntityIndexData)
             {
               EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
-              Label           label;
 
-              widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
-              widgetStorageTreeToolTip.setBackground(COLOR_BACKGROUND);
-              widgetStorageTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
-              Widgets.layout(widgetStorageTreeToolTip,0,0,TableLayoutData.NSWE);
-              widgetStorageTreeToolTip.addMouseTrackListener(new MouseTrackListener()
-              {
-                public void mouseEnter(MouseEvent mouseEvent)
-                {
-                }
-
-                public void mouseExit(MouseEvent mouseEvent)
-                {
-                  widgetStorageTreeToolTip.dispose();
-                  widgetStorageTreeToolTip = null;
-                }
-
-                public void mouseHover(MouseEvent mouseEvent)
-                {
-                }
-              });
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Name")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,0,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.name);
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,0,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last created")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,1,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L)));
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,1,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,2,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format("%d",entityIndexData.totalEntries));
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,2,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,3,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),entityIndexData.size,Units.formatByteSize(entityIndexData.size)));
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,3,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,4,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.errorMessage);
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,4,1,TableLayoutData.WE);
-
-              Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-              Point point = tree.toDisplay(mouseEvent.x+16,treeItem.getBounds(0).y);
-              widgetStorageTreeToolTip.setBounds(point.x,point.y,size.x,size.y);
-              widgetStorageTreeToolTip.setVisible(true);
+              Point point = tree.toDisplay(mouseEvent.x+16,mouseEvent.y);
+              showEntityIndexToolTip(entityIndexData,point.x,point.y);
             }
             else if (treeItem.getData() instanceof StorageIndexData)
             {
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
-              Label            label;
 
-              widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
-              widgetStorageTreeToolTip.setBackground(COLOR_BACKGROUND);
-              widgetStorageTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
-              Widgets.layout(widgetStorageTreeToolTip,0,0,TableLayoutData.NSWE);
-              widgetStorageTreeToolTip.addMouseTrackListener(new MouseTrackListener()
-              {
-                public void mouseEnter(MouseEvent mouseEvent)
-                {
-                }
-
-                public void mouseExit(MouseEvent mouseEvent)
-                {
-                  widgetStorageTreeToolTip.dispose();
-                  widgetStorageTreeToolTip = null;
-                }
-
-                public void mouseHover(MouseEvent mouseEvent)
-                {
-                }
-              });
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Job")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,0,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.jobName);
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,0,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Name")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,1,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.name);
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,1,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Created")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,2,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageIndexData.dateTime*1000L)));
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,2,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Type")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,3,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.archiveType.toString());
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,3,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Entries")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,4,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format("%d",storageIndexData.entries));
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,4,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Size")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,5,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageIndexData.size,Units.formatByteSize(storageIndexData.size)));
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,5,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("State")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,6,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.indexState.toString());
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,6,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last checked")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,7,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000L)));
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,7,1,TableLayoutData.WE);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Error")+":");
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,8,0,TableLayoutData.W);
-
-              label = Widgets.newLabel(widgetStorageTreeToolTip,storageIndexData.errorMessage);
-              label.setForeground(COLOR_FORGROUND);
-              label.setBackground(COLOR_BACKGROUND);
-              Widgets.layout(label,8,1,TableLayoutData.WE);
-
-              Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-              Point point = tree.toDisplay(mouseEvent.x+16,treeItem.getBounds(0).y);
-              widgetStorageTreeToolTip.setBounds(point.x,point.y,size.x,size.y);
-              widgetStorageTreeToolTip.setVisible(true);
+              Point point = tree.toDisplay(mouseEvent.x+16,mouseEvent.y);
+              showStorageIndexToolTip(storageIndexData,point.x,point.y);
             }
           }
         }
@@ -3857,6 +4029,11 @@ break;
 
         public void mouseExit(MouseEvent mouseEvent)
         {
+          if (widgetStorageTableToolTip != null)
+          {
+            widgetStorageTableToolTip.dispose();
+            widgetStorageTableToolTip = null;
+          }
         }
 
         public void mouseHover(MouseEvent mouseEvent)
@@ -3874,127 +4051,9 @@ break;
           if ((tableItem != null) && (mouseEvent.x < table.getBounds().width/2))
           {
             StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
-            Label            label;
 
-            final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
-            final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
-
-            widgetStorageTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
-            widgetStorageTableToolTip.setBackground(COLOR_BACKGROUND);
-            widgetStorageTableToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
-            Widgets.layout(widgetStorageTableToolTip,0,0,TableLayoutData.NSWE);
-            widgetStorageTableToolTip.addMouseTrackListener(new MouseTrackListener()
-            {
-              public void mouseEnter(MouseEvent mouseEvent)
-              {
-              }
-
-              public void mouseExit(MouseEvent mouseEvent)
-              {
-                widgetStorageTableToolTip.dispose();
-                widgetStorageTableToolTip = null;
-              }
-
-              public void mouseHover(MouseEvent mouseEvent)
-              {
-              }
-            });
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Job")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,0,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.jobName);
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,0,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Name")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,1,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.name);
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,1,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Created")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,2,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.dateTime*1000L)));
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,2,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Type")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,3,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.archiveType.toString());
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,3,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Entries")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,4,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,String.format("%d",storageIndexData.entries));
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,4,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Size")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,5,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageIndexData.size,Units.formatByteSize(storageIndexData.size)));
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,5,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("State")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,6,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.indexState.toString());
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,6,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Last checked")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,7,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000L)));
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,7,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Error")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,8,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.errorMessage);
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,8,1,TableLayoutData.WE);
-
-            Point size = widgetStorageTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-            Rectangle bounds = tableItem.getBounds(0);
-            Point point = table.toDisplay(mouseEvent.x+16,bounds.y);
-            widgetStorageTableToolTip.setBounds(point.x,point.y,size.x,size.y);
-            widgetStorageTableToolTip.setVisible(true);
+            Point point = table.toDisplay(mouseEvent.x+16,mouseEvent.y);
+            showStorageIndexToolTip(storageIndexData,point.x,point.y);
           }
         }
       });
@@ -4361,9 +4420,13 @@ break;
     }
 
     // entries list
-    group = Widgets.newGroup(widgetTab,BARControl.tr("Entries"));
+    composite = pane.getComposite(1);
+    composite.setLayout(new TableLayout(1.0,1.0));
+    Widgets.layout(composite,0,0,TableLayoutData.NSWE);
+
+    group = Widgets.newGroup(composite,BARControl.tr("Entries"));
     group.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,4));
-    Widgets.layout(group,1,1,TableLayoutData.NSWE);
+    Widgets.layout(group,0,0,TableLayoutData.NSWE);
     {
       // fix layout
       control = Widgets.newSpacer(group);
@@ -4445,6 +4508,11 @@ break;
 
         public void mouseExit(MouseEvent mouseEvent)
         {
+          if (widgetEntryTableToolTip != null)
+          {
+            widgetEntryTableToolTip.dispose();
+            widgetEntryTableToolTip = null;
+          }
         }
 
         public void mouseHover(MouseEvent mouseEvent)
@@ -4461,101 +4529,9 @@ break;
           if ((tableItem != null) && (mouseEvent.x < 64))
           {
             EntryData entryData = (EntryData)tableItem.getData();
-            Label     label;
-            Control   control;
 
-            final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
-            final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
-
-            widgetEntryTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
-            widgetEntryTableToolTip.setBackground(COLOR_BACKGROUND);
-            widgetEntryTableToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
-            Widgets.layout(widgetEntryTableToolTip,0,0,TableLayoutData.NSWE);
-            widgetEntryTableToolTip.addMouseTrackListener(new MouseTrackListener()
-            {
-              public void mouseEnter(MouseEvent mouseEvent)
-              {
-              }
-
-              public void mouseExit(MouseEvent mouseEvent)
-              {
-                widgetEntryTableToolTip.dispose();
-                widgetEntryTableToolTip = null;
-              }
-
-              public void mouseHover(MouseEvent mouseEvent)
-              {
-              }
-            });
-
-            label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Storage")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,0,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetEntryTableToolTip,entryData.storageName);
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,0,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Created")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,1,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryData.storageDateTime*1000L)));
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,1,1,TableLayoutData.WE);
-
-            control = Widgets.newSpacer(widgetEntryTableToolTip);
-            Widgets.layout(control,2,0,TableLayoutData.WE,0,2,0,0,SWT.DEFAULT,1,SWT.DEFAULT,1,SWT.DEFAULT,1);
-
-            label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Type")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,3,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetEntryTableToolTip,entryData.entryType.toString());
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,3,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Name")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,4,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetEntryTableToolTip,entryData.name);
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,4,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Size")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,5,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetEntryTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),entryData.size,Units.formatByteSize(entryData.size)));
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,5,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Date")+":");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,6,0,TableLayoutData.W);
-
-            label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryData.dateTime*1000L)));
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,6,1,TableLayoutData.WE);
-
-            Point size = widgetEntryTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-            Rectangle bounds = tableItem.getBounds(0);
-            Point point = table.toDisplay(mouseEvent.x+16,bounds.y);
-            widgetEntryTableToolTip.setBounds(point.x,point.y,size.x,size.y);
-            widgetEntryTableToolTip.setVisible(true);
+            Point point = table.toDisplay(mouseEvent.x+16,mouseEvent.y);
+            showEntryToolTip(entryData,point.x,point.y);
           }
         }
       });
@@ -4625,6 +4601,11 @@ break;
       {
         public void menuShown(MenuEvent menuEvent)
         {
+          if (widgetStorageTreeToolTip != null)
+          {
+            widgetStorageTreeToolTip.dispose();
+            widgetStorageTreeToolTip = null;
+          }
           if (widgetEntryTableToolTip != null)
           {
             widgetEntryTableToolTip.dispose();
@@ -4804,7 +4785,7 @@ break;
     // destination
     group = Widgets.newGroup(widgetTab,BARControl.tr("Destination"));
     group.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0},4));
-    Widgets.layout(group,2,0,TableLayoutData.WE,0,2);
+    Widgets.layout(group,1,0,TableLayoutData.WE,0,2);
     {
       // fix layout
       control = Widgets.newSpacer(group);
@@ -4974,7 +4955,7 @@ break;
               {
                 for (TreeItem storageTreeItem : entityTreeItem.getItems())
                 {
-                  StorageIndexData storageIndexData = (StorageIndexData)entityTreeItem.getData();
+                  StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
                   storageIndexData.setChecked(checked);
                 }
               }
@@ -5184,14 +5165,23 @@ break;
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
-        for (TreeItem treeItem : widgetStorageTree.getItems())
+        for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
         {
-          if (treeItem.getData() instanceof StorageIndexData)
+          if (!uuidTreeItem.getGrayed() && uuidTreeItem.getChecked()) return true;
+
+          if (uuidTreeItem.getExpanded())
           {
-            IndexData indexData = (IndexData)treeItem.getData();
-            if ((indexData != null) && !treeItem.getGrayed() && treeItem.getChecked())
+            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
             {
-              return true;
+              if (!entityTreeItem.getGrayed() && entityTreeItem.getChecked()) return true;
+
+              if (entityTreeItem.getExpanded())
+              {
+                for (TreeItem storageTreeItem : entityTreeItem.getItems())
+                {
+                  if (!storageTreeItem.getGrayed() && storageTreeItem.getChecked()) return true;
+                }
+              }
             }
           }
         }
@@ -5221,8 +5211,8 @@ break;
 
     try
     {
-      String[] resultErrorMessage = new String[1];
-      ValueMap resultMap          = new ValueMap();
+      String[] errorMessage = new String[1];
+      ValueMap resultMap    = new ValueMap();
 
       if      (treeItem.getData() instanceof UUIDIndexData)
       {
@@ -5250,7 +5240,7 @@ break;
                                               );
         while (!command.endOfData())
         {
-          if (command.getNextResult(resultErrorMessage,
+          if (command.getNextResult(errorMessage,
                                     resultMap,
                                     Command.TIMEOUT
                                    ) == Errors.NONE
@@ -5359,7 +5349,7 @@ break;
                                               );
         while (!command.endOfData())
         {
-          if (command.getNextResult(resultErrorMessage,
+          if (command.getNextResult(errorMessage,
                                     resultMap,
                                     Command.TIMEOUT
                                    ) == Errors.NONE
@@ -5379,7 +5369,7 @@ break;
               IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
               IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
               long                  lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"                    );
-              String                errorMessage        = resultMap.getString("errorMessage"                           );
+              String                errorMessage_       = resultMap.getString("errorMessage"                           );
 
               // add/update storage data
               final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
@@ -5392,7 +5382,7 @@ break;
                                                                                             indexState,
                                                                                             indexMode,
                                                                                             lastCheckedDateTime,
-                                                                                            errorMessage
+                                                                                            errorMessage_
                                                                                            );
 
               // insert/update tree item
@@ -5499,49 +5489,48 @@ break;
         {
           final String info = indexData.getInfo();
 
-          String[] resultErrorMessage = new String[1];
-          int errorCode = Errors.UNKNOWN;
+          int      error        = Errors.UNKNOWN;
+          String[] errorMessage = new String[1];
           if      (indexData instanceof UUIDIndexData)
           {
-            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s jobUUID=%'S",
-                                                                     toUUIDIndexData.jobUUID,
-                                                                     archiveType.toString(),
-                                                                     ((UUIDIndexData)indexData).jobUUID
-                                                                    ),
-                                                 0,
-                                                 resultErrorMessage
-                                                );
+            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s jobUUID=%'S",
+                                                                 toUUIDIndexData.jobUUID,
+                                                                 archiveType.toString(),
+                                                                 ((UUIDIndexData)indexData).jobUUID
+                                                                ),
+                                             0,
+                                             errorMessage
+                                            );
           }
           else if (indexData instanceof EntityIndexData)
           {
-Dprintf.dprintf("indexData=%s",indexData);
-            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s entityId=%lld",
-                                                                     toUUIDIndexData.jobUUID,
-                                                                     archiveType.toString(),
-                                                                     ((EntityIndexData)indexData).entityId
-                                                                    ),
-                                                 0,
-                                                 resultErrorMessage
-                                                );
+            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s entityId=%lld",
+                                                                 toUUIDIndexData.jobUUID,
+                                                                 archiveType.toString(),
+                                                                 ((EntityIndexData)indexData).entityId
+                                                                ),
+                                             0,
+                                             errorMessage
+                                            );
           }
           else if (indexData instanceof StorageIndexData)
           {
-            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s storageId=%lld",
-                                                                     toUUIDIndexData.jobUUID,
-                                                                     archiveType.toString(),
-                                                                     ((StorageIndexData)indexData).storageId
-                                                                    ),
-                                                 0,
-                                                 resultErrorMessage
-                                                );
+            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s storageId=%lld",
+                                                                 toUUIDIndexData.jobUUID,
+                                                                 archiveType.toString(),
+                                                                 ((StorageIndexData)indexData).storageId
+                                                                ),
+                                             0,
+                                             errorMessage
+                                            );
           }
-          if (errorCode == Errors.NONE)
+          if (error == Errors.NONE)
           {
             indexData.setState(IndexStates.UPDATE_REQUESTED);
           }
           else
           {
-            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
           }
         }
       }
@@ -5570,46 +5559,45 @@ Dprintf.dprintf("indexData=%s",indexData);
         {
           final String info = indexData.getInfo();
 
-          String[] resultErrorMessage = new String[1];
-          int errorCode = Errors.UNKNOWN;
+          int      error        = Errors.UNKNOWN;
+          String[] errorMessage = new String[1];
           if      (indexData instanceof UUIDIndexData)
           {
-            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld jobUUID=%'S",
-                                                                     toEntityIndexData.entityId,
-                                                                     ((UUIDIndexData)indexData).jobUUID
-                                                                    ),
-                                                 0,
-                                                 resultErrorMessage
-                                                );
+            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld jobUUID=%'S",
+                                                                 toEntityIndexData.entityId,
+                                                                 ((UUIDIndexData)indexData).jobUUID
+                                                                ),
+                                             0,
+                                             errorMessage
+                                            );
           }
           else if (indexData instanceof EntityIndexData)
           {
-Dprintf.dprintf("indexData=%s",indexData);
-            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld entityId=%lld",
-                                                                     toEntityIndexData.entityId,
-                                                                     ((EntityIndexData)indexData).entityId
-                                                                    ),
-                                                 0,
-                                                 resultErrorMessage
-                                                );
+            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld entityId=%lld",
+                                                                 toEntityIndexData.entityId,
+                                                                 ((EntityIndexData)indexData).entityId
+                                                                ),
+                                             0,
+                                             errorMessage
+                                            );
           }
           else if (indexData instanceof StorageIndexData)
           {
-            errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld storageId=%lld",
-                                                                     toEntityIndexData.entityId,
-                                                                     ((StorageIndexData)indexData).storageId
-                                                                    ),
-                                                 0,
-                                                 resultErrorMessage
-                                                );
+            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld storageId=%lld",
+                                                                 toEntityIndexData.entityId,
+                                                                 ((StorageIndexData)indexData).storageId
+                                                                ),
+                                             0,
+                                             errorMessage
+                                            );
           }
-          if (errorCode == Errors.NONE)
+          if (error == Errors.NONE)
           {
             indexData.setState(IndexStates.UPDATE_REQUESTED);
           }
           else
           {
-            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
           }
         }
       }
@@ -5633,51 +5621,51 @@ Dprintf.dprintf("indexData=%s",indexData);
       getSelectedIndexData(indexDataHashSet);
       if (!indexDataHashSet.isEmpty())
       {
-        if (Dialogs.confirm(shell,BARControl.tr("Really refresh index for {0} {0,choice,1#entry|1<entries}?",indexDataHashSet.size())))
+        if (Dialogs.confirm(shell,BARControl.tr("Refresh index for {0} {0,choice,0#entries|1#entry|1<entries}?",indexDataHashSet.size())))
         {
           for (IndexData indexData : indexDataHashSet)
           {
             final String info = indexData.getInfo();
 
-            String[] resultErrorMessage = new String[1];
-            int errorCode = Errors.UNKNOWN;
+            int      error        = Errors.UNKNOWN;
+            String[] errorMessage = new String[1];
             if      (indexData instanceof UUIDIndexData)
             {
-              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s jobUUID=%'S",
-                                                                       "*",
-                                                                       ((UUIDIndexData)indexData).jobUUID
-                                                                      ),
-                                                   0,
-                                                   resultErrorMessage
-                                                  );
+              error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s jobUUID=%'S",
+                                                                   "*",
+                                                                   ((UUIDIndexData)indexData).jobUUID
+                                                                  ),
+                                               0,
+                                               errorMessage
+                                              );
             }
             else if (indexData instanceof EntityIndexData)
             {
-              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s entityId=%d",
-                                                                       "*",
-                                                                       ((EntityIndexData)indexData).entityId
-                                                                      ),
-                                                   0,
-                                                   resultErrorMessage
-                                                  );
+              error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s entityId=%d",
+                                                                   "*",
+                                                                   ((EntityIndexData)indexData).entityId
+                                                                  ),
+                                               0,
+                                               errorMessage
+                                              );
             }
             else if (indexData instanceof StorageIndexData)
             {
-              errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
-                                                                       "*",
-                                                                       ((StorageIndexData)indexData).storageId
-                                                                      ),
-                                                   0,
-                                                   resultErrorMessage
-                                                  );
+              error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
+                                                                   "*",
+                                                                   ((StorageIndexData)indexData).storageId
+                                                                  ),
+                                               0,
+                                               errorMessage
+                                              );
             }
-            if (errorCode == Errors.NONE)
+            if (error == Errors.NONE)
             {
               indexData.setState(IndexStates.UPDATE_REQUESTED);
             }
             else
             {
-              Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]));
+              Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
             }
           }
         }
@@ -5695,23 +5683,23 @@ Dprintf.dprintf("indexData=%s",indexData);
   {
     try
     {
-      if (Dialogs.confirm(shell,BARControl.tr("Really refresh all indizes with error state?")))
+      if (Dialogs.confirm(shell,BARControl.tr("Refresh all indizes with error state?")))
       {
-        String[] resultErrorMessage = new String[1];
-        int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
-                                                                     "ERROR",
-                                                                     0
-                                                                    ),
-                                                 0,
-                                                 resultErrorMessage
-                                                );
-        if (errorCode == Errors.NONE)
+        String[] errorMessage = new String[1];
+        int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
+                                                                 "ERROR",
+                                                                 0
+                                                                ),
+                                             0,
+                                             errorMessage
+                                            );
+        if (error == Errors.NONE)
         {
           updateStorageThread.triggerUpdate();
         }
         else
         {
-          Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state (error: {0})",resultErrorMessage[0]));
+          Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state (error: {0})",errorMessage[0]));
         }
       }
     }
@@ -5814,18 +5802,18 @@ Dprintf.dprintf("indexData=%s",indexData);
     // add storage file
     if (storageName != null)
     {
-      String[] resultErrorMessage = new String[1];
-      int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD name=%S",storageName),
-                                               0,
-                                               resultErrorMessage
-                                              );
-      if (errorCode == Errors.NONE)
+      String[] errorMessage = new String[1];
+      int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD name=%S",storageName),
+                                           0,
+                                           errorMessage
+                                          );
+      if (error == Errors.NONE)
       {
         updateStorageThread.triggerUpdate();
       }
       else
       {
-        Dialogs.error(shell,BARControl.tr("Cannot add index database for storage file\n\n''{0}''\n\n(error: {1})",storageName,resultErrorMessage[0]));
+        Dialogs.error(shell,BARControl.tr("Cannot add index database for storage file\n\n''{0}''\n\n(error: {1})",storageName,errorMessage[0]));
       }
     }
   }
@@ -5840,7 +5828,7 @@ Dprintf.dprintf("indexData=%s",indexData);
     getSelectedIndexData(indexDataHashSet);
     if (!indexDataHashSet.isEmpty())
     {
-      if (Dialogs.confirm(shell,BARControl.tr("Really remove index of {0} {0,choice,1#entry|1<entries}?",indexDataHashSet.size())))
+      if (Dialogs.confirm(shell,BARControl.tr("Remove index of {0} {0,choice,0#entries|1#entry|1<entries}?",indexDataHashSet.size())))
       {
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
         busyDialog.setMaximum(indexDataHashSet.size());
@@ -5863,36 +5851,36 @@ Dprintf.dprintf("indexData=%s",indexData);
                 busyDialog.updateText(info);
 
                 // remove entry
-                final String[] resultErrorMessage = new String[1];
-                int errorCode = Errors.UNKNOWN;
+                int            error        = Errors.UNKNOWN;
+                final String[] errorMessage = new String[1];
                 if      (indexData instanceof UUIDIndexData)
                 {
-                  errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* jobUUID=%'S",
-                                                                           ((UUIDIndexData)indexData).jobUUID
-                                                                          ),
-                                                       0,
-                                                       resultErrorMessage
-                                                      );
+                  error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* jobUUID=%'S",
+                                                                       ((UUIDIndexData)indexData).jobUUID
+                                                                      ),
+                                                   0,
+                                                   errorMessage
+                                                  );
                 }
                 else if (indexData instanceof EntityIndexData)
                 {
-                  errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* entityId=%d",
-                                                                           ((EntityIndexData)indexData).entityId
-                                                                          ),
-                                                       0,
-                                                       resultErrorMessage
-                                                      );
+                  error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* entityId=%d",
+                                                                        ((EntityIndexData)indexData).entityId
+                                                                       ),
+                                                    0,
+                                                    errorMessage
+                                                   );
                 }
                 else if (indexData instanceof StorageIndexData)
                 {
-                  errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* storageId=%d",
-                                                                           ((StorageIndexData)indexData).storageId
-                                                                          ),
-                                                       0,
-                                                       resultErrorMessage
-                                                      );
+                  error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* storageId=%d",
+                                                                       ((StorageIndexData)indexData).storageId
+                                                                      ),
+                                                   0,
+                                                   errorMessage
+                                                  );
                 }
-                if (errorCode == Errors.NONE)
+                if (error == Errors.NONE)
                 {
                   indexDataMap.remove(indexData);
                   Widgets.removeTreeItem(widgetStorageTree,indexData);
@@ -5904,7 +5892,7 @@ Dprintf.dprintf("indexData=%s",indexData);
                   {
                     public void run()
                     {
-                      Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]));
+                      Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
                     }
                   });
                 }
@@ -5960,11 +5948,11 @@ Dprintf.dprintf("indexData=%s",indexData);
     try
     {
       // get number of indizes with error state
-      final String[] resultErrorMessage = new String[1];
-      ValueMap       resultMap          = new ValueMap();
+      final String[] errorMessage = new String[1];
+      ValueMap       resultMap    = new ValueMap();
       if (BARServer.executeCommand("INDEX_STORAGE_INFO",
                                    0,
-                                   resultErrorMessage,
+                                   errorMessage,
                                    resultMap
                                   ) != Errors.NONE
          )
@@ -5973,7 +5961,7 @@ Dprintf.dprintf("indexData=%s",indexData);
         {
           public void run()
           {
-            Dialogs.error(shell,BARControl.tr("Cannot get database indizes with error state (error: {0})",resultErrorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot get database indizes with error state (error: {0})",errorMessage[0]));
           }
         });
         return;
@@ -5982,7 +5970,7 @@ Dprintf.dprintf("indexData=%s",indexData);
 
       if (errorCount > 0)
       {
-        if (Dialogs.confirm(shell,BARControl.tr("Really remove {0} {0,choice,1#index|1<indizes} with error state?",errorCount)))
+        if (Dialogs.confirm(shell,BARControl.tr("Remove {0} {0,choice,0#indizes|1#index|1<indizes} with error state?",errorCount)))
         {
           final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes with error",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
           busyDialog.autoAnimate();
@@ -5994,8 +5982,8 @@ Dprintf.dprintf("indexData=%s",indexData);
             {
               try
               {
-                final String[] resultErrorMessage = new String[1];
-                ValueMap       resultMap          = new ValueMap();
+                final String[] errorMessage = new String[1];
+                ValueMap       resultMap    = new ValueMap();
 
                 // remove indizes with error state
                 Command command = BARServer.runCommand("INDEX_STORAGE_REMOVE state=ERROR storageId=0",0);
@@ -6003,7 +5991,7 @@ Dprintf.dprintf("indexData=%s",indexData);
                 long n = 0;
                 while (!command.endOfData() && !busyDialog.isAborted())
                 {
-                  if (command.getNextResult(resultErrorMessage,
+                  if (command.getNextResult(errorMessage,
                                             resultMap,
                                             Command.TIMEOUT
                                            ) == Errors.NONE
@@ -6011,8 +5999,8 @@ Dprintf.dprintf("indexData=%s",indexData);
                   {
                     try
                     {
-                      long        storageId           = resultMap.getLong  ("storageId"          );
-                      String      name                = resultMap.getString("name"               );
+                      long        storageId = resultMap.getLong  ("storageId");
+                      String      name      = resultMap.getString("name"     );
 
                       busyDialog.updateText(String.format("%d: %s",storageId,name));
 
@@ -6034,7 +6022,7 @@ Dprintf.dprintf("indexData=%s",indexData);
                       public void run()
                       {
                         busyDialog.close();
-                        Dialogs.error(shell,BARControl.tr("Cannot remove database indizes with error state (error: {0})",resultErrorMessage[0]));
+                        Dialogs.error(shell,BARControl.tr("Cannot remove database indizes with error state (error: {0})",errorMessage[0]));
                       }
                     });
 
@@ -6100,7 +6088,26 @@ Dprintf.dprintf("");
     getSelectedIndexData(indexDataHashSet);
     if (!indexDataHashSet.isEmpty())
     {
-      if (Dialogs.confirm(shell,BARControl.tr("Really delete {0} {0,choice,1#index/storage file|1<indizes and storage files}?",indexDataHashSet.size())))
+      // get number of entries
+      int entries = 0;
+      for (IndexData indexData : indexDataHashSet)
+      {
+        if      (indexData instanceof UUIDIndexData)
+        {
+          entries += ((UUIDIndexData)indexData).totalEntries;
+        }
+        else if (indexData instanceof EntityIndexData)
+        {
+          entries += ((EntityIndexData)indexData).totalEntries;
+        }
+        else if (indexData instanceof StorageIndexData)
+        {
+          entries += ((StorageIndexData)indexData).entries;
+        }
+      }
+
+      // confirm
+      if (Dialogs.confirm(shell,BARControl.tr("Delete {0} {0,choice,0#indizes|1#index|1<indizes} with {1} {1,choice,0#entries|1#entry|1<entries}?",indexDataHashSet.size(),entries)))
       {
         final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
         busyDialog.setMaximum(indexDataHashSet.size());
@@ -6125,36 +6132,36 @@ Dprintf.dprintf("");
                 busyDialog.updateText(info);
 
                 // delete storage
-                final String[] resultErrorMessage = new String[1];
-                int errorCode = Errors.UNKNOWN;
+                int            error        = Errors.UNKNOWN;
+                final String[] errorMessage = new String[1];
                 if      (indexData instanceof UUIDIndexData)
                 {
-                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE jobUUID=%'S",
-                                                                           ((UUIDIndexData)indexData).jobUUID
-                                                                          ),
-                                                       0,
-                                                       resultErrorMessage
-                                                      );
+                  error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE jobUUID=%'S",
+                                                                       ((UUIDIndexData)indexData).jobUUID
+                                                                      ),
+                                                   0,
+                                                   errorMessage
+                                                  );
                 }
                 else if (indexData instanceof EntityIndexData)
                 {
-                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE entityId=%d",
-                                                                           ((EntityIndexData)indexData).entityId
-                                                                          ),
-                                                       0,
-                                                       resultErrorMessage
-                                                      );
+                  error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE entityId=%d",
+                                                                       ((EntityIndexData)indexData).entityId
+                                                                      ),
+                                                   0,
+                                                   errorMessage
+                                                  );
                 }
                 else if (indexData instanceof StorageIndexData)
                 {
-                  errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%d",
-                                                                           ((StorageIndexData)indexData).storageId
-                                                                          ),
-                                                       0,
-                                                       resultErrorMessage
-                                                      );
+                  error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%d",
+                                                                        ((StorageIndexData)indexData).storageId
+                                                                       ),
+                                                    0,
+                                                    errorMessage
+                                                   );
                 }
-                if (errorCode == Errors.NONE)
+                if (error == Errors.NONE)
                 {
                   indexDataMap.remove(indexData);
                   Widgets.removeTreeItem(widgetStorageTree,indexData);
@@ -6175,7 +6182,7 @@ Dprintf.dprintf("");
                         {
                           selection[0] = Dialogs.select(shell,
                                                         BARControl.tr("Confirmation"),
-                                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0]),
+                                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]),
                                                         new String[]{BARControl.tr("Continue"),BARControl.tr("Continue with all"),BARControl.tr("Abort")},
                                                         0
                                                        );
@@ -6189,7 +6196,7 @@ Dprintf.dprintf("");
                         public void run()
                         {
                           Dialogs.error(shell,
-                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,resultErrorMessage[0])
+                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,errorMessage[0])
                                        );
                         }
                       });
@@ -6306,13 +6313,13 @@ Dprintf.dprintf("");
                                             );
 
               // read results, update/add data
-              String[] resultErrorMessage = new String[1];
-              ValueMap resultMap          = new ValueMap();
+              String[] errorMessage = new String[1];
+              ValueMap resultMap    = new ValueMap();
               while (   !command.endOfData()
                      && !busyDialog.isAborted()
                     )
               {
-                if (command.getNextResult(resultErrorMessage,
+                if (command.getNextResult(errorMessage,
                                           resultMap,
                                           60*1000
                                          ) == Errors.NONE
@@ -6686,13 +6693,13 @@ Dprintf.dprintf("");
                                             );
 
               // read results, update/add data
-              String[] resultErrorMessage = new String[1];
-              ValueMap resultMap          = new ValueMap();
+              String[] errorMessage = new String[1];
+              ValueMap resultMap    = new ValueMap();
               while (   !command.endOfData()
                      && !busyDialog.isAborted()
                     )
               {
-                if (command.getNextResult(resultErrorMessage,
+                if (command.getNextResult(errorMessage,
                                           resultMap,
                                           60*1000
                                          ) == Errors.NONE
