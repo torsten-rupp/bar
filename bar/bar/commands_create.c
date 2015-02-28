@@ -5475,7 +5475,7 @@ createThreadCode(&createInfo);
   error = Archive_close(&createInfo.archiveInfo);
   if (error != ERROR_NONE)
   {
-    printError("Cannot close archive file '%s' (error: %s)\n",
+    printError("Cannot close archive '%s' (error: %s)\n",
                Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
                Error_getText(error)
               );
