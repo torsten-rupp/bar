@@ -3260,11 +3260,6 @@ Errors Command_list(StringList                      *storageNameList,
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
 
-#warning XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
-//jobOptions=NULL;
-//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,jobOptions->archivePartSize);
-
-
   // init variables
   AutoFree_init(&autoFreeList);
   List_init(&archiveContentList);
