@@ -9187,7 +9187,7 @@ archiveEntryInfo->image.chunkImageEntry.blockSize
     #endif /* NDEBUG */
   }
 
-  if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag);
+  if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
     archiveEntryInfo->archiveInfo->entries++;
   }
