@@ -823,7 +823,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    AUTOFREE_ADD(&autoFreeList,&archiveInfo->passwordLock,{ Semaphore_done(&archiveInfo->passwordLock); });
+    AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_unlock(&archiveInfo->chunkIOLock); });
 
     if (!archiveInfo->file.openFlag)
     {
@@ -831,12 +831,11 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
       error = File_getTmpFileName(archiveInfo->file.fileName,NULL,tmpDirectory);
       if (error != ERROR_NONE)
       {
-        Semaphore_unlock(&archiveInfo->chunkIOLock);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
       AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileName,{ File_delete(archiveInfo->file.fileName,FALSE); });
-      DEBUG_TESTCODE("createArchiveFile1") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
+      DEBUG_TESTCODE("createArchiveFile1") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
       // create file
       error = File_open(&archiveInfo->file.fileHandle,
@@ -845,22 +844,20 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
                        );
       if (error != ERROR_NONE)
       {
-        Semaphore_unlock(&archiveInfo->chunkIOLock);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
       AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileHandle,{ File_close(&archiveInfo->file.fileHandle); });
-      DEBUG_TESTCODE("createArchiveFile2") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
+      DEBUG_TESTCODE("createArchiveFile2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
       // write BAR file info header
       error = writeFileInfo(archiveInfo);
       if (error != ERROR_NONE)
       {
-        Semaphore_unlock(&archiveInfo->chunkIOLock);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-      DEBUG_TESTCODE("createArchiveFile3") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
+      DEBUG_TESTCODE("createArchiveFile3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
       // write encrypted key if asymmetric encryption enabled
       if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -868,11 +865,10 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
         error = writeEncryptionKey(archiveInfo);
         if (error != ERROR_NONE)
         {
-          Semaphore_unlock(&archiveInfo->chunkIOLock);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        DEBUG_TESTCODE("createArchiveFile4") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
+        DEBUG_TESTCODE("createArchiveFile4") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       }
 
       if (   (archiveInfo->indexHandle != NULL)
@@ -891,12 +887,11 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
                                 );
         if (error != ERROR_NONE)
         {
-          Semaphore_unlock(&archiveInfo->chunkIOLock);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
         AUTOFREE_ADD(&autoFreeList,&archiveInfo->storageId,{ Index_deleteStorage(archiveInfo->indexHandle,archiveInfo->storageId); });
-        DEBUG_TESTCODE("createArchiveFile5") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
+        DEBUG_TESTCODE("createArchiveFile5") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       }
       else
       {
@@ -914,11 +909,10 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
                                                );
         if (error != ERROR_NONE)
         {
-          Semaphore_unlock(&archiveInfo->chunkIOLock);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        DEBUG_TESTCODE("createArchiveFile6") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
+        DEBUG_TESTCODE("createArchiveFile6") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       }
 
       // mark archive file "open"
