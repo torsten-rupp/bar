@@ -300,159 +300,78 @@ LOCAL Errors setIndexVersion(const char *databaseFileName, int64 indexVersion)
 }
 
 /***********************************************************************\
-* Name   : cleanUp
-* Purpose: clean-up index database
-* Input  : indexHandle - index handle
-* Output : -
-* Return : -
-* Notes  : clean-up steps:
-*            - remove duplicates in meta-table
-*            - set id in storage, files, images, directories, links,
-*              hardlinks, special
-\***********************************************************************/
-
-LOCAL void cleanUp(IndexHandle *indexHandle)
-{
-  DatabaseQueryHandle databaseQueryHandle;
-  String              name;
-
-  // remove duplicate entries in meta table
-  if (Database_prepare(&databaseQueryHandle,
-                       &indexHandle->databaseHandle,
-                       "SELECT name FROM meta GROUP BY name"
-                      ) == ERROR_NONE
-     )
-  {
-    name = String_new();
-    while (Database_getNextRow(&databaseQueryHandle,
-                               "%S",
-                               name
-                              )
-          )
-    {
-      (void)Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM meta \
-                              WHERE     name=%'S \
-                                    AND rowid NOT IN (SELECT rowid FROM meta WHERE name=%'S ORDER BY rowId DESC LIMIT 0,1); \
-                             ",
-                             name,
-                             name
-                            );
-    }
-    String_delete(name);
-    Database_finalize(&databaseQueryHandle);
-  }
-
-#if 0
-  // fix ids
-  (void)Database_execute(&indexHandle->databaseHandle,
-                         CALLBACK(NULL,NULL),
-                         "UPDATE storage SET id=rowId WHERE id IS NULL;"
-                        );
-  (void)Database_execute(&indexHandle->databaseHandle,
-                         CALLBACK(NULL,NULL),
-                         "UPDATE files SET id=rowId WHERE id IS NULL;"
-                        );
-  (void)Database_execute(&indexHandle->databaseHandle,
-                         CALLBACK(NULL,NULL),
-                         "UPDATE images SET id=rowId WHERE id IS NULL;"
-                        );
-  (void)Database_execute(&indexHandle->databaseHandle,
-                         CALLBACK(NULL,NULL),
-                         "UPDATE directories SET id=rowId WHERE id IS NULL;"
-                        );
-  (void)Database_execute(&indexHandle->databaseHandle,
-                         CALLBACK(NULL,NULL),
-                         "UPDATE links SET id=rowId WHERE id IS NULL;"
-                        );
-  (void)Database_execute(&indexHandle->databaseHandle,
-                         CALLBACK(NULL,NULL),
-                         "UPDATE hardlinks SET id=rowId WHERE id IS NULL;"
-                        );
-  (void)Database_execute(&indexHandle->databaseHandle,
-                         CALLBACK(NULL,NULL),
-                         "UPDATE special SET id=rowId WHERE id IS NULL;"
-                        );
-#endif
-}
-
-/***********************************************************************\
-* Name   : upgradeIndexToVersion2
-* Purpose: upgrade index to version 2
+* Name   : upgradeFromVersion1
+* Purpose: upgrade index from version 1 to current version
 * Input  : indexHandle - index handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeIndexToVersion2(const char *databaseFileName)
+LOCAL Errors upgradeFromVersion1(const char *databaseFileName)
 {
-  String      newDatabaseFileName,backupDatabaseFileName;
+  String      newDatabaseFileName;
   Errors      error;
-  IndexHandle indexHandle,newIndexHandle;
+  IndexHandle oldIndexHandle,newIndexHandle;
+  String      backupDatabaseFileName;
 
   // open old index
-  error = openIndex(&indexHandle,databaseFileName);
+  error = openIndex(&oldIndexHandle,databaseFileName);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
-  // create new empty index
-  newDatabaseFileName    = String_new();
-  backupDatabaseFileName = String_new();
-  String_setCString(newDatabaseFileName,databaseFileName);
+  // create new empty index, disable foreign-key contrains
+  newDatabaseFileName = String_newCString(databaseFileName);
   String_appendCString(newDatabaseFileName,".new");
-  String_setCString(backupDatabaseFileName,databaseFileName);
-  String_appendCString(backupDatabaseFileName,".backup");
   error = createIndex(&newIndexHandle,String_cString(newDatabaseFileName));
   if (error != ERROR_NONE)
   {
-    String_delete(backupDatabaseFileName);
     String_delete(newDatabaseFileName);
     return error;
   }
+  (void)Database_setEnabledForeignKeys(&newIndexHandle.databaseHandle,FALSE);
 
-  // transfer data to new index
+  // transfer index data to new index
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "storage"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "files"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "images"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "directories"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "links"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "special"
                               );
@@ -460,26 +379,27 @@ LOCAL Errors upgradeIndexToVersion2(const char *databaseFileName)
   if (error != ERROR_NONE)
   {
     (void)closeIndex(&newIndexHandle);
-    (void)closeIndex(&indexHandle);
+    (void)closeIndex(&oldIndexHandle);
     (void)File_delete(newDatabaseFileName,FALSE);
-    String_delete(backupDatabaseFileName);
     String_delete(newDatabaseFileName);
     return error;
   }
 
-  // close new database
+  // close databases
   (void)closeIndex(&newIndexHandle);
-  (void)closeIndex(&indexHandle);
+  (void)closeIndex(&oldIndexHandle);
 
   // rename database files
+  backupDatabaseFileName = String_newCString(databaseFileName);
+  String_appendCString(backupDatabaseFileName,".backup");
   error = File_renameCString(String_cString(newDatabaseFileName),
                              databaseFileName,
                              String_cString(backupDatabaseFileName)
                             );
   if (error != ERROR_NONE)
   {
-    (void)File_delete(newDatabaseFileName,FALSE);
     String_delete(backupDatabaseFileName);
+    (void)File_delete(newDatabaseFileName,FALSE);
     String_delete(newDatabaseFileName);
     return error;
   }
@@ -492,15 +412,15 @@ LOCAL Errors upgradeIndexToVersion2(const char *databaseFileName)
 }
 
 /***********************************************************************\
-* Name   : upgradeIndexToVersion3
-* Purpose: upgrade index to version 3
+* Name   : upgradeFromVersion2
+* Purpose: upgrade index from version 2 to current version
 * Input  : indexHandle - index handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeIndexToVersion3(const char *databaseFileName)
+LOCAL Errors upgradeFromVersion2(const char *databaseFileName)
 {
 #if 0
   Errors      error;
@@ -516,78 +436,75 @@ LOCAL Errors upgradeIndexToVersion3(const char *databaseFileName)
   return ERROR_NONE;
 #endif
 
-  String         newDatabaseFileName,backupDatabaseFileName;
-  Errors         error;
-  IndexHandle indexHandle,newIndexHandle;
+  String      newDatabaseFileName;
+  Errors      error;
+  IndexHandle oldIndexHandle,newIndexHandle;
+  String      backupDatabaseFileName;
 
   // open old index
-  error = openIndex(&indexHandle,databaseFileName);
+  error = openIndex(&oldIndexHandle,databaseFileName);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
-  // create new empty index database
-  newDatabaseFileName    = String_new();
-  backupDatabaseFileName = String_new();
-  String_setCString(newDatabaseFileName,databaseFileName);
+  // create new empty index, disable foreign-key contrains
+  newDatabaseFileName = String_newCString(databaseFileName);
   String_appendCString(newDatabaseFileName,".new");
-  String_setCString(backupDatabaseFileName,databaseFileName);
-  String_appendCString(backupDatabaseFileName,".backup");
   error = createIndex(&newIndexHandle,String_cString(newDatabaseFileName));
   if (error != ERROR_NONE)
   {
-    String_delete(backupDatabaseFileName);
     String_delete(newDatabaseFileName);
     return error;
   }
+  (void)Database_setEnabledForeignKeys(&newIndexHandle.databaseHandle,FALSE);
 
-  // transfer data to new index
+  // transfer index data to new index
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "storage"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "files"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "images"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "directories"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "links"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "hardlinks"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "special"
                               );
@@ -595,26 +512,27 @@ LOCAL Errors upgradeIndexToVersion3(const char *databaseFileName)
   if (error != ERROR_NONE)
   {
     (void)closeIndex(&newIndexHandle);
-    (void)closeIndex(&indexHandle);
+    (void)closeIndex(&oldIndexHandle);
     (void)File_delete(newDatabaseFileName,FALSE);
-    String_delete(backupDatabaseFileName);
     String_delete(newDatabaseFileName);
     return error;
   }
 
-  // close new database
+  // close databases
   (void)closeIndex(&newIndexHandle);
-  (void)closeIndex(&indexHandle);
+  (void)closeIndex(&oldIndexHandle);
 
   // rename database files
+  backupDatabaseFileName = String_newCString(databaseFileName);
+  String_appendCString(backupDatabaseFileName,".backup");
   error = File_renameCString(String_cString(newDatabaseFileName),
                              databaseFileName,
                              String_cString(backupDatabaseFileName)
                             );
   if (error != ERROR_NONE)
   {
-    (void)File_delete(newDatabaseFileName,FALSE);
     String_delete(backupDatabaseFileName);
+    (void)File_delete(newDatabaseFileName,FALSE);
     String_delete(newDatabaseFileName);
     return error;
   }
@@ -627,19 +545,19 @@ LOCAL Errors upgradeIndexToVersion3(const char *databaseFileName)
 }
 
 /***********************************************************************\
-* Name   : upgradeIndexToVersion4
-* Purpose: upgrade index to version 4
+* Name   : upgradeFromVersion3
+* Purpose: upgrade index from version 3 to current version
 * Input  : indexHandle - index handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeIndexToVersion4(const char *databaseFileName)
+LOCAL Errors upgradeFromVersion3(const char *databaseFileName)
 {
-  String              newDatabaseFileName,backupDatabaseFileName;
+  String              newDatabaseFileName;
   Errors              error;
-  IndexHandle         indexHandle,newIndexHandle;
+  IndexHandle         oldIndexHandle,newIndexHandle;
   String              name1,name2;
   DatabaseQueryHandle databaseQueryHandle1,databaseQueryHandle2;
   DatabaseId          storageId;
@@ -648,135 +566,128 @@ LOCAL Errors upgradeIndexToVersion4(const char *databaseFileName)
   DatabaseId          entityId;
   bool                equalsFlag;
   ulong               i;
+  String              backupDatabaseFileName;
 
   // open old index
-  error = openIndex(&indexHandle,databaseFileName);
+  error = openIndex(&oldIndexHandle,databaseFileName);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
   // fix possible broken ids
-  (void)Database_execute(&indexHandle.databaseHandle,
+  (void)Database_execute(&oldIndexHandle.databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE storage SET id=rowId WHERE id IS NULL;"
                         );
-  (void)Database_execute(&indexHandle.databaseHandle,
+  (void)Database_execute(&oldIndexHandle.databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE files SET id=rowId WHERE id IS NULL;"
                         );
-  (void)Database_execute(&indexHandle.databaseHandle,
+  (void)Database_execute(&oldIndexHandle.databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE images SET id=rowId WHERE id IS NULL;"
                         );
-  (void)Database_execute(&indexHandle.databaseHandle,
+  (void)Database_execute(&oldIndexHandle.databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE directories SET id=rowId WHERE id IS NULL;"
                         );
-  (void)Database_execute(&indexHandle.databaseHandle,
+  (void)Database_execute(&oldIndexHandle.databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE links SET id=rowId WHERE id IS NULL;"
                         );
-  (void)Database_execute(&indexHandle.databaseHandle,
+  (void)Database_execute(&oldIndexHandle.databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE hardlinks SET id=rowId WHERE id IS NULL;"
                         );
-  (void)Database_execute(&indexHandle.databaseHandle,
+  (void)Database_execute(&oldIndexHandle.databaseHandle,
                          CALLBACK(NULL,NULL),
                          "UPDATE special SET id=rowId WHERE id IS NULL;"
                         );
 
-  // create new empty index, temporary disable foreign key contrains
-  newDatabaseFileName    = String_new();
-  backupDatabaseFileName = String_new();
-  String_setCString(newDatabaseFileName,databaseFileName);
+  // create new empty index, disable foreign-key contrains
+  newDatabaseFileName = String_newCString(databaseFileName);
   String_appendCString(newDatabaseFileName,".new");
-  String_setCString(backupDatabaseFileName,databaseFileName);
-  String_appendCString(backupDatabaseFileName,".backup");
   error = createIndex(&newIndexHandle,String_cString(newDatabaseFileName));
   if (error != ERROR_NONE)
   {
-    String_delete(backupDatabaseFileName);
     String_delete(newDatabaseFileName);
     return error;
   }
-  Database_setEnabledForeignKeys(&newIndexHandle.databaseHandle,FALSE);
+  (void)Database_setEnabledForeignKeys(&newIndexHandle.databaseHandle,FALSE);
 
   // transfer data to new database
 #ifndef NDEBUG
 Database_debugEnable(false);
 //Database_debugEnable(true);
 #endif
+  // transfer index data to new index
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "storage"
                               );
   }
-#ifndef NDEBUG
-//Database_debugEnable(false);
-#endif
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "files"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "images"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "directories"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "links"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "hardlinks"
                               );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_copyTable(&indexHandle.databaseHandle,
+    error = Database_copyTable(&oldIndexHandle.databaseHandle,
                                &newIndexHandle.databaseHandle,
                                "special"
                               );
   }
 #ifndef NDEBUG
-//Database_debugEnable(true);
+//Database_debugEnable(false);
 #endif
   if (error != ERROR_NONE)
   {
     (void)closeIndex(&newIndexHandle);
-    (void)closeIndex(&indexHandle);
+    (void)closeIndex(&oldIndexHandle);
     (void)File_delete(newDatabaseFileName,FALSE);
-    String_delete(backupDatabaseFileName);
     String_delete(newDatabaseFileName);
     return error;
   }
 
-  // set entityId in storage entries
+  // try to set entityId in storage entries
   name1 = String_new();
   name2 = String_new();
   error = Database_prepare(&databaseQueryHandle1,
-                           &indexHandle.databaseHandle,
+                           &oldIndexHandle.databaseHandle,
                            "SELECT uuid, \
                                    name, \
                                    STRFTIME('%%s',created) \
@@ -827,7 +738,7 @@ Database_debugEnable(false);
 
         // assign entity id for all storage entries with same uuid and matching name (equals except digits)
         error = Database_prepare(&databaseQueryHandle2,
-                                 &indexHandle.databaseHandle,
+                                 &oldIndexHandle.databaseHandle,
                                  "SELECT id, \
                                          name \
                                   FROM storage \
@@ -878,29 +789,22 @@ Database_debugEnable(false);
   }
   String_delete(name2);
   String_delete(name1);
-  if (error != ERROR_NONE)
-  {
-    (void)closeIndex(&newIndexHandle);
-    (void)closeIndex(&indexHandle);
-    (void)File_delete(newDatabaseFileName,FALSE);
-    String_delete(backupDatabaseFileName);
-    String_delete(newDatabaseFileName);
-    return error;
-  }
 
-  // close new database
+  // close databases
   (void)closeIndex(&newIndexHandle);
-  (void)closeIndex(&indexHandle);
+  (void)closeIndex(&oldIndexHandle);
 
   // rename database files
+  backupDatabaseFileName = String_newCString(databaseFileName);
+  String_appendCString(backupDatabaseFileName,".backup");
   error = File_renameCString(String_cString(newDatabaseFileName),
                              databaseFileName,
                              String_cString(backupDatabaseFileName)
                             );
   if (error != ERROR_NONE)
   {
-    (void)File_delete(newDatabaseFileName,FALSE);
     String_delete(backupDatabaseFileName);
+    (void)File_delete(newDatabaseFileName,FALSE);
     String_delete(newDatabaseFileName);
     return error;
   }
@@ -926,51 +830,652 @@ LOCAL Errors upgradeIndex(IndexHandle *indexHandle)
   Errors error;
   int64  indexVersion;
 
-  do
+  // get index version
+  error = getIndexVersion(indexHandle->databaseFileName,&indexVersion);
+  if (error != ERROR_NONE)
   {
-    // get index version
-    error = getIndexVersion(indexHandle->databaseFileName,&indexVersion);
-    if (error != ERROR_NONE)
+    return error;
+  }
+
+  if (indexVersion < INDEX_VERSION)
+  {
+    // upgrade index structure
+    switch (indexVersion)
     {
+      case 1:
+        error = upgradeFromVersion1(indexHandle->databaseFileName);
+        break;
+      case 2:
+        error = upgradeFromVersion2(indexHandle->databaseFileName);
+        break;
+      case 3:
+        error = upgradeFromVersion3(indexHandle->databaseFileName);
+        break;
+      case 4:
+        // nothing to do
+        break;
+      default:
+        // unknown version if index
+        error = ERROR_DATABASE_VERSION_UNKNOWN;
+        break;
+    }
+    if (error == ERROR_NONE)
+    {
+      plogMessage(LOG_TYPE_INDEX,"INDEX","Upgraded from version %d to %d\n",indexVersion,INDEX_VERSION);
+    }
+    else
+    {
+      plogMessage(LOG_TYPE_INDEX,"INDEX","Upgrade version from %d to %d fail: %s\n",indexVersion,INDEX_VERSION,Error_getText(error));
       return error;
     }
+  }
 
-    // upgrade index structure
-    if (indexVersion < INDEX_VERSION)
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : cleanUpIncompleteUpdate
+* Purpose: reset incomplete updated database entries
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
+{
+  String              name;
+  DatabaseQueryHandle databaseQueryHandle;
+
+  // init variables
+  name = String_new();
+
+  if (Database_prepare(&databaseQueryHandle,
+                       &indexHandle->databaseHandle,
+                       "SELECT name FROM meta GROUP BY name"
+                      ) == ERROR_NONE
+     )
+  {
+    while (Database_getNextRow(&databaseQueryHandle,
+                               "%S",
+                               name
+                              )
+          )
     {
-      switch (indexVersion)
-      {
-        case 1:
-          error = upgradeIndexToVersion2(indexHandle->databaseFileName);
-          indexVersion = 2;
-        case 2:
-          error = upgradeIndexToVersion3(indexHandle->databaseFileName);
-          indexVersion = 3;
-          break;
-        case 3:
-          error = upgradeIndexToVersion4(indexHandle->databaseFileName);
-          indexVersion = 4;
-          break;
-        default:
-          // assume correct database version if index is unknown
-          indexVersion = INDEX_VERSION;
-          break;
-      }
-      if (error != ERROR_NONE)
-      {
-        plogMessage(LOG_TYPE_INDEX,"INDEX","Init index database fail: %s\n",Error_getText(error));
-        return error;
-      }
+      (void)Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM meta \
+                              WHERE     name=%'S \
+                                    AND rowid NOT IN (SELECT rowid FROM meta WHERE name=%'S ORDER BY rowId DESC LIMIT 0,1); \
+                             ",
+                             name,
+                             name
+                            );
+    }
+    Database_finalize(&databaseQueryHandle);
+  }
 
-      // update index version
-      error = setIndexVersion(indexHandle->databaseFileName,indexVersion);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+  // free resources
+  String_delete(name);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : cleanUpIncompleteUpdate
+* Purpose: reset incomplete updated database entries
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
+{
+  Errors           error;
+  DatabaseId       storageId;
+  StorageSpecifier storageSpecifier;
+  String           storageName,printableStorageName;
+
+  // init variables
+  storageName          = String_new();
+  printableStorageName = String_new();
+
+  error = ERROR_NONE;
+  while (Index_findByState(indexHandle,
+                           INDEX_STATE_SET(INDEX_STATE_UPDATE),
+                           NULL, // jobUUID
+                           NULL, // scheduleUUID
+                           &storageId,
+                           NULL, // storageName
+                           NULL  // lastCheckedTimestamp
+                          )
+         && (error == ERROR_NONE)
+        )
+  {
+    // get printable name (if possible)
+    error = Storage_parseName(&storageSpecifier,storageName);
+    if (error == ERROR_NONE)
+    {
+      String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+    }
+    else
+    {
+      String_set(printableStorageName,storageName);
+    }
+
+    error = Index_setState(indexHandle,
+                           storageId,
+                           INDEX_STATE_UPDATE_REQUESTED,
+                           0LL,
+                           NULL
+                          );
+    if (error == ERROR_NONE)
+    {
+      plogMessage(LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Requested update index #%lld: %s\n",
+                  storageId,
+                  String_cString(printableStorageName)
+                 );
     }
   }
-  while (indexVersion < INDEX_VERSION);
+
+  // free resources
+  String_delete(printableStorageName);
+  String_delete(storageName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : cleanUpIncompleteCreate
+* Purpose: delete incomplete created database entries
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
+{
+  Errors           error;
+  DatabaseId       storageId;
+  StorageSpecifier storageSpecifier;
+  String           storageName,printableStorageName;
+
+  // init variables
+  storageName          = String_new();
+  printableStorageName = String_new();
+
+  error = ERROR_NONE;
+  while (Index_findByState(indexHandle,
+                           INDEX_STATE_SET(INDEX_STATE_CREATE),
+                           NULL, // jobUUID
+                           NULL, // scheduleUUID
+                           &storageId,
+                           storageName,
+                           NULL  // lastCheckedTimestamp
+                          )
+         && (error == ERROR_NONE)
+        )
+  {
+    // get printable name (if possible)
+    error = Storage_parseName(&storageSpecifier,storageName);
+    if (error == ERROR_NONE)
+    {
+      String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+    }
+    else
+    {
+      String_set(printableStorageName,storageName);
+    }
+
+    error = Index_deleteStorage(indexHandle,storageId);
+    if (error == ERROR_NONE)
+    {
+      plogMessage(LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Deleted incomplete index #%lld: %s\n",
+                  storageId,
+                  String_cString(printableStorageName)
+                 );
+    }
+  }
+
+  // free resources
+  String_delete(printableStorageName);
+  String_delete(storageName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : cleanUpOrphanedEntries
+* Purpose: delete orphaned entries (entries without storage)
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
+{
+  String           storageName;
+  ulong            n;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       databaseId;
+
+  // initialize variables
+  storageName = String_new();
+
+  // clean-up
+  n = 0L;
+  error = Index_initListFiles(&indexQueryHandle,
+                              indexHandle,
+                              NULL,
+                              0,
+                              NULL
+                             );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextFile(&indexQueryHandle,
+                             &databaseId,
+                             storageName,
+                             NULL,  // storageDateTime,
+                             NULL,  // name,
+                             NULL,  // size,
+                             NULL,  // timeModified,
+                             NULL,  // userId,
+                             NULL,  // groupId,
+                             NULL,  // permission,
+                             NULL,  // fragmentOffset,
+                             NULL   // fragmentSize
+                            )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteFile(indexHandle,databaseId);
+        n++;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  error = Index_initListImages(&indexQueryHandle,
+                               indexHandle,
+                               NULL,
+                               0,
+                               NULL
+                              );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextImage(&indexQueryHandle,
+                              &databaseId,
+                              storageName,
+                              NULL,  // storageDateTime,
+                              NULL,  // imageName,
+                              NULL,  // fileSystemType,
+                              NULL,  // size,
+                              NULL,  // blockOffset,
+                              NULL   // blockCount
+                             )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteImage(indexHandle,databaseId);
+        n++;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  error = Index_initListDirectories(&indexQueryHandle,
+                                    indexHandle,
+                                    NULL,
+                                    0,
+                                    NULL
+                                   );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextDirectory(&indexQueryHandle,
+                                  &databaseId,
+                                  storageName,
+                                  NULL,  // storageDateTime,
+                                  NULL,  // directoryName,
+                                  NULL,  // timeModified,
+                                  NULL,  // userId,
+                                  NULL,  // groupId,
+                                  NULL   // permission
+                                 )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteDirectory(indexHandle,databaseId);
+        n++;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  error = Index_initListLinks(&indexQueryHandle,
+                                    indexHandle,
+                                    NULL,
+                                    0,
+                                    NULL
+                                   );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextLink(&indexQueryHandle,
+                             &databaseId,
+                             storageName,
+                             NULL,  // storageDateTime,
+                             NULL,  // name,
+                             NULL,  // destinationName
+                             NULL,  // timeModified,
+                             NULL,  // userId,
+                             NULL,  // groupId,
+                             NULL   // permission
+                            )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteLink(indexHandle,databaseId);
+        n++;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  error = Index_initListHardLinks(&indexQueryHandle,
+                                  indexHandle,
+                                  NULL,
+                                  0,
+                                  NULL
+                                 );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextHardLink(&indexQueryHandle,
+                                 &databaseId,
+                                 storageName,
+                                 NULL,  // storageDateTime,
+                                 NULL,  // fileName,
+                                 NULL,  // size,
+                                 NULL,  // timeModified,
+                                 NULL,  // userId,
+                                 NULL,  // groupId,
+                                 NULL,  // permission,
+                                 NULL,  // fragmentOffset
+                                 NULL   // fragmentSize
+                                )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteHardLink(indexHandle,databaseId);
+        n++;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  error = Index_initListSpecial(&indexQueryHandle,
+                                indexHandle,
+                                NULL, // storage ids
+                                0,    // storage id count
+                                NULL  // pattern
+                               );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextSpecial(&indexQueryHandle,
+                                &databaseId,
+                                storageName,
+                                NULL,  // storageDateTime,
+                                NULL,  // name,
+                                NULL,  // timeModified,
+                                NULL,  // userId,
+                                NULL,  // groupId,
+                                NULL   // permission
+                               )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteSpecial(indexHandle,databaseId);
+        n++;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  if (n > 0L) plogMessage(LOG_TYPE_INDEX,"INDEX","Cleaned %lu orphaned entries\n",n);
+
+  // free resources
+  String_delete(storageName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : cleanUpStoragenNoName
+* Purpose: delete storage entries without name
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
+{
+  StorageSpecifier storageSpecifier;
+  String           storageName;
+  String           printableStorageName;
+  ulong            n;
+  Errors           error;
+  DatabaseId       storageId;
+  IndexQueryHandle indexQueryHandle;
+
+  // init variables
+  Storage_initSpecifier(&storageSpecifier);
+  storageName          = String_new();
+  printableStorageName = String_new();
+
+  // clean-up
+  n = 0L;
+  error = Index_initListStorage(&indexQueryHandle,
+                                indexHandle,
+                                NULL, // uuid
+                                DATABASE_ID_ANY, // entity id
+                                STORAGE_TYPE_ANY,
+                                NULL, // storageName
+                                NULL, // hostName
+                                NULL, // loginName
+                                NULL, // deviceName
+                                NULL, // fileName
+                                INDEX_STATE_SET_ALL
+                               );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
+                                NULL, // archive type
+                                storageName,
+                                NULL, // createdDateTime
+                                NULL, // entries
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+      if (String_isEmpty(storageName))
+      {
+        (void)Index_deleteStorage(indexHandle,storageId);
+        n++;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  if (n > 0L) plogMessage(LOG_TYPE_INDEX,"INDEX","Cleaned %lu indizes without name\n",n);
+
+  // free resource
+  String_delete(printableStorageName);
+  String_delete(storageName);
+  Storage_doneSpecifier(&storageSpecifier);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : cleanUpDuplicateIndizes
+* Purpose: delete duplicate storage entries
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
+{
+  StorageSpecifier storageSpecifier;
+  String           storageName;
+  String           duplicateStorageName;
+  String           printableStorageName;
+  ulong            n;
+  Errors           error;
+  DatabaseId       storageId;
+  bool             deletedIndex;
+  IndexQueryHandle indexQueryHandle1,indexQueryHandle2;
+  int64            duplicateStorageId;
+
+  // init variables
+  Storage_initSpecifier(&storageSpecifier);
+  storageName          = String_new();
+  duplicateStorageName = String_new();
+  printableStorageName = String_new();
+
+  // clean-up
+  n = 0L;
+  do
+  {
+    deletedIndex = FALSE;
+
+    // get storage entry
+    error = Index_initListStorage(&indexQueryHandle1,
+                                  indexHandle,
+                                  NULL, // uuid
+                                  DATABASE_ID_ANY, // entity id
+                                  STORAGE_TYPE_ANY,
+                                  NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL
+                                 );
+    if (error != ERROR_NONE)
+    {
+      break;
+    }
+    while (   !deletedIndex
+           && Index_getNextStorage(&indexQueryHandle1,
+                                   &storageId,
+                                   NULL, // entity id
+                                   NULL, // job UUID
+                                   NULL, // schedule UUID
+                                   NULL, // archive type
+                                   storageName,
+                                   NULL, // createdDateTime
+                                   NULL, // entries
+                                   NULL, // size
+                                   NULL, // indexState
+                                   NULL, // indexMode
+                                   NULL, // lastCheckedDateTime
+                                   NULL  // errorMessage
+                                  )
+          )
+    {
+      // check for duplicate entry
+      error = Index_initListStorage(&indexQueryHandle2,
+                                    indexHandle,
+                                    NULL, // uuid
+                                    DATABASE_ID_ANY, // entity id
+                                    STORAGE_TYPE_ANY,
+                                    NULL, // storageName
+                                    NULL, // hostName
+                                    NULL, // loginName
+                                    NULL, // deviceName
+                                    NULL, // fileName
+                                    INDEX_STATE_SET_ALL
+                                   );
+      if (error != ERROR_NONE)
+      {
+        continue;
+      }
+      while (Index_getNextStorage(&indexQueryHandle2,
+                                  &duplicateStorageId,
+                                  NULL, // entity id
+                                  NULL, // job UUID
+                                  NULL, // schedule UUID
+                                  NULL, // archive type
+                                  duplicateStorageName,
+                                  NULL, // createdDateTime
+                                  NULL, // entries
+                                  NULL, // size
+                                  NULL, // indexState
+                                  NULL, // indexMode
+                                  NULL, // lastCheckedDateTime
+                                  NULL  // errorMessage
+                                 )
+            )
+      {
+        if (   (storageId != duplicateStorageId)
+            && Storage_equalNames(storageName,duplicateStorageName)
+           )
+        {
+          // get printable name (if possible)
+          error = Storage_parseName(&storageSpecifier,storageName);
+          if (error == ERROR_NONE)
+          {
+            String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+          }
+          else
+          {
+            String_set(printableStorageName,storageName);
+          }
+
+          error = Index_deleteStorage(indexHandle,duplicateStorageId);
+          if (error == ERROR_NONE)
+          {
+            plogMessage(LOG_TYPE_INDEX,
+                        "INDEX",
+                        "Deleted duplicate index #%lld: '%s'\n",
+                        duplicateStorageId,
+                        String_cString(printableStorageName)
+                       );
+            n++;
+            break;
+          }
+          deletedIndex = TRUE;
+          break;
+        }
+      }
+      Index_doneList(&indexQueryHandle2);
+    }
+    Index_doneList(&indexQueryHandle1);
+  }
+  while (deletedIndex);
+  if (n > 0L) plogMessage(LOG_TYPE_INDEX,"INDEX","Cleaned %lu duplicate indizes\n",n);
+
+  // free resources
+  String_delete(printableStorageName);
+  String_delete(duplicateStorageName);
+  String_delete(storageName);
+  Storage_doneSpecifier(&storageSpecifier);
 
   return ERROR_NONE;
 }
@@ -1023,13 +1528,23 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   indexHandle->isReady = TRUE;
   plogMessage(LOG_TYPE_INDEX,"INDEX","Done init index database\n");
 
+  // single clean-ups
+  (void)cleanUpIncompleteUpdate(indexHandle);
+  (void)cleanUpIncompleteCreate(indexHandle);
+
+  // regular clean-ups
 #warning TODO
   while (!quitFlag)
   {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // clean-up database
     plogMessage(LOG_TYPE_INDEX,"INDEX","Start clean-up index database\n");
-    cleanUp(indexHandle);
+
+    (void)cleanUpDuplicateMeta(indexHandle);
+    (void)cleanUpOrphanedEntries(indexHandle);
+    (void)cleanUpStorageNoName(indexHandle);
+    (void)cleanUpDuplicateIndizes(indexHandle);
+
     plogMessage(LOG_TYPE_INDEX,"INDEX","Done clean-up index database\n");
 
     Misc_udelay(1LL*MISC_US_PER_HOUR);
@@ -1783,7 +2298,12 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                             GROUP BY entities.jobUUID; \
                            "
                           );
-//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+  if (error != ERROR_NONE)
+  {
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
   DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   return error;
@@ -1890,7 +2410,12 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                            MAX_UINT,
                            offset
                           );
-//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+  if (error != ERROR_NONE)
+  {
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
   DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   return error;
@@ -2075,9 +2600,14 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                            entityId,
                            getIndexStateSetString(indexStateSetString,indexStateSet)
                           );
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
-
   String_delete(indexStateSetString);
+  if (error != ERROR_NONE)
+  {
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   return error;
 }
@@ -2588,10 +3118,15 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            regexpString,
                            storageIdsString
                           );
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
-
   String_delete(storageIdsString);
   String_delete(regexpString);
+  if (error != ERROR_NONE)
+  {
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   return error;
 }
@@ -2696,10 +3231,15 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                            regexpString,
                            storageIdsString
                           );
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
-
   String_delete(storageIdsString);
   String_delete(regexpString);
+  if (error != ERROR_NONE)
+  {
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   return error;
 }
@@ -2798,10 +3338,15 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                            regexpString,
                            storageIdsString
                           );
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
-
   String_delete(storageIdsString);
   String_delete(regexpString);
+  if (error != ERROR_NONE)
+  {
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   return error;
 }
@@ -2901,10 +3446,15 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            regexpString,
                            storageIdsString
                           );
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
-
   String_delete(storageIdsString);
   String_delete(regexpString);
+  if (error != ERROR_NONE)
+  {
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   return error;
 }
@@ -3008,10 +3558,16 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                            regexpString,
                            storageIdsString
                           );
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
-
   String_delete(storageIdsString);
   String_delete(regexpString);
+  if (error != ERROR_NONE)
+  {
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
+
 
   return error;
 }
@@ -3116,10 +3672,15 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                            regexpString,
                            storageIdsString
                           );
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
-
   String_delete(storageIdsString);
   String_delete(regexpString);
+  if (error != ERROR_NONE)
+  {
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
 
   return error;
 }
