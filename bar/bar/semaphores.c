@@ -744,7 +744,7 @@ LOCAL void unlock(const char *fileName, ulong lineNb, Semaphore *semaphore)
 {
   #ifndef NDEBUG
     pthread_t threadSelf;
-    uint      z;
+    int       z;
   #endif /* not NDEBUG */
 
   assert(semaphore != NULL);
@@ -761,14 +761,14 @@ LOCAL void unlock(const char *fileName, ulong lineNb, Semaphore *semaphore)
         #ifndef NDEBUG
           // debug lock code: remove lock information
           threadSelf = pthread_self();
-          z = 0;
-          while (   (z < semaphore->lockedByCount)
+          z = (int)semaphore->lockedByCount-1;
+          while (   (z >= 0)
                  && (pthread_equal(threadSelf,semaphore->lockedBy[z].thread) == 0)
                 )
           {
-            z++;
+            z--;
           }
-          if (z < semaphore->lockedByCount)
+          if (z >= 0)
           {
             memset(&semaphore->lockedBy[z],0,sizeof(semaphore->lockedBy[z]));
             if (semaphore->lockedByCount > 1)
@@ -810,14 +810,14 @@ LOCAL void unlock(const char *fileName, ulong lineNb, Semaphore *semaphore)
       #ifndef NDEBUG
         // debug trace code: remove lock information
         threadSelf = pthread_self();
-        z = 0;
-        while (   (z < semaphore->lockedByCount)
+        z = (int)semaphore->lockedByCount-1;
+        while (   (z >=0)
                && (pthread_equal(threadSelf,semaphore->lockedBy[z].thread) == 0)
               )
         {
-          z++;
+          z--;
         }
-        if (z < semaphore->lockedByCount)
+        if (z >= 0)
         {
           memset(&semaphore->lockedBy[z],0,sizeof(semaphore->lockedBy[z]));
           if (semaphore->lockedByCount > 1)
