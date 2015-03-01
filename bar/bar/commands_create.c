@@ -3135,6 +3135,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
     }
+    AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
     DEBUG_TESTCODE("storageThreadCode4") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
     // write data to store file
@@ -3245,13 +3246,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     {
       createInfo->failError = error;
 
-      File_close(&fileHandle);
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
     }
 
     // close file to store
     File_close(&fileHandle);
+    AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
 
     if (!isAborted(createInfo))
     {
