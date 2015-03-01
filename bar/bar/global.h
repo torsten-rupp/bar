@@ -935,17 +935,17 @@ typedef struct
 /***********************************************************************\
 * Name   : IS_DEBUG_TESTCODE
 * Purpose: true if test code is executed
-* Input  : -
+* Input  : name - test code name
 * Output : -
 * Return : TRUE iff test code is executed
 * Notes  : -
 \***********************************************************************/
 
 #ifndef NDEBUG
-  #define IS_DEBUG_TESTCODE() \
-    (__testCodeName__ != NULL)
+  #define IS_DEBUG_TESTCODE(name) \
+    ((__testCodeName__ != NULL) && (strcmp(__testCodeName__,name) == 0))
 #else /* not NDEBUG */
-  #define IS_DEBUG_TESTCODE() \
+  #define IS_DEBUG_TESTCODE(name) \
     FALSE
 #endif /* NDEBUG */
 
