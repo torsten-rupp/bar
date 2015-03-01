@@ -3132,19 +3132,44 @@ endif
 
 # ----------------------------------------------------------------------------
 
-TESTCODE_COMMAND1=$(TEST_BAR_DEBUG) \
-                    --compress-algorithm=lzma9 \
-                    --crypt-algorithm=AES256 \
-                    --crypt-password=$(TEST_PASSWORD) \
-                    --crypt-type=asymmetric \
-                    --crypt-public-key=$(PWD)/test/key.public \
-                    --crypt-private-key=$(PWD)/test/key.private \
-                    --archive-part-size=100K \
-                    --overwrite-archive-files \
-                    --incremental \
-                    --incremental-list-file=test/test.bid \
-                    --log-post-command='true' \
-                    -c test/test-\#\#\#.bar test/data
+TESTCODE_COMMAND1A=$(TEST_BAR_DEBUG) \
+                     --compress-algorithm=lzma9 \
+                     --crypt-algorithm=AES256 \
+                     --crypt-password=$(TEST_PASSWORD) \
+                     --crypt-type=asymmetric \
+                     --crypt-public-key=$(PWD)/test/key.public \
+                     --crypt-private-key=$(PWD)/test/key.private \
+                     --archive-part-size=100K \
+                     --overwrite-archive-files \
+                     --full \
+                     --log-post-command='true' \
+                     -c test/test-\#\#\#.bar test/data
+TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
+                     --compress-algorithm=lzma9 \
+                     --crypt-algorithm=AES256 \
+                     --crypt-password=$(TEST_PASSWORD) \
+                     --crypt-type=asymmetric \
+                     --crypt-public-key=$(PWD)/test/key.public \
+                     --crypt-private-key=$(PWD)/test/key.private \
+                     --archive-part-size=100K \
+                     --overwrite-archive-files \
+                     --differential \
+                     --incremental-list-file=test/test.bid \
+                     --log-post-command='true' \
+                     -c test/test-\#\#\#.bar test/data
+TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
+                     --compress-algorithm=lzma9 \
+                     --crypt-algorithm=AES256 \
+                     --crypt-password=$(TEST_PASSWORD) \
+                     --crypt-type=asymmetric \
+                     --crypt-public-key=$(PWD)/test/key.public \
+                     --crypt-private-key=$(PWD)/test/key.private \
+                     --archive-part-size=100K \
+                     --overwrite-archive-files \
+                     --incremental \
+                     --incremental-list-file=test/test.bid \
+                     --log-post-command='true' \
+                     -c test/test-\#\#\#.bar test/data
 TESTCODE_COMMAND2=$(TEST_BAR_DEBUG) \
                     --crypt-password=$(TEST_PASSWORD) \
                     --crypt-public-key=$(PWD)/test/key.public \
@@ -3163,13 +3188,15 @@ TESTCODE_COMMAND4=$(TEST_BAR_DEBUG) \
                     -x test/test-*.bar
 
 # helper function to execute test code
-# call functionTestcode
-functionTestcode = \
+# call functionTestcodeA
+# call functionTestcodeB
+# call functionTestcodeC
+functionTestcodeA = \
   ( \
    rc=0; rc1=0; rc2=0; rc3=0; rc4=0; \
    if test $$rc -ne $(TESTCODE_EXITCODE); then \
      TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND1) > /dev/null; \
+       $(TESTCODE_COMMAND1A) > /dev/null; \
      rc=$$?; \
      rc1=$$rc; \
    fi; \
@@ -3198,24 +3225,141 @@ functionTestcode = \
    if test $$rc -ne $(TESTCODE_EXITCODE); then \
      if test $$rc1 -ne $(TESTCODE_EXITCODE); then \
        $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name`) $(TESTCODE_COMMAND1)"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND1)"; \
      fi; \
      if test $$rc2 -ne $(TESTCODE_EXITCODE); then \
        $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name`) $(TESTCODE_COMMAND2)"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND2)"; \
      fi; \
      if test $$rc3 -ne $(TESTCODE_EXITCODE); then \
        $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name`) $(TESTCODE_COMMAND3)"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND3)"; \
      fi; \
      if test $$rc4 -ne $(TESTCODE_EXITCODE); then \
        $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name`) $(TESTCODE_COMMAND4)"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND4)"; \
      fi; \
-     if test -z "$(TESTCODE)" -a -z "$(shell $(CAT) testcode.name)"; then \
+     if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
        $(ECHO) "ERROR: No testcode executed!"; \
-       $(ECHO) "  Not executed testcode:"; \
-       $(MAKE) testcode_diff; \
+       $(ECHO) ""; \
+       $(ECHO) "Available and not executed testcode:"; \
+       $(MAKE) --quiet testcode_diff; \
+     fi; \
+   fi; \
+   exit $$rc; \
+  )
+
+functionTestcodeB = \
+  ( \
+   rc=0; rc1=0; rc2=0; rc3=0; rc4=0; \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+       $(TESTCODE_COMMAND1B) > /dev/null; \
+     rc=$$?; \
+     rc1=$$rc; \
+   fi; \
+   \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+       $(TESTCODE_COMMAND2) > /dev/null; \
+     rc=$$?; \
+     rc2=$$rc; \
+   fi;\
+   \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+       $(TESTCODE_COMMAND3) > /dev/null; \
+     rc=$$?; \
+     rc3=$$rc; \
+   fi;\
+   \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+       $(TESTCODE_COMMAND4) > /dev/null; \
+     rc=$$?; \
+     rc4=$$rc; \
+   fi;\
+   \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     if test $$rc1 -ne $(TESTCODE_EXITCODE); then \
+       $(ECHO) "Test code fail:"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND1)"; \
+     fi; \
+     if test $$rc2 -ne $(TESTCODE_EXITCODE); then \
+       $(ECHO) "Test code fail:"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND2)"; \
+     fi; \
+     if test $$rc3 -ne $(TESTCODE_EXITCODE); then \
+       $(ECHO) "Test code fail:"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND3)"; \
+     fi; \
+     if test $$rc4 -ne $(TESTCODE_EXITCODE); then \
+       $(ECHO) "Test code fail:"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND4)"; \
+     fi; \
+     if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
+       $(ECHO) "ERROR: No testcode executed!"; \
+       $(ECHO) ""; \
+       $(ECHO) "Available and not executed testcode:"; \
+       $(MAKE) --quiet testcode_diff; \
+     fi; \
+   fi; \
+   exit $$rc; \
+  )
+
+functionTestcodeC = \
+  ( \
+   rc=0; rc1=0; rc2=0; rc3=0; rc4=0; \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+       $(TESTCODE_COMMAND1C) > /dev/null; \
+     rc=$$?; \
+     rc1=$$rc; \
+   fi; \
+   \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+       $(TESTCODE_COMMAND2) > /dev/null; \
+     rc=$$?; \
+     rc2=$$rc; \
+   fi;\
+   \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+       $(TESTCODE_COMMAND3) > /dev/null; \
+     rc=$$?; \
+     rc3=$$rc; \
+   fi;\
+   \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+       $(TESTCODE_COMMAND4) > /dev/null; \
+     rc=$$?; \
+     rc4=$$rc; \
+   fi;\
+   \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     if test $$rc1 -ne $(TESTCODE_EXITCODE); then \
+       $(ECHO) "Test code fail:"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND1)"; \
+     fi; \
+     if test $$rc2 -ne $(TESTCODE_EXITCODE); then \
+       $(ECHO) "Test code fail:"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND2)"; \
+     fi; \
+     if test $$rc3 -ne $(TESTCODE_EXITCODE); then \
+       $(ECHO) "Test code fail:"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND3)"; \
+     fi; \
+     if test $$rc4 -ne $(TESTCODE_EXITCODE); then \
+       $(ECHO) "Test code fail:"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND4)"; \
+     fi; \
+     if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
+       $(ECHO) "ERROR: No testcode executed!"; \
+       $(ECHO) ""; \
+       $(ECHO) "Available and not executed testcode:"; \
+       $(MAKE) --quiet testcode_diff; \
      fi; \
    fi; \
    exit $$rc; \
@@ -3232,22 +3376,43 @@ testcode_init:
 	$(ECHO_NO_LF) > testcode.done
 	for z in $(TESTCODE_SKIP); do $(ECHO) $$s; done > testcode.skip
 
-testcode_all:
+testcode_all: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
 	rc=$(TESTCODE_EXITCODE); \
         while test $$rc -eq $(TESTCODE_EXITCODE); do \
-          $(call functionTestcode); \
-          rc=$$?; \
+          rc=0; \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(call functionTestcodeA); \
+            rc=$$?; \
+          fi; \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(call functionTestcodeB); \
+            rc=$$?; \
+          fi; \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(call functionTestcodeC); \
+            rc=$$?; \
+          fi; \
+          \
           if test $$rc -eq $(TESTCODE_EXITCODE); then \
             $(CAT) testcode.name >> testcode.done; \
             $(ECHO_NO_LF) > testcode.name; \
-          else \
-            $(ECHO) "Test code fail:"; \
-            $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name`) $(TESTCODE_COMMAND1)"; \
           fi; \
         done
 
 testcode: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
-	$(call functionTestcode)
+          rc=0; \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(call functionTestcodeA); \
+            rc=$$?; \
+          fi; \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(call functionTestcodeB); \
+            rc=$$?; \
+          fi; \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(call functionTestcodeC); \
+            rc=$$?; \
+          fi; \
 
 testcodex: $(TEST_BAR_DEBUG) $(TEST_KEYS)
 	TESTCODE=$(shell $(CAT) testcode.name) \
