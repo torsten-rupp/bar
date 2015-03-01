@@ -3174,7 +3174,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           break;
         }
       }
-      DEBUG_TESTCODE("storageThreadCode5") { error = DEBUG_TESTCODE_ERROR(); break; }
+      DEBUG_TESTCODE("storageThreadCode5") { Storage_close(&createInfo->storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
 
       // update status info, check for abort
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
