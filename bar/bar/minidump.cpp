@@ -31,6 +31,8 @@
 #include "global.h"
 #include "files.h"
 
+#include "bar.h"
+
 #include "minidump.h"
 
 /****************** Conditional compilation switches *******************/
@@ -324,6 +326,8 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
   // free resources
   close(minidumpFileDescriptor);
 
+  if (IS_DEBUG_TESTCODE()) exit(EXITCODE_TESTCODE);
+
   return succeeded;
 
   #undef __TO_STRING
@@ -382,8 +386,10 @@ bool MiniDump_init(void)
     initFlag = TRUE;
   #endif /* HAVE_BREAKPAD */
 
+  DEBUG_TESTCODE("minidump") { volatile int *p = (int*)(NULL); (*p) = 1; }
+
 // test crash
-//{ volatile int* a = (int*)(NULL); *a = 1; }
+//{ volatile int *p = (int*)(NULL); (*p) = 1; }
 
   return TRUE;
 }
