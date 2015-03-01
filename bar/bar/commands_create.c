@@ -206,6 +206,26 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 }
 
 /***********************************************************************\
+* Name   : freeStorageMsg
+* Purpose: free storage msg
+* Input  : storageMsg - storage message
+*          userData   - user data (ignored)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
+{
+  assert(storageMsg != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(storageMsg->destinationFileName);
+  String_delete(storageMsg->fileName);
+}
+
+/***********************************************************************\
 * Name   : initCreateInfo
 * Purpose: initialize create info
 * Input  : createInfo                 - create info variable
@@ -314,7 +334,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   // init entry name queue, storage queue
   if (!MsgQueue_init(&createInfo->entryMsgQueue,MAX_FILE_MSG_QUEUE_ENTRIES))
   {
-    HALT_FATAL_ERROR("Cannot initialize file message queue!");
+    HALT_FATAL_ERROR("Cannot initialize entry message queue!");
   }
   if (!MsgQueue_init(&createInfo->storageMsgQueue,0))
   {
@@ -334,6 +354,8 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   {
     HALT_FATAL_ERROR("Cannot initialize status info name semaphore!");
   }
+
+  DEBUG_ADD_RESOURCE_TRACE("create info",createInfo);
 }
 
 /***********************************************************************\
@@ -349,11 +371,13 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
 {
   assert(createInfo != NULL);
 
+  DEBUG_REMOVE_RESOURCE_TRACE(createInfo);
+
   Semaphore_done(&createInfo->statusInfoNameLock);
   Semaphore_done(&createInfo->statusInfoLock);
   Semaphore_done(&createInfo->storageInfoLock);
 
-  MsgQueue_done(&createInfo->storageMsgQueue,NULL,NULL);
+  MsgQueue_done(&createInfo->storageMsgQueue,(MsgQueueMsgFreeFunction)freeStorageMsg,NULL);
   MsgQueue_done(&createInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
 
   String_delete(createInfo->statusInfo.storageName);
@@ -2757,26 +2781,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : freeStorageMsg
-* Purpose: free storage msg
-* Input  : storageMsg - storage message
-*          userData   - user data (ignored)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
-{
-  assert(storageMsg != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(storageMsg->destinationFileName);
-  String_delete(storageMsg->fileName);
-}
-
-/***********************************************************************\
 * Name   : storageInfoIncrement
 * Purpose: increment storage info
 * Input  : createInfo - create info
@@ -2949,6 +2953,8 @@ LOCAL Errors storeArchiveFile(void        *userData,
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
+      String_delete(storageName);
+      String_delete(destinationFileName);
       return error;
     }
   }
@@ -2965,10 +2971,9 @@ LOCAL Errors storeArchiveFile(void        *userData,
   {
     freeStorageMsg(&storageMsg,NULL);
     String_delete(storageName);
-    String_delete(destinationFileName);
     return ERROR_NONE;
   }
-  DEBUG_TESTCODE("storeArchiveFile2") { freeStorageMsg(&storageMsg,NULL); String_delete(destinationFileName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE("storeArchiveFile2") { String_delete(storageName); return DEBUG_TESTCODE_ERROR(); }
 
   // update status info
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -3095,7 +3100,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
     }
-    DEBUG_TESTCODE("storageThreadCode1") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
+    DEBUG_TESTCODE("storageThreadCode1") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
     // get printable storage name
     String_set(storageName,Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.destinationFileName));
@@ -3113,7 +3118,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
     }
-    DEBUG_TESTCODE("storageThreadCode2") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
+    DEBUG_TESTCODE("storageThreadCode2") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
     // open file to store
     #ifndef NDEBUG
