@@ -887,7 +887,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 if (failError == ERROR_NONE) failError = error;
                 break;
               }
-              DEBUG_TESTCODE("Command_compare301") { Archive_closeEntry(&archiveEntryInfo); String_delete(directoryName); failError = DEBUG_TESTCODE_ERROR(); break; }
+              D EBUG_TESTCODE("Command_compare301") { Archive_closeEntry(&archiveEntryInfo); String_delete(directoryName); failError = DEBUG_TESTCODE_ERROR(); break; }
 
               // check file time, permissions, file owner/group
 #endif /* 0 */
@@ -1032,7 +1032,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 if (failError == ERROR_NONE) failError = error;
                 break;
               }
-              DEBUG_TESTCODE("Command_compare403") { Archive_closeEntry(&archiveEntryInfo); String_delete(linkName); String_delete(fileName); failError = DEBUG_TESTCODE_ERROR(); break; }
+              D EBUG_TESTCODE("Command_compare403") { Archive_closeEntry(&archiveEntryInfo); String_delete(linkName); String_delete(fileName); failError = DEBUG_TESTCODE_ERROR(); break; }
 
               // check file time, permissions, file owner/group
 #endif /* 0 */
