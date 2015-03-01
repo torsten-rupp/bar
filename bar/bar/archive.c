@@ -3137,8 +3137,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_open2") { Storage_close(archiveInfo->storage.storageHandle); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storageHandle,{ Storage_close(archiveInfo->storage.storageHandle); });
+  DEBUG_TESTCODE("Archive_open2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // check if BAR archive file
   error = getNextChunkHeader(archiveInfo,&chunkHeader);
