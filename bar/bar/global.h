@@ -886,40 +886,65 @@ typedef struct
 * Output : -
 * Return : -
 * Notes  : test code is executed if:
-*            - environement variable TESTCODE contains name
+*            - environment variable TESTCODE contains name
 *          or
 *            - text file specified by environment varibale TESTCODE_LIST
 *              contains name and
 *            - text file specified by environment varibale TESTCODE_DONE
 *              does not contain name
+*          If environment variable TESTCODE_NAME is defined the name of
+*          executed testcode is written to that text file.
 *          If environment variable TESTCODE_DONE is defined the name of
 *          executed testcode is added to that text file.
 \***********************************************************************/
 
 #ifndef NDEBUG
-
   #define DEBUG_TESTCODE(name) \
     if (debugIsTestCodeEnabled(__FILE__,__LINE__,name))
-
 // TODO: remove
   #define DEBUG_TESTCODE2(name,codeBody) \
     void (*__testcode__ ## __LINE__)(const char*) = ({ \
                                           auto void __closure__(const char *); \
                                           void __closure__(const char *__testCodeName__)codeBody __closure__; \
                                         }); \
-    if (debugIsTestCodeEnabled(__FILE__,__LINE__,name)) { __testcode__ ## __LINE__(name); } \
-
-  #define DEBUG_TESTCODE_ERROR() \
-    ERRORX_(TESTCODE,0,__testCodeName__)
-
+    if (debugIsTestCodeEnabled(__FILE__,__LINE__,name)) { __testcode__ ## __LINE__(name); }
 #else /* not NDEBUG */
-
   #define DEBUG_TESTCODE(name) \
     if (FALSE)
+#endif /* NDEBUG */
 
+/***********************************************************************\
+* Name   : DEBUG_TESTCODE_ERROR
+* Purpose: get test code error code
+* Input  : name - test code name
+* Output : -
+* Return : test code error code
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+  #define DEBUG_TESTCODE_ERROR() \
+    ERRORX_(TESTCODE,0,__testCodeName__)
+#else /* not NDEBUG */
   #define DEBUG_TESTCODE_ERROR() \
     ERROR_NONE
+#endif /* NDEBUG */
 
+/***********************************************************************\
+* Name   : IS_DEBUG_TESTCODE
+* Purpose: true if test code is executed
+* Input  : -
+* Output : -
+* Return : TRUE iff test code is executed
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+  #define IS_DEBUG_TESTCODE() \
+    (__testCodeName__ != NULL)
+#else /* not NDEBUG */
+  #define IS_DEBUG_TESTCODE() \
+    FALSE
 #endif /* NDEBUG */
 
 /***********************************************************************\
