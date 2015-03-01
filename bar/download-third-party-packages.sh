@@ -28,6 +28,8 @@ XZ="xz"
 
 GMP_VERSION=6.0.0a
 PCRE_VERSION=8.36
+MTX_VERSION=1.3.12
+BREAKPAD_REVISION=1430
 
 # --------------------------------- variables --------------------------------
 
@@ -52,6 +54,7 @@ libssh2Flag=0
 gnutlsFlag=0
 libcdioFlag=0
 pcreFlag=0
+mtxFlag=0
 breakpadFlag=0
 pthreadsW32Flag=0
 epmFlag=0
@@ -155,6 +158,10 @@ while test $# != 0; do
           allFlag=0
           pcreFlag=1
           ;;
+        mtx)
+          allFlag=0
+          mtxFlag=1
+          ;;
         breakpad|minidump)
           allFlag=0
           breakpadFlag=1
@@ -249,6 +256,10 @@ while test $# != 0; do
     pcre)
       allFlag=0
       pcreFlag=1
+      ;;
+    mtx)
+      allFlag=0
+      mtxFlag=1
       ;;
     breakpad|minidump)
       allFlag=0
@@ -818,6 +829,31 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
+  if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
+    # mtx
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+
+     if test ! -f pcre-$MTX_VERSION.tar.bz2; then
+       $WGET $WGET_OPTIONS "http://sourceforge.net/projects/mtx/files/mtx-stable/$MTX_VERSION/mtx-$MTX_VERSION.tar.gz"
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf mtx-$MTX_VERSION.tar.gz
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      if test -n "$destination"; then
+        $LN -f -s $destination/mtx-$MTX_VERSION mtx
+      else
+        $LN -f -s $tmpDirectory/mtx-$MTX_VERSION mtx
+      fi
+    fi
+  fi
+
   if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
     # breakpad
     (
@@ -828,8 +864,8 @@ if test $cleanFlag -eq 0; then
      fi
 
      if test ! -d breakpad; then
-       $ECHO_NO_NEW_LINE "Checkout 'http://google-breakpad.googlecode.com/svn/trunk'..."
-       $SVN checkout 'http://google-breakpad.googlecode.com/svn/trunk' breakpad >/dev/null
+       $ECHO_NO_NEW_LINE "Checkout 'http://google-breakpad.googlecode.com/svn/trunk', revision $BREAKPAD_REVISION..."
+       $SVN checkout 'http://google-breakpad.googlecode.com/svn/trunk' breakpad -r$BREAKPAD_REVISION >/dev/null
        $ECHO "done"
      fi
     )
@@ -1063,6 +1099,12 @@ else
     # pcre
     $RMRF $tmpDirectory/pcre-*
     $RMF pcre
+  fi
+
+  if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
+    # mtx
+    $RMRF $tmpDirectory/mtx-*
+    $RMF mtx
   fi
 
   if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
