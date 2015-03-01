@@ -3174,7 +3174,8 @@ testcode_init:
 	for z in $(TESTCODE_SKIP); do $(ECHO) $$s; done > testcode.skip
 
 testcode: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
-	rc=$(TESTCODE_EXITCODE); \
+	testcode=$(TESTCODE); \
+        rc=$(TESTCODE_EXITCODE); \
         while test $$rc -eq $(TESTCODE_EXITCODE); do \
           $(ECHO) -----------------------------------------------------------------------; \
           rc=0; \
@@ -3184,7 +3185,7 @@ testcode: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
           rc4=0; \
           if test $$rc -ne $(TESTCODE_EXITCODE); then \
             $(RMF) test/test.bid; \
-            TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+            TESTCODE=$(testcode) TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
               $(TESTCODE_COMMAND1) > /dev/null; \
             rc1=$$?; \
             rc=$$rc1; \
@@ -3195,21 +3196,21 @@ testcode: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
           fi; \
           \
           if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+            TESTCODE=$(testcode) TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
               $(TESTCODE_COMMAND2) > /dev/null; \
             rc2=$$?; \
             rc=$$rc2; \
           fi;\
           \
           if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+            TESTCODE=$(testcode) TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
               $(TESTCODE_COMMAND3) > /dev/null; \
             rc3=$$?; \
             rc=$$rc3; \
           fi;\
           \
           if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+            TESTCODE=$(testcode) TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
               $(TESTCODE_COMMAND4) > /dev/null; \
             rc4=$$?; \
             rc=$$rc4; \
@@ -3221,19 +3222,19 @@ testcode: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
           else \
             if test $$rc1 -ne $(TESTCODE_EXITCODE); then \
               $(ECHO) "Test code fail:"; \
-              $(ECHO) "TESTCODE=$(if $(TESTCODE),$(TESTCODE),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND1)"; \
+              $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND1)"; \
             fi; \
             if test $$rc2 -ne $(TESTCODE_EXITCODE); then \
               $(ECHO) "Test code fail:"; \
-              $(ECHO) "TESTCODE=$(if $(TESTCODE),$(TESTCODE),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND2)"; \
+              $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND2)"; \
             fi; \
             if test $$rc3 -ne $(TESTCODE_EXITCODE); then \
               $(ECHO) "Test code fail:"; \
-              $(ECHO) "TESTCODE=$(if $(TESTCODE),$(TESTCODE),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND3)"; \
+              $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND3)"; \
             fi; \
             if test $$rc4 -ne $(TESTCODE_EXITCODE); then \
               $(ECHO) "Test code fail:"; \
-              $(ECHO) "TESTCODE=$(if $(TESTCODE),$(TESTCODE),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND4)"; \
+              $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND4)"; \
             fi; \
             if test -z "$(TESTCODE)" -a -z "$(shell $(CAT) testcode.name)"; then \
               $(ECHO) "ERROR: No testcode executed!"; \
@@ -3241,6 +3242,7 @@ testcode: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
               $(MAKE) testcode_diff; \
             fi; \
           fi; \
+          testcode=; \
         done
 
 testcodex: $(TEST_BAR_DEBUG) $(TEST_KEYS)

@@ -200,7 +200,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
 
   // check environment variable
   value = getenv(DEBUG_TESTCODE_NAME);
-  if (value != NULL)
+  if ((value != NULL) && !stringIsEmpty(value))
   {
     isTestCodeEnabledFlag = stringEquals(name,value);
   }
