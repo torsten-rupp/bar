@@ -267,8 +267,7 @@ Errors Crypt_initAll(void)
     // check version and do internal library init
     if (!gcry_check_version(GCRYPT_VERSION))
     {
-      printError("Wrong gcrypt version (needed: %d)\n",GCRYPT_VERSION);
-      return ERROR_INIT_CRYPT;
+      return ERRORX_(INIT_CRYPT,0,"Wrong gcrypt version (needed: %d)\n",GCRYPT_VERSION);
     }
 
     gcry_control(GCRYCTL_DISABLE_SECMEM,         0);
@@ -426,11 +425,12 @@ Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
                                              );
           if (gcryptError != 0)
           {
-            printError("Cannot detect block length of '%s' cipher (error: %s)\n",
-                       gcry_cipher_algo_name(gcryptAlgorithm),
-                       gpg_strerror(gcryptError)
-                      );
-            return ERROR_INIT_CIPHER;
+            return ERRORX_(INIT_CIPHER,
+                           0,
+                           "Cannot detect block length of '%s' cipher (error: %s)\n",
+                           gcry_cipher_algo_name(gcryptAlgorithm),
+                           gpg_strerror(gcryptError)
+                          );
           }
           (*keyLength) = n*8;
         }
@@ -509,11 +509,12 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
                                              );
           if (gcryptError != 0)
           {
-            printError("Cannot detect block length of '%s' cipher (error: %s)\n",
-                       gcry_cipher_algo_name(gcryptAlgorithm),
-                       gpg_strerror(gcryptError)
-                      );
-            return ERROR_INIT_CIPHER;
+            return ERRORX_(INIT_CIPHER,
+                           0,
+                           "Cannot detect block length of '%s' cipher (error: %s)\n",
+                           gcry_cipher_algo_name(gcryptAlgorithm),
+                           gpg_strerror(gcryptError)
+                          );
           }
           (*blockLength) = n;
         }
@@ -590,6 +591,7 @@ Errors __Crypt_init(const char    *__fileName__,
           uint         keyLength;
           char         key[MAX_KEY_SIZE/8];
           uint         z;
+          Errors       error;
 
           if (password == NULL)
           {
@@ -633,11 +635,12 @@ Errors __Crypt_init(const char    *__fileName__,
                                              );
           if (gcryptError != 0)
           {
-            printError("Cannot detect max. key length of cipher '%s' (error: %s)\n",
-                       gcry_cipher_algo_name(gcryptAlgorithm),
-                       gpg_strerror(gcryptError)
-                      );
-            return ERROR_INIT_CIPHER;
+            return ERRORX_(INIT_CIPHER,
+                           0,
+                           "Cannot detect max. key length of cipher '%s' (error: %s)\n",
+                           gcry_cipher_algo_name(gcryptAlgorithm),
+                           gpg_strerror(gcryptError)
+                          );
           }
           maxKeyLength = n*8;
           gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
@@ -647,11 +650,12 @@ Errors __Crypt_init(const char    *__fileName__,
                                              );
           if (gcryptError != 0)
           {
-            printError("Cannot detect block length of cipher '%s' (error: %s)\n",
-                       gcry_cipher_algo_name(gcryptAlgorithm),
-                       gpg_strerror(gcryptError)
-                      );
-            return ERROR_INIT_CIPHER;
+            return ERRORX_(INIT_CIPHER,
+                           0,
+                           "Cannot detect block length of cipher '%s' (error: %s)\n",
+                           gcry_cipher_algo_name(gcryptAlgorithm),
+                           gpg_strerror(gcryptError)
+                          );
           }
           cryptInfo->blockLength = n;
 
@@ -681,11 +685,12 @@ Errors __Crypt_init(const char    *__fileName__,
           }
           if (keyLength > maxKeyLength)
           {
-            printError("Cipher '%s' does not support %dbit keys\n",
-                       gcry_cipher_algo_name(gcryptAlgorithm),
-                       keyLength
-                      );
-            return ERROR_INIT_CIPHER;
+            return ERRORX_(INIT_CIPHER,
+                           0,
+                           "Cipher '%s' does not support %dbit keys\n",
+                           gcry_cipher_algo_name(gcryptAlgorithm),
+                           keyLength
+                          );
           }
 
           // init cipher
@@ -696,11 +701,12 @@ Errors __Crypt_init(const char    *__fileName__,
                                         );
           if (gcryptError != 0)
           {
-            printError("Init cipher '%s' failed (error: %s)\n",
-                       gcry_cipher_algo_name(gcryptAlgorithm),
-                       gpg_strerror(gcryptError)
-                      );
-            return ERROR_INIT_CIPHER;
+            return ERRORX_(INIT_CIPHER,
+                           0,
+                           "Init cipher '%s' failed (error: %s)\n",
+                           gcry_cipher_algo_name(gcryptAlgorithm),
+                           gpg_strerror(gcryptError)
+                          );
           }
 
           // set key
@@ -716,13 +722,15 @@ Errors __Crypt_init(const char    *__fileName__,
                                           );
           if (gcryptError != 0)
           {
-            printError("Cannot set key for cipher '%s' with %dbit (error: %s)\n",
-                       gcry_cipher_algo_name(gcryptAlgorithm),
-                       keyLength,
-                       gpg_strerror(gcryptError)
-                      );
+            error = ERRORX_(INIT_CIPHER,
+                            0,
+                            "Cannot set key for cipher '%s' with %dbit (error: %s)\n",
+                            gcry_cipher_algo_name(gcryptAlgorithm),
+                            keyLength,
+                            gpg_strerror(gcryptError)
+                           );
             gcry_cipher_close(cryptInfo->gcry_cipher_hd);
-            return ERROR_INIT_CIPHER;
+            return error;
           }
 
 
@@ -735,9 +743,13 @@ Errors __Crypt_init(const char    *__fileName__,
                                          );
           if (gcryptError != 0)
           {
-            printError("Cannot set cipher IV (error: %s)\n",gpg_strerror(gcryptError));
+            error = ERRORX_(INIT_CIPHER,
+                            0,
+                            "Cannot set cipher IV (error: %s)\n",
+                            gpg_strerror(gcryptError)
+                           );
             gcry_cipher_close(cryptInfo->gcry_cipher_hd);
-            return ERROR_INIT_CIPHER;
+            return error;
           }
 
           gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
@@ -882,10 +894,11 @@ Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
                                            );
             if (gcryptError != 0)
             {
-              printError("Cannot set cipher IV (error: %s)\n",
-                         gpg_strerror(gcryptError)
-                        );
-              return ERROR_INIT_CIPHER;
+              return ERRORX_(INIT_CIPHER,
+                             0,
+                             "Cannot set cipher IV (error: %s)\n",
+                             gpg_strerror(gcryptError)
+                            );
             }
           }
         }
