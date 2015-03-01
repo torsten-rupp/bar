@@ -449,9 +449,9 @@ help:
 	@$(ECHO) "  memcheck_extended [CHECK=1|2|2a|2b|2c|2d|2e|3|4|5|6|7]"
 	@$(ECHO) ""
 	@$(ECHO) "  testcode_init                             init test code name"
-	@$(ECHO) "  testcode                                  run all test code"
-	@$(ECHO) "  testcodex [TESTCODE=<name>]               run test code or test code <name>"
+	@$(ECHO) "  testcode_all                              run all test code"
 	@$(ECHO) "  testcode_list                             list test code names"
+	@$(ECHO) "  testcode [TESTCODE=<name>]                run test code or test code <name>"
 	@$(ECHO) ""
 	@$(ECHO) "  performance"
 	@$(ECHO) "  performance1, performance_none"
@@ -3162,7 +3162,66 @@ TESTCODE_COMMAND4=$(TEST_BAR_DEBUG) \
                     --destination=test/restore \
                     -x test/test-*.bar
 
-.PHONY: testcode_clean testcode_init testcode testcodex testcode_list testcode_diff
+# helper function to execute test code
+# call functionTestcode
+functionTestcode = \
+  ( \
+   rc=0; rc1=0; rc2=0; rc3=0; rc4=0; \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+       $(TESTCODE_COMMAND1) > /dev/null; \
+     rc=$$?; \
+     rc1=$$rc; \
+   fi; \
+   \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+       $(TESTCODE_COMMAND2) > /dev/null; \
+     rc=$$?; \
+     rc2=$$rc; \
+   fi;\
+   \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+       $(TESTCODE_COMMAND3) > /dev/null; \
+     rc=$$?; \
+     rc3=$$rc; \
+   fi;\
+   \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+       $(TESTCODE_COMMAND4) > /dev/null; \
+     rc=$$?; \
+     rc4=$$rc; \
+   fi;\
+   \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     if test $$rc1 -ne $(TESTCODE_EXITCODE); then \
+       $(ECHO) "Test code fail:"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name`) $(TESTCODE_COMMAND1)"; \
+     fi; \
+     if test $$rc2 -ne $(TESTCODE_EXITCODE); then \
+       $(ECHO) "Test code fail:"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name`) $(TESTCODE_COMMAND2)"; \
+     fi; \
+     if test $$rc3 -ne $(TESTCODE_EXITCODE); then \
+       $(ECHO) "Test code fail:"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name`) $(TESTCODE_COMMAND3)"; \
+     fi; \
+     if test $$rc4 -ne $(TESTCODE_EXITCODE); then \
+       $(ECHO) "Test code fail:"; \
+       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name`) $(TESTCODE_COMMAND4)"; \
+     fi; \
+     if test -z "$(TESTCODE)" -a -z "$(shell $(CAT) testcode.name)"; then \
+       $(ECHO) "ERROR: No testcode executed!"; \
+       $(ECHO) "  Not executed testcode:"; \
+       $(MAKE) testcode_diff; \
+     fi; \
+   fi; \
+   exit $$rc; \
+  )
+
+.PHONY: testcode_clean testcode_init testcode_all testcode testcodex testcode_list testcode_diff
 
 testcode_clean:
 	$(RMRF) $(TEST_FILES_CLEAN)
@@ -3173,77 +3232,22 @@ testcode_init:
 	$(ECHO_NO_LF) > testcode.done
 	for z in $(TESTCODE_SKIP); do $(ECHO) $$s; done > testcode.skip
 
-testcode: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
-	testcode=$(TESTCODE); \
-        rc=$(TESTCODE_EXITCODE); \
+testcode_all:
+	rc=$(TESTCODE_EXITCODE); \
         while test $$rc -eq $(TESTCODE_EXITCODE); do \
-          $(ECHO) -----------------------------------------------------------------------; \
-          rc=0; \
-          rc1=0; \
-          rc2=0; \
-          rc3=0; \
-          rc4=0; \
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(RMF) test/test.bid; \
-            TESTCODE=$(testcode) TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-              $(TESTCODE_COMMAND1) > /dev/null; \
-            rc1=$$?; \
-            rc=$$rc1; \
-          fi;\
-          \
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(TESTCODE_COMMAND1) > /dev/null; \
-          fi; \
-          \
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            TESTCODE=$(testcode) TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-              $(TESTCODE_COMMAND2) > /dev/null; \
-            rc2=$$?; \
-            rc=$$rc2; \
-          fi;\
-          \
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            TESTCODE=$(testcode) TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-              $(TESTCODE_COMMAND3) > /dev/null; \
-            rc3=$$?; \
-            rc=$$rc3; \
-          fi;\
-          \
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            TESTCODE=$(testcode) TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-              $(TESTCODE_COMMAND4) > /dev/null; \
-            rc4=$$?; \
-            rc=$$rc4; \
-          fi;\
-          \
+          $(call functionTestcode); \
+          rc=$$?; \
           if test $$rc -eq $(TESTCODE_EXITCODE); then \
             $(CAT) testcode.name >> testcode.done; \
             $(ECHO_NO_LF) > testcode.name; \
           else \
-            if test $$rc1 -ne $(TESTCODE_EXITCODE); then \
-              $(ECHO) "Test code fail:"; \
-              $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND1)"; \
-            fi; \
-            if test $$rc2 -ne $(TESTCODE_EXITCODE); then \
-              $(ECHO) "Test code fail:"; \
-              $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND2)"; \
-            fi; \
-            if test $$rc3 -ne $(TESTCODE_EXITCODE); then \
-              $(ECHO) "Test code fail:"; \
-              $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND3)"; \
-            fi; \
-            if test $$rc4 -ne $(TESTCODE_EXITCODE); then \
-              $(ECHO) "Test code fail:"; \
-              $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND4)"; \
-            fi; \
-            if test -z "$(TESTCODE)" -a -z "$(shell $(CAT) testcode.name)"; then \
-              $(ECHO) "ERROR: No testcode executed!"; \
-              $(ECHO) "  Not executed testcode:"; \
-              $(MAKE) testcode_diff; \
-            fi; \
+            $(ECHO) "Test code fail:"; \
+            $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name`) $(TESTCODE_COMMAND1)"; \
           fi; \
-          testcode=; \
         done
+
+testcode: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
+	$(call functionTestcode)
 
 testcodex: $(TEST_BAR_DEBUG) $(TEST_KEYS)
 	TESTCODE=$(shell $(CAT) testcode.name) \
