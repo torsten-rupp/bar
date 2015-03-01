@@ -3132,7 +3132,7 @@ endif
 
 # ----------------------------------------------------------------------------
 
-TESTCODE_COMMAND1=$(TEST_BAR) \
+TESTCODE_COMMAND1=$(TEST_BAR_DEBUG) \
                     --compress-algorithm=lzma9 \
                     --crypt-algorithm=AES256 \
                     --crypt-password=$(TEST_PASSWORD) \
@@ -3145,17 +3145,17 @@ TESTCODE_COMMAND1=$(TEST_BAR) \
                     --incremental-list-file=test/test.bid \
                     --log-post-command='true' \
                     -c test/test-\#\#\#.bar test/data
-TESTCODE_COMMAND2=$(TEST_BAR) \
+TESTCODE_COMMAND2=$(TEST_BAR_DEBUG) \
                     --crypt-password=$(TEST_PASSWORD) \
                     --crypt-public-key=$(PWD)/test/key.public \
                     --crypt-private-key=$(PWD)/test/key.private \
                     -l test/test-*.bar
-TESTCODE_COMMAND3=$(TEST_BAR) \
+TESTCODE_COMMAND3=$(TEST_BAR_DEBUG) \
                     --crypt-password=$(TEST_PASSWORD) \
                     --crypt-public-key=$(PWD)/test/key.public \
                     --crypt-private-key=$(PWD)/test/key.private \
                     -d test/test-*.bar
-TESTCODE_COMMAND4=$(TEST_BAR) \
+TESTCODE_COMMAND4=$(TEST_BAR_DEBUG) \
                     --crypt-password=$(TEST_PASSWORD) \
                     --crypt-public-key=$(PWD)/test/key.public \
                     --crypt-private-key=$(PWD)/test/key.private \
@@ -3173,7 +3173,7 @@ testcode_init:
 	$(ECHO_NO_LF) > testcode.done
 	for z in $(TESTCODE_SKIP); do $(ECHO) $$s; done > testcode.skip
 
-testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
+testcode: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
 	rc=$(TESTCODE_EXITCODE); \
         while test $$rc -eq $(TESTCODE_EXITCODE); do \
           $(ECHO) -----------------------------------------------------------------------; \
@@ -3220,16 +3220,16 @@ testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
             $(ECHO_NO_LF) > testcode.name; \
           else \
             if test $$rc1 -ne $(TESTCODE_EXITCODE); then \
-              $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND1)"; \
+              $(ECHO) "Test code fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND1)"; \
             fi; \
             if test $$rc2 -ne $(TESTCODE_EXITCODE); then \
-              $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND2)"; \
+              $(ECHO) "Test code fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND2)"; \
             fi; \
             if test $$rc3 -ne $(TESTCODE_EXITCODE); then \
-              $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND3)"; \
+              $(ECHO) "Test code fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND3)"; \
             fi; \
             if test $$rc4 -ne $(TESTCODE_EXITCODE); then \
-              $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND4)"; \
+              $(ECHO) "Test code fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND4)"; \
             fi; \
             if test -z "$(shell $(CAT) testcode.name)"; then \
               $(ECHO) "ERROR: No testcode executed!"; \
@@ -3239,7 +3239,7 @@ testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
           fi; \
         done
 
-testcodex: $(TEST_BAR) $(TEST_KEYS)
+testcodex: $(TEST_BAR_DEBUG) $(TEST_KEYS)
 	TESTCODE=$(shell $(CAT) testcode.name) \
           $(TESTCODE_COMMAND1)
 	$(TESTCODE_COMMAND1) > /dev/null
