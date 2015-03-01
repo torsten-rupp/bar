@@ -12,14 +12,25 @@
   * added "entities" for set of created storage files:
     keep set of storage in the internal database and show
     created backups in a tree view in barcontrol
+  * barcontrol: added function in restore tab context
+    menu to assign storage to some entity
   * started localization support (English, German, Japanese)
   * added no-storage to schedule: schedule just to create
     .bid file
   * improved crash dump support: include symbol file
+  * improved logging
   * barcontrol: show tooltip in restore tab in left
     halfe of tree/table
   * barcontrol: show number of entries in entity and
     storage (tooltip info)
+  * barcontrol: add function in context menu to trigger
+    a specific schedule entry
+  * barcontrol: improved statistic view of no-storage
+    job
+  * upgraded GMP to version 6.0.0a: fix usage of wrong
+    code on AMD architecture.
+    Thanks to Shane for his help to understand this bug!
+  * barcontrol: added option --version
 
 2014-09-26 0.18c
   * fixed server network connection wait time in pselect();
