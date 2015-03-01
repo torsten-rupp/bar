@@ -3240,7 +3240,7 @@ functionTestcodeA = \
        $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND4)"; \
      fi; \
      if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
-       $(ECHO) "ERROR: No testcode executed!"; \
+       $(ECHO) "ERROR: No more testcode executed!"; \
        $(ECHO) ""; \
        $(ECHO) "Available and not executed testcode:"; \
        $(MAKE) --quiet testcode_diff; \
@@ -3298,7 +3298,7 @@ functionTestcodeB = \
        $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND4)"; \
      fi; \
      if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
-       $(ECHO) "ERROR: No testcode executed!"; \
+       $(ECHO) "ERROR: No more testcode executed!"; \
        $(ECHO) ""; \
        $(ECHO) "Available and not executed testcode:"; \
        $(MAKE) --quiet testcode_diff; \
