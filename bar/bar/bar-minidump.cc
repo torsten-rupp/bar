@@ -40,6 +40,7 @@
 /***************************** Functions *******************************/
 
 using google_breakpad::BasicSourceLineResolver;
+using google_breakpad::Minidump;
 using google_breakpad::MinidumpProcessor;
 using google_breakpad::ProcessState;
 using google_breakpad::SymbolSupplier;
@@ -188,16 +189,24 @@ LOCAL bool printMinidump(const string &minidumpFileName, const string &symbolFil
 
   // process minidump file
   BasicSourceLineResolver basicSourceLineResolver;
-  ProcessState processState;
   MinidumpProcessor minidumpProcessor(&simpleSymbolSupplier,&basicSourceLineResolver);
-  if (minidumpProcessor.Process(minidumpFileName,&processState) != google_breakpad::PROCESS_OK)
+
+  Minidump minidump(minidumpFileName);
+  if (!minidump.Read())
+  {
+    fprintf(stderr,"ERROR: Cannot read minidump!\n");
+    return false;
+  }
+
+  ProcessState processState;
+  if (minidumpProcessor.Process(&minidump,&processState) != google_breakpad::PROCESS_OK)
   {
     fprintf(stderr,"ERROR: Cannot initialize minidump processor!\n");
     return false;
   }
 
   // print state
-  PrintProcessState(processState);
+  PrintProcessState(processState,true,&basicSourceLineResolver);
 
   return true;
 }
