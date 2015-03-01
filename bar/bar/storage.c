@@ -5124,6 +5124,8 @@ Errors Storage_create(StorageHandle *storageHandle,
         {
           return error;
         }
+
+        DEBUG_ADD_RESOURCE_TRACE("storage create file",&storageHandle->fileSystem);
       }
       break;
     case STORAGE_TYPE_FTP:
@@ -5273,6 +5275,8 @@ Errors Storage_create(StorageHandle *storageHandle,
             String_delete(baseName);
             String_delete(pathName);
           }
+
+          DEBUG_ADD_RESOURCE_TRACE("storage create ftp",&storageHandle->ftp);
         }
       #elif defined(HAVE_FTP)
         {
@@ -5392,6 +5396,8 @@ Errors Storage_create(StorageHandle *storageHandle,
               }
             }
           }
+
+          DEBUG_ADD_RESOURCE_TRACE("storage create ftp",&storageHandle->ftp);
         }
       #else /* not HAVE_CURL || HAVE_FTP */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -5461,6 +5467,8 @@ Errors Storage_create(StorageHandle *storageHandle,
               return error;
             }
           }
+
+          DEBUG_ADD_RESOURCE_TRACE("storage create scp",&storageHandle->scp);
         }
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(fileSize);
@@ -5532,6 +5540,8 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
               return error;
             }
           }
+
+          DEBUG_ADD_RESOURCE_TRACE("storage create sftp",&storageHandle->sftp);
         }
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(fileSize);
@@ -5786,6 +5796,8 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
 
           // free resources
           String_delete(baseURL);
+
+          DEBUG_ADD_RESOURCE_TRACE("storage create curl",&storageHandle->webdav);
         }
       #else /* not HAVE_CURL */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -5827,6 +5839,8 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
           return error;
         }
       }
+
+      DEBUG_ADD_RESOURCE_TRACE("storage create cd/dvd/bd",&storageHandle->opticalDisk);
       break;
     case STORAGE_TYPE_DEVICE:
       // create file name
@@ -5845,6 +5859,8 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
           return error;
         }
       }
+
+      DEBUG_ADD_RESOURCE_TRACE("storage create device",&storageHandle->device);
       break;
     default:
       #ifndef NDEBUG
@@ -5886,6 +5902,8 @@ Errors Storage_open(StorageHandle *storageHandle)
       {
         return error;
       }
+
+      DEBUG_ADD_RESOURCE_TRACE("storage open file",&storageHandle->fileSystem);
       break;
     case STORAGE_TYPE_FTP:
       #if   defined(HAVE_CURL)
@@ -6070,6 +6088,8 @@ Errors Storage_open(StorageHandle *storageHandle)
           String_delete(url);
           String_delete(baseName);
           String_delete(pathName);
+
+          DEBUG_ADD_RESOURCE_TRACE("storage open ftp",&storageHandle->ftp);
         }
       #elif defined(HAVE_FTP)
         {
@@ -6220,6 +6240,8 @@ Errors Storage_open(StorageHandle *storageHandle)
               return ERRORX_(OPEN_FILE,0,"ftp access");
             }
           }
+
+          DEBUG_ADD_RESOURCE_TRACE("storage open ftp",&storageHandle->ftp);
         }
       #else /* not HAVE_CURL || HAVE_FTP */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -6280,6 +6302,8 @@ Errors Storage_open(StorageHandle *storageHandle)
             return error;
           }
           storageHandle->scp.size = (uint64)fileInfo.st_size;
+
+          DEBUG_ADD_RESOURCE_TRACE("storage open scp",&storageHandle->scp);
         }
       #else /* not HAVE_SSH2 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -6367,6 +6391,8 @@ Errors Storage_open(StorageHandle *storageHandle)
             return error;
           }
           storageHandle->sftp.size = sftpAttributes.filesize;
+
+          DEBUG_ADD_RESOURCE_TRACE("storage open sftp",&storageHandle->sftp);
         }
       #else /* not HAVE_SSH2 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -6602,6 +6628,8 @@ Errors Storage_open(StorageHandle *storageHandle)
           String_delete(baseName);
           String_delete(pathName);
           String_delete(baseURL);
+
+          DEBUG_ADD_RESOURCE_TRACE("storage open webdav",&storageHandle->webdav);
         }
       #else /* not HAVE_CURL */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -6650,6 +6678,8 @@ Errors Storage_open(StorageHandle *storageHandle)
             iso9660_close(storageHandle->opticalDisk.read.iso9660Handle);
             return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(storageHandle->storageSpecifier.fileName));
           }
+
+          DEBUG_ADD_RESOURCE_TRACE("storage open cd/dvd/bd",&storageHandle->opticalDisk);
         }
       #else /* not HAVE_ISO9660 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -6671,6 +6701,8 @@ Errors Storage_open(StorageHandle *storageHandle)
         String_delete(storageSpecifier);
         return error;
       }
+
+      DEBUG_ADD_RESOURCE_TRACE("storage open device",&storageHandle->device);
 #endif /* 0 */
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
@@ -6694,6 +6726,8 @@ void Storage_close(StorageHandle *storageHandle)
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
+      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->fileSystem);
+
       switch (storageHandle->mode)
       {
         case STORAGE_MODE_UNKNOWN:
@@ -6719,6 +6753,8 @@ void Storage_close(StorageHandle *storageHandle)
         assert(storageHandle->ftp.curlHandle != NULL);
         assert(storageHandle->ftp.curlMultiHandle != NULL);
 
+        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->ftp);
+
         /* Note: curl trigger from time to time a SIGALRM. The curl option
                  CURLOPT_NOSIGNAL should stop this. But it seems there is
                  a bug in curl which cause random crashes when
@@ -6734,6 +6770,8 @@ void Storage_close(StorageHandle *storageHandle)
         (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
       #elif defined(HAVE_FTP)
         assert(storageHandle->ftp.control != NULL);
+
+        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->ftp);
 
         switch (storageHandle->mode)
         {
@@ -6764,6 +6802,8 @@ void Storage_close(StorageHandle *storageHandle)
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
+        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp);
+
         switch (storageHandle->mode)
         {
           case STORAGE_MODE_UNKNOWN:
@@ -6795,6 +6835,8 @@ void Storage_close(StorageHandle *storageHandle)
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
+        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp);
+
         switch (storageHandle->mode)
         {
           case STORAGE_MODE_UNKNOWN:
@@ -6824,6 +6866,8 @@ void Storage_close(StorageHandle *storageHandle)
         assert(storageHandle->webdav.curlHandle != NULL);
         assert(storageHandle->webdav.curlMultiHandle != NULL);
 
+        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->webdav);
+
         /* Note: curl trigger from time to time a SIGALRM. The curl option
                  CURLOPT_NOSIGNAL should stop this. But it seems there is
                  a bug in curl which cause random crashes when
@@ -6844,6 +6888,8 @@ void Storage_close(StorageHandle *storageHandle)
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
+      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->opticalDisk);
+
       switch (storageHandle->mode)
       {
         case STORAGE_MODE_UNKNOWN:
@@ -6873,6 +6919,8 @@ void Storage_close(StorageHandle *storageHandle)
       }
       break;
     case STORAGE_TYPE_DEVICE:
+      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->device);
+
       switch (storageHandle->mode)
       {
         case STORAGE_MODE_UNKNOWN:
