@@ -2992,7 +2992,7 @@ memcheck8: \
             --server-cert-file=bar-server-cert.pem \
             --server-key-file=bar-server-key.pem \
             --server-port=$(TEST_SERVER_PORT) \
-            --server-tls-port=$(TEST_SSL_SERVER_PORT) \
+            --server-tls-port=$(TEST_SERVER_SSL_PORT) \
             --server-debug &
 	$(SLEEP) 30
 	$(ECHO) '1 VERSION' | $(NETCAT) localhost $(TEST_SERVER_PORT)
