@@ -2951,7 +2951,6 @@ LOCAL Errors storeArchiveFile(void        *userData,
                 );
       return error;
     }
-    DEBUG_TESTCODE("storeArchiveFile2") { String_delete(storageName); String_delete(destinationFileName); return DEBUG_TESTCODE_ERROR(); }
   }
 
   // send to storage controller
@@ -2969,7 +2968,7 @@ LOCAL Errors storeArchiveFile(void        *userData,
     String_delete(destinationFileName);
     return ERROR_NONE;
   }
-  DEBUG_TESTCODE("storeArchiveFile3") { freeStorageMsg(&storageMsg,NULL); String_delete(destinationFileName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE("storeArchiveFile2") { freeStorageMsg(&storageMsg,NULL); String_delete(destinationFileName); return DEBUG_TESTCODE_ERROR(); }
 
   // update status info
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
