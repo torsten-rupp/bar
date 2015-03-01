@@ -891,7 +891,6 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
           return error;
         }
         AUTOFREE_ADD(&autoFreeList,&archiveInfo->storageId,{ Index_deleteStorage(archiveInfo->indexHandle,archiveInfo->storageId); });
-        DEBUG_TESTCODE("createArchiveFile5") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       }
       else
       {
@@ -912,7 +911,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        DEBUG_TESTCODE("createArchiveFile6") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+        DEBUG_TESTCODE("createArchiveFile5") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       }
 
       // mark archive file "open"
