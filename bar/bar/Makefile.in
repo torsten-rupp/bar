@@ -3220,18 +3220,22 @@ testcode: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
             $(ECHO_NO_LF) > testcode.name; \
           else \
             if test $$rc1 -ne $(TESTCODE_EXITCODE); then \
-              $(ECHO) "Test code fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND1)"; \
+              $(ECHO) "Test code fail:"; \
+              $(ECHO) "TESTCODE=$(if $(TESTCODE),$(TESTCODE),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND1)"; \
             fi; \
             if test $$rc2 -ne $(TESTCODE_EXITCODE); then \
-              $(ECHO) "Test code fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND2)"; \
+              $(ECHO) "Test code fail:"; \
+              $(ECHO) "TESTCODE=$(if $(TESTCODE),$(TESTCODE),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND2)"; \
             fi; \
             if test $$rc3 -ne $(TESTCODE_EXITCODE); then \
-              $(ECHO) "Test code fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND3)"; \
+              $(ECHO) "Test code fail:"; \
+              $(ECHO) "TESTCODE=$(if $(TESTCODE),$(TESTCODE),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND3)"; \
             fi; \
             if test $$rc4 -ne $(TESTCODE_EXITCODE); then \
-              $(ECHO) "Test code fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND4)"; \
+              $(ECHO) "Test code fail:"; \
+              $(ECHO) "TESTCODE=$(if $(TESTCODE),$(TESTCODE),$(shell $(CAT) testcode.name)) $(TESTCODE_COMMAND4)"; \
             fi; \
-            if test -z "$(shell $(CAT) testcode.name)"; then \
+            if test -z "$(TESTCODE)" -a -z "$(shell $(CAT) testcode.name)"; then \
               $(ECHO) "ERROR: No testcode executed!"; \
               $(ECHO) "  Not executed testcode:"; \
               $(MAKE) testcode_diff; \
