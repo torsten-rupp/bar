@@ -164,7 +164,7 @@ sub writeHPostfix()
   extern \"C\" {
 #endif
 
-int _Error_textToIndex(const char *text);
+int _Error_textToIndex(const char *text, ...);
 unsigned int Error_getCode(Errors error);
 const char *Error_getCodeText(Errors error);
 const char *Error_getErrnoText(Errors error);
@@ -207,6 +207,7 @@ if ($cFileName ne "")
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
+#include <stdarg.h>
 #include <errno.h>
 
 #include \"global.h\"
@@ -225,14 +226,20 @@ static ErrorText errorTexts[$ERROR_TEXTINDEX_MAX_COUNT];
 static int       errorTextCount = 0;
 static int       errorTextId    = 0;
 
-int _Error_textToIndex(const char *text)
+int _Error_textToIndex(const char *format, ...)
 {
-  int  index;
-  int  minId;
-  uint z,i;
+  va_list arguments;
+  char    text[$ERROR_MAX_TEXT_LENGTH];
+  int     index;
+  int     minId;
+  uint    z,i;
 
-  if (text != NULL)
+  if (format != NULL)
   {
+    va_start(arguments,format);
+    vsnprintf(text,sizeof(text),format,arguments);
+    va_end(arguments);
+
     errorTextId++;
     if (errorTextCount < $ERROR_TEXTINDEX_MAX_COUNT)
     {
@@ -278,8 +285,15 @@ if ($hFileName ne "")
 #ifndef __ERRORS__
 #define __ERRORS__
 
-#define ERROR_(code,errno)       ((Errors)((((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) |                                                                                  (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK)))
-#define ERRORX_(code,errno,text) ((Errors)((((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) | ((_Error_textToIndex(text) << $ERROR_TEXTINDEX_SHIFT) & $ERROR_TEXTINDEX_MASK) | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK)))
+#define ERROR_(code,errno)             ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
+                                                 | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
+                                                ) \\
+                                       )
+#define ERRORX_(code,errno,format,...) ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
+                                                 | ((_Error_textToIndex(format, ## __VA_ARGS__) << $ERROR_TEXTINDEX_SHIFT) & $ERROR_TEXTINDEX_MASK) \\
+                                                 | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
+                                                ) \\
+                                       )
 
 ";
   writeHPrefix();

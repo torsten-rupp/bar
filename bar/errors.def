@@ -224,7 +224,17 @@ ERROR UNKNOWN_COMPRESS_ALGORITHM     "unknown compress algorithm"
 
 // --- crypt ------------------------------------------------------------
 ERROR UNSUPPORTED_BLOCK_SIZE         "unsupported block size"
-ERROR INIT_CRYPT                     "init crypt fail"
+ERROR INIT_CRYPT
+  if (ERROR_TEXT != NULL)
+  {
+    snprintf(errorText,sizeof(errorText)-1,"init crypt fail: %s",ERROR_TEXT);
+  }
+  else
+  {
+    strncpy(errorText,"init crypt fail",sizeof(errorText)-1);
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
 ERROR NO_CRYPT_PASSWORD              "no password given for cipher"
 ERROR INVALID_CRYPT_PASSWORD         "invalid encryption password"
 ERROR CRYPT_PASSWORDS_MISMATCH       "encryption passwords mismatch"
