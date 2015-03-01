@@ -2885,9 +2885,9 @@ const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
   return String_cString(Storage_getName(storageSpecifier,fileName));
 }
 
-String Storage_getPrintableName(StorageSpecifier *storageSpecifier,
-                                const String     fileName
-                               )
+const String Storage_getPrintableName(StorageSpecifier *storageSpecifier,
+                                      const String     fileName
+                                     )
 {
   String storageFileName;
 
