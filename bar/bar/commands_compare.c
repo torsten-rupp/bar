@@ -197,7 +197,7 @@ Errors Command_compare(const StringList                *storageNameList,
       (void)Storage_done(&storageHandle);
       continue;
     }
-    DEBUG_TESTCODE("Command_compare2") { (void)Archive_close(&archiveInfo); failError = DEBUG_TESTCODE_ERROR(); break; }
+    DEBUG_TESTCODE("Command_compare2") { (void)Archive_close(&archiveInfo); (void)Storage_done(&storageHandle); failError = DEBUG_TESTCODE_ERROR(); break; }
 
     // read files
     while (   !Archive_eof(&archiveInfo,TRUE)
