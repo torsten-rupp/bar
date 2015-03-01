@@ -35,6 +35,8 @@
 #endif
 #include <assert.h>
 
+#include "errors.h"
+
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
@@ -924,7 +926,7 @@ typedef struct
 
 #ifndef NDEBUG
   #define DEBUG_TESTCODE_ERROR() \
-    ERRORX_(TESTCODE,0,__testCodeName__)
+    debugTestCodeError()
 #else /* not NDEBUG */
   #define DEBUG_TESTCODE_ERROR() \
     ERROR_NONE
@@ -1457,6 +1459,17 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
                             uint       __lineNb__,
                             const char *name
                            );
+
+/***********************************************************************\
+* Name   : debugTestCodeError
+* Purpose: get test code error code and stop at breakpoint
+* Input  : -
+* Output : -
+* Return : error code
+* Notes  : stop when environment variable TESTCODE_STOP is set
+\***********************************************************************/
+
+Errors debugTestCodeError(void);
 
 /***********************************************************************\
 * Name   : debugLocalResource

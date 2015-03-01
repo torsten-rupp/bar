@@ -24,6 +24,8 @@
   #include "lists.h"
 #endif /* not NDEBUG */
 
+#include "errors.h"
+
 #include "global.h"
 
 /****************** Conditional compilation switches *******************/
@@ -36,6 +38,7 @@
 #define DEBUG_TESTCODE_SKIP_FILENAME "TESTCODE_SKIP"
 #define DEBUG_TESTCODE_NAME_FILENAME "TESTCODE_NAME"
 #define DEBUG_TESTCODE_DONE_FILENAME "TESTCODE_DONE"
+#define DEBUG_TESTCODE_STOP          "TESTCODE_STOP"
 
 /**************************** Datatypes ********************************/
 #ifndef NDEBUG
@@ -197,9 +200,9 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
 
   // check environment variable
   value = getenv(DEBUG_TESTCODE_NAME);
-  if ((value != NULL) && stringEquals(name,value))
+  if (value != NULL)
   {
-    isTestCodeEnabledFlag = TRUE;
+    isTestCodeEnabledFlag = stringEquals(name,value);
   }
   else
   {
@@ -319,6 +322,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
         fputs(name,file); fputc('\n',file);
         fclose(file);
       }
+      fprintf(stderr,"DEBUG: -----------------------------------------------------------------\n");
       fprintf(stderr,"DEBUG: Execute testcode '%s', %s, line %u\n",name,__fileName__,__lineNb__);
     }
 
@@ -330,6 +334,15 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
   }
 
   return isTestCodeEnabledFlag;
+}
+
+Errors debugTestCodeError(void)
+{
+  if (getenv(DEBUG_TESTCODE_STOP) != NULL)
+  {
+    __BP();
+  }
+  return ERRORX_(TESTCODE,0,__testCodeName__);
 }
 
 void debugLocalResource(const char *__fileName__,
