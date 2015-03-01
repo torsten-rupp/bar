@@ -238,7 +238,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
       }
     }
 
-    // check test code done file
+    // check test code skip file
     if (isInListFileFlag)
     {
       value = getenv(DEBUG_TESTCODE_SKIP_FILENAME);
