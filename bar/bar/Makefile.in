@@ -2987,7 +2987,8 @@ memcheck8: \
           $(TEST_BAR_VALGRIND) \
             --daemon \
             --no-detach \
-            --server-jobs-directory jobs \
+            --no-default-config \
+            --server-jobs-directory=jobs \
             --server-ca-file=bar-ca.pem \
             --server-cert-file=bar-server-cert.pem \
             --server-key-file=bar-server-key.pem \
