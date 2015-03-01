@@ -276,12 +276,14 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define File_getTmpFile(...)        __File_getTmpFile(__FILE__,__LINE__,__VA_ARGS__)
-  #define File_getTmpFileCString(...) __File_getTmpFileCString(__FILE__,__LINE__,__VA_ARGS__)
-  #define File_open(...)              __File_open(__FILE__,__LINE__,__VA_ARGS__)
-  #define File_openCString(...)       __File_openCString(__FILE__,__LINE__,__VA_ARGS__)
-  #define File_openDescriptor(...)    __File_openDescriptor(__FILE__,__LINE__,__VA_ARGS__)
-  #define File_close(...)             __File_close(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_getTmpFile(...)             __File_getTmpFile(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_getTmpFileCString(...)      __File_getTmpFileCString(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_open(...)                   __File_open(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_openCString(...)            __File_openCString(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_openDescriptor(...)         __File_openDescriptor(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_close(...)                  __File_close(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_initExtendedAttributes(...) __File_initExtendedAttributes(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_doneExtendedAttributes(...) __File_doneExtendedAttributes(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -1172,7 +1174,14 @@ INLINE bool File_haveAttributeNoDump(const FileInfo *fileInfo)
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
+#else /* not NDEBUG */
+void __File_initExtendedAttributes(const char                *__fileName__,
+                                   uint                      __lineNb__,
+                                   FileExtendedAttributeList *fileExtendedAttributeList
+                                  );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : File_doneExtendedAttributes
@@ -1183,7 +1192,14 @@ void File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribut
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
+#else /* not NDEBUG */
+void __File_doneExtendedAttributes(const char                *__fileName__,
+                                   uint                      __lineNb__,
+                                   FileExtendedAttributeList *fileExtendedAttributeList
+                                  );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : File_addExtendedAttribute, File_addExtendedAttributeCString

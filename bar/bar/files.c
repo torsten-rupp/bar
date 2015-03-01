@@ -845,7 +845,7 @@ Errors __File_getTmpFileCString(const char   *__fileName__,
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %u",
+        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened multiple times at %s, line %u",
                             String_cString(debugFileNode->fileHandle->name),
                             debugFileNode->fileName,
                             debugFileNode->lineNb,
@@ -3201,18 +3201,44 @@ Errors File_setFileInfo(const String   fileName,
   return ERROR_NONE;
 }
 
+#ifdef NDEBUG
 void File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList)
+#else /* not NDEBUG */
+void __File_initExtendedAttributes(const char                *__fileName__,
+                                   uint                      __lineNb__,
+                                   FileExtendedAttributeList *fileExtendedAttributeList
+                                  )
+#endif /* NDEBUG */
 {
   assert(fileExtendedAttributeList != NULL);
 
   List_init(fileExtendedAttributeList);
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE("fileExtendedAttributeList",fileExtendedAttributeList);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"fileExtendedAttributeList",fileExtendedAttributeList);
+  #endif /* NDEBUG */
 }
 
+#ifdef NDEBUG
 void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList)
+#else /* not NDEBUG */
+void __File_doneExtendedAttributes(const char                *__fileName__,
+                                   uint                      __lineNb__,
+                                   FileExtendedAttributeList *fileExtendedAttributeList
+                                  )
+#endif /* NDEBUG */
 {
   assert(fileExtendedAttributeList != NULL);
 
   List_done(fileExtendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
+
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(fileExtendedAttributeList);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,fileExtendedAttributeList);
+  #endif /* NDEBUG */
 }
 
 void File_addExtendedAttribute(FileExtendedAttributeList *fileExtendedAttributeList,
