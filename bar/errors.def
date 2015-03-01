@@ -536,7 +536,7 @@ ERROR AUTHORIZATION                  "authorization error"
 ERROR JOB_NOT_FOUND                  "job not found"
 ERROR JOB                            "job error"
 
-// --- database (SQLite3) -----------------------------------------------
+// --- index database (SQLite3) -----------------------------------------
 ERROR DATABASE
   if (ERROR_TEXT != NULL)
   {
@@ -548,6 +548,7 @@ ERROR DATABASE
   }
   errorText[sizeof(errorText)-1] = '\0';
 
+ERROR DATABASE_VERSION_UNKNOWN       "unknown version on index"
 ERROR DATABASE_CREATE_INDEX          "error creating index"
 ERROR DATABASE_INDEX_NOT_FOUND       "index not found"
 
