@@ -4812,6 +4812,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                  Error_getText(error)
                 );
       (void)File_close(&fileHandle);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return error;
     }
