@@ -1538,14 +1538,10 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // clean-up database
-    plogMessage(LOG_TYPE_INDEX,"INDEX","Start clean-up index database\n");
-
     (void)cleanUpDuplicateMeta(indexHandle);
     (void)cleanUpOrphanedEntries(indexHandle);
     (void)cleanUpStorageNoName(indexHandle);
     (void)cleanUpDuplicateIndizes(indexHandle);
-
-    plogMessage(LOG_TYPE_INDEX,"INDEX","Done clean-up index database\n");
 
     Misc_udelay(1LL*MISC_US_PER_HOUR);
 //Misc_udelay(10LL*MISC_US_PER_SECOND);
