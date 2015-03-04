@@ -260,46 +260,6 @@ LOCAL Errors getIndexVersion(const char *databaseFileName, int64 *indexVersion)
 }
 
 /***********************************************************************\
-* Name   : setIndexVersion
-* Purpose: set index version
-* Input  : databaseFileName - database file name
-*          indexVersion     - index version
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors setIndexVersion(const char *databaseFileName, int64 indexVersion)
-{
-  Errors      error;
-  IndexHandle indexHandle;
-
-  // open index database
-  error = openIndex(&indexHandle,databaseFileName);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // get database version
-  error = Database_setInteger64(&indexHandle.databaseHandle,
-                                indexVersion,
-                                "meta",
-                                "value",
-                                "WHERE name='version'"
-                               );
-  if (error != ERROR_NONE)
-  {
-    (void)closeIndex(&indexHandle);
-    return error;
-  }
-
-  (void)closeIndex(&indexHandle);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
 * Name   : upgradeFromVersion1
 * Purpose: upgrade index from version 1 to current version
 * Input  : indexHandle - index handle
@@ -938,6 +898,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
   String           storageName,printableStorageName;
 
   // init variables
+  Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
   printableStorageName = String_new();
 
@@ -984,6 +945,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
   // free resources
   String_delete(printableStorageName);
   String_delete(storageName);
+  Storage_doneSpecifier(&storageSpecifier);
 
   return ERROR_NONE;
 }
@@ -1005,6 +967,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
   String           storageName,printableStorageName;
 
   // init variables
+  Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
   printableStorageName = String_new();
 
@@ -1046,6 +1009,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
   // free resources
   String_delete(printableStorageName);
   String_delete(storageName);
+  Storage_doneSpecifier(&storageSpecifier);
 
   return ERROR_NONE;
 }
