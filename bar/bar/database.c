@@ -746,7 +746,7 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
     return error;
   }
   #ifndef NDEBUG
-    databaseHandle->fileName = fileName;
+    strncpy(databaseHandle->fileName,fileName,sizeof(databaseHandle->fileName)); databaseHandle->fileName[sizeof(databaseHandle->fileName)-1] = '\0';
   #endif /* not NDEBUG */
 
 #warning TODO remove

@@ -69,7 +69,7 @@ typedef struct
 {
   sqlite3    *handle;
   #ifndef NDEBUG
-    const char *fileName;
+    char fileName[256];
   #endif /* not NDEBUG */
 } DatabaseHandle;
 
