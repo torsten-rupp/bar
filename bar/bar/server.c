@@ -3489,7 +3489,7 @@ LOCAL Errors deleteStorage(DatabaseId storageId)
       resultError = Storage_parseName(&storageSpecifier,storageName);
       if (resultError == ERROR_NONE)
       {
-  #warning NYI: move this special handling of limited scp into Storage_delete()?
+#warning NYI: move this special handling of limited scp into Storage_delete()?
         // init storage
         if (storageSpecifier.type == STORAGE_TYPE_SCP)
         {
