@@ -6952,382 +6952,6 @@ void Storage_close(StorageHandle *storageHandle)
   }
 }
 
-Errors Storage_delete(StorageHandle *storageHandle,
-                      const String  storageFileName
-                     )
-{
-  Errors error;
-
-  assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-
-  error = ERROR_UNKNOWN;
-  switch (storageHandle->storageSpecifier.type)
-  {
-    case STORAGE_TYPE_NONE:
-      break;
-    case STORAGE_TYPE_FILESYSTEM:
-      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-      {
-        error = File_delete(storageFileName,FALSE);
-      }
-      else
-      {
-        error = ERROR_NONE;
-      }
-      break;
-    case STORAGE_TYPE_FTP:
-      #if   defined(HAVE_CURL)
-        {
-          CURL              *curlHandle;
-          String            pathName,baseName;
-          String            url;
-          CURLcode          curlCode;
-          const char        *plainLoginPassword;
-          StringTokenizer   nameTokenizer;
-          String            name;
-          String            ftpCommand;
-          struct curl_slist *curlSList;
-
-          // open Curl handle
-          curlHandle = curl_easy_init();
-          if (curlHandle != NULL)
-          {
-            /* Note: curl trigger from time to time a SIGALRM. The curl option
-                     CURLOPT_NOSIGNAL should stop this. But it seems there is
-                     a bug in curl which cause random crashes when
-                     CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-                     Instead install a signal handler to catch the not wanted
-                     signal.
-            (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
-            */
-            if (globalOptions.verboseLevel >= 6)
-            {
-              // enable debug mode
-              (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
-            }
-
-            // get pathname, basename
-            pathName = File_getFilePathName(String_new(),storageFileName);
-            baseName = File_getFileBaseName(String_new(),storageFileName);
-
-            // get URL
-            url = String_format(String_new(),"ftp://%S",storageHandle->storageSpecifier.hostName);
-            if (storageHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageSpecifier.hostPort);
-            File_initSplitFileName(&nameTokenizer,pathName);
-            while (File_getNextSplitFileName(&nameTokenizer,&name))
-            {
-              String_appendChar(url,'/');
-              String_append(url,name);
-            }
-            File_doneSplitFileName(&nameTokenizer);
-            String_append(url,baseName);
-
-            // set FTP connect
-            curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-            if (curlCode == CURLE_OK)
-            {
-              // set FTP login
-              (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-              plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-              (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-              Password_undeploy(storageHandle->storageSpecifier.loginPassword);
-
-              if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-              {
-                // delete file
-                ftpCommand = String_format(String_new(),"*DELE %S",storageFileName);
-                curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
-                curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_QUOTE,curlSList);
-                }
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_perform(curlHandle);
-                }
-                (void)curl_easy_setopt(curlHandle,CURLOPT_QUOTE,NULL);
-                if (curlCode == CURLE_OK)
-                {
-                  error = ERROR_NONE;
-                }
-                else
-                {
-                  error = ERRORX_(DELETE_FILE,0,curl_multi_strerror(curlCode));
-                }
-                curl_slist_free_all(curlSList);
-                String_delete(ftpCommand);
-              }
-              else
-              {
-                error = ERROR_NONE;
-              }
-            }
-            else
-            {
-              error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
-            }
-
-            // free resources
-            String_delete(url);
-            String_delete(baseName);
-            String_delete(pathName);
-            (void)curl_easy_cleanup(curlHandle);
-          }
-          else
-          {
-            error = ERROR_FTP_SESSION_FAIL;
-          }
-        }
-      #elif defined(HAVE_FTP)
-        assert(storageHandle->ftp.data != NULL);
-
-        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-        {
-          error = (FtpDelete(String_cString(storageFileName),storageHandle->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
-        }
-        else
-        {
-          error = ERROR_NONE;
-        }
-      #else /* not HAVE_CURL || HAVE_FTP */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_CURL || HAVE_FTP */
-      break;
-    case STORAGE_TYPE_SSH:
-      #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
-      break;
-    case STORAGE_TYPE_SCP:
-      #ifdef HAVE_SSH2
-#if 0
-whould this be a possible implementation?
-        {
-          String command;
-
-          assert(storageHandle->scp.channel != NULL);
-
-          // there is no unlink command for scp: execute either 'rm' or 'del' on remote server
-          command = String_new();
-          String_format(String_clear(command),"rm %'S",storageFileName);
-          error = (libssh2_channel_exec(storageHandle->scp.channel,
-                                        String_cString(command)
-                                       ) != 0
-                  ) ? ERROR_NONE : ERROR_DELETE_FILE;
-          if (error != ERROR_NONE)
-          {
-            String_format(String_clear(command),"del %'S",storageFileName);
-            error = (libssh2_channel_exec(storageHandle->scp.channel,
-                                          String_cString(command)
-                                         ) != 0
-                    ) ? ERROR_NONE : ERROR_DELETE_FILE;
-          }
-          String_delete(command);
-        }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
-#endif /* 0 */
-      error = ERROR_FUNCTION_NOT_SUPPORTED;
-      break;
-    case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        error = Network_connect(&storageHandle->sftp.socketHandle,
-                                SOCKET_TYPE_SSH,
-                                storageHandle->storageSpecifier.hostName,
-                                storageHandle->storageSpecifier.hostPort,
-                                storageHandle->storageSpecifier.loginName,
-                                storageHandle->storageSpecifier.loginPassword,
-                                storageHandle->sftp.sshPublicKeyFileName,
-                                storageHandle->sftp.sshPrivateKeyFileName,
-                                0
-                               );
-        if (error == ERROR_NONE)
-        {
-          libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
-
-          // init session
-          storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
-          if (storageHandle->sftp.sftp != NULL)
-          {
-            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-            {
-              // delete file
-              if (libssh2_sftp_unlink(storageHandle->sftp.sftp,
-                                      String_cString(storageFileName)
-                                     ) == 0
-                 )
-              {
-                error = ERROR_NONE;
-              }
-              else
-              {
-                 char *sshErrorText;
-
-                 libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-                 error = ERRORX_(SSH,
-                                 libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                                 sshErrorText
-                                );
-              }
-            }
-            else
-            {
-              error = ERROR_NONE;
-            }
-
-            libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-          }
-          else
-          {
-            char *sshErrorText;
-
-            libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-            error = ERRORX_(SSH,
-                            libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                            sshErrorText
-                           );
-            Network_disconnect(&storageHandle->sftp.socketHandle);
-          }
-          Network_disconnect(&storageHandle->sftp.socketHandle);
-        }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
-      break;
-    case STORAGE_TYPE_WEBDAV:
-      #ifdef HAVE_CURL
-        {
-          CURL              *curlHandle;
-          String            baseURL;
-          const char        *plainLoginPassword;
-          CURLcode          curlCode;
-          String            pathName,baseName;
-          String            url;
-          StringTokenizer   nameTokenizer;
-          String            name;
-
-          // initialize variables
-          curlHandle = curl_easy_init();
-          if (curlHandle != NULL)
-          {
-            /* Note: curl trigger from time to time a SIGALRM. The curl option
-                     CURLOPT_NOSIGNAL should stop this. But it seems there is
-                     a bug in curl which cause random crashes when
-                     CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-                     Instead install a signal handler to catch the not wanted
-                     signal.
-            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
-            */
-            (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
-            if (globalOptions.verboseLevel >= 6)
-            {
-              // enable debug mode
-              (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
-            }
-
-            // get base URL
-            baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
-            if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
-
-            // get pathname, basename
-            pathName = File_getFilePathName(String_new(),storageFileName);
-            baseName = File_getFileBaseName(String_new(),storageFileName);
-
-            // get URL
-            url = String_format(String_duplicate(baseURL),"/");
-            File_initSplitFileName(&nameTokenizer,pathName);
-            while (File_getNextSplitFileName(&nameTokenizer,&name))
-            {
-              String_append(url,name);
-              String_appendChar(url,'/');
-            }
-            File_doneSplitFileName(&nameTokenizer);
-            String_append(url,baseName);
-
-            // set WebDAV connect
-            curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(baseURL));
-            if (curlCode == CURLE_OK)
-            {
-              // set WebDAV login
-              (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-              plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-              (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-              Password_undeploy(storageHandle->storageSpecifier.loginPassword);
-
-              if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-              {
-                // delete file
-                curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
-                }
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-                }
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_perform(curlHandle);
-                }
-                if (curlCode == CURLE_OK)
-                {
-                  error = ERROR_NONE;
-                }
-                else
-                {
-                  error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
-                }
-              }
-              else
-              {
-                error = ERROR_NONE;
-              }
-            }
-            else
-            {
-              error = ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
-            }
-
-            // free resources
-            String_delete(url);
-            String_delete(baseName);
-            String_delete(pathName);
-            String_delete(baseURL);
-            (void)curl_easy_cleanup(curlHandle);
-          }
-          else
-          {
-            error = ERROR_WEBDAV_SESSION_FAIL;
-          }
-        }
-      #else /* not HAVE_CURL */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_CURL */
-      break;
-    case STORAGE_TYPE_CD:
-    case STORAGE_TYPE_DVD:
-    case STORAGE_TYPE_BD:
-      error = ERROR_FUNCTION_NOT_SUPPORTED;
-      break;
-    case STORAGE_TYPE_DEVICE:
-      error = ERROR_FUNCTION_NOT_SUPPORTED;
-      break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break;
-  }
-  assert(error != ERROR_UNKNOWN);
-
-  return error;
-}
-
 bool Storage_eof(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
@@ -9387,6 +9011,735 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
   return error;
 }
+
+Errors Storage_delete(StorageHandle *storageHandle,
+                      const String  storageFileName
+                     )
+{
+  String deleteFileName;
+  Errors error;
+
+  assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+
+  deleteFileName = (storageFileName != NULL) ? storageFileName : storageHandle->storageSpecifier.fileName;
+
+  error = ERROR_UNKNOWN;
+  switch (storageHandle->storageSpecifier.type)
+  {
+    case STORAGE_TYPE_NONE:
+      break;
+    case STORAGE_TYPE_FILESYSTEM:
+      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+      {
+        error = File_delete(deleteFileName,FALSE);
+      }
+      else
+      {
+        error = ERROR_NONE;
+      }
+      break;
+    case STORAGE_TYPE_FTP:
+      #if   defined(HAVE_CURL)
+        {
+          CURL              *curlHandle;
+          String            pathName,baseName;
+          String            url;
+          CURLcode          curlCode;
+          const char        *plainLoginPassword;
+          StringTokenizer   nameTokenizer;
+          String            name;
+          String            ftpCommand;
+          struct curl_slist *curlSList;
+
+          // open Curl handle
+          curlHandle = curl_easy_init();
+          if (curlHandle != NULL)
+          {
+            (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
+            if (globalOptions.verboseLevel >= 6)
+            {
+              // enable debug mode
+              (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
+            }
+
+            // get pathname, basename
+            pathName = File_getFilePathName(String_new(),deleteFileName);
+            baseName = File_getFileBaseName(String_new(),deleteFileName);
+
+            // get URL
+            url = String_format(String_new(),"ftp://%S",storageHandle->storageSpecifier.hostName);
+            if (storageHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageSpecifier.hostPort);
+            File_initSplitFileName(&nameTokenizer,pathName);
+            while (File_getNextSplitFileName(&nameTokenizer,&name))
+            {
+              String_appendChar(url,'/');
+              String_append(url,name);
+            }
+            File_doneSplitFileName(&nameTokenizer);
+            String_append(url,baseName);
+
+            // set FTP connect
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+            if (curlCode == CURLE_OK)
+            {
+              // set FTP login
+              (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
+              plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
+              (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+              Password_undeploy(storageHandle->storageSpecifier.loginPassword);
+
+              if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+              {
+                // delete file
+                ftpCommand = String_format(String_new(),"*DELE %S",deleteFileName);
+                curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
+                curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_QUOTE,curlSList);
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_perform(curlHandle);
+                }
+                (void)curl_easy_setopt(curlHandle,CURLOPT_QUOTE,NULL);
+                if (curlCode == CURLE_OK)
+                {
+                  error = ERROR_NONE;
+                }
+                else
+                {
+                  error = ERRORX_(DELETE_FILE,0,curl_multi_strerror(curlCode));
+                }
+                curl_slist_free_all(curlSList);
+                String_delete(ftpCommand);
+              }
+              else
+              {
+                error = ERROR_NONE;
+              }
+            }
+            else
+            {
+              error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+            }
+
+            // free resources
+            String_delete(url);
+            String_delete(baseName);
+            String_delete(pathName);
+            (void)curl_easy_cleanup(curlHandle);
+          }
+          else
+          {
+            error = ERROR_FTP_SESSION_FAIL;
+          }
+        }
+      #elif defined(HAVE_FTP)
+        assert(storageHandle->ftp.data != NULL);
+
+        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+        {
+          error = (FtpDelete(String_cString(deleteFileName),storageHandle->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
+        }
+        else
+        {
+          error = ERROR_NONE;
+        }
+      #else /* not HAVE_CURL || HAVE_FTP */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_CURL || HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_SCP:
+      #ifdef HAVE_SSH2
+#if 0
+whould this be a possible implementation?
+        {
+          String command;
+
+          assert(storageHandle->scp.channel != NULL);
+
+          // there is no unlink command for scp: execute either 'rm' or 'del' on remote server
+          command = String_new();
+          String_format(String_clear(command),"rm %'S",deleteFileName);
+          error = (libssh2_channel_exec(storageHandle->scp.channel,
+                                        String_cString(command)
+                                       ) != 0
+                  ) ? ERROR_NONE : ERROR_DELETE_FILE;
+          if (error != ERROR_NONE)
+          {
+            String_format(String_clear(command),"del %'S",deleteFileName);
+            error = (libssh2_channel_exec(storageHandle->scp.channel,
+                                          String_cString(command)
+                                         ) != 0
+                    ) ? ERROR_NONE : ERROR_DELETE_FILE;
+          }
+          String_delete(command);
+        }
+      #else /* not HAVE_SSH2 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
+#endif /* 0 */
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_SFTP:
+      #ifdef HAVE_SSH2
+        error = Network_connect(&storageHandle->sftp.socketHandle,
+                                SOCKET_TYPE_SSH,
+                                storageHandle->storageSpecifier.hostName,
+                                storageHandle->storageSpecifier.hostPort,
+                                storageHandle->storageSpecifier.loginName,
+                                storageHandle->storageSpecifier.loginPassword,
+                                storageHandle->sftp.sshPublicKeyFileName,
+                                storageHandle->sftp.sshPrivateKeyFileName,
+                                0
+                               );
+        if (error == ERROR_NONE)
+        {
+          libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
+
+          // init session
+          storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
+          if (storageHandle->sftp.sftp != NULL)
+          {
+            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+            {
+              // delete file
+              if (libssh2_sftp_unlink(storageHandle->sftp.sftp,
+                                      String_cString(deleteFileName)
+                                     ) == 0
+                 )
+              {
+                error = ERROR_NONE;
+              }
+              else
+              {
+                 char *sshErrorText;
+
+                 libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
+                 error = ERRORX_(SSH,
+                                 libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
+                                 sshErrorText
+                                );
+              }
+            }
+            else
+            {
+              error = ERROR_NONE;
+            }
+
+            libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+          }
+          else
+          {
+            char *sshErrorText;
+
+            libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
+            error = ERRORX_(SSH,
+                            libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
+                            sshErrorText
+                           );
+            Network_disconnect(&storageHandle->sftp.socketHandle);
+          }
+          Network_disconnect(&storageHandle->sftp.socketHandle);
+        }
+      #else /* not HAVE_SSH2 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      #ifdef HAVE_CURL
+        {
+          CURL              *curlHandle;
+          String            baseURL;
+          const char        *plainLoginPassword;
+          CURLcode          curlCode;
+          String            pathName,baseName;
+          String            url;
+          StringTokenizer   nameTokenizer;
+          String            name;
+
+          // initialize variables
+          curlHandle = curl_easy_init();
+          if (curlHandle != NULL)
+          {
+            /* Note: curl trigger from time to time a SIGALRM. The curl option
+                     CURLOPT_NOSIGNAL should stop this. But it seems there is
+                     a bug in curl which cause random crashes when
+                     CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+                     Instead install a signal handler to catch the not wanted
+                     signal.
+            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
+            */
+            (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
+            if (globalOptions.verboseLevel >= 6)
+            {
+              // enable debug mode
+              (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
+            }
+
+            // get base URL
+            baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
+            if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
+
+            // get pathname, basename
+            pathName = File_getFilePathName(String_new(),deleteFileName);
+            baseName = File_getFileBaseName(String_new(),deleteFileName);
+
+            // get URL
+            url = String_format(String_duplicate(baseURL),"/");
+            File_initSplitFileName(&nameTokenizer,pathName);
+            while (File_getNextSplitFileName(&nameTokenizer,&name))
+            {
+              String_append(url,name);
+              String_appendChar(url,'/');
+            }
+            File_doneSplitFileName(&nameTokenizer);
+            String_append(url,baseName);
+
+            // set WebDAV connect
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(baseURL));
+            if (curlCode == CURLE_OK)
+            {
+              // set WebDAV login
+              (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
+              plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
+              (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+              Password_undeploy(storageHandle->storageSpecifier.loginPassword);
+
+              if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+              {
+                // delete file
+                curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_perform(curlHandle);
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  error = ERROR_NONE;
+                }
+                else
+                {
+                  error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
+                }
+              }
+              else
+              {
+                error = ERROR_NONE;
+              }
+            }
+            else
+            {
+              error = ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+            }
+
+            // free resources
+            String_delete(url);
+            String_delete(baseName);
+            String_delete(pathName);
+            String_delete(baseURL);
+            (void)curl_easy_cleanup(curlHandle);
+          }
+          else
+          {
+            error = ERROR_WEBDAV_SESSION_FAIL;
+          }
+        }
+      #else /* not HAVE_CURL */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_CURL */
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_DEVICE:
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+  assert(error != ERROR_UNKNOWN);
+
+  return error;
+}
+
+#if 0
+still not complete
+Errors Storage_getFileInfo(StorageHandle *storageHandle,
+                           const String  fileName,
+                           FileInfo     *fileInfo
+                          )
+{
+  String infoFileName;
+  Errors error;
+
+  assert(storageHandle != NULL);
+  assert(fileInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+
+  infoFileName = (fileName != NULL) ? fileName : storageHandle->storageSpecifier.fileName;
+  memset(fileInfo,0,sizeof(fileInfo));
+
+  error = ERROR_UNKNOWN;
+  switch (storageHandle->storageSpecifier.type)
+  {
+    case STORAGE_TYPE_NONE:
+      break;
+    case STORAGE_TYPE_FILESYSTEM:
+      error = File_getFileInfo(infoFileName,fileInfo);
+      break;
+    case STORAGE_TYPE_FTP:
+      #if   defined(HAVE_CURL)
+        {
+          Server            server;
+          CURL              *curlHandle;
+          String            pathName,baseName;
+          String            url;
+          CURLcode          curlCode;
+          const char        *plainLoginPassword;
+          StringTokenizer   nameTokenizer;
+          String            name;
+          String            ftpCommand;
+          struct curl_slist *curlSList;
+
+          // get FTP server settings
+          getFTPServerSettings(storageHandle->storageSpecifier.hostName,storageHandle->jobOptions,&ftpServer);
+          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,ftpServer.loginName);
+          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageHandle->storageSpecifier.hostName))
+          {
+            return ERROR_NO_HOST_NAME;
+          }
+
+          // allocate FTP server
+          if (!allocateServer(&server,SERVER_CONNECTION_PRIORITY_LOW,60*1000L))
+          {
+            return ERROR_TOO_MANY_CONNECTIONS;
+          }
+
+          // open Curl handle
+          curlHandle = curl_easy_init();
+          if (curlHandle != NULL)
+          {
+            freeServer(ftpServer);
+            return = ERROR_FTP_SESSION_FAIL;
+          }
+          (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
+          if (globalOptions.verboseLevel >= 6)
+          {
+            // enable debug mode
+            (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
+          }
+
+          // get pathname, basename
+          pathName = File_getFilePathName(String_new(),infoFileName);
+          baseName = File_getFileBaseName(String_new(),infoFileName);
+
+          // get URL
+          url = String_format(String_new(),"ftp://%S",storageHandle->storageSpecifier.hostName);
+          if (storageHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageSpecifier.hostPort);
+          File_initSplitFileName(&nameTokenizer,pathName);
+          while (File_getNextSplitFileName(&nameTokenizer,&name))
+          {
+            String_appendChar(url,'/');
+            String_append(url,name);
+          }
+          File_doneSplitFileName(&nameTokenizer);
+          String_append(url,baseName);
+
+          // set FTP connect
+          curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+          if (curlCode != CURLE_OK)
+          {
+            String_delete(url);
+            String_delete(baseName);
+            String_delete(pathName);
+            (void)curl_easy_cleanup(curlHandle);
+            freeServer(server);
+            return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+          }
+
+          // set FTP login
+          (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
+          plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
+          (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+          Password_undeploy(storageHandle->storageSpecifier.loginPassword);
+
+          // get file info
+          ftpCommand = String_format(String_new(),"*DIR %S",infoFileName);
+          curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
+          curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_QUOTE,curlSList);
+          }
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_perform(curlHandle);
+          }
+          (void)curl_easy_setopt(curlHandle,CURLOPT_QUOTE,NULL);
+          if (curlCode == CURLE_OK)
+          {
+            error = ERROR_NONE;
+          }
+          else
+          {
+            error = ERRORX_(DELETE_FILE,0,curl_multi_strerror(curlCode));
+          }
+          curl_slist_free_all(curlSList);
+          String_delete(ftpCommand);
+
+          // free resources
+          String_delete(url);
+          String_delete(baseName);
+          String_delete(pathName);
+          (void)curl_easy_cleanup(curlHandle);
+          freeServer(ftp.server);
+        }
+      #elif defined(HAVE_FTP)
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_CURL || HAVE_FTP */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_CURL || HAVE_FTP */
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_SCP:
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_SFTP:
+      #ifdef HAVE_SSH2
+        {
+          LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
+
+          error = Network_connect(&storageHandle->sftp.socketHandle,
+                                  SOCKET_TYPE_SSH,
+                                  storageHandle->storageSpecifier.hostName,
+                                  storageHandle->storageSpecifier.hostPort,
+                                  storageHandle->storageSpecifier.loginName,
+                                  storageHandle->storageSpecifier.loginPassword,
+                                  storageHandle->sftp.sshPublicKeyFileName,
+                                  storageHandle->sftp.sshPrivateKeyFileName,
+                                  0
+                                 );
+          if (error == ERROR_NONE)
+          {
+            libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
+
+            // init session
+            storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
+            if (storageHandle->sftp.sftp != NULL)
+            {
+              // get file fino
+              if (libssh2_sftp_lstat(storageHandle->sftp.sftp,
+                                     String_cString(infoFileName),
+                                     &sftpAttributes
+                                    ) == 0
+                 )
+              {
+                if      (LIBSSH2_SFTP_S_ISREG (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_FILE;
+                else if (LIBSSH2_SFTP_S_ISDIR (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_DIRECTORY;
+                else if (LIBSSH2_SFTP_S_ISLNK (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_LINK;
+                else if (LIBSSH2_SFTP_S_ISCHR (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_SPECIAL;
+                else if (LIBSSH2_SFTP_S_ISBLK (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_SPECIAL;
+                else if (LIBSSH2_SFTP_S_ISFIFO(sftpAttributes.flags)) fileInfo->type = FILE_TYPE_SPECIAL;
+                else if (LIBSSH2_SFTP_S_ISSOCK(sftpAttributes.flags)) fileInfo->type = FILE_TYPE_SPECIAL;
+                else                                                  fileInfo->type = FILE_TYPE_UNKNOWN;
+                fileInfo->size            = (uint64)sftpAttributes.filesize;
+                fileInfo->timeLastAccess  = (uint64)sftpAttributes.atime;
+                fileInfo->timeModified    = (uint64)sftpAttributes.mtime;
+                fileInfo->userId          = sftpAttributes.uid;
+                fileInfo->groupId         = sftpAttributes.gid;
+                fileInfo->permission      = (FilePermission)sftpAttributes.permissions;
+
+                error = ERROR_NONE;
+              }
+              else
+              {
+                 char *sshErrorText;
+
+                 libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
+                 error = ERRORX_(SSH,
+                                 libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
+                                 sshErrorText
+                                );
+              }
+
+              libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+            }
+            else
+            {
+              char *sshErrorText;
+
+              libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
+              error = ERRORX_(SSH,
+                              libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
+                              sshErrorText
+                             );
+              Network_disconnect(&storageHandle->sftp.socketHandle);
+            }
+            Network_disconnect(&storageHandle->sftp.socketHandle);
+          }
+        }
+      #else /* not HAVE_SSH2 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      #ifdef HAVE_CURL
+        {
+          CURL              *curlHandle;
+          String            baseURL;
+          const char        *plainLoginPassword;
+          CURLcode          curlCode;
+          String            pathName,baseName;
+          String            url;
+          StringTokenizer   nameTokenizer;
+          String            name;
+
+          // initialize variables
+          curlHandle = curl_easy_init();
+          if (curlHandle != NULL)
+          {
+            /* Note: curl trigger from time to time a SIGALRM. The curl option
+                     CURLOPT_NOSIGNAL should stop this. But it seems there is
+                     a bug in curl which cause random crashes when
+                     CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+                     Instead install a signal handler to catch the not wanted
+                     signal.
+            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
+            */
+            (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
+            if (globalOptions.verboseLevel >= 6)
+            {
+              // enable debug mode
+              (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
+            }
+
+            // get base URL
+            baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
+            if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
+
+            // get pathname, basename
+            pathName = File_getFilePathName(String_new(),infoFileName);
+            baseName = File_getFileBaseName(String_new(),infoFileName);
+
+            // get URL
+            url = String_format(String_duplicate(baseURL),"/");
+            File_initSplitFileName(&nameTokenizer,pathName);
+            while (File_getNextSplitFileName(&nameTokenizer,&name))
+            {
+              String_append(url,name);
+              String_appendChar(url,'/');
+            }
+            File_doneSplitFileName(&nameTokenizer);
+            String_append(url,baseName);
+
+            // set WebDAV connect
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(baseURL));
+            if (curlCode == CURLE_OK)
+            {
+              // set WebDAV login
+              (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
+              plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
+              (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+              Password_undeploy(storageHandle->storageSpecifier.loginPassword);
+
+              if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+              {
+                // get file info
+                curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"INFO");
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_perform(curlHandle);
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  error = ERROR_NONE;
+                }
+                else
+                {
+                  error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
+                }
+              }
+              else
+              {
+                error = ERROR_NONE;
+              }
+            }
+            else
+            {
+              error = ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+            }
+
+            // free resources
+            String_delete(url);
+            String_delete(baseName);
+            String_delete(pathName);
+            String_delete(baseURL);
+            (void)curl_easy_cleanup(curlHandle);
+          }
+          else
+          {
+            error = ERROR_WEBDAV_SESSION_FAIL;
+          }
+        }
+      #else /* not HAVE_CURL */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_CURL */
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_DEVICE:
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+  assert(error != ERROR_UNKNOWN);
+
+  return error;
+}
+#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 

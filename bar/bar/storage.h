@@ -998,20 +998,6 @@ Errors Storage_open(StorageHandle *storageHandle);
 void Storage_close(StorageHandle *storageHandle);
 
 /***********************************************************************\
-* Name   : Storage_delete
-* Purpose: delete storage file
-* Input  : storageHandle - storage handle
-*          fileName      - archive file name
-* Output : -
-* Return : ERROR_NONE or errorcode
-* Notes  : -
-\***********************************************************************/
-
-Errors Storage_delete(StorageHandle *storageHandle,
-                      const String  fileName
-                     );
-
-/***********************************************************************\
 * Name   : Storage_eof
 * Purpose: check if end-of-file in storage file
 * Input  : storageHandle - storage handle
@@ -1093,6 +1079,39 @@ Errors Storage_tell(StorageHandle *storageHandle,
 Errors Storage_seek(StorageHandle *storageHandle,
                     uint64        offset
                    );
+
+/***********************************************************************\
+* Name   : Storage_delete
+* Purpose: delete storage file
+* Input  : storageHandle - storage handle
+*          fileName      - archive file name (can be NULL)
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_delete(StorageHandle *storageHandle,
+                      const String  fileName
+                     );
+
+#if 0
+still not complete
+/***********************************************************************\
+* Name   : Storage_getFileInfo
+* Purpose: get storage file info
+* Input  : storageHandle - storage handle
+*          fileName      - archive file name (can be NULL)
+*          fileInfo      - file info variable
+* Output : fileInfo - file info
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_getFileInfo(StorageHandle *storageHandle,
+                           const String  fileName,
+                           FileInfo     *fileInfo
+                          );
+#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 
