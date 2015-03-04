@@ -4386,7 +4386,10 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
     {
       if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
       {
-        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        if (COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm != COMPRESS_ALGORITHM_NONE)
+        {
+          compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        }
         foundFlag = TRUE;
         break;
       }
@@ -4395,7 +4398,10 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
     {
       if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
       {
-        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        if (COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm != COMPRESS_ALGORITHM_NONE)
+        {
+          compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        }
         foundFlag = TRUE;
         break;
       }
@@ -4411,7 +4417,10 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
     {
       if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
       {
-        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        if (COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm != COMPRESS_ALGORITHM_NONE)
+        {
+          compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        }
         foundFlag = TRUE;
         break;
       }
@@ -4420,7 +4429,10 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
     {
       if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
       {
-        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        if (COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm != COMPRESS_ALGORITHM_NONE)
+        {
+          compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        }
         foundFlag = TRUE;
         break;
       }
@@ -4438,7 +4450,10 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
     {
       if (strcasecmp(value,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
       {
-        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        if (COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm != COMPRESS_ALGORITHM_NONE)
+        {
+          compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        }
         foundFlag = TRUE;
         break;
       }
@@ -4447,7 +4462,10 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
     {
       if (strcasecmp(value,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
       {
-        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        if (COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm != COMPRESS_ALGORITHM_NONE)
+        {
+          compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        }
         foundFlag = TRUE;
         break;
       }
