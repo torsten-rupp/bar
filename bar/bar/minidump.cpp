@@ -270,6 +270,7 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
                             bool                                      succeeded
                            )
 {
+  // linked in symbol file
   extern int _minidump_symbols_start __attribute__((weak));
   extern int _minidump_symbols_size __attribute__((weak));
 
