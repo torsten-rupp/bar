@@ -320,8 +320,8 @@ ulong getBandWidth(BandWidthList *bandWidthList);
 * Purpose: get FTP server settings
 * Input  : hostName   - FTP server host name
 *          jobOptions - job options
-* Output : ftperver   - FTP server settings from job options, server
-*                       list or default FTP server values
+* Output : ftpServer - FTP server settings from job options, server
+*                      list or default FTP server values
 * Return : server
 * Notes  : -
 \***********************************************************************/
