@@ -2704,10 +2704,10 @@ public class TabJobs
             }
           });
 
-          widgetIncludeTableRemove = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
-          widgetIncludeTableRemove.setToolTipText(BARControl.tr("Clone entry in included list."));
-          Widgets.layout(widgetIncludeTableRemove,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          widgetIncludeTableRemove.addSelectionListener(new SelectionListener()
+          button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
+          button.setToolTipText(BARControl.tr("Clone entry in included list."));
+          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2722,10 +2722,10 @@ public class TabJobs
             }
           });
 
-          button = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
-          button.setToolTipText(BARControl.tr("Remove entry from included list."));
-          Widgets.layout(button,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
+          widgetIncludeTableRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
+          widgetIncludeTableRemove.setToolTipText(BARControl.tr("Remove entry from included list."));
+          Widgets.layout(widgetIncludeTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetIncludeTableRemove.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -9211,7 +9211,10 @@ throw new Error("NYI");
         {
           public void keyPressed(KeyEvent keyEvent)
           {
-            if ((highlightedNamePart != null) && (highlightedNamePart.string != null) && ((keyEvent.keyCode == SWT.DEL) || (keyEvent.keyCode == SWT.BS)))
+            if (   (highlightedNamePart != null)
+                && (highlightedNamePart.string != null)
+                && (Widgets.isAccelerator(keyEvent,SWT.DEL) || Widgets.isAccelerator(keyEvent,SWT.BS))
+               )
             {
               remPart(highlightedNamePart);
             }
