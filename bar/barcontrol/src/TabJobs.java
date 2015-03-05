@@ -1668,6 +1668,7 @@ public class TabJobs
   private WidgetEvent                  selectJobEvent         = new WidgetEvent();
   private HashMap<String,EntryData>    includeHashMap         = new HashMap<String,EntryData>();
   private HashSet<String>              excludeHashSet         = new HashSet<String>();
+  private HashSet<String>              sourceHashSet          = new HashSet<String>();
   private HashSet<String>              compressExcludeHashSet = new HashSet<String>();
   private HashMap<String,ScheduleData> scheduleDataMap        = new HashMap<String,ScheduleData>();
 
@@ -3222,6 +3223,7 @@ public class TabJobs
           label = Widgets.newLabel(composite,BARControl.tr("Source")+":");
           Widgets.layout(label,0,0,TableLayoutData.NONE);
 
+//TODO: list?
           text = Widgets.newText(composite);
           Widgets.layout(text,0,1,TableLayoutData.WE);
           Widgets.addModifyListener(new WidgetModifyListener(text,deltaCompressAlgorithm)
@@ -3249,7 +3251,8 @@ public class TabJobs
               Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
               deltaSource.set(string);
-              BARServer.setJobOption(selectedJobData.uuid,"delta-source",string);
+              sourceListRemoveAll();
+              sourceListAdd(string);
               widget.setBackground(null);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -3266,7 +3269,8 @@ public class TabJobs
               Text widget = (Text)focusEvent.widget;
               String string = widget.getText();
               deltaSource.set(string);
-              BARServer.setJobOption(selectedJobData.uuid,"delta-source",string);
+              sourceListRemoveAll();
+              sourceListAdd(string);
               widget.setBackground(null);
             }
           });
@@ -3299,7 +3303,8 @@ public class TabJobs
               if (fileName != null)
               {
                 deltaSource.set(fileName);
-                BARServer.setJobOption(selectedJobData.uuid,"delta-source",fileName);
+                sourceListRemoveAll();
+                sourceListAdd(fileName);
               }
             }
           });
@@ -7211,6 +7216,7 @@ throw new Error("NYI");
       updateDeviceImages();
       updateIncludeList();
       updateExcludeList();
+      updateSourceList();
       updateCompressExcludeList();
       updateScheduleTable();
     }
@@ -7964,6 +7970,55 @@ throw new Error("NYI");
     }
   }
 
+  /** update source list
+   * Note: currently not a list. Show only first source pattern.
+   */
+  private void updateSourceList()
+  {
+    assert selectedJobData != null;
+
+    String[]            resultErrorMessage  = new String[1];
+    ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("SOURCE_LIST jobUUID=%s",
+                                                             selectedJobData.uuid
+                                                            ),
+                                         0,
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
+    if (error != Errors.NONE)
+    {
+      return;
+    }
+
+    sourceHashSet.clear();
+    deltaSource.set("");
+
+    for (ValueMap resultMap : resultMapList)
+    {
+      try
+      {
+        // get data
+        PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
+        String       pattern     = resultMap.getString("pattern"                       );
+
+        if (!pattern.equals(""))
+        {
+           sourceHashSet.add(pattern);
+           deltaSource.set(pattern);
+           break;
+        }
+      }
+      catch (IllegalArgumentException exception)
+      {
+        if (Settings.debugLevel > 0)
+        {
+          System.err.println("ERROR: "+exception.getMessage());
+        }
+      }
+    }
+  }
+
   /** update compress exclude list
    */
   private void updateCompressExcludeList()
@@ -8687,6 +8742,96 @@ throw new Error("NYI");
     updateDeviceImages();
 
     return true;
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** add source entry
+   * @param pattern patterns to add to source list
+   */
+  private void sourceListAdd(String[] patterns)
+  {
+    assert selectedJobData != null;
+
+    for (String pattern : patterns)
+    {
+      if (!sourceHashSet.contains(pattern))
+      {
+        String[] resultErrorMessage = new String[1];
+        int error = BARServer.executeCommand(StringParser.format("SOURCE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+                                                                 selectedJobData.uuid,
+                                                                 "GLOB",
+                                                                 pattern
+                                                                ),
+                                             0,
+                                             resultErrorMessage
+                                            );
+        if (error != Errors.NONE)
+        {
+          Dialogs.error(shell,BARControl.tr("Cannot add source pattern:\n\n{0}",resultErrorMessage[0]));
+          return;
+        }
+
+        sourceHashSet.add(pattern);
+      }
+    }
+  }
+
+  /** add source pattern
+   * @param pattern pattern to add to source list
+   */
+  private void sourceListAdd(String pattern)
+  {
+    sourceListAdd(new String[]{pattern});
+  }
+
+  /** remove source list patterns
+   * @param patterns patterns to remove from source list
+   */
+  private void sourceListRemove(String[] patterns)
+  {
+    assert selectedJobData != null;
+
+    // remove patterns from hash map
+    for (String pattern : patterns)
+    {
+      sourceHashSet.remove(pattern);
+    }
+
+    // update source list
+    String[] resultErrorMessage = new String[1];
+//TODO return value?
+    BARServer.executeCommand(StringParser.format("SOURCE_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
+    for (String pattern : sourceHashSet)
+    {
+      BARServer.executeCommand(StringParser.format("SOURCE_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
+                                                   selectedJobData.uuid,
+                                                   "GLOB",
+                                                   pattern
+                                                  ),
+                               0,
+                               resultErrorMessage
+                              );
+    }
+  }
+
+  /** remove source pattern
+   * @param pattern pattern to remove from source list
+   */
+  private void sourceListRemove(String pattern)
+  {
+    sourceListRemove(new String[]{pattern});
+  }
+
+  /** remove all source patterns
+   */
+  private void sourceListRemoveAll()
+  {
+    sourceHashSet.clear();
+
+//TODO return value?
+    String[] resultErrorMessage = new String[1];
+    BARServer.executeCommand(StringParser.format("SOURCE_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
   }
 
   //-----------------------------------------------------------------------
