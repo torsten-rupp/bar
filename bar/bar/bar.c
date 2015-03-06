@@ -3694,7 +3694,6 @@ Errors inputCryptPassword(void         *userData,
   Errors error;
 
   assert(password != NULL);
-  assert(fileName != NULL);
 
   UNUSED_VARIABLE(userData);
 
@@ -3710,7 +3709,7 @@ Errors inputCryptPassword(void         *userData,
         {
           // input password
           title = String_new();
-          if (!String_isEmpty(fileName))
+          if ((fileName != NULL) && !String_isEmpty(fileName))
           {
             String_format(title,"Crypt password for '%S'",fileName);
           }
@@ -3728,7 +3727,7 @@ Errors inputCryptPassword(void         *userData,
           if (validateFlag)
           {
             // verify input password
-            if (!String_isEmpty(fileName))
+            if ((fileName != NULL) && !String_isEmpty(fileName))
             {
               String_format(String_clear(title),"Verify password for '%S'",fileName);
             }
