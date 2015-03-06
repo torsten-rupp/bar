@@ -6487,7 +6487,7 @@ public class TabJobs
         };
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,0,BARControl.tr("Date"),        SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleTable,1,BARControl.tr("Week day"),    SWT.LEFT,250,true );
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,1,BARControl.tr("Week days"),   SWT.LEFT,250,true );
         Widgets.sortTableColumn(widgetScheduleTable,tableColumn,new ScheduleDataComparator(widgetScheduleTable,tableColumn));
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,2,BARControl.tr("Time"),        SWT.LEFT,100,false);
