@@ -31,6 +31,7 @@
     code on AMD architecture.
     Thanks to Shane for his help to understand this bug!
   * barcontrol: added option --version
+  * fixed parsing compress algorithm names
 
 2014-09-26 0.18c
   * fixed server network connection wait time in pselect();
