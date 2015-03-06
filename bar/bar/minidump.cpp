@@ -69,7 +69,11 @@
 
 LOCAL void printString(const char *s)
 {
-  (void)write(STDERR_FILENO,s,strlen(s));
+  size_t unused;
+
+  UNUSED_VARIABLE(unused);
+
+  unused = write(STDERR_FILENO,s,strlen(s));
 }
 
 LOCAL char tarBlock[512];
@@ -109,10 +113,13 @@ LOCAL void writeTarHeader(int tarHandle, const char *name, ulong size)
     char pad[12];                 /* 500 */
   } TARHeader;
 
+  size_t         unused;
   TARHeader      *tarHeader = (TARHeader*)tarBlock;
   struct timeval tv;
   uint           z;
   uint           chksum;
+
+  UNUSED_VARIABLE(unused);
 
   // init header
   memset(tarHeader,0,sizeof(TARHeader));
@@ -135,7 +142,7 @@ LOCAL void writeTarHeader(int tarHandle, const char *name, ulong size)
   snprintf(tarHeader->chksum,sizeof(tarHeader->chksum),"%07o",chksum);
 
   // write header data
-  (void)write(tarHandle,tarHeader,sizeof(TARHeader));
+  unused = write(tarHandle,tarHeader,sizeof(TARHeader));
 }
 
 /***********************************************************************\
@@ -152,8 +159,11 @@ LOCAL void writeTarHeader(int tarHandle, const char *name, ulong size)
 
 LOCAL void addToTarArchive(int tarHandle, const char *name, const void *buffer, ulong size)
 {
-  byte  *p;
-  ulong n;
+  size_t unused;
+  byte   *p;
+  ulong  n;
+
+  UNUSED_VARIABLE(unused);
 
   // write header
   writeTarHeader(tarHandle,name,size);
@@ -166,7 +176,7 @@ LOCAL void addToTarArchive(int tarHandle, const char *name, const void *buffer, 
 
     memcpy(&tarBlock[0],p,n);
     memset(&tarBlock[n],0,sizeof(tarBlock)-n);
-    (void)write(tarHandle,tarBlock,sizeof(tarBlock));
+    unused = write(tarHandle,tarBlock,sizeof(tarBlock));
 
     p += n;
     size -= n;
@@ -187,7 +197,10 @@ LOCAL void addToTarArchive(int tarHandle, const char *name, const void *buffer, 
 
 LOCAL void addFileHandleToTarArchive(int tarHandle, const char *name, int handle, ulong size)
 {
-  ulong n;
+  size_t unused;
+  ulong  n;
+
+  UNUSED_VARIABLE(unused);
 
   // write header
   writeTarHeader(tarHandle,name,size);
@@ -197,9 +210,9 @@ LOCAL void addFileHandleToTarArchive(int tarHandle, const char *name, int handle
   {
     n = (size > sizeof(tarBlock)) ? sizeof(tarBlock) : size;
 
-    (void)read(handle,&tarBlock[0],n);
+    unused = read(handle,&tarBlock[0],n);
     memset(&tarBlock[n],0,sizeof(tarBlock)-n);
-    (void)write(tarHandle,tarBlock,sizeof(tarBlock));
+    unused = write(tarHandle,tarBlock,sizeof(tarBlock));
 
     size -= n;
   }
@@ -221,10 +234,13 @@ LOCAL void addFileToTarArchive(int tarHandle, const char *name, const char *file
 {
   static char buffer[64*1024];
 
+  size_t     unused;
   int        handle;
   ulong      size;
   const char *p;
   ulong      n;
+
+  UNUSED_VARIABLE(unused);
 
   // get file content
   size = 0;
@@ -247,7 +263,7 @@ LOCAL void addFileToTarArchive(int tarHandle, const char *name, const char *file
 
     memcpy(&tarBlock[0],p,n);
     memset(&tarBlock[n],0,sizeof(tarBlock)-n);
-    (void)write(tarHandle,tarBlock,sizeof(tarBlock));
+    unused = write(tarHandle,tarBlock,sizeof(tarBlock));
 
     size -= n;
     p += n;
