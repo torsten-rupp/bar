@@ -71,7 +71,7 @@ typedef uint32 DevicePermission;
 typedef struct
 {
   DeviceTypes      type;
-  int64            size;                     // total size [bytes]
+  uint64           size;                     // total size [bytes]
   ulong            blockSize;                // size of a block [bytes]
 // NYI
 //  int64       freeBlocks;       // number of free blocks
@@ -176,12 +176,12 @@ Errors Device_write(DeviceHandle *deviceHandle,
 * Purpose: get device size
 * Input  : deviceHandle - device handle
 * Output : -
-* Return : size of device (in bytes) or -1 when size cannot be
+* Return : size of device (in bytes) or 0 when size cannot be
 *          determined
 * Notes  : -
 \***********************************************************************/
 
-int64 Device_getSize(DeviceHandle *deviceHandle);
+uint64 Device_getSize(DeviceHandle *deviceHandle);
 
 /***********************************************************************\
 * Name   : Device_tell

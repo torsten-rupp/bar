@@ -1850,7 +1850,6 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                       createInfo->statusInfo.totalEntries++;
                                       if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
                                           && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                                          && (fileInfo.size >= 0LL)
                                          )
                                       {
                                         createInfo->statusInfo.totalBytes += fileInfo.size;
@@ -1865,7 +1864,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                                     {
                                       createInfo->statusInfo.totalEntries++;
-                                      if (fileInfo.size >= 0LL) createInfo->statusInfo.totalBytes += fileInfo.size;
+                                      createInfo->statusInfo.totalBytes += fileInfo.size;
                                       updateStatusInfo(createInfo);
                                     }
                                   }
@@ -1983,7 +1982,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
                         createInfo->statusInfo.totalEntries++;
-                        if (fileInfo.size >= 0LL) createInfo->statusInfo.totalBytes += fileInfo.size;
+                        createInfo->statusInfo.totalBytes += fileInfo.size;
                         updateStatusInfo(createInfo);
                       }
                     }
@@ -2853,6 +2852,11 @@ LOCAL Errors newArchiveFile(void        *userData,
 #warning XXXXXXXXXXXXXXX
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
+UNUSED_VARIABLE(indexHandle);
+UNUSED_VARIABLE(entityId);
+UNUSED_VARIABLE(createInfo);
+UNUSED_VARIABLE(error);
+
   // set database storage name and uuid
   if (storageId != DATABASE_ID_NONE)
   {
@@ -3672,7 +3676,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
   if (!createInfo->jobOptions->noStorageFlag)
   {
     // check if file data should be byte compressed
-    byteCompressFlag =    (fileInfo.size > (int64)globalOptions.compressMinFileSize)
+    byteCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
                        && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
@@ -3899,7 +3903,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
   printInfo(1,"Add '%s'...",String_cString(deviceName));
 
   // try to set status done entry info
-  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,deviceName,(deviceInfo.size >= 0LL) ? (uint64)deviceInfo.size : 0LL);
+  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,deviceName,deviceInfo.size);
 
   // get device info
   error = Device_getDeviceInfo(&deviceInfo,deviceName);
@@ -3993,7 +3997,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
   if (!createInfo->jobOptions->noStorageFlag)
   {
     // check if image data should be byte compressed
-    byteCompressFlag =    (deviceInfo.size > (int64)globalOptions.compressMinFileSize)
+    byteCompressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
                        && !PatternList_match(createInfo->compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
@@ -4073,7 +4077,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
           // try to set status done entry info
           if (!statusEntryDoneLocked)
           {
-            statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,deviceName,(deviceInfo.size >= 0LL) ? (uint64)deviceInfo.size : 0LL);
+            statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,deviceName,deviceInfo.size);
           }
 
           // update status info
@@ -4691,7 +4695,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   if (!createInfo->jobOptions->noStorageFlag)
   {
     // check if file data should be byte compressed
-    byteCompressFlag =    (fileInfo.size > (int64)globalOptions.compressMinFileSize)
+    byteCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
                        && !PatternList_matchStringList(createInfo->compressExcludePatternList,nameList,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed

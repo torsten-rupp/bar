@@ -617,7 +617,7 @@ Errors Command_restore(const StringList                *storageNameList,
               // set file size
               if (!jobOptions->dryRunFlag)
               {
-                if ((long)File_getSize(&fileHandle) > fileInfo.size)
+                if (File_getSize(&fileHandle) > fileInfo.size)
                 {
                   File_truncate(&fileHandle,fileInfo.size);
                 }
@@ -1816,7 +1816,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   // set file size
                   if (!jobOptions->dryRunFlag)
                   {
-                    if ((long)File_getSize(&fileHandle) > fileInfo.size)
+                    if (File_getSize(&fileHandle) > fileInfo.size)
                     {
                       File_truncate(&fileHandle,fileInfo.size);
                     }

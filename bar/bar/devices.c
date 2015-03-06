@@ -348,7 +348,7 @@ Errors Device_write(DeviceHandle *deviceHandle,
   return ERROR_NONE;
 }
 
-int64 Device_getSize(DeviceHandle *deviceHandle)
+uint64 Device_getSize(DeviceHandle *deviceHandle)
 {
   assert(deviceHandle != NULL);
 
@@ -639,7 +639,7 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
 
   // initialize variables
   deviceInfo->type        = DEVICE_TYPE_UNKNOWN;
-  deviceInfo->size        = -1LL;
+  deviceInfo->size        = 0LL;
   deviceInfo->blockSize   = 0L;
 //  deviceInfo->freeBlocks  = 0LL;
 //  deviceInfo->totalBlocks = 0LL;

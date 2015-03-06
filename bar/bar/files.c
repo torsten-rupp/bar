@@ -3097,7 +3097,7 @@ Errors File_getFileInfo(const String fileName,
   else if (S_ISBLK(fileStat.st_mode))
   {
     fileInfo->type        = FILE_TYPE_SPECIAL;
-    fileInfo->size        = -1LL;
+    fileInfo->size        = 0LL;
     fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
     fileInfo->attributes  = 0LL;
 

@@ -323,7 +323,7 @@ Errors Command_compare(const StringList                *storageNameList,
               DEBUG_TESTCODE("Command_compare101") { (void)File_close(&fileHandle); String_delete(fileName); Archive_closeEntry(&archiveEntryInfo); failError = DEBUG_TESTCODE_ERROR(); break; }
 
               // check file size
-              if (fileInfo.size != (long)File_getSize(&fileHandle))
+              if (fileInfo.size != File_getSize(&fileHandle))
               {
                 printInfo(1,"FAIL!\n");
                 printError("'%s' differ in size: expected %lld bytes, found %lld bytes\n",
@@ -1189,7 +1189,7 @@ Errors Command_compare(const StringList                *storageNameList,
                   DEBUG_TESTCODE("Command_compare501") { (void)File_close(&fileHandle); failError = DEBUG_TESTCODE_ERROR(); break; }
 
                   // check file size
-                  if (fileInfo.size != (long)File_getSize(&fileHandle))
+                  if (fileInfo.size != File_getSize(&fileHandle))
                   {
                     printInfo(1,"FAIL!\n");
                     printError("'%s' differ in size: expected %lld bytes, found %lld bytes\n",

@@ -246,7 +246,7 @@ typedef struct
 typedef struct
 {
   FileTypes        type;              // file type; see FileTypes
-  int64            size;              // size of file [bytes]
+  uint64           size;              // size of file [bytes]
   uint64           timeLastAccess;    // timestamp of last access
   uint64           timeModified;      // timestamp of last modification
   uint64           timeLastChanged;   // timestamp of last changed
