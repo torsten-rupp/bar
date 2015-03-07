@@ -481,7 +481,7 @@ ERROR CRC_
   strncpy(errorText,"wrong CRC",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText," ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText," at offset ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
   }
   errorText[sizeof(errorText)-1] = '\0';
