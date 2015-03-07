@@ -1142,7 +1142,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
             // check crc
             if (n != crc)
             {
-              snprintf(errorText,sizeof(errorText),"at offset %llu",offset);
+              snprintf(errorText,sizeof(errorText),"%llu",offset);
               error = ERRORX_(CRC_,0,errorText);
               break;
             }
