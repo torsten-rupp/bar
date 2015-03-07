@@ -5907,6 +5907,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             String_set(fileName,archiveEntryInfo->file.chunkFileEntry.name);
             if (fileInfo != NULL)
             {
+              memset(fileInfo,0,sizeof(FileInfo));
               fileInfo->type            = FILE_TYPE_FILE;
               fileInfo->size            = archiveEntryInfo->file.chunkFileEntry.size;
               fileInfo->timeLastAccess  = archiveEntryInfo->file.chunkFileEntry.timeLastAccess;
@@ -6854,6 +6855,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             String_set(directoryName,archiveEntryInfo->directory.chunkDirectoryEntry.name);
             if (fileInfo != NULL)
             {
+              memset(fileInfo,0,sizeof(FileInfo));
               fileInfo->type            = FILE_TYPE_DIRECTORY;
               fileInfo->timeLastAccess  = archiveEntryInfo->directory.chunkDirectoryEntry.timeLastAccess;
               fileInfo->timeModified    = archiveEntryInfo->directory.chunkDirectoryEntry.timeModified;
@@ -7234,6 +7236,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             String_set(destinationName,archiveEntryInfo->link.chunkLinkEntry.destinationName);
             if (fileInfo != NULL)
             {
+              memset(fileInfo,0,sizeof(FileInfo));
               fileInfo->type            = FILE_TYPE_LINK;
               fileInfo->timeLastAccess  = archiveEntryInfo->link.chunkLinkEntry.timeLastAccess;
               fileInfo->timeModified    = archiveEntryInfo->link.chunkLinkEntry.timeModified;
@@ -7767,6 +7770,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             // get hard link meta data
             if (fileInfo != NULL)
             {
+              memset(fileInfo,0,sizeof(FileInfo));
               fileInfo->type            = FILE_TYPE_HARDLINK;
               fileInfo->size            = archiveEntryInfo->hardLink.chunkHardLinkEntry.size;
               fileInfo->timeLastAccess  = archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess;
@@ -8232,6 +8236,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             String_set(specialName,archiveEntryInfo->special.chunkSpecialEntry.name);
             if (fileInfo != NULL)
             {
+              memset(fileInfo,0,sizeof(FileInfo));
               fileInfo->type            = FILE_TYPE_SPECIAL;
               fileInfo->timeLastAccess  = archiveEntryInfo->special.chunkSpecialEntry.timeLastAccess;
               fileInfo->timeModified    = archiveEntryInfo->special.chunkSpecialEntry.timeModified;
