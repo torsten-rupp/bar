@@ -529,7 +529,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
 
           // get name
           j = 0;
-          while ((value[i] != '\0') && (value[i] != ','))
+          while ((value[i] != '\0') && !isspace(value[i]) && (value[i] != ','))
           {
             if (j < sizeof(setName)-1) { setName[j] = value[i]; j++; }
             i++;
