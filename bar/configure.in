@@ -326,7 +326,6 @@ dnl usage: AC_CHECK_LARGEFILE_DEFINES
 AC_DEFUN([AC_CHECK_LARGEFILE_DEFINES],
 [
   AC_REQUIRE([AC_PROG_CC])
-  AC_SYS_LARGEFILE
   AC_CACHE_CHECK(
     [for needed large files defines],
     ac_cv_largefile_defines,
@@ -336,20 +335,17 @@ AC_DEFUN([AC_CHECK_LARGEFILE_DEFINES],
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
-int main(void) { printf("%p",fseeko64); return 0; }
+int main(void) { printf("%p",fopen64); return 0; }
 EOF
       ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
       if test $rc -eq 0; then
-        ac_cv_largefile_defines=""
+        ac_cv_largefile_defines="_FILE_OFFSET_BITS=64"
       else
         ${CC} ${CFLAGS} -Wall -Werror -D_LARGEFILE64_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
-          ac_cv_largefile_defines="_LARGEFILE64_SOURCE"
+          ac_cv_largefile_defines="_FILE_OFFSET_BITS=64 _LARGEFILE64_SOURCE"
         else
           ac_cv_largefile_defines=""
-        fi
-        if test "$ac_cv_sys_file_offset_bits" != "no"; then
-          ac_cv_largefile_defines="$ac_cv_largefile_defines _FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
         fi
       fi
       rm -f conftest.c conftest.o
@@ -2815,12 +2811,7 @@ AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MIN;],AC_DEFINE(HAVE
 AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MAX;],AC_DEFINE(HAVE_LLONG_MAX,1,[defined if LLONG_MAX is available]))
 AC_TRY_COMPILE([#include <limits.h>],[unsigned long long int x=ULLONG_MAX;],AC_DEFINE(HAVE_ULLONG_MAX,1,[defined if ULLONG_MAX is available]))
 AC_CHECK_VARIABLE_ATTRIBUTE(__thread,AC_DEFINE(HAVE___THREAD,1,[defined if __thread is available]))
-dnl AC_SYS_LARGEFILE
-dnl echo ---
-dnl echo "ac_cv_sys_file_offset_bits=$ac_cv_sys_file_offset_bits"
-dnl echo "ac_cv_sys_large_files~$ac_cv_sys_large_files"
-dnl echo "ac_cv_sys_largefile_CC=$ac_cv_sys_largefile_CC"
-dnl echo -----------
+dnl Note: AC_SYS_LARGEFILE() does not work with gcc? Use my own implementation
 AC_CHECK_LARGEFILE_DEFINES
 AC_CHECK_SIZEOF(ulong)
 AC_CHECK_SIZEOF(void *)
@@ -2907,12 +2898,14 @@ AC_CHECK_FUNCTION(gethostbyname_r,AC_DEFINE(HAVE_GETHOSTBYNAME_R,1,[gethostbynam
 AC_CHECK_FUNCTION(chmod,        AC_DEFINE(HAVE_CHMOD,        1,[chmod() available]))
 AC_CHECK_FUNCTION(chown,        AC_DEFINE(HAVE_CHOWN,        1,[chown() available]))
 AC_CHECK_FUNCTION(fdatasync,    AC_DEFINE(HAVE_FDATASYNC,    1,[fdatasync() available]))
+AC_CHECK_FUNCTION(fopen,        AC_DEFINE(HAVE_FOPEN,        1,[fopen() available]))
+AC_CHECK_FUNCTION(fopen64,      AC_DEFINE(HAVE_FOPNE64,      1,[fopen64() available]))
+AC_CHECK_FUNCTION(fseeko,       AC_DEFINE(HAVE_FSEEKO,       1,[fseeko() available]))
 AC_CHECK_FUNCTION(_fseeki64,    AC_DEFINE(HAVE__FSEEKI64,    1,[_fseeki64() available]))
 AC_CHECK_FUNCTION(fseeko64,     AC_DEFINE(HAVE_FSEEKO64,     1,[fseeko64() available]))
-AC_CHECK_FUNCTION(fseeko,       AC_DEFINE(HAVE_FSEEKO,       1,[fseeko() available]))
+AC_CHECK_FUNCTION(ftello,       AC_DEFINE(HAVE_FTELLO,       1,[ftello() available]))
 AC_CHECK_FUNCTION(_ftelli64,    AC_DEFINE(HAVE__FTELLI64,    1,[_ftelli64() available]))
 AC_CHECK_FUNCTION(ftello64,     AC_DEFINE(HAVE_FTELLO64,     1,[ftello64() available]))
-AC_CHECK_FUNCTION(ftello,       AC_DEFINE(HAVE_FTELLO,       1,[ftello() available]))
 AC_CHECK_FUNCTION(getgrgid_r,   AC_DEFINE(HAVE_GETGRGID_R,   1,[getgrgid_r() available]))
 AC_CHECK_FUNCTION(getgrnam_r,   AC_DEFINE(HAVE_GETGRNAM_R,   1,[getgrnam_r() available]))
 AC_CHECK_FUNCTION(getpwnam_r,   AC_DEFINE(HAVE_GETPWNAM_R,   1,[getpwnam_r() available]))

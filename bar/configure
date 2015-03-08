@@ -786,7 +786,6 @@ enable_gui
 enable_gui_i18n
 enable_package_compile
 enable_package_check
-enable_largefile
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1430,7 +1429,6 @@ Optional Features:
   --disable-package-compile
                           disable compilation of external packages
   --enable-package-check  enable check packages
-  --disable-largefile     omit support for large files
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -12563,204 +12561,6 @@ fi
 $as_echo "$ac_cv_variable_attribute___thread" >&6; }
 
 
-  # Check whether --enable-largefile was given.
-if test "${enable_largefile+set}" = set; then :
-  enableval=$enable_largefile;
-fi
-
-if test "$enable_largefile" != no; then
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for special C compiler options needed for large files" >&5
-$as_echo_n "checking for special C compiler options needed for large files... " >&6; }
-if ${ac_cv_sys_largefile_CC+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_cv_sys_largefile_CC=no
-     if test "$GCC" != yes; then
-       ac_save_CC=$CC
-       while :; do
-	 # IRIX 6.2 and later do not support large files by default,
-	 # so use the C compiler's -n32 option if that helps.
-	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <sys/types.h>
- /* Check that off_t can represent 2**63 - 1 correctly.
-    We can't simply define LARGE_OFF_T to be 9223372036854775807,
-    since some C++ compilers masquerading as C compilers
-    incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
-  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
-		       && LARGE_OFF_T % 2147483647 == 1)
-		      ? 1 : -1];
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-	 if ac_fn_c_try_compile "$LINENO"; then :
-  break
-fi
-rm -f core conftest.err conftest.$ac_objext
-	 CC="$CC -n32"
-	 if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_sys_largefile_CC=' -n32'; break
-fi
-rm -f core conftest.err conftest.$ac_objext
-	 break
-       done
-       CC=$ac_save_CC
-       rm -f conftest.$ac_ext
-    fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_sys_largefile_CC" >&5
-$as_echo "$ac_cv_sys_largefile_CC" >&6; }
-  if test "$ac_cv_sys_largefile_CC" != no; then
-    CC=$CC$ac_cv_sys_largefile_CC
-  fi
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for _FILE_OFFSET_BITS value needed for large files" >&5
-$as_echo_n "checking for _FILE_OFFSET_BITS value needed for large files... " >&6; }
-if ${ac_cv_sys_file_offset_bits+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  while :; do
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <sys/types.h>
- /* Check that off_t can represent 2**63 - 1 correctly.
-    We can't simply define LARGE_OFF_T to be 9223372036854775807,
-    since some C++ compilers masquerading as C compilers
-    incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
-  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
-		       && LARGE_OFF_T % 2147483647 == 1)
-		      ? 1 : -1];
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_sys_file_offset_bits=no; break
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#define _FILE_OFFSET_BITS 64
-#include <sys/types.h>
- /* Check that off_t can represent 2**63 - 1 correctly.
-    We can't simply define LARGE_OFF_T to be 9223372036854775807,
-    since some C++ compilers masquerading as C compilers
-    incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
-  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
-		       && LARGE_OFF_T % 2147483647 == 1)
-		      ? 1 : -1];
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_sys_file_offset_bits=64; break
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  ac_cv_sys_file_offset_bits=unknown
-  break
-done
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_sys_file_offset_bits" >&5
-$as_echo "$ac_cv_sys_file_offset_bits" >&6; }
-case $ac_cv_sys_file_offset_bits in #(
-  no | unknown) ;;
-  *)
-cat >>confdefs.h <<_ACEOF
-#define _FILE_OFFSET_BITS $ac_cv_sys_file_offset_bits
-_ACEOF
-;;
-esac
-rm -rf conftest*
-  if test $ac_cv_sys_file_offset_bits = unknown; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for _LARGE_FILES value needed for large files" >&5
-$as_echo_n "checking for _LARGE_FILES value needed for large files... " >&6; }
-if ${ac_cv_sys_large_files+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  while :; do
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <sys/types.h>
- /* Check that off_t can represent 2**63 - 1 correctly.
-    We can't simply define LARGE_OFF_T to be 9223372036854775807,
-    since some C++ compilers masquerading as C compilers
-    incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
-  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
-		       && LARGE_OFF_T % 2147483647 == 1)
-		      ? 1 : -1];
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_sys_large_files=no; break
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#define _LARGE_FILES 1
-#include <sys/types.h>
- /* Check that off_t can represent 2**63 - 1 correctly.
-    We can't simply define LARGE_OFF_T to be 9223372036854775807,
-    since some C++ compilers masquerading as C compilers
-    incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
-  int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
-		       && LARGE_OFF_T % 2147483647 == 1)
-		      ? 1 : -1];
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_sys_large_files=1; break
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  ac_cv_sys_large_files=unknown
-  break
-done
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_sys_large_files" >&5
-$as_echo "$ac_cv_sys_large_files" >&6; }
-case $ac_cv_sys_large_files in #(
-  no | unknown) ;;
-  *)
-cat >>confdefs.h <<_ACEOF
-#define _LARGE_FILES $ac_cv_sys_large_files
-_ACEOF
-;;
-esac
-rm -rf conftest*
-  fi
-fi
-
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for needed large files defines" >&5
 $as_echo_n "checking for needed large files defines... " >&6; }
 if ${ac_cv_largefile_defines+:} false; then :
@@ -12772,20 +12572,17 @@ else
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
-int main(void) { printf("%p",fseeko64); return 0; }
+int main(void) { printf("%p",fopen64); return 0; }
 EOF
       ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
       if test $rc -eq 0; then
-        ac_cv_largefile_defines=""
+        ac_cv_largefile_defines="_FILE_OFFSET_BITS=64"
       else
         ${CC} ${CFLAGS} -Wall -Werror -D_LARGEFILE64_SOURCE -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
-          ac_cv_largefile_defines="_LARGEFILE64_SOURCE"
+          ac_cv_largefile_defines="_FILE_OFFSET_BITS=64 _LARGEFILE64_SOURCE"
         else
           ac_cv_largefile_defines=""
-        fi
-        if test "$ac_cv_sys_file_offset_bits" != "no"; then
-          ac_cv_largefile_defines="$ac_cv_largefile_defines _FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
         fi
       fi
       rm -f conftest.c conftest.o
@@ -14398,6 +14195,156 @@ fi
 
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fopen" >&5
+$as_echo_n "checking for fopen... " >&6; }
+if ${ac_cv_func_fopen+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_fopen="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void fopen();"; fi`
+                                         #ifdef fopen
+                                         #else
+                                           return (int)fopen;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_fopen=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_fopen" >&5
+$as_echo "$ac_cv_func_fopen" >&6; }
+  if test "$ac_cv_func_fopen" != no; then :
+
+$as_echo "#define HAVE_FOPEN 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fopen64" >&5
+$as_echo_n "checking for fopen64... " >&6; }
+if ${ac_cv_func_fopen64+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_fopen64="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void fopen64();"; fi`
+                                         #ifdef fopen64
+                                         #else
+                                           return (int)fopen64;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_fopen64=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_fopen64" >&5
+$as_echo "$ac_cv_func_fopen64" >&6; }
+  if test "$ac_cv_func_fopen64" != no; then :
+
+$as_echo "#define HAVE_FOPNE64 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fseeko" >&5
+$as_echo_n "checking for fseeko... " >&6; }
+if ${ac_cv_func_fseeko+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_fseeko="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void fseeko();"; fi`
+                                         #ifdef fseeko
+                                         #else
+                                           return (int)fseeko;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_fseeko=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_fseeko" >&5
+$as_echo "$ac_cv_func_fseeko" >&6; }
+  if test "$ac_cv_func_fseeko" != no; then :
+
+$as_echo "#define HAVE_FSEEKO 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for _fseeki64" >&5
 $as_echo_n "checking for _fseeki64... " >&6; }
 if ${ac_cv_func__fseeki64+:} false; then :
@@ -14498,13 +14445,13 @@ fi
 
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fseeko" >&5
-$as_echo_n "checking for fseeko... " >&6; }
-if ${ac_cv_func_fseeko+:} false; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ftello" >&5
+$as_echo_n "checking for ftello... " >&6; }
+if ${ac_cv_func_ftello+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_cv_func_fseeko="no"
+      ac_cv_func_ftello="no"
       echo > conftest.log
 
       for ac_headers in  ""; do
@@ -14514,10 +14461,10 @@ else
 int
 main ()
 {
-`if test -z "$ac_headers"; then echo "extern void fseeko();"; fi`
-                                         #ifdef fseeko
+`if test -z "$ac_headers"; then echo "extern void ftello();"; fi`
+                                         #ifdef ftello
                                          #else
-                                           return (int)fseeko;
+                                           return (int)ftello;
                                          #endif
 
 
@@ -14527,7 +14474,7 @@ main ()
 
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_func_fseeko=yes; break
+  ac_cv_func_ftello=yes; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
@@ -14536,11 +14483,11 @@ rm -f core conftest.err conftest.$ac_objext \
 
 
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_fseeko" >&5
-$as_echo "$ac_cv_func_fseeko" >&6; }
-  if test "$ac_cv_func_fseeko" != no; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_ftello" >&5
+$as_echo "$ac_cv_func_ftello" >&6; }
+  if test "$ac_cv_func_ftello" != no; then :
 
-$as_echo "#define HAVE_FSEEKO 1" >>confdefs.h
+$as_echo "#define HAVE_FTELLO 1" >>confdefs.h
 
 elif :; then :
 
@@ -14641,56 +14588,6 @@ $as_echo "$ac_cv_func_ftello64" >&6; }
   if test "$ac_cv_func_ftello64" != no; then :
 
 $as_echo "#define HAVE_FTELLO64 1" >>confdefs.h
-
-elif :; then :
-
-fi
-
-
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ftello" >&5
-$as_echo_n "checking for ftello... " >&6; }
-if ${ac_cv_func_ftello+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-      ac_cv_func_ftello="no"
-      echo > conftest.log
-
-      for ac_headers in  ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z "$ac_headers"; then echo "extern void ftello();"; fi`
-                                         #ifdef ftello
-                                         #else
-                                           return (int)ftello;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_func_ftello=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_ftello" >&5
-$as_echo "$ac_cv_func_ftello" >&6; }
-  if test "$ac_cv_func_ftello" != no; then :
-
-$as_echo "#define HAVE_FTELLO 1" >>confdefs.h
 
 elif :; then :
 
