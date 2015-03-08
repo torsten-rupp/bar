@@ -120,13 +120,14 @@ LOCAL PasswordList decryptPasswordList;
 
 #define FILE_SYSTEM_CONSTANT_TO_TYPE(n) ((FileSystemTypes)(n))
 
-// debug only: store xdelta encoded data in file encoded.testdata
-#define _DEBUG_XDELTA_ENCODED_DATA
-#ifdef DEBUG_XDELTA_ENCODED_DATA
+// debug only: store encoded data into file
+//#define DEBUG_ENCODED_DATA_FILENAME "test-encoded.dat"
+
+#ifdef DEBUG_ENCODED_DATA_FILENAME
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#endif /* DEBUG_XDELTA_ENCODED_DATA */
+#endif /* DEBUG_ENCODED_DATA_FILENAME */
 
 /***************************** Forwards ********************************/
 
@@ -1254,20 +1255,15 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                           blockCount
                          );
 
-      // get next byte-compressed data blocks
+      // get byte-compressed data blocks
       Compress_getCompressedData(&archiveEntryInfo->file.byteCompressInfo,
                                  archiveEntryInfo->file.byteBuffer,
                                  maxBlockCount*archiveEntryInfo->file.byteCompressInfo.blockLength,
                                  &byteLength
                                 );
       assert((byteLength%archiveEntryInfo->file.byteCompressInfo.blockLength) == 0);
-#ifdef DEBUG_XDELTA_ENCODED_DATA
-{
-int h = open("encoded.testdata",O_CREAT|O_WRONLY|O_APPEND,0664);
-write(h,archiveEntryInfo->file.byteBuffer,length);
-close(h);
-}
-#endif /* DEBUG_XDELTA_ENCODED_DATA */
+#warning remove?
+assert(byteLength > 0L);
 
       if (byteLength > 0L)
       {
@@ -1290,6 +1286,14 @@ close(h);
         {
           return error;
         }
+
+        #ifdef DEBUG_ENCODED_DATA_FILENAME
+          {
+            int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+            write(handle,archiveEntryInfo->file.byteBuffer,byteLength);
+            close(handle);
+          }
+        #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
         // store block into chunk
         error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
@@ -1356,13 +1360,6 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 //                                 archiveEntryInfo->file.byteCompressInfo.blockLength,
                                  &byteLength
                                  );
-#ifdef DEBUG_XDELTA_ENCODED_DATA
-{
-int h = open("encoded.testdata",O_CREAT|O_WRONLY|O_APPEND,0664);
-write(h,archiveEntryInfo->file.byteBuffer,byteLength);
-close(h);
-}
-#endif /* DEBUG_XDELTA_ENCODED_DATA */
 
       // calculate min. bytes to write to archive
       minBytes = (ulong)File_getSize(&archiveEntryInfo->file.tmpFileHandle)+byteLength;
@@ -1404,6 +1401,14 @@ close(h);
             Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
             return error;
           }
+
+          #ifdef DEBUG_ENCODED_DATA_FILENAME
+            {
+              int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+              write(handle,archiveEntryInfo->file.byteBuffer,byteLength);
+              close(handle);
+            }
+          #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
           // store block into chunk
           error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
@@ -1589,6 +1594,14 @@ close(h);
             return error;
           }
 
+          #ifdef DEBUG_ENCODED_DATA_FILENAME
+            {
+              int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+              write(handle,archiveEntryInfo->file.byteBuffer,byteLength);
+              close(handle);
+            }
+          #endif /* DEBUG_ENCODED_DATA_FILENAME */
+
           // write block to temporary file
           error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
                                   archiveEntryInfo->file.byteBuffer,
@@ -1644,6 +1657,10 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     if (error != ERROR_NONE)
     {
       return error;
+    }
+    if (bytesRead <= 0L)
+    {
+      return ERROR_READ_FILE;
     }
     if ((bytesRead%archiveEntryInfo->file.byteCompressInfo.blockLength) != 0)
     {
@@ -1801,20 +1818,13 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                           blockCount
                          );
 
-      // get next byte-compressed data
+      // get byte-compressed data
       Compress_getCompressedData(&archiveEntryInfo->image.byteCompressInfo,
                                  archiveEntryInfo->image.byteBuffer,
                                  maxBlockCount*archiveEntryInfo->image.byteCompressInfo.blockLength,
                                  &byteLength
                                 );
       assert((byteLength%archiveEntryInfo->image.byteCompressInfo.blockLength) == 0);
-#ifdef DEBUG_XDELTA_ENCODED_DATA
-{
-int h = open("encoded.testdata",O_CREAT|O_WRONLY|O_APPEND,0664);
-write(h,archiveEntryInfo->image.byteBuffer,byteLength);
-close(h);
-}
-#endif /* DEBUG_XDELTA_ENCODED_DATA */
 
       // encrypt block
       error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
@@ -1825,6 +1835,14 @@ close(h);
       {
         return error;
       }
+
+      #ifdef DEBUG_ENCODED_DATA_FILENAME
+        {
+          int handle = open(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+          write(handle,archiveEntryInfo->image.byteBuffer,byteLength);
+          close(handle);
+        }
+      #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
       // store block into chunk
       error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
@@ -1927,6 +1945,14 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
             Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
             return error;
           }
+
+          #ifdef DEBUG_ENCODED_DATA_FILENAME
+            {
+              int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+              write(handle,archiveEntryInfo->image.byteBuffer,byteLength);
+              close(handle);
+            }
+          #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
           // store block into chunk
           error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
@@ -2109,6 +2135,14 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
             return error;
           }
 
+          #ifdef DEBUG_ENCODED_DATA_FILENAME
+            {
+              int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+              write(handle,archiveEntryInfo->image.byteBuffer,byteLength);
+              close(handle);
+            }
+          #endif /* DEBUG_ENCODED_DATA_FILENAME */
+
           // store block into chunk
           error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
                                   archiveEntryInfo->image.byteBuffer,
@@ -2164,6 +2198,10 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     if (error != ERROR_NONE)
     {
       return error;
+    }
+    if (bytesRead <= 0L)
+    {
+      return ERROR_READ_FILE;
     }
     if ((bytesRead%archiveEntryInfo->image.byteCompressInfo.blockLength) != 0)
     {
@@ -2368,13 +2406,6 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                                  &byteLength
                                 );
       assert((byteLength%archiveEntryInfo->hardLink.byteCompressInfo.blockLength) == 0);
-#ifdef DEBUG_XDELTA_ENCODED_DATA
-{
-int h = open("encoded.testdata",O_CREAT|O_WRONLY|O_APPEND,0664);
-write(h,archiveEntryInfo->hardLink.byteBuffer,byteLength);
-close(h);
-}
-#endif /* DEBUG_XDELTA_ENCODED_DATA */
 
       // encrypt block
       error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
@@ -2385,6 +2416,14 @@ close(h);
       {
         return error;
       }
+
+      #ifdef DEBUG_ENCODED_DATA_FILENAME
+        {
+          int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+          write(handle,archiveEntryInfo->hardLink.byteBuffer,byteLength);
+          close(handle);
+        }
+      #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
       // store block into chunk
       error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
@@ -2487,6 +2526,14 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
             Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
             return error;
           }
+
+          #ifdef DEBUG_ENCODED_DATA_FILENAME
+            {
+              int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+              write(handle,archiveEntryInfo->hardLink.byteBuffer,byteLength);
+              close(handle);
+            }
+          #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
           // store block into chunk
           error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
@@ -2668,6 +2715,14 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
             return error;
           }
 
+          #ifdef DEBUG_ENCODED_DATA_FILENAME
+            {
+              int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+              write(handle,archiveEntryInfo->hardLink.byteBuffer,byteLength);
+              close(handle);
+            }
+          #endif /* DEBUG_ENCODED_DATA_FILENAME */
+
           // write block
           error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                                   archiveEntryInfo->hardLink.byteBuffer,
@@ -2723,6 +2778,10 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     if (error != ERROR_NONE)
     {
       return error;
+    }
+    if (bytesRead <= 0L)
+    {
+      return ERROR_READ_FILE;
     }
     if ((bytesRead%archiveEntryInfo->hardLink.byteCompressInfo.blockLength) != 0)
     {
@@ -3046,6 +3105,13 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // free resources
   AutoFree_done(&autoFreeList);
+
+  #ifdef DEBUG_ENCODED_DATA_FILENAME
+    {
+      int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_TRUNC|O_LARGEFILE,0664);
+      close(handle);
+    }
+  #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
   #ifndef NDEBUG
     DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive create",archiveInfo);
@@ -8660,11 +8726,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 // store in index database
                 if (error == ERROR_NONE)
                 {
-fprintf(stderr,"%s, %d: %s %llu %u\n",__FILE__,__LINE__,
-String_cString(archiveEntryInfo->image.chunkImageEntry.name),
-archiveEntryInfo->image.chunkImageEntry.size,
-archiveEntryInfo->image.chunkImageEntry.blockSize
-);
                   error = Index_addImage(archiveEntryInfo->archiveInfo->indexHandle,
                                          archiveEntryInfo->archiveInfo->storageId,
                                          archiveEntryInfo->image.chunkImageEntry.name,
