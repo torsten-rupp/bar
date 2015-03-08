@@ -807,7 +807,7 @@ TEST_LARGEFILE_NAMES = \
   zero5G.dat \
   random5G.dat \
 
-TEST_LARGEFILES = $(foreach z,$(TEST_LARGEFILE_NAMES),$(TEST_DATA_DIR)/data/$z)
+TEST_LARGEFILES = $(foreach z,$(TEST_LARGEFILE_NAMES),$(TEST_DATA_DIR)/data_large/$z)
 
 .PHONY: x
 x:
@@ -1491,10 +1491,10 @@ $(TEST_DATA_DIR)/data/delta2/test.dat: $(TEST_DATA_DIR)/data/delta1/test.dat
           $(DD) if=$(TEST_DATA_DIR)/data/delta1/test.dat skip=256 bs=1k count=256 2>/dev/null; \
         ) > $@
 
-$(TEST_DATA_DIR)/data/zero5G.dat:
+$(TEST_DATA_DIR)/data_large/zero5G.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1M count=5120 2>/dev/null
-$(TEST_DATA_DIR)/data/random5G.dat:
+$(TEST_DATA_DIR)/data_large/random5G.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1M count=5120 2>/dev/null
 
@@ -2844,11 +2844,14 @@ test_largefiles_operations: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_LARGEFILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
+	$(INSTALL) -d $(TEST_DATA_DIR)/tmp
+	for z in $(TEST_LARGEFILES); do \
+          SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $$z $(BAR_OPTIONS) --overwrite-archive-files --tmp-directory=$(TEST_DATA_DIR)/tmp --verbose=2 $(if $(QUIET),1>/dev/null); \
+          SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null); \
+          SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null); \
+          SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null); \
+          SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null); \
+        done
 
 .PHONY: test_dvd_operations
 test_dvd_operations: \
