@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 #ifndef __THREADS__
-#define __TRHEADS__
+#define __THREADS__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
