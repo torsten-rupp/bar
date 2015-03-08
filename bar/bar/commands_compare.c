@@ -363,7 +363,7 @@ Errors Command_compare(const StringList                *storageNameList,
                      && equalFlag
                     )
               {
-                bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
+                bufferLength = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
 
                 // read archive, file
                 error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferLength);
@@ -1239,7 +1239,7 @@ Errors Command_compare(const StringList                *storageNameList,
                          && equalFlag
                         )
                   {
-                    bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
+                    bufferLength = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
 
                     // read archive, file
                     error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferLength);

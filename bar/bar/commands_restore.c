@@ -556,7 +556,7 @@ Errors Command_restore(const StringList                *storageNameList,
               }
 
               // write file data
-              length = 0;
+              length = 0LL;
               while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                      && (length < fragmentSize)
                     )
@@ -567,7 +567,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   Misc_udelay(500L*1000L);
                 }
 
-                n = MIN(fragmentSize-length,BUFFER_SIZE);
+                n = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
 
                 error = Archive_readData(&archiveEntryInfo,buffer,n);
                 if (error != ERROR_NONE)
@@ -615,6 +615,7 @@ Errors Command_restore(const StringList                *storageNameList,
               printInfo(2,"    \b\b\b\b");
 
               // set file size
+#warning required? wrong?
               if (!jobOptions->dryRunFlag)
               {
                 if (File_getSize(&fileHandle) > fileInfo.size)
@@ -1757,7 +1758,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       Misc_udelay(500L*1000L);
                     }
 
-                    n = MIN(fragmentSize-length,BUFFER_SIZE);
+                    n = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
 
                     error = Archive_readData(&archiveEntryInfo,buffer,n);
                     if (error != ERROR_NONE)
@@ -1814,6 +1815,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   printInfo(2,"    \b\b\b\b");
 
                   // set file size
+#warning required? wrong?
                   if (!jobOptions->dryRunFlag)
                   {
                     if (File_getSize(&fileHandle) > fileInfo.size)

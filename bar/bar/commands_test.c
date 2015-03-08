@@ -68,7 +68,7 @@ Errors Command_test(const StringList                *storageNameList,
                     void                            *archiveGetCryptPasswordUserData
                    )
 {
-  byte              *archiveBuffer,*fileBuffer;
+  byte              *buffer;
   FragmentList      fragmentList;
   StorageSpecifier  storageSpecifier;
   StorageHandle     storageHandle;
@@ -87,15 +87,9 @@ Errors Command_test(const StringList                *storageNameList,
   assert(jobOptions != NULL);
 
   // allocate resources
-  archiveBuffer = (byte*)malloc(BUFFER_SIZE);
-  if (archiveBuffer == NULL)
+  buffer = (byte*)malloc(BUFFER_SIZE);
+  if (buffer == NULL)
   {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  fileBuffer = malloc(BUFFER_SIZE);
-  if (fileBuffer == NULL)
-  {
-    free(archiveBuffer);
     HALT_INSUFFICIENT_MEMORY();
   }
   FragmentList_init(&fragmentList);
@@ -234,14 +228,14 @@ Errors Command_test(const StringList                *storageNameList,
               }
 //FragmentList_print(fragmentNode,String_cString(fileName));
 
-              // test read file content
+              // read file content
               length = 0LL;
               while (length < fragmentSize)
               {
-                n = MIN(fragmentSize-length,BUFFER_SIZE);
+                n = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
 
                 // read archive file
-                error = Archive_readData(&archiveEntryInfo,archiveBuffer,n);
+                error = Archive_readData(&archiveEntryInfo,buffer,n);
                 if (error != ERROR_NONE)
                 {
                   printInfo(1,"FAIL!\n");
@@ -393,14 +387,14 @@ Errors Command_test(const StringList                *storageNameList,
                 fragmentNode = NULL;
               }
 
-              // test read image content
+              // read image content
               block = 0LL;
               while (block < blockCount)
               {
                 bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
 
                 // read archive file
-                error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferBlockCount*deviceInfo.blockSize);
+                error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
                   printInfo(1,"FAIL!\n");
@@ -673,7 +667,7 @@ Errors Command_test(const StringList                *storageNameList,
 
                 if (!testedDataFlag && (failError == ERROR_NONE))
                 {
-                  // test hard link data
+                  // read hard link data
 
                   if (!jobOptions->noFragmentsCheckFlag)
                   {
@@ -691,14 +685,14 @@ Errors Command_test(const StringList                *storageNameList,
                     fragmentNode = NULL;
                   }
 
-                  // test read hard link content
+                  // read hard link content
                   length = 0LL;
                   while (length < fragmentSize)
                   {
-                    n = MIN(fragmentSize-length,BUFFER_SIZE);
+                    n = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
 
                     // read archive file
-                    error = Archive_readData(&archiveEntryInfo,archiveBuffer,n);
+                    error = Archive_readData(&archiveEntryInfo,buffer,n);
                     if (error != ERROR_NONE)
                     {
                       printInfo(1,"FAIL!\n");
@@ -753,7 +747,6 @@ Errors Command_test(const StringList                *storageNameList,
                 }
                 else
                 {
-                  // test hard link data already done
                   if (failError == ERROR_NONE)
                   {
                     printInfo(1,"ok\n");
@@ -900,8 +893,7 @@ Errors Command_test(const StringList                *storageNameList,
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
   FragmentList_done(&fragmentList);
-  free(fileBuffer);
-  free(archiveBuffer);
+  free(buffer);
 
   return failError;
 }
