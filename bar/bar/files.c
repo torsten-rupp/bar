@@ -794,7 +794,7 @@ Errors __File_getTmpFileCString(const char   *__fileName__,
       free(s);
       return error;
     }
-    fileHandle->file = fopen(s,"w+b");
+    fileHandle->file = FOPEN(s,"w+b");
       if (fileHandle->file == NULL)
     {
       error = ERRORX_(CREATE_FILE,errno,s);
@@ -1111,7 +1111,7 @@ Errors __File_openCString(const char *__fileName__,
 // TODO: use fd?
 //      fd = open(fileName,O_RDWR|O_CREAT|O_TRUNC|O_LARGEFILE,0666);
 //      fileHandle->file = fdopen(fd,"w+b");
-      fileHandle->file = fopen(fileName,"w+b");
+      fileHandle->file = FOPEN(fileName,"w+b");
       if (fileHandle->file == NULL)
       {
         return ERRORX_(CREATE_FILE,errno,fileName);
@@ -1263,12 +1263,12 @@ Errors __File_openCString(const char *__fileName__,
 // TODO: use fd?
 //      fd = open(fileName,O_WRONLY|O_LARGEFILE,0);
 //      fileHandle->file = fdopen(fd,"r+b");
-      fileHandle->file = fopen(fileName,"r+b");
+      fileHandle->file = FOPEN(fileName,"r+b");
       if (fileHandle->file == NULL)
       {
         if (errno == ENOENT)
         {
-          fileHandle->file = fopen(fileName,"wb");
+          fileHandle->file = FOPEN(fileName,"wb");
           if (fileHandle->file == NULL)
           {
             return ERRORX_(OPEN_FILE,errno,fileName);
@@ -1309,7 +1309,7 @@ Errors __File_openCString(const char *__fileName__,
 // TODO: use fd?
 //      fd = open(fileName,O_RDWR|O_APPEND|O_LARGEFILE,0);
 //      fileHandle->file = fdopen(fd,"ab");
-      fileHandle->file = fopen(fileName,"ab");
+      fileHandle->file = FOPEN(fileName,"ab");
       if (fileHandle->file == NULL)
       {
         return ERRORX_(OPEN_FILE,errno,fileName);
@@ -2822,14 +2822,14 @@ Errors File_copyCString(const char *sourceFileName,
   }
 
   // open files
-  sourceFile = fopen(sourceFileName,"r");
+  sourceFile = FOPEN(sourceFileName,"r");
   if (sourceFile == NULL)
   {
     error = ERRORX_(OPEN_FILE,errno,sourceFileName);
     free(buffer);
     return error;
   }
-  destinationFile = fopen(destinationFileName,"w");
+  destinationFile = FOPEN(destinationFileName,"w");
   if (destinationFile == NULL)
   {
     error = ERRORX_(OPEN_FILE,errno,destinationFileName);
