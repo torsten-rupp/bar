@@ -293,9 +293,20 @@ Errors Chunk_skip(const ChunkIO     *chunkIO,
 * Notes  : -
 \***********************************************************************/
 
-bool Chunk_eof(const ChunkIO *chunkIO,
-               void          *chunkIOUserData
-              );
+INLINE bool Chunk_eof(const ChunkIO *chunkIO,
+                      void          *chunkIOUserData
+                     );
+#if defined(NDEBUG) || defined(__CHUNKS_IMPLEMENATION__)
+INLINE bool Chunk_eof(const ChunkIO *chunkIO,
+                      void          *chunkIOUserData
+                     )
+{
+  assert(chunkIO != NULL);
+  assert(chunkIO->eof != NULL);
+
+  return chunkIO->eof(chunkIOUserData);
+}
+#endif /* NDEBUG || __CHUNKS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Chunk_tell
@@ -411,7 +422,15 @@ Errors Chunk_skipSub(ChunkInfo         *chunkInfo,
 * Notes  : -
 \***********************************************************************/
 
-bool Chunk_eofSub(ChunkInfo *chunkInfo);
+INLINE bool Chunk_eofSub(ChunkInfo *chunkInfo);
+#if defined(NDEBUG) || defined(__CHUNKS_IMPLEMENATION__)
+INLINE bool Chunk_eofSub(ChunkInfo *chunkInfo)
+{
+  assert(chunkInfo != NULL);
+
+  return chunkInfo->index >= chunkInfo->size;
+}
+#endif /* NDEBUG || __CHUNKS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Chunk_update

@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __CHUNK_IMPLEMENATION__
+#define __CHUNKS_IMPLEMENATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
@@ -1850,16 +1850,6 @@ Errors Chunk_skip(const ChunkIO     *chunkIO,
   return ERROR_NONE;
 }
 
-bool Chunk_eof(const ChunkIO *chunkIO,
-               void          *chunkIOUserData
-              )
-{
-  assert(chunkIO != NULL);
-  assert(chunkIO->eof != NULL);
-
-  return chunkIO->eof(chunkIOUserData);
-}
-
 void Chunk_tell(ChunkInfo *chunkInfo, uint64 *index)
 {
   #ifndef NDEBUG
@@ -1942,10 +1932,10 @@ Errors __Chunk_open(const char *__fileName__,
   {
     return error;
   }
-  chunkInfo->index += bytesRead;
+  chunkInfo->index += (uint64)bytesRead;
   if (chunkInfo->parentChunkInfo != NULL)
   {
-    chunkInfo->parentChunkInfo->index += bytesRead;
+    chunkInfo->parentChunkInfo->index += (uint64)bytesRead;
   }
 
   #ifdef NDEBUG
@@ -2013,8 +2003,8 @@ Errors __Chunk_create(const char *__fileName__,
   chunkInfo->size  = 0LL;
   if (chunkInfo->parentChunkInfo != NULL)
   {
-    chunkInfo->parentChunkInfo->index += bytesWritten;
-    chunkInfo->parentChunkInfo->size  += bytesWritten;
+    chunkInfo->parentChunkInfo->index += (uint64)bytesWritten;
+    chunkInfo->parentChunkInfo->size  += (uint64)bytesWritten;
   }
 
   // write chunk data
@@ -2033,12 +2023,12 @@ Errors __Chunk_create(const char *__fileName__,
     {
       return error;
     }
-    chunkInfo->index += bytesWritten;
-    chunkInfo->size  += bytesWritten;
+    chunkInfo->index += (uint64)bytesWritten;
+    chunkInfo->size  += (uint64)bytesWritten;
     if (chunkInfo->parentChunkInfo != NULL)
     {
-      chunkInfo->parentChunkInfo->index += bytesWritten;
-      chunkInfo->parentChunkInfo->size  += bytesWritten;
+      chunkInfo->parentChunkInfo->index += (uint64)bytesWritten;
+      chunkInfo->parentChunkInfo->size  += (uint64)bytesWritten;
     }
   }
 
@@ -2181,10 +2171,10 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
   {
     return error;
   }
-  chunkInfo->index += bytesRead;
+  chunkInfo->index += (uint64)bytesRead;
   if (chunkInfo->parentChunkInfo != NULL)
   {
-    chunkInfo->parentChunkInfo->index += bytesRead;
+    chunkInfo->parentChunkInfo->index += (uint64)bytesRead;
   }
   chunkHeader->id   = chunk.id;
   chunkHeader->size = chunk.size;
@@ -2233,11 +2223,6 @@ Errors Chunk_skipSub(ChunkInfo         *chunkInfo,
   chunkInfo->index += chunkHeader->size;
 
   return ERROR_NONE;
-}
-
-bool Chunk_eofSub(ChunkInfo *chunkInfo)
-{
-  return chunkInfo->index >= chunkInfo->size;
 }
 
 Errors Chunk_update(ChunkInfo *chunkInfo)
@@ -2305,9 +2290,9 @@ Errors Chunk_readData(ChunkInfo *chunkInfo,
   assert(data != NULL);
 
   // limit size to read to rest
-  if (size > (chunkInfo->size-chunkInfo->index))
+  if (size > (ulong)(chunkInfo->size-chunkInfo->index))
   {
-    size = chunkInfo->size-chunkInfo->index;
+    size = (ulong)(chunkInfo->size-chunkInfo->index);
   }
 
   // read data
@@ -2359,12 +2344,12 @@ Errors Chunk_writeData(ChunkInfo  *chunkInfo,
   }
 
   // increment indizes and increase sizes
-  chunkInfo->size  += size;
-  chunkInfo->index += size;
+  chunkInfo->size  += (uint64)size;
+  chunkInfo->index += (uint64)size;
   if (chunkInfo->parentChunkInfo != NULL)
   {
-    chunkInfo->parentChunkInfo->index += size;
-    chunkInfo->parentChunkInfo->size  += size;
+    chunkInfo->parentChunkInfo->index += (uint64)size;
+    chunkInfo->parentChunkInfo->size  += (uint64)size;
   }
 
   return ERROR_NONE;
@@ -2388,7 +2373,7 @@ Errors Chunk_skipData(ChunkInfo *chunkInfo,
   {
     return error;
   }
-  offset += size;
+  offset += (uint64)size;
   error = chunkInfo->io->seek(chunkInfo->ioUserData,offset);
   if (error != ERROR_NONE)
   {
@@ -2396,13 +2381,13 @@ Errors Chunk_skipData(ChunkInfo *chunkInfo,
   }
 
   // increment size
-  chunkInfo->index += size;
+  chunkInfo->index += (uint64)size;
 
   // set size in container chunk
   if (chunkInfo->parentChunkInfo != NULL)
   {
-    chunkInfo->parentChunkInfo->index += size;
-    chunkInfo->parentChunkInfo->size  += size;
+    chunkInfo->parentChunkInfo->index += (uint64)size;
+    chunkInfo->parentChunkInfo->size  += (uint64)size;
   }
 
   return ERROR_NONE;
