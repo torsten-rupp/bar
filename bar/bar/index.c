@@ -1493,22 +1493,19 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   plogMessage(LOG_TYPE_INDEX,"INDEX","Done init index database\n");
 
   // single clean-ups
+  (void)cleanUpDuplicateMeta(indexHandle);
   (void)cleanUpIncompleteUpdate(indexHandle);
   (void)cleanUpIncompleteCreate(indexHandle);
+  (void)cleanUpStorageNoName(indexHandle);
 
   // regular clean-ups
-#warning TODO
   while (!quitFlag)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // clean-up database
-    (void)cleanUpDuplicateMeta(indexHandle);
     (void)cleanUpOrphanedEntries(indexHandle);
-    (void)cleanUpStorageNoName(indexHandle);
     (void)cleanUpDuplicateIndizes(indexHandle);
 
-    Misc_udelay(1LL*MISC_US_PER_HOUR);
-//Misc_udelay(10LL*MISC_US_PER_SECOND);
+    Misc_udelay(4LL*MISC_US_PER_HOUR);
   }
 }
 
