@@ -3076,7 +3076,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   autoFreeSavePoint = AutoFree_save(&autoFreeList);
   while (   (createInfo->failError == ERROR_NONE)
          && !isAborted(createInfo)
-         && MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg))
+         && MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),WAIT_FOREVER)
         )
   {
     AUTOFREE_ADD(&autoFreeList,&storageMsg,
@@ -3703,6 +3703,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return error;
     }
+
 
     // write file content to archive
     error          = ERROR_NONE;
@@ -5068,7 +5069,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
   // store files
   while (   (createInfo->failError == ERROR_NONE)
          && !isAborted(createInfo)
-         && MsgQueue_get(&createInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg))
+         && MsgQueue_get(&createInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
         )
   {
     // pause
