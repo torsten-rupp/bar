@@ -171,12 +171,18 @@ typedef enum
 #define FILE_ATTRIBUTE_NONE 0LL
 #ifdef HAVE_FS_COMPR_FL
   #define FILE_ATTRIBUTE_COMPRESS    FS_COMPR_FL
+#else
+  #define FILE_ATTRIBUTE_COMPRESS    0LL
 #endif
 #ifdef HAVE_FS_NOCOMP_FL
   #define FILE_ATTRIBUTE_NO_COMPRESS FS_NOCOMP_FL
+#else
+  #define FILE_ATTRIBUTE_NO_COMPRESS 0LL
 #endif
 #ifdef HAVE_FS_NODUMP_FL
   #define FILE_ATTRIBUTE_NO_DUMP     FS_NODUMP_FL
+#else
+  #define FILE_ATTRIBUTE_NO_DUMP     0LL
 #endif
 
 /***************************** Datatypes *******************************/

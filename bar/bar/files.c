@@ -68,18 +68,24 @@
 #define DEBUG_MAX_CLOSED_LIST 100
 
 /***************************** Datatypes *******************************/
-#ifdef HAVE_FSEEKO
-  #define FSEEK fseeko
-#elif HAVE__FSEEKI64
+#ifdef HAVE_FOPEN64
+  #define FOPEN fopen64
+#else
+  #define FOPEN fopen
+#endif
+
+#ifdef HAVE__FSEEKI64
   #define FSEEK _fseeki64
+#elif HAVE_FSEEKO
+  #define FSEEK fseeko
 #else
   #define FSEEK fseek
 #endif
 
-#ifdef HAVE_FTELLO
-  #define FTELL ftello
-#elif HAVE__FTELLI64
+#ifdef HAVE__FTELLI64
   #define FTELL _ftelli64
+#elif HAVE_FTELLO
+  #define FTELL ftello
 #else
   #define FTELL ftell
 #endif
@@ -338,15 +344,9 @@ LOCAL Errors getAttributes(const String fileName, FileAttributes *fileAttributes
   #endif /* FS_IOC_GETFLAGS */
 
   (*fileAttributes) = 0LL;
-  #ifdef HAVE_FS_COMPR_FL
-    if ((attributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_COMPRESS;
-  #endif
-  #ifdef HAVE_FS_NOCOMP_FL
-    if ((attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_NO_COMPRESS;
-  #endif
-  #ifdef HAVE_FS_NODUMP_FL
-    if ((attributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_NO_DUMP;
-  #endif
+  if ((attributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_COMPRESS;
+  if ((attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_NO_COMPRESS;
+  if ((attributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_NO_DUMP;
 
   return ERROR_NONE;
 }
@@ -399,15 +399,9 @@ LOCAL Errors setAttributes(const String fileName, FileAttributes fileAttributes)
       return error;
     }
     attributes &= ~(FILE_ATTRIBUTE_COMPRESS|FILE_ATTRIBUTE_NO_COMPRESS|FILE_ATTRIBUTE_NO_DUMP);
-    #ifdef HAVE_FS_COMPR_FL
-      if ((fileAttributes & FILE_ATTRIBUTE_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_COMPRESS;
-    #endif
-    #ifdef HAVE_FS_NOCOMP_FL
-      if ((fileAttributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_NO_COMPRESS;
-    #endif
-    #ifdef HAVE_FS_NODUMP_FL
-      if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) != 0LL) attributes |= FILE_ATTRIBUTE_NO_DUMP;
-    #endif
+    if ((fileAttributes & FILE_ATTRIBUTE_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_COMPRESS;
+    if ((fileAttributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_NO_COMPRESS;
+    if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) != 0LL) attributes |= FILE_ATTRIBUTE_NO_DUMP;
     if (ioctl(handle,FS_IOC_SETFLAGS,&attributes) != 0)
     {
       error = ERRORX_(IO_ERROR,errno,String_cString(fileName));
