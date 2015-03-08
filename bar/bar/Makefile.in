@@ -30,6 +30,8 @@ INSTALL_CONFIG_DIR = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
 INSTALL_MAN_DIR    = $(if $(mandir),$(mandir),@MAN_DIR@)
 INSTALL_TLS_DIR    = @TLS_DIR@
 
+TEST_DATA_DIR      ?= test
+
 #--------------------------------- tool chain --------------------------------
 
 # shell in Makefile must be bash
@@ -435,7 +437,8 @@ help:
 	@$(ECHO) "  test5[-debug|-valgrind], test_split[-debug|-valgrind]"
 	@$(ECHO) "  test6[-debug|-valgrind], test_image[-debug|-valgrind]"
 	@$(ECHO) "  test7[-debug|-valgrind], test_storage[-debug|-valgrind]"
-	@$(ECHO) "  test8[-debug|-valgrind], test_dvd[-debug|-valgrind]"
+	@$(ECHO) "  test8[-debug|-valgrind], test_largefiles[-debug|-valgrind]"
+	@$(ECHO) "  test9[-debug|-valgrind], test_dvd[-debug|-valgrind]"
 	@$(ECHO) "  test_combined[-debug|-valgrind]"
 	@$(ECHO) "  test_parameters[-debug|-valgrind]"
 	@$(ECHO) ""
@@ -755,47 +758,60 @@ functionTestCheckExitcode = \
 #  sudo mkfs <options> <loop device>
 #  sudo mount <loop device> test/dev
 #  sudo umount <loop device>
-#  sudo cp test/data test/dev
+#  sudo cp $(TEST_DATA_DIR)/data test/dev
 #  sudo dd <loop device> <file>
 #  sudo diff -r <mount point> <mount point>
 
 # different test files
-TEST_FILES = \
-  test/data/zero1024.dat \
-  test/data/zero512k.dat \
-  test/data/random1024.dat \
-  test/data/random512k.dat \
-  test/data/zero-random512k.dat \
-  test/data/zero.dat \
-  test/data/readonly.dat \
-  test/data/readonly512k.dat \
-  test/data/unreadable.dat \
-  test/data/smallfile.dat \
-  test/data/sub_dir \
-  test/data/sub_ignore_dir \
-  test/data/linkdata.dat \
-  test/data/link.dat \
-  test/data/link_not_existing_file.dat \
-  test/data/circular_link.dat.marker \
-  test/data/hardlinkdata.dat \
-  test/data/hardlink.dat \
-  test/data/file400.dat \
-  test/data/file640.dat \
-  test/data/file644.dat \
-  test/data/file664.dat \
-  test/data/file666.dat \
-  test/data/nodump.dat \
-  test/data/fifo \
-  test/data/data\'.dat \
-  test/data/data\".dat \
-  test/data/delta1/test.dat \
-  test/data/delta2/test.dat
+TEST_FILE_NAMES = \
+  zero1024.dat \
+  zero512k.dat \
+  random1024.dat \
+  random512k.dat \
+  zero-random512k.dat \
+  zero.dat \
+  readonly.dat \
+  readonly512k.dat \
+  unreadable.dat \
+  smallfile.dat \
+  sub_dir \
+  sub_ignore_dir \
+  linkdata.dat \
+  link.dat \
+  link_not_existing_file.dat \
+  circular_link.dat.marker \
+  hardlinkdata.dat \
+  hardlink.dat \
+  file400.dat \
+  file640.dat \
+  file644.dat \
+  file664.dat \
+  file666.dat \
+  nodump.dat \
+  fifo \
+  data\'.dat \
+  data\".dat \
+  delta1/test.dat \
+  delta2/test.dat
 ifneq ($(ATTR),)
-TEST_FILES += \
-  test/data/extended_attribute.dat \
-  test/data/sub_dir_extended_attribute \
-  test/data/hardlink_extended_attribute.dat
+TEST_FILE_NAMES += \
+  extended_attribute.dat \
+  sub_dir_extended_attribute \
+  hardlink_extended_attribute.dat \
+  hardlinkdata_extended_attribute.dat
 endif
+
+TEST_FILES = $(foreach z,$(TEST_FILE_NAMES),$(TEST_DATA_DIR)/data/$z)
+
+TEST_LARGEFILE_NAMES = \
+  zero5G.dat \
+  random5G.dat \
+
+TEST_LARGEFILES = $(foreach z,$(TEST_LARGEFILE_NAMES),$(TEST_DATA_DIR)/data/$z)
+
+.PHONY: x
+x:
+	echo $(TEST_FILES)
 
 # temporary test files
 TEST_FILES_CLEAN = \
@@ -819,9 +835,9 @@ TEST_KEYS = test/key.public \
 
 .PHONY: test test_win
 .PHONY: test-debug test_win-debug
-.PHONY: test1 test2 test3 test4 test5 test6 test7 test8
-.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug
-.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind
+.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9
+.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug
+.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_storage test_dvd test_combined test_parameters
 .PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_parameters-debug
 .PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_split-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_parameters-valgrind
@@ -897,10 +913,10 @@ test1 test_basic: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test1-debug test_basic-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test1
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_basic
 
 test1-valgrind test_basic-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test1
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_basic
 
 test2 test_compress: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 2: compress..."
@@ -939,10 +955,10 @@ test2 test_compress: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test2-debug test_compress-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test2
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_compress
 
 test2-valgrind test_compress-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test2
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_compress
 
 test_delta_compress: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 2: delta compress..."
@@ -972,6 +988,9 @@ test_delta_compress: $(TEST_BAR)
 
 test_delta_compress-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_delta_compress
+
+test_delta_compress-valgrind: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_delta_compress
 
 test3 test_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 3: crypt..."
@@ -1010,10 +1029,10 @@ test3 test_crypt: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test3-debug test_crypt-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test3
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_crypt
 
 test3-valgrind test_crypt-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test3
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_crypt
 
 test4 test_asymmetric_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
@@ -1053,10 +1072,10 @@ test4 test_asymmetric_crypt: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test4-debug test_asymmetric_crypt-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test4
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_asymmetric_crypt
 
 test4-valgrind test_asymmetric-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test4
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_asymmetric_crypt
 
 test5 test_split: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 5: split..."
@@ -1081,10 +1100,10 @@ test5 test_split: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test5-debug test_split-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test5
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_split
 
 test5-valgrind test_split-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test5
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_split
 
 test6 test_image: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 6: image..."
@@ -1123,10 +1142,10 @@ test6 test_image: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test6-debug test_image-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test6
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_image
 
 test6-valgrind test_image-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test6
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_image
 
 test7 test_storage: $(TEST_BAR)
 	@$(call functionVerifyParameter,PASSWORD)
@@ -1205,13 +1224,29 @@ test7 test_storage: $(TEST_BAR)
 	@$(ECHO) "ok"
 
 test7-debug test_storage-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test7
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage
 
 test7-valgrind test_storage-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test7
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
 
-test8 test_dvd: $(TEST_BAR)
-	@$(ECHO_NO_LF) "Test 8: dvd..."
+test8 test_largefiles: $(TEST_BAR)
+	@$(ECHO_NO_LF) "Test 8: large files..."
+	$(MAKE) \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
+          test_largefiles_operations \
+          ;
+	@$(ECHO) "ok"
+
+test8-debug test_test_largefiles-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_test_largefiles
+
+test8-valgrind test_test_largefiles-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_test_largefiles
+
+test9 test_dvd: $(TEST_BAR)
+	@$(ECHO_NO_LF) "Test 9: dvd..."
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -1220,11 +1255,11 @@ test8 test_dvd: $(TEST_BAR)
           ;
 	@$(ECHO) "ok"
 
-test8-debug test_dvd-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test8
+test9-debug test_dvd-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_dvd
 
-test8-valgrind test_dvd-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test8
+test9-valgrind test_dvd-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_dvd
 
 test_combined: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test combined..."
@@ -1291,7 +1326,7 @@ test_parameters: \
 	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --help 1>/dev/null $(if $(QUIET),1>/dev/null))
 	#
 	# different options
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -g $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -H $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -L $(if $(QUIET),1>/dev/null))
@@ -1302,7 +1337,7 @@ test_parameters: \
 	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -g -H -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --config=test/test.cfg -l test/test*.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 --dry-run $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --dry-run $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l cd://test*.bar $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t cd://test*.bar $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d cd://test*.bar $(if $(QUIET),1>/dev/null))
@@ -1315,10 +1350,10 @@ test_parameters: \
 	#
 	# wrong options
 	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --not-existing-option  $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar test/data --compress-algorithm=not-existing-compress  $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar test/data --crypt-algorithm=not-existing-compress $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --compress-algorithm=not-existing-compress  $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --crypt-algorithm=not-existing-compress $(if $(QUIET),1>/dev/null))
 ifeq (@HAVE_XDELTA@,1)
-	$(call functionTestCheckExitcode,1,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar test/data --delta-source=does-not-exists --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,1,1,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --delta-source=does-not-exists --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files $(if $(QUIET),1>/dev/null))
 endif
 	$(call functionTestCheckExitcode,6,6,SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --config=test/test-not-exists.cfg -l test/test*.bar $(if $(QUIET),1>/dev/null))
 	#
@@ -1345,19 +1380,19 @@ test_file_operations: \
   test_file_operations_differential \
   test_file_operations_destroyed
 
-test/data/zero1024.dat:
+$(TEST_DATA_DIR)/data/zero1024.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1 count=1024 2>/dev/null
-test/data/zero512k.dat:
+$(TEST_DATA_DIR)/data/zero512k.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1k count=512 2>/dev/null
-test/data/random1024.dat:
+$(TEST_DATA_DIR)/data/random1024.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1 count=1024 2>/dev/null
-test/data/random512k.dat:
+$(TEST_DATA_DIR)/data/random512k.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=512 2>/dev/null
-test/data/zero-random512k.dat:
+$(TEST_DATA_DIR)/data/zero-random512k.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) bs=1k count=64 1>$@  2>/dev/null
 	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
@@ -1367,94 +1402,101 @@ test/data/zero-random512k.dat:
 	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
 	$(DD) if=$(DEVICE_RANDOM) bs=1k count=64 1>>$@ 2>/dev/null
 	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
-test/data/zero.dat:
+$(TEST_DATA_DIR)/data/zero.dat:
 	$(INSTALL) -d $(@D)
 	$(RMF) $0; touch $@
-test/data/readonly.dat:
+$(TEST_DATA_DIR)/data/readonly.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@; $(CHMOD) 440 $@
-test/data/readonly512k.dat:
+$(TEST_DATA_DIR)/data/readonly512k.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=512 2>/dev/null; $(CHMOD) 440 $@
-test/data/unreadable.dat:
+$(TEST_DATA_DIR)/data/unreadable.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@; $(CHMOD) 000 $@
-test/data/smallfile.dat:
+$(TEST_DATA_DIR)/data/smallfile.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1 count=128 2>/dev/null
-test/data/sub_dir:
+$(TEST_DATA_DIR)/data/sub_dir:
 	$(INSTALL) -d $(@D)
 	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World > $@/test.dat
-test/data/sub_ignore_dir:
+$(TEST_DATA_DIR)/data/sub_ignore_dir:
 	$(INSTALL) -d $(@D)
 	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World > $@/test.dat
 	touch $@/.nobackup
-test/data/linkdata.dat test/data/link.dat:
+$(TEST_DATA_DIR)/data/linkdata.dat $(TEST_DATA_DIR)/data/link.dat:
 	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=test/data/linkdata.dat bs=1 count=1024 2>/dev/null
+	$(DD) if=$(DEVICE_RANDOM) of=$(TEST_DATA_DIR)/data/linkdata.dat bs=1 count=1024 2>/dev/null
 	($(CD) $(@D); $(RMF) link.dat; $(LN) -s linkdata.dat link.dat)
-test/data/link_not_existing_file.dat:
+$(TEST_DATA_DIR)/data/link_not_existing_file.dat:
 	$(INSTALL) -d $(@D)
-	($(CD) test/data; $(RMF) link_not_existing_file.dat; $(LN) -s not-existing-file link_not_existing_file.dat)
-test/data/circular_link.dat.marker:
+	($(CD) $(TEST_DATA_DIR)/data; $(RMF) link_not_existing_file.dat; $(LN) -s not-existing-file link_not_existing_file.dat)
+$(TEST_DATA_DIR)/data/circular_link.dat.marker:
 	$(INSTALL) -d $(@D)
-	($(CD) test/data; $(LN) -s circular_link.dat circular_link.dat)
+	($(CD) $(TEST_DATA_DIR)/data; $(LN) -s circular_link.dat circular_link.dat)
 	touch $@
-test/data/hardlinkdata.dat test/data/hardlink.dat:
+$(TEST_DATA_DIR)/data/hardlinkdata.dat $(TEST_DATA_DIR)/data/hardlink.dat:
 	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=test/data/hardlinkdata.dat bs=1 count=1024 2>/dev/null
+	$(DD) if=$(DEVICE_RANDOM) of=$(TEST_DATA_DIR)/data/hardlinkdata.dat bs=1 count=1024 2>/dev/null
 	($(CD) $(@D); $(RMF) hardlink.dat; $(LN) hardlinkdata.dat hardlink.dat)
-test/data/file400.dat:
+$(TEST_DATA_DIR)/data/file400.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 400 $@
-test/data/file640.dat:
+$(TEST_DATA_DIR)/data/file640.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 640 $@
-test/data/file644.dat:
+$(TEST_DATA_DIR)/data/file644.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 644 $@
-test/data/file664.dat:
+$(TEST_DATA_DIR)/data/file664.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 664 $@
-test/data/file666.dat:
+$(TEST_DATA_DIR)/data/file666.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 666 $@
-test/data/nodump.dat:
+$(TEST_DATA_DIR)/data/nodump.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 440 $@; $(CHATTR) +d $@
 ifneq ($(ATTR),)
-test/data/extended_attribute.dat:
+$(TEST_DATA_DIR)/data/extended_attribute.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(ATTR) -s foo1 -V test $@ 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" $@ 1>/dev/null
-test/data/sub_dir_extended_attribute:
+$(TEST_DATA_DIR)/data/sub_dir_extended_attribute:
 	$(INSTALL) -d $(@D)
 	$(RMRF) $@; $(INSTALL) -d $@; $(ATTR) -s foo1 -V test $@ 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" $@ 1>/dev/null
-test/data/hardlinkdata_extended_attribute.dat test/data/hardlink_extended_attribute.dat:
+$(TEST_DATA_DIR)/data/hardlinkdata_extended_attribute.dat $(TEST_DATA_DIR)/data/hardlink_extended_attribute.dat:
 	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=test/data/hardlinkdata_extended_attribute.dat bs=1 count=1024 2>/dev/null
-	($(CD) $(@D); $(RMF) hardlink_extended_attribute.dat; $(LN) hardlinkdata_extended_attribute.dat hardlink_extended_attribute.dat); $(ATTR) -s foo1 -V test test/data/hardlink_extended_attribute.dat 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" test/data/hardlink_extended_attribute.dat 1>/dev/null
+	$(DD) if=$(DEVICE_RANDOM) of=$(TEST_DATA_DIR)/data/hardlinkdata_extended_attribute.dat bs=1 count=1024 2>/dev/null
+	($(CD) $(@D); $(RMF) hardlink_extended_attribute.dat; $(LN) hardlinkdata_extended_attribute.dat hardlink_extended_attribute.dat); $(ATTR) -s foo1 -V test $(TEST_DATA_DIR)/data/hardlink_extended_attribute.dat 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" $(TEST_DATA_DIR)/data/hardlink_extended_attribute.dat 1>/dev/null
 endif
-test/data/fifo:
+$(TEST_DATA_DIR)/data/fifo:
 	$(INSTALL) -d $(@D)
-	($(CD) test/data; $(MKFIFO) fifo)
-test/data/data\'.dat:
-	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World > $@
-test/data/data\".dat:
+	($(CD) $(TEST_DATA_DIR)/data; $(MKFIFO) fifo)
+$(TEST_DATA_DIR)/data/data\'.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@
-test/data/delta1/test.dat:
+$(TEST_DATA_DIR)/data/data\".dat:
+	$(INSTALL) -d $(@D)
+	$(ECHO) Hello World > $@
+$(TEST_DATA_DIR)/data/delta1/test.dat:
 	$(INSTALL) -d $(@D)
 	( \
          $(DD) if=$(DEVICE_RANDOM) bs=1k count=512 2>/dev/null; \
         ) > $@
-test/data/delta2/test.dat: test/data/delta1/test.dat
+$(TEST_DATA_DIR)/data/delta2/test.dat: $(TEST_DATA_DIR)/data/delta1/test.dat
 	$(INSTALL) -d $(@D)
 	( \
-          $(DD) if=test/data/delta1/test.dat skip=0 bs=1k count=255 2>/dev/null; \
+          $(DD) if=$(TEST_DATA_DIR)/data/delta1/test.dat skip=0 bs=1k count=255 2>/dev/null; \
           $(DD) if=$(DEVICE_RANDOM) bs=1k count=1 2>/dev/null; \
-          $(DD) if=test/data/delta1/test.dat skip=256 bs=1k count=256 2>/dev/null; \
+          $(DD) if=$(TEST_DATA_DIR)/data/delta1/test.dat skip=256 bs=1k count=256 2>/dev/null; \
         ) > $@
+
+$(TEST_DATA_DIR)/data/zero5G.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1M count=5120 2>/dev/null
+$(TEST_DATA_DIR)/data/random5G.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1M count=5120 2>/dev/null
 
 test/key.public test/key.private:
 	$(INSTALL) -d test
@@ -1477,19 +1519,27 @@ test_file_operations_base: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar test/data $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
-	$(DIFF) -r -x unreadable.dat -x link_not_existing_file.dat -x circular_link.dat -x circular_link.dat.marker -x fifo -x sub_ignore_dir -x nodump.dat test/data test/restore/test/data
-	$(READLINK) test/restore/test/data/link.dat 2>/dev/null $(if $(QUIET),1>/dev/null)
-	test `$(STAT) --format "%a" test/restore/test/data/file400.dat 2>/dev/null` = "400" $(if $(QUIET),1>/dev/null)
-	test `$(STAT) --format "%a" test/restore/test/data/file640.dat 2>/dev/null` = "640" $(if $(QUIET),1>/dev/null)
-	test `$(STAT) --format "%a" test/restore/test/data/file644.dat 2>/dev/null` = "644" $(if $(QUIET),1>/dev/null)
-	test `$(STAT) --format "%a" test/restore/test/data/file664.dat 2>/dev/null` = "664" $(if $(QUIET),1>/dev/null)
-	test `$(STAT) --format "%a" test/restore/test/data/file666.dat 2>/dev/null` = "666" $(if $(QUIET),1>/dev/null)
-	test `$(STAT) --format "%h" test/restore/test/data/hardlink.dat 2>/dev/null` -eq 2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination $(TEST_DATA_DIR)/restore $(if $(QUIET),1>/dev/null)
+	$(DIFF) -r \
+          -x unreadable.dat \
+          -x link_not_existing_file.dat \
+          -x circular_link.dat \
+          -x circular_link.dat.marker \
+          -x fifo \
+          -x sub_ignore_dir \
+          -x nodump.dat \
+          $(TEST_DATA_DIR)/data $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data
+	$(READLINK) $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/link.dat 2>/dev/null $(if $(QUIET),1>/dev/null)
+	test `$(STAT) --format "%a" $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/file400.dat 2>/dev/null` = "400" $(if $(QUIET),1>/dev/null)
+	test `$(STAT) --format "%a" $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/file640.dat 2>/dev/null` = "640" $(if $(QUIET),1>/dev/null)
+	test `$(STAT) --format "%a" $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/file644.dat 2>/dev/null` = "644" $(if $(QUIET),1>/dev/null)
+	test `$(STAT) --format "%a" $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/file664.dat 2>/dev/null` = "664" $(if $(QUIET),1>/dev/null)
+	test `$(STAT) --format "%a" $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/file666.dat 2>/dev/null` = "666" $(if $(QUIET),1>/dev/null)
+	test `$(STAT) --format "%h" $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/hardlink.dat 2>/dev/null` -eq 2 $(if $(QUIET),1>/dev/null)
 
 test_file_operations_delta: \
   $(TEST_BAR) \
@@ -1501,38 +1551,38 @@ ifeq (@HAVE_XDELTA@,1)
 	@$(call functionVerifyParameter,BAR_PATTERN)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	($(CD) test/data/delta1; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-A.bar test.dat $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	($(CD) $(TEST_DATA_DIR)/data/delta1; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-A.bar test.dat $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	#
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar test.dat --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar test.dat --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
-	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
+	($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	$(DIFF) $(TEST_DATA_DIR)/data/delta2/test.dat test/restore/test.dat
 	#
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
-	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
+	($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	$(DIFF) $(TEST_DATA_DIR)/data/delta2/test.dat test/restore/test.dat
 	#
 ifeq (@HAVE_BZ2@,1)
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+bzip2 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+bzip2 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
-	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
+	($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	$(DIFF) $(TEST_DATA_DIR)/data/delta2/test.dat test/restore/test.dat
 endif
 	#
 ifeq (@HAVE_LZMA@,1)
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+lzma9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+lzma9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
-	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
+	($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	$(DIFF) $(TEST_DATA_DIR)/data/delta2/test.dat test/restore/test.dat
 endif
 endif
 
@@ -1544,7 +1594,7 @@ test_file_operations_dryrun: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar test/data $(BAR_OPTIONS) --dry-run --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --dry-run --verbose=2 $(if $(QUIET),1>/dev/null)
 
 test_file_operations_incremental: \
   $(TEST_BAR) \
@@ -1554,9 +1604,9 @@ test_file_operations_incremental: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	$(INSTALL) -d test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	$(INSTALL) -d test/new; $(CP) $(TEST_DATA_DIR)/data/random1024.dat test/new/random1024-new.dat
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
@@ -1569,9 +1619,9 @@ test_file_operations_differential: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	$(INSTALL) -d test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-differential.bar --differential --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	$(INSTALL) -d test/new; $(CP) $(TEST_DATA_DIR)/data/random1024.dat test/new/random1024-new.dat
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-differential.bar --differential --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
@@ -1586,7 +1636,7 @@ test_file_operations_destroyed: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:16:FIL0 > $${fileName}_destroyed; done
 	- `SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:20:XXXX > $${fileName}_destroyed; done
@@ -1791,7 +1841,7 @@ ifneq (@MKFS_EXT2@,)
 	# ext2 zero-data, default block size
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -1806,7 +1856,7 @@ ifneq (@MKFS_EXT2@,)
 	# ext2 random-data, default block size
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -1821,8 +1871,8 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext2,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext2,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext2,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext2,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -1839,7 +1889,7 @@ ifneq (@MKFS_EXT2@,)
 	# ext2 zero-data, block size 1024 bytes
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -1854,7 +1904,7 @@ ifneq (@MKFS_EXT2@,)
 	# ext2 random-data, block size 1024 bytes
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -1869,8 +1919,8 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext2 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext2 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext2 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext2 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -1887,7 +1937,7 @@ ifneq (@MKFS_EXT2@,)
 	# ext2 zero-data, block size 2048 bytes
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -1902,7 +1952,7 @@ ifneq (@MKFS_EXT2@,)
 	# ext2 random-data, block size 2048 bytes
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -1917,8 +1967,8 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext2 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext2 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext2 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext2 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -1935,7 +1985,7 @@ ifneq (@MKFS_EXT2@,)
 	# ext2 zero-data, block size 4096 bytes
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -1950,7 +2000,7 @@ ifneq (@MKFS_EXT2@,)
 	# ext2 random-data, block size 4096 bytes
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -1965,8 +2015,8 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext2 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext2 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext2 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext2 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -1990,7 +2040,7 @@ ifneq (@MKFS_EXT3@,)
 	# ext3 zero-data, default block size
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2005,7 +2055,7 @@ ifneq (@MKFS_EXT3@,)
 	# ext3 random-data, default block size
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2020,8 +2070,8 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext3,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext3,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext3,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext3,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2038,7 +2088,7 @@ ifneq (@MKFS_EXT3@,)
 	# ext3 zero-data, block size 1024 bytes
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2053,7 +2103,7 @@ ifneq (@MKFS_EXT3@,)
 	# ext3 random-data, block size 1024 bytes
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2068,8 +2118,8 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext3 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext3 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext3 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext3 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2086,7 +2136,7 @@ ifneq (@MKFS_EXT3@,)
 	# ext3 zero-data, block size 2048 bytes
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2101,7 +2151,7 @@ ifneq (@MKFS_EXT3@,)
 	# ext3 random-data, block size 2048 bytes
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2116,8 +2166,8 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext3 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext3 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext3 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext3 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2134,7 +2184,7 @@ ifneq (@MKFS_EXT3@,)
 	# ext3 zero-data, block size 4096 bytes
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2149,7 +2199,7 @@ ifneq (@MKFS_EXT3@,)
 	# ext3 random-data, block size 4096 bytes
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2164,8 +2214,8 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext3 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext3 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext3 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext3 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2189,7 +2239,7 @@ ifneq (@MKFS_EXT4@,)
 	# ext4 zero-data, default block size
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2204,7 +2254,7 @@ ifneq (@MKFS_EXT4@,)
 	# ext4 random-data, default block size
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2219,8 +2269,8 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext4,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext4,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext4,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext4,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2237,7 +2287,7 @@ ifneq (@MKFS_EXT4@,)
 	# ext4 zero-data, block size 1024 bytes
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2252,7 +2302,7 @@ ifneq (@MKFS_EXT4@,)
 	# ext4 random-data, block size 1024 bytes
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2267,8 +2317,8 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext4 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext4 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext4 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext4 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2285,7 +2335,7 @@ ifneq (@MKFS_EXT4@,)
 	# ext4 zero-data, block size 2048 bytes
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2300,7 +2350,7 @@ ifneq (@MKFS_EXT4@,)
 	# ext4 random-data, block size 2048 bytes
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2315,8 +2365,8 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext4 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext4 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext4 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext4 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2333,7 +2383,7 @@ ifneq (@MKFS_EXT4@,)
 	# ext4 zero-data, block size 4096 bytes
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2348,7 +2398,7 @@ ifneq (@MKFS_EXT4@,)
 	# ext4 random-data, block size 4096 bytes
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2361,7 +2411,7 @@ ifneq (@MKFS_EXT4@,)
 	#
 	#$(call functionCreateSpare,test/dev0.dat,512G)
 	#$(call functionCreateSpare,test/dev1.dat,512G)
-	#$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	#$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	#$(MAKE) test_image_operations_base \
         #   DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
 	#$(call functionTestDeviceDelete,$(LOOP1),test/dev1)
@@ -2373,8 +2423,8 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext4 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext4 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext4 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext4 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2404,7 +2454,7 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT12 zero-data
 	$(call functionCreateFileZero,test/dev0.dat,1440K)
 	$(call functionCreateFileZero,test/dev1.dat,1440K)
-	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 12,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 12,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2419,7 +2469,7 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT12 random-data
 	$(call functionCreateFileRandom,test/dev0.dat,1440K)
 	$(call functionCreateFileRandom,test/dev1.dat,1440K)
-	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 12,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 12,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2434,8 +2484,8 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 12,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 12,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 12,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 12,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2459,7 +2509,7 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT16 zero-data
 	$(call functionCreateFileZero,test/dev0.dat,20M)
 	$(call functionCreateFileZero,test/dev1.dat,20M)
-	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 16,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 16,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2474,7 +2524,7 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT16 random-data
 	$(call functionCreateFileRandom,test/dev0.dat,20M)
 	$(call functionCreateFileRandom,test/dev1.dat,20M)
-	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 16,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 16,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2489,8 +2539,8 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 16,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 16,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 16,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 16,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2514,7 +2564,7 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT32 zero-data
 	$(call functionCreateFileZero,test/dev0.dat,40M)
 	$(call functionCreateFileZero,test/dev1.dat,40M)
-	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 32,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 32,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2529,7 +2579,7 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT32 random-data
 	$(call functionCreateFileRandom,test/dev0.dat,40M)
 	$(call functionCreateFileRandom,test/dev1.dat,40M)
-	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 32,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 32,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2544,8 +2594,8 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionCreateFileZero,test/dev0a.dat,32M)
 	$(call functionCreateFileZero,test/dev0b.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 32,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 32,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 32,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 32,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2584,7 +2634,7 @@ ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3 zero-data
 	$(call functionCreateFileZero,test/dev0.dat,64M)
 	$(call functionCreateFileZero,test/dev1.dat,64M)
-	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.5,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.5,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2600,7 +2650,7 @@ ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3 random-data
 	$(call functionCreateFileRandom,test/dev0.dat,64M)
 	$(call functionCreateFileRandom,test/dev1.dat,64M)
-	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.5,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.5,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2615,7 +2665,7 @@ ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3 zero-data
 	$(call functionCreateFileZero,test/dev0.dat,64M)
 	$(call functionCreateFileZero,test/dev1.dat,64M)
-	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.6,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.6,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2631,7 +2681,7 @@ ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3 random-data
 	$(call functionCreateFileRandom,test/dev0.dat,64M)
 	$(call functionCreateFileRandom,test/dev1.dat,64M)
-	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.6,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.6,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2647,8 +2697,8 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionCreateFileZero,test/dev0a.dat,64M)
 	$(call functionCreateFileZero,test/dev0b.dat,64M)
 	$(call functionCreateFileZero,test/dev1.dat,64M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t reiserfs -b 4096 -q --format 3.6,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t reiserfs -b 4096 -q --format 3.6,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0a.dat,-t reiserfs -b 4096 -q --format 3.6,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t reiserfs -b 4096 -q --format 3.6,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -2690,7 +2740,6 @@ test_image_operations_base: \
 	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
-	#
 
 test_image_operations_delta: \
   $(TEST_BAR) \
@@ -2742,7 +2791,6 @@ endif
 	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
-	#
 
 test_image_operations_check:
 	# check file systems and compare file content
@@ -2767,7 +2815,6 @@ test_image_operations_check:
 	$(SLEEP) 5
 	$(call functionDeviceUmount,$(DEVICE0),test/dev0)
 	$(call functionDeviceUmount,$(DEVICE1),test/dev1)
-	#
 
 test_image_operations_diff_image:
 	# compare devices
@@ -2787,7 +2834,21 @@ test_image_operations_diff_image:
 	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
 	@
 	$(DIFF) test/dev0.dump test/dev1.dump
+
+.PHONY: test_largefiles_operations
+test_largefiles_operations: \
+  $(TEST_BAR) \
+  $(TEST_LARGEFILES)
+	# normal tests
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
 	#
+	$(RMRF) $(TEST_FILES_CLEAN)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_LARGEFILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
 
 .PHONY: test_dvd_operations
 test_dvd_operations: \
@@ -2800,16 +2861,15 @@ test_dvd_operations: \
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(SLEEP) 30
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c dvd://$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	$(SLEEP) 30
-	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --ecc $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c dvd://$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --ecc $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
-	#
 
 # ----------------------------------------------------------------------------
 
@@ -2864,7 +2924,7 @@ memcheck2a: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 memcheck2b: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -2874,7 +2934,7 @@ memcheck2b: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files > /dev/null
 memcheck2c: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -2884,7 +2944,7 @@ memcheck2c: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --overwrite-archive-files > /dev/null
 memcheck2d: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -2894,7 +2954,7 @@ memcheck2d: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --overwrite-archive-files > /dev/null
 memcheck2e: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -2904,7 +2964,7 @@ memcheck2e: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test-###.bar test/data $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test-###.bar $(TEST_FILES) $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files > /dev/null
 memcheck2f: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -2914,9 +2974,9 @@ memcheck2f: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files --dry-run > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --dry-run > /dev/null
 memcheck3: bar
-	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
@@ -2927,7 +2987,7 @@ memcheck3: bar
 memcheck4: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
@@ -2938,7 +2998,7 @@ memcheck4: \
 memcheck5: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
@@ -2949,7 +3009,7 @@ memcheck5: \
 memcheck6: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
@@ -2960,7 +3020,7 @@ memcheck6: \
 memcheck7: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	-$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
@@ -3015,10 +3075,10 @@ memcheck8: \
 
 # different performance files
 PERFORMANCE_FILES = \
-  test/data/zero100M.dat \
-  test/data/random100M.dat \
-  test/data/delta1/test100M.dat \
-  test/data/delta2/test100M.dat \
+  $(TEST_DATA_DIR)/data/zero100M.dat \
+  $(TEST_DATA_DIR)/data/random100M.dat \
+  $(TEST_DATA_DIR)/data/delta1/test100M.dat \
+  $(TEST_DATA_DIR)/data/delta2/test100M.dat \
 
 # temporary performance files
 PERFORMANCE_FILES_CLEAN = \
@@ -3030,23 +3090,23 @@ PERFORMANCE_FILES_CLEAN = \
 # test bar exeuctable
 PERFORMANCE_BAR = ./bar@EXEEXT@
 
-test/data/zero100M.dat:
+$(TEST_DATA_DIR)/data/zero100M.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1M count=100 2>/dev/null
-test/data/random100M.dat:
+$(TEST_DATA_DIR)/data/random100M.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1M count=100 2>/dev/null
-test/data/delta1/test100M.dat:
+$(TEST_DATA_DIR)/data/delta1/test100M.dat:
 	$(INSTALL) -d $(@D)
 	( \
          $(DD) if=$(DEVICE_RANDOM) bs=1M count=100 2>/dev/null; \
         ) > $@
-test/data/delta2/test100M.dat: test/data/delta1/test100M.dat
+$(TEST_DATA_DIR)/data/delta2/test100M.dat: $(TEST_DATA_DIR)/data/delta1/test100M.dat
 	$(INSTALL) -d $(@D)
 	( \
-          $(DD) if=test/data/delta1/test100M.dat skip=0 bs=1M count=50 2>/dev/null; \
+          $(DD) if=$(TEST_DATA_DIR)/data/delta1/test100M.dat skip=0 bs=1M count=50 2>/dev/null; \
           $(DD) if=$(DEVICE_RANDOM) bs=1M count=1 2>/dev/null; \
-          $(DD) if=test/data/delta1/test100M.dat skip=256 bs=1M count=49 2>/dev/null; \
+          $(DD) if=$(TEST_DATA_DIR)/data/delta1/test100M.dat skip=256 bs=1M count=49 2>/dev/null; \
         ) > $@
 
 # performance tests
@@ -3064,7 +3124,7 @@ performance1 performance_none: \
   $(PERFORMANCE_FILES)
 	@$(ECHO) "None (100M zero, 100M random):"
 	@$(ECHO_NO_LF) "  Create : "
-	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar test/data/zero100M.dat test/data/random100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null"
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Test   : "
 	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t test/test.bar 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Diff   : "
@@ -3078,7 +3138,7 @@ performance2 performance_zip_compress: \
   $(PERFORMANCE_FILES)
 	@$(ECHO) "ZIP (100M zero, 100M random):"
 	@$(ECHO_NO_LF) "  Create : "
-	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar test/data/zero100M.dat test/data/random100M.dat --overwrite-archive-files --compress-algorithm=zip9 1>/dev/null 2>/dev/null"
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=zip9 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Test   : "
 	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t test/test.bar 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Diff   : "
@@ -3092,7 +3152,7 @@ performance3 performance_bzip2_compress: \
   $(PERFORMANCE_FILES)
 	@$(ECHO) "BZIP2 (100M zero, 100M random):"
 	@$(ECHO_NO_LF) "  Create : "
-	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar test/data/zero100M.dat test/data/random100M.dat --overwrite-archive-files --compress-algorithm=bzip9 1>/dev/null 2>/dev/null"
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=bzip9 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Test   : "
 	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t test/test.bar 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Diff   : "
@@ -3106,7 +3166,7 @@ performance4 performance_lzma_compress: \
   $(PERFORMANCE_FILES)
 	@$(ECHO) "LZMA (100M zero, 100M random):"
 	@$(ECHO_NO_LF) "  Create : "
-	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar test/data/zero100M.dat test/data/random100M.dat --overwrite-archive-files --compress-algorithm=lzma9 1>/dev/null 2>/dev/null"
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=lzma9 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Test   : "
 	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t test/test.bar 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Diff   : "
@@ -3120,15 +3180,15 @@ performance5 performance_delta_compress: \
   $(PERFORMANCE_FILES)
 ifeq (@HAVE_XDELTA@,1)
 	@$(ECHO) "XDELTA (100M random):"
-	@($(CD) test/data/delta1; ../../../$(PERFORMANCE_BAR) -c ../../test-A.bar test100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null)
+	@($(CD) $(TEST_DATA_DIR)/data/delta1; ../../../$(PERFORMANCE_BAR) -c ../../test-A.bar test100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null)
 	@$(ECHO_NO_LF) "  Create : "
-	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -c ../../test-B.bar test100M.dat --overwrite-archive-files --compress-algorithm=xdelta9+lzma9 --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
+	@($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -c ../../test-B.bar test100M.dat --overwrite-archive-files --compress-algorithm=xdelta9+lzma9 --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
 	@$(ECHO_NO_LF) "  Test   : "
-	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -t ../../test-B.bar --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
+	@($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -t ../../test-B.bar --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
 	@$(ECHO_NO_LF) "  Diff   : "
-	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -d ../../test-B.bar --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
+	@($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -d ../../test-B.bar --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
 	@$(ECHO_NO_LF) "  Extract: "
-	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -x ../../test-B.bar --delta-source=../../test-A.bar --destination=../../restore --overwrite-files 1>/dev/null 2>/dev/null")
+	@($(CD) $(TEST_DATA_DIR)/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -x ../../test-B.bar --delta-source=../../test-A.bar --destination=../../restore --overwrite-files 1>/dev/null 2>/dev/null")
 endif
 
 # ----------------------------------------------------------------------------
@@ -3144,7 +3204,7 @@ TESTCODE_COMMAND1A=$(TEST_BAR_DEBUG) \
                      --overwrite-archive-files \
                      --full \
                      --log-post-command='true' \
-                     -c test/test-\#\#\#.bar test/data
+                     -c test/test-\#\#\#.bar $(TEST_DATA_DIR)/data
 TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
                      --compress-algorithm=lzma9 \
                      --crypt-algorithm=AES256 \
@@ -3157,7 +3217,7 @@ TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
                      --differential \
                      --incremental-list-file=test/test.bid \
                      --log-post-command='true' \
-                     -c test/test-\#\#\#.bar test/data
+                     -c test/test-\#\#\#.bar $(TEST_DATA_DIR)/data
 TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
                      --compress-algorithm=lzma9 \
                      --crypt-algorithm=AES256 \
@@ -3170,7 +3230,7 @@ TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
                      --incremental \
                      --incremental-list-file=test/test.bid \
                      --log-post-command='true' \
-                     -c test/test-\#\#\#.bar test/data
+                     -c test/test-\#\#\#.bar $(TEST_DATA_DIR)/data
 TESTCODE_COMMAND2=$(TEST_BAR_DEBUG) \
                     --crypt-password=$(TEST_PASSWORD) \
                     --crypt-public-key=$(PWD)/test/key.public \
@@ -3516,15 +3576,15 @@ ifneq ($(DIRECTORY),)
                    ) \
                    $(DIRECTORY)/bar/po
 	$(INSTALL) -d $(DIRECTORY)/bar/test
-	$(INSTALL) -d $(DIRECTORY)/bar/test/data
-	$(INSTALL) -m 664 test/data/zero.dat \
-                          test/data/zero1024.dat \
-                          test/data/zero512k.dat \
-                          test/data/random1024.dat \
-                          test/data/random512k.dat \
-                          test/data/zero-random512k.dat \
-                          test/data/smallfile.dat \
-                          $(DIRECTORY)/bar/test/data
+	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/data
+	$(INSTALL) -m 664 $(TEST_DATA_DIR)/data/zero.dat \
+                          $(TEST_DATA_DIR)/data/zero1024.dat \
+                          $(TEST_DATA_DIR)/data/zero512k.dat \
+                          $(TEST_DATA_DIR)/data/random1024.dat \
+                          $(TEST_DATA_DIR)/data/random512k.dat \
+                          $(TEST_DATA_DIR)/data/zero-random512k.dat \
+                          $(TEST_DATA_DIR)/data/smallfile.dat \
+                          $(DIRECTORY)/bar/$(TEST_DATA_DIR)/data
 else
 	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
 endif
