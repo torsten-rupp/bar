@@ -597,7 +597,7 @@ uint64 Misc_parseDateTime(const char *string)
     z = 0;
     while ((z < SIZE_OF_ARRAY(DATE_TIME_FORMATS)) && (tm == NULL))
     {
-      s = strptime(string,DATE_TIME_FORMATS[z],&tmBuffer);
+      s = (const char*)strptime(string,DATE_TIME_FORMATS[z],&tmBuffer);
       if ((s != NULL) && ((*s) == '\0'))
       {
         tm = &tmBuffer;
@@ -1239,7 +1239,7 @@ String_setCString(command,"/bin/sh");
     }
 
     // create temporary script file
-    File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
+    File_getTmpFileName(tmpFileName,NULL,NULL);
     error = File_open(&fileHandle,tmpFileName,FILE_OPEN_WRITE);
     if (error != ERROR_NONE)
     {
