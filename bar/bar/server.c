@@ -12859,7 +12859,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 
   result = String_new();
   while (   !clientInfo->network.quitFlag
-         && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg))
+         && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg),WAIT_FOREVER)
         )
   {
     // check authorization (if not in server debug mode)
