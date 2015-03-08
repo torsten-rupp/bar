@@ -112,18 +112,48 @@ LOCAL void unlock(MsgQueue *msgQueue)
 }
 
 /***********************************************************************\
-* Name   : waitModified
-* Purpose: wait until message is modified
-* Input  : msgQueue - message queue
+* Name   : initTimespec
+* Purpose: initialize timespec structure
+* Input  : timespec - timespec variable
+*          timeout  - timeout [ms]
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void waitModified(MsgQueue *msgQueue)
+void initTimespec(struct timespec *timespec, long timeout)
+{
+  struct timeval timeval;
+  long           s,ns;
+
+  assert(timespec != NULL);
+
+  gettimeofday(&timeval,NULL);
+  s  = timeval.tv_sec       +timeout/1000L;
+  ns = timeval.tv_usec*1000L+(timeout%1000L)*1000000L;
+  if (ns > 1000000000L)
+  {
+    s  += ns/1000000000L;
+    ns = ns%1000000000L;
+  }
+  timespec->tv_sec  = s;
+  timespec->tv_nsec = ns;
+}
+
+/***********************************************************************\
+* Name   : waitModified
+* Purpose: wait until message is modified
+* Input  : msgQueue - message queue
+* Output : -
+* Return : TRUE iff modified, timeout otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool waitModified(MsgQueue *msgQueue, const struct timespec *timeout)
 {
   uint lockCount;
   uint z;
+  int  result;
 
   assert(msgQueue != NULL);
   assert(msgQueue->lockCount > 0);
@@ -132,9 +162,18 @@ LOCAL void waitModified(MsgQueue *msgQueue)
 
   for (z = 1; z < lockCount; z++) pthread_mutex_unlock(&msgQueue->lock);
   msgQueue->lockCount  = 0;
-  pthread_cond_wait(&msgQueue->modified,&msgQueue->lock);
+  if (timeout != NULL)
+  {
+    result = pthread_cond_timedwait(&msgQueue->modified,&msgQueue->lock,timeout);
+  }
+  else
+  {
+    result = pthread_cond_wait(&msgQueue->modified,&msgQueue->lock);
+  }
   msgQueue->lockCount  = lockCount;
   for (z = 1; z < lockCount; z++) pthread_mutex_lock(&msgQueue->lock);
+
+  return result == 0;
 }
 
 /*---------------------------------------------------------------------*/
@@ -256,20 +295,38 @@ void MsgQueue_unlock(MsgQueue *msgQueue)
   unlock(msgQueue);
 }
 
-bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize)
+
+bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, long timeout)
 {
-  MsgQueueLock msgQueueLock;
-  MsgNode      *msgNode;
-  ulong        n;
+  MsgQueueLock    msgQueueLock;
+  struct timespec timespec;
+  MsgNode         *msgNode;
+  ulong           n;
 
   assert(msgQueue != NULL);
 
   MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
   {
     // wait for message
-    while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) <= 0))
+    if (timeout != WAIT_FOREVER)
     {
-      waitModified(msgQueue);
+      initTimespec(&timespec,timeout);
+
+      while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) <= 0))
+      {
+        if (!waitModified(msgQueue,&timespec))
+        {
+          unlock(msgQueue);
+          return FALSE;
+        }
+      }
+    }
+    else
+    {
+      while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) <= 0))
+      {
+        (void)waitModified(msgQueue,NULL);
+      }
     }
 
     // get message
@@ -323,7 +380,7 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
     {
       while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) >= msgQueue->maxMsgs))
       {
-        waitModified(msgQueue);
+        waitModified(msgQueue,NULL);
       }
       if (List_count(&msgQueue->list) >= msgQueue->maxMsgs)
       {
@@ -369,7 +426,7 @@ void MsgQueue_wait(MsgQueue *msgQueue)
   {
     if (!msgQueue->endOfMsgFlag)
     {
-      waitModified(msgQueue);
+      waitModified(msgQueue,NULL);
     }
   }
 }
