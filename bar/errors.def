@@ -286,6 +286,9 @@ ERROR KEY_ENCRYPT_FAIL               "key encryption fail"
 ERROR KEY_DECRYPT_FAIL               "key decryption fail"
 ERROR WRONG_PRIVATE_KEY              "wrong private decryption key"
 
+ERROR INVALID_CRYPT_ALGORITHM        "invalid encryption algorithm"
+ERROR UNKNOWN_CRYPT_ALGORITHM        "unknown encryption algorithm"
+
 // --- file i/o ---------------------------------------------------------
 ERROR CREATE_FILE
 ERROR OPEN_FILE
