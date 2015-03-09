@@ -2290,7 +2290,7 @@ Errors Chunk_readData(ChunkInfo *chunkInfo,
   assert(data != NULL);
 
   // limit size to read to rest
-  if (size > (ulong)(chunkInfo->size-chunkInfo->index))
+  if ((uint64)size > (chunkInfo->size-chunkInfo->index))
   {
     size = (ulong)(chunkInfo->size-chunkInfo->index);
   }
