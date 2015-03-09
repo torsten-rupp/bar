@@ -104,8 +104,20 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - barcontrol: show for each directory total size+included size
 - tape library support
 - spare files
-- BAR header: create time, user, host
+- BAR header: create time, user, host, user comment
 - NDMP
+- delete expired: delete directory if empty
+- Reed Solomo Codes for file protection and recovery
+- restore with stripping some/all directories
+- decrementelles backup
+- store flag for changed files while storing
+- support for caching files standard
+  http://www.brynosaurus.com/cachedir/
+- barcontrol: add shortcut DEL to delete entries
+- parallel compression of huge files
+- progress on console when storing archives
+- barcontrol: test and compare of archives
+
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
 Mon 02 Feb 2015 05:47:11 PM CET> Start job 'shares'
