@@ -12,7 +12,6 @@
 
 PLATFORM           = @PLATFORM@
 
-ENABLE_DEBUG       = @ENABLE_DEBUG@
 ENABLE_GUI         = @ENABLE_GUI@
 
 #------------------------------------ paths ----------------------------------
