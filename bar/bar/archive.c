@@ -5721,9 +5721,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   if (error != ERROR_NONE)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    (void)Chunk_close(&archiveEntryInfo->file.chunkFile.info);
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->file.chunkFile.info,{ Chunk_close(&archiveEntryInfo->file.chunkFile.info); }); 
   if (!Compress_isValidAlgorithm(archiveEntryInfo->file.chunkFile.compressAlgorithm))
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -5732,7 +5734,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   }
   archiveEntryInfo->file.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
   archiveEntryInfo->file.byteCompressAlgorithm  = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.compressAlgorithm);
-  archiveEntryInfo->cryptAlgorithm              = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithm);
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->file.chunkFile.cryptAlgorithm))
+  {
+    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return ERROR_INVALID_CRYPT_ALGORITHM;
+  }
+  archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithm);
 
   // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
@@ -6298,6 +6306,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->image.chunkImage.info,{ Chunk_close(&archiveEntryInfo->image.chunkImage.info); }); 
   if (!Compress_isValidAlgorithm(archiveEntryInfo->image.chunkImage.compressAlgorithm))
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -6306,7 +6315,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   }
   archiveEntryInfo->image.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
   archiveEntryInfo->image.byteCompressAlgorithm  = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.compressAlgorithm);
-  archiveEntryInfo->cryptAlgorithm               = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithm);
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->image.chunkImage.cryptAlgorithm))
+  {
+    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return ERROR_INVALID_CRYPT_ALGORITHM;
+  }
+  archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithm);
 
   // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
@@ -6781,7 +6796,14 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
-  archiveEntryInfo->cryptAlgorithm = archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm;
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->directory.chunkDirectory.info,{ Chunk_close(&archiveEntryInfo->directory.chunkDirectory.info); }); 
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm))
+  {
+    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return ERROR_INVALID_CRYPT_ALGORITHM;
+  }
+  archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm);
 
   // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
@@ -7159,7 +7181,14 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
-  archiveEntryInfo->cryptAlgorithm = archiveEntryInfo->link.chunkLink.cryptAlgorithm;
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->link.chunkLink.info,{ Chunk_close(&archiveEntryInfo->link.chunkLink.info); }); 
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->link.chunkLink.cryptAlgorithm))
+  {
+    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return ERROR_INVALID_CRYPT_ALGORITHM;
+  }
+  archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->link.chunkLink.cryptAlgorithm);
 
   // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
@@ -7559,6 +7588,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->hardLink.chunkHardLink.info,{ Chunk_close(&archiveEntryInfo->hardLink.chunkHardLink.info); }); 
   if (!Compress_isValidAlgorithm(archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm))
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -7567,7 +7597,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   }
   archiveEntryInfo->hardLink.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
   archiveEntryInfo->hardLink.byteCompressAlgorithm  = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm);
-  archiveEntryInfo->cryptAlgorithm                  = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm);
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm))
+  {
+    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return ERROR_INVALID_CRYPT_ALGORITHM;
+  }
+  archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm);
 
   // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
@@ -8160,7 +8196,14 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
-  archiveEntryInfo->cryptAlgorithm = archiveEntryInfo->special.chunkSpecial.cryptAlgorithm;
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->special.chunkSpecial.info,{ Chunk_close(&archiveEntryInfo->special.chunkSpecial.info); }); 
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->special.chunkSpecial.cryptAlgorithm))
+  {
+    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return ERROR_INVALID_CRYPT_ALGORITHM;
+  }
+  archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->special.chunkSpecial.cryptAlgorithm);
 
   // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
