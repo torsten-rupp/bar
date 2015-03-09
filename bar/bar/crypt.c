@@ -543,6 +543,21 @@ bool Crypt_isSymmetricSupported(void)
   #endif /* HAVE_GCRYPT */
 }
 
+bool Crypt_isValidAlgorithm(uint16 n)
+{
+  uint z;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
+         && (CRYPT_ALGORITHMS[z].cryptAlgorithm != CRYPT_CONSTANT_TO_ALGORITHM(n))
+        )
+  {
+    z++;
+  }
+
+  return (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS));
+}
+
 #ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,

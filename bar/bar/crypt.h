@@ -140,6 +140,17 @@ typedef struct
 #endif
 
 /***********************************************************************\
+* Name   : Crypt_isValidAlgorithm
+* Purpose: check if valid crypt algoritm
+* Input  : n - crypt algorithm constant
+* Output : -
+* Return : TRUE iff valid, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Crypt_isValidAlgorithm(uint16 n);
+
+/***********************************************************************\
 * Name   : Crypt_initAll
 * Purpose: initialize crypt functions
 * Input  : -
