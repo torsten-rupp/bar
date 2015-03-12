@@ -81,6 +81,12 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+typedef struct
+{
+  String saveLine;
+  String lastOutputLine;
+} ConsoleSave;
+
 /***************************** Variables *******************************/
 extern GlobalOptions globalOptions;          // global options
 extern String        tmpDirectory;           // temporary directory
@@ -193,6 +199,29 @@ bool lockConsole(void);
 \***********************************************************************/
 
 void unlockConsole(void);
+
+/***********************************************************************\
+* Name   : saveConsole
+* Purpose: save and clear current console line
+* Input  : file - stdout or stderr
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+void saveConsole(FILE *file, ConsoleSave *consoleSave);
+
+/***********************************************************************\
+* Name   : restoreConsole
+* Purpose: restore saved console line
+* Input  : file     - stdout or stderr
+*          saveLine - saved console line
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void restoreConsole(FILE *file, const ConsoleSave *consoleSavea);
 
 /***********************************************************************\
 * Name   : printConsole
