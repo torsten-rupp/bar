@@ -1135,7 +1135,7 @@ LOCAL void outputLineDone(void *variable, void *userData)
 }
 
 /***********************************************************************\
-* Name   : output
+* Name   : outputConsole
 * Purpose: output string to console
 * Input  : file   - output stream (stdout, stderr)
 *          string - string
@@ -1144,10 +1144,10 @@ LOCAL void outputLineDone(void *variable, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void output(FILE *file, const String string)
+LOCAL void outputConsole(FILE *file, const String string)
 {
-  SemaphoreLock semaphoreLock;
   String        outputLine;
+  SemaphoreLock semaphoreLock;
   ulong         z;
   char          ch;
 
@@ -1178,10 +1178,14 @@ LOCAL void output(FILE *file, const String string)
           }
 
           // restore line
+#warning XXXX
+//printf("U");
           (void)fwrite(String_cString(outputLine),1,String_length(outputLine),file);
         }
 
-        // output string
+        // output new string
+#warning XXXX
+//printf("Z");
         (void)fwrite(String_cString(string),1,String_length(string),file);
 
         // store output string
@@ -2784,7 +2788,7 @@ void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_li
     String_vformat(line,format,arguments);
 
     // output
-    output(stdout,line);
+    outputConsole(stdout,line);
 
     String_delete(line);
   }
@@ -2892,6 +2896,91 @@ void unlockConsole(void)
   Semaphore_unlock(&consoleLock);
 }
 
+void saveConsole(FILE *file, ConsoleSave *consoleSave)
+{
+  String        saveLine;
+  String        outputLine;
+  SemaphoreLock semaphoreLock;
+  ulong         z;
+
+  assert(file != NULL);
+  assert(consoleSave != NULL);
+
+  consoleSave->saveLine = String_new();
+
+  outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
+  if (outputLine != NULL)
+  {
+    if (File_isTerminal(file))
+    {
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      {
+        // wipe-out current line
+        for (z = 0; z < String_length(lastOutputLine); z++)
+        {
+          (void)fwrite("\b",1,1,file);
+        }
+        for (z = 0; z < String_length(lastOutputLine); z++)
+        {
+          (void)fwrite(" ",1,1,file);
+        }
+        for (z = 0; z < String_length(lastOutputLine); z++)
+        {
+          (void)fwrite("\b",1,1,file);
+        }
+      }
+
+      String_set(consoleSave->saveLine,outputLine);
+      consoleSave->lastOutputLine = lastOutputLine;
+
+      String_clear(outputLine);
+      lastOutputLine = outputLine;
+    }
+  }
+}
+
+void restoreConsole(FILE *file, const ConsoleSave *consoleSave)
+{
+  String        outputLine;
+  SemaphoreLock semaphoreLock;
+  ulong         z;
+
+  assert(file != NULL);
+  assert(consoleSave != NULL);
+
+  outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
+  if (outputLine != NULL)
+  {
+    if (File_isTerminal(file))
+    {
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      {
+        // wipe-out current line
+        for (z = 0; z < String_length(lastOutputLine); z++)
+        {
+          (void)fwrite("\b",1,1,file);
+        }
+        for (z = 0; z < String_length(lastOutputLine); z++)
+        {
+          (void)fwrite(" ",1,1,file);
+        }
+        for (z = 0; z < String_length(lastOutputLine); z++)
+        {
+          (void)fwrite("\b",1,1,file);
+        }
+
+        // restore line
+        (void)fwrite(String_cString(consoleSave->saveLine),1,String_length(consoleSave->saveLine),file);
+      }
+
+      String_set(outputLine,consoleSave->saveLine);
+      lastOutputLine = consoleSave->lastOutputLine;
+    }
+  }
+
+  String_delete(consoleSave->saveLine);
+}
+
 void printConsole(FILE *file, const char *format, ...)
 {
   String  line;
@@ -2908,7 +2997,7 @@ void printConsole(FILE *file, const char *format, ...)
   va_end(arguments);
 
   // output
-  output(file,line);
+  outputConsole(file,line);
 
   String_delete(line);
 }
@@ -2916,6 +3005,8 @@ void printConsole(FILE *file, const char *format, ...)
 void printWarning(const char *text, ...)
 {
   va_list arguments;
+  String  saveLine;
+  ConsoleSave consoleSave;
   String  line;
 
   assert(text != NULL);
@@ -2925,23 +3016,24 @@ void printWarning(const char *text, ...)
   vlogMessage(LOG_TYPE_WARNING,"Warning",text,arguments);
   va_end(arguments);
 
+  // output line
   line = String_new();
-
-  // format line
   va_start(arguments,text);
   String_appendCString(line,"Warning: ");
   String_vformat(line,text,arguments);
   va_end(arguments);
-
-  // output
-  output(stdout,line);
-
+  saveConsole(stderr,&consoleSave);
+  outputConsole(stderr,line);
+  restoreConsole(stderr,&consoleSave);
   String_delete(line);
+  fprintf(stderr,"XXXX");
 }
 
 void printError(const char *text, ...)
 {
   va_list arguments;
+  String  saveLine;
+  ConsoleSave consoleSave;
   String  line;
 
   assert(text != NULL);
@@ -2951,17 +3043,15 @@ void printError(const char *text, ...)
   vlogMessage(LOG_TYPE_ERROR,"ERROR",text,arguments);
   va_end(arguments);
 
+  // output line
   line = String_new();
-
-  // format line
   va_start(arguments,text);
   String_appendCString(line,"ERROR: ");
   String_vformat(line,text,arguments);
   va_end(arguments);
-
-  // output console
-  output(stderr,line);
-
+  saveConsole(stderr,&consoleSave);
+  outputConsole(stderr,line);
+  restoreConsole(stderr,&consoleSave);
   String_delete(line);
 }
 
@@ -5159,45 +5249,58 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
           EntryTypes entryType;
           int        z;
 
-          // get archive file name
-          if (argc <= 1)
+          // get storage name
+          storageName = String_new();
+          if (argc > 1)
+          {
+            String_setCString(storageName,argv[1]);
+          }
+          else
           {
             printError("No archive file name given!\n");
             error = ERROR_INVALID_ARGUMENT;
-            break;
           }
-          storageName = String_newCString(argv[1]);
 
           // get include patterns
-          switch (command)
+          if (error == ERROR_NONE)
           {
-            case COMMAND_CREATE_FILES:  entryType = ENTRY_TYPE_FILE;  break;
-            case COMMAND_CREATE_IMAGES: entryType = ENTRY_TYPE_IMAGE; break;
-            default:                    entryType = ENTRY_TYPE_FILE;  break;
-          }
-          for (z = 2; z < argc; z++)
-          {
-            error = EntryList_appendCString(&includeEntryList,entryType,argv[z],jobOptions.patternType);
+            switch (command)
+            {
+              case COMMAND_CREATE_FILES:  entryType = ENTRY_TYPE_FILE;  break;
+              case COMMAND_CREATE_IMAGES: entryType = ENTRY_TYPE_IMAGE; break;
+              default:                    entryType = ENTRY_TYPE_FILE;  break;
+            }
+            for (z = 2; z < argc; z++)
+            {
+              error = EntryList_appendCString(&includeEntryList,entryType,argv[z],jobOptions.patternType);
+              if (error != ERROR_NONE)
+              {
+                break;
+              }
+            }
           }
 
-          // create archive
-          error = Command_create(NULL, // job UUID
-                                 NULL, // schedule UUID
-                                 storageName,
-                                 &includeEntryList,
-                                 &excludePatternList,
-                                 &compressExcludePatternList,
-                                 &jobOptions,
-                                 ARCHIVE_TYPE_NORMAL,
-                                 NULL, // scheduleTitle
-                                 NULL, // scheduleCustomText
-                                 CALLBACK(inputCryptPassword,NULL),
-                                 CALLBACK(NULL,NULL), // createStatusInfoFunction
-                                 CALLBACK(NULL,NULL), // storageRequestVolumeFunction
-                                 NULL, // pauseCreateFlag
-                                 NULL, // pauseStorageFlag
-                                 NULL  // requestedAbortFlag
-                                );
+          if (error == ERROR_NONE)
+          {
+            // create archive
+            error = Command_create(NULL, // job UUID
+                                  NULL, // schedule UUID
+                                  storageName,
+                                  &includeEntryList,
+                                  &excludePatternList,
+                                  &compressExcludePatternList,
+                                  &jobOptions,
+                                  ARCHIVE_TYPE_NORMAL,
+                                  NULL, // scheduleTitle
+                                  NULL, // scheduleCustomText
+                                  CALLBACK(inputCryptPassword,NULL),
+                                  CALLBACK(NULL,NULL), // createStatusInfoFunction
+                                  CALLBACK(NULL,NULL), // storageRequestVolumeFunction
+                                  NULL, // pauseCreateFlag
+                                  NULL, // pauseStorageFlag
+                                  NULL  // requestedAbortFlag
+                                  );
+          }
 
           // free resources
           String_delete(storageName);
