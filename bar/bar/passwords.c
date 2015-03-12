@@ -567,6 +567,8 @@ bool Password_input(Password   *password,
   #if   defined(PLATFORM_LINUX)
     if (((modes & PASSWORD_INPUT_MODE_CONSOLE) != 0) && !okFlag)
     {
+      String         saveLine;
+      ConsoleSave    consoleSave;
       int            n;
       struct termios oldTermioSettings;
       struct termios termioSettings;
@@ -578,7 +580,8 @@ bool Password_input(Password   *password,
         // read data from interactive input
         if (message != NULL)
         {
-          printConsole(stderr,"%s: ",message);
+          saveConsole(stdout,&consoleSave);
+          printConsole(stdout,"%s: ",message);
         }
 
         // save current console settings
@@ -626,7 +629,8 @@ bool Password_input(Password   *password,
 
         if (message != NULL)
         {
-          printConsole(stderr,"\n");
+          printConsole(stdout,"\n");
+          restoreConsole(stdout,&consoleSave);
         }
       }
       else
