@@ -168,10 +168,20 @@ ifeq ($(COMPRESS_NAMES),)
   endif
   ifeq ($(COMPRESS_NAMES_LZ4),)
     ifeq (@HAVE_LZ4@,1)
-      COMPRESS_NAMES += lz4-1 lz4-9
+      COMPRESS_NAMES += lz4-0 lz4-1 lz4-9
     endif
   else
     COMPRESS_NAMES += $(COMPRESS_NAMES_LZ4) 
+  endif
+endif
+
+ifeq ($(COMPRESS_NAMES_LARGE),)
+  COMPRESS_NAMES_LARGE = none zip0
+  ifeq (@HAVE_LZO@,1)
+    COMPRESS_NAMES_LARGE += lzo1
+  endif
+  ifeq (@HAVE_LZ4@,1)
+    COMPRESS_NAMES_LARGE += lz4-0
   endif
 endif
 
@@ -791,6 +801,8 @@ TEST_FILE_NAMES = \
   fifo \
   data\'.dat \
   data\".dat \
+  data\\.dat \
+  data\n.dat \
   delta1/test.dat \
   delta2/test.dat
 ifneq ($(ATTR),)
@@ -1231,12 +1243,18 @@ test7-valgrind test_storage-valgrind: $(TEST_BAR_VALGRIND)
 
 test8 test_largefiles: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 8: large files..."
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
-          test_largefiles_operations \
-          ;
+	for compress in $(COMPRESS_NAMES_LARGE); do \
+          $(MAKE) \
+            BAR_FILE="test" \
+            BAR_PATTERN="test" \
+            BAR_OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
+            test_largefiles_operations \
+            ; \
+          rc=$$?; \
+          if test $$rc -ne 0; then \
+            exit $$rc; \
+          fi; \
+        done
 	@$(ECHO) "ok"
 
 test8-debug test_test_largefiles-debug: $(TEST_BAR_DEBUG)
@@ -1476,6 +1494,12 @@ $(TEST_DATA_DIR)/data/data\'.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@
 $(TEST_DATA_DIR)/data/data\".dat:
+	$(INSTALL) -d $(@D)
+	$(ECHO) Hello World > $@
+$(TEST_DATA_DIR)/data/data\\.dat:
+	$(INSTALL) -d $(@D)
+	$(ECHO) Hello World > $@
+$(TEST_DATA_DIR)/data/data\n.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@
 $(TEST_DATA_DIR)/data/delta1/test.dat:
