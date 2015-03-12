@@ -767,14 +767,23 @@ String String_trimLeft(String string, const char *chars);
 * Name   : String_escape
 * Purpose: escape string
 * Input  : string     - string variable
-*          chars      - characters to escape
 *          escapeChar - escape char
+*          chars      - characters to escape
+*          from       - from map characters or NULL
+*          to         - to map characters or NULL
+*          count      - number of from/to map characters or 0
 * Output : -
 * Return : escaped string
 * Notes  : -
 \***********************************************************************/
 
-String String_escape(String string, const char *chars, char escapeChar);
+String String_escape(String     string,
+                     char       escapeChar,
+                     const char *chars,
+                     const char from[],
+                     const char to[],
+                     uint       count
+                    );
 
 /***********************************************************************\
 * Name   : String_unescape
@@ -789,7 +798,12 @@ String String_escape(String string, const char *chars, char escapeChar);
 * Notes  : -
 \***********************************************************************/
 
-String String_unescape(String string, char escapeChar, const char from[], const char to[], uint count);
+String String_unescape(String     string,
+                       char       escapeChar,
+                       const char from[],
+                       const char to[],
+                       uint       count
+                      );
 
 /***********************************************************************\
 * Name   : String_quote, String_unquote

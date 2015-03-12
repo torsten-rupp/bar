@@ -52,8 +52,10 @@
 #endif /* not NDEBUG */
 
 /***************************** Constants *******************************/
-const char STRING_ESCAPE_CHARACTERS_MAP_FROM[STRING_ESCAPE_CHARACTER_MAP_LENGTH] = {'\0','\007','\b','\t','\n','\v','\f','\r','\033'};
-const char STRING_ESCAPE_CHARACTERS_MAP_TO[STRING_ESCAPE_CHARACTER_MAP_LENGTH]   = {'0', 'a',   'b', 't', 'n', 'v', 'f', 'r', 'e'   };
+const char STRING_ESCAPE_CHARACTERS_MAP_FROM[STRING_ESCAPE_CHARACTER_MAP_LENGTH] =
+{'\0','\007','\b','\t','\n','\v','\f','\r','\033'};
+const char STRING_ESCAPE_CHARACTERS_MAP_TO[STRING_ESCAPE_CHARACTER_MAP_LENGTH] =
+{'0', 'a',   'b', 't', 'n', 'v', 'f', 'r', 'e'   };
 
 struct __String __STRING_EMPTY =
 {
@@ -1160,7 +1162,8 @@ LOCAL bool parseString(const char    *string,
     struct __String    *string;
   } value;
   char        buffer[64];
-  ulong       z;
+  ulong       i;
+//  uint        z;
   const char  *stringQuote;
   bool        foundFlag;
 
@@ -1191,26 +1194,26 @@ LOCAL bool parseString(const char    *string,
           case 'i':
           case 'd':
             // get data
-            z = 0L;
+            i = 0L;
             if ((index < length) && ((string[index] == '+') || (string[index] == '-')))
             {
-              buffer[z] = string[index];
-              z++;
+              buffer[i] = string[index];
+              i++;
               index++;
             }
             while (   (index < length)
-                   && (z < sizeof(buffer)-1)
+                   && (i < sizeof(buffer)-1)
                    && isdigit(string[index])
                   )
             {
-              buffer[z] = string[index];
-              z++;
+              buffer[i] = string[index];
+              i++;
               index++;
             }
-            buffer[z] = '\0';
+            buffer[i] = '\0';
 
             // convert
-            if (z > 0)
+            if (i > 0)
             {
               switch (formatToken.lengthType)
               {
@@ -1240,24 +1243,24 @@ LOCAL bool parseString(const char    *string,
             break;
           case 'u':
             // get data
-            z = 0L;
+            i = 0L;
             if ((index < length) && (string[index] == '+'))
             {
               index++;
             }
             while (   (index < length)
-                   && (z < sizeof(buffer)-1)
+                   && (i < sizeof(buffer)-1)
                    && isdigit(string[index])
                   )
             {
-              buffer[z] = string[index];
-              z++;
+              buffer[i] = string[index];
+              i++;
               index++;
             }
-            buffer[z] = '\0';
+            buffer[i] = '\0';
 
             // convert
-            if (z > 0)
+            if (i > 0)
             {
               switch (formatToken.lengthType)
               {
@@ -1300,21 +1303,21 @@ LOCAL bool parseString(const char    *string,
             break;
           case 'o':
             // get data
-            z = 0L;
+            i = 0L;
             while (   (index < length)
-                   && (z < sizeof(buffer)-1)
+                   && (i < sizeof(buffer)-1)
                    && (string[index] >= '0')
                    && (string[index] <= '7')
                   )
             {
-              buffer[z] = string[index];
-              z++;
+              buffer[i] = string[index];
+              i++;
               index++;
             }
-            buffer[z] = '\0';
+            buffer[i] = '\0';
 
             // convert
-            if (z > 0)
+            if (i > 0)
             {
               switch (formatToken.lengthType)
               {
@@ -1349,20 +1352,20 @@ LOCAL bool parseString(const char    *string,
             {
               index += 2;
             }
-            z = 0L;
+            i = 0L;
             while (   (index < length)
-                   && (z < sizeof(buffer)-1)
+                   && (i < sizeof(buffer)-1)
                    && isdigit(string[index])
                   )
             {
-              buffer[z] = string[index];
-              z++;
+              buffer[i] = string[index];
+              i++;
               index++;
             }
-            buffer[z] = '\0';
+            buffer[i] = '\0';
 
             // convert
-            if (z > 0)
+            if (i > 0)
             {
               switch (formatToken.lengthType)
               {
@@ -1399,41 +1402,41 @@ LOCAL bool parseString(const char    *string,
           case 'a':
           case 'A':
             // get data
-            z = 0L;
+            i = 0L;
             if ((index < length) && ((string[index] == '+') || (string[index] == '-')  || (string[index] == '.')))
             {
-              buffer[z] = string[index];
-              z++;
+              buffer[i] = string[index];
+              i++;
               index++;
             }
             while (   (index < length)
-                   && (z < sizeof(buffer)-1)
+                   && (i < sizeof(buffer)-1)
                    && isdigit(string[index])
                   )
             {
-              buffer[z] = string[index];
-              z++;
+              buffer[i] = string[index];
+              i++;
               index++;
             }
             if ((index < length) && (string[index] == '.'))
             {
-              buffer[z] = '.';
-              z++;
+              buffer[i] = '.';
+              i++;
               index++;
               while (   (index < length)
-                     && (z < sizeof(buffer)-1)
+                     && (i < sizeof(buffer)-1)
                      && isdigit(string[index])
                     )
               {
-                buffer[z] = string[index];
-                z++;
+                buffer[i] = string[index];
+                i++;
                 index++;
               }
             }
-            buffer[z] = '\0';
+            buffer[i] = '\0';
 
             // convert
-            if (z > 0)
+            if (i > 0)
             {
               switch (formatToken.lengthType)
               {
@@ -1465,7 +1468,7 @@ LOCAL bool parseString(const char    *string,
             value.s = va_arg(arguments,char*);
             assert(formatToken.width > 0);
 
-            z = 0L;
+            i = 0L;
             if (index < length)
             {
               while (   (index < length)
@@ -1479,10 +1482,10 @@ LOCAL bool parseString(const char    *string,
                    )
                 {
                   // quoted character
-                  if ((formatToken.width == 0) || (z < formatToken.width-1))
+                  if ((formatToken.width == 0) || (i < formatToken.width-1))
                   {
                     String_appendChar(value.string,string[index+1]);
-                    z++;
+                    i++;
                   }
                   index += 2;
                 }
@@ -1510,19 +1513,19 @@ LOCAL bool parseString(const char    *string,
                             && (string[index+1] == (*stringQuote))
                            )
                         {
-                          if ((formatToken.width == 0) || (z < formatToken.width-1))
+                          if ((formatToken.width == 0) || (i < formatToken.width-1))
                           {
-                            if (value.s != NULL) value.s[z] = string[index+1];
-                            z++;
+                            if (value.s != NULL) value.s[i] = string[index+1];
+                            i++;
                           }
                           index += 2;
                         }
                         else
                         {
-                          if (z < (formatToken.width-1))
+                          if (i < (formatToken.width-1))
                           {
-                            if (value.s != NULL) value.s[z] = string[index];
-                            z++;
+                            if (value.s != NULL) value.s[i] = string[index];
+                            i++;
                           }
                           index++;
                         }
@@ -1545,17 +1548,17 @@ LOCAL bool parseString(const char    *string,
                   }
                   else
                   {
-                    if (z < (formatToken.width-1))
+                    if (i < (formatToken.width-1))
                     {
-                      if (value.s != NULL) value.s[z] = string[index];
-                      z++;
+                      if (value.s != NULL) value.s[i] = string[index];
+                      i++;
                     }
                     index++;
                   }
                 }
               }
             }
-            if (value.s != NULL) value.s[z] = '\0';
+            if (value.s != NULL) value.s[i] = '\0';
             break;
           case 'p':
           case 'n':
@@ -1569,7 +1572,7 @@ LOCAL bool parseString(const char    *string,
             String_clear(value.string);
             if (index < length)
             {
-              z = 0L;
+              i = 0;
               while (   (index < length)
                      && (formatToken.blankFlag || !isspace(string[index]))
 // NUL in string here a problem?
@@ -1582,10 +1585,10 @@ LOCAL bool parseString(const char    *string,
                    )
                 {
                   // quoted character
-                  if ((formatToken.width == 0) || (z < formatToken.width-1))
+                  if ((formatToken.width == 0) || (i < formatToken.width-1))
                   {
                     String_appendChar(value.string,string[index+1]);
-                    z++;
+                    i++;
                   }
                   index += 2;
                 }
@@ -1613,19 +1616,19 @@ LOCAL bool parseString(const char    *string,
                             && (string[index+1] == (*stringQuote))
                            )
                         {
-                          if ((formatToken.width == 0) || (z < formatToken.width-1))
+                          if ((formatToken.width == 0) || (i < formatToken.width-1))
                           {
                             String_appendChar(value.string,string[index+1]);
-                            z++;
+                            i++;
                           }
                           index += 2;
                         }
                         else
                         {
-                          if ((formatToken.width == 0) || (z < formatToken.width-1))
+                          if ((formatToken.width == 0) || (i < formatToken.width-1))
                           {
                             String_appendChar(value.string,string[index]);
-                            z++;
+                            i++;
                           }
                           index++;
                         }
@@ -1649,10 +1652,10 @@ LOCAL bool parseString(const char    *string,
                   }
                   else
                   {
-                    if ((formatToken.width == 0) || (z < formatToken.width-1))
+                    if ((formatToken.width == 0) || (i < formatToken.width-1))
                     {
                       String_appendChar(value.string,string[index]);
-                      z++;
+                      i++;
                     }
                     index++;
                   }
@@ -1704,26 +1707,26 @@ still not implemented
 #endif /* 0 */
           case 'y':
             // get data
-            z = 0L;
+            i = 0L;
             while (   (index < length)
                    && !isspace(string[index])
                   )
             {
-              if (z < sizeof(buffer)-1)
+              if (i < sizeof(buffer)-1)
               {
-                buffer[z] = string[index];
-                z++;
+                buffer[i] = string[index];
+                i++;
               }
               index++;
             }
-            buffer[z] = '\0';
+            buffer[i] = '\0';
 
             // convert
-            if (z > 0)
+            if (i > 0)
             {
               value.b = va_arg(arguments,bool*);
               foundFlag = FALSE;
-              z = 0L;
+              uint z = 0;
               while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS)))
               {
                 if (strcmp(buffer,DEFAULT_TRUE_STRINGS[z]) == 0)
@@ -1733,7 +1736,7 @@ still not implemented
                 }
                 z++;
               }
-              z = 0L;
+              z = 0;
               while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_FALSE_STRINGS)))
               {
                 if (strcmp(buffer,DEFAULT_FALSE_STRINGS[z]) == 0)
@@ -1756,7 +1759,6 @@ still not implemented
             break;
           case '*':
             // skip value
-            z = 0L;
             while (   (index < length)
                    && !isspace(string[index])
                    && (string[index] != (*format))
@@ -3074,7 +3076,7 @@ int String_compare(const String          string1,
                   )
 {
   ulong n;
-  ulong z;
+  ulong i;
   int   result;
 
   assert(string1 != NULL);
@@ -3085,22 +3087,22 @@ int String_compare(const String          string1,
 
   result = 0;
   n = MIN(string1->length,string2->length);
-  z = 0L;
+  i = 0L;
   if (stringCompareFunction != NULL)
   {
-    while ((result == 0) && (z < n))
+    while ((result == 0) && (i < n))
     {
-      result = stringCompareFunction(stringCompareUserData,string1->data[z],string2->data[z]);
-      z++;
+      result = stringCompareFunction(stringCompareUserData,string1->data[i],string2->data[i]);
+      i++;
     }
   }
   else
   {
-    while ((result == 0) && (z < n))
+    while ((result == 0) && (i < n))
     {
-      if      (string1->data[z] < string2->data[z]) result = -1;
-      else if (string1->data[z] > string2->data[z]) result =  1;
-      z++;
+      if      (string1->data[i] < string2->data[i]) result = -1;
+      else if (string1->data[i] > string2->data[i]) result =  1;
+      i++;
     }
   }
   if (result == 0)
@@ -3181,7 +3183,7 @@ bool String_equalsChar(const String string, char ch)
 bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLength)
 {
   bool  equalFlag;
-  ulong z;
+  ulong i;
 
   assert(string != NULL);
   assert(buffer != NULL);
@@ -3193,11 +3195,11 @@ bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLe
     if (string->length == bufferLength)
     {
       equalFlag = TRUE;
-      z         = 0L;
-      while (equalFlag && (z < string->length))
+      i         = 0L;
+      while (equalFlag && (i < string->length))
       {
-        equalFlag = (string->data[z] == buffer[z]);
-        z++;
+        equalFlag = (string->data[i] == buffer[i]);
+        i++;
       }
     }
     else
@@ -3282,7 +3284,7 @@ bool String_equalsIgnoreCaseChar(const String string, char ch)
 bool String_equalsIgnoreCaseBuffer(const String string, const char *buffer, ulong bufferLength)
 {
   bool  equalFlag;
-  ulong z;
+  ulong i;
 
   assert(string != NULL);
   assert(buffer != NULL);
@@ -3294,11 +3296,11 @@ bool String_equalsIgnoreCaseBuffer(const String string, const char *buffer, ulon
     if (string->length == bufferLength)
     {
       equalFlag = TRUE;
-      z         = 0L;
-      while (equalFlag && (z < string->length))
+      i         = 0L;
+      while (equalFlag && (i < string->length))
       {
-        equalFlag = (toupper(string->data[z]) == toupper(buffer[z]));
-        z++;
+        equalFlag = (toupper(string->data[i]) == toupper(buffer[i]));
+        i++;
       }
     }
     else
@@ -3387,7 +3389,7 @@ bool String_subEqualsBuffer(const String string, const char *buffer, ulong buffe
 {
   long  i;
   bool  equalFlag;
-  ulong z;
+  ulong j;
 
   assert(buffer != NULL);
 
@@ -3402,11 +3404,11 @@ bool String_subEqualsBuffer(const String string, const char *buffer, ulong buffe
        )
     {
       equalFlag = TRUE;
-      z         = 0L;
-      while (equalFlag && (z < length))
+      j         = 0L;
+      while (equalFlag && (j < length))
       {
-        equalFlag = (string->data[i+z] == buffer[z]);
-        z++;
+        equalFlag = (string->data[i+j] == buffer[j]);
+        j++;
       }
     }
     else
@@ -3495,7 +3497,7 @@ bool String_subEqualsIgnoreCaseBuffer(const String string, const char *buffer, u
 {
   long  i;
   bool  equalFlag;
-  ulong z;
+  ulong j;
 
   assert(buffer != NULL);
 
@@ -3510,11 +3512,11 @@ bool String_subEqualsIgnoreCaseBuffer(const String string, const char *buffer, u
        )
     {
       equalFlag = TRUE;
-      z         = 0L;
-      while (equalFlag && (z < length))
+      j         = 0L;
+      while (equalFlag && (j < length))
       {
-        equalFlag = (toupper(string->data[i+z]) == toupper(buffer[z]));
-        z++;
+        equalFlag = (toupper(string->data[i+j]) == toupper(buffer[j]));
+        j++;
       }
     }
     else
@@ -3590,7 +3592,7 @@ bool String_startsWithChar(const String string, char ch)
 bool String_startsWithBuffer(const String string, const char *buffer, ulong bufferLength)
 {
   bool  equalFlag;
-  ulong z;
+  ulong i;
 
   assert(buffer != NULL);
 
@@ -3601,11 +3603,11 @@ bool String_startsWithBuffer(const String string, const char *buffer, ulong buff
     if (string->length >= bufferLength)
     {
       equalFlag = TRUE;
-      z         = 0L;
-      while (equalFlag && (z < bufferLength))
+      i         = 0L;
+      while (equalFlag && (i < bufferLength))
       {
-        equalFlag = (string->data[z] == buffer[z]);
-        z++;
+        equalFlag = (string->data[i] == buffer[i]);
+        i++;
       }
     }
     else
@@ -3681,7 +3683,7 @@ bool String_endsWithChar(const String string, char ch)
 bool String_endsWithBuffer(const String string, const char *buffer, ulong bufferLength)
 {
   bool  equalFlag;
-  ulong z;
+  ulong j;
   ulong i;
 
   assert(buffer != NULL);
@@ -3693,12 +3695,12 @@ bool String_endsWithBuffer(const String string, const char *buffer, ulong buffer
     if (string->length >= bufferLength)
     {
       equalFlag = TRUE;
-      z         = 0L;
+      j         = 0L;
       i         = string->length-bufferLength;
-      while (equalFlag && (z < bufferLength))
+      while (equalFlag && (j < bufferLength))
       {
-        equalFlag = (string->data[i] == buffer[z]);
-        z++;
+        equalFlag = (string->data[i] == buffer[j]);
+        j++;
         i++;
       }
     }
@@ -3719,7 +3721,7 @@ long String_find(const String string, ulong index, const String findString)
 {
   long  findIndex;
   long  i;
-  ulong z;
+  ulong j;
 
   assert(string != NULL);
   assert(findString != NULL);
@@ -3732,12 +3734,12 @@ long String_find(const String string, ulong index, const String findString)
   i = (index != STRING_BEGIN) ? index : 0L;
   while (((i+(long)findString->length) <= (long)string->length) && (findIndex < 0))
   {
-    z = 0L;
-    while ((z < findString->length) && (string->data[i+z] == findString->data[z]))
+    j = 0L;
+    while ((j < findString->length) && (string->data[i+j] == findString->data[j]))
     {
-      z++;
+      j++;
     }
-    if (z >=  findString->length) findIndex = i;
+    if (j >=  findString->length) findIndex = i;
 
     i++;
   }
@@ -3750,7 +3752,7 @@ long String_findCString(const String string, ulong index, const char *s)
   long  findIndex;
   ulong sLength;
   long  i;
-  ulong z;
+  ulong j;
 
   assert(string != NULL);
   assert(s != NULL);
@@ -3763,12 +3765,12 @@ long String_findCString(const String string, ulong index, const char *s)
   i = (index != STRING_BEGIN) ? index : 0L;
   while (((i+sLength) <= string->length) && (findIndex < 0))
   {
-    z = 0L;
-    while ((z < sLength) && (string->data[i+z] == s[z]))
+    j = 0L;
+    while ((j < sLength) && (string->data[i+j] == s[j]))
     {
-      z++;
+      j++;
     }
-    if (z >= sLength) findIndex = i;
+    if (j >= sLength) findIndex = i;
 
     i++;
   }
@@ -3797,7 +3799,7 @@ long String_findLast(const String string, long index, String findString)
 {
   long  findIndex;
   long  i;
-  ulong z;
+  ulong j;
 
   assert(string != NULL);
   assert(findString != NULL);
@@ -3809,12 +3811,12 @@ long String_findLast(const String string, long index, String findString)
   i = (index != STRING_END) ? index : (long)string->length-1;
   while ((i >= 0) && (findIndex < 0))
   {
-    z = 0L;
-    while ((z < findString->length) && (string->data[i+z] == findString->data[z]))
+    j = 0L;
+    while ((j < findString->length) && (string->data[i+j] == findString->data[j]))
     {
-      z++;
+      j++;
     }
-    if (z >= findString->length) findIndex = i;
+    if (j >= findString->length) findIndex = i;
 
     i--;
   }
@@ -3827,7 +3829,7 @@ long String_findLastCString(const String string, long index, const char *s)
   long  findIndex;
   ulong sLength;
   long  i;
-  ulong z;
+  ulong j;
 
   assert(string != NULL);
   assert(s != NULL);
@@ -3840,12 +3842,12 @@ long String_findLastCString(const String string, long index, const char *s)
   i = (index != STRING_END) ? index : (long)string->length-1;
   while ((i >= 0) && (findIndex < 0))
   {
-    z = 0L;
-    while ((z < sLength) && (string->data[i+z] == s[z]))
+    j = 0L;
+    while ((j < sLength) && (string->data[i+j] == s[j]))
     {
-      z++;
+      j++;
     }
-    if (z >=  sLength) findIndex = i;
+    if (j >=  sLength) findIndex = i;
 
     i--;
   }
@@ -3875,7 +3877,7 @@ String String_iterate(                      String string,
                       void                  *stringIterateUserData
                      )
 {
-  ulong      z;
+  ulong      j;
   const char *s;
   ulong      n;
 
@@ -3888,24 +3890,24 @@ String String_iterate(                      String string,
   {
     assert(string->data != NULL);
 
-    z = 0L;
-    while (z < string->length)
+    j = 0L;
+    while (j < string->length)
     {
-      s = stringIterateFunction(stringIterateUserData,string->data[z]);
+      s = stringIterateFunction(stringIterateUserData,string->data[j]);
       if (s != NULL)
       {
         n = strlen(s);
         ensureStringLength(string,string->length+n-1);
-        memmove(&string->data[z+n],&string->data[z+1],string->length-(z+1));
-        memcpy(&string->data[z],s,n);
+        memmove(&string->data[j+n],&string->data[j+1],string->length-(j+1));
+        memcpy(&string->data[j],s,n);
         string->data[string->length+n-1] = '\0';
         string->length += n-1;
 
-        z += n;
+        j += n;
       }
       else
       {
-        z += 1;
+        j += 1;
       }
     }
 
@@ -3917,7 +3919,7 @@ String String_iterate(                      String string,
 
 String String_toLower(String string)
 {
-  ulong z;
+  ulong i;
 
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
@@ -3926,9 +3928,9 @@ String String_toLower(String string)
   {
     assert(string->data != NULL);
 
-    for (z = 0L; z < string->length; z++)
+    for (i = 0L; i < string->length; i++)
     {
-      string->data[z] = tolower(string->data[z]);
+      string->data[i] = tolower(string->data[i]);
     }
 
     STRING_UPDATE_VALID(string);
@@ -3939,7 +3941,7 @@ String String_toLower(String string)
 
 String String_toUpper(String string)
 {
-  ulong z;
+  ulong i;
 
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
@@ -3948,9 +3950,9 @@ String String_toUpper(String string)
   {
     assert(string->data != NULL);
 
-    for (z = 0L; z < string->length; z++)
+    for (i = 0L; i < string->length; i++)
     {
-      string->data[z] = toupper(string->data[z]);
+      string->data[i] = toupper(string->data[i]);
     }
 
     STRING_UPDATE_VALID(string);
@@ -3997,7 +3999,7 @@ String String_trimRight(String string, const char *chars)
 
 String String_trimLeft(String string, const char *chars)
 {
-  ulong z,n;
+  ulong i,n;
 
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
@@ -4006,15 +4008,15 @@ String String_trimLeft(String string, const char *chars)
   {
     assert(string->data != NULL);
 
-    z = 0L;
-    while ((z < string->length) && (strchr(chars,string->data[z]) != NULL))
+    i = 0L;
+    while ((i < string->length) && (strchr(chars,string->data[i]) != NULL))
     {
-      z++;
+      i++;
     }
-    if (z > 0)
+    if (i > 0)
     {
-      n = string->length - z;
-      memmove(&string->data[0],&string->data[z],n);
+      n = string->length - i;
+      memmove(&string->data[0],&string->data[i],n);
       string->data[n] = '\0';
       string->length = n;
     }
@@ -4025,41 +4027,16 @@ String String_trimLeft(String string, const char *chars)
   return string;
 }
 
-String String_escape(String string, const char *chars, char escapeChar)
+String String_escape(String     string,
+                     char       escapeChar,
+                     const char *chars,
+                     const char from[],
+                     const char to[],
+                     uint       count
+                    )
 {
   String s;
-  ulong  z;
-
-  STRING_CHECK_VALID(string);
-  STRING_CHECK_ASSIGNABLE(string);
-
-  if (string != NULL)
-  {
-    assert(string->data != NULL);
-
-    #ifdef NDEBUG
-      s = allocTmpString();
-    #else /* not NDEBUG */
-      s = allocTmpString(__FILE__,__LINE__);
-    #endif /* NDEBUG */
-    for (z = 0L; z < string->length; z++)
-    {
-      if ((string->data[z] == escapeChar) || ((chars != NULL) && (strchr(chars,string->data[z]) != NULL)))
-      {
-        String_appendChar(s,escapeChar);
-      }
-      String_appendChar(s,string->data[z]);
-    }
-    assignTmpString(string,s);
-  }
-
-  return string;
-}
-
-String String_unescape(String string, char escapeChar, const char from[], const char to[], uint count)
-{
-  String s;
-  ulong  index;
+  ulong  i;
   uint   z;
 
   STRING_CHECK_VALID(string);
@@ -4074,20 +4051,89 @@ String String_unescape(String string, char escapeChar, const char from[], const 
     #else /* not NDEBUG */
       s = allocTmpString(__FILE__,__LINE__);
     #endif /* NDEBUG */
-    index = STRING_BEGIN;
-    while (index < string->length)
+    for (i = 0L; i < string->length; i++)
     {
-      if (   (string->data[index] == escapeChar)
-          && ((index+1) < string->length)
+      if      (string->data[i] == escapeChar)
+      {
+        // escape character
+        String_appendChar(s,escapeChar);
+        String_appendChar(s,escapeChar);
+      }
+      else if ((chars != NULL) && (strchr(chars,string->data[i]) != NULL))
+      {
+        // escaped character
+        String_appendChar(s,escapeChar);
+        String_appendChar(s,string->data[i]);
+      }
+      else if ((from != NULL) && (to != NULL))
+      {
+        // check if mapped character
+        z = 0;
+        while ((z < count) && (string->data[i] != from[z]))
+        {
+          z++;
+        }
+        if (z < count)
+        {
+          // mapped character
+          String_appendChar(s,escapeChar);
+          String_appendChar(s,to[z]);
+        }
+        else
+        {
+          // not-mapped character
+          String_appendChar(s,string->data[i]);
+        }
+      }
+      else
+      {
+        // not-escaped character
+        String_appendChar(s,string->data[i]);
+      }
+    }
+    assignTmpString(string,s);
+  }
+
+  return string;
+}
+
+String String_unescape(String     string,
+                       char       escapeChar,
+                       const char from[],
+                       const char to[],
+                       uint       count
+                      )
+{
+  String s;
+  ulong  i;
+  uint   z;
+
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    #ifdef NDEBUG
+      s = allocTmpString();
+    #else /* not NDEBUG */
+      s = allocTmpString(__FILE__,__LINE__);
+    #endif /* NDEBUG */
+    i = 0L;
+    while (i < string->length)
+    {
+      if (   (string->data[i] == escapeChar)
+          && ((i+1) < string->length)
          )
       {
-        index++;
+        i++;
 
         if ((from != NULL) && (to != NULL))
         {
           // check if mapped character
           z = 0;
-          while ((z < count) && (string->data[index] != from[z]))
+          while ((z < count) && (string->data[i] != from[z]))
           {
             z++;
           }
@@ -4098,21 +4144,22 @@ String String_unescape(String string, char escapeChar, const char from[], const 
           }
           else
           {
-            // unescape character
-            String_appendChar(s,string->data[index]);
+            // not-mapped character
+            String_appendChar(s,string->data[i]);
           }
         }
         else
         {
-          // unescape character
-          String_appendChar(s,string->data[index]);
+          // not-escaped character
+          String_appendChar(s,string->data[i]);
         }
       }
       else
       {
-        String_appendChar(s,string->data[index]);
+        // not-escaped character
+        String_appendChar(s,string->data[i]);
       }
-      index++;
+      i++;
     }
     assignTmpString(string,s);
   }
@@ -4123,7 +4170,7 @@ String String_unescape(String string, char escapeChar, const char from[], const 
 String String_quote(String string, char quoteChar)
 {
   String s;
-  ulong  z;
+  ulong  i;
 
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
@@ -4138,13 +4185,13 @@ String String_quote(String string, char quoteChar)
       s = allocTmpString(__FILE__,__LINE__);
     #endif /* NDEBUG */
     String_appendChar(s,quoteChar);
-    for (z = 0; z < string->length; z++)
+    for (i = 0L; i < string->length; i++)
     {
-      if (string->data[z] == quoteChar)
+      if (string->data[i] == quoteChar)
       {
         String_appendChar(s,STRING_ESCAPE_CHARACTER);
       }
-      String_appendChar(s,string->data[z]);
+      String_appendChar(s,string->data[i]);
     }
     String_appendChar(s,quoteChar);
     assignTmpString(string,s);
@@ -4157,7 +4204,7 @@ String String_unquote(String string, const char *quoteChars)
 {
   const char *t0,*t1;
   String     s;
-  ulong      z;
+  ulong      i;
 
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
@@ -4177,23 +4224,23 @@ String String_unquote(String string, const char *quoteChars)
         #else /* not NDEBUG */
           s = allocTmpString(__FILE__,__LINE__);
         #endif /* NDEBUG */
-        z = 1;
-        while (z < (string->length-1))
+        i = 1;
+        while (i < (string->length-1))
         {
-          if (   (string->data[z] == STRING_ESCAPE_CHARACTER)
-              && ((z+1) < string->length-1)
-              && (string->data[z+1] == (*t0))
+          if (   (string->data[i] == STRING_ESCAPE_CHARACTER)
+              && ((i+1) < string->length-1)
+              && (string->data[i+1] == (*t0))
              )
           {
             // escaped quote character
-            z++;
-            String_appendChar(s,string->data[z]);
+            i++;
+            String_appendChar(s,string->data[i]);
           }
           else
           {
-            String_appendChar(s,string->data[z]);
+            String_appendChar(s,string->data[i]);
           }
-          z++;
+          i++;
         }
         assignTmpString(string,s);
       }
