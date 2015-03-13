@@ -2,7 +2,7 @@
   * added LZO compression
   * added LZ4 compression
   * fixed large file support: on some systems large files
-  (>4GB) could be written incomplete
+    (>4GB) could be written incomplete
   * do not modify atime of files when creating or compare
     archives (NO_ATIME)
   * barcontrol: added new/clone/rename/delete to status tab
