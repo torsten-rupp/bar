@@ -327,7 +327,6 @@ LOCAL bool processValue(const ConfigValue *configValue,
   assert(configValue != NULL);
   assert(name != NULL);
 
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,configValue->type);
   switch (configValue->type)
   {
     case CONFIG_VALUE_TYPE_INTEGER:
@@ -799,7 +798,6 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,configValue->type);
             if ((*configVariable.string) == NULL) (*configVariable.string) = String_new();
             assert((*configVariable.string) != NULL);
             String_setCString(*configVariable.string,value);
-fprintf(stderr,"%s, %d: %s -> %s\n",__FILE__,__LINE__,String_cString(*configVariable.string),value);
           }
           else
           {
@@ -809,7 +807,6 @@ fprintf(stderr,"%s, %d: %s -> %s\n",__FILE__,__LINE__,String_cString(*configVari
               configVariable.string = (String*)((byte*)(*configValue->variable.reference)+configValue->offset);
               if ((*configVariable.string) == NULL) (*configVariable.string) = String_new();
               assert((*configVariable.string) != NULL);
-fprintf(stderr,"%s, %d: %s -> %s\n",__FILE__,__LINE__,String_cString(*configVariable.string),value);
               String_setCString(*configVariable.string,value);
             }
           }
@@ -819,7 +816,6 @@ fprintf(stderr,"%s, %d: %s -> %s\n",__FILE__,__LINE__,String_cString(*configVari
           assert(configValue->variable.string != NULL);
           if ((*configValue->variable.string) == NULL) (*configValue->variable.string) = String_new();
           assert((*configValue->variable.string) != NULL);
-fprintf(stderr,"%s, %d: %s -> %s\n",__FILE__,__LINE__,String_cString(*configVariable.string),value);
           String_setCString(*configValue->variable.string,value);
         }
       }
