@@ -37,11 +37,11 @@
 
 #define LZO_BLOCK_SIZE (64*KB)
 
-#define LZO_MAX_COMPRESS_LENGTH 0x3FFFFFF
-#define LZO_LENGTH_MASK         0x3FFFFFF
-#define LZO_END_OF_DATA_FLAG    0x8000000
-#define LZO_COMPRESSED_FLAG     0x4000000
-#define LZO_UNCOMPRESSED_FLAG   0x0000000
+#define LZO_MAX_COMPRESS_LENGTH 0x3FFFFFFF
+#define LZO_LENGTH_MASK         0x3FFFFFFF
+#define LZO_END_OF_DATA_FLAG    0x80000000
+#define LZO_COMPRESSED_FLAG     0x40000000
+#define LZO_UNCOMPRESSED_FLAG   0x00000000
 
 /***************************** Datatypes *******************************/
 

@@ -40,11 +40,11 @@
 #define LZ4_DECOMPRESS_PREFIX (64*KB)
 #define LZ4_CACHELINE_SIZE    64
 
-#define LZ4_MAX_COMPRESS_LENGTH 0x3FFFFFF
-#define LZ4_LENGTH_MASK         0x3FFFFFF
-#define LZ4_END_OF_DATA_FLAG    0x8000000
-#define LZ4_COMPRESSED_FLAG     0x4000000
-#define LZ4_UNCOMPRESSED_FLAG   0x0000000
+#define LZ4_MAX_COMPRESS_LENGTH 0x3FFFFFFF
+#define LZ4_LENGTH_MASK         0x3FFFFFFF
+#define LZ4_END_OF_DATA_FLAG    0x80000000
+#define LZ4_COMPRESSED_FLAG     0x40000000
+#define LZ4_UNCOMPRESSED_FLAG   0x00000000
 
 #define LZ4_OK   0
 #define LZ4_FAIL -1
@@ -242,7 +242,7 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
 
             // put length of data+compress flag into output buffer before data
             putUINT32(&compressInfo->lz4.outputBuffer[0],((uint32)compressLength & LZ4_LENGTH_MASK) | LZ4_COMPRESSED_FLAG);
-//fprintf(stderr,"%s, %d: compressLength=%d\n",__FILE__,__LINE__,compressLength);
+fprintf(stderr,"%s, %d: compressLength=%d\n",__FILE__,__LINE__,compressLength);
 
             // init LZ4 output buffer
             compressInfo->lz4.outputBufferIndex  = 0;
@@ -260,7 +260,7 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
 
             // put length of data into output buffer before data
             putUINT32(&compressInfo->lz4.outputBuffer[0],((uint32)compressInfo->lz4.inputBufferLength & LZ4_LENGTH_MASK));
-//fprintf(stderr,"%s, %d: length=%d\n",__FILE__,__LINE__,compressInfo->lz4.inputBufferLength);
+fprintf(stderr,"%s, %d: length=%d\n",__FILE__,__LINE__,compressInfo->lz4.inputBufferLength);
 
             // init LZ4 output buffer
             compressInfo->lz4.outputBufferIndex  = 0;
@@ -319,7 +319,7 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
 
             // put length+compress flag of compressed data into output buffer before compressed data, set compressed flag
             putUINT32(&compressInfo->lz4.outputBuffer[0],((uint32)compressLength & LZ4_LENGTH_MASK) | LZ4_COMPRESSED_FLAG | LZ4_END_OF_DATA_FLAG);
-//fprintf(stderr,"%s, %d: final compressLength=%d\n",__FILE__,__LINE__,compressLength);
+fprintf(stderr,"%s, %d: final compressLength=%d\n",__FILE__,__LINE__,compressLength);
 
             // init LZ4 output buffer
             compressInfo->lz4.outputBufferIndex  = 0;
@@ -337,7 +337,7 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
 
             // put length of data into output buffer before data
             putUINT32(&compressInfo->lz4.outputBuffer[0],((uint32)compressInfo->lz4.inputBufferLength & LZ4_LENGTH_MASK) | LZ4_END_OF_DATA_FLAG);
-//fprintf(stderr,"%s, %d: final length=%d\n",__FILE__,__LINE__,compressInfo->lz4.inputBufferLength);
+fprintf(stderr,"%s, %d: final length=%d\n",__FILE__,__LINE__,compressInfo->lz4.inputBufferLength);
 
             // init LZ4 output buffer
             compressInfo->lz4.outputBufferIndex  = 0;
@@ -391,10 +391,13 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
   assert(compressInfo->lz4.inputBuffer != NULL);
   assert(compressInfo->lz4.outputBuffer != NULL);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (!compressInfo->endOfDataFlag)                                           // not end-of-data
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                // space in compress buffer
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // get max. number of compressed bytes
       maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
 
@@ -413,11 +416,13 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
 
     if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       assert(compressInfo->lz4.outputBufferIndex >= compressInfo->lz4.outputBufferLength);
 
       // decompress data available
       if (!RingBuffer_isEmpty(&compressInfo->compressRingBuffer))             // unprocessed compressed data available
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // get max. number of compressed bytes
         maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
 
@@ -435,6 +440,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
 
         if ((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) >= 4)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           // decompress: get length of compressed data and compressed flag
           n = getUINT32(&compressInfo->lz4.inputBuffer[0]);
           if ((n & LZ4_COMPRESSED_FLAG) == LZ4_COMPRESSED_FLAG)
@@ -448,7 +454,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
 
             if ((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) >= (4+compressLength))
             {
-//fprintf(stderr,"%s, %d: compressLength=%d\n",__FILE__,__LINE__,compressLength);
+fprintf(stderr,"%s, %d: compressLength=%d\n",__FILE__,__LINE__,compressLength);
               // decompress: LZ4 input buffer -> LZ4 output buffer (byte 0..3 are length+flags)
               lz4Result = lz4DecompressBlock(compressInfo->lz4.stream.decompress,
                                              &compressInfo->lz4.inputBuffer[compressInfo->lz4.inputBufferIndex+4],
@@ -461,6 +467,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
               {
                 return ERROR_INFLATE_FAIL;
               }
+fprintf(stderr,"%s, %d: length=%d\n",__FILE__,__LINE__,length);
 
               // shift LZ4 input buffer
               memmove(compressInfo->lz4.inputBuffer,
@@ -486,7 +493,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
 
             if ((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) >= (4+length))
             {
-//fprintf(stderr,"%s, %d: uncompressed length=%d\n",__FILE__,__LINE__,length);
+fprintf(stderr,"%s, %d: uncompressed length=%d\n",__FILE__,__LINE__,length);
               // transfer: LZ4 input buffer -> LZ4 output buffer (byte 0..3 are length+flags)
               memcpy(compressInfo->lz4.outputBuffer,
                      &compressInfo->lz4.inputBuffer[4],
@@ -527,9 +534,11 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
         }
       }
     }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                    // no data in data buffer
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       assert(compressInfo->lz4.outputBufferIndex >= compressInfo->lz4.outputBufferLength);
 
       // finish decompress, flush internal decompress buffers
@@ -537,6 +546,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
           && (compressInfo->compressState == COMPRESS_STATE_RUNNING)          // compressor is running -> data available in internal buffers
          )
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // get max. number of compressed bytes
         maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
 
