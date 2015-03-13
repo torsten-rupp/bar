@@ -205,11 +205,11 @@ void unlockConsole(void);
 * Purpose: save and clear current console line
 * Input  : file - stdout or stderr
 * Output : -
-* Return : string
+* Return : saved console line
 * Notes  : -
 \***********************************************************************/
 
-void saveConsole(FILE *file, ConsoleSave *consoleSave);
+void saveConsole(FILE *file, String *saveLine);
 
 /***********************************************************************\
 * Name   : restoreConsole
@@ -221,7 +221,7 @@ void saveConsole(FILE *file, ConsoleSave *consoleSave);
 * Notes  : -
 \***********************************************************************/
 
-void restoreConsole(FILE *file, const ConsoleSave *consoleSavea);
+void restoreConsole(FILE *file, const String *saveLine);
 
 /***********************************************************************\
 * Name   : printConsole

@@ -365,95 +365,22 @@ LOCAL const struct
   #endif /* HAVE_LZO */
 };
 
-#if 0
-const CommandLineOptionSelect COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS[] =
-{
-  {"none", COMPRESS_ALGORITHM_NONE,   "no compression"           },
-
-  {"zip0", COMPRESS_ALGORITHM_ZIP_0,  "ZIP compression level 0"  },
-  {"zip1", COMPRESS_ALGORITHM_ZIP_1,  "ZIP compression level 1"  },
-  {"zip2", COMPRESS_ALGORITHM_ZIP_2,  "ZIP compression level 2"  },
-  {"zip3", COMPRESS_ALGORITHM_ZIP_3,  "ZIP compression level 3"  },
-  {"zip4", COMPRESS_ALGORITHM_ZIP_4,  "ZIP compression level 4"  },
-  {"zip5", COMPRESS_ALGORITHM_ZIP_5,  "ZIP compression level 5"  },
-  {"zip6", COMPRESS_ALGORITHM_ZIP_6,  "ZIP compression level 6"  },
-  {"zip7", COMPRESS_ALGORITHM_ZIP_7,  "ZIP compression level 7"  },
-  {"zip8", COMPRESS_ALGORITHM_ZIP_8,  "ZIP compression level 8"  },
-  {"zip9", COMPRESS_ALGORITHM_ZIP_9,  "ZIP compression level 9"  },
-
-  #ifdef HAVE_BZ2
-    {"bzip1",COMPRESS_ALGORITHM_BZIP2_1,"BZIP2 compression level 1"},
-    {"bzip2",COMPRESS_ALGORITHM_BZIP2_2,"BZIP2 compression level 2"},
-    {"bzip3",COMPRESS_ALGORITHM_BZIP2_3,"BZIP2 compression level 3"},
-    {"bzip4",COMPRESS_ALGORITHM_BZIP2_4,"BZIP2 compression level 4"},
-    {"bzip5",COMPRESS_ALGORITHM_BZIP2_5,"BZIP2 compression level 5"},
-    {"bzip6",COMPRESS_ALGORITHM_BZIP2_6,"BZIP2 compression level 6"},
-    {"bzip7",COMPRESS_ALGORITHM_BZIP2_7,"BZIP2 compression level 7"},
-    {"bzip8",COMPRESS_ALGORITHM_BZIP2_8,"BZIP2 compression level 8"},
-    {"bzip9",COMPRESS_ALGORITHM_BZIP2_9,"BZIP2 compression level 9"},
-  #endif /* HAVE_BZ2 */
-
-  #ifdef HAVE_LZMA
-    {"lzma1",COMPRESS_ALGORITHM_LZMA_1,"LZMA compression level 1"},
-    {"lzma2",COMPRESS_ALGORITHM_LZMA_2,"LZMA compression level 2"},
-    {"lzma3",COMPRESS_ALGORITHM_LZMA_3,"LZMA compression level 3"},
-    {"lzma4",COMPRESS_ALGORITHM_LZMA_4,"LZMA compression level 4"},
-    {"lzma5",COMPRESS_ALGORITHM_LZMA_5,"LZMA compression level 5"},
-    {"lzma6",COMPRESS_ALGORITHM_LZMA_6,"LZMA compression level 6"},
-    {"lzma7",COMPRESS_ALGORITHM_LZMA_7,"LZMA compression level 7"},
-    {"lzma8",COMPRESS_ALGORITHM_LZMA_8,"LZMA compression level 8"},
-    {"lzma9",COMPRESS_ALGORITHM_LZMA_9,"LZMA compression level 9"},
-  #endif /* HAVE_LZMA */
-
-#if 0
-  #ifdef HAVE_XDELTA
-    {"xdelta1",COMPRESS_ALGORITHM_XDELTA_1,"XDELTA compression level 1"},
-    {"xdelta2",COMPRESS_ALGORITHM_XDELTA_2,"XDELTA compression level 2"},
-    {"xdelta3",COMPRESS_ALGORITHM_XDELTA_3,"XDELTA compression level 3"},
-    {"xdelta4",COMPRESS_ALGORITHM_XDELTA_4,"XDELTA compression level 4"},
-    {"xdelta5",COMPRESS_ALGORITHM_XDELTA_5,"XDELTA compression level 5"},
-    {"xdelta6",COMPRESS_ALGORITHM_XDELTA_6,"XDELTA compression level 6"},
-    {"xdelta7",COMPRESS_ALGORITHM_XDELTA_7,"XDELTA compression level 7"},
-    {"xdelta8",COMPRESS_ALGORITHM_XDELTA_8,"XDELTA compression level 8"},
-    {"xdelta9",COMPRESS_ALGORITHM_XDELTA_9,"XDELTA compression level 9"},
-  #endif /* HAVE_XDELTA */
-#endif /* 0 */
-};
-
-const CommandLineOptionSelect COMMAND_LINE_OPTIONS_DELTA_COMPRESS_ALGORITHMS[] =
-{
-  {"none", COMPRESS_ALGORITHM_NONE,   "no compression"           },
-
-  #ifdef HAVE_XDELTA
-    {"xdelta1",COMPRESS_ALGORITHM_XDELTA_1,"XDELTA compression level 1"},
-    {"xdelta2",COMPRESS_ALGORITHM_XDELTA_2,"XDELTA compression level 2"},
-    {"xdelta3",COMPRESS_ALGORITHM_XDELTA_3,"XDELTA compression level 3"},
-    {"xdelta4",COMPRESS_ALGORITHM_XDELTA_4,"XDELTA compression level 4"},
-    {"xdelta5",COMPRESS_ALGORITHM_XDELTA_5,"XDELTA compression level 5"},
-    {"xdelta6",COMPRESS_ALGORITHM_XDELTA_6,"XDELTA compression level 6"},
-    {"xdelta7",COMPRESS_ALGORITHM_XDELTA_7,"XDELTA compression level 7"},
-    {"xdelta8",COMPRESS_ALGORITHM_XDELTA_8,"XDELTA compression level 8"},
-    {"xdelta9",COMPRESS_ALGORITHM_XDELTA_9,"XDELTA compression level 9"},
-  #endif /* HAVE_XDELTA */
-};
-#endif /* 0 */
-
 LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS[] =
 {
-  {"none",      CRYPT_ALGORITHM_NONE,      "no encryption"          },
+  {"none",      CRYPT_ALGORITHM_NONE,          "no encryption"         },
 
   #ifdef HAVE_GCRYPT
-    {"3DES",      CRYPT_ALGORITHM_3DES,      "3DES cipher"          },
-    {"CAST5",     CRYPT_ALGORITHM_CAST5,     "CAST5 cipher"         },
-    {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH,  "Blowfish cipher"      },
-    {"AES128",    CRYPT_ALGORITHM_AES128,    "AES cipher 128bit"    },
-    {"AES192",    CRYPT_ALGORITHM_AES192,    "AES cipher 192bit"    },
-    {"AES256",    CRYPT_ALGORITHM_AES256,    "AES cipher 256bit"    },
-    {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128,"Twofish cipher 128bit"},
-    {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256,"Twofish cipher 256bit"},
-    {"SERPENT128",CRYPT_ALGORITHM_SERPENT128,"Serpent cipher 128bit"},
-    {"SERPENT192",CRYPT_ALGORITHM_SERPENT192,"Serpent cipher 192bit"},
-    {"SERPENT256",CRYPT_ALGORITHM_SERPENT256,"Serpent cipher 256bit"},
+    {"3DES",       CRYPT_ALGORITHM_3DES,       "3DES cipher"           },
+    {"CAST5",      CRYPT_ALGORITHM_CAST5,      "CAST5 cipher"          },
+    {"BLOWFISH",   CRYPT_ALGORITHM_BLOWFISH,   "Blowfish cipher"       },
+    {"AES128",     CRYPT_ALGORITHM_AES128,     "AES cipher 128bit"     },
+    {"AES192",     CRYPT_ALGORITHM_AES192,     "AES cipher 192bit"     },
+    {"AES256",     CRYPT_ALGORITHM_AES256,     "AES cipher 256bit"     },
+    {"TWOFISH128", CRYPT_ALGORITHM_TWOFISH128, "Twofish cipher 128bit" },
+    {"TWOFISH256", CRYPT_ALGORITHM_TWOFISH256, "Twofish cipher 256bit" },
+    {"SERPENT128", CRYPT_ALGORITHM_SERPENT128, "Serpent cipher 128bit" },
+    {"SERPENT192", CRYPT_ALGORITHM_SERPENT192, "Serpent cipher 192bit" },
+    {"SERPENT256", CRYPT_ALGORITHM_SERPENT256, "Serpent cipher 256bit" },
     {"CAMELLIA128",CRYPT_ALGORITHM_CAMELLIA128,"Camellia cipher 128bit"},
     {"CAMELLIA192",CRYPT_ALGORITHM_CAMELLIA192,"Camellia cipher 192bit"},
     {"CAMELLIA256",CRYPT_ALGORITHM_CAMELLIA256,"Camellia cipher 256bit"},
@@ -833,20 +760,20 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
 {
-  {"none",      CRYPT_ALGORITHM_NONE,     },
+  {"none",CRYPT_ALGORITHM_NONE},
 
   #ifdef HAVE_GCRYPT
-    {"3DES",      CRYPT_ALGORITHM_3DES,     },
-    {"CAST5",     CRYPT_ALGORITHM_CAST5,    },
-    {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH, },
-    {"AES128",    CRYPT_ALGORITHM_AES128,   },
-    {"AES192",    CRYPT_ALGORITHM_AES192,   },
-    {"AES256",    CRYPT_ALGORITHM_AES256,   },
-    {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128},
-    {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256},
-    {"SERPENT128",CRYPT_ALGORITHM_SERPENT128},
-    {"SERPENT192",CRYPT_ALGORITHM_SERPENT192},
-    {"SERPENT256",CRYPT_ALGORITHM_SERPENT256},
+    {"3DES",       CRYPT_ALGORITHM_3DES       },
+    {"CAST5",      CRYPT_ALGORITHM_CAST5      },
+    {"BLOWFISH",   CRYPT_ALGORITHM_BLOWFISH   },
+    {"AES128",     CRYPT_ALGORITHM_AES128     },
+    {"AES192",     CRYPT_ALGORITHM_AES192     },
+    {"AES256",     CRYPT_ALGORITHM_AES256     },
+    {"TWOFISH128", CRYPT_ALGORITHM_TWOFISH128 },
+    {"TWOFISH256", CRYPT_ALGORITHM_TWOFISH256 },
+    {"SERPENT128", CRYPT_ALGORITHM_SERPENT128 },
+    {"SERPENT192", CRYPT_ALGORITHM_SERPENT192 },
+    {"SERPENT256", CRYPT_ALGORITHM_SERPENT256 },
     {"CAMELLIA128",CRYPT_ALGORITHM_CAMELLIA128},
     {"CAMELLIA192",CRYPT_ALGORITHM_CAMELLIA192},
     {"CAMELLIA256",CRYPT_ALGORITHM_CAMELLIA256},
@@ -1146,10 +1073,12 @@ LOCAL void outputLineDone(void *variable, void *userData)
 
 LOCAL void outputConsole(FILE *file, const String string)
 {
-  String        outputLine;
-  SemaphoreLock semaphoreLock;
-  ulong         z;
-  char          ch;
+  String outputLine;
+  ulong  z;
+  char   ch;
+
+  assert(file != NULL);
+  assert(Semaphore_isLocked(&consoleLock));
 
 //fprintf(stderr,"%s, %d: string=%s\n",__FILE__,__LINE__,String_cString(string));
   outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
@@ -1157,13 +1086,12 @@ LOCAL void outputConsole(FILE *file, const String string)
   {
     if (File_isTerminal(file))
     {
-      // lock
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      // restore output line if different to current line
+      if (outputLine != lastOutputLine)
       {
-        // restore output line
-        if (outputLine != lastOutputLine)
+        // wipe-out last line
+        if (lastOutputLine != NULL)
         {
-          // wipe-out current line
           for (z = 0; z < String_length(lastOutputLine); z++)
           {
             (void)fwrite("\b",1,1,file);
@@ -1176,37 +1104,34 @@ LOCAL void outputConsole(FILE *file, const String string)
           {
             (void)fwrite("\b",1,1,file);
           }
-
-          // restore line
-#warning XXXX
-//printf("U");
-          (void)fwrite(String_cString(outputLine),1,String_length(outputLine),file);
+          fflush(file);
         }
 
-        // output new string
-#warning XXXX
-//printf("Z");
-        (void)fwrite(String_cString(string),1,String_length(string),file);
-
-        // store output string
-        STRING_CHAR_ITERATE(string,z,ch)
-        {
-          switch (ch)
-          {
-            case '\n':
-              String_clear(outputLine);
-              break;
-            case '\b':
-              String_remove(outputLine,STRING_END,1);
-              break;
-            default:
-              String_appendChar(outputLine,ch);
-              break;
-          }
-        }
-
-        lastOutputLine = outputLine;
+        // restore line
+        (void)fwrite(String_cString(outputLine),1,String_length(outputLine),file);
       }
+
+      // output new string
+      (void)fwrite(String_cString(string),1,String_length(string),file);
+
+      // store output string
+      STRING_CHAR_ITERATE(string,z,ch)
+      {
+        switch (ch)
+        {
+          case '\n':
+            String_clear(outputLine);
+            break;
+          case '\b':
+            String_remove(outputLine,STRING_END,1);
+            break;
+          default:
+            String_appendChar(outputLine,ch);
+            break;
+        }
+      }
+
+      lastOutputLine = outputLine;
     }
     else
     {
@@ -1221,13 +1146,13 @@ LOCAL void outputConsole(FILE *file, const String string)
         String_append(outputLine,string);
       }
     }
+    fflush(file);
   }
   else
   {
     // no thread local vairable -> output string
     (void)fwrite(String_cString(string),1,String_length(string),file);
   }
-  fflush(file);
 }
 
 /***********************************************************************\
@@ -2775,7 +2700,8 @@ bool isPrintInfo(uint verboseLevel)
 
 void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
 {
-  String line;
+  String        line;
+  SemaphoreLock semaphoreLock;
 
   assert(format != NULL);
 
@@ -2788,7 +2714,10 @@ void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_li
     String_vformat(line,format,arguments);
 
     // output
-    outputConsole(stdout,line);
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    {
+      outputConsole(stdout,line);
+    }
 
     String_delete(line);
   }
@@ -2893,98 +2822,66 @@ bool lockConsole(void)
 
 void unlockConsole(void)
 {
+  assert(Semaphore_isLocked(&consoleLock));
+
   Semaphore_unlock(&consoleLock);
 }
 
-void saveConsole(FILE *file, ConsoleSave *consoleSave)
+void saveConsole(FILE *file, String *saveLine)
 {
-  String        saveLine;
-  String        outputLine;
-  SemaphoreLock semaphoreLock;
-  ulong         z;
+  ulong z;
 
   assert(file != NULL);
-  assert(consoleSave != NULL);
+  assert(saveLine != NULL);
+  assert(Semaphore_isLocked(&consoleLock));
 
-  consoleSave->saveLine = String_new();
+  (*saveLine) = String_new();
 
-  outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
-  if (outputLine != NULL)
+  if (File_isTerminal(file))
   {
-    if (File_isTerminal(file))
+    // wipe-out last line
+    if (lastOutputLine != NULL)
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      for (z = 0; z < String_length(lastOutputLine); z++)
       {
-        // wipe-out current line
-        for (z = 0; z < String_length(lastOutputLine); z++)
-        {
-          (void)fwrite("\b",1,1,file);
-        }
-        for (z = 0; z < String_length(lastOutputLine); z++)
-        {
-          (void)fwrite(" ",1,1,file);
-        }
-        for (z = 0; z < String_length(lastOutputLine); z++)
-        {
-          (void)fwrite("\b",1,1,file);
-        }
+        (void)fwrite("\b",1,1,file);
       }
-
-      String_set(consoleSave->saveLine,outputLine);
-      consoleSave->lastOutputLine = lastOutputLine;
-
-      String_clear(outputLine);
-      lastOutputLine = outputLine;
+      for (z = 0; z < String_length(lastOutputLine); z++)
+      {
+        (void)fwrite(" ",1,1,file);
+      }
+      for (z = 0; z < String_length(lastOutputLine); z++)
+      {
+        (void)fwrite("\b",1,1,file);
+      }
+      fflush(file);
     }
+
+    // save last line
+    String_set(*saveLine,lastOutputLine);
   }
 }
 
-void restoreConsole(FILE *file, const ConsoleSave *consoleSave)
+void restoreConsole(FILE *file, const String *saveLine)
 {
-  String        outputLine;
-  SemaphoreLock semaphoreLock;
-  ulong         z;
-
   assert(file != NULL);
-  assert(consoleSave != NULL);
+  assert(saveLine != NULL);
+  assert(Semaphore_isLocked(&consoleLock));
 
-  outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
-  if (outputLine != NULL)
+  if (File_isTerminal(file))
   {
-    if (File_isTerminal(file))
-    {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-      {
-        // wipe-out current line
-        for (z = 0; z < String_length(lastOutputLine); z++)
-        {
-          (void)fwrite("\b",1,1,file);
-        }
-        for (z = 0; z < String_length(lastOutputLine); z++)
-        {
-          (void)fwrite(" ",1,1,file);
-        }
-        for (z = 0; z < String_length(lastOutputLine); z++)
-        {
-          (void)fwrite("\b",1,1,file);
-        }
-
-        // restore line
-        (void)fwrite(String_cString(consoleSave->saveLine),1,String_length(consoleSave->saveLine),file);
-      }
-
-      String_set(outputLine,consoleSave->saveLine);
-      lastOutputLine = consoleSave->lastOutputLine;
-    }
+    // force restore of line on next output
+    lastOutputLine = NULL;
   }
 
-  String_delete(consoleSave->saveLine);
+  String_delete(*saveLine);
 }
 
 void printConsole(FILE *file, const char *format, ...)
 {
-  String  line;
-  va_list arguments;
+  String        line;
+  va_list       arguments;
+  SemaphoreLock semaphoreLock;
 
   assert(file != NULL);
   assert(format != NULL);
@@ -2997,17 +2894,20 @@ void printConsole(FILE *file, const char *format, ...)
   va_end(arguments);
 
   // output
-  outputConsole(file,line);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    outputConsole(file,line);
+  }
 
   String_delete(line);
 }
 
 void printWarning(const char *text, ...)
 {
-  va_list arguments;
-  String  saveLine;
-  ConsoleSave consoleSave;
-  String  line;
+  va_list       arguments;
+  String        line;
+  String        saveLine;
+  SemaphoreLock semaphoreLock;
 
   assert(text != NULL);
 
@@ -3022,19 +2922,22 @@ void printWarning(const char *text, ...)
   String_appendCString(line,"Warning: ");
   String_vformat(line,text,arguments);
   va_end(arguments);
-  saveConsole(stderr,&consoleSave);
-  outputConsole(stderr,line);
-  restoreConsole(stderr,&consoleSave);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    saveConsole(stderr,&saveLine);
+    (void)fwrite(String_cString(line),1,String_length(line),stderr);
+    restoreConsole(stderr,&saveLine);
+  }
   String_delete(line);
-  fprintf(stderr,"XXXX");
 }
 
 void printError(const char *text, ...)
 {
-  va_list arguments;
-  String  saveLine;
-  ConsoleSave consoleSave;
-  String  line;
+  va_list       arguments;
+  String        saveLine;
+  String        line;
+  SemaphoreLock semaphoreLock;
 
   assert(text != NULL);
 
@@ -3049,9 +2952,12 @@ void printError(const char *text, ...)
   String_appendCString(line,"ERROR: ");
   String_vformat(line,text,arguments);
   va_end(arguments);
-  saveConsole(stderr,&consoleSave);
-  outputConsole(stderr,line);
-  restoreConsole(stderr,&consoleSave);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    saveConsole(stderr,&saveLine);
+    (void)fwrite(String_cString(line),1,String_length(line),stderr);
+    restoreConsole(stderr,&saveLine);
+  }
   String_delete(line);
 }
 
@@ -3781,7 +3687,8 @@ Errors inputCryptPassword(void         *userData,
                           bool         weakCheckFlag
                          )
 {
-  Errors error;
+  Errors        error;
+  SemaphoreLock semaphoreLock;
 
   assert(password != NULL);
 
@@ -3794,9 +3701,12 @@ Errors inputCryptPassword(void         *userData,
     case RUN_MODE_INTERACTIVE:
       {
         String title;
+        String saveLine;
 
-        lockConsole();
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
+          saveConsole(stdout,&saveLine);
+
           // input password
           title = String_new();
           if ((fileName != NULL) && !String_isEmpty(fileName))
@@ -3810,7 +3720,8 @@ Errors inputCryptPassword(void         *userData,
           if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
           {
             String_delete(title);
-            unlockConsole();
+            restoreConsole(stdout,&saveLine);
+            Semaphore_unlock(&consoleLock);
             error = ERROR_NO_CRYPT_PASSWORD;
             break;
           }
@@ -3829,7 +3740,8 @@ Errors inputCryptPassword(void         *userData,
             {
               printError("Crypt passwords are not equal!\n");
               String_delete(title);
-              unlockConsole();
+              restoreConsole(stdout,&saveLine);
+              Semaphore_unlock(&consoleLock);
               error = ERROR_CRYPT_PASSWORDS_MISMATCH;
               break;
             }
@@ -3844,8 +3756,9 @@ Errors inputCryptPassword(void         *userData,
               printWarning("Low password quality!\n");
             }
           }
+
+          restoreConsole(stdout,&saveLine);
         }
-        unlockConsole();
 
         error = ERROR_NONE;
       }
