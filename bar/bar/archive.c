@@ -123,11 +123,11 @@ LOCAL PasswordList decryptPasswordList;
 // debug only: store encoded data into file
 //#define DEBUG_ENCODED_DATA_FILENAME "test-encoded.dat"
 
-#ifdef DEBUG_ENCODED_DATA_FILENAME
+//#ifdef DEBUG_ENCODED_DATA_FILENAME
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#endif /* DEBUG_ENCODED_DATA_FILENAME */
+//#endif /* DEBUG_ENCODED_DATA_FILENAME */
 
 /***************************** Forwards ********************************/
 
