@@ -37,11 +37,10 @@
 
 #define LZO_BLOCK_SIZE (64*KB)
 
-#define LZO_MAX_COMPRESS_LENGTH 0x3FFFFFFF
-#define LZO_LENGTH_MASK         0x3FFFFFFF
+#define LZO_MAX_COMPRESS_LENGTH 0x00FFFFFF
+#define LZO_LENGTH_MASK         0x00FFFFFF
 #define LZO_END_OF_DATA_FLAG    0x80000000
 #define LZO_COMPRESSED_FLAG     0x40000000
-#define LZO_UNCOMPRESSED_FLAG   0x00000000
 
 /***************************** Datatypes *******************************/
 
@@ -69,7 +68,7 @@
 LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
 {
   ulong    maxCompressBytes,maxDataBytes;
-  ulong    n;
+  uint     n;
   lzo_uint compressLength;
   int      lzoError;
 
@@ -92,8 +91,8 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
                        &compressInfo->lzo.outputBuffer[compressInfo->lzo.outputBufferIndex],
                        n
                       );
-        compressInfo->lzo.outputBufferIndex += (uint)n;
-        compressInfo->lzo.totalOutputLength += n;
+        compressInfo->lzo.outputBufferIndex += n;
+        compressInfo->lzo.totalOutputLength += (uint64)n;
       }
     }
 
@@ -115,8 +114,8 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
                          &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferLength],
                          n
                         );
-          compressInfo->lzo.inputBufferLength += (uint)n;
-          compressInfo->lzo.totalInputLength  += n;
+          compressInfo->lzo.inputBufferLength += n;
+          compressInfo->lzo.totalInputLength  += (uint64)n;
         }
 
         if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= LZO_BLOCK_SIZE)
@@ -177,8 +176,8 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
                            &compressInfo->lzo.outputBuffer[compressInfo->lzo.outputBufferIndex],
                            n
                           );
-            compressInfo->lzo.outputBufferIndex += (uint)n;
-            compressInfo->lzo.totalOutputLength += n;
+            compressInfo->lzo.outputBufferIndex += n;
+            compressInfo->lzo.totalOutputLength += (uint64)n;
           }
         }
 
@@ -256,8 +255,8 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
                            &compressInfo->lzo.outputBuffer[compressInfo->lzo.outputBufferIndex],
                            n
                           );
-            compressInfo->lzo.outputBufferIndex += (uint)n;
-            compressInfo->lzo.totalOutputLength += n;
+            compressInfo->lzo.outputBufferIndex += n;
+            compressInfo->lzo.totalOutputLength += (uint64)n;
           }
         }
       }
@@ -279,7 +278,7 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
 LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
 {
   ulong    maxCompressBytes,maxDataBytes;
-  uint32   n;
+  uint     n;
   lzo_uint compressLength,length;
   int      lzoError;
 
@@ -303,8 +302,8 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
                        &compressInfo->lzo.outputBuffer[compressInfo->lzo.outputBufferIndex],
                        n
                       );
-        compressInfo->lzo.outputBufferIndex += (uint)n;
-        compressInfo->lzo.totalOutputLength += n;
+        compressInfo->lzo.outputBufferIndex += n;
+        compressInfo->lzo.totalOutputLength += (uint64)n;
       }
     }
 
@@ -326,8 +325,8 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
                          &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferLength],
                          n
                         );
-          compressInfo->lzo.inputBufferLength += (uint)n;
-          compressInfo->lzo.totalInputLength  += n;
+          compressInfo->lzo.inputBufferLength += n;
+          compressInfo->lzo.totalInputLength  += (uint64)n;
         }
 
         if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= 4)
@@ -416,8 +415,8 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
                            &compressInfo->lzo.outputBuffer[compressInfo->lzo.outputBufferIndex],
                            n
                           );
-            compressInfo->lzo.outputBufferIndex += (uint)n;
-            compressInfo->lzo.totalOutputLength += n;
+            compressInfo->lzo.outputBufferIndex += n;
+            compressInfo->lzo.totalOutputLength += (uint64)n;
           }
 
           // update compress state
@@ -446,8 +445,8 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
                          &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferLength],
                          n
                         );
-          compressInfo->lzo.inputBufferLength += (uint)n;
-          compressInfo->lzo.totalInputLength  += n;
+          compressInfo->lzo.inputBufferLength += n;
+          compressInfo->lzo.totalInputLength  += (uint64)n;
         }
 
         if ((compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) >= 4)
@@ -540,8 +539,8 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
                            &compressInfo->lzo.outputBuffer[compressInfo->lzo.outputBufferIndex],
                            n
                           );
-            compressInfo->lzo.outputBufferIndex += (uint)n;
-            compressInfo->lzo.totalOutputLength += n;
+            compressInfo->lzo.outputBufferIndex += n;
+            compressInfo->lzo.totalOutputLength += (uint64)n;
           }
 
           // update compress state
