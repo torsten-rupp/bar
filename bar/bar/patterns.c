@@ -152,11 +152,11 @@ LOCAL Errors compilePattern(const char   *pattern,
       regexFlags |= REG_EXTENDED;
       String_setCString(matchString,pattern);
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   String_set(regexString,matchString);
