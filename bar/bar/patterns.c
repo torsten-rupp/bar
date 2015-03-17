@@ -121,13 +121,8 @@ LOCAL Errors compilePattern(const char   *pattern,
             z++;
             break;
           case '\\':
-            String_appendChar(matchString,'\\');
+            String_appendCString(matchString,"\\\\");
             z++;
-            if (pattern[z] != '\0')
-            {
-              String_appendChar(matchString,pattern[z]);
-              z++;
-            }
             break;
           case '[':
           case ']':
