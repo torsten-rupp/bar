@@ -202,16 +202,25 @@ typedef struct
       } lzo;
     #endif /* HAVE_LZO */
     #ifdef HAVE_LZ4
+      /* Note: LZ4 streaming is still not usable, because the API says all
+               previous data is require as a dictionary.
+               For large files this is of course not suitable...
+      */
+      #define _LZ4_STREAM
+
       struct
       {
         CompressModes compressMode;
         uint          compressionLevel;         // used compression level
-        union
-        {
-          LZ4_stream_t *compress;
-          LZ4_streamHC_t *compressHC;
-          LZ4_streamDecode_t *decompress;
-        } stream;
+        #ifdef LZ4_STREAM
+          union
+          {
+            LZ4_stream_t       *compress;
+            LZ4_streamHC_t     *compressHC;
+            LZ4_streamDecode_t *decompress;
+          } stream;
+          byte        *dictionaryBuffer;
+        #endif /* LZ4_STREAM */
         byte          *inputBuffer;
         uint          inputBufferIndex;
         uint          inputBufferLength;
