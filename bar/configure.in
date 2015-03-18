@@ -670,6 +670,8 @@ AC_SUBST(TXT2MAN)                           dnl text-to-man page tool
 
 AC_SUBST(ATTR)                              dnl attr command
 AC_SUBST(TIME)                              dnl time command
+AC_SUBST(GETFATTR)                          dnl getfattr command
+AC_SUBST(SETFATTR)                          dnl setfattr command
 
 AC_SUBST(MKFS_EXT2)                         dnl mksfs.ext2 command
 AC_SUBST(MKFS_EXT3)                         dnl mksfs.ext3 command
@@ -1136,6 +1138,8 @@ fi
 
 AC_PATH_PROGS(ATTR,attr,,/usr/bin)
 AC_PATH_PROGS(TIME,time,,/usr/bin)
+AC_PATH_PROGS(GETFATTR,getfattr,,/usr/bin)
+AC_PATH_PROGS(SETFATTR,setfattr,,/usr/bin)
 
 AC_PATH_PROGS(MKFS_EXT2,    mkfs.ext2,    ,/sbin)
 AC_PATH_PROGS(MKFS_EXT3,    mkfs.ext3,    ,/sbin)
