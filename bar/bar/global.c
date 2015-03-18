@@ -161,7 +161,11 @@ void __abort(const char *__fileName__,
   va_start(arguments,format);
   vfprintf(stderr,format,arguments);
   va_end(arguments);
-  fprintf(stderr," - program aborted in file %s, line %u\n",__fileName__,__lineNb__);
+  #ifndef NDEBUG
+    fprintf(stderr," - program aborted in file %s, line %u\n",__fileName__,__lineNb__);
+  #else /* NDEBUG */
+    fprintf(stderr," - program aborted\n");
+  #endif /* not NDEBUG */
   abort();
 }
 
