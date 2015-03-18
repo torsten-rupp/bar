@@ -64,6 +64,12 @@
 /* fdopendir() available */
 #undef HAVE_FDOPENDIR
 
+/* fopen() available */
+#undef HAVE_FOPEN
+
+/* fopen64() available */
+#undef HAVE_FOPNE64
+
 /* fork() available */
 #undef HAVE_FORK
 
@@ -498,11 +504,5 @@
 
 /* TLS directory */
 #undef TLS_DIR
-
-/* Number of bits in a file offset, on hosts where this is settable. */
-#undef _FILE_OFFSET_BITS
-
-/* Define for large files, on AIX-style hosts. */
-#undef _LARGE_FILES
 
 #endif /* __CONFIG__ */
