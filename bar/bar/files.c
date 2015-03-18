@@ -441,9 +441,6 @@ LOCAL void freeExtendedAttributeNode(FileExtendedAttributeNode *fileExtendedAttr
 
 /*---------------------------------------------------------------------*/
 
-
-/*---------------------------------------------------------------------*/
-
 String File_newFileName(void)
 {
   return String_new();
@@ -3141,7 +3138,44 @@ Errors File_setFileInfo(const String   fileName,
     case FILE_TYPE_FILE:
     case FILE_TYPE_DIRECTORY:
     case FILE_TYPE_HARDLINK:
+      // set last access, time modified, user/group id, permissions
+      utimeBuffer.actime  = fileInfo->timeLastAccess;
+      utimeBuffer.modtime = fileInfo->timeModified;
+      if (utime(String_cString(fileName),&utimeBuffer) != 0)
+      {
+        return ERRORX_(IO_ERROR,errno,String_cString(fileName));
+      }
+      #ifdef HAVE_CHOWN
+        if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
+        {
+          return ERRORX_(IO_ERROR,errno,String_cString(fileName));
+        }
+      #endif /* HAVE_CHOWN */
+      #ifdef HAVE_CHMOD
+        if (chmod(String_cString(fileName),(mode_t)fileInfo->permission) != 0)
+        {
+          return ERRORX_(IO_ERROR,errno,String_cString(fileName));
+        }
+      #endif /* HAVE_CHMOD */
+
+      // set attributes
+      error = setAttributes(fileName,fileInfo->attributes);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      break;
+    case FILE_TYPE_LINK:
+      // set user/group id
+      #ifdef HAVE_LCHMOD
+        if (lchown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
+        {
+          return ERRORX_(IO_ERROR,errno,String_cString(fileName));
+        }
+      #endif /* HAVE_LCHMOD */
+      break;
     case FILE_TYPE_SPECIAL:
+      // set last access, time modified, user/group id, permissions
       utimeBuffer.actime  = fileInfo->timeLastAccess;
       utimeBuffer.modtime = fileInfo->timeModified;
       if (utime(String_cString(fileName),&utimeBuffer) != 0)
@@ -3161,26 +3195,11 @@ Errors File_setFileInfo(const String   fileName,
         }
       #endif /* HAVE_CHMOD */
       break;
-    case FILE_TYPE_LINK:
-      #ifdef HAVE_LCHMOD
-        if (lchown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
-        {
-          return ERRORX_(IO_ERROR,errno,String_cString(fileName));
-        }
-      #endif /* HAVE_LCHMOD */
-      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
       #endif /* NDEBUG */
       break; /* not reached */
-  }
-
-  // set attributes
-  error = setAttributes(fileName,fileInfo->attributes);
-  if (error != ERROR_NONE)
-  {
-    return error;
   }
 
 #if 0
