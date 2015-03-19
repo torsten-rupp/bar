@@ -19,6 +19,7 @@ BuildRequires: xz
 BuildRequires: patch
 BuildRequires: m4
 BuildRequires: e2fsprogs
+BuildRequires: bc
 
 %description
 BAR is backup archiver progWSx2zCTaram. It can create compressed, encrypted
@@ -116,6 +117,7 @@ mkdir packages
   (cd packages; tar xjf pcre-*.tar.bz2)
   ln -s `find packages -type d -name 'pcre-*'|head -1` pcre
 )
+echo XXX
 (
   cp %{_sourcedir}/breakpad.tar.bz2 packages
   (cd packages; tar xjf breakpad.tar.bz2)

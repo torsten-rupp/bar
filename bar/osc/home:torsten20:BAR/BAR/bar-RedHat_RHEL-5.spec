@@ -19,6 +19,7 @@ BuildRequires: xz
 BuildRequires: patch
 BuildRequires: m4
 BuildRequires: e2fsprogs
+BuildRequires: bc
 
 %description
 BAR is backup archiver program. It can create compressed, encrypted
