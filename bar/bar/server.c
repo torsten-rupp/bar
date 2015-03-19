@@ -6538,8 +6538,6 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, uint id, const Str
     }
 
     // parse
-fprintf(stderr,"%s, %d: name=%s value=%s\n",__FILE__,__LINE__,String_cString(name),String_cString(value));
-fprintf(stderr,"%s, %d: ---------------------------------------\n",__FILE__,__LINE__);
     if (ConfigValue_parse(String_cString(name),
                           String_cString(value),
                           CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
@@ -6557,7 +6555,6 @@ fprintf(stderr,"%s, %d: ---------------------------------------\n",__FILE__,__LI
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
     }
-fprintf(stderr,"%s, %d: ---------------------------------------\n",__FILE__,__LINE__);
   }
 
   // free resources
