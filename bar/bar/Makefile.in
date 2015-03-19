@@ -1537,7 +1537,7 @@ $(TEST_DATA_DIR)/data/data\".dat:
 $(TEST_DATA_DIR)/data/data\\.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@
-$(TEST_DATA_DIR)/data/data\n.dat:
+$(TEST_DATA_DIR)/data/data\\n.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@
 $(TEST_DATA_DIR)/data/delta1/test.dat:
