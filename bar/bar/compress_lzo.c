@@ -239,7 +239,7 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
             compressInfo->lzo.outputBufferIndex  = 0;
             compressInfo->lzo.outputBufferLength = 4+(uint)compressInfo->lzo.inputBufferLength;
           }
-          compressInfo->endOfDataFlag = TRUE;
+//          compressInfo->endOfDataFlag = TRUE;
 
           compressInfo->lzo.inputBufferIndex  = 0;
           compressInfo->lzo.inputBufferLength = 0;
@@ -258,6 +258,9 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
             compressInfo->lzo.outputBufferIndex += n;
             compressInfo->lzo.totalOutputLength += (uint64)n;
           }
+
+          // check if LZ4 output buffer is empty => end-of-data
+          compressInfo->endOfDataFlag = (compressInfo->lzo.outputBufferIndex >= compressInfo->lzo.outputBufferLength);
         }
       }
     }
@@ -523,10 +526,6 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
               compressInfo->lzo.outputBufferLength = (uint)length;
             }
           }
-          if ((n & LZO_END_OF_DATA_FLAG) == LZO_END_OF_DATA_FLAG)
-          {
-            compressInfo->endOfDataFlag = TRUE;
-          }
 
           // get max. number of bytes free in data buffer
           maxDataBytes  = RingBuffer_getFree(&compressInfo->dataRingBuffer);
@@ -543,8 +542,9 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
             compressInfo->lzo.totalOutputLength += (uint64)n;
           }
 
-          // update compress state
-          compressInfo->compressState = COMPRESS_STATE_RUNNING;
+          // check if LZ4 output buffer is empty => end-of-data
+          compressInfo->endOfDataFlag = RingBuffer_isEmpty(&compressInfo->compressRingBuffer)
+                                        && (compressInfo->lzo.outputBufferIndex >= compressInfo->lzo.outputBufferLength);
         }
       }
     }
