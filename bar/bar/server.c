@@ -10934,6 +10934,9 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
+  String_clear(jobUUID);
+  entityId  = DATABASE_ID_NONE;
+  storageId = DATABASE_ID_NONE;
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
@@ -11042,94 +11045,23 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 
   if (!String_isEmpty(jobUUID))
   {
-//????
-    // add all storage ids with specified uuid
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  NULL, // uuid
-                                  DATABASE_ID_ANY, // entity id
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL
-                                 );
-    if (error == ERROR_NONE)
+    // delete job UUID
+    error = Index_deleteUUID(indexHandle,jobUUID);
+    if (error != ERROR_NONE)
     {
-      while (Index_getNextStorage(&indexQueryHandle,
-                                  &storageId,
-                                  NULL, // entity id
-                                  NULL, // job UUID
-                                  NULL, // schedule UUID
-                                  NULL, // archive type
-                                  NULL, // storageName
-                                  NULL, // createdDateTime
-                                  NULL, // entries
-                                  NULL, // size
-                                  NULL, // indexState
-                                  NULL, // indexMode
-                                  NULL, // lastCheckedDateTime
-                                  NULL  // errorMessage
-                                 )
-            )
-      {
-        // delete index
-        error = Index_deleteStorage(indexHandle,storageId);
-        if (error != ERROR_NONE)
-        {
-          sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
-          return;
-        }
-      }
-      Index_doneList(&indexQueryHandle);
+      sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
+      return;
     }
   }
 
   if (entityId != DATABASE_ID_NONE)
   {
-    // delete all storage ids with entity id
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  NULL, // uuid
-                                  entityId,
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL
-                                 );
-    if (error == ERROR_NONE)
+    // delete entity
+    error = Index_deleteEntity(indexHandle,entityId);
+    if (error != ERROR_NONE)
     {
-      while (Index_getNextStorage(&indexQueryHandle,
-                                  &storageId,
-                                  NULL, // entity id
-                                  NULL, // job UUID
-                                  NULL, // schedule UUID
-                                  NULL, // archive type
-                                  NULL, // storageName
-                                  NULL, // createdDateTime
-                                  NULL, // entries
-                                  NULL, // size
-                                  NULL, // indexState
-                                  NULL, // indexMode
-                                  NULL, // lastCheckedDateTime
-                                  NULL  // errorMessage
-                                 )
-            )
-      {
-        // delete index
-        error = Index_deleteStorage(indexHandle,storageId);
-        if (error != ERROR_NONE)
-        {
-          sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
-          return;
-        }
-      }
-      Index_doneList(&indexQueryHandle);
+      sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
+      return;
     }
   }
 
