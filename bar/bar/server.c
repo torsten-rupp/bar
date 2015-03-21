@@ -5127,7 +5127,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
       // process FIFO for deep-first search; this keep the directory list shorter
       StringList_getLast(&directoryInfoNode->pathNameList,pathName);
 
-      // open diretory for reading
+      // open directory for reading
       error = File_openDirectoryList(&directoryInfoNode->directoryListHandle,pathName);
       if (error != ERROR_NONE)
       {
@@ -6355,11 +6355,12 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
   uint64            fileCount;
   uint64            fileSize;
   bool              timedOut;
+  FileInfo          fileInfo;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get path name
+  // get path/file name
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
@@ -6369,21 +6370,36 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
   }
   StringMap_getInt64(argumentMap,"timeout",&timeout,0L);
 
-  // find/create directory info
-  directoryInfoNode = findDirectoryInfo(&clientInfo->directoryInfoList,name);
-  if (directoryInfoNode == NULL)
+  fileCount = 0LL;
+  fileSize  = 0LL;
+  timedOut  = FALSE;
+  if (File_isDirectory(name))
   {
-    directoryInfoNode = newDirectoryInfo(name);
-    List_append(&clientInfo->directoryInfoList,directoryInfoNode);
-  }
+    // find/create directory info
+    directoryInfoNode = findDirectoryInfo(&clientInfo->directoryInfoList,name);
+    if (directoryInfoNode == NULL)
+    {
+      directoryInfoNode = newDirectoryInfo(name);
+      List_append(&clientInfo->directoryInfoList,directoryInfoNode);
+    }
 
-  // get total size of directoy/file
-  getDirectoryInfo(directoryInfoNode,
-                   timeout,
-                   &fileCount,
-                   &fileSize,
-                   &timedOut
-                  );
+    // get total size of directoy/file
+    getDirectoryInfo(directoryInfoNode,
+                     timeout,
+                     &fileCount,
+                     &fileSize,
+                     &timedOut
+                    );
+  }
+  else
+  {
+    // get file size
+    if (File_getFileInfo(name,&fileInfo) == ERROR_NONE)
+    {
+      fileCount = 1LL;
+      fileSize  = fileInfo.size;
+    }
+  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%llu size=%llu timedOut=%y",fileCount,fileSize,timedOut);
 
