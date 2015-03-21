@@ -2265,7 +2265,6 @@ public class TabRestore
         {
           for (Menu menu : removeUUIDMenuSet)
           {
-Dprintf.dprintf("menu=%s",menu);
             UUIDIndexData uuidIndexData = (UUIDIndexData)menu.getData();
             Widgets.removeMenu(widgetStorageTreeAssignToMenu,menu);
             uuidIndexData.clearSubMenu();
@@ -2356,7 +2355,6 @@ Dprintf.dprintf("menu=%s",menu);
                         MenuItem widget = (MenuItem)selectionEvent.widget;
 
                         EntityIndexData entityIndexData = (EntityIndexData)widget.getData();
-Dprintf.dprintf("entityIndexData=%s",entityIndexData);
 
                         assignStorage(entityIndexData);
                       }
@@ -2392,7 +2390,6 @@ Dprintf.dprintf("entityIndexData=%s",entityIndexData);
         {
           for (MenuItem menuItem : removeEntityMenuItemSet)
           {
-Dprintf.dprintf("menuItem=%s: %s",menuItem,(EntityIndexData)menuItem.getData());
             EntityIndexData entityIndexData = (EntityIndexData)menuItem.getData();
             Widgets.removeMenuItem(widgetStorageTreeAssignToMenu,menuItem);
             entityIndexData.clearMenuItem();
