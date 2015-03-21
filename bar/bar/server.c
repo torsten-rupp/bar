@@ -3489,13 +3489,13 @@ LOCAL Errors deleteStorage(DatabaseId storageId)
     return ERROR_ARCHIVE_NOT_FOUND;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  if (!String_isEmpty(storageName))
   {
-    // find job if possible
-    jobNode = findJobByUUID(jobUUID);
-
-    if (!String_isEmpty(storageName))
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
     {
+      // find job if possible
+      jobNode = findJobByUUID(jobUUID);
+
       // delete storage file
       Storage_initSpecifier(&storageSpecifier);
       resultError = Storage_parseName(&storageSpecifier,storageName);
@@ -3543,6 +3543,7 @@ LOCAL Errors deleteStorage(DatabaseId storageId)
         }
         if (resultError == ERROR_NONE)
         {
+          // delete storage
           resultError = Storage_delete(&storageHandle,
                                        storageSpecifier.fileName
                                       );
@@ -3551,8 +3552,8 @@ LOCAL Errors deleteStorage(DatabaseId storageId)
           Storage_done(&storageHandle);
         }
       }
+      Storage_doneSpecifier(&storageSpecifier);
     }
-    Storage_doneSpecifier(&storageSpecifier);
   }
 
   // delete index
@@ -10049,7 +10050,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
   if (!String_isEmpty(jobUUID))
   {
-    // delete all storage with specified job UUID
+    // delete all storage files with specified job UUID
     error = deleteUUID(jobUUID);
     if (error != ERROR_NONE)
     {
@@ -10060,7 +10061,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
   if (entityId != DATABASE_ID_NONE)
   {
-    // delete entity
+    // delete all storage files of specified entity
     error = deleteEntity(entityId);
     if (error != ERROR_NONE)
     {
@@ -10071,7 +10072,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
   if (storageId != DATABASE_ID_NONE)
   {
-    // delete storage
+    // delete storage file
     error = deleteStorage(storageId);
     if (error != ERROR_NONE)
     {
