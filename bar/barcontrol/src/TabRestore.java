@@ -1266,7 +1266,6 @@ public class TabRestore
     {
       index++;
     }
-Dprintf.dprintf("uuidIndexData=%s: %d",uuidIndexData,index);
 
     return index;
   }
