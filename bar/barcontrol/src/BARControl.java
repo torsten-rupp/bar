@@ -1108,6 +1108,7 @@ public class BARControl
     System.out.println("         -c|--continue                              - continue job execution");
     System.out.println("         -l|--list                                  - list jobs");
     System.out.println("");
+    System.out.println("         --version                                  - output version");
     System.out.println("         -h|--help                                  - print this help");
   }
 
