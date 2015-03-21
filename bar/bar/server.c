@@ -3722,12 +3722,16 @@ LOCAL void cleanExpiredStorage(void)
     // init variables
     jobName  = String_new();
     dateTime = String_new();
+    now      = Misc_getCurrentDateTime();
 
     // check entities
-    now = Misc_getCurrentDateTime();
-    error = Index_initListUUIDs(&indexQueryHandle1,
-                                indexHandle
-                               );
+    error = Index_initListEntities(&indexQueryHandle1,
+                                   indexHandle,
+                                   NULL, // jobUUID
+                                   NULL, // scheduldUUID,
+                                   DATABASE_ORDERING_ASCENDING,
+                                   0LL   // offset
+                                  );
     if (error != ERROR_NONE)
     {
       String_delete(dateTime);
@@ -3735,14 +3739,16 @@ LOCAL void cleanExpiredStorage(void)
       return;
     }
     while (   !quitFlag
-           && Index_getNextUUID(&indexQueryHandle1,
-                                jobUUID,
-                                scheduleUUID,
-                                NULL,  // lastCreatedDateTime
-                                NULL,  // totalEntries
-                                NULL,  // totalSize
-                                NULL   // lastErrorMessage
-                               )
+           && Index_getNextEntity(&indexQueryHandle1,
+                                  &entityId,
+                                  jobUUID,
+                                  scheduleUUID,
+                                  NULL,  // createdDateTime,
+                                  NULL,  // archiveType,
+                                  NULL,  // totalEntries,
+                                  NULL,  // totalSize,
+                                  NULL   // lastErrorMessage
+                                 )
           )
     {
       if (!String_isEmpty(scheduleUUID))
@@ -3771,6 +3777,7 @@ LOCAL void cleanExpiredStorage(void)
           }
         }
 
+        // check if expired
         if ((maxKeep > 0) || (maxAge > 0))
         {
           // delete expired entities
