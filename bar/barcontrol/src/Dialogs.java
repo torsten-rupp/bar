@@ -31,6 +31,7 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Display;
@@ -40,6 +41,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Monitor;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Slider;
 import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.Text;
 
@@ -2381,18 +2383,20 @@ class Dialogs
   /** password dialog
    * @param parentShell parent shell
    * @param title title string
-   * @param message message to display
-   * @param text1 text
+   * @param message message to display (can be null)
+   * @param userName user name to display (can be null)
+   * @param text1 text (can be null)
    * @param text2 text (can be null)
    * @param okText OK button text
    * @param CancelText cancel button text
    * @return password or null on cancel
    */
-  public static String password(Shell parentShell, String title, String message, String text1, final String text2, String okText, String cancelText)
+  public static String password(Shell parentShell, String title, String message, String userName, String text1, final String text2, String okText, String cancelText)
   {
-    int       row;
+    int       row0,row1;
     Composite composite;
     Label     label;
+    Text      text;
     Button    button;
 
     if (!parentShell.isDisposed())
@@ -2405,45 +2409,63 @@ class Dialogs
       // password
       final Text   widgetPassword1,widgetPassword2;
       final Button widgetOkButton;
-      row = 0;
+      row0 = 0;
       if (message != null)
       {
         label = new Label(dialog,SWT.LEFT);
         label.setText(message);
-        label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W));
-        row++;
+        label.setLayoutData(new TableLayoutData(row0,0,TableLayoutData.W));
+        row0++;
       }
       composite = new Composite(dialog,SWT.NONE);
       composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
-      composite.setLayoutData(new TableLayoutData(row+0,0,TableLayoutData.WE));
+      composite.setLayoutData(new TableLayoutData(row0,0,TableLayoutData.WE));
       {
+        row1 = 0;
+        if (userName != null)
+        {
+          label = new Label(composite,SWT.LEFT);
+          label.setText(Dialogs.tr("Name")+":");
+          label.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.W));
+
+          text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.READ_ONLY);
+          text.setBackground(composite.getBackground());
+          text.setText(userName);
+          text.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+
+          row1++;
+        }
+
         label = new Label(composite,SWT.LEFT);
-        label.setText(text1);
-        label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
+        label.setText((text1 != null) ? text1 : Dialogs.tr("Password")+":");
+        label.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.W));
 
         widgetPassword1 = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
-        widgetPassword1.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        widgetPassword1.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        row1++;
 
         if (text2 != null)
         {
           label = new Label(composite,SWT.LEFT);
           label.setText(text2);
-          label.setLayoutData(new TableLayoutData(1,0,TableLayoutData.W));
+          label.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.W));
 
           widgetPassword2 = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
-          widgetPassword2.setLayoutData(new TableLayoutData(1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+          widgetPassword2.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+
+          row1++;
         }
         else
         {
           widgetPassword2 = null;
         }
       }
-      row++;
+      row0++;
 
       // buttons
       composite = new Composite(dialog,SWT.NONE);
       composite.setLayout(new TableLayout(0.0,1.0));
-      composite.setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE,0,0,4));
+      composite.setLayoutData(new TableLayoutData(row0,0,TableLayoutData.WE,0,0,4));
       {
         widgetOkButton = new Button(composite,SWT.CENTER);
         widgetOkButton.setText(okText);
@@ -2518,6 +2540,7 @@ class Dialogs
         });
       }
 
+      widgetPassword1.setFocus();
       return (String)run(dialog,null);
     }
     else
@@ -2529,24 +2552,39 @@ class Dialogs
   /** password dialog
    * @param parentShell parent shell
    * @param title title string
+   * @param message message to display
+   * @param userName user name to display (can be null)
+   * @param text1 text
+   * @param text2 text (can be null)
+   * @return password or null on cancel
+   */
+  public static String password(Shell parentShell, String title, String message, String userName, String text1, String text2)
+  {
+    return password(parentShell,title,message,userName,text1,text2,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
+  }
+
+  /** password dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param message message to display
    * @param text1 text
    * @param text2 text (can be null)
    * @return password or null on cancel
    */
   public static String password(Shell parentShell, String title, String message, String text1, String text2)
   {
-    return password(parentShell,title,message,text1,text2,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
+    return password(parentShell,title,message,null,text1,text2);
   }
 
   /** password dialog
    * @param parentShell parent shell
    * @param title title string
-   * @param text text
+   * @param message message to display
    * @return password or null on cancel
    */
   public static String password(Shell parentShell, String title, String message, String text)
   {
-    return password(parentShell,title,message,text,null,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
+    return password(parentShell,title,message,text,null);
   }
 
   /** password dialog
@@ -2555,9 +2593,9 @@ class Dialogs
    * @param text text
    * @return password or null on cancel
    */
-  public static String password(Shell parentShell, String title, String text)
+  public static String password(Shell parentShell, String title, String message)
   {
-    return password(parentShell,title,null,text,null);
+    return password(parentShell,title,message,null);
   }
 
   /** password dialog
@@ -2567,8 +2605,7 @@ class Dialogs
    */
   public static String password(Shell parentShell, String title)
   {
-//TODO
-    return password(parentShell,title,Dialogs.tr("Password:"));
+    return password(parentShell,title,null);
   }
 
   /** open a file dialog
@@ -3233,6 +3270,139 @@ class Dialogs
   public static Integer integer(Shell parentShell, String title, String text, int value, int minValue, int maxValue)
   {
     return integer(parentShell,title,text,value,minValue,maxValue,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
+  }
+
+  /** slider dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit
+   * @param minValue,maxValue min./max. value
+   * @param increment increment value
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
+   * @return value or null on cancel
+   */
+  public static Integer slider(Shell parentShell, String title, String text, final int value, int minValue, int maxValue, final int increment, String okText, String cancelText, String toolTipText)
+  {
+    int             row;
+    Composite       composite,subComposite;
+    Label           label;
+    Button          button;
+
+    if (increment < 1) throw new IllegalArgumentException();
+
+    if (!parentShell.isDisposed())
+    {
+      final String[] result = new String[1];
+
+      final Shell dialog = openModal(parentShell,title,60,SWT.DEFAULT);
+      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+      // slider
+      final Combo  widgetValue;
+      final Slider widgetSlider;
+      final Button widgetOkButton;
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+      {
+        label = new Label(composite,SWT.LEFT);
+        label.setText(text);
+        label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW));
+
+        subComposite = new Composite(composite,SWT.NONE);
+        subComposite.setLayout(new TableLayout(1.0,1.0,4));
+        subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
+        {
+          widgetValue = new Combo(subComposite,SWT.RIGHT|SWT.READ_ONLY);
+          widgetValue.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+
+          widgetSlider = new Slider(subComposite,SWT.HORIZONTAL);
+          widgetSlider.setMinimum(minValue);
+          widgetSlider.setMaximum(maxValue);
+          widgetSlider.setIncrement(increment);
+          widgetSlider.setSelection(value);
+          widgetSlider.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));//,0,0,0,0,100,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+          if (toolTipText != null) widgetSlider.setToolTipText(toolTipText);
+        }
+      }
+
+      // buttons
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+      {
+        widgetOkButton = new Button(composite,SWT.CENTER);
+        widgetOkButton.setText(okText);
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        widgetOkButton.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            int newValue = (widgetSlider.getSelection() / increment) * increment;
+            close(dialog,new Integer(newValue));
+          }
+        });
+
+        button = new Button(composite,SWT.CENTER);
+        button.setText(cancelText);
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,new Integer(value));
+          }
+        });
+      }
+
+      // install handlers
+      widgetValue.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          widgetOkButton.setFocus();
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      widgetSlider.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          int newValue = (widgetSlider.getSelection() / increment) * increment;
+          widgetValue.select(newValue / increment);
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      // set values
+      int i = 0;
+      for (int n = minValue; n <= maxValue; n += increment)
+      {
+        widgetValue.add(String.format("%d",n));
+        if (n == value) widgetValue.select(i);
+        i++;
+      }
+
+      widgetSlider.setFocus();
+      return (Integer)run(dialog,null);
+    }
+    else
+    {
+      return null;
+    }
   }
 
   /** open simple busy dialog
