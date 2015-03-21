@@ -7347,18 +7347,21 @@ throw new Error("NYI");
         TreeItem treeItem = findTreeItem(treeItems,buffer.toString());
         if (treeItem != null)
         {
-          // open sub-directory
-          if (!treeItem.getExpanded())
+          FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+          if (fileTreeData.fileType == FileTypes.DIRECTORY)
           {
-//Dprintf.dprintf("open %s\n",treeItem);
-            Event treeEvent = new Event();
-            treeEvent.item = treeItem;
-            widgetFileTree.notifyListeners(SWT.Expand,treeEvent);
-            treeItem.setExpanded(true);
-          }
+            // open sub-directory
+            if (!treeItem.getExpanded())
+            {
+              Event treeEvent = new Event();
+              treeEvent.item = treeItem;
+              widgetFileTree.notifyListeners(SWT.Expand,treeEvent);
+              treeItem.setExpanded(true);
 
-          // get sub-directory items
-          treeItems = treeItem.getItems();
+              // get sub-directory items
+              treeItems = treeItem.getItems();
+            }
+          }
         }
         else
         {
