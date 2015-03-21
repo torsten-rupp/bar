@@ -9505,7 +9505,7 @@ throw new Error("NYI");
       {
         // column 1
         addDragAndDrop(composite,"-","text '-'",                                       0, 0);
-        addDragAndDrop(composite,BARServer.fileSeparator,BARServer.fileSeparator,      1, 2);
+        addDragAndDrop(composite,BARServer.fileSeparator,BARServer.fileSeparator,      1, 0);
         addDragAndDrop(composite,".bar","text '.bar'",                                 2, 0);
         widgetText = Widgets.newText(composite);
         addDragAndDrop(composite,"Text",widgetText,                                    3, 0);
