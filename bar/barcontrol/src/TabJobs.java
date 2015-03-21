@@ -2241,7 +2241,7 @@ public class TabJobs
 
           Widgets.addMenuSeparator(menu);
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Directory size"));
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Directory/File size"));
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
