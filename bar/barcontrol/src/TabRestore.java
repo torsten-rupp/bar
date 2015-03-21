@@ -290,7 +290,6 @@ public class TabRestore
     public String                   name;                     // name
     public long                     dateTime;                 // date/time when storage was created or last time some storage was created
     public long                     size;                     // storage size or total size [bytes]
-    public String                   title;                    // title to show
     public IndexStates              indexState;               // state of index
     public String                   errorMessage;             // last error message
 
@@ -307,15 +306,13 @@ public class TabRestore
      * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
      * @param size size of storage [byte]
-     * @param title title to show
      * @param errorMessage error message text
      */
-    IndexData(String name, long dateTime, long size, String title, String errorMessage)
+    IndexData(String name, long dateTime, long size, String errorMessage)
     {
       this.name          = name;
       this.dateTime      = dateTime;
       this.size          = size;
-      this.title         = title;
       this.indexState    = IndexStates.NONE;
       this.errorMessage  = errorMessage;
       this.treeItem      = null;
@@ -328,22 +325,20 @@ public class TabRestore
     /** create index data
      * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
-     * @param title title to show
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
-    IndexData(String name, long dateTime, String title)
+    IndexData(String name, long dateTime)
     {
-      this(name,dateTime,0L,title,null);
+      this(name,dateTime,0L,null);
     }
 
     /** create index data
      * @param name name of storage
      * @param uuid uuid
-     * @param title title to show
      */
-    IndexData(String name, String title)
+    IndexData(String name)
     {
-      this(name,0L,title);
+      this(name,0L);
     }
 
     /** set tree item reference
@@ -468,11 +463,11 @@ public class TabRestore
     }
 
     /** get info string
-     * @return string
+     * @return info string
      */
     public String getInfo()
     {
-      return title;
+      return "";
     }
 
     /** convert data to string
@@ -549,7 +544,9 @@ public class TabRestore
       switch (sortMode)
       {
         case SORTMODE_NAME:
-          return indexData1.title.compareTo(indexData2.title);
+          final String info1 = indexData1.getInfo();
+          final String info2 = indexData2.getInfo();
+          return info1.compareTo(info2);
         case SORTMODE_SIZE:
           if      (indexData1.size < indexData2.size) return -1;
           else if (indexData1.size > indexData2.size) return  1;
@@ -613,13 +610,20 @@ public class TabRestore
      * @param scheduleUUID schedule UUID
      * @param name job name
      * @param lastDateTime last date/time (timestamp) when storage was created
-     * @param totalEntries total number of entresi of storage
+     * @param totalEntries total number of entries of storage
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    UUIDIndexData(String jobUUID, String scheduleUUID, String name, long lastDateTime, long totalEntries, long totalSize, String lastErrorMessage)
+    UUIDIndexData(String jobUUID,
+                  String scheduleUUID,
+                  String name,
+                  long   lastDateTime,
+                  long   totalEntries,
+                  long   totalSize,
+                  String lastErrorMessage
+                 )
     {
-      super(name,lastDateTime,totalSize,name,lastErrorMessage);
+      super(name,lastDateTime,totalSize,lastErrorMessage);
       this.jobUUID      = jobUUID;
       this.scheduleUUID = scheduleUUID;
       this.totalEntries = totalEntries;
@@ -744,9 +748,15 @@ public class TabRestore
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    EntityIndexData(long entityId, Settings.ArchiveTypes archiveType, long lastDateTime, long totalEntries, long totalSize, String lastErrorMessage)
+    EntityIndexData(long                  entityId,
+                    Settings.ArchiveTypes archiveType,
+                    long                  lastDateTime,
+                    long                  totalEntries,
+                    long                  totalSize,
+                    String                lastErrorMessage
+                   )
     {
-      super("",lastDateTime,totalSize,"",lastErrorMessage);
+      super("",lastDateTime,totalSize,lastErrorMessage);
       this.entityId     = entityId;
       this.archiveType  = archiveType;
       this.totalEntries = totalEntries;
@@ -773,7 +783,7 @@ public class TabRestore
      */
     public String getInfo()
     {
-      return String.format("%d: %s",entityId,name);
+      return String.format("%d: %s",entityId,archiveType.toString());
     }
 
     /** convert data to string
@@ -880,15 +890,25 @@ public class TabRestore
      * @param dateTime date/time (timestamp) when storage was created
      * @param entries number of entries
      * @param size size of storage [byte]
-     * @param title title to show
      * @param indexState storage index state
      * @param indexMode storage index mode
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    StorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, long entries, long size, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    StorageIndexData(long                  storageId,
+                     String                jobName,
+                     Settings.ArchiveTypes archiveType,
+                     String                name,
+                     long                  dateTime,
+                     long                  entries,
+                     long                  size,
+                     IndexStates           indexState,
+                     IndexModes            indexMode,
+                     long                  lastCheckedDateTime,
+                     String                errorMessage
+                    )
     {
-      super(name,dateTime,size,title,errorMessage);
+      super(name,dateTime,size,errorMessage);
       this.storageId           = storageId;
       this.jobName             = jobName;
       this.archiveType         = archiveType;
@@ -904,12 +924,17 @@ public class TabRestore
      * @param archiveType archive type
      * @param name name of storage
      * @param dateTime date/time (timestamp) when storage was created
-     * @param title title to show
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
-    StorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, String title, long lastCheckedDateTime)
+    StorageIndexData(long                  storageId,
+                     String                jobName,
+                     Settings.ArchiveTypes archiveType,
+                     String                name,
+                     long                  dateTime,
+                     long                  lastCheckedDateTime
+                    )
     {
-      this(storageId,jobName,archiveType,name,dateTime,0L,0L,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+      this(storageId,jobName,archiveType,name,dateTime,0L,0L,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
     }
 
     /** create storage data
@@ -919,11 +944,10 @@ public class TabRestore
      * @param archiveType archive type
      * @param name name of storage
      * @param uuid uuid
-     * @param title title to show
      */
-    StorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, String title)
+    StorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name)
     {
-      this(storageId,jobName,archiveType,name,0L,title,0L);
+      this(storageId,jobName,archiveType,name,0L,0L);
     }
 
     /** set tree item reference
@@ -944,7 +968,7 @@ public class TabRestore
      */
     public String getInfo()
     {
-      return String.format("%d: %s",storageId,title);
+      return String.format("%d: %s, %s",storageId,jobName,name);
     }
 
     /** convert data to string
@@ -1162,7 +1186,6 @@ public class TabRestore
         storageIndexData.dateTime            = dateTime;
         storageIndexData.entries             = entries;
         storageIndexData.size                = size;
-        storageIndexData.title               = new File(name).getName();
         storageIndexData.indexState          = indexState;
         storageIndexData.indexMode           = indexMode;
         storageIndexData.lastCheckedDateTime = lastCheckedDateTime;
@@ -1177,11 +1200,11 @@ public class TabRestore
                                                 dateTime,
                                                 entries,
                                                 size,
-                                                new File(name).getName(),
                                                 indexState,
                                                 indexMode,
                                                 lastCheckedDateTime,
                                                 errorMessage
+//                                                new File(name).getName()
                                                );
         storageIndexDataMap.put(storageId,storageIndexData);
       }
@@ -1287,7 +1310,6 @@ public class TabRestore
     {
       index++;
     }
-//Dprintf.dprintf("entityIndexData=%s: %d",entityIndexData,index);
 
     return index;
   }
@@ -1304,26 +1326,6 @@ public class TabRestore
     int index = 0;
     while (   (index < tableItems.length)
            && (indexDataComparator.compare(storageIndexData,(StorageIndexData)tableItems[index].getData()) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
-  }
-
-  /** find index for insert of item in sorted storage menu
-   * @param storageIndexData data of tree item
-   * @return index in menu
-   */
-  private int XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXfindStorageMenuIndex(StorageIndexData storageIndexData)
-  {
-    MenuItem            menuItems[]         = widgetStorageTableAssignToMenu.getItems();
-    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable);
-
-    int index = 0;
-    while (   (index < menuItems.length)
-           && (indexDataComparator.compare(storageIndexData,(StorageIndexData)menuItems[index].getData()) > 0)
           )
     {
       index++;
@@ -6071,7 +6073,6 @@ break;
     {
       Dialogs.error(shell,BARControl.tr("Communication error while removing database indizes\n\n(error: {0})",error.toString()));
     }
-Dprintf.dprintf("");
   }
 
   /** delete storage
@@ -6085,25 +6086,29 @@ Dprintf.dprintf("");
     if (!indexDataHashSet.isEmpty())
     {
       // get number of entries
-      int entries = 0;
+      int  entries = 0;
+      long size    = 0L;
       for (IndexData indexData : indexDataHashSet)
       {
         if      (indexData instanceof UUIDIndexData)
         {
           entries += ((UUIDIndexData)indexData).totalEntries;
+          size    += ((UUIDIndexData)indexData).size;
         }
         else if (indexData instanceof EntityIndexData)
         {
           entries += ((EntityIndexData)indexData).totalEntries;
+          size    += ((EntityIndexData)indexData).size;
         }
         else if (indexData instanceof StorageIndexData)
         {
           entries += ((StorageIndexData)indexData).entries;
+          size    += ((StorageIndexData)indexData).size;
         }
       }
 
       // confirm
-      if (Dialogs.confirm(shell,BARControl.tr("Delete {0} {0,choice,0#indizes|1#index|1<indizes} with {1} {1,choice,0#entries|1#entry|1<entries}?",indexDataHashSet.size(),entries)))
+      if (Dialogs.confirm(shell,BARControl.tr("Delete {0} {0,choice,0#jobs/entities/storage files|1#job/entity/storage file|1<jobs/entities/storage files} with {1} {1,choice,0#entries|1#entry|1<entries}/{2} {2,choice,0#bytes|1#byte|1<bytes}?",indexDataHashSet.size(),entries,size)))
       {
         final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
         busyDialog.setMaximum(indexDataHashSet.size());
