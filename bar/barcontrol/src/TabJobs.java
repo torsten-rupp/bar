@@ -9432,11 +9432,11 @@ throw new Error("NYI");
                 // replace/insert part
                 if      (dropTargetEvent.data instanceof StorageNamePart)
                 {
-                  addPart(index,((StorageNamePart)dropTargetEvent.data).string);
+                  addParts(index,((StorageNamePart)dropTargetEvent.data).string);
                 }
                 else if (dropTargetEvent.data instanceof String)
                 {
-                  addPart(index,(String)dropTargetEvent.data);
+                  addParts(index,(String)dropTargetEvent.data);
                 }
               }
             }
@@ -9505,20 +9505,21 @@ throw new Error("NYI");
       {
         // column 1
         addDragAndDrop(composite,"-","text '-'",                                       0, 0);
-        addDragAndDrop(composite,".bar","text '.bar'",                                 1, 0);
+        addDragAndDrop(composite,BARServer.fileSeparator,BARServer.fileSeparator,      1, 2);
+        addDragAndDrop(composite,".bar","text '.bar'",                                 2, 0);
         widgetText = Widgets.newText(composite);
-        addDragAndDrop(composite,"Text",widgetText,                                    2, 0);
+        addDragAndDrop(composite,"Text",widgetText,                                    3, 0);
 
-        addDragAndDrop(composite,"#","part number 1 digit",                            4, 0);
-        addDragAndDrop(composite,"##","part number 2 digits",                          5, 0);
-        addDragAndDrop(composite,"###","part number 3 digits",                         6, 0);
-        addDragAndDrop(composite,"####","part number 4 digits",                        7, 0);
+        addDragAndDrop(composite,"#","part number 1 digit",                            5, 0);
+        addDragAndDrop(composite,"##","part number 2 digits",                          6, 0);
+        addDragAndDrop(composite,"###","part number 3 digits",                         7, 0);
+        addDragAndDrop(composite,"####","part number 4 digits",                        8, 0);
 
-        addDragAndDrop(composite,"%type","archive type: full,incremental,differential",9, 0);
-        addDragAndDrop(composite,"%T","archive type short: F, I, D",                   10,0);
-        addDragAndDrop(composite,"%last","'-last' if last archive part",               11,0);
-        addDragAndDrop(composite,"%uuid","universally unique identifier",              12,0);
-        addDragAndDrop(composite,"%text","schedule custom text",                       13,0);
+        addDragAndDrop(composite,"%type","archive type: full,incremental,differential",10,0);
+        addDragAndDrop(composite,"%T","archive type short: F, I, D",                   11,0);
+        addDragAndDrop(composite,"%last","'-last' if last archive part",               12,0);
+        addDragAndDrop(composite,"%uuid","universally unique identifier",              13,0);
+        addDragAndDrop(composite,"%text","schedule custom text",                       14,0);
 
         // column 2
         addDragAndDrop(composite,"%d","day 01..31",                                    0, 1);
@@ -9550,6 +9551,9 @@ throw new Error("NYI");
         // column 3
         addDragAndDrop(composite,"%%","%",                                             0, 2);
         addDragAndDrop(composite,"%#","#",                                             1, 2);
+
+        addDragAndDrop(composite,"%Y-%m-%d","Date YYYY-MM-DD",                         3, 2);
+        addDragAndDrop(composite,"%H:%M:%S","Time hh:mm:ss",                           4, 2);
       }
 
       // set name
@@ -9568,56 +9572,53 @@ throw new Error("NYI");
 
         // parse file name
         storageNamePartList.add(new StorageNamePart(null));
+        StringBuilder buffer = new StringBuilder();
         int z = 0;
         while (z < fileName.length())
         {
-          StringBuilder buffer;
-
-          // get next text part
-          buffer = new StringBuilder();
-          while (   (z < fileName.length())
-                 && (fileName.charAt(z) != '%')
-                 && (fileName.charAt(z) != '#')
-                )
+          switch (fileName.charAt(z))
           {
-            buffer.append(fileName.charAt(z)); z++;
-          }
-          storageNamePartList.add(new StorageNamePart(buffer.toString()));
-          storageNamePartList.add(new StorageNamePart(null));
-
-          if (z < fileName.length())
-          {
-            switch (fileName.charAt(z))
-            {
-              case '%':
-                // add variable part
-                buffer = new StringBuilder();
+            case '%':
+              // add variable part
+              buffer = new StringBuilder();
+              buffer.append('%'); z++;
+              if ((z < fileName.length()) && (fileName.charAt(z) == '%'))
+              {
                 buffer.append('%'); z++;
-                if ((z < fileName.length()) && (fileName.charAt(z) == '%'))
-                {
-                  buffer.append('%'); z++;
-                }
-                else
-                {
-                  while ((z < fileName.length()) && (Character.isLetterOrDigit(fileName.charAt(z))))
-                  {
-                    buffer.append(fileName.charAt(z)); z++;
-                  }
-                }
-                storageNamePartList.add(new StorageNamePart(buffer.toString()));
-                storageNamePartList.add(new StorageNamePart(null));
-                break;
-              case '#':
-                // add number part
-                buffer = new StringBuilder();
-                while ((z < fileName.length()) && (fileName.charAt(z) == '#'))
+              }
+              else
+              {
+                while ((z < fileName.length()) && (Character.isLetterOrDigit(fileName.charAt(z))))
                 {
                   buffer.append(fileName.charAt(z)); z++;
                 }
-                storageNamePartList.add(new StorageNamePart(buffer.toString()));
-                storageNamePartList.add(new StorageNamePart(null));
-                break;
-            }
+              }
+              storageNamePartList.add(new StorageNamePart(buffer.toString()));
+              storageNamePartList.add(new StorageNamePart(null));
+              break;
+            case '#':
+              // add number part
+              buffer = new StringBuilder();
+              while ((z < fileName.length()) && (fileName.charAt(z) == '#'))
+              {
+                buffer.append(fileName.charAt(z)); z++;
+              }
+              storageNamePartList.add(new StorageNamePart(buffer.toString()));
+              storageNamePartList.add(new StorageNamePart(null));
+              break;
+            default:
+              // text part
+              buffer = new StringBuilder();
+              while (   (z < fileName.length())
+                     && (fileName.charAt(z) != '%')
+                     && (fileName.charAt(z) != '#')
+                    )
+              {
+                buffer.append(fileName.charAt(z)); z++;
+              }
+              storageNamePartList.add(new StorageNamePart(buffer.toString()));
+              storageNamePartList.add(new StorageNamePart(null));
+              break;
           }
         }
       }
@@ -9646,7 +9647,7 @@ throw new Error("NYI");
 
     //-----------------------------------------------------------------------
 
-    /** add part
+    /** add drag-and-drop part
      * @param composite composite to add into
      * @param text text to show
      * @param description of part
@@ -9681,7 +9682,18 @@ throw new Error("NYI");
       Widgets.layout(label,row,column*2+1,TableLayoutData.WE);
     }
 
-    /** add part
+    /** add drag-and-drop part
+     * @param composite composite to add into
+     * @param text text to show
+     * @param description of part
+     * @param row,column row/column
+     */
+    private void addDragAndDrop(Composite composite, char text, char description, int row, int column)
+    {
+      addDragAndDrop(composite,Character.toString(text),Character.toString(description),row,column);
+    }
+
+    /** add drag-and-drop part
      * @param composite composite to add into
      * @param text text to show
      * @param control control to add
@@ -9731,10 +9743,59 @@ throw new Error("NYI");
      * @param index index to add/insert part
      * @param string part to add
      */
-    private void addPart(int index, String string)
+    private void addParts(int index, String string)
     {
       boolean redrawFlag = false;
 
+      // split into parts
+      ArrayList<String> parts = new ArrayList<String>();
+      StringBuilder buffer;
+      int z = 0;
+      while (z < string.length())
+      {
+        switch (string.charAt(z))
+        {
+          case '%':
+            // add variable part
+            buffer = new StringBuilder();
+            buffer.append('%'); z++;
+            if ((z < string.length()) && (string.charAt(z) == '%'))
+            {
+              buffer.append('%'); z++;
+            }
+            else
+            {
+              while ((z < string.length()) && (Character.isLetterOrDigit(string.charAt(z))))
+              {
+                buffer.append(string.charAt(z)); z++;
+              }
+            }
+            parts.add(buffer.toString());
+            break;
+          case '#':
+            // add number part
+            buffer = new StringBuilder();
+            while ((z < string.length()) && (string.charAt(z) == '#'))
+            {
+              buffer.append(string.charAt(z)); z++;
+            }
+            parts.add(buffer.toString());
+            break;
+          default:
+            // add text
+            buffer = new StringBuilder();
+            while (   (z < string.length())
+               && (string.charAt(z) != '%')
+               && (string.charAt(z) != '#')
+              )
+            {
+              buffer.append(string.charAt(z)); z++;
+            }
+            parts.add(buffer.toString());
+        }
+      }
+
+      // insert parts
       synchronized(storageNamePartList)
       {
         if (index < storageNamePartList.size())
@@ -9742,20 +9803,36 @@ throw new Error("NYI");
           if (storageNamePartList.get(index).string != null)
           {
             // replace
-            storageNamePartList.get(index).string = string;
+            if (parts.size() > 0)
+            {
+              storageNamePartList.get(index).string = parts.get(0);
+            }
+            for (int i = 1; i < parts.size(); i++)
+            {
+              storageNamePartList.add(index+1,new StorageNamePart(null));
+              storageNamePartList.add(index+2,new StorageNamePart(parts.get(i)));
+              index += 2;
+            }
           }
           else
           {
             // insert
-            storageNamePartList.add(index+1,new StorageNamePart(string));
-            storageNamePartList.add(index+2,new StorageNamePart(null));
+            for (String part : parts)
+            {
+              storageNamePartList.add(index+1,new StorageNamePart(part));
+              storageNamePartList.add(index+2,new StorageNamePart(null));
+              index += 2;
+            }
           }
         }
         else
         {
           // add
-          storageNamePartList.add(new StorageNamePart(string));
-          storageNamePartList.add(new StorageNamePart(null));
+          for (String part : parts)
+          {
+            storageNamePartList.add(new StorageNamePart(part));
+            storageNamePartList.add(new StorageNamePart(null));
+          }
         }
         redrawFlag = true;
       }
