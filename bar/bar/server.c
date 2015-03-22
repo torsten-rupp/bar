@@ -10057,7 +10057,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
   if (!String_isEmpty(jobUUID))
   {
-    // delete all storage files with specified job UUID
+    // delete all storage files with job UUID
     error = deleteUUID(jobUUID);
     if (error != ERROR_NONE)
     {
@@ -10068,7 +10068,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
   if (entityId != DATABASE_ID_NONE)
   {
-    // delete all storage files of specified entity
+    // delete all storage files of entity
     error = deleteEntity(entityId);
     if (error != ERROR_NONE)
     {
@@ -13538,6 +13538,7 @@ Errors Server_run(uint             port,
   sigemptyset(&signalMask);
   sigaddset(&signalMask,SIGALRM);
   clientName = String_new();
+
   while (!quitFlag)
   {
     // wait for command
