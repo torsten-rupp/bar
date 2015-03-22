@@ -856,13 +856,12 @@ LOCAL Errors CompressLZ4_init(CompressInfo       *compressInfo,
       break;
   }
 
-#warning XXXXXX
-  compressInfo->lz4.inputBuffer = (byte*)malloc(compressInfo->lz4.inputBufferSize+100000);
+  compressInfo->lz4.inputBuffer = (byte*)malloc(compressInfo->lz4.inputBufferSize);
   if (compressInfo->lz4.inputBuffer == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
   }
-  compressInfo->lz4.outputBuffer = (byte*)malloc(compressInfo->lz4.outputBufferSize+100000);
+  compressInfo->lz4.outputBuffer = (byte*)malloc(compressInfo->lz4.outputBufferSize);
   if (compressInfo->lz4.outputBuffer == NULL)
   {
     free(compressInfo->lz4.inputBuffer);
