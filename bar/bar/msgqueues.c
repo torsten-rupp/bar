@@ -14,6 +14,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <sys/time.h>
 #include <assert.h>
 
 #include "global.h"
