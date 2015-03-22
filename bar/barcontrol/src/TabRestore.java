@@ -266,7 +266,7 @@ public class TabRestore
 
   /** index data
    */
-  class IndexData
+  class IndexData implements Comparable<IndexData>
   {
     /** tree item update runnable
      */
@@ -462,6 +462,14 @@ public class TabRestore
       }
     }
 
+    /** compare index data
+     * @return <0/=0/>0 if name </=/> indexData.name
+     */
+    public int compareTo(IndexData indexData)
+    {
+      return name.compareTo(indexData.name);
+    }
+
     /** get info string
      * @return info string
      */
@@ -544,9 +552,7 @@ public class TabRestore
       switch (sortMode)
       {
         case SORTMODE_NAME:
-          final String info1 = indexData1.getInfo();
-          final String info2 = indexData2.getInfo();
-          return info1.compareTo(info2);
+          return indexData1.compareTo(indexData2);
         case SORTMODE_SIZE:
           if      (indexData1.size < indexData2.size) return -1;
           else if (indexData1.size > indexData2.size) return  1;
@@ -643,6 +649,14 @@ public class TabRestore
     public void setMenuItem(MenuItem menuItem)
     {
       setMenuItem(menuItem,menuItemUpdateRunnable);
+    }
+
+    /** compare index data
+     * @return <0/=0/>0 if name </=/> indexData.name
+     */
+    public int compareTo(IndexData indexData)
+    {
+      return name.compareTo(indexData.name);
     }
 
     /** get info string
@@ -776,6 +790,30 @@ public class TabRestore
     public void setMenuItem(MenuItem menuItem)
     {
       setMenuItem(menuItem,menuItemUpdateRunnable);
+    }
+
+    /** compare index data
+     * @return <0/=0/>0 if name </=/> entityIndexData.date/entityIndexData.archiveType
+     */
+    public int compareTo(IndexData indexData)
+    {
+      EntityIndexData entityIndexData = (EntityIndexData)indexData;
+      int             result;
+
+      if      (dateTime < entityIndexData.dateTime)
+      {
+        result = -1;
+      }
+      else if (dateTime > entityIndexData.dateTime)
+      {
+        result = 1;
+      }
+      else
+      {
+        result = archiveType.toString().compareTo(entityIndexData.archiveType.toString());
+      }
+
+      return result;
     }
 
     /** get info string
@@ -961,6 +999,14 @@ public class TabRestore
     public void setTableItem(TableItem tableItem)
     {
       setTableItem(tableItem,tableItemUpdateRunnable);
+    }
+
+    /** compare index data
+     * @return <0/=0/>0 if name </=/> indexData.name
+     */
+    public int compareTo(IndexData indexData)
+    {
+      return name.compareTo(indexData.name);
     }
 
     /** get info string
@@ -3190,10 +3236,6 @@ public class TabRestore
                   });
                 }
                 break;
-default:
-Dprintf.dprintf("ERROR");
-System.exit(1);
-break;
             }
           }
           catch (IllegalArgumentException exception)
