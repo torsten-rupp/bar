@@ -2246,7 +2246,6 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entities.jobUUID, \
-                                   entities.scheduleUUID, \
                                    STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1)), \
                                    (SELECT SUM(entries) FROM storage LEFT JOIN entities AS storageEntities ON storage.entityId=storageEntities.id WHERE storageEntities.jobUUID=entities.jobUUID), \
                                    (SELECT SUM(size) FROM storage LEFT JOIN entities AS storageEntities ON storage.entityId=storageEntities.id WHERE storageEntities.jobUUID=entities.jobUUID), \
@@ -2268,7 +2267,6 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        String           jobUUID,
-                       String           scheduleUUID,
                        uint64           *lastCreatedDateTime,
                        uint64           *totalEntries,
                        uint64           *totalSize,
@@ -2280,9 +2278,8 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   assert(Index_isReady(indexQueryHandle->indexHandle));
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%S %S %llu %llu %llu %S",
+                             "%S %llu %llu %llu %S",
                              jobUUID,
-                             scheduleUUID,
                              lastCreatedDateTime,
                              totalEntries,
                              totalSize,

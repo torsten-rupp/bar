@@ -382,7 +382,6 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 * Purpose: get next index uuid entry
 * Input  : IndexQueryHandle - index query handle
 * Output : jobUUID             - unique job id (can be NULL)
-*          scheduleUUID        - unique schedule id (can be NULL)
 *          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
 *          totalEntries        - total number of entries (can be NULL)
 *          totalSize           - total storage size [bytes] (can be NULL)
@@ -393,7 +392,6 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        String           jobUUID,
-                       String           scheduleUUID,
                        uint64           *lastCreatedDateTime,
                        uint64           *totalEntries,
                        uint64           *totalSize,
