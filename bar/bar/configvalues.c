@@ -1470,7 +1470,6 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         // format value
-fprintf(stderr,"%s, %d: value=%s\n",__FILE__,__LINE__,String_cString(*configVariable.string));
         s = String_escape(String_newCString(*configVariable.cString),
                           STRING_ESCAPE_CHARACTER,
                           NULL,
@@ -1478,7 +1477,6 @@ fprintf(stderr,"%s, %d: value=%s\n",__FILE__,__LINE__,String_cString(*configVari
                           STRING_ESCAPE_CHARACTERS_MAP_TO,
                           STRING_ESCAPE_CHARACTER_MAP_LENGTH
                          );
-fprintf(stderr,"%s, %d: s=%s\n",__FILE__,__LINE__,String_cString(s));
         if (!String_isEmpty(s) && (String_findChar(s,STRING_BEGIN,' ') >= 0))
         {
           String_format(line,"%'S",s);
@@ -1488,7 +1486,6 @@ fprintf(stderr,"%s, %d: s=%s\n",__FILE__,__LINE__,String_cString(s));
           String_format(line,"%S",s);
         }
         String_delete(s);
-fprintf(stderr,"%s, %d: line=%s\n",__FILE__,__LINE__,String_cString(line));
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
