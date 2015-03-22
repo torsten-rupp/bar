@@ -1,14 +1,15 @@
-2015-??-?? 0.19
+2015-03-21 0.19
   * added LZO compression
   * added LZ4 compression
   * fixed large file support: on some systems large files
-    (>4GB) could be written incomplete
+    (>4GB) could be incompletely written
   * do not modify atime of files when creating or compare
     archives (NO_ATIME)
   * barcontrol: added new/clone/rename/delete to status tab
     option menu
   * added pre-/post-command
-  * improved crash reporting
+  * improved crash reporting: include symbol file
+  * improved logging
   * barcontrol: added scripts
   * barcontrol: added archive tree view to restore tab
   * added "entities" for set of created storage files:
@@ -19,8 +20,6 @@
   * started localization support (English, German, Japanese)
   * added no-storage to schedule: schedule just to create
     .bid file
-  * improved crash dump support: include symbol file
-  * improved logging
   * barcontrol: show tooltip in restore tab in left
     halfe of tree/table
   * barcontrol: show number of entries in entity and
@@ -36,6 +35,8 @@
   * fixed parsing compress algorithm names
   * improved error when reading encryption algorithm from
     archives
+  * fixed matching files with \ in name (glob pattern)
+  * improved tests
 
 2014-09-26 0.18c
   * fixed server network connection wait time in pselect();
