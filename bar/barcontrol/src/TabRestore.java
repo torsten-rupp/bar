@@ -1409,18 +1409,21 @@ public class TabRestore
       {
         for (;;)
         {
+          boolean updateIndicatorFlag = false;
+
+          // set busy cursor and foreground color to inform about update
           if (setUpdateIndicator)
           {
-            // set busy cursor and foreground color to inform about update
             display.syncExec(new Runnable()
             {
               public void run()
               {
-                shell.setCursor(waitCursor);
+                BARControl.waitCursor();
                 widgetStorageTree.setForeground(COLOR_MODIFIED);
                 widgetStorageTable.setForeground(COLOR_MODIFIED);
               }
             });
+            updateIndicatorFlag = true;
           }
 
           // update tree/table
@@ -1452,16 +1455,6 @@ public class TabRestore
           {
             // ignored
           }
-          catch (Exception exception)
-          {
-            if (Settings.debugLevel > 0)
-            {
-              BARServer.disconnect();
-              System.err.println("ERROR: "+exception.getMessage());
-              BARControl.printStackTrace(exception);
-              System.exit(1);
-            }
-          }
 
           // update menues
           try
@@ -1472,27 +1465,17 @@ public class TabRestore
           {
             // ignored
           }
-          catch (Exception exception)
-          {
-            if (Settings.debugLevel > 0)
-            {
-              BARServer.disconnect();
-              System.err.println("ERROR: "+exception.getMessage());
-              BARControl.printStackTrace(exception);
-              System.exit(1);
-            }
-          }
 
-          if (setUpdateIndicator)
+          // reset cursor and foreground color
+          if (updateIndicatorFlag)
           {
-            // reset cursor and foreground color
             display.syncExec(new Runnable()
             {
               public void run()
               {
                 widgetStorageTree.setForeground(null);
                 widgetStorageTable.setForeground(null);
-                shell.setCursor(null);
+                BARControl.resetCursor();
               }
             });
           }
@@ -2744,7 +2727,7 @@ public class TabRestore
           {
             public void run()
             {
-              shell.setCursor(waitCursor);
+              BARControl.waitCursor();
               widgetEntryTable.setForeground(COLOR_MODIFIED);
             }
           });
@@ -2775,7 +2758,7 @@ public class TabRestore
             public void run()
             {
               widgetEntryTable.setForeground(null);
-              shell.setCursor(null);
+              BARControl.resetCursor();
             }
           });
 
@@ -3294,9 +3277,6 @@ public class TabRestore
   // date/time format
   private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-  // cursors
-  private final Cursor           waitCursor;
-
   // --------------------------- variables --------------------------------
 
   // global variable references
@@ -3709,9 +3689,6 @@ public class TabRestore
 
     IMAGE_CONNECT0   = Widgets.loadImage(display,"connect0.png");
     IMAGE_CONNECT1   = Widgets.loadImage(display,"connect1.png");
-
-    // get cursors
-    waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Restore")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
@@ -4483,9 +4460,17 @@ public class TabRestore
           EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryTable,tableColumn);
           synchronized(widgetEntryTable)
           {
-            shell.setCursor(waitCursor);
-            Widgets.sortTableColumn(widgetEntryTable,tableColumn,entryDataComparator);
-            shell.setCursor(null);
+            {
+              BARControl.waitCursor();
+            }
+            try
+            {
+              Widgets.sortTableColumn(widgetEntryTable,tableColumn,entryDataComparator);
+            }
+            finally
+            {
+              BARControl.resetCursor();
+            }
           }
         }
       };
@@ -5244,252 +5229,258 @@ public class TabRestore
    */
   private void updateStorageTree(final TreeItem treeItem, String storagePattern)
   {
-    shell.setCursor(waitCursor);
-
+    {
+      BARControl.waitCursor();
+    }
     try
     {
-      String[] errorMessage = new String[1];
-      ValueMap resultMap    = new ValueMap();
-
-      if      (treeItem.getData() instanceof UUIDIndexData)
+      try
       {
-        // get job index data
-        final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
-        display.syncExec(new Runnable()
+        String[] errorMessage = new String[1];
+        ValueMap resultMap    = new ValueMap();
+
+        if      (treeItem.getData() instanceof UUIDIndexData)
         {
-          public void run()
+          // get job index data
+          final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
+          display.syncExec(new Runnable()
           {
-            for (TreeItem entityTreeItem : treeItem.getItems())
+            public void run()
             {
-              assert entityTreeItem.getData() instanceof EntityIndexData;
-              removeEntityTreeItemSet.add(entityTreeItem);
-            }
-          }
-        });
-
-        // update job list
-        UUIDIndexData uuidIndexData = (UUIDIndexData)treeItem.getData();
-        Command command = BARServer.runCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S pattern=%'S",
-                                                                   uuidIndexData.jobUUID,
-                                                                   (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
-                                                                  ),
-                                               0
-                                              );
-        while (!command.endOfData())
-        {
-          if (command.getNextResult(errorMessage,
-                                    resultMap,
-                                    Command.TIMEOUT
-                                   ) == Errors.NONE
-             )
-          {
-            try
-            {
-              long                  entityId         = resultMap.getLong  ("entityId"                               );
-              String                jobUUID          = resultMap.getString("jobUUID"                                );
-              String                scheuduleUUID    = resultMap.getString("scheduleUUID"                           );
-              Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-              long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                           );
-              long                  totalEntries     = resultMap.getLong  ("totalEntries"                           );
-              long                  totalSize        = resultMap.getLong  ("totalSize"                              );
-              String                lastErrorMessage = resultMap.getString("lastErrorMessage"                       );
-
-              // add/update job data index
-              final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
-                                                                                         archiveType,
-                                                                                         lastDateTime,
-                                                                                         totalEntries,
-                                                                                         totalSize,
-                                                                                         lastErrorMessage
-                                                                                        );
-
-              // insert/update tree item
-              display.syncExec(new Runnable()
+              for (TreeItem entityTreeItem : treeItem.getItems())
               {
-                public void run()
+                assert entityTreeItem.getData() instanceof EntityIndexData;
+                removeEntityTreeItemSet.add(entityTreeItem);
+              }
+            }
+          });
+
+          // update job list
+          UUIDIndexData uuidIndexData = (UUIDIndexData)treeItem.getData();
+          Command command = BARServer.runCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S pattern=%'S",
+                                                                     uuidIndexData.jobUUID,
+                                                                     (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
+                                                                    ),
+                                                 0
+                                                );
+          while (!command.endOfData())
+          {
+            if (command.getNextResult(errorMessage,
+                                      resultMap,
+                                      Command.TIMEOUT
+                                     ) == Errors.NONE
+               )
+            {
+              try
+              {
+                long                  entityId         = resultMap.getLong  ("entityId"                               );
+                String                jobUUID          = resultMap.getString("jobUUID"                                );
+                String                scheuduleUUID    = resultMap.getString("scheduleUUID"                           );
+                Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+                long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                           );
+                long                  totalEntries     = resultMap.getLong  ("totalEntries"                           );
+                long                  totalSize        = resultMap.getLong  ("totalSize"                              );
+                String                lastErrorMessage = resultMap.getString("lastErrorMessage"                       );
+
+                // add/update job data index
+                final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
+                                                                                           archiveType,
+                                                                                           lastDateTime,
+                                                                                           totalEntries,
+                                                                                           totalSize,
+                                                                                           lastErrorMessage
+                                                                                          );
+
+                // insert/update tree item
+                display.syncExec(new Runnable()
                 {
-                  TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
-                  if (entityTreeItem == null)
+                  public void run()
                   {
-                    // insert tree item
-                    entityTreeItem = Widgets.insertTreeItem(treeItem,
-                                                            findStorageTreeIndex(treeItem,entityIndexData),
-                                                            (Object)entityIndexData,
-                                                            true
-                                                           );
-                    entityIndexData.setTreeItem(entityTreeItem);
-                  }
-                  else
-                  {
-                    assert entityTreeItem.getData() instanceof EntityIndexData;
+                    TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
+                    if (entityTreeItem == null)
+                    {
+                      // insert tree item
+                      entityTreeItem = Widgets.insertTreeItem(treeItem,
+                                                              findStorageTreeIndex(treeItem,entityIndexData),
+                                                              (Object)entityIndexData,
+                                                              true
+                                                             );
+                      entityIndexData.setTreeItem(entityTreeItem);
+                    }
+                    else
+                    {
+                      assert entityTreeItem.getData() instanceof EntityIndexData;
 
-                    // keep tree item
-                    removeEntityTreeItemSet.remove(entityTreeItem);
-                  }
+                      // keep tree item
+                      removeEntityTreeItemSet.remove(entityTreeItem);
+                    }
 
-                  // update view
-                  entityIndexData.update();
-                }
-              });
-            }
-            catch (IllegalArgumentException exception)
-            {
-              if (Settings.debugLevel > 0)
+                    // update view
+                    entityIndexData.update();
+                  }
+                });
+              }
+              catch (IllegalArgumentException exception)
               {
-                System.err.println("ERROR: "+exception.getMessage());
+                if (Settings.debugLevel > 0)
+                {
+                  System.err.println("ERROR: "+exception.getMessage());
+                }
               }
             }
           }
+
+          // remove not existing entries
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              for (TreeItem treeItem : removeEntityTreeItemSet)
+              {
+                IndexData indexData = (IndexData)treeItem.getData();
+                Widgets.removeTreeItem(widgetStorageTree,treeItem);
+                indexData.clearTreeItem();
+              }
+            }
+          });
         }
-
-        // remove not existing entries
-        display.syncExec(new Runnable()
+        else if (treeItem.getData() instanceof EntityIndexData)
         {
-          public void run()
+          // get job index data
+          final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
+          display.syncExec(new Runnable()
           {
-            for (TreeItem treeItem : removeEntityTreeItemSet)
+            public void run()
             {
-              IndexData indexData = (IndexData)treeItem.getData();
-              Widgets.removeTreeItem(widgetStorageTree,treeItem);
-              indexData.clearTreeItem();
-            }
-          }
-        });
-      }
-      else if (treeItem.getData() instanceof EntityIndexData)
-      {
-        // get job index data
-        final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
-        display.syncExec(new Runnable()
-        {
-          public void run()
-          {
-            for (TreeItem storageTreeItem : treeItem.getItems())
-            {
-              assert treeItem.getData() instanceof StorageIndexData;
-              removeStorageTreeItemSet.add(storageTreeItem);
-            }
-          }
-        });
-
-
-        // update storage list
-        EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
-        Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexState=%s indexMode=%s pattern=%'S",
-                                                                   entityIndexData.entityId,
-                                                                   -1,
-                                                                   "*",
-                                                                   "*",
-                                                                   (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
-                                                                  ),
-                                               0
-                                              );
-        while (!command.endOfData())
-        {
-          if (command.getNextResult(errorMessage,
-                                    resultMap,
-                                    Command.TIMEOUT
-                                   ) == Errors.NONE
-             )
-          {
-            try
-            {
-              long                  storageId           = resultMap.getLong  ("storageId"                              );
-              String                jobUUID             = resultMap.getString("jobUUID"                                );
-              String                scheduleUUID        = resultMap.getString("scheduleUUID"                           );
-              String                jobName             = resultMap.getString("jobName"                                );
-              Settings.ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-              String                name                = resultMap.getString("name"                                   );
-              long                  dateTime            = resultMap.getLong  ("dateTime"                               );
-              long                  entries             = resultMap.getLong  ("entries"                                );
-              long                  size                = resultMap.getLong  ("size"                                   );
-              IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
-              IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
-              long                  lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"                    );
-              String                errorMessage_       = resultMap.getString("errorMessage"                           );
-
-              // add/update storage data
-              final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-                                                                                            jobName,
-                                                                                            archiveType,
-                                                                                            name,
-                                                                                            dateTime,
-                                                                                            entries,
-                                                                                            size,
-                                                                                            indexState,
-                                                                                            indexMode,
-                                                                                            lastCheckedDateTime,
-                                                                                            errorMessage_
-                                                                                           );
-
-              // insert/update tree item
-              display.syncExec(new Runnable()
+              for (TreeItem storageTreeItem : treeItem.getItems())
               {
-                public void run()
+                assert treeItem.getData() instanceof StorageIndexData;
+                removeStorageTreeItemSet.add(storageTreeItem);
+              }
+            }
+          });
+
+
+          // update storage list
+          EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
+          Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexState=%s indexMode=%s pattern=%'S",
+                                                                     entityIndexData.entityId,
+                                                                     -1,
+                                                                     "*",
+                                                                     "*",
+                                                                     (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
+                                                                    ),
+                                                 0
+                                                );
+          while (!command.endOfData())
+          {
+            if (command.getNextResult(errorMessage,
+                                      resultMap,
+                                      Command.TIMEOUT
+                                     ) == Errors.NONE
+               )
+            {
+              try
+              {
+                long                  storageId           = resultMap.getLong  ("storageId"                              );
+                String                jobUUID             = resultMap.getString("jobUUID"                                );
+                String                scheduleUUID        = resultMap.getString("scheduleUUID"                           );
+                String                jobName             = resultMap.getString("jobName"                                );
+                Settings.ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+                String                name                = resultMap.getString("name"                                   );
+                long                  dateTime            = resultMap.getLong  ("dateTime"                               );
+                long                  entries             = resultMap.getLong  ("entries"                                );
+                long                  size                = resultMap.getLong  ("size"                                   );
+                IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
+                IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
+                long                  lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"                    );
+                String                errorMessage_       = resultMap.getString("errorMessage"                           );
+
+                // add/update storage data
+                final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
+                                                                                              jobName,
+                                                                                              archiveType,
+                                                                                              name,
+                                                                                              dateTime,
+                                                                                              entries,
+                                                                                              size,
+                                                                                              indexState,
+                                                                                              indexMode,
+                                                                                              lastCheckedDateTime,
+                                                                                              errorMessage_
+                                                                                             );
+
+                // insert/update tree item
+                display.syncExec(new Runnable()
                 {
-                  TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,storageIndexData);
-                  if (storageTreeItem == null)
+                  public void run()
                   {
-                    // insert tree item
-                    storageTreeItem = Widgets.insertTreeItem(treeItem,
-                                                             findStorageTreeIndex(treeItem,storageIndexData),
-                                                             (Object)storageIndexData,
-                                                             false
-                                                            );
-                    storageIndexData.setTreeItem(storageTreeItem);
-                  }
-                  else
-                  {
-                    // keep tree item
-                    removeStorageTreeItemSet.remove(storageTreeItem);
-                  }
+                    TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,storageIndexData);
+                    if (storageTreeItem == null)
+                    {
+                      // insert tree item
+                      storageTreeItem = Widgets.insertTreeItem(treeItem,
+                                                               findStorageTreeIndex(treeItem,storageIndexData),
+                                                               (Object)storageIndexData,
+                                                               false
+                                                              );
+                      storageIndexData.setTreeItem(storageTreeItem);
+                    }
+                    else
+                    {
+                      // keep tree item
+                      removeStorageTreeItemSet.remove(storageTreeItem);
+                    }
 
-                  // update view
-                  storageIndexData.update();
-                }
-              });
-            }
-            catch (IllegalArgumentException exception)
-            {
-              if (Settings.debugLevel > 0)
+                    // update view
+                    storageIndexData.update();
+                  }
+                });
+              }
+              catch (IllegalArgumentException exception)
               {
-                System.err.println("ERROR: "+exception.getMessage());
+                if (Settings.debugLevel > 0)
+                {
+                  System.err.println("ERROR: "+exception.getMessage());
+                }
               }
             }
           }
-        }
 
-        // remove not existing entries
-        display.syncExec(new Runnable()
-        {
-          public void run()
+          // remove not existing entries
+          display.syncExec(new Runnable()
           {
-            for (TreeItem treeItem : removeStorageTreeItemSet)
+            public void run()
             {
-              IndexData indexData = (IndexData)treeItem.getData();
-              Widgets.removeTreeItem(widgetStorageTree,treeItem);
-              indexData.clearTreeItem();
+              for (TreeItem treeItem : removeStorageTreeItemSet)
+              {
+                IndexData indexData = (IndexData)treeItem.getData();
+                Widgets.removeTreeItem(widgetStorageTree,treeItem);
+                indexData.clearTreeItem();
+              }
             }
-          }
-        });
+          });
+        }
       }
-    }
-    catch (CommunicationError error)
-    {
-      // ignored
-    }
-    catch (Exception exception)
-    {
-      if (Settings.debugLevel > 0)
+      catch (CommunicationError error)
       {
-        BARServer.disconnect();
-        System.err.println("ERROR: "+exception.getMessage());
-        BARControl.printStackTrace(exception);
-        System.exit(1);
+        // ignored
+      }
+      catch (Exception exception)
+      {
+        if (Settings.debugLevel > 0)
+        {
+          BARServer.disconnect();
+          System.err.println("ERROR: "+exception.getMessage());
+          BARControl.printStackTrace(exception);
+          System.exit(1);
+        }
       }
     }
-
-    shell.setCursor(null);
+    finally
+    {
+      BARControl.resetCursor();
+    }
   }
 
   /** set storage filter pattern
@@ -5561,11 +5552,7 @@ public class TabRestore
                                              errorMessage
                                             );
           }
-          if (error == Errors.NONE)
-          {
-            indexData.setState(IndexStates.UPDATE_REQUESTED);
-          }
-          else
+          if (error != Errors.NONE)
           {
             Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
           }
@@ -6308,8 +6295,7 @@ public class TabRestore
    */
   private void restoreArchives(HashSet<String> storageNamesHashSet, String directory, boolean overwriteFiles)
   {
-    shell.setCursor(waitCursor);
-
+    BARControl.waitCursor();
     final BusyDialog busyDialog = new BusyDialog(shell,"Restore archives",500,100,null,BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR1);
 
     new BackgroundTask(busyDialog,new Object[]{storageNamesHashSet,directory,overwriteFiles})
@@ -6452,7 +6438,7 @@ public class TabRestore
             public void run()
             {
               busyDialog.close();
-              shell.setCursor(null);
+              BARControl.resetCursor();
             }
           });
         }
@@ -6464,7 +6450,7 @@ public class TabRestore
             public void run()
             {
               busyDialog.close();
-              shell.setCursor(null);
+              BARControl.resetCursor();
               Dialogs.error(shell,BARControl.tr("Error while restoring archives:\n\n{0}",errorMessage));
              }
           });
@@ -6681,7 +6667,7 @@ public class TabRestore
    */
   private void restoreEntries(EntryData entryData[], String directory, boolean overwriteFiles)
   {
-    shell.setCursor(waitCursor);
+    BARControl.waitCursor();
 
     final BusyDialog busyDialog = new BusyDialog(shell,"Restore entries",500,100,null,BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR1);
 
@@ -6938,7 +6924,7 @@ public class TabRestore
             public void run()
             {
               busyDialog.close();
-              shell.setCursor(null);
+              BARControl.resetCursor();
              }
           });
         }
@@ -6950,7 +6936,7 @@ public class TabRestore
             public void run()
             {
               busyDialog.close();
-              shell.setCursor(null);
+              BARControl.resetCursor();
               Dialogs.error(shell,BARControl.tr("Error while restoring entries:\n\n{0}",errorMessage));
              }
           });

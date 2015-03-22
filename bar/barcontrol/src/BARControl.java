@@ -61,6 +61,7 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Device;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
@@ -979,10 +980,12 @@ public class BARControl
   };
 
   // --------------------------- variables --------------------------------
-  private static I18n i18n;
+  private static I18n    i18n;
+  private static Display display;
+  private static Shell   shell;
+  private static Cursor  waitCursor;
+  private static int     waitCursorCount = 0;
 
-  private Display    display;
-  private Shell      shell;
   private TabFolder  tabFolder;
   private TabStatus  tabStatus;
   private TabJobs    tabJobs;
@@ -1070,6 +1073,27 @@ public class BARControl
     }
 
     return exception;
+  }
+
+  /** set wait cursor
+   */
+  public static void waitCursor()
+  {
+    shell.setCursor(waitCursor);
+    waitCursorCount++;
+  }
+
+  /** reset wait cursor
+   */
+  public static void resetCursor()
+  {
+    assert waitCursorCount > 0;
+
+    waitCursorCount--;
+    if (waitCursorCount <= 0)
+    {
+      shell.setCursor(null);
+    }
   }
 
   // ----------------------------------------------------------------------
@@ -1347,9 +1371,13 @@ public class BARControl
    */
   private void createWindow()
   {
+    // create shell window
     shell = new Shell(display);
     shell.setText("BAR control");
     shell.setLayout(new TableLayout(1.0,1.0));
+
+    // get cursors
+    waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
   }
 
   /** create tabs
