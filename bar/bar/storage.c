@@ -9079,19 +9079,25 @@ Errors Storage_delete(StorageHandle *storageHandle,
             File_doneSplitFileName(&nameTokenizer);
             String_append(url,baseName);
 
-            // set FTP connect
+            // set FTP login
             curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
             if (curlCode == CURLE_OK)
             {
-              // set FTP login
               (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
               plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
               (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
               Password_undeploy(storageHandle->storageSpecifier.loginPassword);
+            }
+            else
+            {
+              error = ERRORX_(DELETE_FILE,0,curl_multi_strerror(curlCode));
+            }
 
-              if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+            {
+              // delete file
+              if (curlCode == CURLE_OK)
               {
-                // delete file
                 ftpCommand = String_format(String_new(),"*DELE %S",deleteFileName);
                 curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
                 curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
@@ -9115,14 +9121,10 @@ Errors Storage_delete(StorageHandle *storageHandle,
                 curl_slist_free_all(curlSList);
                 String_delete(ftpCommand);
               }
-              else
-              {
-                error = ERROR_NONE;
-              }
             }
             else
             {
-              error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+              error = ERROR_NONE;
             }
 
             // free resources
@@ -9304,20 +9306,30 @@ whould this be a possible implementation?
             File_doneSplitFileName(&nameTokenizer);
             String_append(url,baseName);
 
-            // set WebDAV connect
+            // set WebDAV login
             curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(baseURL));
             if (curlCode == CURLE_OK)
             {
-              // set WebDAV login
               (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
               plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
               (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
               Password_undeploy(storageHandle->storageSpecifier.loginPassword);
+            }
+            else
+            {
+              error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
+            }
 
-              if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+            {
+              // delete file
+              if (curlCode == CURLE_OK)
               {
-                // delete file
-                curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+                curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+                }
                 if (curlCode == CURLE_OK)
                 {
                   curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
@@ -9330,7 +9342,33 @@ whould this be a possible implementation?
                 {
                   curlCode = curl_easy_perform(curlHandle);
                 }
+                if (curlCode != CURLE_OK)
+                {
+                  error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
+                }
+              }
+
+              // check if file deleted
+              if (curlCode == CURLE_OK)
+              {
+                curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
                 if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"HEAD");
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_perform(curlHandle);
+                }
+                if (curlCode != CURLE_OK)
                 {
                   error = ERROR_NONE;
                 }
@@ -9339,14 +9377,10 @@ whould this be a possible implementation?
                   error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
                 }
               }
-              else
-              {
-                error = ERROR_NONE;
-              }
             }
             else
             {
-              error = ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+              error = ERROR_NONE;
             }
 
             // free resources
@@ -9468,9 +9502,16 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
           File_doneSplitFileName(&nameTokenizer);
           String_append(url,baseName);
 
-          // set FTP connect
+          // set FTP login
           curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-          if (curlCode != CURLE_OK)
+          if (curlCode == CURLE_OK)
+          {
+            (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
+            plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
+            (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+            Password_undeploy(storageHandle->storageSpecifier.loginPassword);
+          }
+          else
           {
             String_delete(url);
             String_delete(baseName);
@@ -9479,12 +9520,6 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
             freeServer(server);
             return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
           }
-
-          // set FTP login
-          (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-          plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-          (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-          Password_undeploy(storageHandle->storageSpecifier.loginPassword);
 
           // get file info
           ftpCommand = String_format(String_new(),"*DIR %S",infoFileName);
@@ -9660,22 +9695,33 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             File_doneSplitFileName(&nameTokenizer);
             String_append(url,baseName);
 
-            // set WebDAV connect
+            // set WebDAV login
             curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(baseURL));
             if (curlCode == CURLE_OK)
             {
-              // set WebDAV login
               (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
               plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
               (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
               Password_undeploy(storageHandle->storageSpecifier.loginPassword);
+            }
+            else
+            {
+              error = ERRORX_(FILE_NOT_FOUND_,0,curl_easy_strerror(curlCode));
+            }
 
-              if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+            {
+              // get file info
+              if (curlCode == CURLE_OK)
               {
-                // get file info
-                curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+                curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
                 if (curlCode == CURLE_OK)
                 {
+                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+                }
+                if (curlCode == CURLE_OK)
+                {
+#warnign INFO, HEAD?
                   curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"INFO");
                 }
                 if (curlCode == CURLE_OK)
@@ -9692,17 +9738,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 }
                 else
                 {
-                  error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
+                  error = ERRORX_(FILE_NOT_FOUND_,0,curl_easy_strerror(curlCode));
                 }
-              }
-              else
-              {
-                error = ERROR_NONE;
               }
             }
             else
             {
-              error = ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+              error = ERROR_NONE;
             }
 
             // free resources
@@ -9915,9 +9957,16 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
           File_doneSplitFileName(&nameTokenizer);
 
-          // set FTP connect
+          // set FTP login
           curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-          if (curlCode != CURLE_OK)
+          if (curlCode == CURLE_OK)
+          {
+            (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageDirectoryListHandle->storageSpecifier.loginName));
+            plainLoginPassword = Password_deploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
+            (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+            Password_undeploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
+          }
+          else
           {
             error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             String_delete(url);
@@ -9925,12 +9974,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
-
-          // set FTP login
-          (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageDirectoryListHandle->storageSpecifier.loginName));
-          plainLoginPassword = Password_deploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
-          (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-          Password_undeploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
 
           // read directory
           curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlFTPParseDirectoryListCallback);
@@ -10360,9 +10403,16 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           File_doneSplitFileName(&nameTokenizer);
           String_appendChar(url,'/');
 
-          // set WebDAV connect
+          // set WebDAV login
           curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-          if (curlCode != CURLE_OK)
+          if (curlCode == CURLE_OK)
+          {
+            (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageDirectoryListHandle->storageSpecifier.loginName));
+            plainLoginPassword = Password_deploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
+            (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+            Password_undeploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
+          }
+          else
           {
             error = ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             String_delete(url);
@@ -10370,12 +10420,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
-
-          // set login
-          (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageDirectoryListHandle->storageSpecifier.loginName));
-          plainLoginPassword = Password_deploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
-          (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-          Password_undeploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
 
           // read directory data
           directoryData = String_new();
