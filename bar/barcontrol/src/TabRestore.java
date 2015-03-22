@@ -581,7 +581,6 @@ public class TabRestore
   class UUIDIndexData extends IndexData
   {
     public String jobUUID;                       // job UUID
-    public String scheduleUUID;                  // schedule UUID
     public long   totalEntries;                  // total number of entries
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
@@ -612,7 +611,6 @@ public class TabRestore
 
     /** create UUID data index
      * @param jobUUID job uuid
-     * @param scheduleUUID schedule UUID
      * @param name job name
      * @param lastDateTime last date/time (timestamp) when storage was created
      * @param totalEntries total number of entries of storage
@@ -620,7 +618,6 @@ public class TabRestore
      * @param lastErrorMessage last error message text
      */
     UUIDIndexData(String jobUUID,
-                  String scheduleUUID,
                   String name,
                   long   lastDateTime,
                   long   totalEntries,
@@ -630,7 +627,6 @@ public class TabRestore
     {
       super(name,lastDateTime,totalSize,lastErrorMessage);
       this.jobUUID      = jobUUID;
-      this.scheduleUUID = scheduleUUID;
       this.totalEntries = totalEntries;
     }
 
@@ -1105,19 +1101,17 @@ public class TabRestore
 
     /** update UUID data index
      * @param jobUUID job UUID
-     * @param scheduleUUID schedule UUID
      * @param name job name
      * @param lastDateTime last date/time (timestamp) when storage was created
      * @param totalEntries total number of entresi of storage
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    synchronized public UUIDIndexData updateUUIDIndexData(String jobUUID, String scheduleUUID, String name, long lastDateTime, long totalEntries, long totalSize, String lastErrorMessage)
+    synchronized public UUIDIndexData updateUUIDIndexData(String jobUUID, String name, long lastDateTime, long totalEntries, long totalSize, String lastErrorMessage)
     {
       UUIDIndexData uuidIndexData = uuidIndexDataMap.get(jobUUID);
       if (uuidIndexData != null)
       {
-        uuidIndexData.scheduleUUID = scheduleUUID;
         uuidIndexData.name         = name;
         uuidIndexData.dateTime     = lastDateTime;
         uuidIndexData.totalEntries = totalEntries;
@@ -1127,7 +1121,6 @@ public class TabRestore
       else
       {
         uuidIndexData = new UUIDIndexData(jobUUID,
-                                          scheduleUUID,
                                           name,
                                           lastDateTime,
                                           totalEntries,
@@ -1645,7 +1638,6 @@ public class TabRestore
           try
           {
             String jobUUID          = resultMap.getString("jobUUID"         );
-            String scheduleUUID     = resultMap.getString("scheduleUUID"    );
             String name             = resultMap.getString("name"            );
             long   lastDateTime     = resultMap.getLong  ("lastDateTime"    );
             long   totalEntries     = resultMap.getLong  ("totalEntries"    );
@@ -1654,7 +1646,6 @@ public class TabRestore
 
             // add/update index map
             final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
-                                                                                 scheduleUUID,
                                                                                  name,
                                                                                  lastDateTime,
                                                                                  totalEntries,
@@ -2174,7 +2165,6 @@ public class TabRestore
           try
           {
             String jobUUID          = resultMap.getString("jobUUID"         );
-            String scheduleUUID     = resultMap.getString("scheduleUUID"    );
             String name             = resultMap.getString("name"            );
             long   lastDateTime     = resultMap.getLong  ("lastDateTime"    );
             long   totalEntries     = resultMap.getLong  ("totalEntries"    );
@@ -2183,7 +2173,6 @@ public class TabRestore
 
             // add/update index map
             final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
-                                                                                 scheduleUUID,
                                                                                  name,
                                                                                  lastDateTime,
                                                                                  totalEntries,

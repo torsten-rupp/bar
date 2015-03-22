@@ -10229,7 +10229,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 *            pattern=<pattern>
 *          Result:
 *            jobUUID=<uuid> \
-*            scheduleUUID=<uuid> \
 *            name=<name> \
 *            lastDateTime=<created date/time> \
 *            totalEntries=<n> \
@@ -10246,7 +10245,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     LIST_NODE_HEADER(struct UUIDDataNode);
 
     String jobUUID;
-    String scheduleUUID;
     String name;
     uint64 lastCreatedDateTime;
     uint64 totalEntries;
@@ -10260,8 +10258,33 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   } UUIDDataList;
 
   /***********************************************************************\
+  * Name   : findUUIDDataNode
+  * Purpose: find UUID node
+  * Input  : jobUUID - job UUID
+  * Output : -
+  * Return : UUID node or NULL if not found
+  * Notes  : -
+  \***********************************************************************/
+
+  UUIDDataNode *findUUIDDataNode(const UUIDDataList *uuidDataList, const String jobUUID)
+  {
+    UUIDDataNode *uuidDataNode;
+
+    assert(uuidDataList != NULL);
+    assert(jobUUID != NULL);
+
+    uuidDataNode = uuidDataList->head;
+    while ((uuidDataNode != NULL) && !String_equals(uuidDataNode->jobUUID,jobUUID))
+    {
+      uuidDataNode = uuidDataNode->next;
+    }
+
+    return uuidDataNode;
+  }
+
+  /***********************************************************************\
   * Name   : freeUUIDDataNode
-  * Purpose: free allocated job data node
+  * Purpose: free allocated UUID data node
   * Input  : uuidDataNode - UUID data node
   * Input  : userData     - not used
   * Output : -
@@ -10273,7 +10296,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   {
     assert(uuidDataNode != NULL);
     assert(uuidDataNode->jobUUID != NULL);
-    assert(uuidDataNode->scheduleUUID != NULL);
     assert(uuidDataNode->name != NULL);
     assert(uuidDataNode->lastErrorMessage != NULL);
 
@@ -10281,13 +10303,12 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 
     String_delete(uuidDataNode->lastErrorMessage);
     String_delete(uuidDataNode->name);
-    String_delete(uuidDataNode->scheduleUUID);
     String_delete(uuidDataNode->jobUUID);
   }
 
   /***********************************************************************\
   * Name   : compareUUIDDataNode
-  * Purpose: compare job data nodes
+  * Purpose: compare UUID data nodes
   * Input  : uuidDataNode1,uuidDataNode2 - UUID data node 1, UUID data
   *                                        node2
   * Input  : userData                    - not used
@@ -10315,7 +10336,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   StaticString     (jobUUID,INDEX_UUID_LENGTH);
-  StaticString     (scheduleUUID,INDEX_UUID_LENGTH);
   uint64           lastCreatedDateTime;
   uint64           totalEntries,totalSize;
   String           lastErrorMessage;
@@ -10353,7 +10373,43 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   List_init(&uuidDataList);
   lastErrorMessage = String_new();
 
-  // get uuids
+  // get uuids from job list
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    LIST_ITERATE(&jobList,jobNode)
+    {
+      // add uuid data node
+      uuidDataNode = findUUIDDataNode(&uuidDataList,jobNode->uuid);
+      if (uuidDataNode == NULL)
+      {
+        uuidDataNode = LIST_NEW_NODE(UUIDDataNode);
+        if (uuidDataNode == NULL)
+        {
+          Semaphore_unlock(&jobList.lock);
+
+          String_delete(lastErrorMessage);
+          List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
+
+          sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get uuid list fail: insufficient memory");
+
+          String_delete(pattern);
+          return;
+        }
+        uuidDataNode->jobUUID             = String_duplicate(jobNode->uuid);
+        uuidDataNode->name                = String_duplicate(jobNode->uuid);
+
+        List_append(&uuidDataList,uuidDataNode);
+      }
+
+      // clear uuid data
+      uuidDataNode->lastCreatedDateTime = 0;
+      uuidDataNode->totalEntries        = 0LL;
+      uuidDataNode->totalSize           = 0LL;
+      uuidDataNode->lastErrorMessage    = String_new();
+    }
+  }
+
+  // get uuids from database
   error = Index_initListUUIDs(&indexQueryHandle,
                               indexHandle
                              );
@@ -10370,7 +10426,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextUUID(&indexQueryHandle,
                               jobUUID,
-                              scheduleUUID,
                               &lastCreatedDateTime,
                               &totalEntries,
                               &totalSize,
@@ -10378,28 +10433,33 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
                              )
         )
   {
-    uuidDataNode = LIST_NEW_NODE(UUIDDataNode);
+    // add uuid data node
+    uuidDataNode = findUUIDDataNode(&uuidDataList,jobUUID);
     if (uuidDataNode == NULL)
     {
-      Index_doneList(&indexQueryHandle);
-      String_delete(lastErrorMessage);
-      List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
+      uuidDataNode = LIST_NEW_NODE(UUIDDataNode);
+      if (uuidDataNode == NULL)
+      {
+        Index_doneList(&indexQueryHandle);
+        String_delete(lastErrorMessage);
+        List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
 
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get uuid list fail: insufficient memory");
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get uuid list fail: insufficient memory");
 
-      String_delete(pattern);
-      return;
+        String_delete(pattern);
+        return;
+      }
+      uuidDataNode->jobUUID = String_duplicate(jobUUID);
+      uuidDataNode->name    = String_duplicate(jobUUID);
+
+      List_append(&uuidDataList,uuidDataNode);
     }
 
-    uuidDataNode->jobUUID             = String_duplicate(jobUUID);
-    uuidDataNode->scheduleUUID        = String_duplicate(scheduleUUID);
-    uuidDataNode->name                = String_duplicate(jobUUID);
+    // update uuid data
     uuidDataNode->lastCreatedDateTime = lastCreatedDateTime;
     uuidDataNode->totalEntries        = totalEntries;
     uuidDataNode->totalSize           = totalSize;
     uuidDataNode->lastErrorMessage    = String_duplicate(lastErrorMessage);
-
-    List_append(&uuidDataList,uuidDataNode);
   }
   Index_doneList(&indexQueryHandle);
 
@@ -10421,9 +10481,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   LIST_ITERATE(&uuidDataList,uuidDataNode)
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "jobUUID=%S scheduleUUID=%S name=%'S lastDateTime=%llu totalEntries=%llu totalSize=%llu lastErrorMessage=%'S",
+                     "jobUUID=%S name=%'S lastDateTime=%llu totalEntries=%llu totalSize=%llu lastErrorMessage=%'S",
                      uuidDataNode->jobUUID,
-                     uuidDataNode->scheduleUUID,
                      uuidDataNode->name,
                      uuidDataNode->lastCreatedDateTime,
                      uuidDataNode->totalEntries,
@@ -11091,7 +11150,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 
 /***********************************************************************\
 * Name   : serverCommand_indexStorageAssign
-* Purpose: assign index database for storage
+* Purpose: assign index database for storage; create entity if requested
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -11099,8 +11158,15 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            toJobUUID=<uuid>|"" or toEntityId=<id>|0
+*            toEntityId=<id>|0
 *            jobUUID=<uuid>|"" or entityId=<id>|0 or storageId=<id>|0
+*
+*          or
+*
+*            toJobUUID=<uuid>|""
+*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL
+*            jobUUID=<uuid>|"" or entityId=<id>|0 or storageId=<id>|0
+*
 *          Result:
 \***********************************************************************/
 
@@ -11117,7 +11183,7 @@ LOCAL void serverCommand_indexStorageAssign(ClientInfo *clientInfo, uint id, con
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get toJobUUID, toEntityId, archiveType
+  // get toJobUUID, toEntityId
   String_clear(toJobUUID);
   toEntityId = DATABASE_ID_NONE;
   if (   !StringMap_getString(argumentMap,"toJobUUID",toJobUUID,NULL)
@@ -11132,6 +11198,7 @@ LOCAL void serverCommand_indexStorageAssign(ClientInfo *clientInfo, uint id, con
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected non-empty toJobUUID or toEntityId");
     return;
   }
+  // get archiveType
   archiveType = ARCHIVE_TYPE_UNKNOWN;
   if (toEntityId == DATABASE_ID_NONE)
   {
