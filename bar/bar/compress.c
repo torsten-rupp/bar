@@ -1109,35 +1109,12 @@ Errors Compress_inflate(CompressInfo *compressInfo,
 
 Errors Compress_flush(CompressInfo *compressInfo)
 {
-  Errors error;
-
   assert(compressInfo != NULL);
 
   // mark compress flush
   compressInfo->flushFlag = TRUE;
 
-#if 0
-  // try to compress/decompress data
-  switch (compressInfo->compressMode)
-  {
-    case COMPRESS_MODE_DEFLATE:
-      error = compressData(compressInfo);
-      if (error != ERROR_NONE) return error;
-      break;
-    case COMPRESS_MODE_INFLATE:
-      error = decompressData(compressInfo);
-      if (error != ERROR_NONE) return error;
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
-  }
-#endif
-error=ERROR_NONE;
-
-  return error;
+  return ERROR_NONE;
 }
 
 uint64 Compress_getInputLength(CompressInfo *compressInfo)

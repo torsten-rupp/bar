@@ -197,6 +197,7 @@ typedef struct
         uint      outputBufferLength;
         uint      bufferSize;
         lzo_voidp workingMemory;
+        bool      lastBlockFlag;                // TRUE if last data block processed
         uint64    totalInputLength;             // total input length [bytes]
         uint64    totalOutputLength;            // total output length [bytes]
       } lzo;
@@ -229,6 +230,7 @@ typedef struct
         uint          outputBufferIndex;
         uint          outputBufferLength;
         uint          outputBufferSize;
+        bool          lastBlockFlag;            // TRUE if last data block processed
         uint64        totalInputLength;         // total input length [bytes]
         uint64        totalOutputLength;        // total output length [bytes]
       } lz4;
