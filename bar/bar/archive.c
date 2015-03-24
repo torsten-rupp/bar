@@ -1327,6 +1327,7 @@ assert(byteLength > 0L);
         #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
         // store block into chunk
+//fprintf(stderr,"%s, %d: wite %d\n",__FILE__,__LINE__,byteLength);
         error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
                                 archiveEntryInfo->file.byteBuffer,
                                 byteLength
@@ -1634,6 +1635,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
           // write block to temporary file
+//fprintf(stderr,"%s, %d: write %d\n",__FILE__,__LINE__,byteLength);
           error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
                                   archiveEntryInfo->file.byteBuffer,
                                   byteLength
@@ -1689,6 +1691,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return error;
     }
+//fprintf(stderr,"%s, %d: &bytesRead=%d\n",__FILE__,__LINE__,bytesRead);
     if (bytesRead <= 0L)
     {
       return ERROR_READ_FILE;
