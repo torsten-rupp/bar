@@ -593,7 +593,7 @@ public class TabRestore
                                (Object)uuidIndexData,
                                uuidIndexData.name,
                                Units.formatByteSize(uuidIndexData.size),
-                               simpleDateFormat.format(new Date(uuidIndexData.dateTime*1000L)),
+                               (uuidIndexData.dateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.dateTime*1000L)) : "-",
                                ""
                               );
       }
@@ -733,7 +733,7 @@ public class TabRestore
                                (Object)entityIndexData,
                                entityIndexData.archiveType.toString(),
                                Units.formatByteSize(entityIndexData.size),
-                               simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L)),
+                               (entityIndexData.dateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L)) : "-",
                                ""
                               );
       }
@@ -893,7 +893,7 @@ public class TabRestore
                                (Object)storageIndexData,
                                storageIndexData.name,
                                Units.formatByteSize(storageIndexData.size),
-                               simpleDateFormat.format(new Date(storageIndexData.dateTime*1000L)),
+                               (storageIndexData.dateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.dateTime*1000L)) : "-",
                                storageIndexData.indexState.toString()
                               );
       }
@@ -2283,7 +2283,9 @@ public class TabRestore
           for (Menu menu : removeUUIDMenuSet)
           {
             UUIDIndexData uuidIndexData = (UUIDIndexData)menu.getData();
+//Dprintf.dprintf("remove uuidIndexData=%s",entityIndexData);
             Widgets.removeMenu(widgetStorageTreeAssignToMenu,menu);
+            Widgets.removeMenu(widgetStorageTableAssignToMenu,menu);
             uuidIndexData.clearSubMenu();
           }
         }
@@ -2360,7 +2362,7 @@ public class TabRestore
                     menuItem = Widgets.insertMenuItem(subMenu,
                                                       findStorageMenuIndex(subMenu,entityIndexData),
                                                       (Object)entityIndexData,
-                                                      simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L))+", "+entityIndexData.archiveType.toString()
+                                                      ((entityIndexData.dateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L)) : "-")+", "+entityIndexData.archiveType.toString()
                                                      );
                     menuItem.addSelectionListener(new SelectionListener()
                     {
@@ -2408,7 +2410,9 @@ public class TabRestore
           for (MenuItem menuItem : removeEntityMenuItemSet)
           {
             EntityIndexData entityIndexData = (EntityIndexData)menuItem.getData();
+Dprintf.dprintf("remove entityIndexData=%s",entityIndexData);
             Widgets.removeMenuItem(widgetStorageTreeAssignToMenu,menuItem);
+//            Widgets.removeMenuItem(widgetStorageTableAssignToMenu,menuItem);
             entityIndexData.clearMenuItem();
           }
         }
@@ -3405,7 +3409,7 @@ public class TabRestore
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,6,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryData.dateTime*1000L)));
+    label = Widgets.newLabel(widgetEntryTableToolTip,(entryData.dateTime > 0) ? simpleDateFormat.format(new Date(entryData.dateTime*1000L)) : "-");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,6,1,TableLayoutData.WE);
@@ -3466,7 +3470,7 @@ public class TabRestore
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,1,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L)));
+    label = Widgets.newLabel(widgetStorageTreeToolTip,(entityIndexData.dateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L)) : "-");
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,1,1,TableLayoutData.WE);
@@ -3617,7 +3621,7 @@ public class TabRestore
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,7,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000L)));
+    label = Widgets.newLabel(widgetStorageTableToolTip,(storageIndexData.lastCheckedDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000L)) : "-");
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,7,1,TableLayoutData.WE);
@@ -3744,7 +3748,7 @@ public class TabRestore
       tab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,2));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
 
-      widgetStorageTree = Widgets.newTree(tab,SWT.CHECK);
+      widgetStorageTree = Widgets.newTree(tab,SWT.CHECK|SWT.MULTI);
       widgetStorageTree.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0}));
       Widgets.layout(widgetStorageTree,1,0,TableLayoutData.NSWE);
       SelectionListener storageTreeColumnSelectionListener = new SelectionListener()
