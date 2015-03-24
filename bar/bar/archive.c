@@ -166,32 +166,34 @@ LOCAL void freePasswordNode(PasswordNode *passwordNode, void *userData)
 *                                            be NULL)
 *          archiveGetCryptPasswordUserData - user data for get password
 *                                            call back
-* Output : -
-* Return : password or NULL if no password given
+* Output : password - password
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Password *getCryptPassword(ArchiveInfo                     *archiveInfo,
-                                 const JobOptions                *jobOptions,
-                                 ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                                 void                            *archiveGetCryptPasswordUserData
-                                )
+LOCAL Errors getCryptPassword(Password                        *password,
+                              ArchiveInfo                     *archiveInfo,
+                              const JobOptions                *jobOptions,
+                              ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                              void                            *archiveGetCryptPasswordUserData
+                             )
 {
-  Password *password;
   Password *newPassword;
   Errors   error;
 
+  assert(password != NULL);
   assert(archiveInfo != NULL);
   assert(jobOptions != NULL);
 
-  password = NULL;
+  error = ERROR_UNKNOWN;
 
   switch (jobOptions->cryptPasswordMode)
   {
     case PASSWORD_MODE_DEFAULT:
       if (globalOptions.cryptPassword != NULL)
       {
-        password = Password_duplicate(globalOptions.cryptPassword);
+        Password_set(password,globalOptions.cryptPassword);
+        error = ERROR_NONE;
       }
       else
       {
@@ -210,22 +212,24 @@ LOCAL Password *getCryptPassword(ArchiveInfo                     *archiveInfo,
                                                    );
             if (error == ERROR_NONE)
             {
-              password = newPassword;
+              Password_set(password,newPassword);
             }
-            else
-            {
-              Password_delete(newPassword);
-            }
+            Password_delete(newPassword);
           }
 
           archiveInfo->cryptPasswordReadFlag = TRUE;
+        }
+        else
+        {
+          error = ERROR_NO_CRYPT_PASSWORD;
         }
       }
       break;
     case PASSWORD_MODE_ASK:
       if (globalOptions.cryptPassword != NULL)
       {
-        password = Password_duplicate(globalOptions.cryptPassword);
+        Password_set(password,globalOptions.cryptPassword);
+        error = ERROR_NONE;
       }
       else
       {
@@ -244,26 +248,29 @@ LOCAL Password *getCryptPassword(ArchiveInfo                     *archiveInfo,
                                                    );
             if (error == ERROR_NONE)
             {
-              password = newPassword;
+              Password_set(password,newPassword);
             }
-            else
-            {
-              Password_delete(newPassword);
-            }
+            Password_delete(newPassword);
           }
 
           archiveInfo->cryptPasswordReadFlag = TRUE;
+        }
+        else
+        {
+          error = ERROR_NO_CRYPT_PASSWORD;
         }
       }
       break;
     case PASSWORD_MODE_CONFIG:
       if      (jobOptions->cryptPassword != NULL)
       {
-        password = Password_duplicate(jobOptions->cryptPassword);
+        Password_set(password,jobOptions->cryptPassword);
+        error = ERROR_NONE;
       }
       else if (globalOptions.cryptPassword != NULL)
       {
-        password = Password_duplicate(globalOptions.cryptPassword);
+        Password_set(password,globalOptions.cryptPassword);
+        error = ERROR_NONE;
       }
       else
       {
@@ -282,15 +289,16 @@ LOCAL Password *getCryptPassword(ArchiveInfo                     *archiveInfo,
                                                    );
             if (error == ERROR_NONE)
             {
-              password = newPassword;
+              Password_set(password,newPassword);
             }
-            else
-            {
-              Password_delete(newPassword);
-            }
+            Password_delete(newPassword);
           }
 
           archiveInfo->cryptPasswordReadFlag = TRUE;
+        }
+        else
+        {
+          error = ERROR_NO_CRYPT_PASSWORD;
         }
       }
       break;
@@ -300,8 +308,9 @@ LOCAL Password *getCryptPassword(ArchiveInfo                     *archiveInfo,
         break; /* not reached */
     #endif /* NDEBUG */
   }
+  assert(error != ERROR_UNKNOWN);
 
-  return password;
+  return error;
 }
 
 /***********************************************************************\
@@ -447,6 +456,8 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle                  *p
 LOCAL Errors initCryptPassword(ArchiveInfo *archiveInfo)
 {
   SemaphoreLock semaphoreLock;
+  Password      *cryptPassword;
+  Errors        error;
 
   assert(archiveInfo != NULL);
 
@@ -454,16 +465,24 @@ LOCAL Errors initCryptPassword(ArchiveInfo *archiveInfo)
   {
     if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
     {
-      archiveInfo->cryptPassword = getCryptPassword(archiveInfo,
-                                                    archiveInfo->jobOptions,
-                                                    archiveInfo->archiveGetCryptPasswordFunction,
-                                                    archiveInfo->archiveGetCryptPasswordUserData
-                                                   );
-      if (archiveInfo->cryptPassword == NULL)
+      cryptPassword = Password_new();
+      if (cryptPassword == NULL)
       {
-        Semaphore_unlock(&archiveInfo->passwordLock);
         return ERROR_NO_CRYPT_PASSWORD;
       }
+      error = getCryptPassword(cryptPassword,
+                               archiveInfo,
+                               archiveInfo->jobOptions,
+                               archiveInfo->archiveGetCryptPasswordFunction,
+                               archiveInfo->archiveGetCryptPasswordUserData
+                              );
+      if (error != ERROR_NONE)
+      {
+        Password_delete(cryptPassword);
+        Semaphore_unlock(&archiveInfo->passwordLock);
+        return error;
+      }
+      archiveInfo->cryptPassword = cryptPassword;
     }
   }
 

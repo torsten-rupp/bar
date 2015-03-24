@@ -3736,7 +3736,11 @@ Errors inputCryptPassword(void         *userData,
             {
               String_setCString(title,"Verify password");
             }
-            if (!Password_inputVerify(password,String_cString(title),PASSWORD_INPUT_MODE_ANY))
+            if (Password_inputVerify(password,String_cString(title),PASSWORD_INPUT_MODE_ANY))
+            {
+              error = ERROR_NONE;
+            }
+            else
             {
               printError("Crypt passwords are not equal!\n");
               String_delete(title);
@@ -3759,8 +3763,6 @@ Errors inputCryptPassword(void         *userData,
 
           restoreConsole(stdout,&saveLine);
         }
-
-        error = ERROR_NONE;
       }
       break;
     case RUN_MODE_BATCH:
