@@ -314,26 +314,26 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
   assert(compressInfo->lz4.inputBuffer != NULL);
   assert(compressInfo->lz4.outputBuffer != NULL);
 
+  if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                  // space in compress buffer
+  {
+    // get max. number of compressed bytes
+    maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+
+    // move LZ4 output buffer -> compress buffer
+    n = MIN(compressInfo->lz4.outputBufferLength-compressInfo->lz4.outputBufferIndex,maxCompressBytes);
+    if (n > 0)
+    {
+      RingBuffer_put(&compressInfo->compressRingBuffer,
+                     &compressInfo->lz4.outputBuffer[compressInfo->lz4.outputBufferIndex],
+                     n
+                    );
+      compressInfo->lz4.outputBufferIndex += n;
+      compressInfo->lz4.totalOutputLength += (uint64)n;
+    }
+  }
+
   if (!compressInfo->endOfDataFlag)                                           // not end-of-data
   {
-    if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
-    {
-      // get max. number of compressed bytes
-      maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
-
-      // move LZ4 output buffer -> compress buffer
-      n = MIN(compressInfo->lz4.outputBufferLength-compressInfo->lz4.outputBufferIndex,maxCompressBytes);
-      if (n > 0)
-      {
-        RingBuffer_put(&compressInfo->compressRingBuffer,
-                       &compressInfo->lz4.outputBuffer[compressInfo->lz4.outputBufferIndex],
-                       n
-                      );
-        compressInfo->lz4.outputBufferIndex += n;
-        compressInfo->lz4.totalOutputLength += (uint64)n;
-      }
-    }
-
     if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
     {
       assert(compressInfo->lz4.outputBufferIndex >= compressInfo->lz4.outputBufferLength);
@@ -400,7 +400,7 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
                   );
 
             // put length of data into output buffer before data
-            lengthFlags = ((uint32)(compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) & LZ4_LENGTH_MASK;
+            lengthFlags = (uint32)(compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) & LZ4_LENGTH_MASK;
             putUINT32(&compressInfo->lz4.outputBuffer[0],lengthFlags);
 
             // init LZ4 output buffer
@@ -544,26 +544,26 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
   assert(compressInfo->lz4.inputBuffer != NULL);
   assert(compressInfo->lz4.outputBuffer != NULL);
 
+  if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                      // space in compress buffer
+  {
+    // get max. number of compressed bytes
+    maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
+
+    // move LZ4 output buffer -> data buffer
+    n = MIN(compressInfo->lz4.outputBufferLength-compressInfo->lz4.outputBufferIndex,maxCompressBytes);
+    if (n > 0)
+    {
+      RingBuffer_put(&compressInfo->dataRingBuffer,
+                     &compressInfo->lz4.outputBuffer[compressInfo->lz4.outputBufferIndex],
+                     n
+                    );
+      compressInfo->lz4.outputBufferIndex += n;
+      compressInfo->lz4.totalOutputLength += (uint64)n;
+    }
+  }
+
   if (!compressInfo->endOfDataFlag)                                           // not end-of-data
   {
-    if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
-    {
-      // get max. number of compressed bytes
-      maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
-
-      // move LZ4 output buffer -> data buffer
-      n = MIN(compressInfo->lz4.outputBufferLength-compressInfo->lz4.outputBufferIndex,maxCompressBytes);
-      if (n > 0)
-      {
-        RingBuffer_put(&compressInfo->dataRingBuffer,
-                       &compressInfo->lz4.outputBuffer[compressInfo->lz4.outputBufferIndex],
-                       n
-                      );
-        compressInfo->lz4.outputBufferIndex += n;
-        compressInfo->lz4.totalOutputLength += (uint64)n;
-      }
-    }
-
     if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
     {
       assert(compressInfo->lz4.outputBufferIndex >= compressInfo->lz4.outputBufferLength);
