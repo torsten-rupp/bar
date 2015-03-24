@@ -784,8 +784,10 @@ functionTestCheckExitcode = \
 
 # different test files
 TEST_FILE_NAMES = \
+  zero128.dat \
   zero1024.dat \
   zero512k.dat \
+  random128.dat \
   random1024.dat \
   random512k.dat \
   zero-random512k.dat \
@@ -1423,12 +1425,18 @@ test_file_operations: \
   test_file_operations_differential \
   test_file_operations_destroyed
 
+$(TEST_DATA_DIR)/data/zero128.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1 count=128 2>/dev/null
 $(TEST_DATA_DIR)/data/zero1024.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1 count=1024 2>/dev/null
 $(TEST_DATA_DIR)/data/zero512k.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1k count=512 2>/dev/null
+$(TEST_DATA_DIR)/data/random128.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1 count=128 2>/dev/null
 $(TEST_DATA_DIR)/data/random1024.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1 count=1024 2>/dev/null
@@ -3643,8 +3651,10 @@ ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/bar/test
 	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/data
 	$(INSTALL) -m 664 $(TEST_DATA_DIR)/data/zero.dat \
+                          $(TEST_DATA_DIR)/data/zero128.dat \
                           $(TEST_DATA_DIR)/data/zero1024.dat \
                           $(TEST_DATA_DIR)/data/zero512k.dat \
+                          $(TEST_DATA_DIR)/data/random128.dat \
                           $(TEST_DATA_DIR)/data/random1024.dat \
                           $(TEST_DATA_DIR)/data/random512k.dat \
                           $(TEST_DATA_DIR)/data/zero-random512k.dat \
