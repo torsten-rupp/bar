@@ -178,8 +178,7 @@ LOCAL Errors getCryptPassword(Password                        *password,
                               void                            *archiveGetCryptPasswordUserData
                              )
 {
-  Password *newPassword;
-  Errors   error;
+  Errors error;
 
   assert(password != NULL);
   assert(archiveInfo != NULL);
@@ -199,24 +198,14 @@ LOCAL Errors getCryptPassword(Password                        *password,
       {
         if (!archiveInfo->cryptPasswordReadFlag && (archiveGetCryptPasswordFunction != NULL))
         {
-          newPassword = Password_new();
-          if (newPassword != NULL)
-          {
-            error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,
-                                                    newPassword,
-                                                    (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
-                                                      ? Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL)
-                                                      : NULL,
-                                                    TRUE,
-                                                    TRUE
-                                                   );
-            if (error == ERROR_NONE)
-            {
-              Password_set(password,newPassword);
-            }
-            Password_delete(newPassword);
-          }
-
+          error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,
+                                                  password,
+                                                  (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                                    ? Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL)
+                                                    : NULL,
+                                                  TRUE,
+                                                  TRUE
+                                                 );
           archiveInfo->cryptPasswordReadFlag = TRUE;
         }
         else
@@ -235,24 +224,14 @@ LOCAL Errors getCryptPassword(Password                        *password,
       {
         if (!archiveInfo->cryptPasswordReadFlag && (archiveGetCryptPasswordFunction != NULL))
         {
-          newPassword = Password_new();
-          if (newPassword != NULL)
-          {
-            error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,
-                                                    newPassword,
-                                                    (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
-                                                      ? Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL)
-                                                      : NULL,
-                                                    TRUE,
-                                                    TRUE
-                                                   );
-            if (error == ERROR_NONE)
-            {
-              Password_set(password,newPassword);
-            }
-            Password_delete(newPassword);
-          }
-
+          error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,
+                                                  password,
+                                                  (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                                    ? Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL)
+                                                    : NULL,
+                                                  TRUE,
+                                                  TRUE
+                                                 );
           archiveInfo->cryptPasswordReadFlag = TRUE;
         }
         else
@@ -276,24 +255,14 @@ LOCAL Errors getCryptPassword(Password                        *password,
       {
         if (!archiveInfo->cryptPasswordReadFlag && (archiveGetCryptPasswordFunction != NULL))
         {
-          newPassword = Password_new();
-          if (newPassword != NULL)
-          {
-            error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,
-                                                    newPassword,
-                                                    (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
-                                                      ? Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL)
-                                                      : NULL,
-                                                    TRUE,
-                                                    TRUE
-                                                   );
-            if (error == ERROR_NONE)
-            {
-              Password_set(password,newPassword);
-            }
-            Password_delete(newPassword);
-          }
-
+          error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,
+                                                  password,
+                                                  (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                                    ? Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL)
+                                                    : NULL,
+                                                  TRUE,
+                                                  TRUE
+                                                 );
           archiveInfo->cryptPasswordReadFlag = TRUE;
         }
         else
@@ -385,19 +354,21 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
                                                                 FALSE,
                                                                 FALSE
                                                                );
-        if (error != ERROR_NONE)
+        if (error == ERROR_NONE)
         {
-          return NULL;
+          // add to password list
+          password = Archive_appendDecryptPassword(&newPassword);
+
+          // free resources
+          Password_done(&newPassword);
+
+          // next password mode is: none
+          passwordHandle->inputFlag = TRUE;
         }
-
-        // add to password list
-        password = Archive_appendDecryptPassword(&newPassword);
-
-        // free resources
-        Password_done(&newPassword);
-
-        // next password mode is: none
-        passwordHandle->inputFlag = TRUE;
+        else
+        {
+          doneFlag = TRUE;
+        }
       }
       else
       {
