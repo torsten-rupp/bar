@@ -3687,14 +3687,14 @@ LOCAL Errors deleteUUID(const String jobUUID)
 
 /***********************************************************************\
 * Name   : cleanExpiredStorage
-* Purpose: clean expired/surplus storage
+* Purpose: clean expired/surplus entities
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void cleanExpiredStorage(void)
+LOCAL void cleanExpiredEntities(void)
 {
   const uint64 SECONDS_PER_DAY = 24*60*60;
 
@@ -3910,10 +3910,10 @@ LOCAL void schedulerThreadCode(void)
     // re-read job config files
     rereadAllJobs(serverJobsDirectory);
 
-    // clean-up expired/surplus storage files
-    cleanExpiredStorage();
+    // clean-up expired/surplus entities
+    cleanExpiredEntities();
 
-    // trigger jobs
+    // check for jobs triggers
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER);
     {
       currentDateTime = Misc_getCurrentDateTime();
