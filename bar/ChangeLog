@@ -37,6 +37,8 @@
     archives
   * fixed matching files with \ in name (glob pattern)
   * improved tests
+  * fixed delete files via webdav-protocol
+  * fixed error if entered passwords are not equal
 
 2014-09-26 0.18c
   * fixed server network connection wait time in pselect();
