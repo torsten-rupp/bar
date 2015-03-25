@@ -39,8 +39,6 @@
 /***************************** Constants *******************************/
 
 #define LZ4_BLOCK_SIZE             (64*KB)
-//#define LZ4_DECOMPRESS_PREFIX (64*KB)
-//#define LZ4_CACHELINE_SIZE    64
 #define LZ4_DICTIONARY_BUFFER_SIZE (64*KB)
 
 #define LZ4_MAX_COMPRESS_LENGTH 0x00FFFFFF
