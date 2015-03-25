@@ -3719,8 +3719,8 @@ Errors inputCryptPassword(void         *userData,
           }
           if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
           {
-            String_delete(title);
             restoreConsole(stdout,&saveLine);
+            String_delete(title);
             Semaphore_unlock(&consoleLock);
             error = ERROR_NO_CRYPT_PASSWORD;
             break;
@@ -3743,12 +3743,16 @@ Errors inputCryptPassword(void         *userData,
             else
             {
               printError("Crypt passwords are not equal!\n");
-              String_delete(title);
               restoreConsole(stdout,&saveLine);
+              String_delete(title);
               Semaphore_unlock(&consoleLock);
               error = ERROR_CRYPT_PASSWORDS_MISMATCH;
               break;
             }
+          }
+          else
+          {
+            error = ERROR_NONE;
           }
           String_delete(title);
 
