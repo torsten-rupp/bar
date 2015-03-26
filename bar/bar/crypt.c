@@ -1356,12 +1356,12 @@ p++;
 String Crypt_getKeyModulus(CryptKey *cryptKey)
 {
   #ifdef HAVE_GCRYPT
-    gcry_sexp_t sexpToken;
-    gcry_sexp_t rsaToken;
-    gcry_sexp_t nToken;
-    gcry_mpi_t  n;
-    char        *s;
-    String      string;
+    gcry_sexp_t   sexpToken;
+    gcry_sexp_t   rsaToken;
+    gcry_sexp_t   nToken;
+    gcry_mpi_t    n;
+    unsigned char *s;
+    String        string;
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
@@ -1386,8 +1386,8 @@ String Crypt_getKeyModulus(CryptKey *cryptKey)
     n = gcry_sexp_nth_mpi(nToken,1,GCRYMPI_FMT_USG);
 
     // format string
-    gcry_mpi_aprint(GCRYMPI_FMT_HEX,(unsigned char**)&s,NULL,n);
-    string = String_newCString(s);
+    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,n);
+    string = String_newCString((char*)s);
     free(s);
 
     // free resources
@@ -1407,12 +1407,12 @@ String Crypt_getKeyModulus(CryptKey *cryptKey)
 String Crypt_getKeyExponent(CryptKey *cryptKey)
 {
   #ifdef HAVE_GCRYPT
-    gcry_sexp_t sexpToken;
-    gcry_sexp_t rsaToken;
-    gcry_sexp_t eToken;
-    gcry_mpi_t  e;
-    char        *s;
-    String      string;
+    gcry_sexp_t   sexpToken;
+    gcry_sexp_t   rsaToken;
+    gcry_sexp_t   eToken;
+    gcry_mpi_t    e;
+    unsigned char *s;
+    String        string;
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
@@ -1437,8 +1437,8 @@ String Crypt_getKeyExponent(CryptKey *cryptKey)
     e = gcry_sexp_nth_mpi(eToken,1,GCRYMPI_FMT_USG);
 
     // format string
-    gcry_mpi_aprint(GCRYMPI_FMT_HEX,(unsigned char**)&s,NULL,e);
-    string = String_newCString(s);
+    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,e);
+    string = String_newCString((char*)s);
     free(s);
 
     // free resources
