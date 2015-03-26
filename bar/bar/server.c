@@ -11803,7 +11803,12 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   * Notes  : -
   \***********************************************************************/
 
-  IndexNode *newIndexEntryNode(IndexList *indexList, ArchiveEntryTypes archiveEntryType, const String storageName, const String name, uint64 timeModified)
+  IndexNode *newIndexEntryNode(IndexList         *indexList,
+                               ArchiveEntryTypes archiveEntryType,
+                               const String      storageName,
+                               const String      name,
+                               uint64            timeModified
+                              )
   {
     IndexNode *indexNode;
     bool       foundFlag;
