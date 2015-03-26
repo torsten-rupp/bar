@@ -126,35 +126,57 @@ void __dprintf__(const char *__fileName__,
 }
 #endif /* NDEBUG */
 
+#ifdef NDEBUG
+void __halt(int        exitcode,
+            const char *format,
+            ...
+           )
+#else /* not NDEBUG */
 void __halt(const char *__fileName__,
             uint       __lineNb__,
             int        exitcode,
             const char *format,
             ...
            )
+#endif /* NDEBUG */
 {
   va_list arguments;
 
-  assert(__fileName__ != NULL);
+  #ifndef NDEBUG
+    assert(__fileName__ != NULL);
+  #endif /* not NDEBUG */
   assert(format != NULL);
 
   va_start(arguments,format);
   vfprintf(stderr,format,arguments);
   va_end(arguments);
-  fprintf(stderr," - halt in file %s, line %u\n",__fileName__,__lineNb__);
+  #ifndef NDEBUG
+    fprintf(stderr," - halt in file %s, line %u\n",__fileName__,__lineNb__);
+  #else /* NDEBUG */
+    fprintf(stderr," - halt\n");
+  #endif /* not NDEBUG */
   exit(exitcode);
 }
 
+#ifdef NDEBUG
+void __abort(const char *prefix,
+             const char *format,
+             ...
+            )
+#else /* not NDEBUG */
 void __abort(const char *__fileName__,
              uint       __lineNb__,
              const char *prefix,
              const char *format,
              ...
             )
+#endif /* NDEBUG */
 {
   va_list arguments;
 
-  assert(__fileName__ != NULL);
+  #ifndef NDEBUG
+    assert(__fileName__ != NULL);
+  #endif /* not NDEBUG */
   assert(format != NULL);
 
   if (prefix != NULL) fprintf(stderr,"%s", prefix);
@@ -166,6 +188,25 @@ void __abort(const char *__fileName__,
   #else /* NDEBUG */
     fprintf(stderr," - program aborted\n");
   #endif /* not NDEBUG */
+  abort();
+}
+void __abortAt(const char *fileName,
+               uint       lineNb,
+               const char *prefix,
+               const char *format,
+               ...
+              )
+{
+  va_list arguments;
+
+  assert(fileName != NULL);
+  assert(format != NULL);
+
+  if (prefix != NULL) fprintf(stderr,"%s", prefix);
+  va_start(arguments,format);
+  vfprintf(stderr,format,arguments);
+  va_end(arguments);
+  fprintf(stderr," - program aborted in file %s, line %u\n",fileName,lineNb);
   abort();
 }
 

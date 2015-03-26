@@ -256,7 +256,11 @@ typedef struct
 #define MASKSHIFT(n,maskShift) (((n) & maskShift.mask) >> maskShift.shift)
 
 // debugging
-#define __BP() asm(" int3");
+#if defined(__x86_64__) || defined(__i386)
+  #define __BP() do { asm(" int3"); } while (0)
+#else
+  #define __BP() do { } while (0)
+#endif
 
 /***********************************************************************\
 * Name   : CALLBACK_INLINE
@@ -720,6 +724,35 @@ typedef struct
 #define _HALT_STRING1(z) _HALT_STRING2(z)
 #define _HALT_STRING2(z) #z
 #undef HALT
+#ifdef NDEBUG
+#define HALT(errorLevel, format, args...) \
+  do \
+  { \
+    __halt(errorLevel,format, ## args); \
+  } \
+  while (0)
+
+#define HALT_INSUFFICIENT_MEMORY(args...) \
+  do \
+  { \
+     __abort(HALT_PREFIX_FATAL_ERROR,"Insufficient memory", ## args); \
+  } \
+ while (0)
+
+#define HALT_FATAL_ERROR(format, args...) \
+  do \
+  { \
+     __abort(HALT_PREFIX_FATAL_ERROR,format, ## args); \
+  } \
+ while (0)
+
+#define HALT_INTERNAL_ERROR(format, args...) \
+  do \
+  { \
+     __abort(HALT_PREFIX_INTERNAL_ERROR, format, ## args); \
+  } \
+  while (0)
+#else /* not NDEBUG */
 #define HALT(errorLevel, format, args...) \
   do \
   { \
@@ -747,10 +780,11 @@ typedef struct
      __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, format, ## args); \
   } \
   while (0)
+#endif /* NDEBUG */
 #define HALT_INTERNAL_ERROR_AT(file, line, format, args...) \
   do \
   { \
-     __abort(file,line,HALT_PREFIX_INTERNAL_ERROR,format, ## args); \
+     __abortAt(file,line,HALT_PREFIX_INTERNAL_ERROR,format, ## args); \
   } \
   while (0)
 #define HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED() \
@@ -1413,6 +1447,13 @@ inline ulong swapLONG(ulong n)
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
+void __halt(int        exitcode,
+            const char *format,
+            ...
+           ) __attribute__((noreturn))
+             __attribute__((format(printf,2,3)));
+#else /* not NDEBUG */
 void __halt(const char *__fileName__,
             uint       __lineNb__,
             int        exitcode,
@@ -1420,6 +1461,7 @@ void __halt(const char *__fileName__,
             ...
            ) __attribute__((noreturn))
              __attribute__((format(printf,4,5)));
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : __abort
@@ -1434,10 +1476,26 @@ void __halt(const char *__fileName__,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
+void __abort(const char *prefix,
+             const char *format,
+             ...
+            ) __attribute__((noreturn))
+              __attribute__((format(printf,2,3)));
+
+#else /* not NDEBUG */
 void __abort(const char *__fileName__,
              uint       __lineNb__,
              const char *prefix,
              const char *format,
+             ...
+            ) __attribute__((noreturn))
+              __attribute__((format(printf,4,5)));
+#endif /* NDEBUG */
+void __abortAt(const char *fileName,
+             uint         lineNb,
+             const char   *prefix,
+             const char   *format,
              ...
             ) __attribute__((noreturn))
               __attribute__((format(printf,4,5)));
