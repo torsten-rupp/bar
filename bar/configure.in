@@ -1019,6 +1019,7 @@ AC_COMPILER_OPTION(-Wdeclaration-after-statement,CC_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wbad-function-cast,          CC_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wsign-compare,               CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wstrict-prototypes,          CC_WARN_FLAGS)
+AC_COMPILER_OPTION(-Wno-unknown-pragmas,         CC_WARN_FLAGS CXX_WARN_FLAGS)
 
 CC_OPTIMIZE="$CC_OPTIMIZE"
 CC_DEFINES="$CC_DEFINES"
