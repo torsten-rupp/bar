@@ -1,4 +1,4 @@
-2015-03-21 0.19
+2015-03-29 0.19
   * added LZO compression
   * added LZ4 compression
   * fixed large file support: on some systems large files
@@ -20,6 +20,7 @@
   * started localization support (English, German, Japanese)
   * added no-storage to schedule: schedule just to create
     .bid file
+  * added min/max/age to schedule
   * barcontrol: show tooltip in restore tab in left
     halfe of tree/table
   * barcontrol: show number of entries in entity and
