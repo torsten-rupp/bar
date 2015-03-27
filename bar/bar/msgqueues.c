@@ -122,7 +122,7 @@ LOCAL void unlock(MsgQueue *msgQueue)
 * Notes  : -
 \***********************************************************************/
 
-void initTimespec(struct timespec *timespec, long timeout)
+LOCAL void initTimespec(struct timespec *timespec, long timeout)
 {
   struct timeval timeval;
   long           s,ns;
