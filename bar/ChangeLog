@@ -10,14 +10,17 @@
   * added pre-/post-command
   * improved crash reporting: include symbol file
   * improved logging
-  * barcontrol: added scripts
+  * barcontrol: added different exclude types in
+    context menu (nodump, .nobackup, exclude)
+  * barcontrol: added pre-/post scripts
   * barcontrol: added archive tree view to restore tab
   * added "entities" for set of created storage files:
     keep set of storage in the internal database and show
     created backups in a tree view in barcontrol
   * barcontrol: added function in restore tab context
     menu to assign storage to some entity
-  * started localization support (English, German, Japanese)
+  * started localization support (English, German,
+    partially Japanese)
   * added no-storage to schedule: schedule just to create
     .bid file
   * added min/max/age to schedule
