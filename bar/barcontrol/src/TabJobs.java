@@ -1750,7 +1750,7 @@ public class TabJobs
           int   index  = widget.getSelectionIndex();
           if (index >= 0)
           {
-            selectedJobData = Widgets.getSelectedOptionMenuItem(widgetJobList);
+            selectedJobData = Widgets.getSelectedOptionMenuItem(widgetJobList,null);
             if (tabStatus != null) tabStatus.setSelectedJob(selectedJobData);
             update();
 
@@ -7156,10 +7156,10 @@ throw new Error("NYI");
    */
   private void clearJobData()
   {
-    Widgets.removeAllTableEntries(widgetIncludeTable);
-    Widgets.removeAllListEntries(widgetExcludeList);
-    Widgets.removeAllListEntries(widgetCompressExcludeList);
-    Widgets.removeAllTableEntries(widgetScheduleTable);
+    Widgets.removeAllTableItems(widgetIncludeTable);
+    Widgets.removeAllListItems(widgetExcludeList);
+    Widgets.removeAllListItems(widgetCompressExcludeList);
+    Widgets.removeAllTableItems(widgetScheduleTable);
   }
 
   /** update selected job data
@@ -7888,7 +7888,7 @@ throw new Error("NYI");
     }
 
     includeHashMap.clear();
-    Widgets.removeAllTableEntries(widgetIncludeTable);
+    Widgets.removeAllTableItems(widgetIncludeTable);
     for (ValueMap resultMap : resultMapList)
     {
       try
@@ -7942,7 +7942,7 @@ throw new Error("NYI");
     }
 
     excludeHashSet.clear();
-    Widgets.removeAllListEntries(widgetExcludeList);
+    Widgets.removeAllListItems(widgetExcludeList);
 
     for (ValueMap resultMap : resultMapList)
     {
@@ -8042,7 +8042,7 @@ throw new Error("NYI");
     }
 
     compressExcludeHashSet.clear();
-    Widgets.removeAllListEntries(widgetCompressExcludeList);
+    Widgets.removeAllListItems(widgetCompressExcludeList);
 
     for (ValueMap resultMap : resultMapList)
     {
@@ -8294,7 +8294,7 @@ throw new Error("NYI");
     }
 
     // update table widget
-    Widgets.removeAllTableEntries(widgetIncludeTable);
+    Widgets.removeAllTableItems(widgetIncludeTable);
     for (EntryData entryData : includeHashMap.values())
     {
       Widgets.insertTableItem(widgetIncludeTable,
@@ -8581,7 +8581,7 @@ throw new Error("NYI");
     }
 
     // update list widget
-    Widgets.removeAllListEntries(widgetExcludeList);
+    Widgets.removeAllListItems(widgetExcludeList);
     for (String pattern : excludeHashSet)
     {
       Widgets.insertListItem(widgetExcludeList,
@@ -9074,7 +9074,7 @@ throw new Error("NYI");
     String[] resultErrorMessage = new String[1];
 //TODO return value?
     BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
-    Widgets.removeAllListEntries(widgetCompressExcludeList);
+    Widgets.removeAllListItems(widgetCompressExcludeList);
     for (String pattern : compressExcludeHashSet)
     {
       BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobUUID=%s patternType=%s pattern=%'S",
@@ -10659,9 +10659,9 @@ throw new Error("NYI");
         else if (widgetTypeDifferential.getSelection()) scheduleData.archiveType = "differential";
         else                                            scheduleData.archiveType = "*";
         scheduleData.customText = widgetCustomText.getText();
-        scheduleData.minKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep);
-        scheduleData.maxKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep);
-        scheduleData.maxAge     = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge);
+        scheduleData.minKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep,0);
+        scheduleData.maxKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep,0);
+        scheduleData.maxAge     = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge,0);
         scheduleData.noStorage  = widgetNoStorage.getSelection();
         scheduleData.enabled    = widgetEnabled.getSelection();
 
