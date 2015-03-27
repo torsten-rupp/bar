@@ -490,6 +490,8 @@ bool Password_equals(const Password *password0, const Password *password1)
   return TRUE;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
 bool Password_input(Password   *password,
                     const char *message,
                     uint       modes
@@ -578,8 +580,8 @@ bool Password_input(Password   *password,
         // read data from interactive input
         if (message != NULL)
         {
-          write(STDOUT_FILENO,message,strlen(message));
-          write(STDOUT_FILENO,": ",2);
+          (void)write(STDOUT_FILENO,message,strlen(message));
+          (void)write(STDOUT_FILENO,": ",2);
         }
 
         // save current console settings
@@ -627,7 +629,7 @@ bool Password_input(Password   *password,
 
         if (message != NULL)
         {
-          write(STDOUT_FILENO,"\n",1);
+          (void)write(STDOUT_FILENO,"\n",1);
         }
       }
       else
@@ -679,6 +681,7 @@ bool Password_input(Password   *password,
 
   return okFlag;
 }
+#pragma GCC diagnostic pop
 
 bool Password_inputVerify(const Password *password,
                           const char     *message,
