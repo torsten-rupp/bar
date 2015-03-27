@@ -279,6 +279,8 @@ LOCAL_INLINE int lz4DecompressBlock(CompressInfo *compressInfo,
     memcpy(dictionaryBuffer,outputBuffer,MIN(result,LZ4_DICTIONARY_BUFFER_SIZE));
     LZ4_setStreamDecode(handle,(char*)dictionaryBuffer,MIN(result,LZ4_DICTIONARY_BUFFER_SIZE));
   #else /* not LZ4_STREAM */
+    UNUSED_VARIABLE(compressInfo);
+
     result = LZ4_decompress_safe((const char*)inputBuffer,
                                  (char*)outputBuffer,
                                  (int)inputBufferLength,
@@ -858,8 +860,6 @@ LOCAL Errors CompressLZ4_init(CompressInfo       *compressInfo,
   compressInfo->lz4.compressMode       = compressMode;
   compressInfo->lz4.inputBufferIndex   = 0;
   compressInfo->lz4.inputBufferLength  = 0;
-#warning XXXXX
-//TODO: 4+LZ4_BLOCK_SIZE enough?
   compressInfo->lz4.inputBufferSize    = 4+LZ4_compressBound(LZ4_BLOCK_SIZE);
   compressInfo->lz4.outputBufferIndex  = 0;
   compressInfo->lz4.outputBufferLength = 0;
