@@ -466,15 +466,50 @@ LOCAL int executeCallback(void *userData,
           : 1;
 }
 
-#warning TODO remove
-LOCAL int busyHandler(void *userData, int n)
+/***********************************************************************\
+* Name   : busyHandlerCallback
+* Purpose: SQLite3 busy handler callback
+* Input  : userData - user data
+*          n        - number of calls
+* Output : -
+* Return : 1 for wait, 0 for abort
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int busyHandlerCallback(void *userData, int n)
 {
+  #define SLEEP_TIME 500LL
+
+  #ifdef HAVE_NANOSLEEP
+    struct timespec ts;
+  #endif /* HAVE_NANOSLEEP */
+
   UNUSED_VARIABLE(userData);
 
-  fprintf(stderr,"Warning: database busy handler called (%d)\n",n);
-  sleep(1);
+  #ifndef NDEBUG
+    fprintf(stderr,"Warning: database busy handler called (%d)\n",n);
+  #endif /* not NDEBUG */
 
-  return 1;
+  #if defined(PLATFORM_LINUX)
+    #if   defined(HAVE_NANOSLEEP)
+      ts.tv_sec  = (ulong)(SLEEP_TIME/1000LL);
+      ts.tv_nsec = (ulong)((SLEEP_TIME%1000LL)*1000000);
+      while (   (nanosleep(&ts,&ts) == -1)
+             && (errno == EINTR)
+            )
+     {
+        // nothing to do
+      }
+    #else
+      sleep(1);
+    #endif
+  #elif defined(PLATFORM_WINDOWS)
+    Sleep(SLEEP_TIME);
+  #endif
+
+  return (n < 50);
+
+  #undef SLEEP_TIME
 }
 
 /***********************************************************************\
@@ -749,9 +784,8 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
     strncpy(databaseHandle->fileName,fileName,sizeof(databaseHandle->fileName)); databaseHandle->fileName[sizeof(databaseHandle->fileName)-1] = '\0';
   #endif /* not NDEBUG */
 
-#warning TODO remove
-// set busy timeout
-sqlite3_busy_handler(databaseHandle->handle,busyHandler,NULL);
+  // set busy timeout
+  sqlite3_busy_handler(databaseHandle->handle,busyHandlerCallback,NULL);
 
   // register REGEXP functions
   sqlite3_create_function(databaseHandle->handle,
@@ -799,6 +833,10 @@ sqlite3_busy_handler(databaseHandle->handle,busyHandler,NULL);
     fprintf(stderr,"Database debug: close\n");
   #endif
 
+  // clear busy timeout
+  sqlite3_busy_handler(databaseHandle->handle,NULL,NULL);
+
+  // close database
   sqlite3_close(databaseHandle->handle);
 }
 
@@ -905,11 +943,8 @@ Errors Database_copyTable(DatabaseHandle *fromDatabaseHandle,
   freeTableColumnList(&toColumnList);
   freeTableColumnList(&fromColumnList);
 
-assert(!List_isEmpty(&columnList));
-
   // select rows in from-table
   sqlString = String_new();
-#if 1
   BLOCK_DOX(error,
             { sqlite3_mutex_enter(sqlite3_db_mutex(fromDatabaseHandle->handle));
               sqlite3_mutex_enter(sqlite3_db_mutex(toDatabaseHandle->handle));
@@ -917,14 +952,11 @@ assert(!List_isEmpty(&columnList));
             { sqlite3_mutex_leave(sqlite3_db_mutex(fromDatabaseHandle->handle));
               sqlite3_mutex_enter(sqlite3_db_mutex(toDatabaseHandle->handle));
             },
-#endif
   {
-# warning xxxxxxxxxx remove
     formatSQLString(String_clear(sqlString),"SELECT ");
     n = 0;
     LIST_ITERATE(&columnList,columnNode)
     {
-//        if (!stringEquals(columnNode->name,columnName))
       {
         if (n > 0) String_appendChar(sqlString,',');
 
@@ -933,7 +965,6 @@ assert(!List_isEmpty(&columnList));
       }
     }
     formatSQLString(sqlString," FROM %s;",tableName);
-//    formatSQLString(sqlString," FROM %s LIMIT 0,100;",tableName);
 
     DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlString);
     sqliteResult = sqlite3_prepare_v2(fromDatabaseHandle->handle,
@@ -954,7 +985,6 @@ assert(!List_isEmpty(&columnList));
       n = 0;
       LIST_ITERATE(&columnList,columnNode)
       {
-//        if (!stringEquals(columnNode->name,columnName))
         {
           if (n > 0) String_appendChar(sqlString,',');
 
@@ -983,7 +1013,6 @@ assert(!List_isEmpty(&columnList));
               formatSQLString(sqlString,"%lf",sqlite3_column_double(handle,column));
               break;
             case DATABASE_TYPE_DATETIME:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               formatSQLString(sqlString,"%llu",(uint64)sqlite3_column_int64(handle,column));
               break;
             case DATABASE_TYPE_TEXT:
