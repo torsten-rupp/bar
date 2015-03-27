@@ -3288,7 +3288,7 @@ e composite widget
 
       for (int i = 0; i < listItems.size(); i++)
       {
-        if (listItems.get(index).data == data)
+        if (listItems.get(index).data.equals(data))
         {
           index = i;
           break;
@@ -3407,7 +3407,7 @@ e composite widget
               for (int i = 0; i < listItems.size(); i++)
               {
                 ListItem listItem = listItems.get(i);
-                if (listItem.data == data)
+                if (listItem.data.equals(data))
                 {
                   listItem.text = text;
                   list.setItem(i,text);
@@ -3561,7 +3561,7 @@ e composite widget
     ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
     for (int i = 0; i < listItems.size(); i++)
     {
-      if (listItems.get(i).data == data)
+      if (listItems.get(i).data.equals(data))
       {
         removeListItem(list,i);
         break;
@@ -3598,10 +3598,10 @@ e composite widget
     }
   }
 
-  /** remove all list entries
+  /** remove all list items
    * @param list list
    */
-  public static void removeAllListEntries(final List list)
+  public static void removeAllListItems(final List list)
   {
     if (!list.isDisposed())
     {
@@ -3751,7 +3751,7 @@ e composite widget
             ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
             for (int i = 0; i < listItems.size(); i++)
             {
-              if (listItems.get(i) == data)
+              if (listItems.get(i).equals(data))
               {
                 list.select(i);
                 break;
@@ -3941,7 +3941,7 @@ e composite widget
 
           for (int i = 0; i < dataArray.size(); i++)
           {
-            if (dataArray.get(i) == data)
+            if (dataArray.get(i).equals(data))
             {
               index[0] = i;
               break;
@@ -4057,7 +4057,7 @@ e composite widget
 
               for (int i = 0; i < dataArray.size(); i++)
               {
-                if (dataArray.get(i) == data)
+                if (dataArray.get(i).equals(data))
                 {
                   combo.setItem(i,text);
                   updatedFlag = true;
@@ -4111,7 +4111,7 @@ e composite widget
     ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
     for (int i = 0; i < dataArray.size(); i++)
     {
-      if (dataArray.get(i) == data)
+      if (dataArray.get(i).equals(data))
       {
         removeComboItem(combo,i);
         break;
@@ -4206,11 +4206,12 @@ e composite widget
 
   /** get selected combo item
    * @param combo combo
+   * @param default default value
    * @return selected combo item data
    */
-  public static <T> T getSelectedComboItem(final Combo combo)
+  public static <T> T getSelectedComboItem(final Combo combo, T defaultValue)
   {
-    final Object data[] = new Object[1];
+    final Object data[] = new Object[]{defaultValue};
 
     if (!combo.isDisposed())
     {
@@ -4221,7 +4222,12 @@ e composite widget
           if (!combo.isDisposed())
           {
             ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
-            data[0] = dataArray.get(combo.getSelectionIndex());
+
+            int index = combo.getSelectionIndex();
+            if ((index >= 0) && (index < dataArray.size()))
+            {
+              data[0] = dataArray.get(index);
+            }
           }
         }
       });
@@ -4247,7 +4253,7 @@ e composite widget
             ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
             for (int i = 0; i < dataArray.size(); i++)
             {
-              if (dataArray.get(i) == data)
+              if (dataArray.get(i).equals(data))
               {
                 combo.select(i);
                 break;
@@ -4395,6 +4401,15 @@ e composite widget
     addComboItem(combo,data,text);
   }
 
+  /** add option menu item
+   * @param combo option menu combo
+   * @param data item data
+   */
+  public static void addOptionMenuItem(Combo combo, Object data)
+  {
+    addComboItem(combo,data,data.toString());
+  }
+
   /** update option menu item
    * @param combo option menu combo
    * @param index index (0..n-1)
@@ -4416,6 +4431,16 @@ e composite widget
   public static boolean updateOptionMenuItem(Combo combo, Object data, String text)
   {
     return updateComboItem(combo,data,text);
+  }
+
+  /** update option menu item
+   * @param combo option menu combo
+   * @param data item data
+   * @param true if updated, false if not found
+   */
+  public static boolean updateOptionMenuItem(Combo combo, Object data)
+  {
+    return updateComboItem(combo,data,data.toString());
   }
 
   /** remove option menu item
@@ -4485,11 +4510,12 @@ e composite widget
 
   /** get selected option menu item
    * @param combo option menu combo
+   * @param defaultValue default value
    * @return selected option menu item data
    */
-  public static <T> T getSelectedOptionMenuItem(Combo combo)
+  public static <T> T getSelectedOptionMenuItem(Combo combo, T defaultValue)
   {
-    return getSelectedComboItem(combo);
+    return getSelectedComboItem(combo,defaultValue);
   }
 
   /** set selected option menu item
@@ -4769,7 +4795,7 @@ e composite widget
           TableItem tableItems[] = table.getItems();
           for (int i = 0; i < tableItems.length; i++)
           {
-            if (tableItems[i].getData() == data)
+            if (tableItems[i].getData().equals(data))
             {
               index[0] = i;
               break;
@@ -5129,7 +5155,6 @@ e composite widget
             {
               if      (values[i] instanceof String)
               {
-//Dprintf.dprintf("i=%d values[i]=%s",i,values[i]);
                 tableItem.setText(i,(String)values[i]);
               }
               else if (values[i] instanceof Image)
@@ -5277,7 +5302,7 @@ e composite widget
         {
           for (TableItem tableItem : table.getItems())
           {
-            if (tableItem.getData() == data)
+            if (tableItem.getData().equals(data))
             {
               for (int i = 0; i < values.length; i++)
               {
@@ -5396,7 +5421,7 @@ e composite widget
   {
     for (TableItem tableItem : table.getItems())
     {
-      if (tableItem.getData() == data)
+      if (tableItem.getData().equals(data))
       {
         return tableItem;
       }
@@ -5423,7 +5448,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (tableItem.getData() == data)
+              if (tableItem.getData().equals(data))
               {
                 tableItem.setForeground(foregroundColor);
                 tableItem.setBackground(backgroundColor);
@@ -5465,7 +5490,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (tableItem.getData() == data)
+              if (tableItem.getData().equals(data))
               {
                 tableItem.setForeground(columnNb,foregroundColor);
                 tableItem.setBackground(columnNb,backgroundColor);
@@ -5506,7 +5531,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (tableItem.getData() == data)
+              if (tableItem.getData().equals(data))
               {
                 tableItem.setFont(font);
                 break;
@@ -5546,7 +5571,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (tableItem.getData() == data)
+              if (tableItem.getData().equals(data))
               {
                 tableItem.setFont(columnNb,font);
                 break;
@@ -5586,7 +5611,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (tableItem.getData() == data)
+              if (tableItem.getData().equals(data))
               {
                 tableItem.setChecked(checked);
                 break;
@@ -5614,7 +5639,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (tableItem.getData() == data)
+              if (tableItem.getData().equals(data))
               {
                 table.remove(table.indexOf(tableItem));
                 break;
@@ -5659,10 +5684,10 @@ e composite widget
     }
   }
 
-  /** remove all table entries
+  /** remove all table items
    * @param table table
    */
-  public static void removeAllTableEntries(final Table table)
+  public static void removeAllTableItems(final Table table)
   {
     if (!table.isDisposed())
     {
@@ -5730,7 +5755,7 @@ e composite widget
             TableItem tableItems[] = table.getItems();
             for (TableItem tableItem : tableItems)
             {
-              if (tableItem.getData() == data)
+              if (tableItem.getData().equals(data))
               {
                 table.setSelection(tableItem);
                 break;
@@ -6042,7 +6067,7 @@ e composite widget
   {
     for (TreeItem treeItem : parentTreeItem.getItems())
     {
-      if (treeItem.getData() == data)
+      if (treeItem.getData().equals(data))
       {
         return treeItem;
       }
@@ -6070,7 +6095,7 @@ e composite widget
 
     for (TreeItem treeItem : tree.getItems())
     {
-      if (treeItem.getData() == data)
+      if (treeItem.getData().equals(data))
       {
         return treeItem;
       }
@@ -6104,7 +6129,7 @@ e composite widget
           {
             for (TreeItem treeItem : tree.getItems())
             {
-              if (treeItem.getData() == data)
+              if (treeItem.getData().equals(data))
               {
                 treeItem.setChecked(checked);
                 break;
@@ -6176,7 +6201,7 @@ e composite widget
         {
           for (TreeItem treeItem : tree.getItems())
           {
-            if (treeItem.getData() == data)
+            if (treeItem.getData().equals(data))
             {
               for (int i = 0; i < values.length; i++)
               {
@@ -6229,7 +6254,7 @@ e composite widget
           {
             for (TreeItem treeItem : tree.getItems())
             {
-              if (treeItem.getData() == data)
+              if (treeItem.getData().equals(data))
               {
                 TreeItem parentTreeItem = treeItem.getParentItem();
                 treeItem.dispose();
@@ -7887,6 +7912,51 @@ private static void printTree(Tree tree)
       menuItem.dispose();
     }
   }
+
+/** remove menu item
+   * @param menu menu
+   * @param menuItem menu item
+   */
+  public static void removeMenuItem(Menu menu, MenuItem menuItem)
+  {
+    menuItem.dispose();
+  }
+
+  /** remove menu item
+   * @param menu menu
+   * @param index menu item index [0..n-1]
+   */
+  public static void removeMenuItems(Menu menu, int fromIndex, int toIndex)
+  {
+    MenuItem[] menuItems = menu.getItems();
+    if (toIndex < 0) toIndex = menuItems.length-1;
+    for (int index = fromIndex; index <= toIndex; index++)
+    {
+      menuItems[index].dispose();
+    }
+  }
+
+  /** remove menu item
+   * @param menu menu
+   * @param index menu item index [0..n-1]
+   */
+  public static void removeMenuItem(Menu menu, int index)
+  {
+    removeMenuItems(menu,index,index);
+  }
+
+  /** remove all menu items
+   * @param menu menu
+   */
+  public static void removeAllMenuItems(Menu menu)
+  {
+    MenuItem[] menuItems = menu.getItems();
+    for (int i = 0; i < menuItems.length; i++)
+    {
+      menuItems[i].dispose();
+    }
+  }
+
 
   //-----------------------------------------------------------------------
 
