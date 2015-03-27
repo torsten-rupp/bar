@@ -2410,7 +2410,6 @@ public class TabRestore
           for (MenuItem menuItem : removeEntityMenuItemSet)
           {
             EntityIndexData entityIndexData = (EntityIndexData)menuItem.getData();
-Dprintf.dprintf("remove entityIndexData=%s",entityIndexData);
             Widgets.removeMenuItem(widgetStorageTreeAssignToMenu,menuItem);
 //            Widgets.removeMenuItem(widgetStorageTableAssignToMenu,menuItem);
             entityIndexData.clearMenuItem();
