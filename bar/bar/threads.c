@@ -184,19 +184,21 @@ void Thread_delay(uint time)
     struct timespec ts;
   #endif /* HAVE_NANOSLEEP */
 
-  #if   defined(HAVE_NANOSLEEP)
-    ts.tv_sec  = (ulong)(time/1000LL);
-    ts.tv_nsec = (ulong)((time%1000LL)*1000000);
-    while (   (nanosleep(&ts,&ts) == -1)
-           && (errno == EINTR)
-          )
-    {
-      // nothing to do
-    }
+  #if defined(PLATFORM_LINUX)
+    #if   defined(HAVE_NANOSLEEP)
+      ts.tv_sec  = (ulong)(time/1000LL);
+      ts.tv_nsec = (ulong)((time%1000LL)*1000000);
+      while (   (nanosleep(&ts,&ts) == -1)
+             && (errno == EINTR)
+            )
+     {
+        // nothing to do
+      }
+    #else
+      sleep(time/1000LL);
+    #endif
   #elif defined(PLATFORM_WINDOWS)
     Sleep(time);
-  #else
-    #error nanosleep() not available nor Windows system!
   #endif
 }
 
