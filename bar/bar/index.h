@@ -270,10 +270,10 @@ bool Index_findById(IndexHandle *indexHandle,
 
 bool Index_findByName(IndexHandle  *indexHandle,
                       StorageTypes findStorageType,
-                      const String findHostName,
-                      const String findLoginName,
-                      const String findDeviceName,
-                      const String findFileName,
+                      ConstString  findHostName,
+                      ConstString  findLoginName,
+                      ConstString  findDeviceName,
+                      ConstString  findFileName,
                       String       jobUUID,
                       String       scheduleUUID,
                       DatabaseId   *storageId,
@@ -407,8 +407,8 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_deleteUUID(IndexHandle  *indexHandle,
-                        const String jobUUID
+Errors Index_deleteUUID(IndexHandle *indexHandle,
+                        ConstString jobUUID
                        );
 
 /***********************************************************************\
@@ -424,8 +424,8 @@ Errors Index_deleteUUID(IndexHandle  *indexHandle,
 
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               IndexHandle      *indexHandle,
-                              const String     jobUUID,
-                              const String     scheduleUUID,
+                              ConstString      jobUUID,
+                              ConstString      scheduleUUID,
                               DatabaseOrdering ordering,
                               ulong            offset
                              );
@@ -470,8 +470,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 Errors Index_newEntity(IndexHandle  *indexHandle,
-                       const String jobUUID,
-                       const String scheduleUUID,
+                       ConstString  jobUUID,
+                       ConstString  scheduleUUID,
                        ArchiveTypes archiveType,
                        DatabaseId   *entityId
                       );
@@ -510,14 +510,14 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 
 Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
-                             const String     uuid,
+                             ConstString      uuid,
                              DatabaseId       entityId,
                              StorageTypes     storageType,
-                             const String     storageName,
-                             const String     hostName,
-                             const String     loginName,
-                             const String     deviceName,
-                             const String     fileName,
+                             ConstString      storageName,
+                             ConstString      hostName,
+                             ConstString      loginName,
+                             ConstString      deviceName,
+                             ConstString      fileName,
                              IndexStateSet    indexStateSet
                             );
 
@@ -573,7 +573,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_newStorage(IndexHandle  *indexHandle,
                         DatabaseId   entityId,
-                        const String storageName,
+                        ConstString storageName,
                         IndexStates  indexState,
                         IndexModes   indexMode,
                         DatabaseId   *storageId
@@ -622,11 +622,11 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_storageAssignTo(IndexHandle  *indexHandle,
-                             const String jobUUID,
-                             DatabaseId   entityId,
-                             DatabaseId   storageId,
-                             DatabaseId   toEntityId
+Errors Index_storageAssignTo(IndexHandle *indexHandle,
+                             ConstString jobUUID,
+                             DatabaseId  entityId,
+                             DatabaseId  storageId,
+                             DatabaseId  toEntityId
                             );
 
 /***********************************************************************\
@@ -642,11 +642,11 @@ Errors Index_storageAssignTo(IndexHandle  *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_storageUpdate(IndexHandle  *indexHandle,
-                           DatabaseId   storageId,
-                           const String storageName,
-                           uint64       entries,
-                           uint64       size
+Errors Index_storageUpdate(IndexHandle *indexHandle,
+                           DatabaseId  storageId,
+                           ConstString storageName,
+                           uint64      entries,
+                           uint64      size
                           );
 
 /***********************************************************************\
@@ -1031,18 +1031,18 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_addFile(IndexHandle  *indexHandle,
-                     DatabaseId   storageId,
-                     const String fileName,
-                     uint64       size,
-                     uint64       timeLastAccess,
-                     uint64       timeModified,
-                     uint64       timeLastChanged,
-                     uint32       userId,
-                     uint32       groupId,
-                     uint32       permission,
-                     uint64       fragmentOffset,
-                     uint64       fragmentSize
+Errors Index_addFile(IndexHandle *indexHandle,
+                     DatabaseId  storageId,
+                     ConstString fileName,
+                     uint64      size,
+                     uint64      timeLastAccess,
+                     uint64      timeModified,
+                     uint64      timeLastChanged,
+                     uint32      userId,
+                     uint32      groupId,
+                     uint32      permission,
+                     uint64      fragmentOffset,
+                     uint64      fragmentSize
                     );
 
 /***********************************************************************\
@@ -1063,7 +1063,7 @@ Errors Index_addFile(IndexHandle  *indexHandle,
 
 Errors Index_addImage(IndexHandle     *indexHandle,
                       DatabaseId      storageId,
-                      const String    imageName,
+                      ConstString     imageName,
                       FileSystemTypes fileSystemType,
                       int64           size,
                       ulong           blockSize,
@@ -1117,16 +1117,16 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_addLink(IndexHandle  *indexHandle,
-                     DatabaseId   storageId,
-                     const String linkName,
-                     const String destinationName,
-                     uint64       timeLastAccess,
-                     uint64       timeModified,
-                     uint64       timeLastChanged,
-                     uint32       userId,
-                     uint32       groupId,
-                     uint32       permission
+Errors Index_addLink(IndexHandle *indexHandle,
+                     DatabaseId  storageId,
+                     ConstString linkName,
+                     ConstString destinationName,
+                     uint64      timeLastAccess,
+                     uint64      timeModified,
+                     uint64      timeLastChanged,
+                     uint32      userId,
+                     uint32      groupId,
+                     uint32      permission
                     );
 
 /***********************************************************************\
@@ -1149,18 +1149,18 @@ Errors Index_addLink(IndexHandle  *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_addHardLink(IndexHandle  *indexHandle,
-                         DatabaseId   storageId,
-                         const String fileName,
-                         uint64       size,
-                         uint64       timeLastAccess,
-                         uint64       timeModified,
-                         uint64       timeLastChanged,
-                         uint32       userId,
-                         uint32       groupId,
-                         uint32       permission,
-                         uint64       fragmentOffset,
-                         uint64       fragmentSize
+Errors Index_addHardLink(IndexHandle *indexHandle,
+                         DatabaseId  storageId,
+                         ConstString fileName,
+                         uint64      size,
+                         uint64      timeLastAccess,
+                         uint64      timeModified,
+                         uint64      timeLastChanged,
+                         uint32      userId,
+                         uint32      groupId,
+                         uint32      permission,
+                         uint64      fragmentOffset,
+                         uint64      fragmentSize
                         );
 
 /***********************************************************************\
@@ -1184,7 +1184,7 @@ Errors Index_addHardLink(IndexHandle  *indexHandle,
 
 Errors Index_addSpecial(IndexHandle      *indexHandle,
                         DatabaseId       storageId,
-                        const String     name,
+                        ConstString      name,
                         FileSpecialTypes specialType,
                         uint64           timeLastAccess,
                         uint64           timeModified,
