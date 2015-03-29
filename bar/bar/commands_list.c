@@ -1722,8 +1722,7 @@ LOCAL void printArchiveList(void)
 /***********************************************************************\
 * Name   : listArchiveContent
 * Purpose: list archive content
-* Input  : storageHandle                    - storage handle
-*          storageSpecifier                 - storage specifier
+* Input  : storageSpecifier                 - storage specifier
 *          archiveName                      - archive name
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
@@ -1736,8 +1735,7 @@ LOCAL void printArchiveList(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors listArchiveContent(StorageHandle                   *storageHandle,
-                                StorageSpecifier                *storageSpecifier,
+LOCAL Errors listArchiveContent(StorageSpecifier                *storageSpecifier,
                                 ConstString                     archiveName,
                                 const EntryList                 *includeEntryList,
                                 const PatternList               *excludePatternList,
@@ -1753,9 +1751,8 @@ LOCAL Errors listArchiveContent(StorageHandle                   *storageHandle,
 bool         remoteBarFlag;
 //  SSHSocketList sshSocketList;
 //  SSHSocketNode *sshSocketNode;
-  SocketHandle socketHandle;
+  SocketHandle     socketHandle;
 
-  assert(storageHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
@@ -1776,13 +1773,28 @@ remoteBarFlag=FALSE;
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
       {
+        StorageHandle     storageHandle;
         ArchiveInfo       archiveInfo;
         ArchiveEntryInfo  archiveEntryInfo;
         ArchiveEntryTypes archiveEntryType;
 
+        // init storage
+        error = Storage_init(&storageHandle,
+                             storageSpecifier,
+                             jobOptions,
+                             &globalOptions.maxBandWidthList,
+                             SERVER_CONNECTION_PRIORITY_HIGH,
+                             CALLBACK(NULL,NULL),
+                             CALLBACK(NULL,NULL)
+                            );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
         // open archive
         error = Archive_open(&archiveInfo,
-                             storageHandle,
+                             &storageHandle,
                              storageSpecifier,
                              archiveName,
                              jobOptions,
@@ -1791,6 +1803,7 @@ remoteBarFlag=FALSE;
                             );
         if (error != ERROR_NONE)
         {
+          (void)Storage_done(&storageHandle);
           return error;
         }
 
@@ -2350,6 +2363,9 @@ remoteBarFlag=FALSE;
 
         // close archive
         Archive_close(&archiveInfo);
+
+        // done storage
+        (void)Storage_done(&storageHandle);
       }
       break;
     case STORAGE_TYPE_SSH:
@@ -3254,7 +3270,6 @@ Errors Command_list(StringList                      *storageNameList,
   StorageSpecifier           storageSpecifier;
   Errors                     failError;
   Errors                     error;
-  StorageHandle              storageHandle;
   StorageDirectoryListHandle storageDirectoryListHandle;
   Pattern                    pattern;
   String                     fileName;
@@ -3329,31 +3344,15 @@ Errors Command_list(StringList                      *storageNameList,
               continue;
             }
 
-            // init storage
-            error = Storage_init(&storageHandle,
-                                 &storageSpecifier,
-                                 jobOptions,
-                                 &globalOptions.maxBandWidthList,
-                                 SERVER_CONNECTION_PRIORITY_HIGH,
-                                 CALLBACK(NULL,NULL),
-                                 CALLBACK(NULL,NULL)
-                                );
-            if (error == ERROR_NONE)
-            {
-              // list archive content
-              error = listArchiveContent(&storageHandle,
-                                         &storageSpecifier,
-                                         fileName,
-                                         includeEntryList,
-                                         excludePatternList,
-                                         jobOptions,
-                                         archiveGetCryptPasswordFunction,
-                                         archiveGetCryptPasswordUserData
-                                        );
-
-              // done storage
-              (void)Storage_done(&storageHandle);
-            }
+            // list archive content
+            error = listArchiveContent(&storageSpecifier,
+                                       fileName,
+                                       includeEntryList,
+                                       excludePatternList,
+                                       jobOptions,
+                                       archiveGetCryptPasswordFunction,
+                                       archiveGetCryptPasswordUserData
+                                      );
           }
           String_delete(fileName);
           Pattern_done(&pattern);
@@ -3365,7 +3364,7 @@ Errors Command_list(StringList                      *storageNameList,
     }
     if (error != ERROR_NONE)
     {
-      printError("Cannot initialize storage '%s' (error: %s)!\n",
+      printError("Cannot open storage '%s' (error: %s)!\n",
                  String_cString(storageName),
                  Error_getText(error)
                 );
