@@ -126,11 +126,11 @@ typedef Errors(*ArchiveCreatedFunction)(void        *userData,
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
-                                                 Password     *password,
-                                                 const String fileName,
-                                                 bool         validateFlag,
-                                                 bool         weakCheckFlag
+typedef Errors(*ArchiveGetCryptPasswordFunction)(void        *userData,
+                                                 Password    *password,
+                                                 ConstString fileName,
+                                                 bool        validateFlag,
+                                                 bool        weakCheckFlag
                                                 );
 
 
@@ -417,7 +417,7 @@ void Archive_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-bool Archive_isArchiveFile(const String fileName);
+bool Archive_isArchiveFile(ConstString fileName);
 
 /***********************************************************************\
 * Name   : Archive_clearCryptPasswords
@@ -468,8 +468,8 @@ const Password *Archive_appendDecryptPassword(const Password *password);
   Errors Archive_create(ArchiveInfo                     *archiveInfo,
                         const JobOptions                *jobOptions,
                         IndexHandle                     *indexHandle,
-                        const String                    jobUUID,
-                        const String                    scheduleUUID,
+                        ConstString                     jobUUID,
+                        ConstString                     scheduleUUID,
                         ArchiveTypes                    archiveType,
                         ArchiveNewFunction              archiveNewFunction,
                         void                            *archiveNewUserData,
@@ -484,8 +484,8 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                           ArchiveInfo                     *archiveInfo,
                           const JobOptions                *jobOptions,
                           IndexHandle                     *indexHandle,
-                          const String                    jobUUID,
-                          const String                    scheduleUUID,
+                          ConstString                     jobUUID,
+                          ConstString                     scheduleUUID,
                           ArchiveTypes                    archiveType,
                           ArchiveNewFunction              archiveNewFunction,
                           void                            *archiveNewUserData,
@@ -502,7 +502,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 * Input  : archiveInfo                     - archive info data
 *          storageHandle                   - storage handle
 *          storageSpecifier                - storage specifier structure
-*          storageName                     - storage name
+*          fileName                        - file name or NULL
 *          jobOptions                      - option settings
 *          archiveGetCryptPasswordFunction - get password call back (can
 *                                            be NULL)
@@ -517,6 +517,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
   Errors Archive_open(ArchiveInfo                     *archiveInfo,
                       StorageHandle                   *storageHandle,
                       StorageSpecifier                *storageSpecifier,
+                      ConstString                     fileName,
                       const JobOptions                *jobOptions,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData
@@ -527,6 +528,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                         ArchiveInfo                     *archiveInfo,
                         StorageHandle                   *storageHandle,
                         StorageSpecifier                *storageSpecifier,
+                        ConstString                     fileName,
                         const JobOptions                *jobOptions,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData
@@ -609,7 +611,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 #ifdef NDEBUG
   Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveInfo                     *archiveInfo,
-                              const String                    fileName,
+                              ConstString                     fileName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList,
                               const bool                      deltaCompressFlag,
@@ -620,7 +622,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveInfo                     *archiveInfo,
-                                const String                    fileName,
+                                ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList,
                                 const bool                      deltaCompressFlag,
@@ -647,7 +649,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 #ifdef NDEBUG
   Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                                ArchiveInfo      *archiveInfo,
-                               const String     deviceName,
+                               ConstString      deviceName,
                                const DeviceInfo *deviceInfo,
                                FileSystemTypes  fileSystemType,
                                const bool       deltaCompressFlag,
@@ -658,7 +660,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                  ulong            __lineNb__,
                                  ArchiveEntryInfo *archiveEntryInfo,
                                  ArchiveInfo      *archiveInfo,
-                                 const String     deviceName,
+                                 ConstString      deviceName,
                                  const DeviceInfo *deviceInfo,
                                  FileSystemTypes  fileSystemType,
                                  const bool       deltaCompressFlag,
@@ -682,7 +684,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 #ifdef NDEBUG
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveInfo                     *archiveInfo,
-                                   const String                    directoryName,
+                                   ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
                                   );
@@ -691,7 +693,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                      ulong                           __lineNb__,
                                      ArchiveEntryInfo                *archiveEntryInfo,
                                      ArchiveInfo                     *archiveInfo,
-                                     const String                    directoryName,
+                                     ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
                                      const FileExtendedAttributeList *fileExtendedAttributeList
                                     );
@@ -714,8 +716,8 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 #ifdef NDEBUG
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveInfo                     *archiveInfo,
-                              const String                    linkName,
-                              const String                    destinationName,
+                              ConstString                     linkName,
+                              ConstString                   destinationName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList
                              );
@@ -724,8 +726,8 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveInfo                     *archiveInfo,
-                                const String                    linkName,
-                                const String                    destinationName,
+                                ConstString                     linkName,
+                                ConstString                     destinationName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList
                                );
@@ -787,7 +789,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 #ifdef NDEBUG
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                  ArchiveInfo                     *archiveInfo,
-                                 const String                    specialName,
+                                 ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
                                  const FileExtendedAttributeList *fileExtendedAttributeList
                                 );
@@ -796,7 +798,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                    ulong                           __lineNb__,
                                    ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveInfo                     *archiveInfo,
-                                   const String                    specialName,
+                                   ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
                                   );
@@ -1265,7 +1267,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 
 Errors Archive_addToIndex(IndexHandle      *indexHandle,
                           StorageHandle    *storageHandle,
-                          const String     storageName,
+                          ConstString      storageName,
                           IndexModes       indexMode,
                           const JobOptions *jobOptions,
                           uint64           *totalEntries,
@@ -1293,7 +1295,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            DatabaseId                   storageId,
                            StorageHandle                *storageHandle,
-                           const String                 storageName,
+                           ConstString                  storageName,
                            const JobOptions             *jobOptions,
                            uint64                       *totalEntries,
                            uint64                       *totalSize,
@@ -1320,11 +1322,11 @@ Errors Archive_remIndex(IndexHandle *indexHandle,
 #if 0
 // NYI
 Errors Archive_copy(ArchiveInfo                     *archiveInfo,
-                    const String                    storageName,
+                    ConstString                     storageName,
                     const JobOptions                *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
                     void                            *archiveGetCryptPasswordData,
-                    const String                    newStorageName
+                    ConstString                     newStorageName
                    );
 #endif /* 0 */
 

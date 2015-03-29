@@ -2875,7 +2875,7 @@ void Archive_doneAll(void)
   Semaphore_done(&decryptPasswordList.lock);
 }
 
-bool Archive_isArchiveFile(const String fileName)
+bool Archive_isArchiveFile(ConstString fileName)
 {
   FileHandle  fileHandle;
   Errors      error;
@@ -2939,8 +2939,8 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   Errors Archive_create(ArchiveInfo                     *archiveInfo,
                         const JobOptions                *jobOptions,
                         IndexHandle                     *indexHandle,
-                        const String                    jobUUID,
-                        const String                    scheduleUUID,
+                        ConstString                     jobUUID,
+                        ConstString                     scheduleUUID,
                         ArchiveTypes                    archiveType,
                         ArchiveNewFunction              archiveNewFunction,
                         void                            *archiveNewUserData,
@@ -2955,8 +2955,8 @@ const Password *Archive_appendDecryptPassword(const Password *password)
                           ArchiveInfo                     *archiveInfo,
                           const JobOptions                *jobOptions,
                           IndexHandle                     *indexHandle,
-                          const String                    jobUUID,
-                          const String                    scheduleUUID,
+                          ConstString                     jobUUID,
+                          ConstString                     scheduleUUID,
                           ArchiveTypes                    archiveType,
                           ArchiveNewFunction              archiveNewFunction,
                           void                            *archiveNewUserData,
@@ -3152,6 +3152,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   Errors Archive_open(ArchiveInfo                     *archiveInfo,
                       StorageHandle                   *storageHandle,
                       StorageSpecifier                *storageSpecifier,
+                      ConstString                     fileName,
                       const JobOptions                *jobOptions,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData
@@ -3162,6 +3163,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                         ArchiveInfo                     *archiveInfo,
                         StorageHandle                   *storageHandle,
                         StorageSpecifier                *storageSpecifier,
+                        ConstString                     fileName,
                         const JobOptions                *jobOptions,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData
@@ -3169,7 +3171,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #endif /* NDEBUG */
 {
   AutoFreeList autoFreeList;
-  String       fileName;
   Errors       error;
   ChunkHeader  chunkHeader;
 
@@ -3178,8 +3179,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init variables
   AutoFree_init(&autoFreeList);
-  fileName = String_new();
-  AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
 
   // initstorageSpecifier
   archiveInfo->jobOptions                      = jobOptions;
@@ -3222,7 +3221,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,archiveInfo->printableName,{ String_delete(archiveInfo->printableName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
 
-  error = Storage_open(archiveInfo->storage.storageHandle);
+  error = Storage_open(archiveInfo->storage.storageHandle,fileName);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -3255,7 +3254,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   DEBUG_TESTCODE("Archive_open4") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // free resources
-  String_delete(fileName);
   AutoFree_done(&autoFreeList);
 
   #ifndef NDEBUG
@@ -3409,7 +3407,7 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
       }
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      error = Storage_open(archiveInfo->storage.storageHandle);
+      error = Storage_open(archiveInfo->storage.storageHandle,NULL);
       if (error != ERROR_NONE)
       {
         return error;
@@ -3608,7 +3606,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #ifdef NDEBUG
   Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveInfo                     *archiveInfo,
-                              const String                    fileName,
+                              ConstString                     fileName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList,
                               const bool                      deltaCompressFlag,
@@ -3619,7 +3617,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveInfo                     *archiveInfo,
-                                const String                    fileName,
+                                ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList,
                                 const bool                      deltaCompressFlag,
@@ -3980,7 +3978,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #ifdef NDEBUG
   Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                                ArchiveInfo      *archiveInfo,
-                               const String     deviceName,
+                               ConstString      deviceName,
                                const DeviceInfo *deviceInfo,
                                FileSystemTypes  fileSystemType,
                                const bool       deltaCompressFlag,
@@ -3991,7 +3989,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                  ulong            __lineNb__,
                                  ArchiveEntryInfo *archiveEntryInfo,
                                  ArchiveInfo      *archiveInfo,
-                                 const String     deviceName,
+                                 ConstString      deviceName,
                                  const DeviceInfo *deviceInfo,
                                  FileSystemTypes  fileSystemType,
                                  const bool       deltaCompressFlag,
@@ -4310,7 +4308,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #ifdef NDEBUG
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveInfo                     *archiveInfo,
-                                   const String                    directoryName,
+                                   ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
                                   )
@@ -4319,7 +4317,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                      ulong                           __lineNb__,
                                      ArchiveEntryInfo                *archiveEntryInfo,
                                      ArchiveInfo                     *archiveInfo,
-                                     const String                    directoryName,
+                                     ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
                                      const FileExtendedAttributeList *fileExtendedAttributeList
                                     )
@@ -4527,8 +4525,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #ifdef NDEBUG
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveInfo                     *archiveInfo,
-                              const String                    linkName,
-                              const String                    destinationName,
+                              ConstString                     linkName,
+                              ConstString                     destinationName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList
                              )
@@ -4537,8 +4535,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveInfo                     *archiveInfo,
-                                const String                    linkName,
-                                const String                    destinationName,
+                                ConstString                     linkName,
+                                ConstString                     destinationName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList
                                )
@@ -5149,7 +5147,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #ifdef NDEBUG
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                  ArchiveInfo                     *archiveInfo,
-                                 const String                    specialName,
+                                 ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
                                  const FileExtendedAttributeList *fileExtendedAttributeList
                                 )
@@ -5158,7 +5156,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                    ulong                           __lineNb__,
                                    ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveInfo                     *archiveInfo,
-                                   const String                    specialName,
+                                   ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
                                   )
@@ -10185,7 +10183,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo)
 
 Errors Archive_addToIndex(IndexHandle      *indexHandle,
                           StorageHandle    *storageHandle,
-                          const String     storageName,
+                          ConstString      storageName,
                           IndexModes       indexMode,
                           const JobOptions *jobOptions,
                           uint64           *totalEntries,
@@ -10234,7 +10232,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            DatabaseId                   storageId,
                            StorageHandle                *storageHandle,
-                           const String                 storageName,
+                           ConstString                  storageName,
                            const JobOptions             *jobOptions,
                            uint64                       *totalEntries,
                            uint64                       *totalSize,
@@ -10277,6 +10275,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     error = Archive_open(&archiveInfo,
                          storageHandle,
                          &storageSpecifier,
+                         NULL,
                          jobOptions,
                          CALLBACK(NULL,NULL)
                         );
@@ -10288,6 +10287,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       error = Archive_open(&archiveInfo,
                            storageHandle,
                            &storageSpecifier,
+                           NULL,
                            jobOptions,
                            CALLBACK(NULL,NULL)
                           );
@@ -10299,6 +10299,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     error = Archive_open(&archiveInfo,
                          storageHandle,
                          &storageSpecifier,
+                         NULL,
                          jobOptions,
                          CALLBACK(NULL,NULL)
                         );
@@ -10839,11 +10840,11 @@ Errors Archive_remIndex(IndexHandle *indexHandle,
 }
 
 #if 0
-Errors Archive_copy(const String                    storageName,
+Errors Archive_copy(ConstString                     storageName,
                     JobOptions                      *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
                     void                            *archiveGetCryptPasswordData,
-                    const String                    newStorageName
+                    ConstString                     newStorageName
                    )
 {
   Errors      error;
