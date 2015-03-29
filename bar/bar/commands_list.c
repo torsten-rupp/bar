@@ -3306,24 +3306,24 @@ Errors Command_list(StringList                      *storageNameList,
       continue;
     }
 
-    // open directory list
-    error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                      &storageSpecifier,
-                                      jobOptions,
-                                      SERVER_CONNECTION_PRIORITY_HIGH
-                                     );
-    if (error == ERROR_NONE)
+    if (String_isEmpty(storageSpecifier.archivePattern))
     {
-      if (String_isEmpty(storageSpecifier.archivePattern))
-      {
-        // list directory
-        error = listDirectoryContent(&storageDirectoryListHandle,
-                                     &storageSpecifier,
-                                     includeEntryList,
-                                     excludePatternList
-                                    );
-      }
-      else
+      // list directory
+      error = listDirectoryContent(&storageDirectoryListHandle,
+                                   &storageSpecifier,
+                                   includeEntryList,
+                                   excludePatternList
+                                  );
+    }
+    else
+    {
+      // open directory list
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_HIGH
+                                       );
+      if (error == ERROR_NONE)
       {
         error = Pattern_init(&pattern,storageSpecifier.archivePattern,jobOptions->patternType,PATTERN_FLAG_NONE);
         if (error == ERROR_NONE)
