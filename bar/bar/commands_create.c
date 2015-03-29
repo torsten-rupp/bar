@@ -1576,7 +1576,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   String              name;
   EntryNode           *includeEntryNode;
   StringTokenizer     fileNameTokenizer;
-  String              string;
+  ConstString         token;
   Errors              error;
   String              fileName;
   FileInfo            fileInfo;
@@ -1610,20 +1610,20 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
     // find base path
     File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
-    if (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
+    if (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
     {
-      if (String_length(string) > 0L)
+      if (!String_isEmpty(token))
       {
-        File_setFileName(basePath,string);
+        File_setFileName(basePath,token);
       }
       else
       {
         File_setFileNameChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
       }
     }
-    while (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
+    while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
     {
-      File_appendFileName(basePath,string);
+      File_appendFileName(basePath,token);
     }
     File_doneSplitFileName(&fileNameTokenizer);
 
@@ -2058,7 +2058,7 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
   Dictionary          hardLinksDictionary;
   EntryNode           *includeEntryNode;
   StringTokenizer     fileNameTokenizer;
-  String              string;
+  ConstString         token;
   Errors              error;
   FileInfo            fileInfo;
   DirectoryListHandle directoryListHandle;
@@ -2106,20 +2106,20 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
     // find base path
     File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
-    if (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
+    if (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
     {
-      if (String_length(string) > 0L)
+      if (!String_isEmpty(token))
       {
-        File_setFileName(basePath,string);
+        File_setFileName(basePath,token);
       }
       else
       {
         File_setFileNameChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
       }
     }
-    while (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
+    while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
     {
-      File_appendFileName(basePath,string);
+      File_appendFileName(basePath,token);
     }
     File_doneSplitFileName(&fileNameTokenizer);
 
@@ -2925,7 +2925,9 @@ LOCAL Errors newArchiveFile(void        *userData,
   Errors        error;
 
   assert(createInfo != NULL);
+#ifndef WERROR
 #warning XXXXXXXXXXXXXXX
+#endif
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 UNUSED_VARIABLE(indexHandle);
