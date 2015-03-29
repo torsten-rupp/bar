@@ -752,7 +752,7 @@ void File_ungetLine(FileHandle  *fileHandle,
 * Notes  : -
 \***********************************************************************/
 
-uint64 File_getSize(FileHandle *fileHandle);
+uint64 File_getSize(const FileHandle *fileHandle);
 
 /***********************************************************************\
 * Name   : File_tell
@@ -763,8 +763,8 @@ uint64 File_getSize(FileHandle *fileHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors File_tell(FileHandle *fileHandle,
-                 uint64     *offset
+Errors File_tell(const FileHandle *fileHandle,
+                 uint64           *offset
                 );
 
 /***********************************************************************\

@@ -178,9 +178,9 @@ LOCAL void debugFileInit(void)
 #endif /* NDEBUG */
 
 #ifndef NDEBUG
-LOCAL void fileCheckValid(const char *fileName,
-                          ulong      lineNb,
-                          FileHandle *fileHandle
+LOCAL void fileCheckValid(const char       *fileName,
+                          ulong            lineNb,
+                          const FileHandle *fileHandle
                          )
 {
   DebugFileNode *debugFileNode;
@@ -1999,7 +1999,7 @@ void File_ungetLine(FileHandle  *fileHandle,
   if (lineNb != NULL) (*lineNb)--;
 }
 
-uint64 File_getSize(FileHandle *fileHandle)
+uint64 File_getSize(const FileHandle *fileHandle)
 {
   assert(fileHandle != NULL);
   FILE_CHECK_VALID(fileHandle);
@@ -2007,7 +2007,7 @@ uint64 File_getSize(FileHandle *fileHandle)
   return fileHandle->size;
 }
 
-Errors File_tell(FileHandle *fileHandle, uint64 *offset)
+Errors File_tell(const FileHandle *fileHandle, uint64 *offset)
 {
   off_t n;
 
