@@ -43,12 +43,12 @@
 typedef struct
 {
 // NYI: is there a list of names required?
-  String     name;             // source name
+  ConstString name;             // source name
 //  StringList nameList;
-  uint64     size;             // size of source
-  String     tmpFileName;      // temporary file name
-  FileHandle tmpFileHandle;    // temporary file handle
-  uint64     baseOffset;       // block read base offset in source
+  uint64      size;             // size of source
+  String      tmpFileName;      // temporary file name
+  FileHandle  tmpFileHandle;    // temporary file handle
+  uint64      baseOffset;       // block read base offset in source
 } SourceHandle;
 
 /***************************** Variables *******************************/
@@ -94,7 +94,7 @@ void Source_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-Errors Source_addSource(const String sourcePattern);
+Errors Source_addSource(ConstString sourcePattern);
 
 /***********************************************************************\
 * Name   : Source_addSourceList
@@ -122,8 +122,8 @@ Errors Source_addSourceList(const PatternList *sourcePatternList);
 \***********************************************************************/
 
 Errors Source_openEntry(SourceHandle     *sourceHandle,
-                        const String     sourceStorageName,
-                        const String     name,
+                        ConstString      sourceStorageName,
+                        ConstString      name,
                         int64            size,
                         const JobOptions *jobOptions
                        );
@@ -148,7 +148,7 @@ void Source_closeEntry(SourceHandle *sourceHandle);
 * Notes  : -
 \***********************************************************************/
 
-String Source_getName(SourceHandle *sourceHandle);
+ConstString Source_getName(const SourceHandle *sourceHandle);
 
 /***********************************************************************\
 * Name   : Source_getSize
@@ -159,7 +159,7 @@ String Source_getName(SourceHandle *sourceHandle);
 * Notes  : -
 \***********************************************************************/
 
-uint64 Source_getSize(SourceHandle *sourceHandle);
+uint64 Source_getSize(const SourceHandle *sourceHandle);
 
 /***********************************************************************\
 * Name   : Source_getName

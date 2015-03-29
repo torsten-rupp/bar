@@ -75,7 +75,7 @@ LOCAL SourceList sourceList;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors addSourceNodes(const String storageName, const Pattern *storagePattern)
+LOCAL Errors addSourceNodes(ConstString storageName, const Pattern *storagePattern)
 {
   JobOptions                 jobOptions;
   StorageSpecifier           storageSpecifier;
@@ -100,7 +100,7 @@ LOCAL Errors addSourceNodes(const String storageName, const Pattern *storagePatt
 
   // get path storage specifier
   Storage_duplicateSpecifier(&storageDirectorySpecifier,&storageSpecifier);
-  File_getFilePathName(storageDirectorySpecifier.fileName,storageSpecifier.fileName);
+  File_getFilePathName(storageDirectorySpecifier.archiveName,storageSpecifier.archiveName);
 
   // open directory list
   sourceNode = NULL;
@@ -132,7 +132,7 @@ LOCAL Errors addSourceNodes(const String storageName, const Pattern *storagePatt
           }
           sourceNode->storageName = String_duplicate(fileName);
           Storage_duplicateSpecifier(&sourceNode->storageSpecifier,&storageSpecifier);
-          String_set(sourceNode->storageSpecifier.fileName,fileName);
+          String_set(sourceNode->storageSpecifier.archiveName,fileName);
           List_append(&sourceList,sourceNode);
         }
       }
@@ -268,10 +268,10 @@ LOCAL void deleteLocalStorageArchive(String localStorageName)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreFile(const String                    storageName,
-                         const String                    name,
+LOCAL Errors restoreFile(ConstString                     storageName,
+                         ConstString                     name,
                          const JobOptions                *jobOptions,
-                         const String                    destinationFileName,
+                         ConstString                     destinationFileName,
                          FragmentNode                    *fragmentNode,
                          ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                          void                            *archiveGetCryptPasswordUserData,
@@ -341,6 +341,7 @@ LOCAL Errors restoreFile(const String                    storageName,
   error = Archive_open(&archiveInfo,
                        &storageHandle,
                        &storageSpecifier,
+                       NULL,
                        jobOptions,
                        CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData)
                       );
@@ -850,7 +851,7 @@ void Source_doneAll(void)
   List_done(&sourceList,(ListNodeFreeFunction)freeSourceNode,NULL);
 }
 
-Errors Source_addSource(const String storageName)
+Errors Source_addSource(ConstString storageName)
 {
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
@@ -913,8 +914,8 @@ Errors Source_addSourceList(const PatternList *sourcePatternList)
 }
 
 Errors Source_openEntry(SourceHandle     *sourceHandle,
-                        const String     sourceStorageName,
-                        const String     name,
+                        ConstString      sourceStorageName,
+                        ConstString      name,
                         int64            size,
                         const JobOptions *jobOptions
                        )
@@ -948,10 +949,10 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
     {
       if (sourceNode->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
       {
-        if (!Archive_isArchiveFile(sourceNode->storageSpecifier.fileName))
+        if (!Archive_isArchiveFile(sourceNode->storageSpecifier.archiveName))
         {
           // open local file as source
-          error = File_open(&sourceHandle->tmpFileHandle,sourceNode->storageSpecifier.fileName,FILE_OPEN_READ);
+          error = File_open(&sourceHandle->tmpFileHandle,sourceNode->storageSpecifier.archiveName,FILE_OPEN_READ);
           if (error == ERROR_NONE)
           {
             sourceHandle->name = sourceNode->storageName;
@@ -983,10 +984,10 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
         {
           if (sourceNode->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
           {
-            if (Archive_isArchiveFile(sourceNode->storageSpecifier.fileName))
+            if (Archive_isArchiveFile(sourceNode->storageSpecifier.archiveName))
             {
               // restore to temporary file
-              error = restoreFile(sourceNode->storageSpecifier.fileName,
+              error = restoreFile(sourceNode->storageSpecifier.archiveName,
                                   name,
                                   jobOptions,
                                   tmpFileName,
@@ -1291,14 +1292,14 @@ void Source_closeEntry(SourceHandle *sourceHandle)
   }
 }
 
-String Source_getName(SourceHandle *sourceHandle)
+ConstString Source_getName(const SourceHandle *sourceHandle)
 {
   assert(sourceHandle != NULL);
 
   return sourceHandle->name;
 }
 
-uint64 Source_getSize(SourceHandle *sourceHandle)
+uint64 Source_getSize(const SourceHandle *sourceHandle)
 {
   assert(sourceHandle != NULL);
 
