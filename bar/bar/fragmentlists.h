@@ -127,7 +127,7 @@ void FragmentList_done(FragmentList *fragmentList);
 \***********************************************************************/
 
 void FragmentList_initNode(FragmentNode *fragmentNode,
-                           const String name,
+                           ConstString  name,
                            uint64       size,
                            const void   *userData,
                            uint         userDataSize
@@ -158,11 +158,11 @@ void FragmentList_doneNode(FragmentNode *fragmentNode);
 * Notes  :
 \***********************************************************************/
 
-FragmentNode *FragmentList_add(FragmentList   *fragmentList,
-                               const String   name,
-                               uint64         size,
-                               const void     *userData,
-                               uint           userDataSize
+FragmentNode *FragmentList_add(FragmentList *fragmentList,
+                               ConstString  name,
+                               uint64       size,
+                               const void   *userData,
+                               uint         userDataSize
                               );
 
 /***********************************************************************\
@@ -187,7 +187,7 @@ void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode
 * Notes  : -
 \***********************************************************************/
 
-FragmentNode *FragmentList_find(FragmentList *fragmentList, const String name);
+FragmentNode *FragmentList_find(FragmentList *fragmentList, ConstString name);
 
 /***********************************************************************\
 * Name   : FragmentList_clearEntry
