@@ -1044,7 +1044,7 @@ bool Misc_findCommandInPath(String     command,
   bool            foundFlag;
   const char      *path;
   StringTokenizer stringTokenizer;
-  String          token;
+  ConstString     token;
 
   assert(command != NULL);
   assert(name != NULL);
@@ -1079,7 +1079,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
   Errors          error;
   String          commandLine;
   StringTokenizer stringTokenizer;
-  String          token;
+  ConstString     token;
   String          command;
   String          name;
   StringList      argumentList;
@@ -1184,7 +1184,7 @@ Errors Misc_executeScript(const char        *scriptTemplate,
   String          script;
   String          command;
   StringTokenizer stringTokenizer;
-  String          token;
+  ConstString     token;
   String          tmpFileName;
   const char      *path;
   String          fileName;

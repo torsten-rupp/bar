@@ -48,6 +48,7 @@ extern const struct __String* STRING_EMPTY;
 
 // string
 typedef struct __String* String;
+typedef struct __String const* ConstString;
 
 #ifndef SIZEOF_ULONG
   #define SIZEOF_ULONG 4
@@ -162,7 +163,7 @@ typedef struct
     } \
     while (0)
 
-  void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, const String string);
+  void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string);
   #define STRING_CHECK_VALID(string) \
     do \
     { \
@@ -267,9 +268,9 @@ String __String_newBuffer(const char *__fileName__, ulong __lineNb__, const void
 \***********************************************************************/
 
 #ifdef NDEBUG
-String String_duplicate(const String fromString);
+String String_duplicate(ConstString fromString);
 #else /* not NDEBUG */
-String __String_duplicate(const char *__fileName__, ulong __lineNb__, const String fromString);
+String __String_duplicate(const char *__fileName__, ulong __lineNb__, ConstString fromString);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -284,9 +285,9 @@ String __String_duplicate(const char *__fileName__, ulong __lineNb__, const Stri
 \***********************************************************************/
 
 #ifdef NDEBUG
-String String_copy(String *string, const String fromString);
+String String_copy(String *string, ConstString fromString);
 #else /* not NDEBUG */
-String __String_copy(const char *__fileName__, ulong __lineNb__, String *string, const String fromString);
+String __String_copy(const char *__fileName__, ulong __lineNb__, String *string, ConstString fromString);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -341,7 +342,7 @@ String String_erase(String string);
 * Notes  : -
 \***********************************************************************/
 
-String String_set(String string, const String sourceString);
+String String_set(String string, ConstString sourceString);
 String String_setCString(String string, const char *s);
 String String_setChar(String string, char ch);
 String String_setBuffer(String string, const void *buffer, ulong bufferLength);
@@ -359,9 +360,9 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 * Notes  : -
 \***********************************************************************/
 
-String String_sub(String string, const String fromString, ulong index, long length);
-char *String_subCString(char *s, const String fromString, ulong index, long length);
-char *String_subBuffer(char *buffer, const String fromString, ulong index, long length);
+String String_sub(String string, ConstString fromString, ulong index, long length);
+char *String_subCString(char *s, ConstString fromString, ulong index, long length);
+char *String_subBuffer(char *buffer, ConstString fromString, ulong index, long length);
 
 /***********************************************************************\
 * Name   : String_append, String_appendSub, String_appendCString,
@@ -377,8 +378,8 @@ char *String_subBuffer(char *buffer, const String fromString, ulong index, long 
 * Notes  : -
 \***********************************************************************/
 
-String String_append(String string, String appendString);
-String String_appendSub(String string, const String fromString, ulong fromIndex, long fromLength);
+String String_append(String string, ConstString appendString);
+String String_appendSub(String string, ConstString fromString, ulong fromIndex, long fromLength);
 String String_appendCString(String string, const char *s);
 String String_appendChar(String string, char ch);
 String String_appendBuffer(String string, const char *buffer, ulong bufferLength);
@@ -400,8 +401,8 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
 * Notes  : -
 \***********************************************************************/
 
-String String_insert(String string, ulong index, const String insertString);
-String String_insertSub(String string, ulong index, const String fromString, ulong fromIndex, long fromLength);
+String String_insert(String string, ulong index, ConstString insertString);
+String String_insertSub(String string, ulong index, ConstString fromString, ulong fromIndex, long fromLength);
 String String_insertCString(String string, ulong index, const char *s);
 String String_insertChar(String string, ulong index, char ch);
 String String_insertBuffer(String string, ulong index, const char *buffer, ulong bufferLength);
@@ -436,7 +437,7 @@ String String_remove(String string, ulong index, ulong length);
 * Notes  : -
 \***********************************************************************/
 
-String String_replace(String string, ulong index, ulong length, const String insertString);
+String String_replace(String string, ulong index, ulong length, ConstString insertString);
 String String_replaceCString(String string, ulong index, ulong length, const char *s);
 String String_replaceChar(String string, ulong index, ulong length, char ch);
 String String_replaceBuffer(String string, ulong index, ulong length, const char *buffer, ulong bufferLength);
@@ -453,7 +454,7 @@ String String_replaceBuffer(String string, ulong index, ulong length, const char
 * Notes  : -
 \***********************************************************************/
 
-String String_replaceAll(String string, ulong index, const String fromString, const String toString);
+String String_replaceAll(String string, ulong index, ConstString fromString, ConstString toString);
 String String_replaceAllCString(String string, ulong index, const char *from, const char *to);
 String String_replaceAllChar(String string, ulong index, char fromCh, char toCh);
 
@@ -469,7 +470,7 @@ String String_replaceAllChar(String string, ulong index, char fromCh, char toCh)
 * Notes  : -
 \***********************************************************************/
 
-String String_map(String string, ulong index, const String from[], const String to[], uint count);
+String String_map(String string, ulong index, ConstString from[], ConstString to[], uint count);
 String String_mapCString(String string, ulong index, const char* from[], const char* to[], uint count);
 String String_mapChar(String string, ulong index, const char from[], const char to[], uint count);
 
@@ -488,7 +489,7 @@ String String_mapChar(String string, ulong index, const char from[], const char 
 * Notes  : -
 \***********************************************************************/
 
-String String_join(String string, const String joinString, char joinChar);
+String String_join(String string, ConstString joinString, char joinChar);
 String String_joinCString(String string, const char *s, char joinChar);
 String String_joinChar(String string, char ch, char joinChar);
 String String_joinBuffer(String string, const char *buffer, ulong bufferLength, char joinChar);
@@ -502,9 +503,9 @@ String String_joinBuffer(String string, const char *buffer, ulong bufferLength, 
 * Notes  : -
 \***********************************************************************/
 
-INLINE ulong String_length(const String string);
+INLINE ulong String_length(ConstString string);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENATION__)
-INLINE ulong String_length(const String string)
+INLINE ulong String_length(ConstString string)
 {
   STRING_CHECK_VALID(string);
 
@@ -521,9 +522,9 @@ INLINE ulong String_length(const String string)
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool String_isEmpty(const String string);
+INLINE bool String_isEmpty(ConstString string);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENATION__)
-INLINE bool String_isEmpty(const String string)
+INLINE bool String_isEmpty(ConstString string)
 {
   STRING_CHECK_VALID(string);
 
@@ -542,9 +543,9 @@ INLINE bool String_isEmpty(const String string)
 * Notes  : -
 \***********************************************************************/
 
-INLINE char String_index(const String string, ulong index);
+INLINE char String_index(ConstString string, ulong index);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENATION__)
-INLINE char String_index(const String string, ulong index)
+INLINE char String_index(ConstString string, ulong index)
 {
   char ch;
 
@@ -583,9 +584,9 @@ INLINE char String_index(const String string, ulong index)
 * Notes  : -
 \***********************************************************************/
 
-INLINE const char *String_cString(const String string);
+INLINE const char *String_cString(const ConstString string);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENATION__)
-INLINE const char *String_cString(const String string)
+INLINE const char *String_cString(const ConstString string)
 {
   STRING_CHECK_VALID(string);
 
@@ -606,8 +607,8 @@ INLINE const char *String_cString(const String string)
 * Notes  : -
 \***********************************************************************/
 
-int String_compare(const String          string1,
-                   const String          string2,
+int String_compare(ConstString           string1,
+                   ConstString           string2,
                    StringCompareFunction stringCompareFunction,
                    void                  *stringCompareUserData
                   );
@@ -626,15 +627,15 @@ int String_compare(const String          string1,
 * Notes  : -
 \***********************************************************************/
 
-bool String_equals(const String string1, const String string2);
-bool String_equalsCString(const String string, const char *s);
-bool String_equalsChar(const String string, char ch);
-bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLength);
+bool String_equals(ConstString string1, ConstString string2);
+bool String_equalsCString(ConstString string, const char *s);
+bool String_equalsChar(ConstString string, char ch);
+bool String_equalsBuffer(ConstString string, const char *buffer, ulong bufferLength);
 
-bool String_equalsIgnoreCase(const String string1, const String string2);
-bool String_equalsIgnoreCaseCString(const String string, const char *s);
-bool String_equalsIgnoreCaseChar(const String string, char ch);
-bool String_equalsIgnoreCaseBuffer(const String string, const char *buffer, ulong bufferLength);
+bool String_equalsIgnoreCase(ConstString string1, ConstString string2);
+bool String_equalsIgnoreCaseCString(ConstString string, const char *s);
+bool String_equalsIgnoreCaseChar(ConstString string, char ch);
+bool String_equalsIgnoreCaseBuffer(ConstString string, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
 * Name   : String_subEquals, String_subEqualsCString,
@@ -652,15 +653,15 @@ bool String_equalsIgnoreCaseBuffer(const String string, const char *buffer, ulon
 * Notes  : -
 \***********************************************************************/
 
-bool String_subEquals(const String string1, const String string2, long index, ulong length);
-bool String_subEqualsCString(const String string, const char *s, long index, ulong length);
-bool String_subEqualsChar(const String string, char ch, long index);
-bool String_subEqualsBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length);
+bool String_subEquals(ConstString string1, ConstString string2, long index, ulong length);
+bool String_subEqualsCString(ConstString string, const char *s, long index, ulong length);
+bool String_subEqualsChar(ConstString string, char ch, long index);
+bool String_subEqualsBuffer(ConstString string, const char *buffer, ulong bufferLength, long index, ulong length);
 
-bool String_subEqualsIgnoreCase(const String string1, const String string2, long index, ulong length);
-bool String_subEqualsIgnoreCaseCString(const String string, const char *s, long index, ulong length);
-bool String_subEqualsIgnoreCaseChar(const String string, char ch, long index);
-bool String_subEqualsIgnoreCaseBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length);
+bool String_subEqualsIgnoreCase(ConstString string1, ConstString string2, long index, ulong length);
+bool String_subEqualsIgnoreCaseCString(ConstString string, const char *s, long index, ulong length);
+bool String_subEqualsIgnoreCaseChar(ConstString string, char ch, long index);
+bool String_subEqualsIgnoreCaseBuffer(ConstString string, const char *buffer, ulong bufferLength, long index, ulong length);
 
 /***********************************************************************\
 * Name   : String_startsWith, String_startsWithCString,
@@ -676,10 +677,10 @@ bool String_subEqualsIgnoreCaseBuffer(const String string, const char *buffer, u
 * Notes  : -
 \***********************************************************************/
 
-bool String_startsWith(const String string1, const String string2);
-bool String_startsWithCString(const String string, const char *s);
-bool String_startsWithChar(const String string, char ch);
-bool String_startsWithBuffer(const String string, const char *buffer, ulong bufferLength);
+bool String_startsWith(ConstString string1, ConstString string2);
+bool String_startsWithCString(ConstString string, const char *s);
+bool String_startsWithChar(ConstString string, char ch);
+bool String_startsWithBuffer(ConstString string, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
 * Name   : String_endsWith, String_endsWithCString,
@@ -695,10 +696,10 @@ bool String_startsWithBuffer(const String string, const char *buffer, ulong buff
 * Notes  : -
 \***********************************************************************/
 
-bool String_endsWith(const String string1, const String string2);
-bool String_endsWithCString(const String string, const char *s);
-bool String_endsWithChar(const String string, char ch);
-bool String_endsWithBuffer(const String string, const char *buffer, ulong bufferLength);
+bool String_endsWith(ConstString string1, ConstString string2);
+bool String_endsWithCString(ConstString string, const char *s);
+bool String_endsWithChar(ConstString string, char ch);
+bool String_endsWithBuffer(ConstString string, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
 * Name   : String_find, String_findCString, String_findChar,
@@ -713,12 +714,12 @@ bool String_endsWithBuffer(const String string, const char *buffer, ulong buffer
 * Notes  : -
 \***********************************************************************/
 
-long String_find(const String string, ulong index, const String findString);
-long String_findCString(const String string, ulong index, const char *s);
-long String_findChar(const String string, ulong index, char ch);
-long String_findLast(const String string, long index, const String findString);
-long String_findLastCString(const String string, long index, const char *s);
-long String_findLastChar(const String string, long index, char ch);
+long String_find(ConstString string, ulong index, ConstString findString);
+long String_findCString(ConstString string, ulong index, const char *s);
+long String_findChar(ConstString string, ulong index, char ch);
+long String_findLast(ConstString string, long index, ConstString findString);
+long String_findLastCString(ConstString string, long index, const char *s);
+long String_findLastChar(ConstString string, long index, char ch);
 
 /***********************************************************************\
 * Name   : String_iterate
@@ -880,7 +881,7 @@ String String_vformat(String string, const char *format, va_list arguments);
 \***********************************************************************/
 
 void String_initTokenizer(StringTokenizer *stringTokenizer,
-                          const String    string,
+                          ConstString     string,
                           ulong           index,
                           const char      *separatorChars,
                           const char      *stringQuotes,
@@ -905,7 +906,7 @@ void String_doneTokenizer(StringTokenizer *stringTokenizer);
 \***********************************************************************/
 
 bool String_getNextToken(StringTokenizer *stringTokenizer,
-                         String *const   token,
+                         ConstString     *token,
                          long            *tokenIndex
                         );
 
@@ -921,7 +922,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 * Notes  : for C-strings the max. length have to be specified with %<n>s
 \***********************************************************************/
 
-bool String_scan(const String string, ulong index, const char *format, ...);
+bool String_scan(ConstString string, ulong index, const char *format, ...);
 bool String_scanCString(const char *s, const char *format, ...);
 
 /***********************************************************************\
@@ -948,7 +949,7 @@ bool String_scanCString(const char *s, const char *format, ...);
 *            - if a value is NULL, skip value
 \***********************************************************************/
 
-bool String_parse(const String string, ulong index, const char *format, long *nextIndex, ...);
+bool String_parse(ConstString string, ulong index, const char *format, long *nextIndex, ...);
 bool String_parseCString(const char *s, const char *format, long *nextIndex, ...);
 
 /***********************************************************************\
@@ -966,8 +967,8 @@ bool String_parseCString(const char *s, const char *format, long *nextIndex, ...
 * Notes  : -
 \***********************************************************************/
 
-bool String_match(const String string, ulong index, const String pattern, long *nextIndex, String matchString, ...);
-bool String_matchCString(const String string, ulong index, const char *pattern, long *nextIndex, String matchString, ...);
+bool String_match(ConstString string, ulong index, ConstString pattern, long *nextIndex, String matchString, ...);
+bool String_matchCString(ConstString string, ulong index, const char *pattern, long *nextIndex, String matchString, ...);
 
 /***********************************************************************\
 * Name   : String_toInteger, String_toInteger64, String_toDouble,
@@ -991,11 +992,11 @@ bool String_matchCString(const String string, ulong index, const char *pattern, 
 * Notes  : -
 \***********************************************************************/
 
-int String_toInteger(const String convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
-int64 String_toInteger64(const String string, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
-double String_toDouble(const String convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
-bool String_toBoolean(const String convertString, ulong index, long *nextIndex, const char *trueStrings[], uint trueStringCount, const char *falseStrings[], uint falseStringCount);
-String String_toString(String string, const String convertString, ulong index, long *nextIndex, const char *stringQuotes);
+int String_toInteger(ConstString convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
+int64 String_toInteger64(ConstString string, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
+double String_toDouble(ConstString convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
+bool String_toBoolean(ConstString convertString, ulong index, long *nextIndex, const char *trueStrings[], uint trueStringCount, const char *falseStrings[], uint falseStringCount);
+String String_toString(String string, ConstString convertString, ulong index, long *nextIndex, const char *stringQuotes);
 
 /***********************************************************************\
 * Name   : String_toCString
@@ -1006,7 +1007,7 @@ String String_toString(String string, const String convertString, ulong index, l
 * Notes  : memory have to be deallocated by free()!
 \***********************************************************************/
 
-char* String_toCString(const String string);
+char* String_toCString(ConstString string);
 
 #ifndef NDEBUG
 

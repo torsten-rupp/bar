@@ -1598,7 +1598,7 @@ LOCAL String getIndexStateSetString(String string, IndexStateSet indexStateSet)
 LOCAL String getREGEXPString(String string, const char *columnName, const String patternText)
 {
   StringTokenizer stringTokenizer;
-  String          token;
+  ConstString     token;
   ulong           z;
   char            ch;
 

@@ -111,7 +111,7 @@ typedef struct
 \***********************************************************************/
 
 Errors Device_open(DeviceHandle *deviceHandle,
-                   const String deviceName,
+                   ConstString  deviceName,
                    DeviceModes  deviceMode
                   );
 
@@ -236,7 +236,7 @@ bool Device_getUsedBlocks(DeviceHandle *deviceHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Device_mount(const String deviceName);
+Errors Device_mount(ConstString deviceName);
 
 /***********************************************************************\
 * Name   : Device_umount
@@ -247,7 +247,7 @@ Errors Device_mount(const String deviceName);
 * Notes  : -
 \***********************************************************************/
 
-Errors Device_umount(const String deviceName);
+Errors Device_umount(ConstString deviceName);
 
 /***********************************************************************\
 * Name   : Device_isMounted
@@ -258,7 +258,7 @@ Errors Device_umount(const String deviceName);
 * Notes  : -
 \***********************************************************************/
 
-bool Device_isMounted(const String deviceName);
+bool Device_isMounted(ConstString deviceName);
 
 /*---------------------------------------------------------------------*/
 
@@ -321,8 +321,8 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
-                            const String deviceName
+Errors Device_getDeviceInfo(DeviceInfo  *deviceInfo,
+                            ConstString deviceName
                            );
 
 #ifdef __cplusplus

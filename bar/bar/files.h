@@ -320,7 +320,7 @@ String File_newFileName(void);
 * Notes  : -
 \***********************************************************************/
 
-String File_duplicateFileName(const String fromFileName);
+String File_duplicateFileName(ConstString fromFileName);
 
 /***********************************************************************\
 * Name   : File_deleteFileName
@@ -354,7 +354,7 @@ String File_clearFileName(String fileName);
 * Notes  : -
 \***********************************************************************/
 
-String File_setFileName(String fileName, const String name);
+String File_setFileName(String fileName, ConstString name);
 String File_setFileNameCString(String fileName, const char *name);
 String File_setFileNameChar(String fileName, char ch);
 
@@ -368,7 +368,7 @@ String File_setFileNameChar(String fileName, char ch);
 * Notes  : -
 \***********************************************************************/
 
-String File_appendFileName(String fileName, const String name);
+String File_appendFileName(String fileName, ConstString name);
 String File_appendFileNameCString(String fileName, const char *name);
 String File_appendFileNameChar(String fileName, char ch);
 String File_appendFileNameBuffer(String fileName, const char *buffer, ulong bufferLength);
@@ -383,7 +383,7 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
 * Notes  : -
 \***********************************************************************/
 
-String File_getFilePathName(String path, const String fileName);
+String File_getFilePathName(String path, ConstString fileName);
 String File_getFilePathNameCString(String path, const char *fileName);
 
 /***********************************************************************\
@@ -396,7 +396,7 @@ String File_getFilePathNameCString(String path, const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-String File_getFileBaseName(String baseName, const String fileName);
+String File_getFileBaseName(String baseName, ConstString fileName);
 String File_getFileBaseNameCString(String baseName, const char *fileName);
 
 /***********************************************************************\
@@ -409,7 +409,7 @@ String File_getFileBaseNameCString(String baseName, const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-void File_splitFileName(const String fileName, String *pathName, String *baseName);
+void File_splitFileName(ConstString fileName, String *pathName, String *baseName);
 
 /***********************************************************************\
 * Name   : File_initSplitFileName, File_doneSplitFileName
@@ -421,7 +421,7 @@ void File_splitFileName(const String fileName, String *pathName, String *baseNam
 * Notes  : -
 \***********************************************************************/
 
-void File_initSplitFileName(StringTokenizer *stringTokenizer, const String fileName);
+void File_initSplitFileName(StringTokenizer *stringTokenizer, ConstString fileName);
 void File_doneSplitFileName(StringTokenizer *stringTokenizer);
 
 /***********************************************************************\
@@ -433,7 +433,7 @@ void File_doneSplitFileName(StringTokenizer *stringTokenizer);
 * Notes  : -
 \***********************************************************************/
 
-bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const name);
+bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, ConstString *name);
 
 /*---------------------------------------------------------------------*/
 
@@ -460,26 +460,26 @@ const char *File_getSystemTmpDirectory(void);
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors File_getTmpFile(FileHandle   *fileHandle,
-                         const String pattern,
-                         const String directory
+  Errors File_getTmpFile(FileHandle  *fileHandle,
+                         ConstString pattern,
+                         ConstString directory
                         );
-  Errors File_getTmpFileCString(FileHandle   *fileHandle,
-                                const char   *pattern,
-                                const String directory
+  Errors File_getTmpFileCString(FileHandle  *fileHandle,
+                                const char  *pattern,
+                                ConstString directory
                                );
 #else /* not NDEBUG */
-  Errors __File_getTmpFile(const char   *__fileName__,
-                           uint         __lineNb__,
-                           FileHandle   *fileHandle,
-                           const String pattern,
-                           const String directory
+  Errors __File_getTmpFile(const char  *__fileName__,
+                           uint        __lineNb__,
+                           FileHandle  *fileHandle,
+                           ConstString pattern,
+                           ConstString directory
                           );
-  Errors __File_getTmpFileCString(const char   *__fileName__,
-                                  uint         __lineNb__,
-                                  FileHandle   *fileHandle,
-                                  const char   *pattern,
-                                  const String directory
+  Errors __File_getTmpFileCString(const char  *__fileName__,
+                                  uint        __lineNb__,
+                                  FileHandle  *fileHandle,
+                                  const char  *pattern,
+                                  ConstString directory
                                  );
 #endif /* NDEBUG */
 
@@ -494,8 +494,8 @@ const char *File_getSystemTmpDirectory(void);
 * Notes  : -
 \***********************************************************************/
 
-Errors File_getTmpFileName(String fileName, const String pattern, const String directory);
-Errors File_getTmpFileNameCString(String fileName, const char *pattern, const String directory);
+Errors File_getTmpFileName(String fileName, ConstString pattern, ConstString directory);
+Errors File_getTmpFileNameCString(String fileName, const char *pattern, ConstString directory);
 
 /***********************************************************************\
 * Name   : File_getTmpDirectoryName, File_getTmpDirectoryNameCString
@@ -509,8 +509,8 @@ Errors File_getTmpFileNameCString(String fileName, const char *pattern, const St
 * Notes  : -
 \***********************************************************************/
 
-Errors File_getTmpDirectoryName(String directoryName, const String pattern, const String directory);
-Errors File_getTmpDirectoryNameCString(String directoryName, const char *pattern, const String directory);
+Errors File_getTmpDirectoryName(String directoryName, ConstString pattern, ConstString directory);
+Errors File_getTmpDirectoryNameCString(String directoryName, const char *pattern, ConstString directory);
 
 /*---------------------------------------------------------------------*/
 
@@ -526,20 +526,20 @@ Errors File_getTmpDirectoryNameCString(String directoryName, const char *pattern
 \***********************************************************************/
 
 #ifdef NDEBUG
-Errors File_open(FileHandle    *fileHandle,
-                 const String  fileName,
-                 FileModes     fileMode
+Errors File_open(FileHandle   *fileHandle,
+                 ConstString  fileName,
+                 FileModes    fileMode
                 );
 Errors File_openCString(FileHandle *fileHandle,
                         const char *fileName,
                         FileModes  fileMode
                        );
 #else /* not NDEBUG */
-Errors __File_open(const char   *__fileName__,
-                   uint         __lineNb__,
+Errors __File_open(const char  *__fileName__,
+                   uint        __lineNb__,
                    FileHandle   *fileHandle,
-                   const String fileName,
-                   FileModes    fileMode
+                   ConstString fileName,
+                   FileModes   fileMode
                   );
 Errors __File_openCString(const char *__fileName__,
                           uint       __lineNb__,
@@ -661,8 +661,8 @@ Errors File_readLine(FileHandle *fileHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_writeLine(FileHandle   *fileHandle,
-                      const String line
+Errors File_writeLine(FileHandle  *fileHandle,
+                      ConstString line
                      );
 
 /***********************************************************************\
@@ -738,9 +738,9 @@ bool File_getLine(FileHandle *fileHandle,
 * Notes  : -
 \***********************************************************************/
 
-void File_ungetLine(FileHandle   *fileHandle,
-                    const String line,
-                    uint         *lineNb
+void File_ungetLine(FileHandle  *fileHandle,
+                    ConstString line,
+                    uint        *lineNb
                    );
 
 /***********************************************************************\
@@ -823,7 +823,7 @@ Errors File_dropCaches(FileHandle *fileHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_touch(const String fileName);
+Errors File_touch(ConstString fileName);
 
 /*---------------------------------------------------------------------*/
 
@@ -838,7 +838,7 @@ Errors File_touch(const String fileName);
 \***********************************************************************/
 
 Errors File_openDirectoryList(DirectoryListHandle *directoryListHandle,
-                              const String        pathName
+                              ConstString         pathName
                              );
 Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
                                      const char          *pathName
@@ -939,7 +939,7 @@ const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId);
 * Notes  : -
 \***********************************************************************/
 
-FileTypes File_getType(const String fileName);
+FileTypes File_getType(ConstString fileName);
 
 /***********************************************************************\
 * Name   : File_getData
@@ -951,9 +951,9 @@ FileTypes File_getType(const String fileName);
 * Notes  : data must be freed with free() after usage!
 \***********************************************************************/
 
-Errors File_getData(const String fileName,
-                    void         **data,
-                    ulong        *size
+Errors File_getData(ConstString fileName,
+                    void        **data,
+                    ulong       *size
                    );
 Errors File_getDataCString(const char *fileName,
                            void       **data,
@@ -969,7 +969,7 @@ Errors File_getDataCString(const char *fileName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_delete(const String fileName, bool recursiveFlag);
+Errors File_delete(ConstString fileName, bool recursiveFlag);
 Errors File_deleteCString(const char *fileName, bool recursiveFlag);
 
 /***********************************************************************\
@@ -984,9 +984,9 @@ Errors File_deleteCString(const char *fileName, bool recursiveFlag);
 *          copied
 \***********************************************************************/
 
-Errors File_rename(const String oldFileName,
-                   const String newFileName,
-                   const String newBackupFileName
+Errors File_rename(ConstString oldFileName,
+                   ConstString newFileName,
+                   ConstString newBackupFileName
                   );
 Errors File_renameCString(const char *oldFileName,
                           const char *newFileName,
@@ -1003,8 +1003,8 @@ Errors File_renameCString(const char *oldFileName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_copy(const String sourceFileName,
-                 const String destinationFileName
+Errors File_copy(ConstString sourceFileName,
+                 ConstString destinationFileName
                 );
 Errors File_copyCString(const char *sourceFileName,
                         const char *destinationFileName
@@ -1019,7 +1019,7 @@ Errors File_copyCString(const char *sourceFileName,
 * Notes  : -
 \***********************************************************************/
 
-bool File_exists(const String fileName);
+bool File_exists(ConstString fileName);
 bool File_existsCString(const char *fileName);
 
 /***********************************************************************\
@@ -1031,7 +1031,7 @@ bool File_existsCString(const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-bool File_isFile(const String fileName);
+bool File_isFile(ConstString fileName);
 bool File_isFileCString(const char *fileName);
 
 /***********************************************************************\
@@ -1043,7 +1043,7 @@ bool File_isFileCString(const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-bool File_isDirectory(const String fileName);
+bool File_isDirectory(ConstString fileName);
 bool File_isDirectoryCString(const char *fileName);
 
 /***********************************************************************\
@@ -1055,7 +1055,7 @@ bool File_isDirectoryCString(const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-bool File_isDevice(const String fileName);
+bool File_isDevice(ConstString fileName);
 bool File_isDeviceCString(const char *fileName);
 
 /***********************************************************************\
@@ -1068,7 +1068,7 @@ bool File_isDeviceCString(const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-bool File_isReadable(const String fileName);
+bool File_isReadable(ConstString fileName);
 bool File_isReadableCString(const char *fileName);
 
 /***********************************************************************\
@@ -1081,7 +1081,7 @@ bool File_isReadableCString(const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-bool File_isWriteable(const String fileName);
+bool File_isWriteable(ConstString fileName);
 bool File_isWriteableCString(const char *fileName);
 
 /***********************************************************************\
@@ -1094,8 +1094,8 @@ bool File_isWriteableCString(const char *fileName);
 * Notes  : fileInfo must _not_ be initialized
 \***********************************************************************/
 
-Errors File_getFileInfo(const String fileName,
-                        FileInfo     *fileInfo
+Errors File_getFileInfo(ConstString fileName,
+                        FileInfo    *fileInfo
                        );
 
 /***********************************************************************\
@@ -1109,7 +1109,7 @@ Errors File_getFileInfo(const String fileName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_setFileInfo(const String   fileName,
+Errors File_setFileInfo(ConstString    fileName,
                         const FileInfo *fileInfo
                        );
 
@@ -1219,7 +1219,7 @@ void __File_doneExtendedAttributes(const char                *__fileName__,
 \***********************************************************************/
 
 void File_addExtendedAttribute(FileExtendedAttributeList *fileExtendedAttributeList,
-                               const String              name,
+                               ConstString               name,
                                const void                *data,
                                uint                      dataLength
                               );
@@ -1240,7 +1240,7 @@ void File_addExtendedAttributeCString(FileExtendedAttributeList *fileExtendedAtt
 \***********************************************************************/
 
 Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList,
-                                  const String              fileName
+                                  ConstString               fileName
                                  );
 
 /***********************************************************************\
@@ -1253,7 +1253,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
 * Notes  : -
 \***********************************************************************/
 
-Errors File_setExtendedAttributes(const String                    fileName,
+Errors File_setExtendedAttributes(ConstString                     fileName,
                                   const FileExtendedAttributeList *fileExtendedAttributeList
                                  );
 
@@ -1266,7 +1266,7 @@ Errors File_setExtendedAttributes(const String                    fileName,
 * Notes  : -
 \***********************************************************************/
 
-uint64 File_getFileTimeModified(const String fileName);
+uint64 File_getFileTimeModified(ConstString fileName);
 
 /***********************************************************************\
 * Name   : File_setPermission
@@ -1278,7 +1278,7 @@ uint64 File_getFileTimeModified(const String fileName);
 * Notes  : -
 \***********************************************************************/
 
-Errors File_setPermission(const String   fileName,
+Errors File_setPermission(ConstString    fileName,
                           FilePermission permission
                          );
 
@@ -1293,9 +1293,9 @@ Errors File_setPermission(const String   fileName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_setOwner(const String fileName,
-                     uint32       userId,
-                     uint32       groupId
+Errors File_setOwner(ConstString fileName,
+                     uint32      userId,
+                     uint32      groupId
                     );
 
 /***********************************************************************\
@@ -1310,7 +1310,7 @@ Errors File_setOwner(const String fileName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_makeDirectory(const String   pathName,
+Errors File_makeDirectory(ConstString    pathName,
                           uint32         userId,
                           uint32         groupId,
                           FilePermission permission
@@ -1330,8 +1330,8 @@ Errors File_makeDirectoryCString(const char     *pathName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_readLink(String       fileName,
-                     const String linkName
+Errors File_readLink(String      fileName,
+                     ConstString linkName
                     );
 
 /***********************************************************************\
@@ -1344,8 +1344,8 @@ Errors File_readLink(String       fileName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_makeLink(const String linkName,
-                     const String fileName
+Errors File_makeLink(ConstString linkName,
+                     ConstString fileName
                     );
 
 /***********************************************************************\
@@ -1358,8 +1358,8 @@ Errors File_makeLink(const String linkName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_makeHardLink(const String linkName,
-                         const String fileName
+Errors File_makeHardLink(ConstString linkName,
+                         ConstString fileName
                         );
 
 /***********************************************************************\
@@ -1374,7 +1374,7 @@ Errors File_makeHardLink(const String linkName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_makeSpecial(const String     name,
+Errors File_makeSpecial(ConstString      name,
                         FileSpecialTypes type,
                         ulong            major,
                         ulong            minor
@@ -1390,7 +1390,7 @@ Errors File_makeSpecial(const String     name,
 \***********************************************************************/
 
 Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
-                              const          String pathName
+                              ConstString    pathName
                              );
 
 

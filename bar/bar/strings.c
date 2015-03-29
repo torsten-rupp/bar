@@ -1869,12 +1869,12 @@ LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool matchString(const String  string,
-                       ulong         index,
-                       const char    *pattern,
-                       long          *nextIndex,
-                       String        matchedString,
-                       va_list       matchedSubStrings
+LOCAL bool matchString(ConstString  string,
+                       ulong        index,
+                       const char   *pattern,
+                       long         *nextIndex,
+                       String       matchedString,
+                       va_list      matchedSubStrings
                       )
 {
   regex_t    regex;
@@ -2113,9 +2113,9 @@ String __String_newBuffer(const char *__fileName__, ulong __lineNb__, const void
 }
 
 #ifdef NDEBUG
-String String_duplicate(const String fromString)
+String String_duplicate(ConstString fromString)
 #else /* not NDEBUG */
-String __String_duplicate(const char *__fileName__, ulong __lineNb__, const String fromString)
+String __String_duplicate(const char *__fileName__, ulong __lineNb__, ConstString fromString)
 #endif /* NDEBUG */
 {
   struct __String *string;
@@ -2152,9 +2152,9 @@ String __String_duplicate(const char *__fileName__, ulong __lineNb__, const Stri
 }
 
 #ifdef NDEBUG
-String String_copy(String *string, const String fromString)
+String String_copy(String *string, ConstString fromString)
 #else /* not NDEBUG */
-String __String_copy(const char *__fileName__, ulong __lineNb__, String *string, const String fromString)
+String __String_copy(const char *__fileName__, ulong __lineNb__, String *string, ConstString fromString)
 #endif /* NDEBUG */
 {
   STRING_CHECK_VALID(*string);
@@ -2332,7 +2332,7 @@ String String_erase(String string)
   return string;
 }
 
-String String_set(String string, const String sourceString)
+String String_set(String string, ConstString sourceString)
 {
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
@@ -2427,7 +2427,7 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength)
   return string;
 }
 
-String String_sub(String string, const String fromString, ulong fromIndex, long fromLength)
+String String_sub(String string, ConstString fromString, ulong fromIndex, long fromLength)
 {
   ulong n;
 
@@ -2471,7 +2471,7 @@ String String_sub(String string, const String fromString, ulong fromIndex, long 
   return string;
 }
 
-char *String_subCString(char *s, const String fromString, ulong fromIndex, long fromLength)
+char *String_subCString(char *s, ConstString fromString, ulong fromIndex, long fromLength)
 {
   ulong n;
 
@@ -2505,7 +2505,7 @@ char *String_subCString(char *s, const String fromString, ulong fromIndex, long 
   return s;
 }
 
-char *String_subBuffer(char *buffer, const String fromString, ulong fromIndex, long fromLength)
+char *String_subBuffer(char *buffer, ConstString fromString, ulong fromIndex, long fromLength)
 {
   ulong n;
 
@@ -2539,7 +2539,7 @@ char *String_subBuffer(char *buffer, const String fromString, ulong fromIndex, l
   return buffer;
 }
 
-String String_append(String string, const String appendString)
+String String_append(String string, ConstString appendString)
 {
   ulong n;
 
@@ -2565,7 +2565,7 @@ String String_append(String string, const String appendString)
   return string;
 }
 
-String String_appendSub(String string, const String fromString, ulong fromIndex, long fromLength)
+String String_appendSub(String string, ConstString fromString, ulong fromIndex, long fromLength)
 {
   ulong n;
 
@@ -2668,7 +2668,7 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
   return string;
 }
 
-String String_insert(String string, ulong index, const String insertString)
+String String_insert(String string, ulong index, ConstString insertString)
 {
   ulong n;
 
@@ -2707,7 +2707,7 @@ String String_insert(String string, ulong index, const String insertString)
   return string;
 }
 
-String String_insertSub(String string, ulong index, const String fromString, ulong fromIndex, long fromLength)
+String String_insertSub(String string, ulong index, ConstString fromString, ulong fromIndex, long fromLength)
 {
   ulong n;
 
@@ -2865,7 +2865,7 @@ String String_remove(String string, ulong index, ulong length)
   return string;
 }
 
-String String_replace(String string, ulong index, ulong length, const String insertString)
+String String_replace(String string, ulong index, ulong length, ConstString insertString)
 {
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
@@ -2910,7 +2910,7 @@ String String_replaceBuffer(String string, ulong index, ulong length, const char
   return string;
 }
 
-String String_replaceAll(String string, ulong index, const String fromString, const String toString)
+String String_replaceAll(String string, ulong index, ConstString fromString, ConstString toString)
 {
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
@@ -2934,7 +2934,7 @@ String String_replaceAllChar(String string, ulong index, char fromCh, char toCh)
   return String_mapChar(string,index,&fromCh,&toCh,1);
 }
 
-String String_map(String string, ulong index, const String from[], const String to[], uint count)
+String String_map(String string, ulong index, ConstString from[], ConstString to[], uint count)
 {
   uint  z;
   ulong l0,l1;
@@ -3024,7 +3024,7 @@ String String_mapChar(String string, ulong index, const char from[], const char 
   return string;
 }
 
-String String_join(String string, const String joinString, char joinChar)
+String String_join(String string, ConstString joinString, char joinChar)
 {
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
@@ -3069,8 +3069,8 @@ String String_joinBuffer(String string, const char *buffer, ulong bufferLength, 
   return string;
 }
 
-int String_compare(const String          string1,
-                   const String          string2,
+int String_compare(ConstString           string1,
+                   ConstString           string2,
                    StringCompareFunction stringCompareFunction,
                    void                  *stringCompareUserData
                   )
@@ -3114,7 +3114,7 @@ int String_compare(const String          string1,
   return result;
 }
 
-bool String_equals(const String string1, const String string2)
+bool String_equals(ConstString string1, ConstString string2)
 {
   bool equalFlag;
 
@@ -3133,7 +3133,7 @@ bool String_equals(const String string1, const String string2)
   return equalFlag;
 }
 
-bool String_equalsCString(const String string, const char *s)
+bool String_equalsCString(ConstString string, const char *s)
 {
   bool equalFlag;
 
@@ -3160,7 +3160,7 @@ bool String_equalsCString(const String string, const char *s)
   return equalFlag;
 }
 
-bool String_equalsChar(const String string, char ch)
+bool String_equalsChar(ConstString string, char ch)
 {
   bool equalFlag;
 
@@ -3180,7 +3180,7 @@ bool String_equalsChar(const String string, char ch)
   return equalFlag;
 }
 
-bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLength)
+bool String_equalsBuffer(ConstString string, const char *buffer, ulong bufferLength)
 {
   bool  equalFlag;
   ulong i;
@@ -3215,7 +3215,7 @@ bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLe
   return equalFlag;
 }
 
-bool String_equalsIgnoreCase(const String string1, const String string2)
+bool String_equalsIgnoreCase(ConstString string1, ConstString string2)
 {
   bool equalFlag;
 
@@ -3234,7 +3234,7 @@ bool String_equalsIgnoreCase(const String string1, const String string2)
   return equalFlag;
 }
 
-bool String_equalsIgnoreCaseCString(const String string, const char *s)
+bool String_equalsIgnoreCaseCString(ConstString string, const char *s)
 {
   bool equalFlag;
 
@@ -3261,7 +3261,7 @@ bool String_equalsIgnoreCaseCString(const String string, const char *s)
   return equalFlag;
 }
 
-bool String_equalsIgnoreCaseChar(const String string, char ch)
+bool String_equalsIgnoreCaseChar(ConstString string, char ch)
 {
   bool equalFlag;
 
@@ -3281,7 +3281,7 @@ bool String_equalsIgnoreCaseChar(const String string, char ch)
   return equalFlag;
 }
 
-bool String_equalsIgnoreCaseBuffer(const String string, const char *buffer, ulong bufferLength)
+bool String_equalsIgnoreCaseBuffer(ConstString string, const char *buffer, ulong bufferLength)
 {
   bool  equalFlag;
   ulong i;
@@ -3316,7 +3316,7 @@ bool String_equalsIgnoreCaseBuffer(const String string, const char *buffer, ulon
   return equalFlag;
 }
 
-bool String_subEquals(const String string1, const String string2, long index, ulong length)
+bool String_subEquals(ConstString string1, ConstString string2, long index, ulong length)
 {
   bool  equalFlag;
 
@@ -3338,7 +3338,7 @@ bool String_subEquals(const String string1, const String string2, long index, ul
   return equalFlag;
 }
 
-bool String_subEqualsCString(const String string, const char *s, long index, ulong length)
+bool String_subEqualsCString(ConstString string, const char *s, long index, ulong length)
 {
   bool equalFlag;
 
@@ -3365,7 +3365,7 @@ bool String_subEqualsCString(const String string, const char *s, long index, ulo
   return equalFlag;
 }
 
-bool String_subEqualsChar(const String string, char ch, long index)
+bool String_subEqualsChar(ConstString string, char ch, long index)
 {
   bool equalFlag;
 
@@ -3385,7 +3385,7 @@ bool String_subEqualsChar(const String string, char ch, long index)
   return equalFlag;
 }
 
-bool String_subEqualsBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length)
+bool String_subEqualsBuffer(ConstString string, const char *buffer, ulong bufferLength, long index, ulong length)
 {
   long  i;
   bool  equalFlag;
@@ -3424,7 +3424,7 @@ bool String_subEqualsBuffer(const String string, const char *buffer, ulong buffe
   return equalFlag;
 }
 
-bool String_subEqualsIgnoreCase(const String string1, const String string2, long index, ulong length)
+bool String_subEqualsIgnoreCase(ConstString string1, ConstString string2, long index, ulong length)
 {
   bool  equalFlag;
 
@@ -3446,7 +3446,7 @@ bool String_subEqualsIgnoreCase(const String string1, const String string2, long
   return equalFlag;
 }
 
-bool String_subEqualsIgnoreCaseCString(const String string, const char *s, long index, ulong length)
+bool String_subEqualsIgnoreCaseCString(ConstString string, const char *s, long index, ulong length)
 {
   bool equalFlag;
 
@@ -3473,7 +3473,7 @@ bool String_subEqualsIgnoreCaseCString(const String string, const char *s, long 
   return equalFlag;
 }
 
-bool String_subEqualsIgnoreCaseChar(const String string, char ch, long index)
+bool String_subEqualsIgnoreCaseChar(ConstString string, char ch, long index)
 {
   bool equalFlag;
 
@@ -3493,7 +3493,7 @@ bool String_subEqualsIgnoreCaseChar(const String string, char ch, long index)
   return equalFlag;
 }
 
-bool String_subEqualsIgnoreCaseBuffer(const String string, const char *buffer, ulong bufferLength, long index, ulong length)
+bool String_subEqualsIgnoreCaseBuffer(ConstString string, const char *buffer, ulong bufferLength, long index, ulong length)
 {
   long  i;
   bool  equalFlag;
@@ -3532,7 +3532,7 @@ bool String_subEqualsIgnoreCaseBuffer(const String string, const char *buffer, u
   return equalFlag;
 }
 
-bool String_startsWith(const String string1, const String string2)
+bool String_startsWith(ConstString string1, ConstString string2)
 {
   bool equalFlag;
 
@@ -3551,7 +3551,7 @@ bool String_startsWith(const String string1, const String string2)
   return equalFlag;
 }
 
-bool String_startsWithCString(const String string, const char *s)
+bool String_startsWithCString(ConstString string, const char *s)
 {
   bool equalFlag;
 
@@ -3569,7 +3569,7 @@ bool String_startsWithCString(const String string, const char *s)
   return equalFlag;
 }
 
-bool String_startsWithChar(const String string, char ch)
+bool String_startsWithChar(ConstString string, char ch)
 {
   bool equalFlag;
 
@@ -3589,7 +3589,7 @@ bool String_startsWithChar(const String string, char ch)
   return equalFlag;
 }
 
-bool String_startsWithBuffer(const String string, const char *buffer, ulong bufferLength)
+bool String_startsWithBuffer(ConstString string, const char *buffer, ulong bufferLength)
 {
   bool  equalFlag;
   ulong i;
@@ -3623,7 +3623,7 @@ bool String_startsWithBuffer(const String string, const char *buffer, ulong buff
   return equalFlag;
 }
 
-bool String_endsWith(const String string1, const String string2)
+bool String_endsWith(ConstString string1, ConstString string2)
 {
   bool equalFlag;
 
@@ -3642,7 +3642,7 @@ bool String_endsWith(const String string1, const String string2)
   return equalFlag;
 }
 
-bool String_endsWithCString(const String string, const char *s)
+bool String_endsWithCString(ConstString string, const char *s)
 {
   bool equalFlag;
 
@@ -3660,7 +3660,7 @@ bool String_endsWithCString(const String string, const char *s)
   return equalFlag;
 }
 
-bool String_endsWithChar(const String string, char ch)
+bool String_endsWithChar(ConstString string, char ch)
 {
   bool equalFlag;
 
@@ -3680,7 +3680,7 @@ bool String_endsWithChar(const String string, char ch)
   return equalFlag;
 }
 
-bool String_endsWithBuffer(const String string, const char *buffer, ulong bufferLength)
+bool String_endsWithBuffer(ConstString string, const char *buffer, ulong bufferLength)
 {
   bool  equalFlag;
   ulong j;
@@ -3717,7 +3717,7 @@ bool String_endsWithBuffer(const String string, const char *buffer, ulong buffer
   return equalFlag;
 }
 
-long String_find(const String string, ulong index, const String findString)
+long String_find(ConstString string, ulong index, ConstString findString)
 {
   long  findIndex;
   long  i;
@@ -3747,7 +3747,7 @@ long String_find(const String string, ulong index, const String findString)
   return findIndex;
 }
 
-long String_findCString(const String string, ulong index, const char *s)
+long String_findCString(ConstString string, ulong index, const char *s)
 {
   long  findIndex;
   ulong sLength;
@@ -3778,7 +3778,7 @@ long String_findCString(const String string, ulong index, const char *s)
   return findIndex;
 }
 
-long String_findChar(const String string, ulong index, char ch)
+long String_findChar(ConstString string, ulong index, char ch)
 {
   long i;
 
@@ -3795,7 +3795,7 @@ long String_findChar(const String string, ulong index, char ch)
   return (i < (long)string->length) ? i : -1L;
 }
 
-long String_findLast(const String string, long index, String findString)
+long String_findLast(ConstString string, long index, ConstString findString)
 {
   long  findIndex;
   long  i;
@@ -3824,7 +3824,7 @@ long String_findLast(const String string, long index, String findString)
   return findIndex;
 }
 
-long String_findLastCString(const String string, long index, const char *s)
+long String_findLastCString(ConstString string, long index, const char *s)
 {
   long  findIndex;
   ulong sLength;
@@ -3855,7 +3855,7 @@ long String_findLastCString(const String string, long index, const char *s)
   return findIndex;
 }
 
-long String_findLastChar(const String string, long index, char ch)
+long String_findLastChar(ConstString string, long index, char ch)
 {
   long i;
 
@@ -4362,7 +4362,7 @@ String String_vformat(String string, const char *format, va_list arguments)
 }
 
 void String_initTokenizer(StringTokenizer *stringTokenizer,
-                          const String    string,
+                          ConstString     string,
                           ulong           index,
                           const char      *separatorChars,
                           const char      *stringQuotes,
@@ -4418,7 +4418,10 @@ void String_doneTokenizer(StringTokenizer *stringTokenizer)
   String_delete(stringTokenizer->token);
 }
 
-bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, long *tokenIndex)
+bool String_getNextToken(StringTokenizer *stringTokenizer,
+                         ConstString     *token,
+                         long            *tokenIndex
+                        )
 {
   const char *s;
 
@@ -4506,7 +4509,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   return TRUE;
 }
 
-bool String_scan(const String string, ulong index, const char *format, ...)
+bool String_scan(ConstString string, ulong index, const char *format, ...)
 {
   va_list arguments;
   long    nextIndex;
@@ -4543,7 +4546,7 @@ bool String_scanCString(const char *s, const char *format, ...)
   return result;
 }
 
-bool String_parse(const String string, ulong index, const char *format, long *nextIndex, ...)
+bool String_parse(ConstString string, ulong index, const char *format, long *nextIndex, ...)
 {
   va_list arguments;
   bool    result;
@@ -4576,7 +4579,7 @@ bool String_parseCString(const char *s, const char *format, long *nextIndex, ...
   return result;
 }
 
-bool String_match(const String string, ulong index, const String pattern, long *nextIndex, String matchedString, ...)
+bool String_match(ConstString string, ulong index, ConstString pattern, long *nextIndex, String matchedString, ...)
 {
   va_list arguments;
   bool    matchFlag;
@@ -4588,7 +4591,7 @@ bool String_match(const String string, ulong index, const String pattern, long *
   return matchFlag;
 }
 
-bool String_matchCString(const String string, ulong index, const char *pattern, long *nextIndex, String matchedString, ...)
+bool String_matchCString(ConstString string, ulong index, const char *pattern, long *nextIndex, String matchedString, ...)
 {
   va_list arguments;
   bool    matchFlag;
@@ -4600,7 +4603,7 @@ bool String_matchCString(const String string, ulong index, const char *pattern, 
   return matchFlag;
 }
 
-int String_toInteger(const String convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
+int String_toInteger(ConstString convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
 {
   int  n;
   char *nextData;
@@ -4638,7 +4641,7 @@ int String_toInteger(const String convertString, ulong index, long *nextIndex, c
   return n;
 }
 
-int64 String_toInteger64(const String convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
+int64 String_toInteger64(ConstString convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
 {
   int64 n;
   char  *nextData;
@@ -4674,7 +4677,7 @@ int64 String_toInteger64(const String convertString, ulong index, long *nextInde
   return n;
 }
 
-double String_toDouble(const String convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
+double String_toDouble(ConstString convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
 {
   double n;
   char   *nextData;
@@ -4712,7 +4715,7 @@ double String_toDouble(const String convertString, ulong index, long *nextIndex,
   return n;
 }
 
-bool String_toBoolean(const String convertString, ulong index, long *nextIndex, const char *trueStrings[], uint trueStringCount, const char *falseStrings[], uint falseStringCount)
+bool String_toBoolean(ConstString convertString, ulong index, long *nextIndex, const char *trueStrings[], uint trueStringCount, const char *falseStrings[], uint falseStringCount)
 {
   bool       n;
   bool       foundFlag;
@@ -4789,7 +4792,7 @@ bool String_toBoolean(const String convertString, ulong index, long *nextIndex, 
   return n;
 }
 
-String String_toString(String string, const String convertString, ulong index, long *nextIndex, const char *stringQuotes)
+String String_toString(String string, ConstString convertString, ulong index, long *nextIndex, const char *stringQuotes)
 {
   char *stringQuote;
 
@@ -4844,7 +4847,7 @@ String String_toString(String string, const String convertString, ulong index, l
   return string;
 }
 
-char* String_toCString(const String string)
+char* String_toCString(ConstString string)
 {
   char *cString;
 
@@ -4870,7 +4873,7 @@ char* String_toCString(const String string)
 
 #ifndef NDEBUG
 
-void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, const String string)
+void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string)
 {
   DebugStringNode *debugStringNode;
 

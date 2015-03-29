@@ -80,10 +80,8 @@ LOCAL PatternNode *copyPatternNode(PatternNode *patternNode,
   newPatternNode->string = String_duplicate(patternNode->string);
 
   // create pattern
-  error = Pattern_init(&newPatternNode->pattern,
-                       patternNode->string,
-                       patternNode->pattern.type,
-                       patternNode->pattern.flags
+  error = Pattern_copy(&newPatternNode->pattern,
+                       &patternNode->pattern
                       );
   if (error != ERROR_NONE)
   {

@@ -923,7 +923,7 @@ bool StringMap_getEnumSet(const StringMap stringMap, const char *name, uint64 *d
 {
   StringMapEntry  *stringMapEntry;
   StringTokenizer stringTokenizer;
-  String          token;
+  ConstString     token;
   uint            value;
 
   assert(stringMap != NULL);

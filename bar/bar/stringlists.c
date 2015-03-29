@@ -186,9 +186,9 @@ void StringList_move(StringList *fromStringList, StringList *toStringList)
 }
 
 #ifdef NDEBUG
-void StringList_insert(StringList *stringList, const String string, StringNode *nextStringNode)
+void StringList_insert(StringList *stringList, ConstString string, StringNode *nextStringNode)
 #else /* not NDEBUG */
-void __StringList_insert(const char *__fileName__, ulong __lineNb__, StringList *stringList, const String string, StringNode *nextStringNode)
+void __StringList_insert(const char *__fileName__, ulong __lineNb__, StringList *stringList, ConstString string, StringNode *nextStringNode)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
@@ -238,9 +238,9 @@ void __StringList_insertBuffer(const char *__fileName__, ulong __lineNb__, Strin
 }
 
 #ifdef NDEBUG
-void StringList_append(StringList *stringList, const String string)
+void StringList_append(StringList *stringList, ConstString string)
 #else /* not NDEBUG */
-void __StringList_append(const char *__fileName__, ulong __lineNb__, StringList *stringList, const String string)
+void __StringList_append(const char *__fileName__, ulong __lineNb__, StringList *stringList, ConstString string)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG

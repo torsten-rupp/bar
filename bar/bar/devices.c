@@ -113,7 +113,7 @@ LOCAL bool findCommandInPath(String command, const char *name)
   bool            foundFlag;
   const char      *path;
   StringTokenizer stringTokenizer;
-  String          token;
+  ConstString     token;
 
   assert(command != NULL);
   assert(name != NULL);
@@ -202,7 +202,7 @@ LOCAL Errors execute(const char *command, const char *arguments[])
 /*---------------------------------------------------------------------*/
 
 Errors Device_open(DeviceHandle *deviceHandle,
-                   const String deviceName,
+                   ConstString  deviceName,
                    DeviceModes  deviceMode
                   )
 {
@@ -393,7 +393,7 @@ Errors Device_seek(DeviceHandle *deviceHandle,
   return ERROR_NONE;
 }
 
-Errors Device_mount(const String deviceName)
+Errors Device_mount(ConstString deviceName)
 {
   String     command;
   const char *arguments[3];
@@ -423,7 +423,7 @@ Errors Device_mount(const String deviceName)
   return error;
 }
 
-Errors Device_umount(const String deviceName)
+Errors Device_umount(ConstString deviceName)
 {
   String     command;
   const char *arguments[3];
@@ -453,7 +453,7 @@ Errors Device_umount(const String deviceName)
   return error;
 }
 
-bool Device_isMounted(const String deviceName)
+bool Device_isMounted(ConstString deviceName)
 {
   bool          mounted;
   FILE          *mtab;
@@ -618,8 +618,8 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
   return ERROR_NONE;
 }
 
-Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
-                            const String deviceName
+Errors Device_getDeviceInfo(DeviceInfo  *deviceInfo,
+                            ConstString deviceName
                            )
 {
   FileStat fileStat;

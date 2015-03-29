@@ -264,7 +264,7 @@ LOCAL bool setAccessTime(int handle, const struct timespec *ts)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getAttributes(const String fileName, FileAttributes *fileAttributes)
+LOCAL Errors getAttributes(ConstString fileName, FileAttributes *fileAttributes)
 {
   long   attributes;
   #ifdef FS_IOC_GETFLAGS
@@ -360,7 +360,7 @@ LOCAL Errors getAttributes(const String fileName, FileAttributes *fileAttributes
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors setAttributes(const String fileName, FileAttributes fileAttributes)
+LOCAL Errors setAttributes(ConstString fileName, FileAttributes fileAttributes)
 {
   long   attributes;
   #ifdef FS_IOC_GETFLAGS
@@ -446,7 +446,7 @@ String File_newFileName(void)
   return String_new();
 }
 
-String File_duplicateFileName(const String fromFileName)
+String File_duplicateFileName(ConstString fromFileName)
 {
   return String_duplicate(fromFileName);
 }
@@ -463,7 +463,7 @@ String File_clearFileName(String fileName)
   return String_clear(fileName);
 }
 
-String File_setFileName(String fileName, const String name)
+String File_setFileName(String fileName, ConstString name)
 {
   assert(fileName != NULL);
 
@@ -484,7 +484,7 @@ String File_setFileNameChar(String fileName, char ch)
   return String_setChar(fileName,ch);
 }
 
-String File_appendFileName(String fileName, const String name)
+String File_appendFileName(String fileName, ConstString name)
 {
   assert(fileName != NULL);
   assert(name != NULL);
@@ -558,7 +558,7 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
   return fileName;
 }
 
-String File_getFilePathName(String pathName, const String fileName)
+String File_getFilePathName(String pathName, ConstString fileName)
 {
   assert(fileName != NULL);
   assert(pathName != NULL);
@@ -589,7 +589,7 @@ String File_getFilePathNameCString(String pathName, const char *fileName)
   return pathName;
 }
 
-String File_getFileBaseName(String baseName, const String fileName)
+String File_getFileBaseName(String baseName, ConstString fileName)
 {
   assert(fileName != NULL);
   assert(baseName != NULL);
@@ -620,7 +620,7 @@ String File_getFileBaseNameCString(String baseName, const char *fileName)
   return baseName;
 }
 
-void File_splitFileName(const String fileName, String *pathName, String *baseName)
+void File_splitFileName(ConstString fileName, String *pathName, String *baseName)
 {
   assert(fileName != NULL);
   assert(pathName != NULL);
@@ -630,7 +630,7 @@ void File_splitFileName(const String fileName, String *pathName, String *baseNam
   (*baseName) = File_getFileBaseName(File_newFileName(),fileName);
 }
 
-void File_initSplitFileName(StringTokenizer *stringTokenizer, String fileName)
+void File_initSplitFileName(StringTokenizer *stringTokenizer, ConstString fileName)
 {
   assert(stringTokenizer != NULL);
   assert(fileName != NULL);
@@ -645,7 +645,7 @@ void File_doneSplitFileName(StringTokenizer *stringTokenizer)
   String_doneTokenizer(stringTokenizer);
 }
 
-bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const name)
+bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, ConstString *name)
 {
   assert(stringTokenizer != NULL);
   assert(name != NULL);
@@ -702,16 +702,16 @@ const char *File_getSystemTmpDirectory()
 }
 
 #ifdef NDEBUG
-Errors File_getTmpFile(FileHandle   *fileHandle,
-                       const String pattern,
-                       const String directory
+Errors File_getTmpFile(FileHandle  *fileHandle,
+                       ConstString pattern,
+                       ConstString directory
                       )
 #else /* not NDEBUG */
-Errors __File_getTmpFile(const char   *__fileName__,
-                         uint         __lineNb__,
-                         FileHandle   *fileHandle,
-                         const String pattern,
-                         const String directory
+Errors __File_getTmpFile(const char  *__fileName__,
+                         uint        __lineNb__,
+                         FileHandle  *fileHandle,
+                         ConstString pattern,
+                         ConstString directory
                         )
 #endif /* NDEBUG */
 {
@@ -723,16 +723,16 @@ Errors __File_getTmpFile(const char   *__fileName__,
 }
 
 #ifdef NDEBUG
-Errors File_getTmpFileCString(FileHandle   *fileHandle,
-                              char const   *pattern,
-                              const String directory
+Errors File_getTmpFileCString(FileHandle  *fileHandle,
+                              char const  *pattern,
+                              ConstString directory
                              )
 #else /* not NDEBUG */
-Errors __File_getTmpFileCString(const char   *__fileName__,
-                                uint         __lineNb__,
-                                FileHandle   *fileHandle,
-                                char const   *pattern,
-                                const String directory
+Errors __File_getTmpFileCString(const char  *__fileName__,
+                                uint        __lineNb__,
+                                FileHandle  *fileHandle,
+                                char const  *pattern,
+                                ConstString directory
                                )
 #endif /* NDEBUG */
 {
@@ -886,12 +886,12 @@ Errors __File_getTmpFileCString(const char   *__fileName__,
   return ERROR_NONE;
 }
 
-Errors File_getTmpFileName(String fileName, const String pattern, const String directory)
+Errors File_getTmpFileName(String fileName, ConstString pattern, ConstString directory)
 {
   return File_getTmpFileNameCString(fileName,String_cString(pattern),directory);
 }
 
-Errors File_getTmpFileNameCString(String fileName, const char *pattern, const String directory)
+Errors File_getTmpFileNameCString(String fileName, const char *pattern, ConstString directory)
 {
   char   *s;
   int    handle;
@@ -958,12 +958,12 @@ Errors File_getTmpFileNameCString(String fileName, const char *pattern, const St
   return ERROR_NONE;
 }
 
-Errors File_getTmpDirectoryName(String directoryName, const String pattern, const String directory)
+Errors File_getTmpDirectoryName(String directoryName, ConstString pattern, ConstString directory)
 {
   return File_getTmpDirectoryNameCString(directoryName,String_cString(pattern),directory);
 }
 
-Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern, const String directory)
+Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern, ConstString directory)
 {
   char   *s;
   #ifdef HAVE_MKDTEMP
@@ -1044,16 +1044,16 @@ Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern
 /*---------------------------------------------------------------------*/
 
 #ifdef NDEBUG
-Errors File_open(FileHandle    *fileHandle,
-                 const String  fileName,
-                 FileModes     fileMode
+Errors File_open(FileHandle   *fileHandle,
+                 ConstString  fileName,
+                 FileModes    fileMode
                 )
 #else /* not NDEBUG */
-Errors __File_open(const char   *__fileName__,
-                   uint         __lineNb__,
-                   FileHandle   *fileHandle,
-                   const String fileName,
-                   FileModes    fileMode
+Errors __File_open(const char  *__fileName__,
+                   uint        __lineNb__,
+                   FileHandle  *fileHandle,
+                   ConstString fileName,
+                   FileModes   fileMode
                   )
 #endif /* NDEBUG */
 {
@@ -1805,8 +1805,8 @@ Errors File_readLine(FileHandle *fileHandle,
   return ERROR_NONE;
 }
 
-Errors File_writeLine(FileHandle   *fileHandle,
-                      const String line
+Errors File_writeLine(FileHandle  *fileHandle,
+                      ConstString line
                      )
 {
   Errors error;
@@ -1986,9 +1986,9 @@ bool File_getLine(FileHandle *fileHandle,
   return readFlag;
 }
 
-void File_ungetLine(FileHandle   *fileHandle,
-                    const String line,
-                    uint         *lineNb
+void File_ungetLine(FileHandle  *fileHandle,
+                    ConstString line,
+                    uint        *lineNb
                    )
 {
   assert(fileHandle != NULL);
@@ -2117,7 +2117,7 @@ Errors File_dropCaches(FileHandle *fileHandle,
   return ERROR_NONE;
 }
 
-Errors File_touch(const String fileName)
+Errors File_touch(ConstString fileName)
 {
   int handle;
 
@@ -2136,7 +2136,7 @@ Errors File_touch(const String fileName)
 /*---------------------------------------------------------------------*/
 
 Errors File_openDirectoryList(DirectoryListHandle *directoryListHandle,
-                              const String        pathName
+                              ConstString         pathName
                              )
 {
   assert(directoryListHandle != NULL);
@@ -2503,7 +2503,7 @@ const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId)
   return name;
 }
 
-FileTypes File_getType(const String fileName)
+FileTypes File_getType(ConstString fileName)
 {
   FileStat fileStat;
 
@@ -2530,9 +2530,9 @@ FileTypes File_getType(const String fileName)
   }
 }
 
-Errors File_getData(const String fileName,
-                    void         **data,
-                    ulong        *size
+Errors File_getData(ConstString fileName,
+                    void        **data,
+                    ulong       *size
                    )
 {
   assert(fileName != NULL);
@@ -2595,7 +2595,7 @@ Errors File_getDataCString(const char *fileName,
   return ERROR_NONE;
 }
 
-Errors File_delete(const String fileName, bool recursiveFlag)
+Errors File_delete(ConstString fileName, bool recursiveFlag)
 {
   assert(fileName != NULL);
 
@@ -2712,9 +2712,9 @@ Errors File_deleteCString(const char *fileName, bool recursiveFlag)
   return ERROR_NONE;
 }
 
-Errors File_rename(const String oldFileName,
-                   const String newFileName,
-                   const String newBackupFileName
+Errors File_rename(ConstString oldFileName,
+                   ConstString newFileName,
+                   ConstString newBackupFileName
                   )
 {
   assert(oldFileName != NULL);
@@ -2786,8 +2786,8 @@ Errors File_renameCString(const char *oldFileName,
   return ERROR_NONE;
 }
 
-Errors File_copy(const String sourceFileName,
-                 const String destinationFileName
+Errors File_copy(ConstString sourceFileName,
+                 ConstString destinationFileName
                 )
 {
   assert(sourceFileName != NULL);
@@ -2894,7 +2894,7 @@ Errors File_copyCString(const char *sourceFileName,
   #undef BUFFER_SIZE
 }
 
-bool File_exists(const String fileName)
+bool File_exists(ConstString fileName)
 {
   assert(fileName != NULL);
 
@@ -2910,7 +2910,7 @@ bool File_existsCString(const char *fileName)
   return (LSTAT((strlen(fileName) > 0) ? fileName : "",&fileStat) == 0);
 }
 
-bool File_isFile(const String fileName)
+bool File_isFile(ConstString fileName)
 {
   assert(fileName != NULL);
 
@@ -2928,7 +2928,7 @@ bool File_isFileCString(const char *fileName)
          );
 }
 
-bool File_isDirectory(const String fileName)
+bool File_isDirectory(ConstString fileName)
 {
   assert(fileName != NULL);
 
@@ -2946,7 +2946,7 @@ bool File_isDirectoryCString(const char *fileName)
          );
 }
 
-bool File_isDevice(const String fileName)
+bool File_isDevice(ConstString fileName)
 {
   assert(fileName != NULL);
 
@@ -2964,7 +2964,7 @@ bool File_isDeviceCString(const char *fileName)
          );
 }
 
-bool File_isReadable(const String fileName)
+bool File_isReadable(ConstString fileName)
 {
   assert(fileName != NULL);
 
@@ -2990,7 +2990,7 @@ bool File_isReadableCString(const char *fileName)
   #endif /* PLATFORM_... */
 }
 
-bool File_isWriteable(const String fileName)
+bool File_isWriteable(ConstString fileName)
 {
   assert(fileName != NULL);
 
@@ -3017,8 +3017,8 @@ bool File_isWriteableCString(const char *fileName)
   #endif /* PLATFORM_... */
 }
 
-Errors File_getFileInfo(const String fileName,
-                        FileInfo     *fileInfo
+Errors File_getFileInfo(ConstString fileName,
+                        FileInfo    *fileInfo
                        )
 {
   FileStat   fileStat;
@@ -3122,7 +3122,7 @@ Errors File_getFileInfo(const String fileName,
   return ERROR_NONE;
 }
 
-Errors File_setFileInfo(const String   fileName,
+Errors File_setFileInfo(ConstString    fileName,
                         const FileInfo *fileInfo
                        )
 {
@@ -3255,7 +3255,7 @@ void __File_doneExtendedAttributes(const char                *__fileName__,
 }
 
 void File_addExtendedAttribute(FileExtendedAttributeList *fileExtendedAttributeList,
-                               const String              name,
+                               ConstString               name,
                                const void                *data,
                                uint                      dataLength
                               )
@@ -3295,7 +3295,7 @@ void File_addExtendedAttributeCString(FileExtendedAttributeList *fileExtendedAtt
 }
 
 Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList,
-                                  const String              fileName
+                                  ConstString               fileName
                                  )
 {
   int                       n;
@@ -3383,7 +3383,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   return ERROR_NONE;
 }
 
-Errors File_setExtendedAttributes(const String                    fileName,
+Errors File_setExtendedAttributes(ConstString                     fileName,
                                   const FileExtendedAttributeList *fileExtendedAttributeList
                                  )
 {
@@ -3409,7 +3409,7 @@ Errors File_setExtendedAttributes(const String                    fileName,
   return ERROR_NONE;
 }
 
-uint64 File_getFileTimeModified(const String fileName)
+uint64 File_getFileTimeModified(ConstString fileName)
 {
   FileStat fileStat;
 
@@ -3423,7 +3423,7 @@ uint64 File_getFileTimeModified(const String fileName)
   return (uint64)fileStat.st_mtime;
 }
 
-Errors File_setPermission(const String   fileName,
+Errors File_setPermission(ConstString    fileName,
                           FilePermission permission
                          )
 {
@@ -3437,9 +3437,9 @@ Errors File_setPermission(const String   fileName,
   return ERROR_NONE;
 }
 
-Errors File_setOwner(const String fileName,
-                     uint32       userId,
-                     uint32       groupId
+Errors File_setOwner(ConstString fileName,
+                     uint32      userId,
+                     uint32      groupId
                     )
 {
   assert(fileName != NULL);
@@ -3464,7 +3464,7 @@ Errors File_setOwner(const String fileName,
   #endif /* HAVE_CHOWN */
 }
 
-Errors File_makeDirectory(const String   pathName,
+Errors File_makeDirectory(ConstString    pathName,
                           uint32         userId,
                           uint32         groupId,
                           FilePermission permission
@@ -3476,13 +3476,13 @@ Errors File_makeDirectory(const String   pathName,
   String          parentDirectoryName;
   mode_t          currentCreationMask;
   StringTokenizer pathNameTokenizer;
+  ConstString     token;
   FileStat        fileStat;
   #ifdef HAVE_CHOWN
     uid_t           uid;
     gid_t           gid;
   #endif /* HAVE_CHOWN */
   Errors          error;
-  String          name;
 
   assert(pathName != NULL);
 
@@ -3496,11 +3496,11 @@ Errors File_makeDirectory(const String   pathName,
 
   // create directory including parent directories
   File_initSplitFileName(&pathNameTokenizer,pathName);
-  if (File_getNextSplitFileName(&pathNameTokenizer,&name))
+  if (File_getNextSplitFileName(&pathNameTokenizer,&token))
   {
-    if (!String_isEmpty(name))
+    if (!String_isEmpty(token))
     {
-      File_setFileName(directoryName,name);
+      File_setFileName(directoryName,token);
     }
     else
     {
@@ -3576,15 +3576,15 @@ Errors File_makeDirectory(const String   pathName,
     return error;
   }
 
-  while (File_getNextSplitFileName(&pathNameTokenizer,&name))
+  while (File_getNextSplitFileName(&pathNameTokenizer,&token))
   {
-    if (!String_isEmpty(name))
+    if (!String_isEmpty(token))
     {
       // get new parent directory
       File_setFileName(parentDirectoryName,directoryName);
 
       // get sub-directory
-      File_appendFileName(directoryName,name);
+      File_appendFileName(directoryName,token);
 
       if      (!File_exists(directoryName))
       {
@@ -3708,8 +3708,8 @@ Errors File_makeDirectoryCString(const char     *pathName,
   return error;
 }
 
-Errors File_readLink(String       fileName,
-                     const String linkName
+Errors File_readLink(String      fileName,
+                     ConstString linkName
                     )
 {
   #define BUFFER_SIZE  256
@@ -3765,8 +3765,8 @@ Errors File_readLink(String       fileName,
   #endif /* HAVE_READLINK */
 }
 
-Errors File_makeLink(const String linkName,
-                     const String fileName
+Errors File_makeLink(ConstString linkName,
+                     ConstString fileName
                     )
 {
   assert(linkName != NULL);
@@ -3788,8 +3788,8 @@ Errors File_makeLink(const String linkName,
   #endif /* HAVE_SYMLINK */
 }
 
-Errors File_makeHardLink(const String linkName,
-                         const String fileName
+Errors File_makeHardLink(ConstString linkName,
+                         ConstString fileName
                         )
 {
   assert(linkName != NULL);
@@ -3811,7 +3811,7 @@ Errors File_makeHardLink(const String linkName,
   #endif /* HAVE_LINK */
 }
 
-Errors File_makeSpecial(const String     name,
+Errors File_makeSpecial(ConstString      name,
                         FileSpecialTypes type,
                         ulong            major,
                         ulong            minor
@@ -3868,7 +3868,7 @@ Errors File_makeSpecial(const String     name,
 }
 
 Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
-                              const String   pathName
+                              ConstString    pathName
                              )
 {
   #ifdef HAVE_STATVFS
