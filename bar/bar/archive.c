@@ -1283,7 +1283,9 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                                  &byteLength
                                 );
       assert((byteLength%archiveEntryInfo->file.byteCompressInfo.blockLength) == 0);
+#ifndef WERROR
 #warning remove?
+#endif
 assert(byteLength > 0L);
 
       if (byteLength > 0L)
@@ -9571,7 +9573,9 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
       while (length > 0L)
       {
         // check if delta-decompressor is empty
+#ifndef WERROR
 #warning todo use getFreeDecompressSpace
+#endif
         error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->file.deltaCompressInfo,
                                                        &availableBytes
                                                       );
