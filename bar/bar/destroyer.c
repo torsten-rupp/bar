@@ -10,7 +10,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -194,7 +194,7 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
 {
   StringTokenizer stringTokenizer;
   String          t;
-  String          w;
+  ConstString     w;
   uint            length;
   char            buffer[1024];
 
