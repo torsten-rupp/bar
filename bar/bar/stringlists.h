@@ -246,7 +246,7 @@ INLINE ulong StringList_count(const StringList *stringList)
 \***********************************************************************/
 
 #ifdef NDEBUG
-void StringList_insert(StringList *stringList, const String string, StringNode *nextStringNode);
+void StringList_insert(StringList *stringList, ConstString string, StringNode *nextStringNode);
 void StringList_insertCString(StringList *stringList, const char *s, StringNode *nextStringNode);
 void StringList_insertChar(StringList *stringList, char ch, StringNode *nextStringNode);
 void StringList_insertBuffer(StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode);
