@@ -1071,7 +1071,7 @@ LOCAL void outputLineDone(void *variable, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void outputConsole(FILE *file, const String string)
+LOCAL void outputConsole(FILE *file, ConstString string)
 {
   String outputLine;
   ulong  z;
@@ -1166,7 +1166,7 @@ LOCAL void outputConsole(FILE *file, const String string)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initServer(Server *server, const String name, ServerTypes serverType)
+LOCAL void initServer(Server *server, ConstString name, ServerTypes serverType)
 {
   assert(server != NULL);
 
@@ -1260,7 +1260,7 @@ LOCAL void doneServer(Server *server)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ServerNode *newServerNode(const String name, ServerTypes serverType)
+LOCAL ServerNode *newServerNode(ConstString name, ServerTypes serverType)
 {
   ServerNode *serverNode;
 
@@ -1332,7 +1332,7 @@ LOCAL void initDevice(Device *device)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL DeviceNode *newDeviceNode(const String name)
+LOCAL DeviceNode *newDeviceNode(ConstString name)
 {
   DeviceNode *deviceNode;
 
@@ -1389,7 +1389,7 @@ LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
+LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 {
   FileInfo   fileInfo;
   Errors     error;
@@ -1712,7 +1712,7 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool parseBandWidthNumber(const String s, ulong *n)
+LOCAL bool parseBandWidthNumber(ConstString s, ulong *n)
 {
   const StringUnit UNITS[] =
   {
@@ -1768,7 +1768,7 @@ LOCAL BandWidthNode *newBandWidthNode(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL BandWidthNode *parseBandWidth(const String s)
+LOCAL BandWidthNode *parseBandWidth(ConstString s)
 {
   BandWidthNode *bandWidthNode;
   bool          errorFlag;
@@ -2977,8 +2977,8 @@ void printError(const char *text, ...)
 * Notes  : -
 \***********************************************************************/
 
-void executeIOOutput(void         *userData,
-                     const String line
+void executeIOOutput(void        *userData,
+                     ConstString line
                     )
 {
   StringList *stringList = (StringList*)userData;
@@ -2999,8 +2999,8 @@ void executeIOOutput(void         *userData,
 * Notes  : string list will be shortend to last 5 entries
 \***********************************************************************/
 
-LOCAL void executeIOlogPostProcess(void         *userData,
-                                   const String line
+LOCAL void executeIOlogPostProcess(void        *userData,
+                                   ConstString line
                                   )
 {
   StringList *stringList = (StringList*)userData;
@@ -3496,7 +3496,7 @@ bool isServerAllocationPending(Server *server)
   return pendingFlag;
 }
 
-Server *getFTPServerSettings(const String     hostName,
+Server *getFTPServerSettings(ConstString      hostName,
                              const JobOptions *jobOptions,
                              FTPServer        *ftpServer
                             )
@@ -3524,7 +3524,7 @@ Server *getFTPServerSettings(const String     hostName,
   return (serverNode != NULL) ? &serverNode->server : &defaultFTPServer;
 }
 
-Server *getSSHServerSettings(const String     hostName,
+Server *getSSHServerSettings(ConstString      hostName,
                              const JobOptions *jobOptions,
                              SSHServer        *sshServer
                             )
@@ -3555,7 +3555,7 @@ Server *getSSHServerSettings(const String     hostName,
   return (serverNode != NULL) ? &serverNode->server : &defaultSSHServer;
 }
 
-Server *getWebDAVServerSettings(const String     hostName,
+Server *getWebDAVServerSettings(ConstString      hostName,
                                 const JobOptions *jobOptions,
                                 WebDAVServer     *webDAVServer
                                )
@@ -3655,7 +3655,7 @@ void getBDSettings(const JobOptions *jobOptions,
   opticalDisk->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.bd.writeImageCommand;
 }
 
-void getDeviceSettings(const String     name,
+void getDeviceSettings(ConstString      name,
                        const JobOptions *jobOptions,
                        Device           *device
                       )
@@ -3686,11 +3686,11 @@ void getDeviceSettings(const String     name,
   device->writeCommand            = ((jobOptions != NULL) && (jobOptions->device.writeCommand            != NULL)) ? jobOptions->device.writeCommand            : ((deviceNode != NULL) ? deviceNode->device.writeCommand            : globalOptions.defaultDevice->writeCommand           );
 }
 
-Errors inputCryptPassword(void         *userData,
-                          Password     *password,
-                          const String fileName,
-                          bool         validateFlag,
-                          bool         weakCheckFlag
+Errors inputCryptPassword(void        *userData,
+                          Password    *password,
+                          ConstString fileName,
+                          bool        validateFlag,
+                          bool        weakCheckFlag
                          )
 {
   Errors        error;
@@ -3838,9 +3838,10 @@ bool parseWeekDaySet(const char *names, WeekDaySet *weekDaySet)
   return TRUE;
 }
 
-bool parseDateTimeNumber(const String s, int *n)
+bool parseDateTimeNumber(ConstString s, int *n)
 {
-  long nextIndex;
+  ulong i;
+  long  nextIndex;
 
   assert(s != NULL);
   assert(n != NULL);
@@ -3852,20 +3853,22 @@ bool parseDateTimeNumber(const String s, int *n)
   }
   else
   {
-    while ((String_length(s) > 1) && String_startsWithChar(s,'0'))
+    i = 0;
+    while ((i < String_length(s)) && (String_index(s,i) == '0'))
     {
-      String_remove(s,STRING_BEGIN,1);
+      i++;
     }
-    (*n) = (int)String_toInteger(s,0,&nextIndex,NULL,0);
+    (*n) = (int)String_toInteger(s,i,&nextIndex,NULL,0);
     if (nextIndex != STRING_END) return FALSE;
   }
 
   return TRUE;
 }
 
-bool parseDateMonth(const String s, int *month)
+bool parseDateMonth(ConstString s, int *month)
 {
   String name;
+  ulong i;
   long   nextIndex;
 
   assert(s != NULL);
@@ -3890,11 +3893,12 @@ bool parseDateMonth(const String s, int *month)
   else if (String_equalsIgnoreCaseCString(name,"dec")) (*month) = MONTH_DEC;
   else
   {
-    while ((String_length(s) > 1) && String_startsWithChar(s,'0'))
+    i = 0;
+    while ((i < String_length(s)) && (String_index(s,i) == '0'))
     {
-      String_remove(s,STRING_BEGIN,1);
+      i++;
     }
-    (*month) = (uint)String_toInteger(s,0,&nextIndex,NULL,0);
+    (*month) = (uint)String_toInteger(s,i,&nextIndex,NULL,0);
     if ((nextIndex != STRING_END) || ((*month) < 1) || ((*month) > 12))
     {
       return FALSE;
@@ -4600,7 +4604,7 @@ bool parseArchiveType(const char *name, ArchiveTypes *archiveType)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool readFromJob(const String fileName)
+LOCAL bool readFromJob(ConstString fileName)
 {
   Errors     error;
   FileHandle fileHandle;

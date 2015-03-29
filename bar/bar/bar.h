@@ -283,8 +283,8 @@ void logPostProcess(void);
 * Notes  : -
 \***********************************************************************/
 
-void executeIOOutput(void         *userData,
-                     const String line
+void executeIOOutput(void        *userData,
+                     ConstString line
                     );
 
 /***********************************************************************\
@@ -355,7 +355,7 @@ ulong getBandWidth(BandWidthList *bandWidthList);
 * Notes  : -
 \***********************************************************************/
 
-Server *getFTPServerSettings(const String     hostName,
+Server *getFTPServerSettings(ConstString      hostName,
                              const JobOptions *jobOptions,
                              FTPServer        *ftpServer
                             );
@@ -371,7 +371,7 @@ Server *getFTPServerSettings(const String     hostName,
 * Notes  : -
 \***********************************************************************/
 
-Server *getSSHServerSettings(const String     hostName,
+Server *getSSHServerSettings(ConstString      hostName,
                              const JobOptions *jobOptions,
                              SSHServer        *sshServer
                             );
@@ -387,10 +387,10 @@ Server *getSSHServerSettings(const String     hostName,
 * Notes  : -
 \***********************************************************************/
 
-Server *getWebDAVServerSettings(const String     hostName,
-                                          const JobOptions *jobOptions,
-                                          WebDAVServer     *webDAVServer
-                                         );
+Server *getWebDAVServerSettings(ConstString      hostName,
+                                const JobOptions *jobOptions,
+                                WebDAVServer     *webDAVServer
+                               );
 
 /***********************************************************************\
 * Name   : getCDSettings
@@ -442,7 +442,7 @@ void getBDSettings(const JobOptions *jobOptions,
 * Notes  : -
 \***********************************************************************/
 
-void getDeviceSettings(const String     name,
+void getDeviceSettings(ConstString      name,
                        const JobOptions *jobOptions,
                        Device           *device
                       );
@@ -499,11 +499,11 @@ bool isServerAllocationPending(Server *server);
 * Notes  : -
 \***********************************************************************/
 
-Errors inputCryptPassword(void         *userData,
-                          Password     *password,
-                          const String fileName,
-                          bool         validateFlag,
-                          bool         weakCheckFlag
+Errors inputCryptPassword(void        *userData,
+                          Password    *password,
+                          ConstString fileName,
+                          bool        validateFlag,
+                          bool        weakCheckFlag
                          );
 
 /***********************************************************************\
@@ -526,7 +526,7 @@ bool parseWeekDaySet(const char *names, WeekDaySet *weekDaySet);
 * Notes  : -
 \***********************************************************************/
 
-bool parseDateTimeNumber(const String s, int *n);
+bool parseDateTimeNumber(ConstString s, int *n);
 
 /***********************************************************************\
 * Name   : parseDateMonth
@@ -537,7 +537,7 @@ bool parseDateTimeNumber(const String s, int *n);
 * Notes  : -
 \***********************************************************************/
 
-bool parseDateMonth(const String s, int *month);
+bool parseDateMonth(ConstString s, int *month);
 
 /***********************************************************************\
 * Name   : configValueParseBandWidth
@@ -597,8 +597,7 @@ bool configValueFormatBandWidth(void **formatUserData, void *userData, String li
 
 /***********************************************************************\
 * Name   : configValueParseOwner
-* Purpose: config value call back for parsing owner
-*          patterns
+* Purpose: config value call back for parsing owner patterns
 * Input  : userData              - user data
 *          variable              - config variable
 *          name                  - config name
@@ -711,7 +710,6 @@ bool configValueFormatImageEntry(void **formatUserData, void *userData, String l
 /***********************************************************************\
 * Name   : configValueParsePattern
 * Purpose: config value option call back for parsing pattern
-*          patterns
 * Input  : userData              - user data
 *          variable              - config variable
 *          name                  - config name
