@@ -69,6 +69,7 @@
 *          printableStorageName             - printable storage name
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
+*          fragmentList                     - fragment list
 * Output : -
 * Return : -
 * Notes  : -
@@ -80,19 +81,17 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
                                 const PatternList               *excludePatternList,
                                 JobOptions                      *jobOptions,
                                 ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                                void                            *archiveGetCryptPasswordUserData
+                                void                            *archiveGetCryptPasswordUserData,
+                                FragmentList                    *fragmentList
                                )
 {
   byte              *buffer;
   StorageHandle     storageHandle;
-  FragmentList      fragmentList;
   Errors            failError;
   Errors            error;
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
-//TODO: test fragmentation?
-//  FragmentNode      *fragmentNode;
 
   printInfo(0,"Testing archive '%s':\n",Storage_getPrintableNameCString(storageSpecifier,archiveName));
 
@@ -199,10 +198,10 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
             if (!jobOptions->noFragmentsCheckFlag)
             {
               // get file fragment list
-              fragmentNode = FragmentList_find(&fragmentList,fileName);
+              fragmentNode = FragmentList_find(fragmentList,fileName);
               if (fragmentNode == NULL)
               {
-                fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,NULL,0);
+                fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
               }
               assert(fragmentNode != NULL);
             }
@@ -251,7 +250,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
               // discard fragment list if file is complete
               if (FragmentList_isEntryComplete(fragmentNode))
               {
-                FragmentList_discard(&fragmentList,fragmentNode);
+                FragmentList_discard(fragmentList,fragmentNode);
               }
             }
 
@@ -358,10 +357,10 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
             if (!jobOptions->noFragmentsCheckFlag)
             {
               // get file fragment node
-              fragmentNode = FragmentList_find(&fragmentList,deviceName);
+              fragmentNode = FragmentList_find(fragmentList,deviceName);
               if (fragmentNode == NULL)
               {
-                fragmentNode = FragmentList_add(&fragmentList,deviceName,deviceInfo.size,NULL,0);
+                fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0);
               }
 //FragmentList_print(fragmentNode,String_cString(deviceName));
               assert(fragmentNode != NULL);
@@ -410,7 +409,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
               // discard fragment list if file is complete
               if (FragmentList_isEntryComplete(fragmentNode))
               {
-                FragmentList_discard(&fragmentList,fragmentNode);
+                FragmentList_discard(fragmentList,fragmentNode);
               }
             }
 
@@ -656,10 +655,10 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
                 if (!jobOptions->noFragmentsCheckFlag)
                 {
                   // get file fragment list
-                  fragmentNode = FragmentList_find(&fragmentList,fileName);
+                  fragmentNode = FragmentList_find(fragmentList,fileName);
                   if (fragmentNode == NULL)
                   {
-                    fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,NULL,0);
+                    fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
                   }
                   assert(fragmentNode != NULL);
 //FragmentList_print(fragmentNode,String_cString(fileName));
@@ -706,7 +705,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
                   // discard fragment list if file is complete
                   if (FragmentList_isEntryComplete(fragmentNode))
                   {
-                    FragmentList_discard(&fragmentList,fragmentNode);
+                    FragmentList_discard(fragmentList,fragmentNode);
                   }
                 }
 
@@ -904,27 +903,27 @@ Errors Command_test(const StringList                *storageNameList,
       continue;
     }
 
-    // open directory list
-    error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                      &storageSpecifier,
-                                      jobOptions,
-                                      SERVER_CONNECTION_PRIORITY_HIGH
-                                     );
-    if (error == ERROR_NONE)
+    if (String_isEmpty(storageSpecifier.archivePattern))
     {
-      if (String_isEmpty(storageSpecifier.archivePattern))
-      {
-        // list directory
+      // test archive content
         error = testArchiveContent(&storageSpecifier,
                                    NULL,
                                    includeEntryList,
                                    excludePatternList,
                                    jobOptions,
                                    archiveGetCryptPasswordFunction,
-                                   archiveGetCryptPasswordUserData
+                                   archiveGetCryptPasswordUserData,
+                                   &fragmentList
                                   );
-      }
-      else
+    }
+    else
+    {
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_HIGH
+                                       );
+      if (error == ERROR_NONE)
       {
         error = Pattern_init(&pattern,storageSpecifier.archivePattern,jobOptions->patternType,PATTERN_FLAG_NONE);
         if (error == ERROR_NONE)
@@ -945,14 +944,15 @@ Errors Command_test(const StringList                *storageNameList,
               continue;
             }
 
-            // list archive content
+            // test archive content
             error = testArchiveContent(&storageSpecifier,
                                        fileName,
                                        includeEntryList,
                                        excludePatternList,
                                        jobOptions,
                                        archiveGetCryptPasswordFunction,
-                                       archiveGetCryptPasswordUserData
+                                       archiveGetCryptPasswordUserData,
+                                       &fragmentList
                                       );
           }
           String_delete(fileName);
