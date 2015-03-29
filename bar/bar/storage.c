@@ -189,7 +189,7 @@ LOCAL size_t curlNopDataCallback(void   *buffer,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initFTPPassword(const String hostName, const String loginName, const JobOptions *jobOptions)
+LOCAL bool initFTPPassword(ConstString hostName, ConstString loginName, const JobOptions *jobOptions)
 {
   SemaphoreLock semaphoreLock;
   String        s;
@@ -242,7 +242,7 @@ LOCAL bool initFTPPassword(const String hostName, const String loginName, const 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initSSHPassword(const String hostName, const String loginName, const JobOptions *jobOptions)
+LOCAL bool initSSHPassword(ConstString hostName, ConstString loginName, const JobOptions *jobOptions)
 {
   SemaphoreLock semaphoreLock;
   String        s;
@@ -296,10 +296,10 @@ LOCAL bool initSSHPassword(const String hostName, const String loginName, const 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors checkFTPLogin(const String hostName,
-                           uint         hostPort,
-                           const String loginName,
-                           Password     *loginPassword
+LOCAL Errors checkFTPLogin(ConstString hostName,
+                           uint        hostPort,
+                           ConstString loginName,
+                           Password    *loginPassword
                           )
 {
   #if   defined(HAVE_CURL)
@@ -899,12 +899,12 @@ LOCAL bool parseFTPDirectoryLine(String         line,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors checkSSHLogin(const String loginName,
-                           Password     *password,
-                           const String hostName,
-                           uint         hostPort,
-                           const String publicKeyFileName,
-                           const String privateKeyFileName
+LOCAL Errors checkSSHLogin(ConstString loginName,
+                           Password    *password,
+                           ConstString hostName,
+                           uint        hostPort,
+                           ConstString publicKeyFileName,
+                           ConstString privateKeyFileName
                           )
 {
   SocketHandle socketHandle;
@@ -1114,7 +1114,7 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initWebDAVPassword(const String hostName, const String loginName, const JobOptions *jobOptions)
+LOCAL bool initWebDAVPassword(ConstString hostName, ConstString loginName, const JobOptions *jobOptions)
 {
   SemaphoreLock semaphoreLock;
   String        s;
@@ -1159,9 +1159,9 @@ LOCAL bool initWebDAVPassword(const String hostName, const String loginName, con
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors checkWebDAVLogin(const String hostName,
-                              const String loginName,
-                              Password     *loginPassword
+LOCAL Errors checkWebDAVLogin(ConstString hostName,
+                              ConstString loginName,
+                              Password    *loginPassword
                              )
 {
   CURL       *curlHandle;
@@ -1892,8 +1892,8 @@ LOCAL Errors requestNewVolume(StorageHandle *storageHandle, bool waitFlag)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOmkisofs(void         *userData,
-                            const String line
+LOCAL void executeIOmkisofs(void        *userData,
+                            ConstString line
                            )
 {
   StorageHandle *storageHandle = (StorageHandle*)userData;
@@ -1928,8 +1928,8 @@ LOCAL void executeIOmkisofs(void         *userData,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOdvdisaster(void         *userData,
-                               const String line
+LOCAL void executeIOdvdisaster(void        *userData,
+                               ConstString line
                               )
 {
   StorageHandle *storageHandle = (StorageHandle*)userData;
@@ -1968,8 +1968,8 @@ LOCAL void executeIOdvdisaster(void         *userData,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOgrowisofs(void         *userData,
-                              const String line
+LOCAL void executeIOgrowisofs(void        *userData,
+                              ConstString line
                              )
 {
   StorageHandle *storageHandle = (StorageHandle*)userData;
@@ -2051,7 +2051,8 @@ void Storage_doneAll(void)
   storageSpecifier->loginName            = String_new();
   storageSpecifier->loginPassword        = Password_new();
   storageSpecifier->deviceName           = String_new();
-  storageSpecifier->fileName             = String_new();
+  storageSpecifier->archiveName          = String_new();
+  storageSpecifier->archivePattern       = String_new();
   storageSpecifier->storageName          = String_new();
   storageSpecifier->printableStorageName = String_new();
 
@@ -2084,7 +2085,8 @@ void Storage_doneAll(void)
   destinationStorageSpecifier->loginName            = String_duplicate(sourceStorageSpecifier->loginName);
   destinationStorageSpecifier->loginPassword        = Password_duplicate(sourceStorageSpecifier->loginPassword);
   destinationStorageSpecifier->deviceName           = String_duplicate(sourceStorageSpecifier->deviceName);
-  destinationStorageSpecifier->fileName             = String_duplicate(sourceStorageSpecifier->fileName);
+  destinationStorageSpecifier->archiveName          = String_duplicate(sourceStorageSpecifier->archiveName);
+  destinationStorageSpecifier->archivePattern       = String_duplicate(sourceStorageSpecifier->archivePattern);
   destinationStorageSpecifier->storageName          = String_new();
   destinationStorageSpecifier->printableStorageName = String_new();
 
@@ -2115,18 +2117,19 @@ void Storage_doneAll(void)
 
   String_delete(storageSpecifier->printableStorageName);
   String_delete(storageSpecifier->storageName);
-  String_delete(storageSpecifier->fileName);
+  String_delete(storageSpecifier->archivePattern);
+  String_delete(storageSpecifier->archiveName);
   String_delete(storageSpecifier->deviceName);
   Password_delete(storageSpecifier->loginPassword);
   String_delete(storageSpecifier->loginName);
   String_delete(storageSpecifier->hostName);
 }
 
-bool Storage_parseFTPSpecifier(const String ftpSpecifier,
-                               String       hostName,
-                               uint         *hostPort,
-                               String       loginName,
-                               Password     *loginPassword
+bool Storage_parseFTPSpecifier(ConstString ftpSpecifier,
+                               String      hostName,
+                               uint        *hostPort,
+                               String      loginName,
+                               Password    *loginPassword
                               )
 {
   const char* LOGINNAME_MAP_FROM[] = {"\\@"};
@@ -2136,6 +2139,8 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
   String s,t;
 
   assert(ftpSpecifier != NULL);
+  assert(hostName != NULL);
+  assert(loginName != NULL);
 
   String_clear(hostName);
   if (hostPort != NULL) (*hostPort) = 0;
@@ -2200,10 +2205,10 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
   return result;
 }
 
-bool Storage_parseSSHSpecifier(const String sshSpecifier,
-                               String       hostName,
-                               uint         *hostPort,
-                               String       loginName
+bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
+                               String      hostName,
+                               uint        *hostPort,
+                               String      loginName
                               )
 {
   const char* LOGINNAME_MAP_FROM[] = {"\\@"};
@@ -2213,6 +2218,8 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
   String s;
 
   assert(sshSpecifier != NULL);
+  assert(hostName != NULL);
+  assert(loginName != NULL);
 
   String_clear(hostName);
   if (hostPort != NULL) (*hostPort) = 0;
@@ -2263,10 +2270,10 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
   return result;
 }
 
-bool Storage_parseWebDAVSpecifier(const String webdavSpecifier,
-                                  String       hostName,
-                                  String       loginName,
-                                  Password     *loginPassword
+bool Storage_parseWebDAVSpecifier(ConstString webdavSpecifier,
+                                  String      hostName,
+                                  String      loginName,
+                                  Password    *loginPassword
                                  )
 {
   const char* LOGINNAME_MAP_FROM[] = {"\\@"};
@@ -2276,6 +2283,8 @@ bool Storage_parseWebDAVSpecifier(const String webdavSpecifier,
   String s;
 
   assert(webdavSpecifier != NULL);
+  assert(hostName != NULL);
+  assert(loginName != NULL);
 
   String_clear(hostName);
   String_clear(loginName);
@@ -2313,14 +2322,15 @@ bool Storage_parseWebDAVSpecifier(const String webdavSpecifier,
   return result;
 }
 
-bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
-                                  const String defaultDeviceName,
-                                  String       deviceName
+bool Storage_parseDeviceSpecifier(ConstString deviceSpecifier,
+                                  ConstString defaultDeviceName,
+                                  String      deviceName
                                  )
 {
   bool result;
 
   assert(deviceSpecifier != NULL);
+  assert(deviceName != NULL);
 
   String_clear(deviceName);
 
@@ -2340,10 +2350,12 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
   return result;
 }
 
-StorageTypes Storage_getType(const String storageName)
+StorageTypes Storage_getType(ConstString storageName)
 {
   StorageSpecifier storageSpecifier;
   StorageTypes     type;
+
+  assert(storageName != NULL);
 
   Storage_initSpecifier(&storageSpecifier);
   if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
@@ -2360,16 +2372,25 @@ StorageTypes Storage_getType(const String storageName)
 }
 
 Errors Storage_parseName(StorageSpecifier *storageSpecifier,
-                         const String     storageName
+                         ConstString      storageName
                         )
 {
-  String string;
-  long   nextIndex;
+  AutoFreeList    autoFreeList;
+  String          string;
+  String          archiveName;
+  long            nextIndex;
+  StringTokenizer archiveNameTokenizer;
+  ConstString     token;
 
   assert(storageSpecifier != NULL);
+  assert(storageName != NULL);
 
   // initialise variables
-  string = String_new();
+  AutoFree_init(&autoFreeList);
+  string      = String_new();
+  archiveName = String_new();
+  AUTOFREE_ADD(&autoFreeList,&string,{ String_delete(string); });
+  AUTOFREE_ADD(&autoFreeList,&archiveName,{ String_delete(archiveName); });
 
   String_clear(storageSpecifier->hostName);
   storageSpecifier->hostPort = 0;
@@ -2397,14 +2418,15 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
                                     )
          )
       {
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_INVALID_FTP_SPECIFIER;
       }
-      String_sub(storageSpecifier->fileName,storageName,6+nextIndex,STRING_END);
+      String_sub(archiveName,storageName,6+nextIndex,STRING_END);
     }
     else
     {
       // ftp://<file name>
-      String_sub(storageSpecifier->fileName,storageName,6,STRING_END);
+      String_sub(archiveName,storageName,6,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_FTP;
@@ -2426,14 +2448,15 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
                                     )
          )
       {
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_INVALID_SSH_SPECIFIER;
       }
-      String_sub(storageSpecifier->fileName,storageName,6+nextIndex,STRING_END);
+      String_sub(archiveName,storageName,6+nextIndex,STRING_END);
     }
     else
     {
       // ssh://<file name>
-      String_sub(storageSpecifier->fileName,storageName,6,STRING_END);
+      String_sub(archiveName,storageName,6,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_SSH;
@@ -2455,14 +2478,15 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
                                     )
          )
       {
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_INVALID_SSH_SPECIFIER;
       }
-      String_sub(storageSpecifier->fileName,storageName,6+nextIndex,STRING_END);
+      String_sub(archiveName,storageName,6+nextIndex,STRING_END);
     }
     else
     {
       // scp://<file name>
-      String_sub(storageSpecifier->fileName,storageName,6,STRING_END);
+      String_sub(archiveName,storageName,6,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_SCP;
@@ -2484,14 +2508,15 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
                                     )
          )
       {
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_INVALID_SSH_SPECIFIER;
       }
-      String_sub(storageSpecifier->fileName,storageName,7+nextIndex,STRING_END);
+      String_sub(archiveName,storageName,7+nextIndex,STRING_END);
     }
     else
     {
       // sftp://<file name>
-      String_sub(storageSpecifier->fileName,storageName,7,STRING_END);
+      String_sub(archiveName,storageName,7,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_SFTP;
@@ -2512,14 +2537,15 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
                                        )
          )
       {
-        return ERROR_INVALID_FTP_SPECIFIER;
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_INVALID_WEBDAV_SPECIFIER;
       }
-      String_sub(storageSpecifier->fileName,storageName,9+nextIndex,STRING_END);
+      String_sub(archiveName,storageName,9+nextIndex,STRING_END);
     }
     else
     {
       // webdav://<file name>
-      String_sub(storageSpecifier->fileName,storageName,9,STRING_END);
+      String_sub(archiveName,storageName,9,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_WEBDAV;
@@ -2537,14 +2563,16 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
                                        )
          )
       {
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_INVALID_DEVICE_SPECIFIER;
       }
-      String_sub(storageSpecifier->fileName,storageName,5+nextIndex,STRING_END);
+      String_sub(archiveName,storageName,5+nextIndex,STRING_END);
     }
     else
     {
-      // cd://<file name>
-      String_sub(storageSpecifier->fileName,storageName,5,STRING_END);
+      // cd://<file name>  AutoFreeList autoFreeList;
+
+      String_sub(archiveName,storageName,5,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_CD;
@@ -2562,14 +2590,15 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
                                        )
          )
       {
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_INVALID_DEVICE_SPECIFIER;
       }
-      String_sub(storageSpecifier->fileName,storageName,6+nextIndex,STRING_END);
+      String_sub(archiveName,storageName,6+nextIndex,STRING_END);
     }
     else
     {
       // dvd://<file name>
-      String_sub(storageSpecifier->fileName,storageName,6,STRING_END);
+      String_sub(archiveName,storageName,6,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_DVD;
@@ -2587,14 +2616,15 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
                                        )
          )
       {
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_INVALID_DEVICE_SPECIFIER;
       }
-      String_sub(storageSpecifier->fileName,storageName,5+nextIndex,STRING_END);
+      String_sub(archiveName,storageName,5+nextIndex,STRING_END);
     }
     else
     {
       // bd://<file name>
-      String_sub(storageSpecifier->fileName,storageName,5,STRING_END);
+      String_sub(archiveName,storageName,5,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_BD;
@@ -2612,39 +2642,83 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
                                        )
          )
       {
+        AutoFree_cleanup(&autoFreeList);
         return ERROR_INVALID_DEVICE_SPECIFIER;
       }
-      String_sub(storageSpecifier->fileName,storageName,9+nextIndex,STRING_END);
+      String_sub(archiveName,storageName,9+nextIndex,STRING_END);
     }
     else
     {
       // device://<file name>
-      String_sub(storageSpecifier->fileName,storageName,9,STRING_END);
+      String_sub(archiveName,storageName,9,STRING_END);
     }
 
     storageSpecifier->type = STORAGE_TYPE_DEVICE;
   }
   else if (String_startsWithCString(storageName,"file://"))
   {
-    String_sub(storageSpecifier->fileName,storageName,7,STRING_END);
+    String_sub(archiveName,storageName,7,STRING_END);
 
     storageSpecifier->type = STORAGE_TYPE_FILESYSTEM;
   }
   else
   {
-    String_set(storageSpecifier->fileName,storageName);
+    String_set(archiveName,storageName);
 
     storageSpecifier->type = STORAGE_TYPE_FILESYSTEM;
   }
 
+  File_initSplitFileName(&archiveNameTokenizer,archiveName);
+  {
+    String_clear(storageSpecifier->archiveName);
+    String_clear(storageSpecifier->archivePattern);
+    if (File_getNextSplitFileName(&archiveNameTokenizer,&token))
+    {
+      // get base file name
+      if (!Pattern_checkIsPattern(token))
+      {
+        if (!String_isEmpty(token))
+        {
+          File_setFileName(storageSpecifier->archiveName,token);
+          File_setFileName(storageSpecifier->archivePattern,token);
+        }
+        else
+        {
+          File_setFileNameChar(storageSpecifier->archiveName,FILE_SEPARATOR_CHAR);
+        }
+        while (File_getNextSplitFileName(&archiveNameTokenizer,&token) && !Pattern_checkIsPattern(token))
+        {
+          File_appendFileName(storageSpecifier->archiveName,token);
+        }
+      }
+
+      // get file pattern
+      if (Pattern_checkIsPattern(token))
+      {
+        do
+        {
+          File_appendFileName(storageSpecifier->archivePattern,token);
+        }
+        while (File_getNextSplitFileName(&archiveNameTokenizer,&token));
+      }
+    }
+    else
+    {
+      File_setFileName(storageSpecifier->archiveName,archiveName);
+    }
+  }
+  File_doneSplitFileName(&archiveNameTokenizer);
+
   // free resources
+  String_delete(archiveName);
   String_delete(string);
+  AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
 }
 
-bool Storage_equalNames(const String storageName1,
-                        const String storageName2
+bool Storage_equalNames(ConstString storageName1,
+                        ConstString storageName2
                        )
 {
   StorageSpecifier storageSpecifier1,storageSpecifier2;
@@ -2669,7 +2743,7 @@ bool Storage_equalNames(const String storageName1,
     switch (storageSpecifier1.type)
     {
       case STORAGE_TYPE_FILESYSTEM:
-        result = String_equals(storageSpecifier1.fileName,storageSpecifier2.fileName);
+        result = String_equals(storageSpecifier1.archiveName,storageSpecifier2.archiveName);
         break;
       case STORAGE_TYPE_FTP:
       case STORAGE_TYPE_SSH:
@@ -2678,14 +2752,14 @@ bool Storage_equalNames(const String storageName1,
       case STORAGE_TYPE_WEBDAV:
         result =    String_equals(storageSpecifier1.hostName,storageSpecifier2.hostName)
                  && String_equals(storageSpecifier1.loginName,storageSpecifier2.loginName)
-                 && String_equals(storageSpecifier1.fileName,storageSpecifier2.fileName);
+                 && String_equals(storageSpecifier1.archiveName,storageSpecifier2.archiveName);
         break;
       case STORAGE_TYPE_CD:
       case STORAGE_TYPE_DVD:
       case STORAGE_TYPE_BD:
       case STORAGE_TYPE_DEVICE:
         result =    String_equals(storageSpecifier1.deviceName,storageSpecifier2.deviceName)
-                 && String_equals(storageSpecifier1.fileName,storageSpecifier2.fileName);
+                 && String_equals(storageSpecifier1.archiveName,storageSpecifier2.archiveName);
         break;
       default:
         break;
@@ -2700,16 +2774,16 @@ bool Storage_equalNames(const String storageName1,
 }
 
 String Storage_getName(StorageSpecifier *storageSpecifier,
-                       const String     fileName
+                       ConstString      archiveName
                       )
 {
-  String     storageFileName;
-  const char *plainLoginPassword;
+  ConstString storageFileName;
+  const char  *plainLoginPassword;
 
   assert(storageSpecifier != NULL);
 
   // get file to use
-  storageFileName = (fileName != NULL) ? fileName : storageSpecifier->fileName;
+  storageFileName = (archiveName != NULL) ? archiveName : storageSpecifier->archiveName;
 
   String_clear(storageSpecifier->storageName);
   switch (storageSpecifier->type)
@@ -2879,22 +2953,22 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
 }
 
 const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
-                                   const String     fileName
+                                   ConstString      archiveName
                                   )
 {
-  return String_cString(Storage_getName(storageSpecifier,fileName));
+  return String_cString(Storage_getName(storageSpecifier,archiveName));
 }
 
-const String Storage_getPrintableName(StorageSpecifier *storageSpecifier,
-                                      const String     fileName
-                                     )
+ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
+                                     ConstString      archiveName
+                                    )
 {
-  String storageFileName;
+  ConstString storageFileName;
 
   assert(storageSpecifier != NULL);
 
   // get file to use
-  storageFileName = (fileName != NULL) ? fileName : storageSpecifier->fileName;
+  storageFileName = (archiveName != NULL) ? archiveName : storageSpecifier->archiveName;
 
   String_clear(storageSpecifier->storageName);
   switch (storageSpecifier->type)
@@ -3034,10 +3108,10 @@ const String Storage_getPrintableName(StorageSpecifier *storageSpecifier,
 }
 
 const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
-                                            const String     fileName
+                                            ConstString      archiveName
                                            )
 {
-  return String_cString(Storage_getPrintableName(storageSpecifier,fileName));
+  return String_cString(Storage_getPrintableName(storageSpecifier,archiveName));
 }
 
 #ifdef NDEBUG
@@ -3099,13 +3173,6 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   storageHandle->storageStatusInfoFunction = storageStatusInfoFunction;
   storageHandle->storageStatusInfoUserData = storageStatusInfoUserData;
   AUTOFREE_ADD(&autoFreeList,&storageHandle->storageSpecifier,{ Storage_doneSpecifier(&storageHandle->storageSpecifier); });
-
-  // check parameters
-  if (String_isEmpty(storageSpecifier->fileName))
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return ERROR_NO_ARCHIVE_FILE_NAME;
-  }
 
   // mount device if needed
   if ((jobOptions != NULL) && !String_isEmpty(jobOptions->mountDeviceName))
@@ -5071,19 +5138,25 @@ Errors Storage_unloadVolume(StorageHandle *storageHandle)
 }
 
 Errors Storage_create(StorageHandle *storageHandle,
-                      const String  fileName,
-                      uint64        fileSize
+                      ConstString   archiveName,
+                      uint64        archiveSize
                      )
 {
   Errors error;
   String directoryName;
 
   assert(storageHandle != NULL);
-  assert(fileName != NULL);
+  assert(archiveName != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   // init variables
   storageHandle->mode = STORAGE_MODE_WRITE;
+
+  // check if archive name given
+  if (String_isEmpty(storageHandle->storageSpecifier.archiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
 
   switch (storageHandle->storageSpecifier.type)
   {
@@ -5091,15 +5164,15 @@ Errors Storage_create(StorageHandle *storageHandle,
       break;
     case STORAGE_TYPE_FILESYSTEM:
       // check if archive file exists
-      if ((storageHandle->jobOptions != NULL) && !storageHandle->jobOptions->overwriteArchiveFilesFlag && File_exists(fileName))
+      if ((storageHandle->jobOptions != NULL) && !storageHandle->jobOptions->overwriteArchiveFilesFlag && File_exists(archiveName))
       {
-        return ERRORX_(FILE_EXISTS_,0,String_cString(fileName));
+        return ERRORX_(FILE_EXISTS_,0,String_cString(archiveName));
       }
 
       if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         // create directory if not existing
-        directoryName = File_getFilePathName(String_new(),fileName);
+        directoryName = File_getFilePathName(String_new(),archiveName);
         if (!String_isEmpty(directoryName) && !File_exists(directoryName))
         {
           error = File_makeDirectory(directoryName,
@@ -5117,7 +5190,7 @@ Errors Storage_create(StorageHandle *storageHandle,
 
         // open file
         error = File_open(&storageHandle->fileSystem.fileHandle,
-                          fileName,
+                          archiveName,
                           FILE_OPEN_CREATE
                          );
         if (error != ERROR_NONE)
@@ -5137,12 +5210,12 @@ Errors Storage_create(StorageHandle *storageHandle,
           const char      *plainLoginPassword;
           CURLMcode       curlMCode;
           StringTokenizer nameTokenizer;
-          String          name;
+          ConstString     token;
           int             runningHandles;
 
           // initialize variables
           storageHandle->ftp.index                  = 0LL;
-          storageHandle->ftp.size                   = fileSize;
+          storageHandle->ftp.size                   = archiveSize;
           storageHandle->ftp.readAheadBuffer.offset = 0LL;
           storageHandle->ftp.readAheadBuffer.length = 0L;
           storageHandle->ftp.length                 = 0L;
@@ -5178,17 +5251,17 @@ Errors Storage_create(StorageHandle *storageHandle,
           */
 
           // get pathname, basename
-          pathName = File_getFilePathName(String_new(),fileName);
-          baseName = File_getFileBaseName(String_new(),fileName);
+          pathName = File_getFilePathName(String_new(),archiveName);
+          baseName = File_getFileBaseName(String_new(),archiveName);
 
           // get URL
           url = String_format(String_new(),"ftp://%S",storageHandle->storageSpecifier.hostName);
           if (storageHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageSpecifier.hostPort);
           File_initSplitFileName(&nameTokenizer,pathName);
-          while (File_getNextSplitFileName(&nameTokenizer,&name))
+          while (File_getNextSplitFileName(&nameTokenizer,&token))
           {
             String_appendChar(url,'/');
-            String_append(url,name);
+            String_append(url,token);
           }
           File_doneSplitFileName(&nameTokenizer);
           String_append(url,baseName);
@@ -5283,7 +5356,7 @@ Errors Storage_create(StorageHandle *storageHandle,
           String          pathName;
           String          directoryName;
           StringTokenizer pathNameTokenizer;
-          String          name;
+          ConstString     token;
           const char      *plainPassword;
 
           // initialize variables
@@ -5319,15 +5392,15 @@ Errors Storage_create(StorageHandle *storageHandle,
           if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             // create directory (try it and ignore errors)
-            pathName      = File_getFilePathName(String_new(),fileName);
+            pathName      = File_getFilePathName(String_new(),archiveName);
             directoryName = File_newFileName();
             File_initSplitFileName(&pathNameTokenizer,pathName);
-            if (File_getNextSplitFileName(&pathNameTokenizer,&name))
+            if (File_getNextSplitFileName(&pathNameTokenizer,&token))
             {
               // create root-directory
-              if (!String_isEmpty(name))
+              if (!String_isEmpty(token))
               {
-                File_setFileName(directoryName,name);
+                File_setFileName(directoryName,token);
               }
               else
               {
@@ -5336,12 +5409,12 @@ Errors Storage_create(StorageHandle *storageHandle,
               (void)FtpMkdir(String_cString(directoryName),storageHandle->ftp.control);
 
               // create sub-directories
-              while (File_getNextSplitFileName(&pathNameTokenizer,&name))
+              while (File_getNextSplitFileName(&pathNameTokenizer,&token))
               {
-                if (!String_isEmpty(name))
+                if (!String_isEmpty(token))
                 {
                   // get sub-directory
-                  File_appendFileName(directoryName,name);
+                  File_appendFileName(directoryName,token);
 
                   // create sub-directory
                   (void)FtpMkdir(String_cString(directoryName),storageHandle->ftp.control);
@@ -5374,7 +5447,7 @@ Errors Storage_create(StorageHandle *storageHandle,
 
             // create file: first try non-passive, then passive mode
             FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,storageHandle->ftp.control);
-            if (FtpAccess(String_cString(fileName),
+            if (FtpAccess(String_cString(archiveName),
                           FTPLIB_FILE_WRITE,
                           FTPLIB_IMAGE,
                           storageHandle->ftp.control,
@@ -5383,7 +5456,7 @@ Errors Storage_create(StorageHandle *storageHandle,
                )
             {
               FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,storageHandle->ftp.control);
-              if (FtpAccess(String_cString(fileName),
+              if (FtpAccess(String_cString(archiveName),
                             FTPLIB_FILE_WRITE,
                             FTPLIB_IMAGE,
                             storageHandle->ftp.control,
@@ -5438,17 +5511,17 @@ Errors Storage_create(StorageHandle *storageHandle,
             // open channel and file for writing
             #ifdef HAVE_SSH2_SCP_SEND64
               storageHandle->scp.channel = libssh2_scp_send64(Network_getSSHSession(&storageHandle->scp.socketHandle),
-                                                                  String_cString(fileName),
+                                                                  String_cString(archiveName),
 // ???
 0600,
-                                                                  (libssh2_uint64_t)fileSize,
+                                                                  (libssh2_uint64_t)archiveSize,
 // ???
                                                                   0L,
                                                                   0L
                                                                  );
             #else /* not HAVE_SSH2_SCP_SEND64 */
               storageHandle->scp.channel = libssh2_scp_send(Network_getSSHSession(&storageHandle->scp.socketHandle),
-                                                                String_cString(fileName),
+                                                                String_cString(archiveName),
 // ???
 0600,
                                                                 (size_t)fileSize
@@ -5521,7 +5594,7 @@ Errors Storage_create(StorageHandle *storageHandle,
           {
             // create file
             storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
-                                                                   String_cString(fileName),
+                                                                   String_cString(archiveName),
                                                                    LIBSSH2_FXF_CREAT|LIBSSH2_FXF_WRITE|LIBSSH2_FXF_TRUNC,
 // ???
 LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
@@ -5558,12 +5631,12 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
           String          url;
           String          pathName,baseName;
           StringTokenizer nameTokenizer;
-          String          name;
+          ConstString     token;
           int             runningHandles;
 
           // initialize variables
           storageHandle->webdav.index             = 0LL;
-          storageHandle->webdav.size              = fileSize;
+          storageHandle->webdav.size              = archiveSize;
           storageHandle->webdav.sendBuffer.index  = 0L;
           storageHandle->webdav.sendBuffer.length = 0L;
 
@@ -5619,17 +5692,17 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
           if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             // get pathname, basename
-            pathName = File_getFilePathName(String_new(),fileName);
-            baseName = File_getFileBaseName(String_new(),fileName);
+            pathName = File_getFilePathName(String_new(),archiveName);
+            baseName = File_getFileBaseName(String_new(),archiveName);
 
             // create directories if necessary
             if (!String_isEmpty(pathName))
             {
               url = String_format(String_duplicate(baseURL),"/");
               File_initSplitFileName(&nameTokenizer,pathName);
-              while (File_getNextSplitFileName(&nameTokenizer,&name))
+              while (File_getNextSplitFileName(&nameTokenizer,&token))
               {
-                String_append(url,name);
+                String_append(url,token);
                 String_appendChar(url,'/');
 
                 curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
@@ -5672,9 +5745,9 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             {
               url = String_format(String_duplicate(baseURL),"/");
               File_initSplitFileName(&nameTokenizer,pathName);
-              while (File_getNextSplitFileName(&nameTokenizer,&name))
+              while (File_getNextSplitFileName(&nameTokenizer,&token))
               {
-                String_append(url,name);
+                String_append(url,token);
                 String_appendChar(url,'/');
               }
               File_doneSplitFileName(&nameTokenizer);
@@ -5710,9 +5783,9 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             // init WebDAV upload
             url = String_format(String_duplicate(baseURL),"/");
             File_initSplitFileName(&nameTokenizer,pathName);
-            while (File_getNextSplitFileName(&nameTokenizer,&name))
+            while (File_getNextSplitFileName(&nameTokenizer,&token))
             {
-              String_append(url,name);
+              String_append(url,token);
               String_appendChar(url,'/');
             }
             File_doneSplitFileName(&nameTokenizer);
@@ -5808,7 +5881,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
     case STORAGE_TYPE_BD:
       // create file name
       String_set(storageHandle->opticalDisk.write.fileName,storageHandle->opticalDisk.write.directory);
-      File_appendFileName(storageHandle->opticalDisk.write.fileName,fileName);
+      File_appendFileName(storageHandle->opticalDisk.write.fileName,archiveName);
 
       if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
@@ -5845,7 +5918,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
     case STORAGE_TYPE_DEVICE:
       // create file name
       String_set(storageHandle->device.fileName,storageHandle->device.directory);
-      File_appendFileName(storageHandle->device.fileName,fileName);
+      File_appendFileName(storageHandle->device.fileName,archiveName);
 
       if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
@@ -5872,7 +5945,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
   return ERROR_NONE;
 }
 
-Errors Storage_open(StorageHandle *storageHandle)
+Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
 {
   Errors error;
 
@@ -5882,20 +5955,27 @@ Errors Storage_open(StorageHandle *storageHandle)
   // init variables
   storageHandle->mode = STORAGE_MODE_READ;
 
+  // get file name
+  if (archiveName == NULL) archiveName = storageHandle->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
+
   switch (storageHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
       // check if file exists
-      if (!File_exists(storageHandle->storageSpecifier.fileName))
+      if (!File_exists(archiveName))
       {
-        return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageHandle->storageSpecifier.fileName));
+        return ERRORX_(FILE_NOT_FOUND_,0,String_cString(archiveName));
       }
 
       // open file
       error = File_open(&storageHandle->fileSystem.fileHandle,
-                        storageHandle->storageSpecifier.fileName,
+                        archiveName,
                         FILE_OPEN_READ
                        );
       if (error != ERROR_NONE)
@@ -5914,7 +5994,7 @@ Errors Storage_open(StorageHandle *storageHandle)
           const char      *plainLoginPassword;
           CURLMcode       curlMCode;
           StringTokenizer nameTokenizer;
-          String          name;
+          ConstString     token;
           long            httpCode;
           double          fileSize;
           int             runningHandles;
@@ -5954,17 +6034,17 @@ Errors Storage_open(StorageHandle *storageHandle)
           */
 
           // get pathname, basename
-          pathName = File_getFilePathName(String_new(),storageHandle->storageSpecifier.fileName);
-          baseName = File_getFileBaseName(String_new(),storageHandle->storageSpecifier.fileName);
+          pathName = File_getFilePathName(String_new(),archiveName);
+          baseName = File_getFileBaseName(String_new(),archiveName);
 
           // get URL
           url = String_format(String_new(),"ftp://%S",storageHandle->storageSpecifier.hostName);
           if (storageHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageSpecifier.hostPort);
           File_initSplitFileName(&nameTokenizer,pathName);
-          while (File_getNextSplitFileName(&nameTokenizer,&name))
+          while (File_getNextSplitFileName(&nameTokenizer,&token))
           {
             String_appendChar(url,'/');
-            String_append(url,name);
+            String_append(url,token);
           }
           File_doneSplitFileName(&nameTokenizer);
           String_append(url,baseName);
@@ -6020,7 +6100,7 @@ Errors Storage_open(StorageHandle *storageHandle)
             String_delete(pathName);
             (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
             (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
-            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageHandle->storageSpecifier.fileName));
+            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(archiveName));
           }
 
           // get file size
@@ -6140,15 +6220,15 @@ Errors Storage_open(StorageHandle *storageHandle)
             return error;
           }
           FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,storageHandle->ftp.control);
-          if (FtpDir(String_cString(tmpFileName),String_cString(storageHandle->storageSpecifier.fileName),storageHandle->ftp.control) != 1)
+          if (FtpDir(String_cString(tmpFileName),String_cString(fileName),storageHandle->ftp.control) != 1)
           {
             FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,storageHandle->ftp.control);
-            if (FtpDir(String_cString(tmpFileName),String_cString(storageHandle->storageSpecifier.fileName),storageHandle->ftp.control) != 1)
+            if (FtpDir(String_cString(tmpFileName),String_cString(fileName),storageHandle->ftp.control) != 1)
             {
               File_delete(tmpFileName,FALSE);
               File_deleteFileName(tmpFileName);
               FtpClose(storageHandle->ftp.control);
-              return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageHandle->storageSpecifier.fileName));
+              return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
             }
           }
           error = File_open(&fileHandle,tmpFileName,FILE_OPEN_READ);
@@ -6201,11 +6281,11 @@ Errors Storage_open(StorageHandle *storageHandle)
           if (!foundFlag)
           {
             FtpClose(storageHandle->ftp.control);
-            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageHandle->storageSpecifier.fileName));
+            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(archiveName));
           }
 
           // get file size
-          if (FtpSize(String_cString(storageHandle->storageSpecifier.fileName),
+          if (FtpSize(String_cString(archiveName),
                       &size,
                       FTPLIB_IMAGE,
                       storageHandle->ftp.control
@@ -6219,7 +6299,7 @@ Errors Storage_open(StorageHandle *storageHandle)
 
           // init FTP download: first try non-passive, then passive mode
           FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,storageHandle->ftp.control);
-          if (FtpAccess(String_cString(storageHandle->storageSpecifier.fileName),
+          if (FtpAccess(String_cString(archiveName),
                         FTPLIB_FILE_READ,
                         FTPLIB_IMAGE,
                         storageHandle->ftp.control,
@@ -6228,7 +6308,7 @@ Errors Storage_open(StorageHandle *storageHandle)
              )
           {
             FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,storageHandle->ftp.control);
-            if (FtpAccess(String_cString(storageHandle->storageSpecifier.fileName),
+            if (FtpAccess(String_cString(archiveName),
                           FTPLIB_FILE_READ,
                           FTPLIB_IMAGE,
                           storageHandle->ftp.control,
@@ -6286,7 +6366,7 @@ Errors Storage_open(StorageHandle *storageHandle)
 
           // open channel and file for reading
           storageHandle->scp.channel = libssh2_scp_recv(Network_getSSHSession(&storageHandle->scp.socketHandle),
-                                                            String_cString(storageHandle->storageSpecifier.fileName),
+                                                            String_cString(archiveName),
                                                             &fileInfo
                                                            );
           if (storageHandle->scp.channel == NULL)
@@ -6354,7 +6434,7 @@ Errors Storage_open(StorageHandle *storageHandle)
 
           // open file
           storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
-                                                                 String_cString(storageHandle->storageSpecifier.fileName),
+                                                                 String_cString(archiveName),
                                                                  LIBSSH2_FXF_READ,
                                                                  0
                                                                 );
@@ -6408,7 +6488,7 @@ Errors Storage_open(StorageHandle *storageHandle)
           String          url;
           String          pathName,baseName;
           StringTokenizer nameTokenizer;
-          String          name;
+          ConstString     token;
           long            httpCode;
           double          fileSize;
           int             runningHandles;
@@ -6479,15 +6559,15 @@ Errors Storage_open(StorageHandle *storageHandle)
           Password_undeploy(storageHandle->storageSpecifier.loginPassword);
 
           // get pathname, basename
-          pathName = File_getFilePathName(String_new(),storageHandle->storageSpecifier.fileName);
-          baseName = File_getFileBaseName(String_new(),storageHandle->storageSpecifier.fileName);
+          pathName = File_getFilePathName(String_new(),archiveName);
+          baseName = File_getFileBaseName(String_new(),archiveName);
 
           // check if file exists
           url = String_format(String_duplicate(baseURL),"/");
           File_initSplitFileName(&nameTokenizer,pathName);
-          while (File_getNextSplitFileName(&nameTokenizer,&name))
+          while (File_getNextSplitFileName(&nameTokenizer,&token))
           {
-            String_append(url,name);
+            String_append(url,token);
             String_appendChar(url,'/');
           }
           File_doneSplitFileName(&nameTokenizer);
@@ -6556,9 +6636,9 @@ Errors Storage_open(StorageHandle *storageHandle)
           // init WebDAV download
           url = String_format(String_duplicate(baseURL),"/");
           File_initSplitFileName(&nameTokenizer,pathName);
-          while (File_getNextSplitFileName(&nameTokenizer,&name))
+          while (File_getNextSplitFileName(&nameTokenizer,&token))
           {
-            String_append(url,name);
+            String_append(url,token);
             String_appendChar(url,'/');
           }
           File_doneSplitFileName(&nameTokenizer);
@@ -6656,7 +6736,7 @@ Errors Storage_open(StorageHandle *storageHandle)
           }
 
           // open optical disk/ISO 9660 file
-          storageHandle->opticalDisk.read.iso9660Handle = iso9660_open(String_cString(storageHandle->storageSpecifier.deviceName));
+          storageHandle->opticalDisk.read.iso9660Handle = iso9660_open_ext(String_cString(storageHandle->storageSpecifier.deviceName),ISO_EXTENSION_ROCK_RIDGE);//ISO_EXTENSION_ALL);
           if (storageHandle->opticalDisk.read.iso9660Handle == NULL)
           {
             if (File_isFile(storageHandle->storageSpecifier.deviceName))
@@ -6671,12 +6751,12 @@ Errors Storage_open(StorageHandle *storageHandle)
 
           // prepare file for reading
           storageHandle->opticalDisk.read.iso9660Stat = iso9660_ifs_stat_translate(storageHandle->opticalDisk.read.iso9660Handle,
-                                                                                   String_cString(storageHandle->storageSpecifier.fileName)
+                                                                                   String_cString(archiveName)
                                                                                   );
           if (storageHandle->opticalDisk.read.iso9660Stat == NULL)
           {
             iso9660_close(storageHandle->opticalDisk.read.iso9660Handle);
-            return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(storageHandle->storageSpecifier.fileName));
+            return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(archiveName));
           }
 
           DEBUG_ADD_RESOURCE_TRACE("storage open cd/dvd/bd",&storageHandle->opticalDisk);
@@ -6689,16 +6769,16 @@ Errors Storage_open(StorageHandle *storageHandle)
       // init variables
 
       // open file
+#ifndef WERROR
 #warning TODO still not implemented
+#endif
 #if 0
       error = File_open(&storageHandle->fileSystem.fileHandle,
-                        storageHandle->fileSystem.fileName,
+                        archiveName,
                         FILE_OPEN_READ
                        );
       if (error != ERROR_NONE)
       {
-        String_delete(storageHandle->fileSystem.fileName);
-        String_delete(storageSpecifier);
         return error;
       }
 
@@ -9013,16 +9093,16 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 }
 
 Errors Storage_delete(StorageHandle *storageHandle,
-                      const String  storageFileName
+                      ConstString   storageFileName
                      )
 {
-  String deleteFileName;
-  Errors error;
+  ConstString deleteFileName;
+  Errors      error;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
-  deleteFileName = (storageFileName != NULL) ? storageFileName : storageHandle->storageSpecifier.fileName;
+  deleteFileName = (storageFileName != NULL) ? storageFileName : storageHandle->storageSpecifier.archiveName;
 
   error = ERROR_UNKNOWN;
   switch (storageHandle->storageSpecifier.type)
@@ -9048,7 +9128,7 @@ Errors Storage_delete(StorageHandle *storageHandle,
           CURLcode          curlCode;
           const char        *plainLoginPassword;
           StringTokenizer   nameTokenizer;
-          String            name;
+          ConstString       token;
           String            ftpCommand;
           struct curl_slist *curlSList;
 
@@ -9071,10 +9151,10 @@ Errors Storage_delete(StorageHandle *storageHandle,
             url = String_format(String_new(),"ftp://%S",storageHandle->storageSpecifier.hostName);
             if (storageHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageSpecifier.hostPort);
             File_initSplitFileName(&nameTokenizer,pathName);
-            while (File_getNextSplitFileName(&nameTokenizer,&name))
+            while (File_getNextSplitFileName(&nameTokenizer,&token))
             {
               String_appendChar(url,'/');
-              String_append(url,name);
+              String_append(url,token);
             }
             File_doneSplitFileName(&nameTokenizer);
             String_append(url,baseName);
@@ -9266,7 +9346,7 @@ whould this be a possible implementation?
           String            pathName,baseName;
           String            url;
           StringTokenizer   nameTokenizer;
-          String            name;
+          ConstString       token;
 
           // initialize variables
           curlHandle = curl_easy_init();
@@ -9298,9 +9378,9 @@ whould this be a possible implementation?
             // get URL
             url = String_format(String_duplicate(baseURL),"/");
             File_initSplitFileName(&nameTokenizer,pathName);
-            while (File_getNextSplitFileName(&nameTokenizer,&name))
+            while (File_getNextSplitFileName(&nameTokenizer,&token))
             {
-              String_append(url,name);
+              String_append(url,token);
               String_appendChar(url,'/');
             }
             File_doneSplitFileName(&nameTokenizer);
@@ -9421,8 +9501,8 @@ whould this be a possible implementation?
 #if 0
 still not complete
 Errors Storage_getFileInfo(StorageHandle *storageHandle,
-                           const String  fileName,
-                           FileInfo     *fileInfo
+                           ConstString   fileName,
+                           FileInfo      *fileInfo
                           )
 {
   String infoFileName;
@@ -9432,7 +9512,7 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
   assert(fileInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
-  infoFileName = (fileName != NULL) ? fileName : storageHandle->storageSpecifier.fileName;
+  infoFileName = (fileName != NULL) ? fileName : storageHandle->storageSpecifier.archiveName;
   memset(fileInfo,0,sizeof(fileInfo));
 
   error = ERROR_UNKNOWN;
@@ -9453,7 +9533,7 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
           CURLcode          curlCode;
           const char        *plainLoginPassword;
           StringTokenizer   nameTokenizer;
-          String            name;
+          ConstString       token;
           String            ftpCommand;
           struct curl_slist *curlSList;
 
@@ -9494,10 +9574,10 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
           url = String_format(String_new(),"ftp://%S",storageHandle->storageSpecifier.hostName);
           if (storageHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageSpecifier.hostPort);
           File_initSplitFileName(&nameTokenizer,pathName);
-          while (File_getNextSplitFileName(&nameTokenizer,&name))
+          while (File_getNextSplitFileName(&nameTokenizer,&token))
           {
             String_appendChar(url,'/');
-            String_append(url,name);
+            String_append(url,token);
           }
           File_doneSplitFileName(&nameTokenizer);
           String_append(url,baseName);
@@ -9655,7 +9735,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           String            pathName,baseName;
           String            url;
           StringTokenizer   nameTokenizer;
-          String            name;
+          ConstString       token;
 
           // initialize variables
           curlHandle = curl_easy_init();
@@ -9687,9 +9767,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             // get URL
             url = String_format(String_duplicate(baseURL),"/");
             File_initSplitFileName(&nameTokenizer,pathName);
-            while (File_getNextSplitFileName(&nameTokenizer,&name))
+            while (File_getNextSplitFileName(&nameTokenizer,&token))
             {
-              String_append(url,name);
+              String_append(url,token);
               String_appendChar(url,'/');
             }
             File_doneSplitFileName(&nameTokenizer);
@@ -9821,7 +9901,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
       // open directory
       error = File_openDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,
-                                     storageSpecifier->fileName
+                                     storageSpecifier->archiveName
                                     );
       if (error != ERROR_NONE)
       {
@@ -9838,7 +9918,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           CURLcode        curlCode;
           const char      *plainLoginPassword;
           StringTokenizer nameTokenizer;
-          String          name;
+          ConstString     token;
 
           // init variables
           storageDirectoryListHandle->type         = STORAGE_TYPE_FTP;
@@ -9949,11 +10029,11 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           // get URL
           url = String_format(String_new(),"ftp://%S",storageDirectoryListHandle->storageSpecifier.hostName);
           if (storageDirectoryListHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageDirectoryListHandle->storageSpecifier.hostPort);
-          File_initSplitFileName(&nameTokenizer,storageDirectoryListHandle->storageSpecifier.fileName);
-          while (File_getNextSplitFileName(&nameTokenizer,&name))
+          File_initSplitFileName(&nameTokenizer,storageDirectoryListHandle->storageSpecifier.archiveName);
+          while (File_getNextSplitFileName(&nameTokenizer,&token))
           {
             String_appendChar(url,'/');
-            String_append(url,name);
+            String_append(url,token);
           }
           File_doneSplitFileName(&nameTokenizer);
 
@@ -10121,12 +10201,12 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
           // read directory: first try non-passive, then passive mode
           FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,control);
-          if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(storageDirectoryListHandle->storageSpecifier.fileName),control) != 1)
+          if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(storageDirectoryListHandle->storageSpecifier.archiveName),control) != 1)
           {
             FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,control);
-            if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(storageDirectoryListHandle->storageSpecifier.fileName),control) != 1)
+            if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(storageDirectoryListHandle->storageSpecifier.archiveName),control) != 1)
             {
-              error = ERRORX_(OPEN_DIRECTORY,0,String_cString(storageDirectoryListHandle->storageSpecifier.fileName));
+              error = ERRORX_(OPEN_DIRECTORY,0,String_cString(storageDirectoryListHandle->storageSpecifier.archiveName));
               FtpClose(control);
               AutoFree_cleanup(&autoFreeList);
               return error;
@@ -10185,7 +10265,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.pathName,{ String_delete(storageDirectoryListHandle->sftp.pathName); });
 
           // set pathname
-          String_set(storageDirectoryListHandle->sftp.pathName,storageDirectoryListHandle->storageSpecifier.fileName);
+          String_set(storageDirectoryListHandle->sftp.pathName,storageDirectoryListHandle->storageSpecifier.archiveName);
 
           // get SSH server settings
           getSSHServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&sshServer);
@@ -10285,7 +10365,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           CURLcode          curlCode;
           const char        *plainLoginPassword;
           StringTokenizer   nameTokenizer;
-          String            name;
+          ConstString       token;
           String            directoryData;
           struct curl_slist *curlSList;
 
@@ -10394,11 +10474,11 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           // get URL
           url = String_format(String_new(),"http://%S",storageDirectoryListHandle->storageSpecifier.hostName);
           if (storageDirectoryListHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageDirectoryListHandle->storageSpecifier.hostPort);
-          File_initSplitFileName(&nameTokenizer,storageDirectoryListHandle->storageSpecifier.fileName);
-          while (File_getNextSplitFileName(&nameTokenizer,&name))
+          File_initSplitFileName(&nameTokenizer,storageDirectoryListHandle->storageSpecifier.archiveName);
+          while (File_getNextSplitFileName(&nameTokenizer,&token))
           {
             String_appendChar(url,'/');
-            String_append(url,name);
+            String_append(url,token);
           }
           File_doneSplitFileName(&nameTokenizer);
           String_appendChar(url,'/');
@@ -10509,7 +10589,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
         UNUSED_VARIABLE(jobOptions);
 
         // init variables
-        storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(storageDirectoryListHandle->storageSpecifier.fileName);
+        storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(storageDirectoryListHandle->storageSpecifier.archiveName);
         AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.pathName,{ String_delete(storageDirectoryListHandle->opticalDisk.pathName); });
 
         // get device name
@@ -10548,7 +10628,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
         }
 
         // open optical disk/ISO 9660 file
-        storageDirectoryListHandle->opticalDisk.iso9660Handle = iso9660_open(String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
+        storageDirectoryListHandle->opticalDisk.iso9660Handle = iso9660_open_ext(String_cString(storageDirectoryListHandle->storageSpecifier.deviceName),ISO_EXTENSION_ALL);
         if (storageDirectoryListHandle->opticalDisk.iso9660Handle == NULL)
         {
           if (File_isFile(storageDirectoryListHandle->storageSpecifier.deviceName))
@@ -10569,11 +10649,11 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 
         // open directory for reading
         storageDirectoryListHandle->opticalDisk.cdioList = iso9660_ifs_readdir(storageDirectoryListHandle->opticalDisk.iso9660Handle,
-                                                                               String_cString(storageDirectoryListHandle->storageSpecifier.fileName)
+                                                                               String_cString(storageDirectoryListHandle->storageSpecifier.archiveName)
                                                                               );
         if (storageDirectoryListHandle->opticalDisk.cdioList == NULL)
         {
-          error = ERRORX_(FILE_NOT_FOUND_,errno,String_cString(storageDirectoryListHandle->storageSpecifier.fileName));
+          error = ERRORX_(FILE_NOT_FOUND_,errno,String_cString(storageDirectoryListHandle->storageSpecifier.archiveName));
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -10582,7 +10662,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #else /* not HAVE_ISO9660 */
         // open directory
         error = File_openDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle,
-                                       storageDirectoryListHandle->storageSpecifier.fileName
+                                       storageDirectoryListHandle->storageSpecifier.archiveName
                                       );
         if (error != NULL)
         {
@@ -11184,7 +11264,8 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
               error = ERROR_INSUFFICIENT_MEMORY;
               break;
             }
-            iso9660_name_translate(iso9660Stat->filename,s);
+            // Note: enable Joliet extension to avoid conversion to lower case
+            iso9660_name_translate_ext(iso9660Stat->filename,s,ISO_EXTENSION_JOLIET_LEVEL1);
             String_set(fileName,storageDirectoryListHandle->opticalDisk.pathName);
             File_appendFileNameCString(fileName,s);
             free(s);
@@ -11247,7 +11328,7 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
                     void                         *storageStatusInfoUserData,
-                    const String                 localFileName
+                    ConstString                  localFileName
                    )
 {
   AutoFreeList      autoFreeList;
@@ -11287,7 +11368,7 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  error = Storage_open(&storageHandle);
+  error = Storage_open(&storageHandle,NULL);
   if (error != ERROR_NONE)
   {
     (void)Storage_done(&storageHandle);

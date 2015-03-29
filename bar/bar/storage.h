@@ -159,7 +159,8 @@ typedef struct
   String       loginName;                                  // login name
   Password     *loginPassword;                             // login name
   String       deviceName;                                 // device name
-  String       fileName;                                   // file name
+  String       archiveName;                                // archive base name
+  String       archivePattern;                             // archive pattern
 
   String       storageName;                                // storage name (returned by Storage_getStorageName())
   String       printableStorageName;                       // printable storage name without password (returned by Storage_getPrintableStorageName())
@@ -187,6 +188,7 @@ typedef struct
   uint64        measurementTime;                           // measurement sum of time for transmission [us]
 } StorageBandWidthLimiter;
 
+// storage handle
 typedef struct
 {
   StorageModes                 mode;                       // storage mode: READ, WRITE
@@ -432,6 +434,7 @@ typedef struct
   StorageStatusInfo runningInfo;
 } StorageHandle;
 
+// directory list handle
 typedef struct
 {
   StorageSpecifier storageSpecifier;                       // storage specifier data
@@ -648,11 +651,11 @@ void Storage_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_parseFTPSpecifier(const String ftpSpecifier,
-                               String       hostName,
-                               uint         *hostPort,
-                               String       loginName,
-                               Password     *loginPassword
+bool Storage_parseFTPSpecifier(ConstString ftpSpecifier,
+                               String      hostName,
+                               uint        *hostPort,
+                               String      loginName,
+                               Password    *loginPassword
                               );
 
 /***********************************************************************\
@@ -670,10 +673,10 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_parseSSHSpecifier(const String sshSpecifier,
-                               String       hostName,
-                               uint         *hostPort,
-                               String       loginName
+bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
+                               String      hostName,
+                               uint        *hostPort,
+                               String      loginName
                               );
 
 /***********************************************************************\
@@ -691,10 +694,10 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_parseWebDAVSpecifier(const String webdavSpecifier,
-                                  String       hostName,
-                                  String       loginName,
-                                  Password     *loginPassword
+bool Storage_parseWebDAVSpecifier(ConstString webdavSpecifier,
+                                  String      hostName,
+                                  String      loginName,
+                                  Password    *loginPassword
                                  );
 
 /***********************************************************************\
@@ -704,16 +707,14 @@ bool Storage_parseWebDAVSpecifier(const String webdavSpecifier,
 * Input  : deviceSpecifier   - device specifier string
 *          defaultDeviceName - default device name
 *          deviceName        - device name variable (can be NULL)
-*          fileName          - file name variable (can be NULL)
 * Output : deviceName - device name (can be NULL)
-*          fileName   - file name (can be NULL)
 * Return : TRUE if device specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
-                                  const String defaultDeviceName,
-                                  String       deviceName
+bool Storage_parseDeviceSpecifier(ConstString deviceSpecifier,
+                                  ConstString defaultDeviceName,
+                                  String      deviceName
                                  );
 
 /***********************************************************************\
@@ -726,13 +727,13 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
 *            <type>://<storage specifier>/<filename>
 \***********************************************************************/
 
-StorageTypes Storage_getType(const String storageName);
+StorageTypes Storage_getType(ConstString storageName);
 
 /***********************************************************************\
 * Name   : Storage_parseName
 * Purpose: parse storage name and get storage type
 * Input  : storageSpecifier - storage specific variable
-*          storageName - storage name
+*          storageName      - storage name
 * Output : storageSpecifier - storage specific data
 * Return : ERROR_NONE or error code
 * Notes  : name structure:
@@ -740,7 +741,7 @@ StorageTypes Storage_getType(const String storageName);
 \***********************************************************************/
 
 Errors Storage_parseName(StorageSpecifier *storageSpecifier,
-                         const String     storageName
+                         ConstString      storageName
                         );
 
 /***********************************************************************\
@@ -752,32 +753,32 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_equalNames(const String storageName1,
-                        const String storageName2
+bool Storage_equalNames(ConstString storageName1,
+                        ConstString storageName2
                        );
 
 /***********************************************************************\
 * Name   : Storage_getName, Storage_getNameCString
 * Purpose: get storage name
 * Input  : storageSpecifierString - storage specifier string
-*          fileName               - fileName (can be NULL)
+*          archiveName            - archive name (can be NULL)
 * Output : -
 * Return : storage name
 * Notes  : if fileName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
 String Storage_getName(StorageSpecifier *storageSpecifier,
-                       const String     fileName
+                       ConstString      archiveName
                       );
 const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
-                                   const String     fileName
+                                   ConstString      archiveName
                                   );
 
 /***********************************************************************\
 * Name   : Storage_getPrintableName, Storage_getPrintableNameCString
 * Purpose: get printable storage name (without password)
 * Input  : storageSpecifierString - storage specifier string
-*          fileName               - fileName (can be NULL)
+*          archiveName            - archive name (can be NULL)
 * Output : -
 * Return : storage name
 * Notes  : if fileName is NULL file name from storageSpecifier is used
@@ -786,12 +787,12 @@ const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
 // String is a pointer type. Why can't this be a pointer to a const struct?
 #pragma GCC push_options
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
-const String Storage_getPrintableName(StorageSpecifier *storageSpecifier,
-                                      const String     fileName
-                                     );
+ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
+                                     ConstString      archiveName
+                                    );
 #pragma GCC pop_options
 const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
-                                            const String     fileName
+                                            ConstString      archiveName
                                            );
 
 /***********************************************************************\
@@ -963,28 +964,29 @@ Errors Storage_unloadVolume(StorageHandle *storageHandle);
 * Name   : Storage_create
 * Purpose: create new storage file
 * Input  : storageHandle - storage handle
-*          fileName      - archive file name
-*          fileSize      - storage file size
+*          archiveName   - archive file name
+*          archiveSize   - archive file size [bytes]
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Storage_create(StorageHandle *storageHandle,
-                      const String  fileName,
-                      uint64        fileSize
+                      ConstString   archiveName,
+                      uint64        archiveSize
                      );
 
 /***********************************************************************\
 * Name   : Storage_open
 * Purpose: open storage file
 * Input  : storageHandle - storage handle
+*          archiveName   - archive name or NULL
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_open(StorageHandle *storageHandle);
+Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName);
 
 /***********************************************************************\
 * Name   : Storage_close
@@ -1084,14 +1086,14 @@ Errors Storage_seek(StorageHandle *storageHandle,
 * Name   : Storage_delete
 * Purpose: delete storage file
 * Input  : storageHandle - storage handle
-*          fileName      - archive file name (can be NULL)
+*          archiveName   - archive file name (can be NULL)
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Storage_delete(StorageHandle *storageHandle,
-                      const String  fileName
+                      ConstString   archiveName
                      );
 
 #if 0
@@ -1100,7 +1102,7 @@ still not complete
 * Name   : Storage_getFileInfo
 * Purpose: get storage file info
 * Input  : storageHandle - storage handle
-*          fileName      - archive file name (can be NULL)
+*          archiveName   - archive file name (can be NULL)
 *          fileInfo      - file info variable
 * Output : fileInfo - file info
 * Return : ERROR_NONE or errorcode
@@ -1108,8 +1110,8 @@ still not complete
 \***********************************************************************/
 
 Errors Storage_getFileInfo(StorageHandle *storageHandle,
-                           const String  fileName,
-                           FileInfo     *fileInfo
+                           ConstString   archiveName,
+                           FileInfo      *fileInfo
                           );
 #endif /* 0 */
 
@@ -1202,7 +1204,7 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
                     void                         *storageStatusInfoUserData,
-                    const String                 localFileName
+                    ConstString                  localFileName
                    );
 
 #ifdef __cplusplus
