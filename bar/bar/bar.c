@@ -3798,7 +3798,7 @@ Errors inputCryptPassword(void         *userData,
 bool parseWeekDaySet(const char *names, WeekDaySet *weekDaySet)
 {
   StringTokenizer stringTokenizer;
-  String          name;
+  ConstString     token;
 
   assert(names != NULL);
   assert(weekDaySet != NULL);
@@ -3817,15 +3817,15 @@ bool parseWeekDaySet(const char *names, WeekDaySet *weekDaySet)
                                 STRING_QUOTES,
                                 TRUE
                                );
-    while (String_getNextToken(&stringTokenizer,&name,NULL))
+    while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
-      if      (String_equalsIgnoreCaseCString(name,"mon")) SET_ADD(*weekDaySet,WEEKDAY_MON);
-      else if (String_equalsIgnoreCaseCString(name,"tue")) SET_ADD(*weekDaySet,WEEKDAY_TUE);
-      else if (String_equalsIgnoreCaseCString(name,"wed")) SET_ADD(*weekDaySet,WEEKDAY_WED);
-      else if (String_equalsIgnoreCaseCString(name,"thu")) SET_ADD(*weekDaySet,WEEKDAY_THU);
-      else if (String_equalsIgnoreCaseCString(name,"fri")) SET_ADD(*weekDaySet,WEEKDAY_FRI);
-      else if (String_equalsIgnoreCaseCString(name,"sat")) SET_ADD(*weekDaySet,WEEKDAY_SAT);
-      else if (String_equalsIgnoreCaseCString(name,"sun")) SET_ADD(*weekDaySet,WEEKDAY_SUN);
+      if      (String_equalsIgnoreCaseCString(token,"mon")) SET_ADD(*weekDaySet,WEEKDAY_MON);
+      else if (String_equalsIgnoreCaseCString(token,"tue")) SET_ADD(*weekDaySet,WEEKDAY_TUE);
+      else if (String_equalsIgnoreCaseCString(token,"wed")) SET_ADD(*weekDaySet,WEEKDAY_WED);
+      else if (String_equalsIgnoreCaseCString(token,"thu")) SET_ADD(*weekDaySet,WEEKDAY_THU);
+      else if (String_equalsIgnoreCaseCString(token,"fri")) SET_ADD(*weekDaySet,WEEKDAY_FRI);
+      else if (String_equalsIgnoreCaseCString(token,"sat")) SET_ADD(*weekDaySet,WEEKDAY_SAT);
+      else if (String_equalsIgnoreCaseCString(token,"sun")) SET_ADD(*weekDaySet,WEEKDAY_SUN);
       else
       {
         String_doneTokenizer(&stringTokenizer);
@@ -4078,7 +4078,9 @@ LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *var
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
+#ifndef WERROR
 #warning TODO String_mapCString needed?
+#endif
   pattern = String_mapCString(String_newCString(value),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
   error = EntryList_append((EntryList*)variable,entryType,pattern,patternType);
   if (error != ERROR_NONE)
