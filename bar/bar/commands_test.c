@@ -93,8 +93,6 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
 
-  printInfo(0,"Testing archive '%s':\n",Storage_getPrintableNameCString(storageSpecifier,archiveName));
-
   // init variables
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
@@ -113,6 +111,10 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
                       );
   if (error != ERROR_NONE)
   {
+    printError("Cannot initialize storage '%s' (error: %s)!\n",
+               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               Error_getText(error)
+              );
     free(buffer);
     return error;
   }
@@ -128,12 +130,18 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
                       );
   if (error != ERROR_NONE)
   {
+    printError("Cannot open storage '%s' (error: %s)!\n",
+               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               Error_getText(error)
+              );
     (void)Storage_done(&storageHandle);
     free(buffer);
     return error;
   }
 
   // read archive
+  printInfo(0,"Testing archive '%s':\n",Storage_getPrintableNameCString(storageSpecifier,archiveName));
+  failError = ERROR_NONE;
   while (!Archive_eof(&archiveInfo,FALSE))
   {
     // get next archive entry type
@@ -906,15 +914,15 @@ Errors Command_test(const StringList                *storageNameList,
     if (String_isEmpty(storageSpecifier.archivePattern))
     {
       // test archive content
-        error = testArchiveContent(&storageSpecifier,
-                                   NULL,
-                                   includeEntryList,
-                                   excludePatternList,
-                                   jobOptions,
-                                   archiveGetCryptPasswordFunction,
-                                   archiveGetCryptPasswordUserData,
-                                   &fragmentList
-                                  );
+      error = testArchiveContent(&storageSpecifier,
+                                 NULL,
+                                 includeEntryList,
+                                 excludePatternList,
+                                 jobOptions,
+                                 archiveGetCryptPasswordFunction,
+                                 archiveGetCryptPasswordUserData,
+                                 &fragmentList
+                                );
     }
     else
     {
