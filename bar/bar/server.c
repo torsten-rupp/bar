@@ -2863,11 +2863,11 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getCryptPassword(void         *userData,
-                              Password     *password,
-                              const String fileName,
-                              bool         validateFlag,
-                              bool         weakCheckFlag
+LOCAL Errors getCryptPassword(void        *userData,
+                              Password    *password,
+                              ConstString fileName,
+                              bool        validateFlag,
+                              bool        weakCheckFlag
                              )
 {
   UNUSED_VARIABLE(fileName);
@@ -3501,7 +3501,9 @@ LOCAL Errors deleteStorage(DatabaseId storageId)
       resultError = Storage_parseName(&storageSpecifier,storageName);
       if (resultError == ERROR_NONE)
       {
+#ifndef WERROR
 #warning NYI: move this special handling of limited scp into Storage_delete()?
+#endif
         // init storage
         if (storageSpecifier.type == STORAGE_TYPE_SCP)
         {
@@ -3545,7 +3547,7 @@ LOCAL Errors deleteStorage(DatabaseId storageId)
         {
           // delete storage
           resultError = Storage_delete(&storageHandle,
-                                       storageSpecifier.fileName
+                                       storageSpecifier.archiveName
                                       );
 
           // close storage
@@ -4251,7 +4253,9 @@ LOCAL void indexThreadCode(void)
         LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
         {
           // index update
+#ifndef WERROR
 #warning todo init?
+#endif
           jobOptions.cryptPassword           = Password_duplicate(indexCryptPasswordNode->cryptPassword);
           jobOptions.cryptPrivateKeyFileName = String_duplicate(indexCryptPasswordNode->cryptPrivateKeyFileName);
           error = Archive_updateIndex(indexHandle,
@@ -4304,7 +4308,9 @@ LOCAL void indexThreadCode(void)
         }
         else if (Error_getCode(error) == ERROR_INTERRUPTED)
         {
+#ifndef WERROR
 #warning needed?
+#endif
 #if 0
           plogMessage(LOG_TYPE_INDEX,
                       "INDEX",
@@ -5514,7 +5520,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const StringMap 
   String          modeMask;
   SemaphoreLock   semaphoreLock;
   StringTokenizer stringTokenizer;
-  String          token;
+  ConstString     token;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -5603,7 +5609,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const StringMa
   String          modeMask;
   SemaphoreLock   semaphoreLock;
   StringTokenizer stringTokenizer;
-  String          token;
+  ConstString     token;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6654,7 +6660,9 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const 
     }
 
     // delete value
+#ifndef WERROR
 #warning todo?
+#endif
 //    ConfigValue_reset(&CONFIG_VALUES[z],jobNode);
   }
 
@@ -8816,7 +8824,9 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
     }
 
     // delete value
+#ifndef WERROR
 #warning todo?
+#endif
 //    ConfigValue_reset(&CONFIG_VALUES[z],jobNode);
   }
 
@@ -9456,6 +9466,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   error = Archive_open(&archiveInfo,
                        &storageHandle,
                        &storageSpecifier,
+                       NULL,
                        &clientInfo->jobOptions,
                        CALLBACK(NULL,NULL)
                       );
