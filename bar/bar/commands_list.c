@@ -262,7 +262,7 @@ LOCAL const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printArchiveListHeader(const String storageName)
+LOCAL void printArchiveListHeader(ConstString storageName)
 {
   const TextMacro MACROS[] =
   {
@@ -358,8 +358,8 @@ LOCAL void printArchiveListFooter(ulong fileCount)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printFileInfo(const String       storageName,
-                         const String       fileName,
+LOCAL void printFileInfo(ConstString        storageName,
+                         ConstString        fileName,
                          uint64             size,
                          uint64             timeModified,
                          uint64             archiveSize,
@@ -367,7 +367,7 @@ LOCAL void printFileInfo(const String       storageName,
                          CompressAlgorithms byteCompressAlgorithm,
                          CryptAlgorithms    cryptAlgorithm,
                          CryptTypes         cryptType,
-                         const String       deltaSourceName,
+                         ConstString        deltaSourceName,
                          uint64             deltaSourceSize,
                          uint64             fragmentOffset,
                          uint64             fragmentSize
@@ -521,15 +521,15 @@ LOCAL void printFileInfo(const String       storageName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printImageInfo(const String       storageName,
-                          const String       imageName,
+LOCAL void printImageInfo(ConstString        storageName,
+                          ConstString       imageName,
                           uint64             size,
                           uint64             archiveSize,
                           CompressAlgorithms deltaCompressAlgorithm,
                           CompressAlgorithms byteCompressAlgorithm,
                           CryptAlgorithms    cryptAlgorithm,
                           CryptTypes         cryptType,
-                          const String       deltaSourceName,
+                          ConstString        deltaSourceName,
                           uint64             deltaSourceSize,
                           uint               blockSize,
                           uint64             blockOffset,
@@ -668,8 +668,8 @@ LOCAL void printImageInfo(const String       storageName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printDirectoryInfo(const String    storageName,
-                              const String    directoryName,
+LOCAL void printDirectoryInfo(ConstString     storageName,
+                              ConstString     directoryName,
                               uint64          timeModified,
                               CryptAlgorithms cryptAlgorithm,
                               CryptTypes      cryptType
@@ -737,9 +737,9 @@ LOCAL void printDirectoryInfo(const String    storageName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printLinkInfo(const String    storageName,
-                         const String    linkName,
-                         const String    destinationName,
+LOCAL void printLinkInfo(ConstString     storageName,
+                         ConstString     linkName,
+                         ConstString     destinationName,
                          CryptAlgorithms cryptAlgorithm,
                          CryptTypes      cryptType
                         )
@@ -811,8 +811,8 @@ LOCAL void printLinkInfo(const String    storageName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printHardLinkInfo(const String       storageName,
-                             const String       fileName,
+LOCAL void printHardLinkInfo(ConstString        storageName,
+                             ConstString        fileName,
                              uint64             size,
                              uint64             timeModified,
                              uint64             archiveSize,
@@ -820,7 +820,7 @@ LOCAL void printHardLinkInfo(const String       storageName,
                              CompressAlgorithms byteCompressAlgorithm,
                              CryptAlgorithms    cryptAlgorithm,
                              CryptTypes         cryptType,
-                             const String       deltaSourceName,
+                             ConstString        deltaSourceName,
                              uint64             deltaSourceSize,
                              uint64             fragmentOffset,
                              uint64             fragmentSize
@@ -967,8 +967,8 @@ LOCAL void printHardLinkInfo(const String       storageName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printSpecialInfo(const String     storageName,
-                            const String     fileName,
+LOCAL void printSpecialInfo(ConstString      storageName,
+                            ConstString      fileName,
                             CryptAlgorithms  cryptAlgorithm,
                             CryptTypes       cryptType,
                             FileSpecialTypes fileSpecialType,
@@ -1090,8 +1090,8 @@ LOCAL void printSpecialInfo(const String     storageName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addListFileInfo(const String       storageName,
-                           const String       fileName,
+LOCAL void addListFileInfo(ConstString        storageName,
+                           ConstString        fileName,
                            uint64             fileSize,
                            uint64             timeModified,
                            uint64             archiveSize,
@@ -1099,7 +1099,7 @@ LOCAL void addListFileInfo(const String       storageName,
                            CompressAlgorithms byteCompressAlgorithm,
                            CryptAlgorithms    cryptAlgorithm,
                            CryptTypes         cryptType,
-                           const String       deltaSourceName,
+                           ConstString        deltaSourceName,
                            uint64             deltaSourceSize,
                            uint64             fragmentOffset,
                            uint64             fragmentSize
@@ -1155,15 +1155,15 @@ LOCAL void addListFileInfo(const String       storageName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addListImageInfo(const String       storageName,
-                            const String       imageName,
+LOCAL void addListImageInfo(ConstString        storageName,
+                            ConstString        imageName,
                             uint64             imageSize,
                             uint64             archiveSize,
                             CompressAlgorithms deltaCompressAlgorithm,
                             CompressAlgorithms byteCompressAlgorithm,
                             CryptAlgorithms    cryptAlgorithm,
                             CryptTypes         cryptType,
-                            const String       deltaSourceName,
+                            ConstString        deltaSourceName,
                             uint64             deltaSourceSize,
                             uint               blockSize,
                             uint64             blockOffset,
@@ -1212,8 +1212,8 @@ LOCAL void addListImageInfo(const String       storageName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addListDirectoryInfo(const String    storageName,
-                                const String    directoryName,
+LOCAL void addListDirectoryInfo(ConstString     storageName,
+                                ConstString     directoryName,
                                 uint64          timeModified,
                                 CryptAlgorithms cryptAlgorithm,
                                 CryptTypes      cryptType
@@ -1253,9 +1253,9 @@ LOCAL void addListDirectoryInfo(const String    storageName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addListLinkInfo(const String    storageName,
-                           const String    linkName,
-                           const String    destinationName,
+LOCAL void addListLinkInfo(ConstString     storageName,
+                           ConstString     linkName,
+                           ConstString     destinationName,
                            CryptAlgorithms cryptAlgorithm,
                            CryptTypes      cryptType
                           )
@@ -1302,8 +1302,8 @@ LOCAL void addListLinkInfo(const String    storageName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addListHardLinkInfo(const String       storageName,
-                               const String       fileName,
+LOCAL void addListHardLinkInfo(ConstString        storageName,
+                               ConstString        fileName,
                                uint64             fileSize,
                                uint64             timeModified,
                                uint64             archiveSize,
@@ -1311,7 +1311,7 @@ LOCAL void addListHardLinkInfo(const String       storageName,
                                CompressAlgorithms byteCompressAlgorithm,
                                CryptAlgorithms    cryptAlgorithm,
                                CryptTypes         cryptType,
-                               const String       deltaSourceName,
+                               ConstString        deltaSourceName,
                                uint64             deltaSourceSize,
                                uint64             fragmentOffset,
                                uint64             fragmentSize
@@ -1359,8 +1359,8 @@ LOCAL void addListHardLinkInfo(const String       storageName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addListSpecialInfo(const String     storageName,
-                              const String     fileName,
+LOCAL void addListSpecialInfo(ConstString      storageName,
+                              ConstString      fileName,
                               CryptAlgorithms  cryptAlgorithm,
                               CryptTypes       cryptType,
                               FileSpecialTypes fileSpecialType,
@@ -1724,10 +1724,10 @@ LOCAL void printArchiveList(void)
 * Purpose: list archive content
 * Input  : storageHandle                    - storage handle
 *          storageSpecifier                 - storage specifier
+*          archiveName                      - archive name
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
 *          jobOptions                       - job options
-*          storageName                      - storage name
 *          printableStorageName             - printable storage name
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
@@ -1738,6 +1738,7 @@ LOCAL void printArchiveList(void)
 
 LOCAL Errors listArchiveContent(StorageHandle                   *storageHandle,
                                 StorageSpecifier                *storageSpecifier,
+                                ConstString                     archiveName,
                                 const EntryList                 *includeEntryList,
                                 const PatternList               *excludePatternList,
                                 JobOptions                      *jobOptions,
@@ -1783,6 +1784,7 @@ remoteBarFlag=FALSE;
         error = Archive_open(&archiveInfo,
                              storageHandle,
                              storageSpecifier,
+                             archiveName,
                              jobOptions,
                              archiveGetCryptPasswordFunction,
                              archiveGetCryptPasswordUserData
@@ -1805,7 +1807,7 @@ remoteBarFlag=FALSE;
           if (error != ERROR_NONE)
           {
             printError("Cannot read next entry from storage '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,NULL),
+                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
                        Error_getText(error)
                       );
             break;
@@ -1845,7 +1847,7 @@ remoteBarFlag=FALSE;
                 if (error != ERROR_NONE)
                 {
                   printError("Cannot read 'file' content from storage '%s' (error: %s)!\n",
-                             Storage_getPrintableNameCString(storageSpecifier,NULL),
+                             Storage_getPrintableNameCString(storageSpecifier,archiveName),
                              Error_getText(error)
                             );
                   String_delete(deltaSourceName);
@@ -1880,7 +1882,7 @@ remoteBarFlag=FALSE;
                     // output file info
                     if (!printedInfoFlag)
                     {
-                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
                       printedInfoFlag = TRUE;
                     }
                     printFileInfo(NULL,
@@ -1946,7 +1948,7 @@ remoteBarFlag=FALSE;
                 if (error != ERROR_NONE)
                 {
                   printError("Cannot read 'image' content from storage '%s' (error: %s)!\n",
-                             Storage_getPrintableNameCString(storageSpecifier,NULL),
+                             Storage_getPrintableNameCString(storageSpecifier,archiveName),
                              Error_getText(error)
                             );
                   String_delete(deltaSourceName);
@@ -1981,7 +1983,7 @@ remoteBarFlag=FALSE;
                     // output file info
                     if (!printedInfoFlag)
                     {
-                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
                       printedInfoFlag = TRUE;
                     }
                     printImageInfo(NULL,
@@ -2034,7 +2036,7 @@ remoteBarFlag=FALSE;
                 if (error != ERROR_NONE)
                 {
                   printError("Cannot read 'directory' content from storage '%s' (error: %s)!\n",
-                             Storage_getPrintableNameCString(storageSpecifier,NULL),
+                             Storage_getPrintableNameCString(storageSpecifier,archiveName),
                              Error_getText(error)
                             );
                   String_delete(directoryName);
@@ -2060,7 +2062,7 @@ remoteBarFlag=FALSE;
                     // output file info
                     if (!printedInfoFlag)
                     {
-                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
                       printedInfoFlag = TRUE;
                     }
                     printDirectoryInfo(NULL,
@@ -2107,7 +2109,7 @@ remoteBarFlag=FALSE;
                 if (error != ERROR_NONE)
                 {
                   printError("Cannot read 'link' content from storage '%s' (error: %s)!\n",
-                             Storage_getPrintableNameCString(storageSpecifier,NULL),
+                             Storage_getPrintableNameCString(storageSpecifier,archiveName),
                              Error_getText(error)
                             );
                   String_delete(fileName);
@@ -2134,7 +2136,7 @@ remoteBarFlag=FALSE;
                     // output file info
                     if (!printedInfoFlag)
                     {
-                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
                       printedInfoFlag = TRUE;
                     }
                     printLinkInfo(NULL,
@@ -2193,7 +2195,7 @@ remoteBarFlag=FALSE;
                 if (error != ERROR_NONE)
                 {
                   printError("Cannot read 'hard link' content from storage '%s' (error: %s)!\n",
-                             Storage_getPrintableNameCString(storageSpecifier,NULL),
+                             Storage_getPrintableNameCString(storageSpecifier,archiveName),
                              Error_getText(error)
                             );
                   String_delete(deltaSourceName);
@@ -2230,7 +2232,7 @@ remoteBarFlag=FALSE;
                       // output file info
                       if (!printedInfoFlag)
                       {
-                        printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                        printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
                         printedInfoFlag = TRUE;
                       }
                       printHardLinkInfo(NULL,
@@ -2284,7 +2286,7 @@ remoteBarFlag=FALSE;
                 if (error != ERROR_NONE)
                 {
                   printError("Cannot read 'special' content from storage '%s' (error: %s)!\n",
-                             Storage_getPrintableNameCString(storageSpecifier,NULL),
+                             Storage_getPrintableNameCString(storageSpecifier,archiveName),
                              Error_getText(error)
                             );
                   String_delete(fileName);
@@ -2312,7 +2314,7 @@ remoteBarFlag=FALSE;
                     // output file info
                     if (!printedInfoFlag)
                     {
-                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
                       printedInfoFlag = TRUE;
                     }
                     printSpecialInfo(NULL,
@@ -2471,7 +2473,7 @@ remoteBarFlag=FALSE;
           }
 
           // send list archive command
-          String_format(String_clear(line),"2 ARCHIVE_LIST %S",storageSpecifier->fileName);
+          String_format(String_clear(line),"2 ARCHIVE_LIST %S",storageSpecifier->archiveName);
           Network_executeWriteLine(&networkExecuteHandle,line);
           Network_executeSendEOF(&networkExecuteHandle);
 
@@ -2564,7 +2566,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
                           printedInfoFlag = TRUE;
                         }
 
@@ -2661,7 +2663,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
                           printedInfoFlag = TRUE;
                         }
 
@@ -2734,7 +2736,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
                           printedInfoFlag = TRUE;
                         }
 
@@ -2798,7 +2800,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
                           printedInfoFlag = TRUE;
                         }
 
@@ -2887,7 +2889,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
                           printedInfoFlag = TRUE;
                         }
 
@@ -2966,7 +2968,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+                          printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
                           printedInfoFlag = TRUE;
                         }
 
@@ -3060,7 +3062,7 @@ remoteBarFlag=FALSE;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printDirectoryListHeader(const String storageName)
+LOCAL void printDirectoryListHeader(ConstString storageName)
 {
   const TextMacro MACROS[] =
   {
@@ -3254,6 +3256,8 @@ Errors Command_list(StringList                      *storageNameList,
   Errors                     error;
   StorageHandle              storageHandle;
   StorageDirectoryListHandle storageDirectoryListHandle;
+  Pattern                    pattern;
+  String                     fileName;
 
   assert(storageNameList != NULL);
   assert(includeEntryList != NULL);
@@ -3263,7 +3267,7 @@ Errors Command_list(StringList                      *storageNameList,
   // init variables
   AutoFree_init(&autoFreeList);
   List_init(&archiveContentList);
-  storageName          = String_new();
+  storageName = String_new();
   Storage_initSpecifier(&storageSpecifier);
   AUTOFREE_ADD(&autoFreeList,&archiveContentList,{ List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL); });
   AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(storageName); });
@@ -3275,7 +3279,7 @@ Errors Command_list(StringList                      *storageNameList,
   {
     StringList_getFirst(storageNameList,storageName);
 
-    // parse storage name, get printable name
+    // parse storage name
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
@@ -3287,45 +3291,15 @@ Errors Command_list(StringList                      *storageNameList,
       continue;
     }
 
-    error = ERROR_UNKNOWN;
-
-    if (error != ERROR_NONE)
+    // open directory list
+    error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                      &storageSpecifier,
+                                      jobOptions,
+                                      SERVER_CONNECTION_PRIORITY_HIGH
+                                     );
+    if (error == ERROR_NONE)
     {
-      // init storage
-      error = Storage_init(&storageHandle,
-                           &storageSpecifier,
-                           jobOptions,
-                           &globalOptions.maxBandWidthList,
-                           SERVER_CONNECTION_PRIORITY_HIGH,
-                           CALLBACK(NULL,NULL),
-                           CALLBACK(NULL,NULL)
-                          );
-      if (error == ERROR_NONE)
-      {
-        // list archive content
-        error = listArchiveContent(&storageHandle,
-                                   &storageSpecifier,
-                                   includeEntryList,
-                                   excludePatternList,
-                                   jobOptions,
-                                   archiveGetCryptPasswordFunction,
-                                   archiveGetCryptPasswordUserData
-                                  );
-
-        // done storage
-        (void)Storage_done(&storageHandle);
-      }
-    }
-
-    if (error != ERROR_NONE)
-    {
-      // open directory list
-      error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                        &storageSpecifier,
-                                        jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_HIGH
-                                       );
-      if (error == ERROR_NONE)
+      if (String_isEmpty(storageSpecifier.archivePattern))
       {
         // list directory
         error = listDirectoryContent(&storageDirectoryListHandle,
@@ -3333,12 +3307,62 @@ Errors Command_list(StringList                      *storageNameList,
                                      includeEntryList,
                                      excludePatternList
                                     );
-
-        // done list directory
-        Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
-    }
+      else
+      {
+        error = Pattern_init(&pattern,storageSpecifier.archivePattern,jobOptions->patternType,PATTERN_FLAG_NONE);
+        if (error == ERROR_NONE)
+        {
+          fileName = String_new();
+          while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
+          {
+            // read next directory entry
+            error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL);
+            if (error != ERROR_NONE)
+            {
+              continue;
+            }
 
+            // match pattern
+            if (!Pattern_match(&pattern,fileName,PATTERN_MATCH_MODE_EXACT))
+            {
+              continue;
+            }
+
+            // init storage
+            error = Storage_init(&storageHandle,
+                                 &storageSpecifier,
+                                 jobOptions,
+                                 &globalOptions.maxBandWidthList,
+                                 SERVER_CONNECTION_PRIORITY_HIGH,
+                                 CALLBACK(NULL,NULL),
+                                 CALLBACK(NULL,NULL)
+                                );
+            if (error == ERROR_NONE)
+            {
+              // list archive content
+              error = listArchiveContent(&storageHandle,
+                                         &storageSpecifier,
+                                         fileName,
+                                         includeEntryList,
+                                         excludePatternList,
+                                         jobOptions,
+                                         archiveGetCryptPasswordFunction,
+                                         archiveGetCryptPasswordUserData
+                                        );
+
+              // done storage
+              (void)Storage_done(&storageHandle);
+            }
+          }
+          String_delete(fileName);
+          Pattern_done(&pattern);
+        }
+      }
+
+      // done list directory
+      Storage_closeDirectoryList(&storageDirectoryListHandle);
+    }
     if (error != ERROR_NONE)
     {
       printError("Cannot initialize storage '%s' (error: %s)!\n",
