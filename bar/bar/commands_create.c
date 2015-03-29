@@ -1473,19 +1473,19 @@ LOCAL String formatIncrementalFileName(String                 fileName,
   // remove all macros and leading and tailing separator characters
   String_clear(fileName);
   i = 0L;
-  while (i < String_length(storageSpecifier->fileName))
+  while (i < String_length(storageSpecifier->archiveName))
   {
-    ch = String_index(storageSpecifier->fileName,i);
+    ch = String_index(storageSpecifier->archiveName,i);
     switch (ch)
     {
       case '%':
         i += 1L;
-        if (i < String_length(storageSpecifier->fileName))
+        if (i < String_length(storageSpecifier->archiveName))
         {
           // removed previous separator characters
           String_trimRight(fileName,SEPARATOR_CHARS);
 
-          ch = String_index(storageSpecifier->fileName,i);
+          ch = String_index(storageSpecifier->archiveName,i);
           switch (ch)
           {
             case '%':
@@ -1502,24 +1502,24 @@ LOCAL String formatIncrementalFileName(String                 fileName,
               // discard %xyz
               if (isalpha(ch))
               {
-                while (   (i < String_length(storageSpecifier->fileName))
+                while (   (i < String_length(storageSpecifier->archiveName))
                        && isalpha(ch)
                       )
                 {
                   i += 1L;
-                  ch = String_index(storageSpecifier->fileName,i);
+                  ch = String_index(storageSpecifier->archiveName,i);
                 }
               }
 
               // discard following separator characters
               if (strchr(SEPARATOR_CHARS,ch) != NULL)
               {
-                while (   (i < String_length(storageSpecifier->fileName))
+                while (   (i < String_length(storageSpecifier->archiveName))
                        && (strchr(SEPARATOR_CHARS,ch) != NULL)
                       )
                 {
                   i += 1L;
-                  ch = String_index(storageSpecifier->fileName,i);
+                  ch = String_index(storageSpecifier->archiveName,i);
                 }
               }
               break;
@@ -2977,7 +2977,7 @@ LOCAL Errors storeArchiveFile(void        *userData,
   FileInfo      fileInfo;
   String        destinationFileName;
   String        storageName;
-  String        printableStorageName;
+  ConstString   printableStorageName;
   StorageMsg    storageMsg;
   SemaphoreLock semaphoreLock;
 
@@ -2999,7 +2999,7 @@ LOCAL Errors storeArchiveFile(void        *userData,
   storageName          = String_new();
   error = formatArchiveFileName(destinationFileName,
                                 FORMAT_MODE_ARCHIVE_FILE_NAME,
-                                createInfo->storageSpecifier->fileName,
+                                createInfo->storageSpecifier->archiveName,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
                                 createInfo->scheduleCustomText,
@@ -3526,7 +3526,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       pattern = String_new();
       error = formatArchiveFileName(pattern,
                                     FORMAT_MODE_PATTERN,
-                                    createInfo->storageSpecifier->fileName,
+                                    createInfo->storageSpecifier->archiveName,
                                     createInfo->archiveType,
                                     createInfo->scheduleTitle,
                                     createInfo->scheduleCustomText,
@@ -3538,7 +3538,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         // open directory
         Storage_duplicateSpecifier(&storageDirectorySpecifier,createInfo->storageSpecifier);
-        File_getFilePathName(storageDirectorySpecifier.fileName,createInfo->storageSpecifier->fileName);
+        File_getFilePathName(storageDirectorySpecifier.archiveName,createInfo->storageSpecifier->archiveName);
         error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                           &storageDirectorySpecifier,
                                           createInfo->jobOptions,

@@ -183,6 +183,7 @@ Errors Command_compare(const StringList                *storageNameList,
     error = Archive_open(&archiveInfo,
                          &storageHandle,
                          &storageSpecifier,
+                         NULL,
                          jobOptions,
                          archiveGetCryptPasswordFunction,
                          archiveGetCryptPasswordUserData
