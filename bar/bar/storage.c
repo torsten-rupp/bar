@@ -2963,12 +2963,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
                                      ConstString      archiveName
                                     )
 {
-  ConstString storageFileName;
-
   assert(storageSpecifier != NULL);
 
   // get file to use
-  storageFileName = (archiveName != NULL) ? archiveName : storageSpecifier->archiveName;
+  if (archiveName == NULL) archiveName = storageSpecifier->archiveName;
 
   String_clear(storageSpecifier->storageName);
   switch (storageSpecifier->type)
@@ -2976,9 +2974,9 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!String_isEmpty(storageFileName))
+      if (!String_isEmpty(archiveName))
       {
-        String_append(storageSpecifier->storageName,storageFileName);
+        String_append(storageSpecifier->storageName,archiveName);
       }
       break;
     case STORAGE_TYPE_FTP:
@@ -2993,16 +2991,16 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
       {
         String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
       }
-      if (!String_isEmpty(storageFileName))
+      if (!String_isEmpty(archiveName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,storageFileName);
+        String_append(storageSpecifier->storageName,archiveName);
       }
       break;
     case STORAGE_TYPE_SSH:
-      if (!String_isEmpty(storageFileName))
+      if (!String_isEmpty(archiveName))
       {
-        String_append(storageSpecifier->storageName,storageFileName);
+        String_append(storageSpecifier->storageName,archiveName);
       }
       break;
     case STORAGE_TYPE_SCP:
@@ -3012,10 +3010,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
       {
         String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
       }
-      if (!String_isEmpty(storageFileName))
+      if (!String_isEmpty(archiveName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,storageFileName);
+        String_append(storageSpecifier->storageName,archiveName);
       }
       break;
     case STORAGE_TYPE_SFTP:
@@ -3025,10 +3023,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
       {
         String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
       }
-      if (!String_isEmpty(storageFileName))
+      if (!String_isEmpty(archiveName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,storageFileName);
+        String_append(storageSpecifier->storageName,archiveName);
       }
       break;
     case STORAGE_TYPE_WEBDAV:
@@ -3039,10 +3037,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
         String_appendChar(storageSpecifier->storageName,'@');
       }
       String_append(storageSpecifier->storageName,storageSpecifier->hostName);
-      if (!String_isEmpty(storageFileName))
+      if (!String_isEmpty(archiveName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,storageFileName);
+        String_append(storageSpecifier->storageName,archiveName);
       }
       break;
     case STORAGE_TYPE_CD:
@@ -3052,10 +3050,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
         String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
         String_appendChar(storageSpecifier->storageName,':');
       }
-      if (!String_isEmpty(storageFileName))
+      if (!String_isEmpty(archiveName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,storageFileName);
+        String_append(storageSpecifier->storageName,archiveName);
       }
       break;
     case STORAGE_TYPE_DVD:
@@ -3065,10 +3063,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
         String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
         String_appendChar(storageSpecifier->storageName,':');
       }
-      if (!String_isEmpty(storageFileName))
+      if (!String_isEmpty(archiveName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,storageFileName);
+        String_append(storageSpecifier->storageName,archiveName);
       }
       break;
     case STORAGE_TYPE_BD:
@@ -3078,10 +3076,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
         String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
         String_appendChar(storageSpecifier->storageName,':');
       }
-      if (!String_isEmpty(storageFileName))
+      if (!String_isEmpty(archiveName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,storageFileName);
+        String_append(storageSpecifier->storageName,archiveName);
       }
       break;
     case STORAGE_TYPE_DEVICE:
@@ -3091,10 +3089,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
         String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
         String_appendChar(storageSpecifier->storageName,':');
       }
-      if (!String_isEmpty(storageFileName))
+      if (!String_isEmpty(archiveName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,storageFileName);
+        String_append(storageSpecifier->storageName,archiveName);
       }
       break;
     default:
