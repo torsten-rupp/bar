@@ -95,8 +95,9 @@ LOCAL String getDestinationFileName(String       destinationFileName,
                                     uint         directoryStripCount
                                    )
 {
-  String          pathName,baseName,name;
+  String          pathName,baseName;
   StringTokenizer fileNameTokenizer;
+  ConstString     token;
   uint            z;
 
   assert(destinationFileName != NULL);
@@ -118,13 +119,13 @@ LOCAL String getDestinationFileName(String       destinationFileName,
   // strip directory, create destination directory
   File_initSplitFileName(&fileNameTokenizer,pathName);
   z = 0;
-  while ((z< directoryStripCount) && File_getNextSplitFileName(&fileNameTokenizer,&name))
+  while ((z< directoryStripCount) && File_getNextSplitFileName(&fileNameTokenizer,&token))
   {
     z++;
   }
-  while (File_getNextSplitFileName(&fileNameTokenizer,&name))
+  while (File_getNextSplitFileName(&fileNameTokenizer,&token))
   {
-    File_appendFileName(destinationFileName,name);
+    File_appendFileName(destinationFileName,token);
   }
   File_doneSplitFileName(&fileNameTokenizer);
 
@@ -615,7 +616,9 @@ Errors Command_restore(const StringList                *storageNameList,
               printInfo(2,"    \b\b\b\b");
 
               // set file size
+#ifndef WERROR
 #warning required? wrong?
+#endif
               if (!jobOptions->dryRunFlag)
               {
                 if (File_getSize(&fileHandle) > fileInfo.size)
@@ -1815,7 +1818,9 @@ Errors Command_restore(const StringList                *storageNameList,
                   printInfo(2,"    \b\b\b\b");
 
                   // set file size
+#ifndef WERROR
 #warning required? wrong?
+#endif
                   if (!jobOptions->dryRunFlag)
                   {
                     if (File_getSize(&fileHandle) > fileInfo.size)
