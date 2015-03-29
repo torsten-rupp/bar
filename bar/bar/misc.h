@@ -86,8 +86,8 @@ typedef struct
   } value;
 } TextMacro;
 
-typedef void(*ExecuteIOFunction)(void         *userData,
-                                 const String line
+typedef void(*ExecuteIOFunction)(void        *userData,
+                                 ConstString line
                                 );
 
 typedef struct
