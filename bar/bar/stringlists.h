@@ -412,7 +412,7 @@ String __StringList_getLast(const char *fileName, ulong lineNb, StringList *stri
 * Notes  : -
 \***********************************************************************/
 
-StringNode *StringList_find(const StringList *stringList, const String string);
+StringNode *StringList_find(const StringList *stringList, ConstString string);
 StringNode *StringList_findCString(const StringList *stringList, const char *s);
 
 /***********************************************************************\
