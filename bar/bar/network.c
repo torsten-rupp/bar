@@ -244,7 +244,7 @@ void Network_doneAll(void)
   #endif /* HAVE_SSH2 */
 }
 
-bool Network_hostExists(const String hostName)
+bool Network_hostExists(ConstString hostName)
 {
   return Network_hostExistsCString(String_cString(hostName));
 }
@@ -276,12 +276,12 @@ bool Network_hostExistsCString(const char *hostName)
 
 Errors Network_connect(SocketHandle *socketHandle,
                        SocketTypes  socketType,
-                       const String hostName,
+                       ConstString  hostName,
                        uint         hostPort,
-                       const String loginName,
+                       ConstString  loginName,
                        Password     *password,
-                       const String sshPublicKeyFileName,
-                       const String sshPrivateKeyFileName,
+                       ConstString  sshPublicKeyFileName,
+                       ConstString  sshPrivateKeyFileName,
                        uint         flags
                       )
 {
@@ -929,7 +929,7 @@ Errors Network_readLine(SocketHandle *socketHandle,
 }
 
 Errors Network_writeLine(SocketHandle *socketHandle,
-                         const String line
+                         ConstString  line
                         )
 {
   Errors error;
@@ -1683,7 +1683,7 @@ Errors Network_executeRead(NetworkExecuteHandle  *networkExecuteHandle,
 }
 
 Errors Network_executeWriteLine(NetworkExecuteHandle *networkExecuteHandle,
-                                const String         line
+                                ConstString          line
                                )
 {
   Errors error;

@@ -164,7 +164,7 @@ void Network_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-bool Network_hostExists(const String hostName);
+bool Network_hostExists(ConstString hostName);
 bool Network_hostExistsCString(const char *hostName);
 
 /***********************************************************************\
@@ -185,12 +185,12 @@ bool Network_hostExistsCString(const char *hostName);
 
 Errors Network_connect(SocketHandle *socketHandle,
                        SocketTypes  socketType,
-                       const String hostName,
+                       ConstString  hostName,
                        uint         hostPort,
-                       const String loginName,
+                       ConstString  loginName,
                        Password     *password,
-                       const String sshPublicKeyFileName,
-                       const String sshPrivateKeyFileName,
+                       ConstString  sshPublicKeyFileName,
+                       ConstString  sshPrivateKeyFileName,
                        uint         flags
                       );
 
@@ -323,7 +323,7 @@ Errors Network_readLine(SocketHandle *socketHandle,
 \***********************************************************************/
 
 Errors Network_writeLine(SocketHandle *socketHandle,
-                         const String line
+                         ConstString  line
                         );
 
 /***********************************************************************\
@@ -524,7 +524,7 @@ Errors Network_executeRead(NetworkExecuteHandle  *networkExecuteHandle,
 \***********************************************************************/
 
 Errors Network_executeWriteLine(NetworkExecuteHandle *networkExecuteHandle,
-                                const String         line
+                                ConstString          line
                                );
 
 /***********************************************************************\
