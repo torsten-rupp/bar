@@ -1,4 +1,4 @@
-2015-03-29 0.19
+2015-03-30 0.19
   * added LZO compression
   * added LZ4 compression
   * fixed large file support: on some systems large files
@@ -43,6 +43,8 @@
   * improved tests
   * fixed delete files via webdav-protocol
   * fixed error if entered passwords are not equal
+  * fixed listing, testing of content in directory:
+    support pattern matching
 
 2014-09-26 0.18c
   * fixed server network connection wait time in pselect();
