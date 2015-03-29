@@ -66,8 +66,10 @@ typedef enum
 // pattern
 typedef struct
 {
+
   PatternTypes type;
-  uint         flags;
+  String       matchString;             // regular expression match string
+  int          regexFlags;              // regular expression flags
   regex_t      regexBegin;              // regular expression for matching begin
   regex_t      regexEnd;                // regular expression for matching end
   regex_t      regexExact;              // regular expression for matching exact
@@ -143,7 +145,7 @@ bool Pattern_parsePatternType(const char *name, PatternTypes *patternType);
 * Notes  : -
 \***********************************************************************/
 
-Errors Pattern_init(Pattern *pattern, const String string, PatternTypes patternType, uint patternFlags);
+Errors Pattern_init(Pattern *pattern, ConstString string, PatternTypes patternType, uint patternFlags);
 Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes patternType, uint patternFlags);
 
 /***********************************************************************\
@@ -168,7 +170,7 @@ void Pattern_done(Pattern *pattern);
 * Notes  : -
 \***********************************************************************/
 
-Pattern *Pattern_new(const String string, PatternTypes patternType, uint patternFlags);
+Pattern *Pattern_new(ConstString string, PatternTypes patternType, uint patternFlags);
 
 /***********************************************************************\
 * Name   : Pattern_delete
@@ -182,6 +184,29 @@ Pattern *Pattern_new(const String string, PatternTypes patternType, uint pattern
 void Pattern_delete(Pattern *pattern);
 
 /***********************************************************************\
+* Name   : Pattern_duplicate
+* Purpose: duplicate pattern
+* Input  : fromPattern - from pattern
+* Output : -
+* Return : pattern
+* Notes  : -
+\***********************************************************************/
+
+Pattern *Pattern_duplicate(const Pattern *fromPattern);
+
+/***********************************************************************\
+* Name   : Pattern_copy
+* Purpose: copy pattern
+* Input  : pattern     - pattern variable
+*          fromPattern - from pattern
+* Output : pattern - pattern
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern);
+
+/***********************************************************************\
 * Name   : Pattern_match
 * Purpose: patch string with single pattern
 * Input  : pattern          - pattern
@@ -193,7 +218,7 @@ void Pattern_delete(Pattern *pattern);
 \***********************************************************************/
 
 bool Pattern_match(const Pattern     *pattern,
-                   const String      string,
+                   ConstString       string,
                    PatternMatchModes patternMatchMode
                   );
 
@@ -206,7 +231,7 @@ bool Pattern_match(const Pattern     *pattern,
 * Notes  : -
 \***********************************************************************/
 
-bool Pattern_checkIsPattern(const String string);
+bool Pattern_checkIsPattern(const ConstString string);
 
 #ifdef __cplusplus
   }

@@ -60,6 +60,93 @@ LOCAL const struct
 #endif
 
 /***********************************************************************\
+* Name   : toRegularExpression
+* Purpose: convert pattern to regular expression
+* Input  : pattern      - pattern to compile
+*          patternType  - pattern type
+*          patternFlags - pattern flags
+* Output : matchString - match string
+*          regexFlags  - regular expression flags
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void getRegularExpression(String       matchString,
+                                int          *regexFlags,
+                                const char   *pattern,
+                                PatternTypes patternType,
+                                uint         patternFlags
+                               )
+{
+  ulong i;
+
+  assert(matchString != NULL);
+  assert(regexFlags != NULL);
+  assert(pattern != NULL);
+
+  (*regexFlags) = REG_NOSUB;
+  if ((patternFlags & PATTERN_FLAG_IGNORE_CASE) == PATTERN_FLAG_IGNORE_CASE) (*regexFlags) |= REG_ICASE;
+  switch (patternType)
+  {
+    case PATTERN_TYPE_GLOB:
+      i = 0;
+      while (pattern[i] != '\0')
+      {
+        switch (pattern[i])
+        {
+          case '*':
+            String_appendCString(matchString,".*");
+            i++;
+            break;
+          case '?':
+            String_appendChar(matchString,'.');
+            i++;
+            break;
+          case '.':
+            String_appendCString(matchString,"\\.");
+            i++;
+            break;
+          case '\\':
+            String_appendCString(matchString,"\\\\");
+            i++;
+            break;
+          case '[':
+          case ']':
+          case '^':
+          case '$':
+          case '(':
+          case ')':
+          case '{':
+          case '}':
+          case '+':
+          case '|':
+            String_appendChar(matchString,'\\');
+            String_appendChar(matchString,pattern[i]);
+            i++;
+            break;
+          default:
+            String_appendChar(matchString,pattern[i]);
+            i++;
+            break;
+        }
+      }
+      break;
+    case PATTERN_TYPE_REGEX:
+      String_setCString(matchString,pattern);
+      break;
+    case PATTERN_TYPE_EXTENDED_REGEX:
+      String_setCString(matchString,pattern);
+      (*regexFlags) |= REG_EXTENDED;
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+}
+
+/***********************************************************************\
 * Name   : compilePattern
 * Purpose: compile pattern
 * Input  : pattern      - pattern to compile
@@ -73,92 +160,28 @@ LOCAL const struct
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors compilePattern(const char   *pattern,
-                            PatternTypes patternType,
-                            uint         patternFlags,
-                            regex_t      *regexBegin,
-                            regex_t      *regexEnd,
-                            regex_t      *regexExact,
-                            regex_t      *regexAny
+LOCAL Errors compilePattern(ConstString matchString,
+                            int         regexFlags,
+                            regex_t     *regexBegin,
+                            regex_t     *regexEnd,
+                            regex_t     *regexExact,
+                            regex_t     *regexAny
                            )
 {
-  String matchString;
   String regexString;
-  int    regexFlags;
-  ulong  z;
   int    error;
   char   buffer[256];
 
-  assert(pattern != NULL);
+  assert(matchString != NULL);
   assert(regexBegin != NULL);
   assert(regexEnd != NULL);
   assert(regexExact != NULL);
   assert(regexAny != NULL);
 
-  matchString = String_new();
+  // init variables
   regexString = String_new();
 
-  regexFlags = REG_NOSUB;
-  if ((patternFlags & PATTERN_FLAG_IGNORE_CASE) == PATTERN_FLAG_IGNORE_CASE) regexFlags |= REG_ICASE;
-  switch (patternType)
-  {
-    case PATTERN_TYPE_GLOB:
-      z = 0;
-      while (pattern[z] != '\0')
-      {
-        switch (pattern[z])
-        {
-          case '*':
-            String_appendCString(matchString,".*");
-            z++;
-            break;
-          case '?':
-            String_appendChar(matchString,'.');
-            z++;
-            break;
-          case '.':
-            String_appendCString(matchString,"\\.");
-            z++;
-            break;
-          case '\\':
-            String_appendCString(matchString,"\\\\");
-            z++;
-            break;
-          case '[':
-          case ']':
-          case '^':
-          case '$':
-          case '(':
-          case ')':
-          case '{':
-          case '}':
-          case '+':
-          case '|':
-            String_appendChar(matchString,'\\');
-            String_appendChar(matchString,pattern[z]);
-            z++;
-            break;
-          default:
-            String_appendChar(matchString,pattern[z]);
-            z++;
-            break;
-        }
-      }
-      break;
-    case PATTERN_TYPE_REGEX:
-      String_setCString(matchString,pattern);
-      break;
-    case PATTERN_TYPE_EXTENDED_REGEX:
-      regexFlags |= REG_EXTENDED;
-      String_setCString(matchString,pattern);
-      break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break;
-  }
-
+  // compile regular expression
   String_set(regexString,matchString);
   if (String_index(regexString,STRING_BEGIN) != '^') String_insertChar(regexString,STRING_BEGIN,'^');
   error = regcomp(regexBegin,String_cString(regexString),regexFlags);
@@ -166,7 +189,6 @@ LOCAL Errors compilePattern(const char   *pattern,
   {
     regerror(error,regexBegin,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
     String_delete(regexString);
-    String_delete(matchString);
     return ERRORX_(INVALID_PATTERN,0,buffer);
   }
 
@@ -177,7 +199,6 @@ LOCAL Errors compilePattern(const char   *pattern,
     regerror(error,regexEnd,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
     regfree(regexBegin);
     String_delete(regexString);
-    String_delete(matchString);
     return ERRORX_(INVALID_PATTERN,0,buffer);
   }
 
@@ -190,7 +211,6 @@ LOCAL Errors compilePattern(const char   *pattern,
     regfree(regexEnd);
     regfree(regexBegin);
     String_delete(regexString);
-    String_delete(matchString);
     return ERRORX_(INVALID_PATTERN,0,buffer);
   }
 
@@ -202,13 +222,11 @@ LOCAL Errors compilePattern(const char   *pattern,
     regfree(regexEnd);
     regfree(regexBegin);
     String_delete(regexString);
-    String_delete(matchString);
     return ERRORX_(INVALID_PATTERN,0,buffer);
   }
 
   // free resources
   String_delete(regexString);
-  String_delete(matchString);
 
   return ERROR_NONE;
 }
@@ -273,7 +291,7 @@ bool Pattern_parsePatternType(const char *name, PatternTypes *patternType)
   }
 }
 
-Errors Pattern_init(Pattern *pattern, const String string, PatternTypes patternType, uint patternFlags)
+Errors Pattern_init(Pattern *pattern, ConstString string, PatternTypes patternType, uint patternFlags)
 {
   return Pattern_initCString(pattern,String_cString(string),patternType,patternFlags);
 }
@@ -284,13 +302,22 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
 
   assert(pattern != NULL);
 
-  // initialize pattern
-  pattern->type = patternType;
+  // initialize variables
+  pattern->type        = patternType;
+  pattern->matchString = String_new();
+  pattern->regexFlags  = 0;
+
+  // get regular expression
+  getRegularExpression(pattern->matchString,
+                       &pattern->regexFlags,
+                       string,
+                       patternType,
+                       patternFlags
+                      );
 
   // compile pattern
-  error = compilePattern(string,
-                         patternType,
-                         patternFlags,
+  error = compilePattern(pattern->matchString,
+                         pattern->regexFlags,
                          &pattern->regexBegin,
                          &pattern->regexEnd,
                          &pattern->regexExact,
@@ -312,9 +339,10 @@ void Pattern_done(Pattern *pattern)
   regfree(&pattern->regexExact);
   regfree(&pattern->regexEnd);
   regfree(&pattern->regexBegin);
+  String_delete(pattern->matchString);
 }
 
-Pattern *Pattern_new(const String string, PatternTypes patternType, uint patternFlags)
+Pattern *Pattern_new(ConstString string, PatternTypes patternType, uint patternFlags)
 {
   Pattern *pattern;
   Errors  error;
@@ -345,8 +373,60 @@ void Pattern_delete(Pattern *pattern)
   free(pattern);
 }
 
+Pattern *Pattern_duplicate(const Pattern *fromPattern)
+{
+  Pattern *pattern;
+
+  assert(fromPattern != NULL);
+
+  // allocate pattern
+  pattern = (Pattern*)malloc(sizeof(Pattern));
+  if (pattern == NULL)
+  {
+    return NULL;
+  }
+
+  // copy pattern
+  if (Pattern_copy(pattern,fromPattern) != ERROR_NONE)
+  {
+    free(pattern);
+    return NULL;
+  }
+
+  return pattern;
+}
+
+Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern)
+{
+  Errors error;
+
+  assert(pattern != NULL);
+  assert(fromPattern != NULL);
+
+  // initialize variables
+  pattern->type        = fromPattern->type;
+  pattern->matchString = String_duplicate(fromPattern->matchString);
+  pattern->regexFlags  = fromPattern->regexFlags;
+
+  // compile pattern
+  error = compilePattern(pattern->matchString,
+                         pattern->regexFlags,
+                         &pattern->regexBegin,
+                         &pattern->regexEnd,
+                         &pattern->regexExact,
+                         &pattern->regexAny
+                        );
+  if (error != ERROR_NONE)
+  {
+    String_delete(pattern->matchString);
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
 bool Pattern_match(const Pattern     *pattern,
-                   const String      string,
+                   ConstString       string,
                    PatternMatchModes patternMatchMode
                   )
 {
@@ -380,7 +460,7 @@ bool Pattern_match(const Pattern     *pattern,
   return matchFlag;
 }
 
-bool Pattern_checkIsPattern(const String string)
+bool Pattern_checkIsPattern(const ConstString string)
 {
   const char *PATTERNS_CHARS = "*?[{";
 
