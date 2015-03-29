@@ -427,7 +427,7 @@ StringNode *StringList_findCString(const StringList *stringList, const char *s)
   return stringNode;
 }
 
-bool StringList_contain(const StringList *stringList, const String string)
+bool StringList_contain(const StringList *stringList, ConstString string)
 {
   assert(stringList != NULL);
 
