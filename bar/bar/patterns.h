@@ -66,7 +66,6 @@ typedef enum
 // pattern
 typedef struct
 {
-
   PatternTypes type;
   String       matchString;             // regular expression match string
   int          regexFlags;              // regular expression flags
@@ -140,7 +139,7 @@ bool Pattern_parsePatternType(const char *name, PatternTypes *patternType);
 *          string       - pattern
 *          patternType  - pattern type; see PATTERN_TYPE_*
 *          patternFlags - pattern flags; see PATTERN_FLAG_*
-* Output : pattern - initialzied variable
+* Output : pattern - initialized variable
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
