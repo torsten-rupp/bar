@@ -185,7 +185,7 @@ void PatternList_move(PatternList       *fromPatternList,
 }
 
 Errors PatternList_append(PatternList  *patternList,
-                          const String pattern,
+                          ConstString  pattern,
                           PatternTypes patternType
                          )
 {
@@ -234,7 +234,7 @@ Errors PatternList_appendCString(PatternList  *patternList,
 }
 
 bool PatternList_match(const PatternList *patternList,
-                       const String      string,
+                       ConstString       string,
                        PatternMatchModes patternMatchMode
                       )
 {
