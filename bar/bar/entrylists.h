@@ -8,8 +8,8 @@
 *
 \***********************************************************************/
 
-#ifndef __ENTRYLISTS__
-#define __ENTRYLISTS__
+#ifndef __ENTRY_LISTS__
+#define __ENTRY_LISTS__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
@@ -219,7 +219,7 @@ void EntryList_move(EntryList       *fromEntryList,
 
 Errors EntryList_append(EntryList    *entryList,
                         EntryTypes   type,
-                        const String pattern,
+                        ConstString  pattern,
                         PatternTypes patternType
                        );
 Errors EntryList_appendCString(EntryList    *entryList,
@@ -241,7 +241,7 @@ Errors EntryList_appendCString(EntryList    *entryList,
 \***********************************************************************/
 
 bool EntryList_match(const EntryList   *entryList,
-                     const String      string,
+                     ConstString       string,
                      PatternMatchModes patternMatchMode
                     );
 bool EntryList_matchStringList(const EntryList   *entryList,
@@ -253,6 +253,6 @@ bool EntryList_matchStringList(const EntryList   *entryList,
   }
 #endif
 
-#endif /* __PATTERNLISTS__ */
+#endif /* __ENTRY_LISTS__ */
 
 /* end of file */

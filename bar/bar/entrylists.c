@@ -266,7 +266,7 @@ void EntryList_move(EntryList       *fromEntryList,
 
 Errors EntryList_append(EntryList    *entryList,
                         EntryTypes   type,
-                        const String pattern,
+                        ConstString  pattern,
                         PatternTypes patternType
                        )
 {
@@ -336,7 +336,7 @@ Errors EntryList_appendCString(EntryList    *entryList,
 }
 
 bool EntryList_match(const EntryList   *entryList,
-                     const String      string,
+                     ConstString       string,
                      PatternMatchModes patternMatchMode
                     )
 {
