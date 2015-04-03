@@ -160,7 +160,7 @@ typedef struct
   Password     *loginPassword;                             // login name
   String       deviceName;                                 // device name
   String       archiveName;                                // archive base name
-  String       archivePattern;                             // archive pattern
+  String       archivePatternString;                       // archive pattern string or empty if no pattern
 
   String       storageName;                                // storage name (returned by Storage_getStorageName())
   String       printableStorageName;                       // printable storage name without password (returned by Storage_getPrintableStorageName())
@@ -619,7 +619,7 @@ void Storage_doneAll(void);
 /***********************************************************************\
 * Name   : Storage_doneSpecifier
 * Purpose: done storage specifier
-* Input  : storageSpecifier - storage specifier variable
+* Input  : storageSpecifier - storage specifier
 * Output : -
 * Return : -
 * Notes  : -
@@ -633,6 +633,26 @@ void Storage_doneAll(void);
                                StorageSpecifier *storageSpecifier
                               );
 #endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Storage_isInFileSystem
+* Purpose: check if in file system
+* Input  : storageSpecifier - storage specifier
+* Output : -
+* Return : TRUE if in file system, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Storage_isInFileSystem(const StorageSpecifier *storageSpecifier);
+#if defined(NDEBUG) || defined(__STORAGE_IMPLEMENATION__)
+INLINE bool Storage_isInFileSystem(const StorageSpecifier *storageSpecifier)
+{
+  assert(storageSpecifier != NULL);
+
+  return storageSpecifier->type == STORAGE_TYPE_FILESYSTEM;
+}
+#endif /* NDEBUG || __STORAGE_IMPLEMENATION__ */
+
 
 /***********************************************************************\
 * Name   : Storage_parseFTPSpecifier
@@ -733,7 +753,7 @@ StorageTypes Storage_getType(ConstString storageName);
 * Name   : Storage_parseName
 * Purpose: parse storage name and get storage type
 * Input  : storageSpecifier - storage specific variable
-*          storageName      - storage name
+*          storageName      - storage name (may include pattern)
 * Output : storageSpecifier - storage specific data
 * Return : ERROR_NONE or error code
 * Notes  : name structure:

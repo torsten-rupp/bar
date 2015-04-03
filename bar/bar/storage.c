@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __STORAGE_IMPLEMENATION__
+
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -2052,7 +2054,7 @@ void Storage_doneAll(void)
   storageSpecifier->loginPassword        = Password_new();
   storageSpecifier->deviceName           = String_new();
   storageSpecifier->archiveName          = String_new();
-  storageSpecifier->archivePattern       = String_new();
+  storageSpecifier->archivePatternString = String_new();
   storageSpecifier->storageName          = String_new();
   storageSpecifier->printableStorageName = String_new();
 
@@ -2086,7 +2088,7 @@ void Storage_doneAll(void)
   destinationStorageSpecifier->loginPassword        = Password_duplicate(sourceStorageSpecifier->loginPassword);
   destinationStorageSpecifier->deviceName           = String_duplicate(sourceStorageSpecifier->deviceName);
   destinationStorageSpecifier->archiveName          = String_duplicate(sourceStorageSpecifier->archiveName);
-  destinationStorageSpecifier->archivePattern       = String_duplicate(sourceStorageSpecifier->archivePattern);
+  destinationStorageSpecifier->archivePatternString = String_duplicate(sourceStorageSpecifier->archivePatternString);
   destinationStorageSpecifier->storageName          = String_new();
   destinationStorageSpecifier->printableStorageName = String_new();
 
@@ -2117,7 +2119,7 @@ void Storage_doneAll(void)
 
   String_delete(storageSpecifier->printableStorageName);
   String_delete(storageSpecifier->storageName);
-  String_delete(storageSpecifier->archivePattern);
+  String_delete(storageSpecifier->archivePatternString);
   String_delete(storageSpecifier->archiveName);
   String_delete(storageSpecifier->deviceName);
   Password_delete(storageSpecifier->loginPassword);
@@ -2379,6 +2381,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   String          string;
   String          archiveName;
   long            nextIndex;
+  bool            hasPatternFlag;
   StringTokenizer archiveNameTokenizer;
   ConstString     token;
 
@@ -2571,7 +2574,6 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     else
     {
       // cd://<file name>  AutoFreeList autoFreeList;
-
       String_sub(archiveName,storageName,5,STRING_END);
     }
 
@@ -2668,46 +2670,56 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     storageSpecifier->type = STORAGE_TYPE_FILESYSTEM;
   }
 
+  // get base file name
+  hasPatternFlag = FALSE;
+  String_clear(storageSpecifier->archiveName);
   File_initSplitFileName(&archiveNameTokenizer,archiveName);
   {
-    String_clear(storageSpecifier->archiveName);
-    String_clear(storageSpecifier->archivePattern);
     if (File_getNextSplitFileName(&archiveNameTokenizer,&token))
     {
-      // get base file name
       if (!Pattern_checkIsPattern(token))
       {
         if (!String_isEmpty(token))
         {
           File_setFileName(storageSpecifier->archiveName,token);
-          File_setFileName(storageSpecifier->archivePattern,token);
         }
         else
         {
           File_setFileNameChar(storageSpecifier->archiveName,FILE_SEPARATOR_CHAR);
         }
-        while (File_getNextSplitFileName(&archiveNameTokenizer,&token) && !Pattern_checkIsPattern(token))
+        while (File_getNextSplitFileName(&archiveNameTokenizer,&token) && !hasPatternFlag)
         {
-          File_appendFileName(storageSpecifier->archiveName,token);
+          if (!Pattern_checkIsPattern(token))
+          {
+            File_appendFileName(storageSpecifier->archiveName,token);
+          }
+          else
+          {
+            hasPatternFlag = TRUE;
+          }
         }
       }
-
-      // get file pattern
-      if (Pattern_checkIsPattern(token))
+      else
       {
-        do
-        {
-          File_appendFileName(storageSpecifier->archivePattern,token);
-        }
-        while (File_getNextSplitFileName(&archiveNameTokenizer,&token));
+        hasPatternFlag = TRUE;
       }
-    }
-    else
-    {
-      File_setFileName(storageSpecifier->archiveName,archiveName);
     }
   }
   File_doneSplitFileName(&archiveNameTokenizer);
+
+  // get file pattern string
+  String_clear(storageSpecifier->archivePatternString);
+  if (hasPatternFlag)
+  {
+    File_initSplitFileName(&archiveNameTokenizer,archiveName);
+    {
+      while (File_getNextSplitFileName(&archiveNameTokenizer,&token))
+      {
+        File_appendFileName(storageSpecifier->archivePatternString,token);
+      }
+    }
+    File_doneSplitFileName(&archiveNameTokenizer);
+  }
 
   // free resources
   String_delete(archiveName);
@@ -2783,7 +2795,18 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
   assert(storageSpecifier != NULL);
 
   // get file to use
-  storageFileName = (archiveName != NULL) ? archiveName : storageSpecifier->archiveName;
+  if      (archiveName != NULL)
+  {
+    storageFileName = archiveName;
+  }
+  else if (storageSpecifier->archivePatternString != NULL)
+  {
+    storageFileName = storageSpecifier->archivePatternString;
+  }
+  else
+  {
+    storageFileName = storageSpecifier->archiveName;
+  }
 
   String_clear(storageSpecifier->storageName);
   switch (storageSpecifier->type)
@@ -2963,10 +2986,23 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
                                      ConstString      archiveName
                                     )
 {
+  ConstString storageFileName;
+
   assert(storageSpecifier != NULL);
 
   // get file to use
-  if (archiveName == NULL) archiveName = storageSpecifier->archiveName;
+  if      (!String_isEmpty(archiveName))
+  {
+    storageFileName = archiveName;
+  }
+  else if (!String_isEmpty(storageSpecifier->archivePatternString))
+  {
+    storageFileName = storageSpecifier->archivePatternString;
+  }
+  else
+  {
+    storageFileName = storageSpecifier->archiveName;
+  }
 
   String_clear(storageSpecifier->storageName);
   switch (storageSpecifier->type)
@@ -2974,9 +3010,9 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!String_isEmpty(archiveName))
+      if (!String_isEmpty(storageFileName))
       {
-        String_append(storageSpecifier->storageName,archiveName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_FTP:
@@ -2991,16 +3027,16 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
       {
         String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
       }
-      if (!String_isEmpty(archiveName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,archiveName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SSH:
-      if (!String_isEmpty(archiveName))
+      if (!String_isEmpty(storageFileName))
       {
-        String_append(storageSpecifier->storageName,archiveName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SCP:
@@ -3010,10 +3046,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
       {
         String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
       }
-      if (!String_isEmpty(archiveName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,archiveName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_SFTP:
@@ -3023,10 +3059,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
       {
         String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
       }
-      if (!String_isEmpty(archiveName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,archiveName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_WEBDAV:
@@ -3037,10 +3073,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
         String_appendChar(storageSpecifier->storageName,'@');
       }
       String_append(storageSpecifier->storageName,storageSpecifier->hostName);
-      if (!String_isEmpty(archiveName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,archiveName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_CD:
@@ -3050,10 +3086,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
         String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
         String_appendChar(storageSpecifier->storageName,':');
       }
-      if (!String_isEmpty(archiveName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,archiveName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_DVD:
@@ -3063,10 +3099,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
         String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
         String_appendChar(storageSpecifier->storageName,':');
       }
-      if (!String_isEmpty(archiveName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,archiveName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_BD:
@@ -3076,10 +3112,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
         String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
         String_appendChar(storageSpecifier->storageName,':');
       }
-      if (!String_isEmpty(archiveName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,archiveName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_DEVICE:
@@ -3089,10 +3125,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
         String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
         String_appendChar(storageSpecifier->storageName,':');
       }
-      if (!String_isEmpty(archiveName))
+      if (!String_isEmpty(storageFileName))
       {
         String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,archiveName);
+        String_append(storageSpecifier->storageName,storageFileName);
       }
       break;
     default:
@@ -11330,7 +11366,6 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
                    )
 {
   AutoFreeList      autoFreeList;
-  String            fileName;
   void              *buffer;
   Errors            error;
   StorageHandle     storageHandle;
@@ -11351,7 +11386,6 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
 
   // open storage
-  fileName = String_new();
   error = Storage_init(&storageHandle,
                        storageSpecifier,
                        jobOptions,
@@ -11362,7 +11396,6 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
                       );
   if (error != ERROR_NONE)
   {
-    String_delete(fileName);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -11370,12 +11403,10 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
   if (error != ERROR_NONE)
   {
     (void)Storage_done(&storageHandle);
-    String_delete(fileName);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,&storageHandle,{ Storage_close(&storageHandle); (void)Storage_done(&storageHandle); });
-  AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
 
   // create local file
   error = File_open(&fileHandle,
