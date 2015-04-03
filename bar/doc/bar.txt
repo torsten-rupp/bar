@@ -284,6 +284,10 @@ Restore contents of an archive:
 
   bar -x home*.bar
 
+DIAGNOSTICS
+Exit code is zero if no error occurred. Errors result in a non-zero exit
+code and a error message on standard error.
+
 FILES
 /etc/bar/bar.cfg
 
