@@ -25,13 +25,15 @@
 #include "errors.h"
 #include "entrylists.h"
 #include "patternlists.h"
-#include "sources.h"
+#include "deltasources.h"
 #include "crypt.h"
 #include "storage.h"
 
 #include "compress.h"
 
 /****************** Conditional compilation switches *******************/
+
+#define XD3_DEBUG
 
 /***************************** Constants *******************************/
 
@@ -105,6 +107,9 @@ LOCAL Errors CompressXD3_compressData(CompressInfo *compressInfo)
                                compressInfo->xdelta.inputBuffer,
                                n
                               );
+                #ifdef XD3_DEBUG
+                  fprintf(stderr,"%s, %d: compress: move input=%u\n",__FILE__,__LINE__,n);
+                #endif /* XD3_DEBUG */
 #if 0
 {
 int h = open("xd3.data",O_CREAT|O_WRONLY|O_APPEND,0664);
@@ -148,6 +153,9 @@ close(h);
                              compressInfo->xdelta.stream.next_out,
                              compressInfo->xdelta.stream.avail_out
                             );
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: compress: move output=%u\n",__FILE__,__LINE__,compressInfo->xdelta.stream.avail_out);
+              #endif /* XD3_DEBUG */
 
               // done compressed data
               xd3_consume_output(&compressInfo->xdelta.stream);
@@ -155,26 +163,38 @@ close(h);
               doneFlag = TRUE;
               break;
             case XD3_GETSRCBLK:
-              error = Source_getEntryDataBlock(compressInfo->xdelta.sourceHandle,
-                                               (void*)compressInfo->xdelta.source.curblk,
-                                               (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
-                                               compressInfo->xdelta.source.blksize,
-                                               &bytesRead
-                                              );
+              error = DeltaSource_getEntryDataBlock(compressInfo->xdelta.deltaSourceHandle,
+                                                    (void*)compressInfo->xdelta.source.curblk,
+                                                    (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                    compressInfo->xdelta.source.blksize,
+                                                    &bytesRead
+                                                   );
               if (error != ERROR_NONE)
               {
                 return error;
               }
               compressInfo->xdelta.source.onblk    = bytesRead;
               compressInfo->xdelta.source.curblkno = compressInfo->xdelta.source.getblkno;
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XD3_DEBUG */
               break;
             case XD3_GOTHEADER:
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XD3_DEBUG */
 //fprintf(stderr,"%s,%d: XD3_GOTHEADER\n",__FILE__,__LINE__);
               break;
             case XD3_WINSTART:
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XD3_DEBUG */
 //fprintf(stderr,"%s,%d: XD3_WINSTART\n",__FILE__,__LINE__);
               break;
             case XD3_WINFINISH:
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XD3_DEBUG */
 //fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
               break;
             default:
@@ -207,13 +227,11 @@ close(h);
   {
     if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
     {
-//fprintf(stderr,"%s, %d: compressInfo->flushFlag=%d (compressInfo->compressState=%d\n",__FILE__,__LINE__,compressInfo->flushFlag,compressInfo->compressState);
       // finish compress, flush internal compress buffers
       if (   compressInfo->flushFlag                                          // flush data requested
           && (compressInfo->compressState == COMPRESS_STATE_RUNNING)          // compressor is running -> data available in internal buffers
          )
       {
-//fprintf(stderr,"%s,%d: %lu %lu ----------------------\n",__FILE__,__LINE__,(long)compressInfo->xdelta.stream.total_in,(long)compressInfo->xdelta.stream.total_out);
         // get max. number of data bytes and max. number of compressed bytes
         maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
         maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
@@ -235,6 +253,10 @@ close(h);
                                compressInfo->xdelta.inputBuffer,
                                n
                               );
+                #ifdef XD3_DEBUG
+                  fprintf(stderr,"%s, %d: compress: move input=%u\n",__FILE__,__LINE__,n);
+                #endif /* XD3_DEBUG */
+
                 xd3_avail_input(&compressInfo->xdelta.stream,
                                 compressInfo->xdelta.inputBuffer,
                                 (usize_t)n
@@ -273,32 +295,47 @@ close(h);
                              compressInfo->xdelta.stream.next_out,
                              compressInfo->xdelta.stream.avail_out
                             );
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: compress: move output=%u\n",__FILE__,__LINE__,compressInfo->xdelta.stream.avail_out);
+              #endif /* XD3_DEBUG */
 
               // done compressed data
               xd3_consume_output(&compressInfo->xdelta.stream);
 //fprintf(stderr,"%s,%d: outputBufferSize=%ld outputBufferLength=%ld\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferSize,compressInfo->xdelta.outputBufferLength);
               break;
             case XD3_GETSRCBLK:
-              error = Source_getEntryDataBlock(compressInfo->xdelta.sourceHandle,
-                                               (void*)compressInfo->xdelta.source.curblk,
-                                               (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
-                                               compressInfo->xdelta.source.blksize,
-                                               &bytesRead
-                                              );
+              error = DeltaSource_getEntryDataBlock(compressInfo->xdelta.deltaSourceHandle,
+                                                    (void*)compressInfo->xdelta.source.curblk,
+                                                    (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                    compressInfo->xdelta.source.blksize,
+                                                    &bytesRead
+                                                   );
               if (error != ERROR_NONE)
               {
                 return error;
               }
               compressInfo->xdelta.source.onblk    = bytesRead;
               compressInfo->xdelta.source.curblkno = compressInfo->xdelta.source.getblkno;
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XD3_DEBUG */
               break;
             case XD3_GOTHEADER:
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XD3_DEBUG */
 //fprintf(stderr,"%s,%d: XD3_GOTHEADER\n",__FILE__,__LINE__);
               break;
             case XD3_WINSTART:
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XD3_DEBUG */
 //fprintf(stderr,"%s,%d: XD3_WINSTART\n",__FILE__,__LINE__);
               break;
             case XD3_WINFINISH:
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XD3_DEBUG */
 //fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
               break;
             default:
@@ -366,9 +403,9 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
 
   assert(compressInfo != NULL);
 
-  if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
+  if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                      // space in data buffer
   {
-    // get decompressed data from output buffer
+    // move xdelta decompressed data -> data buffer
     if (!RingBuffer_isEmpty(&compressInfo->xdelta.outputRingBuffer))
     {
       dataBytes = MIN(RingBuffer_getAvailable(&compressInfo->xdelta.outputRingBuffer),
@@ -381,9 +418,9 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
     }
   }
 
-  if (!compressInfo->endOfDataFlag)                                           // not end-of-data
+  if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                      // space in data buffer
   {
-    if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
+    if (!compressInfo->endOfDataFlag)                                         // not end-of-data
     {
       // decompress available data
       if (!RingBuffer_isEmpty(&compressInfo->compressRingBuffer))             // unprocessed compressed data available
@@ -391,7 +428,6 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
         // get max. number of compressed and max. number of data bytes
         maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
         maxDataBytes     = RingBuffer_getFree(&compressInfo->dataRingBuffer);
-//fprintf(stderr,"%s, %d: maxCompressBytes=%d compressBufferSize=%d compressBufferLength=%d\n",__FILE__,__LINE__,maxCompressBytes,compressInfo->compressBufferSize,compressInfo->compressBufferLength);
 
         // decompress: transfer compress buffer -> output buffer
         compressBytes = 0L;
@@ -411,6 +447,9 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
                                compressInfo->xdelta.inputBuffer,
                                n
                               );
+                #ifdef XD3_DEBUG
+                  fprintf(stderr,"%s, %d: decompress: move input=%u\n",__FILE__,__LINE__,compressInfo->xdelta.stream.avail_out);
+                #endif /* XD3_DEBUG */
                 xd3_avail_input(&compressInfo->xdelta.stream,
                                 compressInfo->xdelta.inputBuffer,
                                 (usize_t)n
@@ -439,40 +478,52 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
                 }
               }
 
-              // append compressed data to output buffer
+              // append uncompressed data to output buffer
               RingBuffer_put(&compressInfo->xdelta.outputRingBuffer,
                              compressInfo->xdelta.stream.next_out,
                              compressInfo->xdelta.stream.avail_out
                             );
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: decompress: move output=%u\n",__FILE__,__LINE__,compressInfo->xdelta.stream.avail_out);
+              #endif /* XD3_DEBUG */
 
-              // done decompressed data
+              // done undecompressed data
               xd3_consume_output(&compressInfo->xdelta.stream);
 
               doneFlag = TRUE;
 //fprintf(stderr,"%s,%d: outputBufferSize=%ld outputBufferLength=%ld\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferSize,compressInfo->xdelta.outputBufferLength);
               break;
             case XD3_GETSRCBLK:
-              error = Source_getEntryDataBlock(compressInfo->xdelta.sourceHandle,
-                                               (void*)compressInfo->xdelta.source.curblk,
-                                               (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
-                                               compressInfo->xdelta.source.blksize,
-                                               &bytesRead
-                                              );
+              error = DeltaSource_getEntryDataBlock(compressInfo->xdelta.deltaSourceHandle,
+                                                    (void*)compressInfo->xdelta.source.curblk,
+                                                    (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                    compressInfo->xdelta.source.blksize,
+                                                    &bytesRead
+                                                   );
               if (error != ERROR_NONE)
               {
                 return error;
               }
               compressInfo->xdelta.source.onblk    = bytesRead;
               compressInfo->xdelta.source.curblkno = compressInfo->xdelta.source.getblkno;
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: decompress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XD3_DEBUG */
               break;
             case XD3_GOTHEADER:
-//fprintf(stderr,"%s,%d: XD3_GOTHEADER\n",__FILE__,__LINE__);
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: decompress: XD3_GOTHEADER\n",__FILE__,__LINE__);
+              #endif /* XD3_DEBUG */
               break;
             case XD3_WINSTART:
-//fprintf(stderr,"%s,%d: XD3_WINSTART\n",__FILE__,__LINE__);
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: decompress: XD3_WINSTART\n",__FILE__,__LINE__);
+              #endif /* XD3_DEBUG */
               break;
             case XD3_WINFINISH:
-//fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: decompress: XD3_WINFINISH\n",__FILE__,__LINE__);
+              #endif /* XD3_DEBUG */
               break;
             default:
               return ERRORX_(INFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
@@ -499,11 +550,11 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
       }
     }
 
-    /* Note: do not try to decompress more data here, because
-       end-of-data is not recognized by xdelta-decompressor.
-       Instead decompress only minimum, then return. Caller
-       check if all data is decompressed and call
-       xdelta-decompressor again if not all data is decompressed.
+    /* Note: do not try to decompress more data here than minimal
+       required, because end-of-data is not recognized by
+       xdelta-decompressor. Instead decompress only minimum, then
+       return. The caller check if all data is decompressed and
+       call xdelta-decompressor again if not all data is decompressed.
     */
     if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                    // no data in data buffer
     {
@@ -549,6 +600,9 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
                              compressInfo->xdelta.stream.next_out,
                              compressInfo->xdelta.stream.avail_out
                             );
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: decompress: length=%u\n",__FILE__,__LINE__,compressInfo->xdelta.stream.avail_out);
+              #endif /* XD3_DEBUG */
 
               // done decompressed data
               xd3_consume_output(&compressInfo->xdelta.stream);
@@ -557,12 +611,12 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
 //fprintf(stderr,"%s,%d: outputBufferSize=%ld outputBufferLength=%ld\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferSize,compressInfo->xdelta.outputBufferLength);
               break;
             case XD3_GETSRCBLK:
-              error = Source_getEntryDataBlock(compressInfo->xdelta.sourceHandle,
-                                               (void*)compressInfo->xdelta.source.curblk,
-                                               (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
-                                               compressInfo->xdelta.source.blksize,
-                                               &bytesRead
-                                              );
+              error = DeltaSource_getEntryDataBlock(compressInfo->xdelta.deltaSourceHandle,
+                                                    (void*)compressInfo->xdelta.source.curblk,
+                                                    (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                    compressInfo->xdelta.source.blksize,
+                                                    &bytesRead
+                                                   );
               if (error != ERROR_NONE)
               {
                 return error;
@@ -570,15 +624,24 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
               compressInfo->xdelta.source.onblk    = bytesRead;
               compressInfo->xdelta.source.curblkno = compressInfo->xdelta.source.getblkno;
 //dumpMemory(FALSE,compressInfo->xdelta.source.curblk,bytesRead);
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: decompress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XD3_DEBUG */
               break;
             case XD3_GOTHEADER:
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: decompress: XD3_GOTHEADER\n",__FILE__,__LINE__);
+              #endif /* XD3_DEBUG */
               break;
             case XD3_WINSTART:
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: decompress: XD3_WINSTART\n",__FILE__,__LINE__);
+              #endif /* XD3_DEBUG */
               break;
             case XD3_WINFINISH:
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+              #ifdef XD3_DEBUG
+                fprintf(stderr,"%s, %d: decompress: XD3_WINFINISH\n",__FILE__,__LINE__);
+              #endif /* XD3_DEBUG */
               break;
             default:
               return ERRORX_(INFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
@@ -616,7 +679,7 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
 
 LOCAL Errors CompressXD3_init(CompressInfo       *compressInfo,
                               CompressAlgorithms compressAlgorithm,
-                              SourceHandle       *sourceHandle
+                              DeltaSourceHandle  *deltaSourceHandle
                              )
 {
   xd3_config xd3Config;
@@ -625,7 +688,7 @@ LOCAL Errors CompressXD3_init(CompressInfo       *compressInfo,
   assert(compressInfo != NULL);
 
   // initialize variables
-  compressInfo->xdelta.sourceHandle = sourceHandle;
+  compressInfo->xdelta.deltaSourceHandle = deltaSourceHandle;
   if (!RingBuffer_init(&compressInfo->xdelta.outputRingBuffer,1,XDELTA_BUFFER_SIZE))
   {
     HALT_INSUFFICIENT_MEMORY();
