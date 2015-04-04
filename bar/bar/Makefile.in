@@ -287,7 +287,8 @@ BAR_SOURCES          = bar.c \
                        patternlists.c \
                        entrylists.c \
                        compress.c \
-                       sources.c \
+                       deltasources.c \
+                       deltasourcelists.c \
                        crypt.c \
                        passwords.c \
                        misc.c \
