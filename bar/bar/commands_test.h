@@ -12,7 +12,7 @@
 #define __COMMANDS_TEST__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -23,6 +23,7 @@
 #include "bar.h"
 #include "entrylists.h"
 #include "patternlists.h"
+#include "deltasourcelists.h"
 #include "crypt.h"
 
 /****************** Conditional compilation switches *******************/
@@ -49,6 +50,7 @@
 * Input  : archiveFileNameList              - list with archive files
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
+*          deltaSourceList                  - delta source list
 *          jobOptions                       - job options
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
@@ -61,6 +63,7 @@
 Errors Command_test(const StringList                *archiveFileNameList,
                     const EntryList                 *includeEntryList,
                     const PatternList               *excludePatternList,
+                    DeltaSourceList                 *deltaSourceList,
                     JobOptions                      *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                     void                            *archiveGetCryptPasswordUserData

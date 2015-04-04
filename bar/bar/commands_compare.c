@@ -32,11 +32,12 @@
 #include "patterns.h"
 #include "entrylists.h"
 #include "patternlists.h"
+#include "deltasourcelists.h"
 #include "files.h"
 #include "filesystems.h"
 #include "archive.h"
 #include "fragmentlists.h"
-#include "sources.h"
+#include "deltasources.h"
 
 #include "commands_compare.h"
 
@@ -98,6 +99,7 @@ LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 *          archiveName                      - archive name
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
+*          deltaSourceList                  - delta source list
 *          jobOptions                       - job options
 *          printableStorageName             - printable storage name
 *          archiveGetCryptPasswordFunction  - get password call back
@@ -112,6 +114,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier                *storageSpeci
                                    ConstString                     archiveName,
                                    const EntryList                 *includeEntryList,
                                    const PatternList               *excludePatternList,
+                                   DeltaSourceList                 *deltaSourceList,
                                    JobOptions                      *jobOptions,
                                    ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                                    void                            *archiveGetCryptPasswordUserData,
@@ -164,6 +167,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier                *storageSpeci
                        &storageHandle,
                        storageSpecifier,
                        archiveName,
+                       deltaSourceList,
                        jobOptions,
                        archiveGetCryptPasswordFunction,
                        archiveGetCryptPasswordUserData
@@ -1510,6 +1514,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier                *storageSpeci
 Errors Command_compare(const StringList                *storageNameList,
                        const EntryList                 *includeEntryList,
                        const PatternList               *excludePatternList,
+                       DeltaSourceList                 *deltaSourceList,
                        JobOptions                      *jobOptions,
                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                        void                            *archiveGetCryptPasswordUserData
@@ -1545,7 +1550,7 @@ Errors Command_compare(const StringList                *storageNameList,
   failError = ERROR_NONE;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
-    // parse storage name, get printable name
+    // parse storage name
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
@@ -1558,13 +1563,14 @@ Errors Command_compare(const StringList                *storageNameList,
     }
     DEBUG_TESTCODE("Command_compare1") { failError = DEBUG_TESTCODE_ERROR(); break; }
 
-    if (String_isEmpty(storageSpecifier.archivePattern))
+    if (String_isEmpty(storageSpecifier.archivePatternString))
     {
       // test archive content
       error = compareArchiveContent(&storageSpecifier,
                                     NULL,
                                     includeEntryList,
                                     excludePatternList,
+                                    deltaSourceList,
                                     jobOptions,
                                     archiveGetCryptPasswordFunction,
                                     archiveGetCryptPasswordUserData,
@@ -1580,7 +1586,10 @@ Errors Command_compare(const StringList                *storageNameList,
                                        );
       if (error == ERROR_NONE)
       {
-        error = Pattern_init(&pattern,storageSpecifier.archivePattern,jobOptions->patternType,PATTERN_FLAG_NONE);
+        error = Pattern_init(&pattern,storageSpecifier.archivePatternString,
+                             jobOptions->patternType,
+                             PATTERN_FLAG_NONE
+                            );
         if (error == ERROR_NONE)
         {
           fileName = String_new();
@@ -1604,6 +1613,7 @@ Errors Command_compare(const StringList                *storageNameList,
                                           fileName,
                                           includeEntryList,
                                           excludePatternList,
+                                          deltaSourceList,
                                           jobOptions,
                                           archiveGetCryptPasswordFunction,
                                           archiveGetCryptPasswordUserData,
@@ -1613,10 +1623,9 @@ Errors Command_compare(const StringList                *storageNameList,
           String_delete(fileName);
           Pattern_done(&pattern);
         }
-      }
 
-      // done list directory
-      Storage_closeDirectoryList(&storageDirectoryListHandle);
+        Storage_closeDirectoryList(&storageDirectoryListHandle);
+      }
     }
     if (error != ERROR_NONE)
     {
