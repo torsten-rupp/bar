@@ -23,6 +23,7 @@
 #include "bar.h"
 #include "entrylists.h"
 #include "patternlists.h"
+#include "deltasourcelists.h"
 #include "crypt.h"
 
 /****************** Conditional compilation switches *******************/
@@ -81,6 +82,7 @@ typedef bool(*RestoreStatusInfoFunction)(void                    *userData,
 * Input  : storageNameList                  - list with storage names
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
+*          deltaSourceList                  - delta source list
 *          jobOptions                       - job options
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
@@ -100,6 +102,7 @@ typedef bool(*RestoreStatusInfoFunction)(void                    *userData,
 Errors Command_restore(const StringList                *storageNameList,
                        const EntryList                 *includeEntryList,
                        const PatternList               *excludePatternList,
+                       DeltaSourceList                 *deltaSourceList,
                        JobOptions                      *jobOptions,
                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                        void                            *archiveGetCryptPasswordUserData,

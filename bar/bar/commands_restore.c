@@ -31,6 +31,7 @@
 #include "errors.h"
 #include "patterns.h"
 #include "patternlists.h"
+#include "deltasourcelists.h"
 #include "files.h"
 #include "archive.h"
 #include "fragmentlists.h"
@@ -52,6 +53,7 @@ typedef struct
 {
   const EntryList           *includeEntryList;       // included entries (can be empty)
   const PatternList         *excludePatternList;     // excluded entries (can be empty or NULL)
+  DeltaSourceList           *deltaSourceList;        // delta source list
   const JobOptions          *jobOptions;
   bool                      *pauseFlag;              // pause flag (can be NULL)
   bool                      *requestedAbortFlag;     // request abort flag (can be NULL)
@@ -206,6 +208,7 @@ LOCAL bool updateStatusInfo(const RestoreInfo *restoreInfo)
 Errors Command_restore(const StringList                *storageNameList,
                        const EntryList                 *includeEntryList,
                        const PatternList               *excludePatternList,
+                       DeltaSourceList                 *deltaSourceList,
                        JobOptions                      *jobOptions,
                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                        void                            *archiveGetCryptPasswordUserData,
@@ -319,7 +322,8 @@ Errors Command_restore(const StringList                *storageNameList,
     error = Archive_open(&archiveInfo,
                          &storageHandle,
                          &storageSpecifier,
-                         NULL,
+                         NULL,  // fileName
+                         deltaSourceList,
                          jobOptions,
                          archiveGetCryptPasswordFunction,
                          archiveGetCryptPasswordUserData
