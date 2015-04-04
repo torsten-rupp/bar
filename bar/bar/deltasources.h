@@ -27,7 +27,8 @@
 #include "lists.h"
 #include "strings.h"
 #include "files.h"
-#include "patternlists.h"
+//#include "patternlists.h"
+#include "deltasourcelists.h"
 
 #include "errors.h"
 
@@ -49,7 +50,7 @@ typedef struct
   String      tmpFileName;      // temporary file name
   FileHandle  tmpFileHandle;    // temporary file handle
   uint64      baseOffset;       // block read base offset in source
-} SourceHandle;
+} DeltaSourceHandle;
 
 /***************************** Variables *******************************/
 
@@ -64,7 +65,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Source_initAll
+* Name   : DeltaSource_initAll
 * Purpose: initialize source
 * Input  : -
 * Output : -
@@ -72,10 +73,10 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-Errors Source_initAll(void);
+Errors DeltaSource_initAll(void);
 
 /***********************************************************************\
-* Name   : Source_doneAll
+* Name   : DeltaSource_doneAll
 * Purpose: deinitialize source
 * Input  : -
 * Output : -
@@ -83,10 +84,10 @@ Errors Source_initAll(void);
 * Notes  : -
 \***********************************************************************/
 
-void Source_doneAll(void);
+void DeltaSource_doneAll(void);
 
 /***********************************************************************\
-* Name   : Source_addSource
+* Name   : DeltaSource_addSource
 * Purpose: add source
 * Input  : sourcePattern - source pattern
 * Output : -
@@ -94,10 +95,10 @@ void Source_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-Errors Source_addSource(ConstString sourcePattern);
+Errors DeltaSource_add(ConstString sourcePattern, PatternTypes patternType);
 
 /***********************************************************************\
-* Name   : Source_addSourceList
+* Name   : DeltaSource_addSourceList
 * Purpose: add source list
 * Input  : sourcePatternList - source pattern list
 * Output : -
@@ -105,10 +106,10 @@ Errors Source_addSource(ConstString sourcePattern);
 * Notes  : -
 \***********************************************************************/
 
-Errors Source_addSourceList(const PatternList *sourcePatternList);
+//Errors DeltaSource_addSourceList(const PatternList *sourcePatternList);
 
 /***********************************************************************\
-* Name   : Source_openEntry
+* Name   : DeltaSource_openEntry
 * Purpose: open source entry
 * Input  : sourceHandle      - source handle variable
 *          sourceStorageName - storage name
@@ -121,15 +122,16 @@ Errors Source_addSourceList(const PatternList *sourcePatternList);
 * Notes  : -
 \***********************************************************************/
 
-Errors Source_openEntry(SourceHandle     *sourceHandle,
-                        ConstString      sourceStorageName,
-                        ConstString      name,
-                        int64            size,
-                        const JobOptions *jobOptions
-                       );
+Errors DeltaSource_openEntry(DeltaSourceHandle *sourceHandle,
+                             DeltaSourceList   *deltaSourceList,
+                             ConstString       deltaSourceStorageName,
+                             ConstString       name,
+                             int64             size,
+                             const JobOptions  *jobOptions
+                            );
 
 /***********************************************************************\
-* Name   : Source_closeEntry
+* Name   : DeltaSource_closeEntry
 * Purpose: close source entry
 * Input  : sourceHandle - source handle
 * Output : -
@@ -137,10 +139,10 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
 * Notes  : -
 \***********************************************************************/
 
-void Source_closeEntry(SourceHandle *sourceHandle);
+void DeltaSource_closeEntry(DeltaSourceHandle *sourceHandle);
 
 /***********************************************************************\
-* Name   : Source_getName
+* Name   : DeltaSource_getName
 * Purpose: get source name
 * Input  : sourceHandle - source handle
 * Output : -
@@ -148,10 +150,10 @@ void Source_closeEntry(SourceHandle *sourceHandle);
 * Notes  : -
 \***********************************************************************/
 
-ConstString Source_getName(const SourceHandle *sourceHandle);
+ConstString DeltaSource_getName(const DeltaSourceHandle *sourceHandle);
 
 /***********************************************************************\
-* Name   : Source_getSize
+* Name   : DeltaSource_getSize
 * Purpose: get source size
 * Input  : sourceHandle - source handle
 * Output : -
@@ -159,10 +161,10 @@ ConstString Source_getName(const SourceHandle *sourceHandle);
 * Notes  : -
 \***********************************************************************/
 
-uint64 Source_getSize(const SourceHandle *sourceHandle);
+uint64 DeltaSource_getSize(const DeltaSourceHandle *sourceHandle);
 
 /***********************************************************************\
-* Name   : Source_getName
+* Name   : DeltaSource_getName
 * Purpose: get source name
 * Input  : sourceHandle - source handle
 *          offset       - base offset for read blocks
@@ -171,10 +173,10 @@ uint64 Source_getSize(const SourceHandle *sourceHandle);
 * Notes  : -
 \***********************************************************************/
 
-void Source_setBaseOffset(SourceHandle *sourceHandle, uint64 offset);
+void DeltaSource_setBaseOffset(DeltaSourceHandle *sourceHandle, uint64 offset);
 
 /***********************************************************************\
-* Name   : Source_getEntryDataBlock
+* Name   : DeltaSource_getEntryDataBlock
 * Purpose: get source entry data block
 * Input  : sourceHandle    - source handle
 *          buffer          - buffer for data block
@@ -185,7 +187,7 @@ void Source_setBaseOffset(SourceHandle *sourceHandle, uint64 offset);
 * Notes  : -
 \***********************************************************************/
 
-Errors Source_getEntryDataBlock(SourceHandle *sourceHandle,
+Errors DeltaSource_getEntryDataBlock(DeltaSourceHandle *sourceHandle,
                                 void         *buffer,
                                 uint64       offset,
                                 ulong        length,
