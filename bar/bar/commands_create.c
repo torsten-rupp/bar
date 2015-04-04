@@ -39,7 +39,7 @@
 #include "devices.h"
 #include "filesystems.h"
 #include "archive.h"
-#include "sources.h"
+#include "deltasources.h"
 #include "crypt.h"
 #include "storage.h"
 #include "misc.h"
@@ -91,6 +91,7 @@ typedef struct
   const EntryList             *includeEntryList;                  // list of included entries
   const PatternList           *excludePatternList;                // list of exclude patterns
   const PatternList           *compressExcludePatternList;        // exclude compression pattern list
+  const DeltaSourceList       *deltaSourceList;                   // delta sources
   const JobOptions            *jobOptions;
   ArchiveTypes                archiveType;                        // archive type to create
   String                      scheduleTitle;                      // schedule title or NULL
@@ -235,6 +236,7 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 *          includeEntryList           - include entry list
 *          excludePatternList         - exclude pattern list
 *          compressExcludePatternList - exclude compression pattern list
+*          deltaSourceList            - delta source list
 *          jobOptions                 - job options
 *          archiveType                - archive type; see ArchiveTypes
 *                                       (normal/full/incremental)
@@ -259,6 +261,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
                           const EntryList          *includeEntryList,
                           const PatternList        *excludePatternList,
                           const PatternList        *compressExcludePatternList,
+                          const DeltaSourceList    *deltaSourceList,
                           JobOptions               *jobOptions,
                           ArchiveTypes             archiveType,
                           const String             scheduleTitle,
@@ -279,6 +282,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   createInfo->includeEntryList               = includeEntryList;
   createInfo->excludePatternList             = excludePatternList;
   createInfo->compressExcludePatternList     = compressExcludePatternList;
+  createInfo->deltaSourceList                = deltaSourceList;
   createInfo->jobOptions                     = jobOptions;
   createInfo->scheduleTitle                  = scheduleTitle;
   createInfo->scheduleCustomText             = scheduleCustomText;
@@ -5318,6 +5322,7 @@ Errors Command_create(const String                    jobUUID,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
                       const PatternList               *compressExcludePatternList,
+                      const DeltaSourceList           *deltaSourceList,
                       JobOptions                      *jobOptions,
                       ArchiveTypes                    archiveType,
                       const String                    scheduleTitle,
@@ -5389,6 +5394,7 @@ Errors Command_create(const String                    jobUUID,
                  includeEntryList,
                  excludePatternList,
                  compressExcludePatternList,
+                 deltaSourceList,
                  jobOptions,
                  archiveType,
                  scheduleTitle,
@@ -5517,6 +5523,7 @@ Errors Command_create(const String                    jobUUID,
 
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
+                         deltaSourceList,
                          jobOptions,
                          indexHandle,
                          jobUUID,

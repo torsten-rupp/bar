@@ -21,6 +21,7 @@
 #include "errors.h"
 #include "entrylists.h"
 #include "patternlists.h"
+#include "deltasourcelists.h"
 #include "compress.h"
 #include "crypt.h"
 #include "storage.h"
@@ -94,6 +95,7 @@ typedef void(*CreateStatusInfoFunction)(void                   *userData,
 *          excludePatternList               - exclude pattern list
 *          compressExcludePatternList       - exclude compression pattern
 *                                             list
+*          deltaSourceList                  - delta soruce list
 *          jobOptions                       - job options
 *          archiveType                      - archive type; see
 *                                             ArchiveTypes (normal/full/
@@ -127,6 +129,7 @@ Errors Command_create(const String                    jobUUID,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
                       const PatternList               *compressExcludePatternList,
+                      const DeltaSourceList           *deltaSourceList,
                       JobOptions                      *jobOptions,
                       ArchiveTypes                    archiveType,
                       const String                    scheduleTitle,
