@@ -40,7 +40,7 @@
 
 #include "archive_format_const.h"
 #include "errors.h"
-#include "sources.h"
+#include "deltasources.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -239,19 +239,19 @@ typedef struct
       struct
       {
         #ifdef HAVE_XDELTA3
-          SourceHandle *sourceHandle;           // delta source handle
-          byte         *sourceBuffer;           // buffer for delta source data
-          RingBuffer   outputRingBuffer;
-          int          flags;                   // XDELTA flags
-          xd3_stream   stream;                  // XDELTA stream
-          xd3_source   source;                  // XDELTA source
-          byte         inputBuffer[1024];       /* buffer for next xdelta input data bytes (Note: do
+          DeltaSourceHandle *deltaSourceHandle; // delta source handle
+          byte              *sourceBuffer;      // buffer for delta source data
+          RingBuffer        outputRingBuffer;
+          int               flags;              // XDELTA flags
+          xd3_stream        stream;             // XDELTA stream
+          xd3_source        source;             // XDELTA source
+          byte              inputBuffer[1024];  /* buffer for next xdelta input data bytes (Note: do
                                                    not use pointer to data/compress ring buffers
                                                    because input/output is not processed immediately
                                                    and must be available until next input data is
                                                    requested
                                                 */
-          bool         flushFlag;               // TRUE iff flush send to xdelta compressor
+          bool              flushFlag;          // TRUE iff flush send to xdelta compressor
         #endif /* HAVE_XDELTA3 */
       } xdelta;
     #endif /* HAVE_XDELTA */
@@ -445,11 +445,11 @@ INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm)
 /***********************************************************************\
 * Name   : Compress_init
 * Purpose: init compress handle
-* Input  : compressInfo     - compress info block
-*          compressionLevel - compression level (0..9)
-*          blockLength      - block length
-*          sourceHandle     - source handle (can be NULL if no
-*                             delta-compression is used)
+* Input  : compressInfo      - compress info block
+*          compressionLevel  - compression level (0..9)
+*          blockLength       - block length
+*          deltaSourceHandle - delta source handle (can be NULL if no
+*                              delta-compression is used)
 * Output : compressInfo - initialized compress info block
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -460,7 +460,7 @@ INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm)
                        CompressModes      compressMode,
                        CompressAlgorithms compressAlgorithm,
                        ulong              blockLength,
-                       SourceHandle       *sourceHandle
+                       DeltaSourceHandle  *deltaSourceHandle
                       );
 #else /* not NDEBUG */
   Errors __Compress_init(const char         *__fileName__,
@@ -469,7 +469,7 @@ INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm)
                          CompressModes      compressMode,
                          CompressAlgorithms compressAlgorithm,
                          ulong              blockLength,
-                         SourceHandle       *sourceHandle
+                         DeltaSourceHandle  *deltaSourceHandle
                         );
 #endif /* NDEBUG */
 
@@ -576,15 +576,23 @@ INLINE bool Compress_isFlush(CompressInfo *compressInfo)
 * Notes  : -
 \***********************************************************************/
 
+#if 0
 INLINE bool Compress_isEndOfData(CompressInfo *compressInfo);
 #if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
 INLINE bool Compress_isEndOfData(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
+  // decompress data
+  (void)decompressData(compressInfo);
+
   return compressInfo->endOfDataFlag;
 }
 #endif /* defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__) */
+#else
+bool Compress_isEndOfData(CompressInfo *compressInfo);
+#endif
+
 
 /***********************************************************************\
 * Name   : Compress_getInputLength

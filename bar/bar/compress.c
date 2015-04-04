@@ -26,7 +26,7 @@
 #include "errors.h"
 #include "entrylists.h"
 #include "patternlists.h"
-#include "sources.h"
+//#include "sources.h"
 #include "crypt.h"
 #include "storage.h"
 #include "bar.h"
@@ -612,7 +612,7 @@ bool Compress_isValidAlgorithm(uint16 n)
                        CompressModes      compressMode,
                        CompressAlgorithms compressAlgorithm,
                        ulong              blockLength,
-                       SourceHandle       *sourceHandle
+                       DeltaSourceHandle  *deltaSourceHandle
                       )
 #else /* not NDEBUG */
   Errors __Compress_init(const char         *__fileName__,
@@ -621,7 +621,7 @@ bool Compress_isValidAlgorithm(uint16 n)
                          CompressModes      compressMode,
                          CompressAlgorithms compressAlgorithm,
                          ulong              blockLength,
-                         SourceHandle       *sourceHandle
+                         DeltaSourceHandle  *deltaSourceHandle
                         )
 #endif /* NDEBUG */
 {
@@ -630,7 +630,7 @@ bool Compress_isValidAlgorithm(uint16 n)
   assert(compressInfo != NULL);
 
   #ifndef HAVE_XDELTA3
-    UNUSED_VARIABLE(sourceHandle);
+    UNUSED_VARIABLE(deltaSourceHandle);
   #endif
 
   // init variables
@@ -749,7 +749,7 @@ bool Compress_isValidAlgorithm(uint16 n)
     case COMPRESS_ALGORITHM_XDELTA_8:
     case COMPRESS_ALGORITHM_XDELTA_9:
       #ifdef HAVE_XDELTA3
-        error = CompressXD3_init(compressInfo,compressAlgorithm,sourceHandle);
+        error = CompressXD3_init(compressInfo,compressAlgorithm,deltaSourceHandle);
       #else /* not HAVE_XDELTA3 */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_XDELTA3 */
@@ -1117,6 +1117,16 @@ Errors Compress_flush(CompressInfo *compressInfo)
   return ERROR_NONE;
 }
 
+bool Compress_isEndOfData(CompressInfo *compressInfo)
+{
+  assert(compressInfo != NULL);
+
+  // decompress data
+  (void)decompressData(compressInfo);
+
+  return compressInfo->endOfDataFlag;
+}
+
 uint64 Compress_getInputLength(CompressInfo *compressInfo)
 {
   uint64 length;
@@ -1371,7 +1381,6 @@ Errors Compress_getAvailableDecompressedBytes(CompressInfo *compressInfo,
     }
   }
 
-  // decompressed data is available iff bufferIndex < bufferLength
   (*bytes) = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
 
   return ERROR_NONE;
