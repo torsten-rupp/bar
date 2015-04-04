@@ -27,7 +27,7 @@
 #include "bar_global.h"
 #include "bar.h"
 
-#include "sources.h"
+#include "deltasources.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -37,25 +37,29 @@
 #define BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
+
+#if 0
 // source node
-typedef struct SourceNode
+typedef struct DeltaSourceNode
 {
-  LIST_NODE_HEADER(struct SourceNode);
+  LIST_NODE_HEADER(struct DeltaSourceNode);
 
   String           storageName;          // storage name
+  PatternTypes     patternType;
   StorageSpecifier storageSpecifier;     // storage specifier
   bool             restoreFlag;          // TRUE iff restore in progress
-} SourceNode;
+} DeltaSourceNode;
 
 // source list
 typedef struct
 {
-  LIST_HEADER(SourceNode);
+  LIST_HEADER(DeltaSourceNode);
   Semaphore lock;
-} SourceList;
+} DeltaSourceList;
+#endif
 
 /***************************** Variables *******************************/
-LOCAL SourceList sourceList;
+LOCAL DeltaSourceList deltaSourceList;
 
 /****************************** Macros *********************************/
 
@@ -68,7 +72,7 @@ LOCAL SourceList sourceList;
 #endif
 
 /***********************************************************************\
-* Name   : addSourceNodes
+* Name   : addDeltaSourceNodes
 * Purpose: add source nodes (matching names or name)
 * Input  : storageName - storage name
 * Output : -
@@ -76,7 +80,7 @@ LOCAL SourceList sourceList;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors addSourceNodes(ConstString storageName, PatternTypes patternType)
+LOCAL Errors addDeltaSourceNodes(ConstString storageName, PatternTypes patternType)
 {
   JobOptions                 jobOptions;
   StorageSpecifier           storageSpecifier;
@@ -84,7 +88,7 @@ LOCAL Errors addSourceNodes(ConstString storageName, PatternTypes patternType)
   StorageDirectoryListHandle storageDirectoryListHandle;
   Pattern                    pattern;
   String                     fileName;
-  SourceNode                 *sourceNode;
+  DeltaSourceNode            *deltaSourceNode;
 
   // init variables
   initJobOptions(&jobOptions);
@@ -99,24 +103,25 @@ LOCAL Errors addSourceNodes(ConstString storageName, PatternTypes patternType)
     return error;
   }
 
-  sourceNode = NULL;
+  deltaSourceNode = NULL;
 
-  if (String_isEmpty(storageSpecifier.archivePattern))
+  if (String_isEmpty(storageSpecifier.archivePatternString))
   {
     // add file entry
-    sourceNode = LIST_NEW_NODE(SourceNode);
-    if (sourceNode == NULL)
+    deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
+    if (deltaSourceNode == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
 
-    sourceNode->storageName = String_duplicate(Storage_getName(&storageSpecifier,NULL));
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sourceNode->storageName));
-    Storage_duplicateSpecifier(&sourceNode->storageSpecifier,&storageSpecifier);
-//    String_set(sourceNode->storageSpecifier.archiveName,storageSpecifier.archivePattern);
-    sourceNode->restoreFlag = FALSE;
+    deltaSourceNode->storageName = String_duplicate(Storage_getName(&storageSpecifier,NULL));
+    deltaSourceNode->patternType = patternType;
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(deltaSourceNode->storageName));
+//    Storage_duplicateSpecifier(&deltaSourceNode->storageSpecifier,&storageSpecifier);
+//    String_set(deltaSourceNode->storageSpecifier.archiveName,storageSpecifier.archivePatternString);
+//    deltaSourceNode->restoreFlag = FALSE;
 
-    List_append(&sourceList,sourceNode);
+    List_append(&deltaSourceList,deltaSourceNode);
   }
   else
   {
@@ -128,7 +133,11 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sourceNode->stora
                                      );
     if (error == ERROR_NONE)
     {
-      error = Pattern_init(&pattern,storageSpecifier.archivePattern,jobOptions.patternType,PATTERN_FLAG_NONE);
+      error = Pattern_init(&pattern,
+                           storageSpecifier.archivePatternString,
+                           jobOptions.patternType,
+                           PATTERN_FLAG_NONE
+                          );
       if (error == ERROR_NONE)
       {
         fileName = String_new();
@@ -148,18 +157,19 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sourceNode->stora
           }
 
           // add file entry
-          sourceNode = LIST_NEW_NODE(SourceNode);
-          if (sourceNode == NULL)
+          deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
+          if (deltaSourceNode == NULL)
           {
             HALT_INSUFFICIENT_MEMORY();
           }
 
-          sourceNode->storageName = String_duplicate(fileName);
-          Storage_duplicateSpecifier(&sourceNode->storageSpecifier,&storageSpecifier);
-          String_set(sourceNode->storageSpecifier.archiveName,fileName);
-          sourceNode->restoreFlag = FALSE;
+          deltaSourceNode->storageName = String_duplicate(fileName);
+          deltaSourceNode->patternType = patternType;
+//          Storage_duplicateSpecifier(&deltaSourceNode->storageSpecifier,&storageSpecifier);
+//          String_set(deltaSourceNode->storageSpecifier.archiveName,fileName);
+//          deltaSourceNode->restoreFlag = FALSE;
 
-          List_append(&sourceList,sourceNode);
+          List_append(&deltaSourceList,deltaSourceNode);
         }
         String_delete(fileName);
         Pattern_done(&pattern);
@@ -169,25 +179,25 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sourceNode->stora
   }
 
   // add file entry directly if no matching entry found in directory
-  if (sourceNode == NULL)
+  if (deltaSourceNode == NULL)
   {
     printWarning("No matching entry for delta source '%s' found\n",String_cString(Storage_getPrintableName(&storageSpecifier,NULL)));
 
-    sourceNode = LIST_NEW_NODE(SourceNode);
-    if (sourceNode == NULL)
+    deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
+    if (deltaSourceNode == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
 
-    sourceNode->storageName = String_duplicate(storageName);
-    Storage_duplicateSpecifier(&sourceNode->storageSpecifier,&storageSpecifier);
-    sourceNode->restoreFlag = FALSE;
+    deltaSourceNode->storageName = String_duplicate(storageName);
+    deltaSourceNode->patternType = patternType;
+//    Storage_duplicateSpecifier(&deltaSourceNode->storageSpecifier,&storageSpecifier);
+//    deltaSourceNode->restoreFlag = FALSE;
 
-    List_append(&sourceList,sourceNode);
+    List_append(&deltaSourceList,deltaSourceNode);
   }
 
   // free resources
-//  Storage_doneSpecifier(&storageDirectorySpecifier);
   Storage_doneSpecifier(&storageSpecifier);
   doneJobOptions(&jobOptions);
 
@@ -195,23 +205,23 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sourceNode->stora
 }
 
 /***********************************************************************\
-* Name   : freeSourceNode
+* Name   : freeDeltaSourceNode
 * Purpose: free source node
-* Input  : sourceNode - source node
+* Input  : deltaSourceNode - source node
 *          userData   - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeSourceNode(SourceNode *sourceNode, void *userData)
+LOCAL void freeDeltaSourceNode(DeltaSourceNode *deltaSourceNode, void *userData)
 {
-  assert(sourceNode != NULL);
+  assert(deltaSourceNode != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  Storage_doneSpecifier(&sourceNode->storageSpecifier);
-  String_delete(sourceNode->storageName);
+//  Storage_doneSpecifier(&deltaSourceNode->storageSpecifier);
+  String_delete(deltaSourceNode->storageName);
 }
 
 /***********************************************************************\
@@ -303,6 +313,7 @@ LOCAL void deleteLocalStorageArchive(String localStorageName)
 * Purpose: restore file from archive
 * Input  : archiveName                      - archive file name
 *          name                             - name of entry to restore
+*          deltaSourceList                  - delta source list
 *          jobOptions                       - job options
 *          destinationFileName              - destination file name
 *          fragmentNode                     - fragment node (can be NULL)
@@ -319,6 +330,7 @@ LOCAL void deleteLocalStorageArchive(String localStorageName)
 
 LOCAL Errors restoreFile(StorageSpecifier                *storageSpecifier,
                          ConstString                     name,
+                         DeltaSourceList                 *deltaSourceList,
                          const JobOptions                *jobOptions,
                          ConstString                     destinationFileName,
                          FragmentNode                    *fragmentNode,
@@ -375,7 +387,8 @@ LOCAL Errors restoreFile(StorageSpecifier                *storageSpecifier,
   error = Archive_open(&archiveInfo,
                        &storageHandle,
                        storageSpecifier,
-                       NULL,
+                       NULL,  // archive name
+                       deltaSourceList,
                        jobOptions,
                        CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData)
                       );
@@ -431,8 +444,8 @@ LOCAL Errors restoreFile(StorageSpecifier                *storageSpecifier,
                                         fileName,
                                         NULL,  // fileInfo
                                         NULL,  // fileExtendedAttributeList
-                                        NULL,  // deltaSourceName
-                                        NULL,  // deltaSourceSize
+                                        NULL,  // deltaSourceHandleName
+                                        NULL,  // deltaSourceHandleSize
                                         &fragmentOffset,
                                         &fragmentSize
                                        );
@@ -571,8 +584,8 @@ LOCAL Errors restoreFile(StorageSpecifier                *storageSpecifier,
                                          imageName,
                                          &deviceInfo,
                                          NULL,  // fileSystemType
-                                         NULL,  // deltaSourceName
-                                         NULL,  // deltaSourceSize
+                                         NULL,  // deltaSourceHandleName
+                                         NULL,  // deltaSourceHandleSize
                                          &blockOffset,
                                          &blockCount
                                         );
@@ -705,8 +718,8 @@ LOCAL Errors restoreFile(StorageSpecifier                *storageSpecifier,
                                             &fileNameList,
                                             NULL,  // fileInfo
                                             NULL,  // fileExtendedAttributeList
-                                            NULL,  // deltaSourceName
-                                            NULL,  // deltaSourceSize
+                                            NULL,  // deltaSourceHandleName
+                                            NULL,  // deltaSourceHandleSize
                                             &fragmentOffset,
                                             &fragmentSize
                                            );
@@ -869,28 +882,29 @@ LOCAL Errors restoreFile(StorageSpecifier                *storageSpecifier,
 
 /*---------------------------------------------------------------------*/
 
-Errors Source_initAll(void)
+Errors DeltaSource_initAll(void)
 {
-  List_init(&sourceList);
-  Semaphore_init(&sourceList.lock);
+  List_init(&deltaSourceList);
+  Semaphore_init(&deltaSourceList.lock);
 
   return ERROR_NONE;
 }
 
-void Source_doneAll(void)
+void DeltaSource_doneAll(void)
 {
-  Semaphore_done(&sourceList.lock);
-  List_done(&sourceList,(ListNodeFreeFunction)freeSourceNode,NULL);
+  Semaphore_done(&deltaSourceList.lock);
+  List_done(&deltaSourceList,(ListNodeFreeFunction)freeDeltaSourceNode,NULL);
 }
 
-Errors Source_add(ConstString sourcePattern, PatternTypes patternType)
+Errors DeltaSource_add(ConstString sourcePattern, PatternTypes patternType)
 {
-  return addSourceNodes(sourcePattern,patternType);
+  return addDeltaSourceNodes(sourcePattern,patternType);
 
   return ERROR_NONE;
 }
 
-Errors Source_addSourceList(const PatternList *sourcePatternList)
+#if 0
+Errors DeltaSource_addDeltaSourceList(const PatternList *sourcePatternList)
 {
   PatternNode *patternNode;
   Errors      error;
@@ -899,7 +913,7 @@ Errors Source_addSourceList(const PatternList *sourcePatternList)
 
   PATTERNLIST_ITERATE(sourcePatternList,patternNode)
   {
-    error = addSourceNodes(patternNode->string,patternNode->pattern.type);
+    error = addDeltaSourceNodes(patternNode->string,patternNode->pattern.type);
     if (error != ERROR_NONE)
     {
       return error;
@@ -908,59 +922,72 @@ Errors Source_addSourceList(const PatternList *sourcePatternList)
 
   return ERROR_NONE;
 }
+#endif
 
-Errors Source_openEntry(SourceHandle     *sourceHandle,
-                        ConstString      sourceStorageName,
-                        ConstString      name,
-                        int64            size,
-                        const JobOptions *jobOptions
-                       )
+Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
+                             DeltaSourceList   *deltaSourceList,
+                             ConstString       sourceStorageName,
+                             ConstString       name,
+                             int64             size,
+                             const JobOptions  *jobOptions
+                            )
 {
   bool             restoredFlag;
   Errors           error;
   FragmentNode     fragmentNode;
   bool             semaphoreLock;
-  SourceNode       *sourceNode;
+  DeltaSourceNode  *deltaSourceNode;
   String           tmpFileName;
   StorageSpecifier storageSpecifier,localStorageSpecifier;
 //  String           localStorageName;
 
-  assert(sourceHandle != NULL);
+  assert(deltaSourceHandle != NULL);
   assert(name != NULL);
   assert(jobOptions != NULL);
 
   // init variables
-  sourceHandle->name        = NULL;
-  sourceHandle->size        = 0LL;
-  sourceHandle->tmpFileName = NULL;
-  sourceHandle->baseOffset  = 0LL;
+  deltaSourceHandle->name        = NULL;
+  deltaSourceHandle->size        = 0LL;
+  deltaSourceHandle->tmpFileName = NULL;
+  deltaSourceHandle->baseOffset  = 0LL;
+  Storage_initSpecifier(&storageSpecifier);
+  Storage_initSpecifier(&localStorageSpecifier);
 
   restoredFlag = FALSE;
   error        = ERROR_UNKNOWN;
 
+//fprintf(stderr,"%s, %d: name=%s storage=%s\n",__FILE__,__LINE__,String_cString(name),String_cString(sourceStorageName));
+//if (deltaSourceList!= NULL) { DeltaSourceNode *n=deltaSourceList->head; fprintf(stderr,"%s, %d: count=%d\n",__FILE__,__LINE__,deltaSourceList->count);while (n != NULL) { fprintf(stderr,"%s, %d: n=%p: %s\n",__FILE__,__LINE__,n,String_cString(n->storageName)); n=n->next;} }
   // check if source can be restored from local files given by command option --delta-source
   if (!restoredFlag)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&sourceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    if (deltaSourceList != NULL)
     {
-      LIST_ITERATE(&sourceList,sourceNode)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        if (sourceNode->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
+        LIST_ITERATE(deltaSourceList,deltaSourceNode)
         {
-          if (!Archive_isArchiveFile(sourceNode->storageSpecifier.archiveName))
+//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(deltaSourceNode->storageName));
+//Errors b =Storage_parseName(&storageSpecifier,deltaSourceNode->storageName);
+//fprintf(stderr,"%s, %d: %d %d %d: %s\n",__FILE__,__LINE__,b,Storage_isLocalArchive(&storageSpecifier),Archive_isArchiveFile(storageSpecifier.archiveName),String_cString(storageSpecifier.archiveName));
+          // check if available in file system, but not an archive file
+          if (   (Storage_parseName(&storageSpecifier,deltaSourceNode->storageName) == ERROR_NONE)
+              && Storage_isInFileSystem(&storageSpecifier)
+              && !Archive_isArchiveFile(storageSpecifier.archiveName)
+             )
           {
             // open local file as source
-            error = File_open(&sourceHandle->tmpFileHandle,sourceNode->storageSpecifier.archiveName,FILE_OPEN_READ);
+            error = File_open(&deltaSourceHandle->tmpFileHandle,storageSpecifier.archiveName,FILE_OPEN_READ);
             if (error == ERROR_NONE)
             {
-              sourceHandle->name = sourceNode->storageName;
+              deltaSourceHandle->name = deltaSourceNode->storageName;
               restoredFlag = TRUE;
             }
           }
-        }
 
-        // stop if restored
-        if (restoredFlag) break;
+          // stop if restored
+          if (restoredFlag) break;
+        }
       }
     }
   }
@@ -968,31 +995,36 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
   // check if source can be restored from local archives given by command option --delta-source
   if (!restoredFlag)
   {
-    // create temporary file as delta source
-    tmpFileName = String_new();
-    error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
-    if (error == ERROR_NONE)
+    if (deltaSourceList != NULL)
     {
-      // init variables
-      FragmentList_initNode(&fragmentNode,name,size,NULL,0);
-
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&sourceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      // create temporary file as delta source
+      tmpFileName = String_new();
+      error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
+      if (error == ERROR_NONE)
       {
-        LIST_ITERATE(&sourceList,sourceNode)
+        // init variables
+        FragmentList_initNode(&fragmentNode,name,size,NULL,0);
+
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
-          // check if restore in progress (avoid infinite loops)
-          if (!sourceNode->restoreFlag)
+          LIST_ITERATE(deltaSourceList,deltaSourceNode)
           {
-            if (Storage_isLocalArchive(&sourceNode->storageSpecifier))
+            // check if restore in progress (avoid infinite loops)
+            if (!deltaSourceNode->locked)
             {
-              if (Archive_isArchiveFile(sourceNode->storageSpecifier.archiveName))
+              // check if available in file system and an archive file
+              if (   (Storage_parseName(&storageSpecifier,deltaSourceNode->storageName) == ERROR_NONE)
+                  && Storage_isInFileSystem(&storageSpecifier)
+                  && Archive_isArchiveFile(storageSpecifier.archiveName)
+                 )
               {
                 // set restore flag for source node and restore to temporary file
-                BLOCK_DO(sourceNode->restoreFlag = TRUE,
-                         sourceNode->restoreFlag = FALSE,              
+                BLOCK_DO(deltaSourceNode->locked = TRUE,
+                         deltaSourceNode->locked = FALSE,
                 {
-                  error = restoreFile(&sourceNode->storageSpecifier,
+                  error = restoreFile(&storageSpecifier,
                                       name,
+                                      deltaSourceList,
                                       jobOptions,
                                       tmpFileName,
                                       &fragmentNode,
@@ -1003,172 +1035,170 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
                                      );
                   if (error == ERROR_NONE)
                   {
-                    sourceHandle->name = sourceNode->storageName;
+                    deltaSourceHandle->name = deltaSourceNode->storageName;
                   }
                 });
               }
             }
-          }
 
-          // stop if complete
-          if (   (size != SOURCE_SIZE_UNKNOWN)
-              && FragmentList_isEntryComplete(&fragmentNode)
-             )
-          {
-            break;
+            // stop if complete
+            if (   (size != SOURCE_SIZE_UNKNOWN)
+                && FragmentList_isEntryComplete(&fragmentNode)
+               )
+            {
+              break;
+            }
           }
         }
-      }
 
-      if (   (sourceHandle->name != NULL)
-          && (   (size == SOURCE_SIZE_UNKNOWN)
-              || FragmentList_isEntryComplete(&fragmentNode)
-             )
-         )
-      {
-        // open temporary restored file
-        error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
-        if (error == ERROR_NONE)
+        if (   (deltaSourceHandle->name != NULL)
+            && (   (size == SOURCE_SIZE_UNKNOWN)
+                || FragmentList_isEntryComplete(&fragmentNode)
+               )
+           )
         {
-          sourceHandle->tmpFileName = tmpFileName;
-          restoredFlag = TRUE;
+          // open temporary restored file
+          error = File_open(&deltaSourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+          if (error == ERROR_NONE)
+          {
+            deltaSourceHandle->tmpFileName = tmpFileName;
+            restoredFlag = TRUE;
+          }
+        }
+
+        // free resources
+        FragmentList_doneNode(&fragmentNode);
+        if (!restoredFlag)
+        {
+          File_delete(tmpFileName,FALSE);
+          String_delete(tmpFileName);
         }
       }
-
-      // free resources
-      FragmentList_doneNode(&fragmentNode);
-      if (!restoredFlag)
+      else
       {
-        File_delete(tmpFileName,FALSE);
         String_delete(tmpFileName);
       }
     }
-    else
-    {
-      String_delete(tmpFileName);
-    }
   }
 
-  // check if source can be restored from (non-local) storage names given by command option --delta-source
+  // check if source can be restored from (non-file system) storage names given by command option --delta-source
   if (!restoredFlag)
   {
-    // create temporary file as delta source
-    tmpFileName = String_new();
-    error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
-    if (error == ERROR_NONE)
+    if (deltaSourceList != NULL)
     {
-      // init variables
-      FragmentList_initNode(&fragmentNode,name,size,NULL,0);
-
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&sourceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      // create temporary file as delta source
+      tmpFileName = String_new();
+      error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
+      if (error == ERROR_NONE)
       {
-        LIST_ITERATE(&sourceList,sourceNode)
+        // init variables
+        FragmentList_initNode(&fragmentNode,name,size,NULL,0);
+
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
-          // check if restore in progress (avoid infinite loops)
-          if (!sourceNode->restoreFlag)
+          LIST_ITERATE(deltaSourceList,deltaSourceNode)
           {
-            // check if non-local archive file
-            if (!Storage_isLocalArchive(&sourceNode->storageSpecifier))
+            // check if restore in progress (avoid infinite loops)
+            if (!deltaSourceNode->locked)
             {
-              // init variables
-              Storage_initSpecifier(&localStorageSpecifier);
-
-              // create local copy of storage file
-              error = createLocalStorageArchive(&localStorageSpecifier,
-                                                &sourceNode->storageSpecifier,
-                                                jobOptions
-                                              );
-              if (error == ERROR_NONE)
+              // check if not available in file system
+              if (   (Storage_parseName(&storageSpecifier,deltaSourceNode->storageName) == ERROR_NONE)
+                  && !Storage_isInFileSystem(&storageSpecifier)
+                 )
               {
-                // set restore flag for source node and restore to temporary file
-                BLOCK_DO(sourceNode->restoreFlag = TRUE,
-                         sourceNode->restoreFlag = FALSE,              
+                // create local copy of storage file
+                error = createLocalStorageArchive(&localStorageSpecifier,
+                                                  &storageSpecifier,
+                                                  jobOptions
+                                                 );
+                if (error == ERROR_NONE)
                 {
-                  error = restoreFile(&localStorageSpecifier,
-                                      name,
-                                      jobOptions,
-                                      tmpFileName,
-                                      &fragmentNode,
-                                      inputCryptPassword,
-                                      NULL,  // archiveGetCryptPasswordUserData
-                                      NULL,  // pauseFlag
-                                      NULL   // requestedAbortFlag
-                                     );
-                  if (error == ERROR_NONE)
+                  // set restore flag for source node and restore to temporary file
+                  BLOCK_DO(deltaSourceNode->locked = TRUE,
+                           deltaSourceNode->locked = FALSE,
                   {
-                    sourceHandle->name = sourceNode->storageName;
-                  }
-                });
+                    error = restoreFile(&localStorageSpecifier,
+                                        name,
+                                        deltaSourceList,
+                                        jobOptions,
+                                        tmpFileName,
+                                        &fragmentNode,
+                                        inputCryptPassword,
+                                        NULL,  // archiveGetCryptPasswordUserData
+                                        NULL,  // pauseFlag
+                                        NULL   // requestedAbortFlag
+                                       );
+                    if (error == ERROR_NONE)
+                    {
+                      deltaSourceHandle->name = deltaSourceNode->storageName;
+                    }
+                  });
 
-                // delete local copy of storage file
-                doneLocalStorageArchive(&localStorageSpecifier);
+                  // delete local copy of storage file
+                  doneLocalStorageArchive(&localStorageSpecifier);
+                }
               }
+            }
 
-              // free resources
-              Storage_doneSpecifier(&localStorageSpecifier);
+            // stop if complete
+            if (   (size != SOURCE_SIZE_UNKNOWN)
+                && FragmentList_isEntryComplete(&fragmentNode)
+               )
+            {
+              break;
             }
           }
+        }
 
-          // stop if complete
-          if (   (size != SOURCE_SIZE_UNKNOWN)
-              && FragmentList_isEntryComplete(&fragmentNode)
-             )
+        if (   (deltaSourceHandle->name != NULL)
+            && (   (size == SOURCE_SIZE_UNKNOWN)
+                || FragmentList_isEntryComplete(&fragmentNode)
+               )
+           )
+        {
+          // open temporary restored file
+          error = File_open(&deltaSourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+          if (error == ERROR_NONE)
           {
-            break;
+            deltaSourceHandle->tmpFileName = tmpFileName;
+            restoredFlag = TRUE;
           }
         }
-      }
 
-      if (   (sourceHandle->name != NULL)
-          && (   (size == SOURCE_SIZE_UNKNOWN)
-              || FragmentList_isEntryComplete(&fragmentNode)
-             )
-         )
-      {
-        // open temporary restored file
-        error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
-        if (error == ERROR_NONE)
+        // free resources
+        FragmentList_doneNode(&fragmentNode);
+        if (!restoredFlag)
         {
-          sourceHandle->tmpFileName = tmpFileName;
-          restoredFlag = TRUE;
+          File_delete(tmpFileName,FALSE);
+          String_delete(tmpFileName);
         }
       }
-
-      // free resources
-      FragmentList_doneNode(&fragmentNode);
-      if (!restoredFlag)
+      else
       {
-        File_delete(tmpFileName,FALSE);
         String_delete(tmpFileName);
       }
     }
-    else
-    {
-      String_delete(tmpFileName);
-    }
   }
 
-  // check if source can be restored from orginal archive in local file system
+  // check if source can be restored from orginal archive in file system
   if (!restoredFlag)
   {
     if (   !String_isEmpty(sourceStorageName)
-        && File_isFile(sourceStorageName)
+        && (Storage_parseName(&storageSpecifier,sourceStorageName) == ERROR_NONE)
+        && Storage_isInFileSystem(&storageSpecifier)
        )
     {
-      if (Archive_isArchiveFile(sourceStorageName))
+      if (Archive_isArchiveFile(storageSpecifier.archiveName))
       {
         // create temporary file as delta source
         tmpFileName = String_new();
         error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
         if (error == ERROR_NONE)
         {
-          // init variables
-          Storage_initSpecifier(&storageSpecifier);
-          String_set(storageSpecifier.archiveName,sourceStorageName);
-
           // restore to temporary file
           error = restoreFile(&storageSpecifier,
                               name,
+                              deltaSourceList,
                               jobOptions,
                               tmpFileName,
                               NULL,  // fragmentNode
@@ -1180,11 +1210,11 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
           if (error == ERROR_NONE)
           {
             // open temporary restored file
-            error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+            error = File_open(&deltaSourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
             if (error == ERROR_NONE)
             {
-              sourceHandle->name        = sourceStorageName;
-              sourceHandle->tmpFileName = tmpFileName;
+              deltaSourceHandle->name        = sourceStorageName;
+              deltaSourceHandle->tmpFileName = tmpFileName;
               restoredFlag = TRUE;
             }
           }
@@ -1195,7 +1225,6 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
             File_delete(tmpFileName,FALSE);
             String_delete(tmpFileName);
           }
-          Storage_doneSpecifier(&storageSpecifier);
         }
         else
         {
@@ -1205,10 +1234,10 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
       else
       {
         // open local file as delta source
-        error = File_open(&sourceHandle->tmpFileHandle,sourceStorageName,FILE_OPEN_READ);
+        error = File_open(&deltaSourceHandle->tmpFileHandle,storageSpecifier.archiveName,FILE_OPEN_READ);
         if (error == ERROR_NONE)
         {
-          sourceHandle->name = sourceStorageName;
+          deltaSourceHandle->name = sourceStorageName;
           restoredFlag = TRUE;
         }
       }
@@ -1218,71 +1247,67 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
   // check if source can be restored from original storage name
   if (!restoredFlag)
   {
-    if (!String_isEmpty(sourceStorageName))
+    if (   !String_isEmpty(sourceStorageName)
+        && (Storage_parseName(&storageSpecifier,sourceStorageName) == ERROR_NONE)
+       )
     {
-      // parse storage name
-      Storage_initSpecifier(&storageSpecifier);
-      error = Storage_parseName(&storageSpecifier,sourceStorageName);
+      // create temporary restore file as delta source
+      tmpFileName = String_new();
+      error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
       if (error == ERROR_NONE)
       {
-        // create temporary restore file as delta source
-        tmpFileName = String_new();
-        error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
+        // create local copy of storage file
+        error = createLocalStorageArchive(&localStorageSpecifier,
+                                          &storageSpecifier,
+                                          jobOptions
+                                         );
         if (error == ERROR_NONE)
         {
-          // init variables
-          Storage_initSpecifier(&localStorageSpecifier);
-
-          // create local copy of storage file
-          error = createLocalStorageArchive(&localStorageSpecifier,
-                                            &storageSpecifier,
-                                            jobOptions
-                                           );
+          // restore to temporary file
+          error = restoreFile(&localStorageSpecifier,
+                              name,
+                              deltaSourceList,
+                              jobOptions,
+                              tmpFileName,
+                              NULL,  // fragmentNode
+                              inputCryptPassword,
+                              NULL,  // archiveGetCryptPasswordUserData
+                              NULL,  // pauseFlag
+                              NULL   // requestedAbortFlag
+                             );
           if (error == ERROR_NONE)
           {
-            // restore to temporary file
-            error = restoreFile(&localStorageSpecifier,
-                                name,
-                                jobOptions,
-                                tmpFileName,
-                                NULL,  // fragmentNode
-                                inputCryptPassword,
-                                NULL,  // archiveGetCryptPasswordUserData
-                                NULL,  // pauseFlag
-                                NULL   // requestedAbortFlag
-                               );
+            // open temporary restored file
+            error = File_open(&deltaSourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
             if (error == ERROR_NONE)
             {
-              // open temporary restored file
-              error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
-              if (error == ERROR_NONE)
-              {
-                sourceHandle->name        = sourceStorageName;
-                sourceHandle->tmpFileName = tmpFileName;
-                restoredFlag = TRUE;
-              }
+              deltaSourceHandle->name        = sourceStorageName;
+              deltaSourceHandle->tmpFileName = tmpFileName;
+              restoredFlag = TRUE;
             }
-
-            // delete local copy of storage file
-            doneLocalStorageArchive(&localStorageSpecifier);
           }
 
-          // free resources
-          Storage_doneSpecifier(&localStorageSpecifier);
-          if (!restoredFlag)
-          {
-            File_delete(tmpFileName,FALSE);
-            String_delete(tmpFileName);
-          }       
+          // delete local copy of storage file
+          doneLocalStorageArchive(&localStorageSpecifier);
         }
-        else
+
+        // free resources
+        if (!restoredFlag)
         {
+          File_delete(tmpFileName,FALSE);
           String_delete(tmpFileName);
         }
       }
-      Storage_doneSpecifier(&storageSpecifier);
+      else
+      {
+        String_delete(tmpFileName);
+      }
     }
   }
+
+  // free resources
+  Storage_doneSpecifier(&localStorageSpecifier);
+  Storage_doneSpecifier(&storageSpecifier);
 
   if (restoredFlag)
   {
@@ -1294,62 +1319,62 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
   }
 }
 
-void Source_closeEntry(SourceHandle *sourceHandle)
+void DeltaSource_closeEntry(DeltaSourceHandle *deltaSourceHandle)
 {
-  assert(sourceHandle != NULL);
+  assert(deltaSourceHandle != NULL);
 
   // close source file
-  File_close(&sourceHandle->tmpFileHandle);
+  File_close(&deltaSourceHandle->tmpFileHandle);
 
   // delete temporary source file
-  if (sourceHandle->tmpFileName != NULL)
+  if (deltaSourceHandle->tmpFileName != NULL)
   {
-    File_delete(sourceHandle->tmpFileName,FALSE);
-    String_delete(sourceHandle->tmpFileName);
+    File_delete(deltaSourceHandle->tmpFileName,FALSE);
+    String_delete(deltaSourceHandle->tmpFileName);
   }
 }
 
-ConstString Source_getName(const SourceHandle *sourceHandle)
+ConstString DeltaSource_getName(const DeltaSourceHandle *deltaSourceHandle)
 {
-  assert(sourceHandle != NULL);
+  assert(deltaSourceHandle != NULL);
 
-  return sourceHandle->name;
+  return deltaSourceHandle->name;
 }
 
-uint64 Source_getSize(const SourceHandle *sourceHandle)
+uint64 DeltaSource_getSize(const DeltaSourceHandle *deltaSourceHandle)
 {
-  assert(sourceHandle != NULL);
+  assert(deltaSourceHandle != NULL);
 
-  return File_getSize(&sourceHandle->tmpFileHandle);
+  return File_getSize(&deltaSourceHandle->tmpFileHandle);
 }
 
-void Source_setBaseOffset(SourceHandle *sourceHandle, uint64 offset)
+void DeltaSource_setBaseOffset(DeltaSourceHandle *deltaSourceHandle, uint64 offset)
 {
-  assert(sourceHandle != NULL);
+  assert(deltaSourceHandle != NULL);
 
-  sourceHandle->baseOffset = offset;
+  deltaSourceHandle->baseOffset = offset;
 }
 
-Errors Source_getEntryDataBlock(SourceHandle *sourceHandle,
-                                void         *buffer,
-                                uint64       offset,
-                                ulong        length,
-                                ulong        *bytesRead
-                               )
+Errors DeltaSource_getEntryDataBlock(DeltaSourceHandle *deltaSourceHandle,
+                                     void              *buffer,
+                                     uint64            offset,
+                                     ulong             length,
+                                     ulong             *bytesRead
+                                    )
 {
   Errors error;
 
-  assert(sourceHandle != NULL);
+  assert(deltaSourceHandle != NULL);
   assert(buffer != NULL);
   assert(bytesRead != NULL);
 
-  error = File_seek(&sourceHandle->tmpFileHandle,sourceHandle->baseOffset+offset);
+  error = File_seek(&deltaSourceHandle->tmpFileHandle,deltaSourceHandle->baseOffset+offset);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
-  error = File_read(&sourceHandle->tmpFileHandle,buffer,length,bytesRead);
+  error = File_read(&deltaSourceHandle->tmpFileHandle,buffer,length,bytesRead);
   if (error != ERROR_NONE)
   {
     return error;
