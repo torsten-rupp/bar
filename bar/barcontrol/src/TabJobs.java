@@ -3609,7 +3609,7 @@ public class TabJobs
           });
 
           button = Widgets.newRadio(composite,BARControl.tr("asymmetric"));
-          button.setToolTipText(BARControl.tr("Use asymmetric hyprid-encryption with pass-phrase and public/private key."));
+          button.setToolTipText(BARControl.tr("Use asymmetric hybrid-encryption with pass-phrase and public/private key."));
           button.setSelection(false);
           Widgets.layout(button,0,1,TableLayoutData.W);
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptAlgorithm)
