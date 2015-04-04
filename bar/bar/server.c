@@ -146,45 +146,46 @@ typedef struct JobNode
 {
   LIST_NODE_HEADER(struct JobNode);
 
-  String       fileName;                       // file name
-  uint64       timeModified;                   // file modified date/time (timestamp)
+  String          fileName;                    // file name
+  uint64          timeModified;                // file modified date/time (timestamp)
 
   // job config
-  String       uuid;                           // unique id
-  JobTypes     jobType;                        // job type: backup, restore
-  String       name;                           // name of job
-  String       archiveName;                    // archive name
-  EntryList    includeEntryList;               // included entries
-  PatternList  excludePatternList;             // excluded entry patterns
-  PatternList  deltaSourcePatternList;         // delta source patterns
-  PatternList  compressExcludePatternList;     // excluded compression patterns
-  ScheduleList scheduleList;                   // schedule list
-  JobOptions   jobOptions;                     // options for job
-  bool         modifiedFlag;                   // TRUE iff job config modified
+  String          uuid;                        // unique id
+  JobTypes        jobType;                     // job type: backup, restore
+  String          name;                        // name of job
+  String          archiveName;                 // archive name
+  EntryList       includeEntryList;            // included entries
+  PatternList     excludePatternList;          // excluded entry patterns
+  PatternList     deltaSourcePatternList;      // delta source patterns
+  PatternList     compressExcludePatternList;  // excluded compression patterns
+  DeltaSourceList deltaSourceList;             // delta sources
+  ScheduleList    scheduleList;                // schedule list
+  JobOptions      jobOptions;                  // options for job
+  bool            modifiedFlag;                // TRUE iff job config modified
 
   // schedule info
-  uint64       lastExecutedDateTime;           // last execution date/time (timestamp)
-  uint64       lastCheckDateTime;              // last check date/time (timestamp)
+  uint64          lastExecutedDateTime;        // last execution date/time (timestamp)
+  uint64          lastCheckDateTime;           // last check date/time (timestamp)
 
   // job data
-  Password     *ftpPassword;                   // FTP password if password mode is 'ask'
-  Password     *sshPassword;                   // SSH password if password mode is 'ask'
-  Password     *cryptPassword;                 // crypt password if password mode is 'ask'
+  Password        *ftpPassword;                // FTP password if password mode is 'ask'
+  Password        *sshPassword;                // SSH password if password mode is 'ask'
+  Password        *cryptPassword;              // crypt password if password mode is 'ask'
 
   // job running state
-  JobStates    state;                          // current state of job
-  ArchiveTypes archiveType;                    // archive type to create
-  bool         dryRun;                         // TRUE iff dry-run (no storage, no index update)
+  JobStates       state;                       // current state of job
+  ArchiveTypes    archiveType;                 // archive type to create
+  bool            dryRun;                      // TRUE iff dry-run (no storage, no index update)
   struct                                       // schedule data which triggered job
   {
-    String       uuid;                         // UUID or empty
-    String       customText;                   // custom text or empty
-    bool         noStorage;                    // TRUE to skip storage, only create incremental data file
+    String        uuid;                        // UUID or empty
+    String        customText;                  // custom text or empty
+    bool          noStorage;                   // TRUE to skip storage, only create incremental data file
   } schedule;
-  bool         requestedAbortFlag;             // request abort
-  uint         requestedVolumeNumber;          // requested volume number
-  uint         volumeNumber;                   // loaded volume number
-  bool         volumeUnloadFlag;               // TRUE to unload volume
+  bool            requestedAbortFlag;          // request abort
+  uint            requestedVolumeNumber;       // requested volume number
+  uint            volumeNumber;                // loaded volume number
+  bool            volumeUnloadFlag;            // TRUE to unload volume
 
   // running info
   struct
@@ -400,8 +401,8 @@ typedef struct
 
   EntryList           includeEntryList;
   PatternList         excludePatternList;
-  PatternList         deltaSourcePatternList;
   PatternList         compressExcludePatternList;
+  DeltaSourceList     deltaSourceList;
   JobOptions          jobOptions;
   DirectoryInfoList   directoryInfoList;
   Array               storageIdArray;
@@ -1673,8 +1674,8 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   doneJobOptions(&jobNode->jobOptions);
   List_done(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+  DeltaSourceList_done(&jobNode->deltaSourceList);
   PatternList_done(&jobNode->compressExcludePatternList);
-  PatternList_done(&jobNode->deltaSourcePatternList);
   PatternList_done(&jobNode->excludePatternList);
   EntryList_done(&jobNode->includeEntryList);
   String_delete(jobNode->archiveName);
@@ -1714,8 +1715,8 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
   jobNode->archiveName                    = String_new();
   EntryList_init(&jobNode->includeEntryList);
   PatternList_init(&jobNode->excludePatternList);
-  PatternList_init(&jobNode->deltaSourcePatternList);
   PatternList_init(&jobNode->compressExcludePatternList);
+  DeltaSourceList_init(&jobNode->deltaSourceList);
   List_init(&jobNode->scheduleList);
   initJobOptions(&jobNode->jobOptions);
   jobNode->modifiedFlag                   = FALSE;
@@ -1785,8 +1786,8 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
   EntryList_initDuplicate(&newJobNode->includeEntryList,&jobNode->includeEntryList,NULL,NULL);
   PatternList_initDuplicate(&newJobNode->excludePatternList,&jobNode->excludePatternList,NULL,NULL);
-  PatternList_initDuplicate(&newJobNode->deltaSourcePatternList,&jobNode->deltaSourcePatternList,NULL,NULL);
   PatternList_initDuplicate(&newJobNode->compressExcludePatternList,&jobNode->compressExcludePatternList,NULL,NULL);
+  DeltaSourceList_initDuplicate(&newJobNode->deltaSourceList,&jobNode->deltaSourceList,NULL,NULL);
   List_initDuplicate(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,(ListNodeCopyFunction)duplicateScheduleNode,NULL);
   initDuplicateJobOptions(&newJobNode->jobOptions,&jobNode->jobOptions);
   newJobNode->modifiedFlag                   = TRUE;
@@ -2542,8 +2543,8 @@ LOCAL bool readJob(JobNode *jobNode)
   String_clear(jobNode->archiveName);
   EntryList_clear(&jobNode->includeEntryList);
   PatternList_clear(&jobNode->excludePatternList);
-  PatternList_clear(&jobNode->deltaSourcePatternList);
   PatternList_clear(&jobNode->compressExcludePatternList);
+  DeltaSourceList_clear(&jobNode->deltaSourceList);
   List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   jobNode->jobOptions.archiveType                  = ARCHIVE_TYPE_NORMAL;
   jobNode->jobOptions.archivePartSize              = 0LL;
@@ -3106,8 +3107,8 @@ LOCAL void jobThreadCode(void)
   StaticString     (jobUUID,INDEX_UUID_LENGTH);
   EntryList        includeEntryList;
   PatternList      excludePatternList;
-  PatternList      deltaSourcePatternList;
   PatternList      compressExcludePatternList;
+  DeltaSourceList  deltaSourceList;
   JobOptions       jobOptions;
   ArchiveTypes     archiveType;
   StaticString     (scheduleUUID,INDEX_UUID_LENGTH);
@@ -3122,8 +3123,8 @@ LOCAL void jobThreadCode(void)
   storageName         = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
-  PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
+  DeltaSourceList_init(&deltaSourceList);
   scheduleCustomText = String_new();
 
   while (!quitFlag)
@@ -3157,8 +3158,8 @@ LOCAL void jobThreadCode(void)
     String_set(jobUUID,jobNode->uuid);
     EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList,NULL,NULL);
     PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList,NULL,NULL);
-    PatternList_clear(&deltaSourcePatternList); PatternList_copy(&jobNode->deltaSourcePatternList,&deltaSourcePatternList,NULL,NULL);
     PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,NULL,NULL);
+    DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->deltaSourceList,&deltaSourceList,NULL,NULL);
     initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
     archiveType = jobNode->archiveType;
     jobOptions.dryRunFlag = jobNode->dryRun;
@@ -3286,6 +3287,7 @@ LOCAL void jobThreadCode(void)
                                                         &includeEntryList,
                                                         &excludePatternList,
                                                         &compressExcludePatternList,
+                                                        &deltaSourceList,
                                                         &jobOptions,
                                                         archiveType,
 NULL,//                                                        scheduleTitle,
@@ -3333,6 +3335,7 @@ NULL,//                                                        scheduleTitle,
             jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
                                                          &includeEntryList,
                                                          &excludePatternList,
+                                                         &deltaSourceList,
                                                          &jobOptions,
                                                          getCryptPassword,
                                                          jobNode,
@@ -3398,8 +3401,8 @@ NULL,//                                                        scheduleTitle,
 
     // free resources
     doneJobOptions(&jobOptions);
+    DeltaSourceList_clear(&deltaSourceList);
     PatternList_clear(&compressExcludePatternList);
-    PatternList_clear(&deltaSourcePatternList);
     PatternList_clear(&excludePatternList);
     EntryList_clear(&includeEntryList);
 
@@ -3421,8 +3424,8 @@ NULL,//                                                        scheduleTitle,
 
   // free resources
   String_delete(scheduleCustomText);
+  DeltaSourceList_done(&deltaSourceList);
   PatternList_done(&compressExcludePatternList);
-  PatternList_done(&deltaSourcePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   String_delete(storageName);
@@ -9466,7 +9469,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   error = Archive_open(&archiveInfo,
                        &storageHandle,
                        &storageSpecifier,
-                       NULL,
+                       NULL,  // archive name
+                       NULL,  // deltaSourceList
                        &clientInfo->jobOptions,
                        CALLBACK(NULL,NULL)
                       );
@@ -10210,14 +10214,13 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   restoreCommandInfo.id         = id;
   error = Command_restore(&storageNameList,
                           &restoreEntryList,
-                          NULL,
+                          NULL,  // excludePatternList
+                          NULL,  // deltaSourceList
                           &clientInfo->jobOptions,
-                          NULL,
-                          NULL,
-                          (RestoreStatusInfoFunction)updateRestoreCommandStatus,
-                          &restoreCommandInfo,
-                          NULL,
-                          NULL
+                          CALLBACK(NULL,NULL),  // archiveGetCryptPasswordFunction
+                          CALLBACK((RestoreStatusInfoFunction)updateRestoreCommandStatus,&restoreCommandInfo),
+                          NULL,  // pauseFlag
+                          NULL  // requestAbortFlag
                          );
   sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
   EntryList_done(&restoreEntryList);
@@ -13046,6 +13049,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
   EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
   PatternList_init(&clientInfo->compressExcludePatternList);
+  DeltaSourceList_init(&clientInfo->deltaSourceList);
   initJobOptions(&clientInfo->jobOptions);
   List_init(&clientInfo->directoryInfoList);
   clientInfo->storageIdArray = Array_new(sizeof(DatabaseId),64);
@@ -13175,6 +13179,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   Array_delete(clientInfo->storageIdArray,CALLBACK(NULL,NULL));
   List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
   doneJobOptions(&clientInfo->jobOptions);
+  DeltaSourceList_done(&clientInfo->deltaSourceList);
   PatternList_done(&clientInfo->compressExcludePatternList);
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
