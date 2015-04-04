@@ -30,7 +30,7 @@
 #include "compress.h"
 #include "passwords.h"
 #include "crypt.h"
-#include "sources.h"
+#include "deltasources.h"
 #include "archive_format.h"
 #include "storage.h"
 #include "index.h"
@@ -137,6 +137,7 @@ typedef Errors(*ArchiveGetCryptPasswordFunction)(void        *userData,
 // archive info
 typedef struct
 {
+  DeltaSourceList                 *deltaSourceList;                    // list with delta sources
   const JobOptions                *jobOptions;
   ArchiveNewFunction              archiveNewFunction;                  // call back for new archive file
   void                            *archiveNewUserData;                 // user data for call back for new archive file
@@ -221,8 +222,8 @@ typedef struct ArchiveEntryInfo
     {
       const FileExtendedAttributeList *fileExtendedAttributeList;      // extended attribute list
 
-      SourceHandle                    sourceHandle;                    // delta source handle
-      bool                            sourceHandleInitFlag;            // TRUE if delta source is initialized
+      DeltaSourceHandle               deltaSourceHandle;               // delta source handle
+      bool                            deltaSourceHandleInitFlag;       // TRUE if delta source is initialized
 
       CompressAlgorithms              deltaCompressAlgorithm;          // delta compression algorithm
       CompressAlgorithms              byteCompressAlgorithm;           // byte compression algorithm
@@ -250,8 +251,8 @@ typedef struct ArchiveEntryInfo
     {
       const FileExtendedAttributeList *fileExtendedAttributeList;      // extended attribute list
 
-      SourceHandle                    sourceHandle;                    // delta source handle
-      bool                            sourceHandleInitFlag;            // TRUE if delta source is initialized
+      DeltaSourceHandle               deltaSourceHandle;               // delta source handle
+      bool                            deltaSourceHandleInitFlag;       // TRUE if delta source is initialized
 
       uint                            blockSize;                       // block size of device
 
@@ -295,8 +296,8 @@ typedef struct ArchiveEntryInfo
       const StringList                *fileNameList;                   // list of hard link names
       const FileExtendedAttributeList *fileExtendedAttributeList;      // extended attribute list
 
-      SourceHandle                    sourceHandle;                    // delta source handle
-      bool                            sourceHandleInitFlag;            // TRUE if delta source is initialized
+      DeltaSourceHandle               deltaSourceHandle;               // delta source handle
+      bool                            deltaSourceHandleInitFlag;       // TRUE if delta source is initialized
 
       CompressAlgorithms              deltaCompressAlgorithm;          // delta compression algorithm
       CompressAlgorithms              byteCompressAlgorithm;           // byte compression algorithm
@@ -466,6 +467,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 
 #ifdef NDEBUG
   Errors Archive_create(ArchiveInfo                     *archiveInfo,
+                        DeltaSourceList                 *deltaSourceList,
                         const JobOptions                *jobOptions,
                         IndexHandle                     *indexHandle,
                         ConstString                     jobUUID,
@@ -482,6 +484,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
   Errors __Archive_create(const char                      *__fileName__,
                           ulong                           __lineNb__,
                           ArchiveInfo                     *archiveInfo,
+                          DeltaSourceList                 *deltaSourceList,
                           const JobOptions                *jobOptions,
                           IndexHandle                     *indexHandle,
                           ConstString                     jobUUID,
@@ -518,6 +521,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                       StorageHandle                   *storageHandle,
                       StorageSpecifier                *storageSpecifier,
                       ConstString                     fileName,
+                      DeltaSourceList                 *deltaSourceList,
                       const JobOptions                *jobOptions,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData
@@ -529,6 +533,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                         StorageHandle                   *storageHandle,
                         StorageSpecifier                *storageSpecifier,
                         ConstString                     fileName,
+                        DeltaSourceList                 *deltaSourceList,
                         const JobOptions                *jobOptions,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData
