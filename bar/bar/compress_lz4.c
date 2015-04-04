@@ -26,7 +26,6 @@
 #include "errors.h"
 #include "entrylists.h"
 #include "patternlists.h"
-#include "sources.h"
 #include "crypt.h"
 #include "storage.h"
 
@@ -35,6 +34,7 @@
 /****************** Conditional compilation switches *******************/
 
 #define _LZ4_DEBUG
+#define _LZ4_DEBUG_DISABLE_COMPRESS
 
 /***************************** Constants *******************************/
 
@@ -56,7 +56,7 @@
 
 #ifdef LZ4_DEBUG
 LOCAL uint lz4BlockCount = 0;
-#endif /* LZO_DEBUG */
+#endif /* LZ4_DEBUG */
 
 /****************************** Macros *********************************/
 
@@ -335,6 +335,9 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
                     );
       compressInfo->lz4.outputBufferIndex += n;
       compressInfo->lz4.totalOutputLength += (uint64)n;
+      #ifdef LZ4_DEBUG
+        fprintf(stderr,"%s, %d: compress: move output=%u\n",__FILE__,__LINE__,n);
+      #endif /* LZ4_DEBUG */
     }
   }
 
@@ -359,6 +362,9 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
                       );
         compressInfo->lz4.inputBufferLength += n;
         compressInfo->lz4.totalInputLength  += (uint64)n;
+        #ifdef LZ4_DEBUG
+          fprintf(stderr,"%s, %d: compress: move input=%u\n",__FILE__,__LINE__,n);
+        #endif /* LZ4_DEBUG */
       }
       assert((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) <= LZ4_BLOCK_SIZE);
 
@@ -367,13 +373,18 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
         assert((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) == LZ4_BLOCK_SIZE);
 
         // compress: LZ4 input buffer -> LZ4 output buffer (spare 4 bytes for length+flags in output buffer)
-        lz4Result = lz4CompressBlock(compressInfo,
+        #ifndef LZ4_DEBUG_DISABLE_COMPRESS
+          lz4Result = lz4CompressBlock(compressInfo,
                                      &compressInfo->lz4.inputBuffer[compressInfo->lz4.inputBufferIndex],
                                      compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex,
                                      &compressInfo->lz4.outputBuffer[4],
                                      compressInfo->lz4.outputBufferSize-4,
                                      &compressLength
                                     );
+        #else /* LZ4_DEBUG_DISABLE_COMPRESS */
+          compressLength = 0;
+          lz4Result      = LZ4_FAIL;
+        #endif /* not LZ4_DEBUG_DISABLE_COMPRESS */
         if (lz4Result == LZ4_OK)
         {
           // store compressed data
@@ -386,8 +397,8 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
           #endif /* LZ4_STREAM */
           putUINT32(&compressInfo->lz4.outputBuffer[0],compressLengthFlags);
           #ifdef LZ4_DEBUG
-            fprintf(stderr,"%s, %d: compress: compressLengthFlags=%08x compressLength=%u\n",__FILE__,__LINE__,compressLengthFlags,compressLength);
-          #endif /* LZO_DEBUG */
+            fprintf(stderr,"%s, %d: compress: length=%u -> compressLength=%u, compressLengthFlags=%08x\n",__FILE__,__LINE__,compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex,compressLength,compressLengthFlags);
+          #endif /* LZ4_DEBUG */
 
           // init LZ4 output buffer
           compressInfo->lz4.outputBufferIndex  = 0;
@@ -408,7 +419,7 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
           putUINT32(&compressInfo->lz4.outputBuffer[0],lengthFlags);
           #ifdef LZ4_DEBUG
             fprintf(stderr,"%s, %d: compress: lengthFlags=%08x length=%d\n",__FILE__,__LINE__,lengthFlags,compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex);
-          #endif /* LZO_DEBUG */
+          #endif /* LZ4_DEBUG */
 
           // init LZ4 output buffer
           compressInfo->lz4.outputBufferIndex  = 0;
@@ -430,6 +441,9 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
                         );
           compressInfo->lz4.outputBufferIndex += n;
           compressInfo->lz4.totalOutputLength += (uint64)n;
+          #ifdef LZ4_DEBUG
+            fprintf(stderr,"%s, %d: compress: move output=%u\n",__FILE__,__LINE__,n);
+          #endif /* LZ4_DEBUG */
         }
       }
 
@@ -455,13 +469,18 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
         assert((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) <= LZ4_BLOCK_SIZE);
 
         // compress: LZ4 input buffer -> LZ4 output buffer (spare 4 bytes for length+flags in output buffer)
-        lz4Result = lz4CompressBlock(compressInfo,
-                                     &compressInfo->lz4.inputBuffer[compressInfo->lz4.inputBufferIndex],
-                                     compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex,
-                                     &compressInfo->lz4.outputBuffer[4],
-                                     compressInfo->lz4.outputBufferSize-4,
-                                     &compressLength
-                                    );
+        #ifndef LZ4_DEBUG_DISABLE_COMPRESS
+          lz4Result = lz4CompressBlock(compressInfo,
+                                       &compressInfo->lz4.inputBuffer[compressInfo->lz4.inputBufferIndex],
+                                       compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex,
+                                       &compressInfo->lz4.outputBuffer[4],
+                                       compressInfo->lz4.outputBufferSize-4,
+                                       &compressLength
+                                     );
+        #else /* LZ4_DEBUG_DISABLE_COMPRESS */
+          compressLength = 0;
+          lz4Result      = LZ4_FAIL;
+        #endif /* not LZ4_DEBUG_DISABLE_COMPRESS */
         if (lz4Result == LZ4_OK)
         {
           // store compressed data
@@ -474,8 +493,8 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
           #endif /* LZ4_STREAM */
           putUINT32(&compressInfo->lz4.outputBuffer[0],compressLengthFlags);
           #ifdef LZ4_DEBUG
-            fprintf(stderr,"%s, %d: compress: final compressLengthFlags=%08x compressLength=%u\n",__FILE__,__LINE__,compressLengthFlags,compressLength);
-          #endif /* LZO_DEBUG */
+            fprintf(stderr,"%s, %d: compress: final length=%u -> compressLength=%u, compressLengthFlags=%08x\n",__FILE__,__LINE__,compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex,compressLength,compressLengthFlags);
+          #endif /* LZ4_DEBUG */
 
           // init LZ4 output buffer
           compressInfo->lz4.outputBufferIndex  = 0;
@@ -495,8 +514,8 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
           lengthFlags = ((uint32)(compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) & LZ4_LENGTH_MASK) | LZ4_END_OF_DATA_FLAG;
           putUINT32(&compressInfo->lz4.outputBuffer[0],lengthFlags);
           #ifdef LZ4_DEBUG
-            fprintf(stderr,"%s, %d: compress: final lengthFlags=%08x length=%d\n",__FILE__,__LINE__,lengthFlags,compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex);
-          #endif /* LZO_DEBUG */
+            fprintf(stderr,"%s, %d: compress: final length=%u, lengthFlags=%08x\n",__FILE__,__LINE__,compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex,lengthFlags);
+          #endif /* LZ4_DEBUG */
 
           // init LZ4 output buffer
           compressInfo->lz4.outputBufferIndex  = 0;
@@ -518,10 +537,16 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
                         );
           compressInfo->lz4.outputBufferIndex += n;
           compressInfo->lz4.totalOutputLength += (uint64)n;
+          #ifdef LZ4_DEBUG
+            fprintf(stderr,"%s, %d: compress: move output=%u\n",__FILE__,__LINE__,n);
+          #endif /* LZ4_DEBUG */
         }
       }
       else
       {
+        #ifdef LZ4_DEBUG
+          fprintf(stderr,"%s, %d: compress: end of data\n",__FILE__,__LINE__);
+        #endif /* LZ4_DEBUG */
         compressInfo->endOfDataFlag = TRUE;
       }
     }
@@ -567,12 +592,15 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
                     );
       compressInfo->lz4.outputBufferIndex += n;
       compressInfo->lz4.totalOutputLength += (uint64)n;
+      #ifdef LZ4_DEBUG
+        fprintf(stderr,"%s, %d: decompress: move input=%u\n",__FILE__,__LINE__,n);
+      #endif /* LZ4_DEBUG */
     }
   }
 
-  if (!compressInfo->lz4.lastBlockFlag)                                       // not end-of-data
+  if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                      // space in data buffer
   {
-    if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
+    if (!compressInfo->lz4.lastBlockFlag)                                     // not end-of-data
     {
       assert(compressInfo->lz4.outputBufferIndex >= compressInfo->lz4.outputBufferLength);
 
@@ -592,6 +620,9 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
                         );
           compressInfo->lz4.inputBufferLength += n;
           compressInfo->lz4.totalInputLength  += (uint64)n;
+        #ifdef LZ4_DEBUG
+          fprintf(stderr,"%s, %d: decompress: length=%u\n",__FILE__,__LINE__,n);
+        #endif /* LZ4_DEBUG */
         }
       }
 
@@ -601,14 +632,14 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
         compressLengthFlags = getUINT32(&compressInfo->lz4.inputBuffer[compressInfo->lz4.inputBufferIndex]);
         #ifdef LZ4_DEBUG
           fprintf(stderr,"%s, %d: compressLengthFlags=%08x\n",__FILE__,__LINE__,compressLengthFlags);
-        #endif /* LZO_DEBUG */
+        #endif /* LZ4_DEBUG */
         if ((compressLengthFlags & LZ4_COMPRESSED_FLAG) == LZ4_COMPRESSED_FLAG)
         {
           // compressed data block -> decompress
           compressLength = (uint)(compressLengthFlags & LZ4_LENGTH_MASK);
           #ifdef LZ4_DEBUG
             fprintf(stderr,"%s, %d: compressLengthFlags=%08x\n",__FILE__,__LINE__,compressLengthFlags);
-          #endif /* LZO_DEBUG */
+          #endif /* LZ4_DEBUG */
           if ((compressLength <= 0) || ((4+compressLength) >= compressInfo->lz4.inputBufferSize))
           {
             return ERRORX_(INFLATE_FAIL,0,"invalid data size");
@@ -632,7 +663,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
 
             #ifdef LZ4_DEBUG
               fprintf(stderr,"%s, %d: decompress: compressLengthFlags=%08x compressLength=%u -> length=%u\n",__FILE__,__LINE__,compressLengthFlags,compressLength,length);
-            #endif /* LZO_DEBUG */
+            #endif /* LZ4_DEBUG */
 
             // shift LZ4 input buffer
             memmove(compressInfo->lz4.inputBuffer,
@@ -662,8 +693,8 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
           if ((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) >= (4+length)) // enough data available
           {
             #ifdef LZ4_DEBUG
-              fprintf(stderr,"%s, %d: decompress: compressLengthFlags=%08x uncompressed length=%u\n",__FILE__,__LINE__,compressLengthFlags,length);
-            #endif /* LZO_DEBUG */
+              fprintf(stderr,"%s, %d: decompress: compressLengthFlags=%08x decompressed length=%u\n",__FILE__,__LINE__,compressLengthFlags,length);
+            #endif /* LZ4_DEBUG */
 
             // transfer: LZ4 input buffer -> LZ4 output buffer (byte 0..3 are length+flags)
             memcpy(compressInfo->lz4.outputBuffer,
@@ -701,6 +732,9 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
                         );
           compressInfo->lz4.outputBufferIndex += n;
           compressInfo->lz4.totalOutputLength += (uint64)n;
+          #ifdef LZ4_DEBUG
+            fprintf(stderr,"%s, %d: compress: move output=%u\n",__FILE__,__LINE__,n);
+          #endif /* LZ4_DEBUG */
         }
 
         // update compress state
@@ -708,7 +742,8 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
       }
     }
 
-    if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                    // no data in data buffer
+//    if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                    // no data in data buffer
+    if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
     {
       assert(compressInfo->lz4.outputBufferIndex >= compressInfo->lz4.outputBufferLength);
 
@@ -730,9 +765,13 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
                         );
           compressInfo->lz4.inputBufferLength += n;
           compressInfo->lz4.totalInputLength  += (uint64)n;
+          #ifdef LZ4_DEBUG
+            fprintf(stderr,"%s, %d: compress: length=%u\n",__FILE__,__LINE__,n);
+          #endif /* LZ4_DEBUG */
         }
 
-        if ((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) > 0)
+        if (!compressInfo->lz4.lastBlockFlag)                                     // not end-of-data
+//        if ((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) > 0)
         {
           if ((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) >= 4)
           {
@@ -765,7 +804,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
 
                 #ifdef LZ4_DEBUG
                   fprintf(stderr,"%s, %d: decompress: compressLengthFlags=%08x compressLength=%u -> %u\n",__FILE__,__LINE__,compressLengthFlags,compressLength);
-                #endif /* LZO_DEBUG */
+                #endif /* LZ4_DEBUG */
 
                 // shift LZ4 input buffer
                 memmove(compressInfo->lz4.inputBuffer,
@@ -795,8 +834,8 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
               if ((compressInfo->lz4.inputBufferLength-compressInfo->lz4.inputBufferIndex) >= (4+length))
               {
                 #ifdef LZ4_DEBUG
-                  fprintf(stderr,"%s, %d: decompress: final uncompressed length=%u\n",__FILE__,__LINE__,(uint)length);
-                #endif /* LZO_DEBUG */
+                  fprintf(stderr,"%s, %d: decompress: final decompressed length=%u\n",__FILE__,__LINE__,(uint)length);
+                #endif /* LZ4_DEBUG */
 
                 // transfer: LZ4 input buffer -> LZ4 output buffer (byte 0..3 are length+flags)
                 memcpy(compressInfo->lz4.outputBuffer,
@@ -834,11 +873,17 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
                             );
               compressInfo->lz4.outputBufferIndex += n;
               compressInfo->lz4.totalOutputLength += (uint64)n;
+              #ifdef LZ4_DEBUG
+                fprintf(stderr,"%s, %d: decompress: move output=%u\n",__FILE__,__LINE__,n);
+              #endif /* LZ4_DEBUG */
             }
           }
         }
         else
         {
+          #ifdef LZ4_DEBUG
+            fprintf(stderr,"%s, %d: decompress: end of data\n",__FILE__,__LINE__);
+          #endif /* LZ4_DEBUG */
           compressInfo->endOfDataFlag = TRUE;
         }
       }
