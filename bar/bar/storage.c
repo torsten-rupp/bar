@@ -34,6 +34,7 @@
 #ifdef HAVE_ISO9660
   #include <cdio/cdio.h>
   #include <cdio/iso9660.h>
+  #include <cdio/logging.h>
 #endif /* HAVE_ISO9660 */
 #include <signal.h>
 #include <errno.h>
@@ -557,6 +558,27 @@ LOCAL int ftpTimeoutCallback(netbuf *control,
   return 0;
 }
 #endif /* !defined(HAVE_CURL) && defined(HAVE_FTP) */
+
+#ifdef HAVE_ISO9660
+/***********************************************************************\
+* Name   : libcdioLogCallback
+* Purpose: callback for libcdio log messages
+* Input  : buffer   - buffer for data
+*          size     - size of element
+*          n        - number of elements
+*          userData - user data
+* Output : -
+* Return : always size*n
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void libcdioLogCallback(cdio_log_level_t level, const char *message)
+{
+  UNUSED_VARIABLE(level);
+
+  printInfo(5,"libcdio: %s\n",message);
+}
+#endif /* HAVE_ISO9660 */
 
 #if defined(HAVE_CURL) || defined(HAVE_FTP)
 /***********************************************************************\
@@ -2014,12 +2036,18 @@ Errors Storage_initAll(void)
   #ifdef HAVE_SSH2
     defaultSSHPassword = Password_new();
   #endif /* HAVE_SSH2 */
+  #ifdef HAVE_ISO9660
+    (void)cdio_log_set_handler(libcdioLogCallback);
+  #endif /* HAVE_ISO9660 */
 
   return ERROR_NONE;
 }
 
 void Storage_doneAll(void)
 {
+  #ifdef HAVE_ISO9660
+    (void)cdio_log_set_handler(NULL);
+  #endif /* HAVE_ISO9660 */
   #ifdef HAVE_SSH2
     Password_delete(defaultSSHPassword);
   #endif /* HAVE_SSH2 */
