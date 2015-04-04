@@ -1797,6 +1797,7 @@ remoteBarFlag=FALSE;
                              &storageHandle,
                              storageSpecifier,
                              archiveName,
+                             NULL,  // deltaSourceList
                              jobOptions,
                              archiveGetCryptPasswordFunction,
                              archiveGetCryptPasswordUserData
@@ -3306,16 +3307,24 @@ Errors Command_list(StringList                      *storageNameList,
       continue;
     }
 
-    if (String_isEmpty(storageSpecifier.archivePattern))
+    error = ERROR_UNKNOWN;
+
+    if (error != ERROR_NONE)
     {
-      // list directory
-      error = listDirectoryContent(&storageDirectoryListHandle,
-                                   &storageSpecifier,
+      if (String_isEmpty(storageSpecifier.archivePatternString))
+      {
+        // list archive content
+        error = listArchiveContent(&storageSpecifier,
+                                   NULL,
                                    includeEntryList,
-                                   excludePatternList
+                                   excludePatternList,
+                                   jobOptions,
+                                   archiveGetCryptPasswordFunction,
+                                   archiveGetCryptPasswordUserData
                                   );
+      }
     }
-    else
+    if (error != ERROR_NONE)
     {
       // open directory list
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
@@ -3325,42 +3334,56 @@ Errors Command_list(StringList                      *storageNameList,
                                        );
       if (error == ERROR_NONE)
       {
-        error = Pattern_init(&pattern,storageSpecifier.archivePattern,jobOptions->patternType,PATTERN_FLAG_NONE);
-        if (error == ERROR_NONE)
+        if (String_isEmpty(storageSpecifier.archivePatternString))
         {
-          fileName = String_new();
-          while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
-          {
-            // read next directory entry
-            error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL);
-            if (error != ERROR_NONE)
-            {
-              continue;
-            }
-
-            // match pattern
-            if (!Pattern_match(&pattern,fileName,PATTERN_MATCH_MODE_EXACT))
-            {
-              continue;
-            }
-
-            // list archive content
-            error = listArchiveContent(&storageSpecifier,
-                                       fileName,
+          // list directory
+          error = listDirectoryContent(&storageDirectoryListHandle,
+                                       &storageSpecifier,
                                        includeEntryList,
-                                       excludePatternList,
-                                       jobOptions,
-                                       archiveGetCryptPasswordFunction,
-                                       archiveGetCryptPasswordUserData
+                                       excludePatternList
                                       );
-          }
-          String_delete(fileName);
-          Pattern_done(&pattern);
         }
-      }
+        else
+        {
+          // list archive content of matching files
+          error = Pattern_init(&pattern,storageSpecifier.archivePatternString,
+                               jobOptions->patternType,
+                               PATTERN_FLAG_NONE
+                              );
+          if (error == ERROR_NONE)
+          {
+            fileName = String_new();
+            while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
+            {
+              // read next directory entry
+              error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL);
+              if (error != ERROR_NONE)
+              {
+                continue;
+              }
 
-      // done list directory
-      Storage_closeDirectoryList(&storageDirectoryListHandle);
+              // match pattern
+              if (!Pattern_match(&pattern,fileName,PATTERN_MATCH_MODE_EXACT))
+              {
+                continue;
+              }
+
+              // list archive content
+              error = listArchiveContent(&storageSpecifier,
+                                         fileName,
+                                         includeEntryList,
+                                         excludePatternList,
+                                         jobOptions,
+                                         archiveGetCryptPasswordFunction,
+                                         archiveGetCryptPasswordUserData
+                                        );
+            }
+            String_delete(fileName);
+            Pattern_done(&pattern);
+          }
+        }
+        Storage_closeDirectoryList(&storageDirectoryListHandle);
+      }
     }
     if (error != ERROR_NONE)
     {
