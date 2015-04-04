@@ -120,6 +120,7 @@ void DeltaSourceList_init(DeltaSourceList *deltaSourceList)
   assert(deltaSourceList != NULL);
 
   List_init(deltaSourceList);
+  Semaphore_init(&deltaSourceList->lock);
 }
 
 void DeltaSourceList_initDuplicate(DeltaSourceList       *deltaSourceList,
@@ -139,6 +140,7 @@ void DeltaSourceList_done(DeltaSourceList *deltaSourceList)
 {
   assert(deltaSourceList != NULL);
 
+  Semaphore_done(&deltaSourceList->lock);
   List_done(deltaSourceList,(ListNodeFreeFunction)freeDeltaSourceNode,NULL);
 }
 
