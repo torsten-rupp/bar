@@ -41,13 +41,14 @@
 #include "files.h"
 #include "patternlists.h"
 #include "entrylists.h"
+#include "deltasourcelists.h"
 #include "compress.h"
 #include "passwords.h"
 #include "crypt.h"
 #include "archive.h"
 #include "network.h"
 #include "storage.h"
-#include "sources.h"
+#include "deltasources.h"
 #include "database.h"
 #include "index.h"
 #include "misc.h"
@@ -170,58 +171,58 @@ typedef enum
 
 /***************************** Variables *******************************/
 
-GlobalOptions          globalOptions;
-String                 tmpDirectory;
-IndexHandle            *indexHandle;
-Semaphore              consoleLock;
+GlobalOptions                globalOptions;
+String                       tmpDirectory;
+IndexHandle                  *indexHandle;
+Semaphore                    consoleLock;
 
-LOCAL Commands         command;
-LOCAL String           jobName;
+LOCAL Commands               command;
+LOCAL String                 jobName;
 
-LOCAL JobOptions       jobOptions;
-LOCAL String           uuid;
-LOCAL String           storageName;
-LOCAL ServerList       serverList;
-LOCAL Semaphore        serverListLock;
-LOCAL DeviceList       deviceList;
-LOCAL EntryList        includeEntryList;
-LOCAL PatternList      excludePatternList;
-LOCAL PatternList      deltaSourcePatternList;
-LOCAL PatternList      compressExcludePatternList;
-LOCAL Server           defaultFTPServer;
-LOCAL Server           defaultSSHServer;
-LOCAL Server           defaultWebDAVServer;
-LOCAL Device           defaultDevice;
-LOCAL Server           *currentFTPServer;
-LOCAL Server           *currentSSHServer;
-LOCAL Server           *currentWebDAVServer;
-LOCAL Device           *currentDevice;
-LOCAL bool             daemonFlag;
-LOCAL bool             noDetachFlag;
-LOCAL uint             serverPort;
-LOCAL uint             serverTLSPort;
-LOCAL const char       *serverCAFileName;
-LOCAL const char       *serverCertFileName;
-LOCAL const char       *serverKeyFileName;
-LOCAL Password         *serverPassword;
-LOCAL const char       *serverJobsDirectory;
+LOCAL JobOptions             jobOptions;
+LOCAL String                 uuid;
+LOCAL String                 storageName;
+LOCAL ServerList             serverList;
+LOCAL Semaphore              serverListLock;
+LOCAL DeviceList             deviceList;
+LOCAL EntryList              includeEntryList;
+LOCAL PatternList            excludePatternList;
+LOCAL PatternList            compressExcludePatternList;
+LOCAL DeltaSourceList        deltaSourceList;
+LOCAL Server                 defaultFTPServer;
+LOCAL Server                 defaultSSHServer;
+LOCAL Server                 defaultWebDAVServer;
+LOCAL Device                 defaultDevice;
+LOCAL Server                 *currentFTPServer;
+LOCAL Server                 *currentSSHServer;
+LOCAL Server                 *currentWebDAVServer;
+LOCAL Device                 *currentDevice;
+LOCAL bool                   daemonFlag;
+LOCAL bool                   noDetachFlag;
+LOCAL uint                   serverPort;
+LOCAL uint                   serverTLSPort;
+LOCAL const char             *serverCAFileName;
+LOCAL const char             *serverCertFileName;
+LOCAL const char             *serverKeyFileName;
+LOCAL Password               *serverPassword;
+LOCAL const char             *serverJobsDirectory;
 
-LOCAL const char       *indexDatabaseFileName;
+LOCAL const char             *indexDatabaseFileName;
 
-LOCAL ulong            logTypes;
-LOCAL const char       *logFileName;
-LOCAL const char       *logPostCommand;
+LOCAL ulong                  logTypes;
+LOCAL const char             *logFileName;
+LOCAL const char             *logPostCommand;
 
-LOCAL bool             batchFlag;
-LOCAL bool             versionFlag;
-LOCAL bool             helpFlag,xhelpFlag,helpInternalFlag;
+LOCAL bool                   batchFlag;
+LOCAL bool                   versionFlag;
+LOCAL bool                   helpFlag,xhelpFlag,helpInternalFlag;
 
-LOCAL const char       *pidFileName;
+LOCAL const char             *pidFileName;
 
-LOCAL String           keyFileName;
-LOCAL uint             keyBits;
+LOCAL String                 keyFileName;
+LOCAL uint                   keyBits;
 
-LOCAL IndexHandle      __indexHandle;
+LOCAL IndexHandle            __indexHandle;
 
 /*---------------------------------------------------------------------*/
 
@@ -248,6 +249,7 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -456,7 +458,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("include",                      '#',0,2,&includeEntryList,                               cmdOptionParseEntryPattern,NULL,                       "include pattern","pattern"                                                ),
   CMD_OPTION_SPECIAL      ("exclude",                      '!',0,2,&excludePatternList,                             cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
 
-  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,2,&deltaSourcePatternList,                         cmdOptionParsePattern,NULL,                            "source pattern","pattern"                                                 ),
+  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,2,&deltaSourceList,                                cmdOptionParseDeltaSource,NULL,                        "source pattern","pattern"                                                 ),
 
   CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                            cmdOptionParseConfigFile,NULL,                         "configuration file","file name"                                           ),
 
@@ -888,7 +890,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_SPECIAL  ("include-image",                &includeEntryList,-1,                                          configValueParseImageEntry,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_SPECIAL  ("exclude",                      &excludePatternList,-1,                                        configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
 
-  CONFIG_VALUE_SPECIAL  ("delta-source",                 &deltaSourcePatternList,-1,                                    configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_SPECIAL  ("delta-source",                 &deltaSourceList,-1,                                           configValueParseDeltaSource,NULL,NULL,NULL,&jobOptions.patternType),
 
   CONFIG_VALUE_INTEGER64("volume-size",                  &jobOptions.volumeSize,-1,                                     0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_BOOLEAN  ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                        ),
@@ -1665,8 +1667,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
 
 /***********************************************************************\
 * Name   : cmdOptionParsePattern
-* Purpose: command line option call back for parsing pattern
-*          patterns
+* Purpose: command line option call back for parsing patterns
 * Input  : -
 * Output : -
 * Return : TRUE iff parsed, FALSE otherwise
@@ -1698,6 +1699,50 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
     strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
     return FALSE;
   }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseDeltaSource
+* Purpose: command line option call back for parsing delta patterns
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  PatternTypes    patternType;
+  DeltaSourceNode *deltaSourceNode;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  // detect pattern type, get pattern
+  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
+  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
+  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
+  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
+
+  // append to delta source list
+  deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
+  if (deltaSourceNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  deltaSourceNode->storageName = String_newCString(value);
+fprintf(stderr,"%s, %d: %p deltaSourceNode->storageName=%s\n",__FILE__,__LINE__,deltaSourceNode,String_cString(deltaSourceNode->storageName));
+  deltaSourceNode->patternType = patternType;
+  List_append((DeltaSourceList*)variable,deltaSourceNode);
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,((DeltaSourceList*)variable)->count);
 
   return TRUE;
 }
@@ -2449,14 +2494,14 @@ LOCAL Errors initAll(void)
   DEBUG_TESTCODE("initAll6") { Chunk_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Chunk_initAll,{ Chunk_doneAll(); });
 
-  error = Source_initAll();
+  error = DeltaSource_initAll();
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll7") { Source_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,Source_initAll,{ Source_doneAll(); });
+  DEBUG_TESTCODE("initAll7") { DeltaSource_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,DeltaSource_initAll,{ DeltaSource_doneAll(); });
 
   error = Archive_initAll();
   if (error != ERROR_NONE)
@@ -2518,8 +2563,8 @@ LOCAL Errors initAll(void)
   List_init(&deviceList);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
-  PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
+  DeltaSourceList_init(&deltaSourceList);
   initServer(&defaultFTPServer,NULL,SERVER_TYPE_FTP);
   initServer(&defaultSSHServer,NULL,SERVER_TYPE_SSH);
   initServer(&defaultWebDAVServer,NULL,SERVER_TYPE_WEBDAV);
@@ -2638,8 +2683,8 @@ LOCAL void doneAll(void)
   doneServer(&defaultWebDAVServer);
   doneServer(&defaultSSHServer);
   doneServer(&defaultFTPServer);
+  DeltaSourceList_done(&deltaSourceList);
   PatternList_done(&compressExcludePatternList);
-  PatternList_done(&deltaSourcePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   Password_delete(serverPassword);
@@ -2665,7 +2710,7 @@ LOCAL void doneAll(void)
   Index_doneAll();
   Storage_doneAll();
   Archive_doneAll();
-  Source_doneAll();
+  DeltaSource_doneAll();
   Chunk_doneAll();
   PatternList_doneAll();
   Pattern_doneAll();
@@ -4297,6 +4342,92 @@ bool configValueFormatPattern(void **formatUserData, void *userData, String line
   }
 }
 
+bool configValueParseDeltaSource(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  PatternTypes    patternType;
+  DeltaSourceNode *deltaSourceNode;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  // detect pattern type, get pattern
+  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
+  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
+  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
+  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
+
+  // append to delta source list
+  deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
+  if (deltaSourceNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  deltaSourceNode->storageName = String_newCString(value);
+  deltaSourceNode->patternType = patternType;
+  List_append((DeltaSourceList*)variable,deltaSourceNode);
+
+  return TRUE;
+}
+
+void configValueFormatInitDeltaSource(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = ((PatternList*)variable)->head;
+}
+
+void configValueFormatDoneDeltaSource(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatDeltaSource(void **formatUserData, void *userData, String line)
+{
+  DeltaSourceNode *deltaSourceNode;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  deltaSourceNode = (DeltaSourceNode*)(*formatUserData);
+  if (deltaSourceNode != NULL)
+  {
+    switch (deltaSourceNode->patternType)
+    {
+      case PATTERN_TYPE_GLOB:
+        String_format(line,"%'S",deltaSourceNode->storageName);
+        break;
+      case PATTERN_TYPE_REGEX:
+        String_format(line,"r:%'S",deltaSourceNode->storageName);
+        break;
+      case PATTERN_TYPE_EXTENDED_REGEX:
+        String_format(line,"x:%'S",deltaSourceNode->storageName);
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
+    }
+
+    (*formatUserData) = deltaSourceNode->next;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 bool configValueParseString(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
@@ -4595,6 +4726,42 @@ bool parseArchiveType(const char *name, ArchiveTypes *archiveType)
   }
 }
 
+Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType)
+{
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    String    string;
+  #endif /* PLATFORM_... */
+  Errors error;
+
+  assert(pattern != NULL);
+  assert(fileName != NULL);
+
+  // init pattern
+  #if   defined(PLATFORM_LINUX)
+    error = Pattern_init(pattern,
+                         fileName,
+                         patternType,
+                         PATTERN_FLAG_NONE
+                        );
+  #elif defined(PLATFORM_WINDOWS)
+    // escape all '\' by '\\'
+    string = String_duplicate(fileName);
+    String_replaceAllCString(string,STRING_BEGIN,"\\","\\\\");
+
+    error = Pattern_init(pattern,
+                         string,
+                         patternType,
+                         PATTERN_FLAG_IGNORE_CASE
+                        );
+
+    // free resources
+    String_delete(string);
+  #endif /* PLATFORM_... */
+
+  return error;
+}
+
 /***********************************************************************\
 * Name   : readFromJob
 * Purpose: read options from job file
@@ -4788,9 +4955,10 @@ LOCAL int errorToExitcode(Errors error)
 
 int main(int argc, const char *argv[])
 {
-  Errors error;
-  String fileName;
-  bool   printInfoFlag;
+  Errors          error;
+  String          fileName;
+  bool            printInfoFlag;
+  DeltaSourceNode *deltaSourceNode;
 
   // init
   error = initAll();
@@ -4974,9 +5142,18 @@ exit(1);
     return EXITCODE_FAIL;
   }
 
+#if 0
   // add delta sources
-  error = Source_addSourceList(&deltaSourcePatternList);
-  if (error != ERROR_NONE)
+  error = ERROR_NONE;
+  LIST_ITERATE(&deltaSourceList,deltaSourceNode)
+  {
+    error = Source_add(deltaSourceNode->storageName,deltaSourceNode->patternType);
+    if (error != ERROR_NONE)
+    {
+      break;
+    }
+  }
+
   {
     printError("Cannot add delta sources (error: %s)!\n",Error_getText(error));
     doneAll();
@@ -4989,6 +5166,7 @@ exit(1);
     #endif /* not NDEBUG */
     return errorToExitcode(error);
   }
+#endif
 
   // create temporary directory
   error = File_getTmpDirectoryNameCString(tmpDirectory,"bar-XXXXXX",globalOptions.tmpDirectory);
@@ -5154,6 +5332,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                            &includeEntryList,
                            &excludePatternList,
                            &compressExcludePatternList,
+                           &deltaSourceList,
                            &jobOptions,
                            ARCHIVE_TYPE_NORMAL,
                            NULL, // scheduleTitle
@@ -5220,6 +5399,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                   &includeEntryList,
                                   &excludePatternList,
                                   &compressExcludePatternList,
+                                  &deltaSourceList,
                                   &jobOptions,
                                   ARCHIVE_TYPE_NORMAL,
                                   NULL, // scheduleTitle
@@ -5267,6 +5447,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
               error = Command_test(&fileNameList,
                                    &includeEntryList,
                                    &excludePatternList,
+                                   &deltaSourceList,
                                    &jobOptions,
                                    inputCryptPassword,
                                    NULL
@@ -5276,6 +5457,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
               error = Command_compare(&fileNameList,
                                       &includeEntryList,
                                       &excludePatternList,
+                                      &deltaSourceList,
                                       &jobOptions,
                                       inputCryptPassword,
                                       NULL
@@ -5285,6 +5467,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
               error = Command_restore(&fileNameList,
                                       &includeEntryList,
                                       &excludePatternList,
+                                      &deltaSourceList,
                                       &jobOptions,
                                       inputCryptPassword,
                                       NULL,

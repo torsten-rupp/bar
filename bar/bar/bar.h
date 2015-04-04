@@ -652,7 +652,7 @@ bool configValueFormatOwner(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseFileEntry, configValueParseImageEntry
-* Purpose: config value option call back for parsing include/exclude
+* Purpose: config value option call back for parsing file/image entry
 *          patterns
 * Input  : userData              - user data
 *          variable              - config variable
@@ -761,6 +761,62 @@ void configValueFormatDonePattern(void **formatUserData, void *userData);
 \***********************************************************************/
 
 bool configValueFormatPattern(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParseDeltaSource
+* Purpose: config value option call back for parsing delta source
+*          pattern
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseDeltaSource(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+
+/***********************************************************************\
+* Name   : configValueFormatInitDeltaSource
+* Purpose: init format of config delta source pattern statements
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitDeltaSource(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneDeltaSource
+* Purpose: done format of config delta source pattern statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneDeltaSource(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatDeltaSource
+* Purpose: format next config delta source pattern statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatDeltaSource(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseString
@@ -1028,6 +1084,19 @@ const char *archiveTypeToString(ArchiveTypes archiveType, const char *defaultVal
 \***********************************************************************/
 
 bool parseArchiveType(const char *name, ArchiveTypes *archiveType);
+
+/***********************************************************************\
+* Name   : initFilePattern
+* Purpose: init file pattern
+* Input  : pattern     - pattern variable
+*          string      - pattern
+*          patternType - pattern type; see PATTERN_TYPE_*
+* Output : pattern - initialized variable
+* Return : ERROR_NONE or error code
+* Notes  : escape special characters in file name
+\***********************************************************************/
+
+Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType);
 
 #ifdef __cplusplus
   }
