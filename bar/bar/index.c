@@ -576,11 +576,6 @@ LOCAL Errors upgradeFromVersion3(const char *databaseFileName)
   }
   (void)Database_setEnabledForeignKeys(&newIndexHandle.databaseHandle,FALSE);
 
-  // transfer data to new database
-#ifndef NDEBUG
-Database_debugEnable(false);
-//Database_debugEnable(true);
-#endif
   // transfer index data to new index
   if (error == ERROR_NONE)
   {
@@ -631,9 +626,6 @@ Database_debugEnable(false);
                                "special"
                               );
   }
-#ifndef NDEBUG
-//Database_debugEnable(false);
-#endif
   if (error != ERROR_NONE)
   {
     (void)closeIndex(&newIndexHandle);
