@@ -68,7 +68,6 @@
 *          excludePatternList               - exclude pattern list
 *          deltaSourceList                  - delta source list
 *          jobOptions                       - job options
-*          printableStorageName             - printable storage name
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
 *          fragmentList                     - fragment list
@@ -95,6 +94,12 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
+
+  assert(storageSpecifier != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
+  assert(jobOptions != NULL);
+  assert(fragmentList != NULL);
 
   // init variables
   buffer = (byte*)malloc(BUFFER_SIZE);
@@ -143,7 +148,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
     return error;
   }
 
-  // read archive
+  // read archive entries
   printInfo(0,"Testing archive '%s':\n",Storage_getPrintableNameCString(storageSpecifier,archiveName));
   failError = ERROR_NONE;
   while (!Archive_eof(&archiveInfo,FALSE))
@@ -887,10 +892,10 @@ Errors Command_test(const StringList                *storageNameList,
   String                     storageName;
   Errors                     failError;
   Errors                     error;
-  FragmentNode               *fragmentNode;
   StorageDirectoryListHandle storageDirectoryListHandle;
   Pattern                    pattern;
   String                     fileName;
+  FragmentNode               *fragmentNode;
 
   assert(storageNameList != NULL);
   assert(includeEntryList != NULL);
