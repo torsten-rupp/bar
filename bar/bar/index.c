@@ -60,11 +60,13 @@ LOCAL const struct
   { "*",      INDEX_MODE_ALL    }
 };
 
+// sleep time [s]
+#define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
+
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
 LOCAL Thread cleanupIndexThread;    // clean-up thread
-LOCAL bool   quitFlag;              // TRUE iff quit requested
 
 /****************************** Macros *********************************/
 
@@ -1448,6 +1450,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
 LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
 {
   Errors error;
+  uint   sleepTime;
 
   assert(indexHandle != NULL);
 
@@ -1491,13 +1494,19 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   (void)cleanUpStorageNoName(indexHandle);
 
   // regular clean-ups
-  while (!quitFlag)
+  while (!indexHandle->quitFlag)
   {
     // clean-up database
     (void)cleanUpOrphanedEntries(indexHandle);
     (void)cleanUpDuplicateIndizes(indexHandle);
 
-    Misc_udelay(4LL*MISC_US_PER_HOUR);
+    // sleep, check quit flag
+    sleepTime = 0;
+    while ((sleepTime < SLEEP_TIME_INDEX_CLEANUP_THREAD) && !indexHandle->quitFlag)
+    {
+      Misc_udelay(10LL*MISC_US_PER_SECOND);
+      sleepTime += 10;
+    }
   }
 }
 
