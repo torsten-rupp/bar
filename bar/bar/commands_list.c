@@ -3266,7 +3266,6 @@ Errors Command_list(StringList                      *storageNameList,
                     void                            *archiveGetCryptPasswordUserData
                    )
 {
-  AutoFreeList               autoFreeList;
   String                     storageName;
   StorageSpecifier           storageSpecifier;
   Errors                     failError;
@@ -3281,13 +3280,9 @@ Errors Command_list(StringList                      *storageNameList,
   assert(jobOptions != NULL);
 
   // init variables
-  AutoFree_init(&autoFreeList);
   List_init(&archiveContentList);
   storageName = String_new();
   Storage_initSpecifier(&storageSpecifier);
-  AUTOFREE_ADD(&autoFreeList,&archiveContentList,{ List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL); });
-  AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(storageName); });
-  AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
   // list archive content
   failError = ERROR_NONE;
@@ -3400,7 +3395,6 @@ Errors Command_list(StringList                      *storageNameList,
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(storageName);
   List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
-  AutoFree_done(&autoFreeList);
 
   return failError;
 }
