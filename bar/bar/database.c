@@ -74,7 +74,7 @@ typedef struct
   #define DATABASE_DEBUG_SQL(databaseHandle,sqlString) \
     do \
     { \
-      if (databaseDebugCounter == 0) \
+      if (databaseDebugCounter > 0) \
       { \
         fprintf(stderr,"DEBUG database: execute command: %s: %s\n",(databaseHandle)->fileName,String_cString(sqlString)); \
       } \
@@ -83,7 +83,7 @@ typedef struct
   #define DATABASE_DEBUG_SQLX(databaseHandle,text,sqlString) \
     do \
     { \
-      if (databaseDebugCounter == 0) \
+      if (databaseDebugCounter > 0) \
       { \
         fprintf(stderr,"DEBUG database: " text ": %s: %s\n",(databaseHandle)->fileName,String_cString(sqlString)); \
       } \
