@@ -123,11 +123,11 @@ void AutoFree_init(AutoFreeList *autoFreeList);
 
 /***********************************************************************\
 * Name   : AutoFree_done
-* Purpose: free resources and done auto-free list
+* Purpose: done auto-free list
 * Input  : autoFreeList - auto-free list
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : Resources are not freed!
 \***********************************************************************/
 
 void AutoFree_done(AutoFreeList *autoFreeList);
