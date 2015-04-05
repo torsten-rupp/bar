@@ -149,9 +149,29 @@ typedef int64 DatabaseId;
                        );
 #endif /* NDEBUG */
 
+/***********************************************************************\
+* Name   : Database_setEnabledSync
+* Purpose: enable/disable synchronous mode
+* Input  : databaseHandle - database handle
+*          enabled        - TRUE to enable synchronous mode
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
                                bool           enabled
                               );
+
+/***********************************************************************\
+* Name   : Database_setEnabledForeignKeys
+* Purpose: enable/disable foreign key checks
+* Input  : databaseHandle - database handle
+*          enabled        - TRUE to enable foreign key checks
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
                                       bool           enabled
@@ -404,9 +424,9 @@ int64 Database_getLastRowId(DatabaseHandle *databaseHandle);
 #ifndef NDEBUG
 
 /***********************************************************************\
-* Name   : Database_debugPrintQueryInfo
-* Purpose: print query info
-* Input  : databaseQueryHandle - database query handle
+* Name   : Database_debugEnable
+* Purpose: enable/disable debug output
+* Input  : enabled - TRUE to enable debug output
 * Output : -
 * Return : -
 * Notes  : For debugging only!
