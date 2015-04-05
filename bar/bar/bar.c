@@ -5439,8 +5439,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                    &includeEntryList,
                                    &excludePatternList,
                                    &jobOptions,
-                                   inputCryptPassword,
-                                   NULL
+                                   CALLBACK(inputCryptPassword,NULL)
                                   );
               break;
             case COMMAND_TEST:
@@ -5449,8 +5448,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                    &excludePatternList,
                                    &deltaSourceList,
                                    &jobOptions,
-                                   inputCryptPassword,
-                                   NULL
+                                   CALLBACK(inputCryptPassword,NULL)
                                   );
               break;
             case COMMAND_COMPARE:
@@ -5459,8 +5457,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                       &excludePatternList,
                                       &deltaSourceList,
                                       &jobOptions,
-                                      inputCryptPassword,
-                                      NULL
+                                      CALLBACK(inputCryptPassword,NULL)
                                      );
               break;
             case COMMAND_RESTORE:
@@ -5469,12 +5466,10 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                       &excludePatternList,
                                       &deltaSourceList,
                                       &jobOptions,
-                                      inputCryptPassword,
-                                      NULL,
-                                      NULL,
-                                      NULL,
-                                      NULL,
-                                      NULL
+                                      CALLBACK(inputCryptPassword,NULL),
+                                      CALLBACK(NULL,NULL),  // restoreStatusInfoUserData callback
+                                      NULL,  // pauseRestoreFlag
+                                      NULL  // requestedAbortFlag
                                      );
               break;
             default:
@@ -5575,21 +5570,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
             String_delete(publicKeyFileName);
             break;
           }
-#if 0
-{
-  char s[200],c[2000],t[200];
-  ulong n;
-
-  strcpy(s,"Hello World");
-
-  Crypt_keyEncrypt(&publicKey,s,200,c,2000,&n);
-
-  Crypt_keyDecrypt(&privateKey,c,n,t,200,&n);
-
-fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
-
-}
-#endif /* 0 */
           // free resources
           Crypt_doneKey(&privateKey);
           Crypt_doneKey(&publicKey);
