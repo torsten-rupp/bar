@@ -101,7 +101,6 @@ LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 *          excludePatternList               - exclude pattern list
 *          deltaSourceList                  - delta source list
 *          jobOptions                       - job options
-*          printableStorageName             - printable storage name
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
 *          fragmentList                     - fragment list
@@ -128,6 +127,12 @@ LOCAL Errors compareArchiveContent(StorageSpecifier                *storageSpeci
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
+
+  assert(storageSpecifier != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
+  assert(jobOptions != NULL);
+  assert(fragmentList != NULL);
 
   // init variables
   archiveBuffer = (byte*)malloc(BUFFER_SIZE);
@@ -185,7 +190,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier                *storageSpeci
   }
   DEBUG_TESTCODE("Command_compare2") { (void)Archive_close(&archiveInfo); (void)Storage_done(&storageHandle); return DEBUG_TESTCODE_ERROR(); }
 
-  // read files
+  // read archive entries
   printInfo(1,"Comparing archive '%s':\n",Storage_getPrintableNameCString(storageSpecifier,archiveName));
   failError = ERROR_NONE;
   while (   !Archive_eof(&archiveInfo,TRUE)
@@ -1520,18 +1525,16 @@ Errors Command_compare(const StringList                *storageNameList,
                        void                            *archiveGetCryptPasswordUserData
                       )
 {
-  AutoFreeList               autoFreeList;
   FragmentList               fragmentList;
   StorageSpecifier           storageSpecifier;
-//  StorageHandle              storageHandle;
   StringNode                 *stringNode;
   String                     storageName;
   Errors                     failError;
   Errors                     error;
-  FragmentNode               *fragmentNode;
   StorageDirectoryListHandle storageDirectoryListHandle;
   Pattern                    pattern;
   String                     fileName;
+  FragmentNode               *fragmentNode;
 
   assert(storageNameList != NULL);
   assert(includeEntryList != NULL);
@@ -1539,13 +1542,8 @@ Errors Command_compare(const StringList                *storageNameList,
   assert(jobOptions != NULL);
 
   // init variables
-  AutoFree_init(&autoFreeList);
-
-  // allocate resources
   FragmentList_init(&fragmentList);
   Storage_initSpecifier(&storageSpecifier);
-  AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
-  AUTOFREE_ADD(&autoFreeList,&fragmentList,{ FragmentList_done(&fragmentList); });
 
   failError = ERROR_NONE;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
@@ -1565,7 +1563,7 @@ Errors Command_compare(const StringList                *storageNameList,
 
     if (String_isEmpty(storageSpecifier.archivePatternString))
     {
-      // test archive content
+      // compare archive content
       error = compareArchiveContent(&storageSpecifier,
                                     NULL,
                                     includeEntryList,
@@ -1659,7 +1657,6 @@ Errors Command_compare(const StringList                *storageNameList,
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
   FragmentList_done(&fragmentList);
-  AutoFree_done(&autoFreeList);
 
   return failError;
 }
