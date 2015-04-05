@@ -182,8 +182,8 @@ LOCAL size_t curlNopDataCallback(void   *buffer,
 
 #if defined(HAVE_CURL) || defined(HAVE_FTP)
 /***********************************************************************\
-* Name   : initFTPPassword
-* Purpose: init FTP password
+* Name   : initDefaultFTPPassword
+* Purpose: init default FTP password
 * Input  : hostName   - host name
 *          loginName  - login name
 *          jobOptions - job options
@@ -192,7 +192,7 @@ LOCAL size_t curlNopDataCallback(void   *buffer,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initFTPPassword(ConstString hostName, ConstString loginName, const JobOptions *jobOptions)
+LOCAL bool initDefaultFTPPassword(ConstString hostName, ConstString loginName, const JobOptions *jobOptions)
 {
   SemaphoreLock semaphoreLock;
   String        s;
@@ -208,18 +208,27 @@ LOCAL bool initFTPPassword(ConstString hostName, ConstString loginName, const Jo
       {
         if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
         {
-          s = String_newCString("FTP login password for ");
-          if (!String_isEmpty(loginName))
+          if (defaultFTPPassword == NULL)
           {
-            String_format(s,"'%S@%S'",loginName,hostName);
+            Password *password = Password_new();
+            s = !String_isEmpty(loginName)
+                  ? String_format(String_new(),"FTP login password for %S@%S",loginName,hostName)
+                  : String_format(String_new(),"FTP login password for %S",hostName);
+            if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
+            {
+              defaultFTPPassword = password;
+              initFlag = TRUE;
+            }
+            else
+            {
+              Password_delete(password);
+            }
+            String_delete(s);
           }
           else
           {
-            String_format(s,"'%S'",hostName);
+            initFlag = TRUE;
           }
-          initFlag = Password_input(defaultFTPPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
-          String_delete(s);
-          initFlag = TRUE;
         }
       }
       else
@@ -235,8 +244,8 @@ LOCAL bool initFTPPassword(ConstString hostName, ConstString loginName, const Jo
 
 #ifdef HAVE_SSH2
 /***********************************************************************\
-* Name   : initSSHPassword
-* Purpose: init SSH password
+* Name   : initDefaultSSHPassword
+* Purpose: init default SSH password
 * Input  : hostName   - host name
 *          loginName  - login name
 *          jobOptions - job options
@@ -245,7 +254,7 @@ LOCAL bool initFTPPassword(ConstString hostName, ConstString loginName, const Jo
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initSSHPassword(ConstString hostName, ConstString loginName, const JobOptions *jobOptions)
+LOCAL bool initDefaultSSHPassword(ConstString hostName, ConstString loginName, const JobOptions *jobOptions)
 {
   SemaphoreLock semaphoreLock;
   String        s;
@@ -261,18 +270,27 @@ LOCAL bool initSSHPassword(ConstString hostName, ConstString loginName, const Jo
       {
         if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
         {
-          s = String_newCString("SSH login password for ");
-          if (!String_isEmpty(loginName))
+          if (defaultWebDAVPassword == NULL)
           {
-            String_format(s,"'%S@%S'",loginName,hostName);
+            Password *password = Password_new();
+            s = !String_isEmpty(loginName)
+                  ? String_format(String_new(),"SSH login password for %S@%S",loginName,hostName)
+                  : String_format(String_new(),"SSH login password for %S",hostName);
+            if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
+            {
+              defaultSSHPassword = password;
+              initFlag = TRUE;
+            }
+            else
+            {
+                Password_delete(password);
+            }
+            String_delete(s);
           }
           else
           {
-            String_format(s,"'%S'",hostName);
+            initFlag = TRUE;
           }
-          initFlag = Password_input(defaultSSHPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
-          String_delete(s);
-          initFlag = TRUE;
         }
       }
       else
@@ -332,13 +350,20 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
     url = String_format(String_new(),"ftp://%S",hostName);
     if (hostPort != 0) String_format(url,":%d",hostPort);
     curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
+    }
+    String_delete(url);
     if (curlCode != CURLE_OK)
     {
       (void)curl_easy_cleanup(curlHandle);
       return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
     }
-    (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECT_ONLY,1L);
-    String_delete(url);
 
     // set login
     (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(loginName));
@@ -1128,8 +1153,8 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 
 #ifdef HAVE_CURL
 /***********************************************************************\
-* Name   : initWebDAVPassword
-* Purpose: init WebDAV password
+* Name   : initDefaultWebDAVPassword
+* Purpose: init default WebDAV password
 * Input  : hostName   - host name
 *          loginName  - login name
 *          jobOptions - job options
@@ -1138,7 +1163,7 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initWebDAVPassword(ConstString hostName, ConstString loginName, const JobOptions *jobOptions)
+LOCAL bool initDefaultWebDAVPassword(ConstString hostName, ConstString loginName, const JobOptions *jobOptions)
 {
   SemaphoreLock semaphoreLock;
   String        s;
@@ -1154,12 +1179,27 @@ LOCAL bool initWebDAVPassword(ConstString hostName, ConstString loginName, const
       {
         if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
         {
-          s = !String_isEmpty(loginName)
-                ? String_format(String_new(),"WebDAV login password for %S@%S",loginName,hostName)
-                : String_format(String_new(),"WebDAV login password for %S",hostName);
-          initFlag = Password_input(defaultWebDAVPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
-          String_delete(s);
-          initFlag = TRUE;
+          if (defaultWebDAVPassword == NULL)
+          {
+            Password *password = Password_new();
+            s = !String_isEmpty(loginName)
+                  ? String_format(String_new(),"WebDAV login password for %S@%S",loginName,hostName)
+                  : String_format(String_new(),"WebDAV login password for %S",hostName);
+            if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
+            {
+              defaultWebDAVPassword = password;
+              initFlag = TRUE;
+            }
+            else
+            {
+              Password_delete(password);
+            }
+            String_delete(s);
+          }
+          else
+          {
+            initFlag = TRUE;
+          }
         }
       }
       else
@@ -1208,13 +1248,20 @@ LOCAL Errors checkWebDAVLogin(ConstString hostName,
   // set connect
   url = String_format(String_new(),"http://%S",hostName);
   curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
+  }
+  String_delete(url);
   if (curlCode != CURLE_OK)
   {
     (void)curl_easy_cleanup(curlHandle);
     return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
   }
-  (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECT_ONLY,1L);
-  String_delete(url);
 
   // set login
   (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(loginName));
@@ -2030,8 +2077,8 @@ Errors Storage_initAll(void)
     FtpInit();
   #endif /* HAVE_CURL || HAVE_FTP */
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    defaultFTPPassword    = Password_new();
-    defaultWebDAVPassword = Password_new();
+    defaultFTPPassword    = NULL;
+    defaultWebDAVPassword = NULL;
   #endif /* HAVE_CURL */
   #ifdef HAVE_SSH2
     defaultSSHPassword = Password_new();
@@ -3341,7 +3388,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initFTPPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions))
+            if (initDefaultFTPPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions))
             {
               error = checkFTPLogin(storageHandle->storageSpecifier.hostName,
                                     storageHandle->storageSpecifier.hostPort,
@@ -3440,7 +3487,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initFTPPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions))
+            if (initDefaultFTPPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions))
             {
               error = checkFTPLogin(storageHandle->storageSpecifier.hostName,
                                     storageHandle->storageSpecifier.hostPort,
@@ -3539,7 +3586,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           if (error == ERROR_UNKNOWN)
           {
             // initialize default password
-            if (   initSSHPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions)
+            if (   initDefaultSSHPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions)
                 && !Password_isEmpty(defaultSSHPassword)
                )
             {
@@ -3644,7 +3691,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (   initSSHPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions)
+            if (   initDefaultSSHPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions)
                 && !Password_isEmpty(defaultSSHPassword)
                )
             {
@@ -3752,7 +3799,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initWebDAVPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions))
+            if (initDefaultWebDAVPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions))
             {
               error = checkWebDAVLogin(storageHandle->storageSpecifier.hostName,
                                        storageHandle->storageSpecifier.loginName,
@@ -5295,6 +5342,7 @@ Errors Storage_create(StorageHandle *storageHandle,
             curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
             return ERROR_FTP_SESSION_FAIL;
           }
+          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FAILONERROR,1L);
           (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -5714,6 +5762,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
             return ERROR_WEBDAV_SESSION_FAIL;
           }
+          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FAILONERROR,1L);
           (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -6057,7 +6106,6 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
           CURLMcode       curlMCode;
           StringTokenizer nameTokenizer;
           ConstString     token;
-          long            httpCode;
           double          fileSize;
           int             runningHandles;
 
@@ -6078,6 +6126,7 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
             curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
             return ERROR_FTP_SESSION_FAIL;
           }
+          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FAILONERROR,1L);
           (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -6150,10 +6199,6 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
           if (curlCode == CURLE_OK)
           {
             curlCode = curl_easy_perform(storageHandle->ftp.curlHandle);
-          }
-          if (curlCode == CURLE_OK)
-          {
-            curlCode = curl_easy_getinfo(storageHandle->ftp.curlHandle,CURLINFO_RESPONSE_CODE,&httpCode);
           }
           if (curlCode != CURLE_OK)
           {
@@ -6551,7 +6596,6 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
           String          pathName,baseName;
           StringTokenizer nameTokenizer;
           ConstString     token;
-          long            httpCode;
           double          fileSize;
           int             runningHandles;
 
@@ -6582,6 +6626,7 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
             free(storageHandle->webdav.receiveBuffer.data);
             return ERROR_WEBDAV_SESSION_FAIL;
           }
+          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FAILONERROR,1L);
           (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -6660,13 +6705,7 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
           {
             curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
           }
-          if (curlCode == CURLE_OK)
-          {
-            curlCode = curl_easy_getinfo(storageHandle->ftp.curlHandle,CURLINFO_RESPONSE_CODE,&httpCode);
-          }
-          if (   (curlCode != CURLE_OK)
-              || (httpCode != 200)  // HTTP OK
-             )
+          if (curlCode != CURLE_OK)
           {
             String_delete(url);
             String_delete(baseName);
@@ -9198,6 +9237,7 @@ Errors Storage_delete(StorageHandle *storageHandle,
           curlHandle = curl_easy_init();
           if (curlHandle != NULL)
           {
+            (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
             (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
             if (globalOptions.verboseLevel >= 6)
             {
@@ -9422,6 +9462,7 @@ whould this be a possible implementation?
                      signal.
             (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
             */
+            (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
             (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
             if (globalOptions.verboseLevel >= 6)
             {
@@ -9621,6 +9662,7 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
             freeServer(ftpServer);
             return = ERROR_FTP_SESSION_FAIL;
           }
+          (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
           (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -9811,6 +9853,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                      signal.
             (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
             */
+            (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
             (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
             if (globalOptions.verboseLevel >= 6)
             {
@@ -10044,7 +10087,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initFTPPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions))
+            if (initDefaultFTPPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions))
             {
               error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                                     storageDirectoryListHandle->storageSpecifier.hostPort,
@@ -10082,6 +10125,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
                    signal.
           (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
           */
+          (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
           (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -10209,7 +10253,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initFTPPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions))
+            if (initDefaultFTPPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions))
             {
               error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                                     storageDirectoryListHandle->storageSpecifier.hostPort,
@@ -10358,7 +10402,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           if (error == ERROR_UNKNOWN)
           {
             // initialize default password
-            if (   initSSHPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions)
+            if (   initDefaultSSHPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions)
                 && !Password_isEmpty(defaultSSHPassword)
                )
             {
@@ -10489,7 +10533,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initWebDAVPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions))
+            if (initDefaultWebDAVPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions))
             {
               error = checkWebDAVLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                                        storageDirectoryListHandle->storageSpecifier.loginName,
@@ -10526,6 +10570,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
                    signal.
           (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
           */
+          (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
           (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
           if (globalOptions.verboseLevel >= 6)
           {
