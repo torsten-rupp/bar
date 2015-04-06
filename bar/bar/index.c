@@ -2611,7 +2611,9 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                                )
         )
   {
-    if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
+    if (   (storageName != NULL)
+        && (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
+       )
     {
       switch (storageSpecifier.type)
       {
