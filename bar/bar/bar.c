@@ -2666,7 +2666,6 @@ LOCAL void doneAll(void)
   ConfigValue_done(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
 
   // deinitialize variables
-  if (indexHandle != NULL) Index_done(indexHandle);
   Semaphore_done(&consoleLock);
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
@@ -5263,6 +5262,9 @@ exit(1);
             deletePIDFile();
           }
 
+          // close index database
+          if (indexHandle != NULL) Index_done(indexHandle);
+
           // close log files
           if (logFile != NULL) fclose(logFile);
           fclose(tmpLogFile); (void)unlink(String_cString(tmpLogFileName));
@@ -5310,6 +5312,9 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         deletePIDFile();
       }
     }
+
+    // close index database
+    if (indexHandle != NULL) Index_done(indexHandle);
 
     // close log files
     if (logFile != NULL) fclose(logFile);
