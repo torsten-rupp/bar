@@ -229,6 +229,7 @@ LOCAL IndexHandle            __indexHandle;
 LOCAL StringList         configFileNameList;  // list of configuration files to read
 
 LOCAL String             tmpLogFileName;      // file name of temporary log file
+LOCAL Semaphore          logLock;
 LOCAL FILE               *logFile = NULL;     // log file handle
 LOCAL FILE               *tmpLogFile = NULL;  // temporary log file handle
 
@@ -2615,6 +2616,7 @@ LOCAL Errors initAll(void)
 
   tmpDirectory                           = String_new();
   tmpLogFileName                         = String_new();
+  Semaphore_init(&logLock);
   logFile                                = NULL;
   tmpLogFile                             = NULL;
 
@@ -2667,6 +2669,7 @@ LOCAL void doneAll(void)
 
   // deinitialize variables
   Semaphore_done(&consoleLock);
+  Semaphore_done(&logLock);
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
   if (defaultDevice.writePreProcessCommand != NULL) String_delete(defaultDevice.writePreProcessCommand);
@@ -2741,6 +2744,100 @@ LOCAL bool validateOptions(void)
   return TRUE;
 }
 
+/***********************************************************************\
+* Name   : openLog
+* Purpose: open log file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void openLog(void)
+{
+  SemaphoreLock semaphoreLock;
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    if (logFileName != NULL)
+    {
+      logFile = fopen(logFileName,"a");
+      if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
+    }
+  }
+}
+
+/***********************************************************************\
+* Name   : closeLog
+* Purpose: close log file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void closeLog(void)
+{
+  SemaphoreLock semaphoreLock;
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    if (logFile != NULL)
+    {
+      fclose(logFile);
+      logFile = NULL;
+    }
+  }
+}
+
+/***********************************************************************\
+* Name   : openSessionLog
+* Purpose: open session log file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void openSessionLog(void)
+{
+  SemaphoreLock semaphoreLock;
+
+  assert(tmpLogFileName != NULL);
+  assert(tmpDirectory != NULL);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    File_setFileName(tmpLogFileName,tmpDirectory);
+    File_appendFileNameCString(tmpLogFileName,"log.txt");
+    tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
+  }
+}
+
+/***********************************************************************\
+* Name   : closeSessionLog
+* Purpose: close session log file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void closeSessionLog(void)
+{
+  SemaphoreLock semaphoreLock;
+
+  assert(tmpLogFile != NULL);
+  assert(tmpLogFileName != NULL);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    fclose(tmpLogFile);
+    tmpLogFile = NULL;
+    File_delete(tmpLogFileName,FALSE);
+  }
+}
+
 /*---------------------------------------------------------------------*/
 
 bool isPrintInfo(uint verboseLevel)
@@ -2797,48 +2894,52 @@ void printInfo(uint verboseLevel, const char *format, ...)
 
 void vlogMessage(ulong logType, const char *prefix, const char *text, va_list arguments)
 {
-  String  dateTime;
-  va_list tmpArguments;
+  SemaphoreLock semaphoreLock;
+  String        dateTime;
+  va_list       tmpArguments;
 
   assert(text != NULL);
 
-  if ((tmpLogFile != NULL) || (logFile != NULL))
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    if ((logType == LOG_TYPE_ALWAYS) || ((logTypes & logType) != 0))
+    if ((tmpLogFile != NULL) || (logFile != NULL))
     {
-      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),NULL);
-
-      if (tmpLogFile != NULL)
+      if ((logType == LOG_TYPE_ALWAYS) || ((logTypes & logType) != 0))
       {
-        // append to temporary log file
-        (void)fprintf(tmpLogFile,"%s> ",String_cString(dateTime));
-        if (prefix != NULL)
-        {
-          (void)fputs(prefix,tmpLogFile);
-          (void)fprintf(tmpLogFile,": ");
-        }
-        va_copy(tmpArguments,arguments);
-        (void)vfprintf(tmpLogFile,text,tmpArguments);
-        va_end(tmpArguments);
-        fflush(tmpLogFile);
-      }
+        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),NULL);
 
-      if (logFile != NULL)
-      {
-        // append to log file
-        (void)fprintf(logFile,"%s> ",String_cString(dateTime));
-        if (prefix != NULL)
+        if (tmpLogFile != NULL)
         {
-          (void)fputs(prefix,logFile);
-          (void)fprintf(logFile,": ");
+          // append to temporary log file
+          (void)fprintf(tmpLogFile,"%s> ",String_cString(dateTime));
+          if (prefix != NULL)
+          {
+            (void)fputs(prefix,tmpLogFile);
+            (void)fprintf(tmpLogFile,": ");
+          }
+          va_copy(tmpArguments,arguments);
+          (void)vfprintf(tmpLogFile,text,tmpArguments);
+          va_end(tmpArguments);
+          fflush(tmpLogFile);
         }
-        va_copy(tmpArguments,arguments);
-        (void)vfprintf(logFile,text,tmpArguments);
-        va_end(tmpArguments);
-        fflush(logFile);
-      }
 
-      String_delete(dateTime);
+        if (logFile != NULL)
+        {
+          // append to log file
+          (void)fprintf(logFile,"%s> ",String_cString(dateTime));
+          if (prefix != NULL)
+          {
+            (void)fputs(prefix,logFile);
+            (void)fprintf(logFile,": ");
+          }
+          va_copy(tmpArguments,arguments);
+          (void)vfprintf(logFile,text,tmpArguments);
+          va_end(tmpArguments);
+          fflush(logFile);
+        }
+
+        String_delete(dateTime);
+      }
     }
   }
 }
@@ -3061,44 +3162,48 @@ LOCAL void executeIOlogPostProcess(void        *userData,
 
 void logPostProcess(void)
 {
-  TextMacro  textMacros[1];
-  StringList stderrList;
-  Errors     error;
-  StringNode *stringNode;
-  String     string;
+  SemaphoreLock semaphoreLock;
+  TextMacro     textMacros[1];
+  StringList    stderrList;
+  Errors        error;
+  StringNode    *stringNode;
+  String        string;
 
-  // flush log
-  if (logFile != NULL) fflush(logFile);
-
-  // close temporary log file
-  if (tmpLogFile != NULL) fclose(tmpLogFile); tmpLogFile = NULL;
-
-  // log post command for temporary log file
-  if (logPostCommand != NULL)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    printInfo(2,"Log post process '%s'...",logPostCommand);
+    // flush log
+    if (logFile != NULL) fflush(logFile);
 
-    TEXT_MACRO_N_STRING(textMacros[0],"%file",tmpLogFileName);
+    // close temporary log file
+    if (tmpLogFile != NULL) fclose(tmpLogFile); tmpLogFile = NULL;
 
-    StringList_init(&stderrList);
-    error = Misc_executeCommand(logPostCommand,
-                                textMacros,SIZE_OF_ARRAY(textMacros),
-                                CALLBACK(NULL,NULL),
-                                CALLBACK(executeIOlogPostProcess,&stderrList)
-                               );
-    if (error != ERROR_NONE)
+    // log post command for temporary log file
+    if (logPostCommand != NULL)
     {
-      printError("Cannot post-process log file (error: %s)\n",Error_getText(error));
-      STRINGLIST_ITERATE(&stderrList,stringNode,string)
-      {
-        printError("  %s\n",String_cString(string));
-      }
-    }
-    StringList_done(&stderrList);
-  }
+      printInfo(2,"Log post process '%s'...",logPostCommand);
 
-  // reset and reopen temporary log file
-  tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
+      TEXT_MACRO_N_STRING(textMacros[0],"%file",tmpLogFileName);
+
+      StringList_init(&stderrList);
+      error = Misc_executeCommand(logPostCommand,
+                                  textMacros,SIZE_OF_ARRAY(textMacros),
+                                  CALLBACK(NULL,NULL),
+                                  CALLBACK(executeIOlogPostProcess,&stderrList)
+                                 );
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot post-process log file (error: %s)\n",Error_getText(error));
+        STRINGLIST_ITERATE(&stderrList,stringNode,string)
+        {
+          printError("  %s\n",String_cString(string));
+        }
+      }
+      StringList_done(&stderrList);
+    }
+
+    // reset and reopen temporary log file
+    tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
+  }
 }
 
 void initJobOptions(JobOptions *jobOptions)
@@ -5192,17 +5297,9 @@ exit(1);
   error = ERROR_NONE;
   if      (daemonFlag)
   {
-    // open log file
-    if (logFileName != NULL)
-    {
-      logFile = fopen(logFileName,"a");
-      if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
-    }
-
-    // create session log file
-    File_setFileName(tmpLogFileName,tmpDirectory);
-    File_appendFileNameCString(tmpLogFileName,"log.txt");
-    tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
+    // open log file, create session log file
+    openLog();
+    openSessionLog();
 
     if (!stringIsEmpty(indexDatabaseFileName))
     {
@@ -5217,9 +5314,8 @@ exit(1);
                    Error_getText(error)
                   );
         // close log files
-        if (logFile != NULL) fclose(logFile);
-        fclose(tmpLogFile); (void)unlink(String_cString(tmpLogFileName));
-        File_delete(tmpLogFileName,FALSE);
+        closeSessionLog();
+        closeLog();
         CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
         doneAll();
         #ifndef NDEBUG
@@ -5266,9 +5362,8 @@ exit(1);
           if (indexHandle != NULL) Index_done(indexHandle);
 
           // close log files
-          if (logFile != NULL) fclose(logFile);
-          fclose(tmpLogFile); (void)unlink(String_cString(tmpLogFileName));
-          File_delete(tmpLogFileName,FALSE);
+          closeSessionLog();
+          closeLog();
 
           // free resources
           CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
@@ -5317,9 +5412,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     if (indexHandle != NULL) Index_done(indexHandle);
 
     // close log files
-    if (logFile != NULL) fclose(logFile);
-    fclose(tmpLogFile);
-    unlink(String_cString(tmpLogFileName));
+    closeSessionLog();
+    closeLog();
   }
   else if (batchFlag)
   {
