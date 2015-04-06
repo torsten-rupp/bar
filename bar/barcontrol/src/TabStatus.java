@@ -647,7 +647,13 @@ public class TabStatus
         }
       });
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,1,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
+      Widgets.layout(label,1,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
+                                                                                                BARControl.tr("KBytes"),
+                                                                                                BARControl.tr("MBytes"),
+                                                                                                BARControl.tr("GBytes")
+                                                                                               }
+                                                                            )
+                    );
       Widgets.addModifyListener(new WidgetModifyListener(label,doneBytes)
       {
         public String getString(WidgetVariable variable)
@@ -687,7 +693,13 @@ public class TabStatus
           }
         });
         label = Widgets.newLabel(composite,BARControl.tr("bytes/s"));
-        Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
+        Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes/s"),
+                                                                                                  BARControl.tr("KBytes/s"),
+                                                                                                  BARControl.tr("MBytes/s"),
+                                                                                                  BARControl.tr("GBytes/s")
+                                                                                                 }
+                                                                              )
+                      );
         Widgets.addModifyListener(new WidgetModifyListener(label,bytesPerSecond)
         {
           public String getString(WidgetVariable variable)
@@ -717,7 +729,13 @@ public class TabStatus
         }
       });
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,2,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
+      Widgets.layout(label,2,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
+                                                                                                BARControl.tr("KBytes"),
+                                                                                                BARControl.tr("MBytes"),
+                                                                                                BARControl.tr("GBytes")
+                                                                                               }
+                                                                            )
+                    );
       Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalBytes)
       {
         public String getString(WidgetVariable variable)
@@ -759,7 +777,13 @@ public class TabStatus
           }
         });
         label = Widgets.newLabel(composite,BARControl.tr("bytes/s"));
-        Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
+        Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes/s"),
+                                                                                                  BARControl.tr("KBytes/s"),
+                                                                                                  BARControl.tr("MBytes/s"),
+                                                                                                  BARControl.tr("GBytes/s")
+                                                                                                 }
+                                                                              )
+                      );
         Widgets.addModifyListener(new WidgetModifyListener(label,storageBytesPerSecond)
         {
           public String getString(WidgetVariable variable)
@@ -794,7 +818,13 @@ public class TabStatus
         }
       });
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,3,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
+      Widgets.layout(label,3,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
+                                                                                                BARControl.tr("KBytes"),
+                                                                                                BARControl.tr("MBytes"),
+                                                                                                BARControl.tr("GBytes")
+                                                                                               }
+                                                                            )
+                    );
       Widgets.addModifyListener(new WidgetModifyListener(label,skippedBytes)
       {
         public String getString(WidgetVariable variable)
@@ -828,7 +858,13 @@ public class TabStatus
         }
       });
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,4,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
+      Widgets.layout(label,4,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
+                                                                                                BARControl.tr("KBytes"),
+                                                                                                BARControl.tr("MBytes"),
+                                                                                                BARControl.tr("GBytes")
+                                                                                               }
+                                                                            )
+                    );
       Widgets.addModifyListener(new WidgetModifyListener(label,errorBytes)
       {
         public String getString(WidgetVariable variable)
@@ -886,7 +922,13 @@ public class TabStatus
         }
       });
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,5,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
+      Widgets.layout(label,5,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
+                                                                                                BARControl.tr("KBytes"),
+                                                                                                BARControl.tr("MBytes"),
+                                                                                                BARControl.tr("GBytes")
+                                                                                               }
+                                                                            )
+                    );
       Widgets.addModifyListener(new WidgetModifyListener(label,totalBytes)
       {
         public String getString(WidgetVariable variable)
@@ -1740,7 +1782,7 @@ public class TabStatus
     }
     if (error != Errors.NONE)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot change volume job (error: {0})",resultErrorMessage[0]));
+      Dialogs.error(shell,BARControl.tr("Cannot change volume (error: {0})",resultErrorMessage[0]));
     }
   }
 

@@ -990,7 +990,7 @@ public class TabJobs
      */
     ScheduleData()
     {
-      this(null,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,"*","",0,0,0,false,true,0,0,0,0);
+      this(null,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,"normal","",0,0,0,false,true,0,0,0,0);
     }
 
     /** create schedule data
@@ -1027,7 +1027,7 @@ public class TabJobs
       setDate(date);
       setWeekDays(weekDays);
       setTime(time);
-      this.archiveType          = getValidString(archiveType,new String[]{"*","full","incremental","differential"},"*");
+      this.archiveType          = getValidString(archiveType,new String[]{"normal","full","incremental","differential"},"normal");
       this.customText           = customText;
       this.minKeep              = minKeep;
       this.maxKeep              = maxKeep;
@@ -1878,16 +1878,16 @@ public class TabJobs
           }
         };
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Name",    SWT.LEFT, 390,true);
-        treeColumn.setToolTipText(BARControl.tr("Click to sort for name."));
+        treeColumn.setToolTipText(BARControl.tr("Click to sort by name."));
         treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Type",    SWT.LEFT, 160,true);
-        treeColumn.setToolTipText(BARControl.tr("Click to sort for type."));
+        treeColumn.setToolTipText(BARControl.tr("Click to sort by type."));
         treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Size",    SWT.RIGHT,100,true);
-        treeColumn.setToolTipText(BARControl.tr("Click to sort for size."));
+        treeColumn.setToolTipText(BARControl.tr("Click to sort by size."));
         treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Modified",SWT.LEFT, 100,true);
-        treeColumn.setToolTipText(BARControl.tr("Click to sort for modified time."));
+        treeColumn.setToolTipText(BARControl.tr("Click to sort by modification time."));
         treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
 
         widgetFileTree.addListener(SWT.Expand,new Listener()
@@ -2548,7 +2548,7 @@ public class TabJobs
         label = Widgets.newLabel(tab,BARControl.tr("Included")+":");
         Widgets.layout(label,0,0,TableLayoutData.NS);
         widgetIncludeTable = Widgets.newTable(tab);
-        widgetIncludeTable.setToolTipText(BARControl.tr("List with include patterns, right-click for context menu."));
+        widgetIncludeTable.setToolTipText(BARControl.tr("List of include patterns, right-click for context menu."));
         widgetIncludeTable.setHeaderVisible(false);
         Widgets.addTableColumn(widgetIncludeTable,0,SWT.LEFT,20);
         Widgets.addTableColumn(widgetIncludeTable,1,SWT.LEFT,1024,true);
@@ -2738,7 +2738,7 @@ public class TabJobs
         label = Widgets.newLabel(tab,BARControl.tr("Excluded")+":");
         Widgets.layout(label,2,0,TableLayoutData.NS);
         widgetExcludeList = Widgets.newList(tab);
-        widgetExcludeList.setToolTipText(BARControl.tr("List with exclude patterns, right-click for context menu."));
+        widgetExcludeList.setToolTipText(BARControl.tr("List of exclude patterns, right-click for context menu."));
         Widgets.layout(widgetExcludeList,2,1,TableLayoutData.NSWE);
         widgetExcludeList.addMouseListener(new MouseListener()
         {
@@ -2927,7 +2927,7 @@ public class TabJobs
         Widgets.layout(composite,4,1,TableLayoutData.WE);
         {
           button = Widgets.newCheckbox(composite,BARControl.tr("skip unreadable entries"));
-          button.setToolTipText(BARControl.tr("If enabled skip not readable entries (write information to log file).\nIf disabled stop job with an error."));
+          button.setToolTipText(BARControl.tr("If enabled then skip not readable entries (write information to log file).\nIf disabled stop job with an error."));
           Widgets.layout(button,0,0,TableLayoutData.NW);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2945,7 +2945,7 @@ public class TabJobs
           Widgets.addModifyListener(new WidgetModifyListener(button,skipUnreadable));
 
           button = Widgets.newCheckbox(composite,BARControl.tr("raw images"));
-          button.setToolTipText(BARControl.tr("If enabled store all data of a device into an image.\nIf disabled try to detect file system and only store used blocks to image."));
+          button.setToolTipText(BARControl.tr("If enabled then store all data of a device into an image.\nIf disabled try to detect file system and only store used blocks to image."));
           Widgets.layout(button,1,0,TableLayoutData.NW);
           button.addSelectionListener(new SelectionListener()
           {
@@ -3311,7 +3311,7 @@ public class TabJobs
         {
           // compress exclude list
           widgetCompressExcludeList = Widgets.newList(composite);
-          widgetCompressExcludeList.setToolTipText(BARControl.tr("List with compress exclude patterns. Entries which match to one of these patterns will not be compressed.\nRight-click for context menu."));
+          widgetCompressExcludeList.setToolTipText(BARControl.tr("List of compress exclude patterns. Entries which match to one of these patterns will not be compressed.\nRight-click for context menu."));
           Widgets.layout(widgetCompressExcludeList,0,0,TableLayoutData.NSWE);
           widgetCompressExcludeList.addMouseListener(new MouseListener()
           {
@@ -4631,7 +4631,7 @@ public class TabJobs
             }
 
             button = Widgets.newCheckbox(composite,BARControl.tr("overwrite archive files"));
-            button.setToolTipText(BARControl.tr("If enabled overwrite existing archive files. If disabled do not overwrite existing files and stop with an error."));
+            button.setToolTipText(BARControl.tr("If enabled then overwrite existing archive files. If disabled do not overwrite existing files and stop with an error."));
             Widgets.layout(button,1,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
@@ -10478,29 +10478,24 @@ throw new Error("NYI");
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,3,1,TableLayoutData.WE);
       {
-        widgetTypeDefault = Widgets.newRadio(subComposite,BARControl.tr("*"));
-        widgetTypeDefault.setToolTipText(BARControl.tr("Execute job with default type."));
-        Widgets.layout(widgetTypeDefault,0,0,TableLayoutData.W);
-        widgetTypeDefault.setSelection(scheduleData.archiveType.equals("*"));
-
         widgetTypeNormal = Widgets.newRadio(subComposite,BARControl.tr("normal"));
         widgetTypeNormal.setToolTipText(BARControl.tr("Execute job as normal backup (no incremental data)."));
-        Widgets.layout(widgetTypeNormal,0,1,TableLayoutData.W);
+        Widgets.layout(widgetTypeNormal,0,0,TableLayoutData.W);
         widgetTypeNormal.setSelection(scheduleData.archiveType.equals("normal"));
 
         widgetTypeFull = Widgets.newRadio(subComposite,BARControl.tr("full"));
         widgetTypeFull.setToolTipText(BARControl.tr("Execute job as full backup."));
-        Widgets.layout(widgetTypeFull,0,2,TableLayoutData.W);
+        Widgets.layout(widgetTypeFull,0,1,TableLayoutData.W);
         widgetTypeFull.setSelection(scheduleData.archiveType.equals("full"));
 
         widgetTypeIncremental = Widgets.newRadio(subComposite,BARControl.tr("incremental"));
         widgetTypeIncremental.setToolTipText(BARControl.tr("Execute job as incremental backup."));
-        Widgets.layout(widgetTypeIncremental,0,3,TableLayoutData.W);
+        Widgets.layout(widgetTypeIncremental,0,2,TableLayoutData.W);
         widgetTypeIncremental.setSelection(scheduleData.archiveType.equals("incremental"));
 
         widgetTypeDifferential = Widgets.newRadio(subComposite,BARControl.tr("differential"));
         widgetTypeDifferential.setToolTipText(BARControl.tr("Execute job as differential backup."));
-        Widgets.layout(widgetTypeDifferential,0,4,TableLayoutData.W);
+        Widgets.layout(widgetTypeDifferential,0,3,TableLayoutData.W);
         widgetTypeDifferential.setSelection(scheduleData.archiveType.equals("differential"));
       }
 
@@ -10657,7 +10652,7 @@ throw new Error("NYI");
         else if (widgetTypeFull.getSelection())         scheduleData.archiveType = "full";
         else if (widgetTypeIncremental.getSelection())  scheduleData.archiveType = "incremental";
         else if (widgetTypeDifferential.getSelection()) scheduleData.archiveType = "differential";
-        else                                            scheduleData.archiveType = "*";
+        else                                            scheduleData.archiveType = "normal";
         scheduleData.customText = widgetCustomText.getText();
         scheduleData.minKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep,0);
         scheduleData.maxKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep,0);
@@ -10739,16 +10734,46 @@ throw new Error("NYI");
         int    error          = Errors.NONE;
         String errorMessage[] = new String[1];
 
-        error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"date",scheduleData.getDate(),         errorMessage);
-        error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"weekdays",scheduleData.getWeekDays(),  errorMessage);
-        error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"time",scheduleData.getTime(),          errorMessage);
-        error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"archive-type",scheduleData.archiveType,errorMessage);
-        error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"text",scheduleData.customText,         errorMessage);
-        error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"min-keep",scheduleData.minKeep,        errorMessage);
-        error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"max-keep",scheduleData.maxKeep,        errorMessage);
-        error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"max-age",scheduleData.maxAge,          errorMessage);
-        error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"no-storage",scheduleData.noStorage,    errorMessage);
-        error |= BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled,         errorMessage);
+        if (error == Errors.NONE)
+        {
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"date",scheduleData.getDate(),          errorMessage);
+        }
+        if (error == Errors.NONE)
+        {
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"weekdays",scheduleData.getWeekDays(),  errorMessage);
+        }
+        if (error == Errors.NONE)
+        {
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"time",scheduleData.getTime(),          errorMessage);
+        }
+        if (error == Errors.NONE)
+        {
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"archive-type",scheduleData.archiveType,errorMessage);
+        }
+        if (error == Errors.NONE)
+        {
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"text",scheduleData.customText,         errorMessage);
+        }
+        if (error == Errors.NONE)
+        {
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"min-keep",scheduleData.minKeep,        errorMessage);
+        }
+        if (error == Errors.NONE)
+        {
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"max-keep",scheduleData.maxKeep,        errorMessage);
+        }
+        if (error == Errors.NONE)
+        {
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"max-age",scheduleData.maxAge,          errorMessage);
+        }
+        if (error == Errors.NONE)
+        {
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"no-storage",scheduleData.noStorage,    errorMessage);
+        }
+        if (error == Errors.NONE)
+        {
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled,         errorMessage);
+        }
         if (error != Errors.NONE)
         {
           Dialogs.error(shell,BARControl.tr("Cannot set schedule option for job ''{0}'':\n\n{1}",selectedJobData.name,errorMessage[0]));

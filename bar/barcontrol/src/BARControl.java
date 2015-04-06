@@ -802,10 +802,10 @@ class Units
    */
   public static String getByteUnit(double n)
   {
-    if      (n >= 1024*1024*1024) return "GBytes";
-    else if (n >=      1024*1024) return "MBytes";
-    else if (n >=           1024) return "KBytes";
-    else                          return "bytes";
+    if      (n >= 1024*1024*1024) return BARControl.tr("GBytes");
+    else if (n >=      1024*1024) return BARControl.tr("MBytes");
+    else if (n >=           1024) return BARControl.tr("KBytes");
+    else                          return BARControl.tr("bytes");
   }
 
   /** get byte size short unit
@@ -1283,7 +1283,7 @@ public class BARControl
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
     {
       label = new Label(composite,SWT.LEFT);
-      label.setText(tr("Server")+":");
+      label.setText(BARControl.tr("Server")+":");
       label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
 
       widgetServerName = new Text(composite,SWT.LEFT|SWT.BORDER);
@@ -1291,7 +1291,7 @@ public class BARControl
       widgetServerName.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
 
       label = new Label(composite,SWT.LEFT);
-      label.setText(tr("Password")+":");
+      label.setText(BARControl.tr("Password")+":");
       label.setLayoutData(new TableLayoutData(1,0,TableLayoutData.W));
 
       widgetPassword = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
@@ -1304,7 +1304,7 @@ public class BARControl
     composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));
     {
       widgetLoginButton = new Button(composite,SWT.CENTER);
-      widgetLoginButton.setText("Login");
+      widgetLoginButton.setText(BARControl.tr("Login"));
       widgetLoginButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT));
       widgetLoginButton.addSelectionListener(new SelectionListener()
       {
@@ -1321,7 +1321,7 @@ public class BARControl
       });
 
       button = new Button(composite,SWT.CENTER);
-      button.setText("Cancel");
+      button.setText(BARControl.tr("Cancel"));
       button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
