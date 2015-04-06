@@ -3898,10 +3898,13 @@ bool parseDateTimeNumber(ConstString s, int *n)
   }
   else
   {
-    i = 0;
-    while ((i < String_length(s)) && (String_index(s,i) == '0'))
+    i = STRING_BEGIN;
+    if (String_length(s) > 0)
     {
-      i++;
+      while ((i < String_length(s)-1) && (String_index(s,i) == '0'))
+      {
+        i++;
+      }
     }
     (*n) = (int)String_toInteger(s,i,&nextIndex,NULL,0);
     if (nextIndex != STRING_END) return FALSE;
@@ -3938,10 +3941,13 @@ bool parseDateMonth(ConstString s, int *month)
   else if (String_equalsIgnoreCaseCString(name,"dec")) (*month) = MONTH_DEC;
   else
   {
-    i = 0;
-    while ((i < String_length(s)) && (String_index(s,i) == '0'))
+    i = STRING_BEGIN;
+    if (String_length(s) > 0)
     {
-      i++;
+      while ((i < String_length(s)-1) && (String_index(s,i) == '0'))
+      {
+        i++;
+      }
     }
     (*month) = (uint)String_toInteger(s,i,&nextIndex,NULL,0);
     if ((nextIndex != STRING_END) || ((*month) < 1) || ((*month) > 12))
