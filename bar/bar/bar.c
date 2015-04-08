@@ -1740,10 +1740,8 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
     HALT_INSUFFICIENT_MEMORY();
   }
   deltaSourceNode->storageName = String_newCString(value);
-fprintf(stderr,"%s, %d: %p deltaSourceNode->storageName=%s\n",__FILE__,__LINE__,deltaSourceNode,String_cString(deltaSourceNode->storageName));
   deltaSourceNode->patternType = patternType;
   List_append((DeltaSourceList*)variable,deltaSourceNode);
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,((DeltaSourceList*)variable)->count);
 
   return TRUE;
 }
@@ -5065,10 +5063,9 @@ LOCAL int errorToExitcode(Errors error)
 
 int main(int argc, const char *argv[])
 {
-  Errors          error;
-  String          fileName;
-  bool            printInfoFlag;
-  DeltaSourceNode *deltaSourceNode;
+  Errors error;
+  String fileName;
+  bool   printInfoFlag;
 
   // init
   error = initAll();
@@ -5251,32 +5248,6 @@ exit(1);
     #endif /* not NDEBUG */
     return EXITCODE_FAIL;
   }
-
-#if 0
-  // add delta sources
-  error = ERROR_NONE;
-  LIST_ITERATE(&deltaSourceList,deltaSourceNode)
-  {
-    error = Source_add(deltaSourceNode->storageName,deltaSourceNode->patternType);
-    if (error != ERROR_NONE)
-    {
-      break;
-    }
-  }
-
-  {
-    printError("Cannot add delta sources (error: %s)!\n",Error_getText(error));
-    doneAll();
-    #ifndef NDEBUG
-      debugResourceDone();
-      File_debugDone();
-      Array_debugDone();
-      String_debugDone();
-      List_debugDone();
-    #endif /* not NDEBUG */
-    return errorToExitcode(error);
-  }
-#endif
 
   // create temporary directory
   error = File_getTmpDirectoryNameCString(tmpDirectory,"bar-XXXXXX",globalOptions.tmpDirectory);
