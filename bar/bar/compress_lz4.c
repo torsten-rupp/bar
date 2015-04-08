@@ -388,7 +388,7 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
         if (lz4Result == LZ4_OK)
         {
           // store compressed data
-          assert(compressLength < compressInfo->lz4.outputBufferSize-4);
+          assert(compressLength <= compressInfo->lz4.outputBufferSize-4);
 
           // put length of compress data+flags into output buffer before data
           compressLengthFlags = ((uint32)compressLength & LZ4_LENGTH_MASK) | LZ4_COMPRESSED_FLAG;
@@ -484,7 +484,7 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
         if (lz4Result == LZ4_OK)
         {
           // store compressed data
-          assert(compressLength < compressInfo->lz4.outputBufferSize-4);
+          assert(compressLength <= compressInfo->lz4.outputBufferSize-4);
 
           // put length of compress data+flags into output buffer before compressed data
           compressLengthFlags = ((uint32)compressLength & LZ4_LENGTH_MASK) | LZ4_COMPRESSED_FLAG | LZ4_END_OF_DATA_FLAG;
