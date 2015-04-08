@@ -156,7 +156,6 @@ typedef struct JobNode
   String          archiveName;                 // archive name
   EntryList       includeEntryList;            // included entries
   PatternList     excludePatternList;          // excluded entry patterns
-  PatternList     deltaSourcePatternList;      // delta source patterns
   PatternList     compressExcludePatternList;  // excluded compression patterns
   DeltaSourceList deltaSourceList;             // delta sources
   ScheduleList    scheduleList;                // schedule list
@@ -638,7 +637,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("delta-source",            JobNode,deltaSourcePatternList,                 configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER64("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
@@ -3337,10 +3336,8 @@ NULL,//                                                        scheduleTitle,
                                                          &excludePatternList,
                                                          &deltaSourceList,
                                                          &jobOptions,
-                                                         getCryptPassword,
-                                                         jobNode,
-                                                         (RestoreStatusInfoFunction)updateRestoreJobStatus,
-                                                         jobNode,
+                                                         CALLBACK(getCryptPassword,jobNode),
+                                                         CALLBACK((RestoreStatusInfoFunction)updateRestoreJobStatus,jobNode),
                                                          &pauseFlags.restore,
                                                          &jobNode->requestedAbortFlag
                                                         );
@@ -3905,7 +3902,7 @@ LOCAL void schedulerThreadCode(void)
   ScheduleNode *executeScheduleNode;
   ScheduleNode *scheduleNode;
   bool         pendingFlag;
-  int          z;
+  uint         sleepTime;
 
   while (!quitFlag)
   {
@@ -4007,11 +4004,11 @@ LOCAL void schedulerThreadCode(void)
     Semaphore_unlock(&jobList.lock);
 
     // sleep, check quit flag
-    z = 0;
-    while ((z < SLEEP_TIME_SCHEDULER_THREAD) && !quitFlag)
+    sleepTime = 0;
+    while ((sleepTime < SLEEP_TIME_SCHEDULER_THREAD) && !quitFlag)
     {
       Misc_udelay(10LL*MISC_US_PER_SECOND);
-      z += 10;
+      sleepTime += 10;
     }
   }
 }
@@ -4031,7 +4028,7 @@ LOCAL void pauseThreadCode(void)
 {
   SemaphoreLock semaphoreLock;
   uint64        nowTimestamp;
-  int           z;
+  uint          sleepTime;
 
   while (!quitFlag)
   {
@@ -4053,11 +4050,11 @@ LOCAL void pauseThreadCode(void)
     }
 
     // sleep, check update and quit flag
-    z = 0;
-    while ((z < SLEEP_TIME_PAUSE_THREAD) && !quitFlag)
+    sleepTime = 0;
+    while ((sleepTime < SLEEP_TIME_PAUSE_THREAD) && !quitFlag)
     {
       Misc_udelay(10LL*MISC_US_PER_SECOND);
-      z += 10;
+      sleepTime += 10;
     }
   }
 }
@@ -4182,7 +4179,7 @@ LOCAL void indexThreadCode(void)
   JobNode                *jobNode;
   IndexCryptPasswordNode *indexCryptPasswordNode;
   uint64                 totalEntries,totalSize;
-  int                    z;
+  uint                   sleepTime;
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
@@ -4339,11 +4336,11 @@ LOCAL void indexThreadCode(void)
     List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
 
     // sleep, check quit flag
-    z = 0;
-    while ((z < SLEEP_TIME_INDEX_THREAD) && !quitFlag)
+    sleepTime = 0;
+    while ((sleepTime < SLEEP_TIME_INDEX_THREAD) && !quitFlag)
     {
       Misc_udelay(10LL*MISC_US_PER_SECOND);
-      z += 10;
+      sleepTime += 10;
     }
   }
 
@@ -4414,11 +4411,11 @@ LOCAL void autoIndexUpdateThreadCode(void)
   uint64                     createdDateTime;
   IndexStates                indexState;
   uint64                     lastCheckedDateTime;
-  int                        z;
   uint64                     now;
   String                     dateTime;
   IndexQueryHandle           indexQueryHandle;
   IndexModes                 indexMode;
+  uint                       sleepTime;
 
   // initialize variables
   StringList_init(&storageDirectoryList);
@@ -4607,11 +4604,11 @@ LOCAL void autoIndexUpdateThreadCode(void)
     }
 
     // sleep, check quit flag
-    z = 0;
-    while ((z < SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD) && !quitFlag)
+    sleepTime = 0;
+    while ((sleepTime < SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD) && !quitFlag)
     {
       Misc_udelay(10LL*MISC_US_PER_SECOND);
-      z += 10;
+      sleepTime += 10;
     }
   }
 
@@ -7731,10 +7728,10 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,INDEX_UUID_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  PatternNode   *patternNode;
+  StaticString    (jobUUID,INDEX_UUID_LENGTH);
+  SemaphoreLock   semaphoreLock;
+  JobNode         *jobNode;
+  DeltaSourceNode *deltaSourceNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7757,13 +7754,13 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
       return;
     }
 
-    // send soource list
-    LIST_ITERATE(&jobNode->deltaSourcePatternList,patternNode)
+    // send delta source list
+    LIST_ITERATE(&jobNode->deltaSourceList,deltaSourceNode)
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "patternType=%s pattern=%'S",
-                       Pattern_patternTypeToString(patternNode->pattern.type,"unknown"),
-                       patternNode->string
+                       Pattern_patternTypeToString(deltaSourceNode->patternType,"unknown"),
+                       deltaSourceNode->storageName
                       );
     }
   }
@@ -7813,7 +7810,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
     }
 
     // clear source list
-    PatternList_clear(&jobNode->deltaSourcePatternList);
+    DeltaSourceList_clear(&jobNode->deltaSourceList);
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -7878,7 +7875,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
     }
 
     // add to source list
-    PatternList_append(&jobNode->deltaSourcePatternList,pattern,patternType);
+    DeltaSourceList_append(&jobNode->deltaSourceList,pattern,patternType);
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -8304,7 +8301,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job UUID, date, weekday, time, enable, type
+  // get job UUID, date, weekday, time, archive type, custome text, min./max keep, max. age, enabled
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
@@ -13444,6 +13441,7 @@ Errors Server_run(uint             port,
                   const JobOptions *defaultJobOptions
                  )
 {
+  AutoFreeList          autoFreeList;
   Errors                error;
   bool                  serverFlag,serverTLSFlag;
   ServerSocketHandle    serverSocketHandle,serverTLSSocketHandle;
@@ -13464,6 +13462,7 @@ Errors Server_run(uint             port,
   ClientNode            *disconnectClientNode;
 
   // initialize variables
+  AutoFree_init(&autoFreeList);
   serverPassword          = password;
   serverJobsDirectory     = jobsDirectory;
   serverDefaultJobOptions = defaultJobOptions;
@@ -13478,6 +13477,11 @@ Errors Server_run(uint             port,
   pauseFlags.indexUpdate  = FALSE;
   pauseEndTimestamp       = 0LL;
   quitFlag                = FALSE;
+  AUTOFREE_ADD(&autoFreeList,&jobList.lock,{ Semaphore_done(&jobList.lock); });
+  AUTOFREE_ADD(&autoFreeList,&jobList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
+  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
 
   // create jobs directory if necessary
   if (!File_existsCString(serverJobsDirectory))
@@ -13499,6 +13503,7 @@ Errors Server_run(uint             port,
   if (!File_isDirectoryCString(serverJobsDirectory))
   {
     printError("'%s' is not a directory!\n",serverJobsDirectory);
+    AutoFree_cleanup(&autoFreeList);
     return ERROR_NOT_A_DIRECTORY;
   }
 
@@ -13520,10 +13525,12 @@ Errors Server_run(uint             port,
                  port,
                  Error_getText(error)
                 );
+      AutoFree_cleanup(&autoFreeList);
       return error;
     }
     printInfo(1,"Started server on port %d\n",port);
     serverFlag = TRUE;
+    AUTOFREE_ADD(&autoFreeList,&serverSocketHandle,{ Network_doneServer(&serverSocketHandle); });
   }
   if (tlsPort != 0)
   {
@@ -13546,18 +13553,19 @@ Errors Server_run(uint             port,
                      tlsPort,
                      Error_getText(error)
                     );
-          if (port != 0) Network_doneServer(&serverSocketHandle);
-          return FALSE;
+           AutoFree_cleanup(&autoFreeList);
+           return FALSE;
         }
         printInfo(1,"Started TLS/SSL server on port %u\n",tlsPort);
         serverTLSFlag = TRUE;
+        AUTOFREE_ADD(&autoFreeList,&serverTLSSocketHandle,{ Network_doneServer(&serverTLSSocketHandle); });
       #else /* not HAVE_GNU_TLS */
         UNUSED_VARIABLE(caFileName);
         UNUSED_VARIABLE(certFileName);
         UNUSED_VARIABLE(keyFileName);
 
         printError("TLS/SSL server is not supported!\n");
-        Network_doneServer(&serverSocketHandle);
+        if (serverFlag) Network_doneServer(&serverSocketHandle);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GNU_TLS */
     }
@@ -13578,6 +13586,7 @@ Errors Server_run(uint             port,
     {
       printError("Cannot start any server!\n");
     }
+    AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_ARGUMENT;
   }
   if (Password_isEmpty(password))
@@ -13956,6 +13965,7 @@ Errors Server_run(uint             port,
   List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
   Semaphore_done(&jobList.lock);
   List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
+  AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
 }
