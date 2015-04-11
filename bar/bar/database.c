@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <ctype.h>
 #include <unistd.h>
 #if defined(HAVE_PCRE)
@@ -745,6 +746,12 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
   assert(databaseHandle != NULL);
   assert(fileName != NULL);
 
+  // init variables
+  databaseHandle->handle = NULL;
+  #ifndef NDEBUG
+    stringClear(databaseHandle->fileName);
+  #endif /* not NDEBUG */
+
   // create directory if needed
   directory = File_getFilePathNameCString(String_new(),fileName);
   if (   !String_isEmpty(directory)
@@ -899,7 +906,9 @@ Errors Database_copyTable(DatabaseHandle *fromDatabaseHandle,
   uint             column;
 
   assert(fromDatabaseHandle != NULL);
+  assert(fromDatabaseHandle->handle != NULL);
   assert(toDatabaseHandle != NULL);
+  assert(toDatabaseHandle->handle != NULL);
   assert(tableName != NULL);
 
   // get table columns
@@ -1129,6 +1138,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   uint             n;
   uint             column;
 
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
   // get table columns
   error = getTableColumnList(&columnList,databaseHandle,tableName);
   if (error != ERROR_NONE)
@@ -1136,7 +1150,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     return error;
   }
 
-//__BP();
   sqlString = String_new();
   value     = String_new();
   BLOCK_DOX(error,
@@ -1786,6 +1799,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   int          sqliteResult;
 
   assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
   assert(value != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
@@ -1867,6 +1881,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
   int          sqliteResult;
 
   assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
   assert(value != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
@@ -2131,6 +2146,7 @@ int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
   int64 databaseId;
 
   assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
 
   databaseId = DATABASE_ID_NONE;
   BLOCK_DO(sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
