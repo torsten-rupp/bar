@@ -384,20 +384,6 @@ LOCAL Errors upgradeFromVersion1(const char *databaseFileName)
 
 LOCAL Errors upgradeFromVersion2(const char *databaseFileName)
 {
-#if 0
-  Errors      error;
-  IndexHandle indexHandle;
-
-  // add uuid to storage
-  error = Database_execute(&indexHandle.databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "ALTER TABLE storage ADD COLUMN uuid TEXT"
-                          );
-  if (error != ERROR_NONE) return error;
-
-  return ERROR_NONE;
-#endif
-
   String      newDatabaseFileName;
   Errors      error;
   IndexHandle oldIndexHandle,newIndexHandle;
@@ -574,6 +560,7 @@ LOCAL Errors upgradeFromVersion3(const char *databaseFileName)
   if (error != ERROR_NONE)
   {
     String_delete(newDatabaseFileName);
+    (void)closeIndex(&oldIndexHandle);
     return error;
   }
   (void)Database_setEnabledForeignKeys(&newIndexHandle.databaseHandle,FALSE);
@@ -631,9 +618,9 @@ LOCAL Errors upgradeFromVersion3(const char *databaseFileName)
   if (error != ERROR_NONE)
   {
     (void)closeIndex(&newIndexHandle);
-    (void)closeIndex(&oldIndexHandle);
     (void)File_delete(newDatabaseFileName,FALSE);
     String_delete(newDatabaseFileName);
+    (void)closeIndex(&oldIndexHandle);
     return error;
   }
 
@@ -828,8 +815,8 @@ LOCAL Errors upgradeIndex(IndexHandle *indexHandle)
 }
 
 /***********************************************************************\
-* Name   : cleanUpIncompleteUpdate
-* Purpose: reset incomplete updated database entries
+* Name   : cleanUpDuplicateMeta
+* Purpose: delete duplicate meta data
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -840,6 +827,9 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
 {
   String              name;
   DatabaseQueryHandle databaseQueryHandle;
+
+  assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
 
   // init variables
   name = String_new();
@@ -890,6 +880,9 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
   DatabaseId       storageId;
   StorageSpecifier storageSpecifier;
   String           storageName,printableStorageName;
+
+  assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
@@ -960,6 +953,9 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
   StorageSpecifier storageSpecifier;
   String           storageName,printableStorageName;
 
+  assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
+
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
@@ -1024,6 +1020,9 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   DatabaseId       databaseId;
+
+  assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
 
   // initialize variables
   storageName = String_new();
@@ -1232,6 +1231,9 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
   DatabaseId       storageId;
   IndexQueryHandle indexQueryHandle;
 
+  assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
+
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
@@ -1309,6 +1311,9 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   bool             deletedIndex;
   IndexQueryHandle indexQueryHandle1,indexQueryHandle2;
   int64            duplicateStorageId;
+
+  assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
@@ -3127,6 +3132,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
                        )
 {
   assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3234,6 +3240,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
                         )
 {
   assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3341,6 +3348,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
                             )
 {
   assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3451,6 +3459,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
                        )
 {
   assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3568,6 +3577,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
                            )
 {
   assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
