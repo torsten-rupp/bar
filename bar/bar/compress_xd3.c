@@ -33,7 +33,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define XD3_DEBUG
+#define _XDELTA_DEBUG
 
 /***************************** Constants *******************************/
 
@@ -107,9 +107,9 @@ LOCAL Errors CompressXD3_compressData(CompressInfo *compressInfo)
                                compressInfo->xdelta.inputBuffer,
                                n
                               );
-                #ifdef XD3_DEBUG
-                  fprintf(stderr,"%s, %d: compress: move input=%u\n",__FILE__,__LINE__,n);
-                #endif /* XD3_DEBUG */
+                #ifdef XDELTA_DEBUG
+                  fprintf(stderr,"%s, %d: compress: move input=%lu\n",__FILE__,__LINE__,n);
+                #endif /* XDELTA_DEBUG */
 #if 0
 {
 int h = open("xd3.data",O_CREAT|O_WRONLY|O_APPEND,0664);
@@ -153,9 +153,9 @@ close(h);
                              compressInfo->xdelta.stream.next_out,
                              compressInfo->xdelta.stream.avail_out
                             );
-              #ifdef XD3_DEBUG
+              #ifdef XDELTA_DEBUG
                 fprintf(stderr,"%s, %d: compress: move output=%u\n",__FILE__,__LINE__,compressInfo->xdelta.stream.avail_out);
-              #endif /* XD3_DEBUG */
+              #endif /* XDELTA_DEBUG */
 
               // done compressed data
               xd3_consume_output(&compressInfo->xdelta.stream);
@@ -175,26 +175,26 @@ close(h);
               }
               compressInfo->xdelta.source.onblk    = bytesRead;
               compressInfo->xdelta.source.curblkno = compressInfo->xdelta.source.getblkno;
-              #ifdef XD3_DEBUG
-                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
-              #endif /* XD3_DEBUG */
+              #ifdef XDELTA_DEBUG
+xxx                fprintf(stderr,"%s, %d: compress: get block=%u: %lu\n",__FILE__,__LINE__,(uint)compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XDELTA_DEBUG */
               break;
             case XD3_GOTHEADER:
-              #ifdef XD3_DEBUG
-                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
-              #endif /* XD3_DEBUG */
+              #ifdef XDELTA_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %lu\n",__FILE__,__LINE__,(uint)compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XDELTA_DEBUG */
 //fprintf(stderr,"%s,%d: XD3_GOTHEADER\n",__FILE__,__LINE__);
               break;
             case XD3_WINSTART:
-              #ifdef XD3_DEBUG
-                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
-              #endif /* XD3_DEBUG */
+              #ifdef XDELTA_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %lu\n",__FILE__,__LINE__,(uint)compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XDELTA_DEBUG */
 //fprintf(stderr,"%s,%d: XD3_WINSTART\n",__FILE__,__LINE__);
               break;
             case XD3_WINFINISH:
-              #ifdef XD3_DEBUG
-                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
-              #endif /* XD3_DEBUG */
+              #ifdef XDELTA_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %lu\n",__FILE__,__LINE__,(uint)compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XDELTA_DEBUG */
 //fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
               break;
             default:
@@ -253,9 +253,9 @@ close(h);
                                compressInfo->xdelta.inputBuffer,
                                n
                               );
-                #ifdef XD3_DEBUG
-                  fprintf(stderr,"%s, %d: compress: move input=%u\n",__FILE__,__LINE__,n);
-                #endif /* XD3_DEBUG */
+                #ifdef XDELTA_DEBUG
+                  fprintf(stderr,"%s, %d: compress: move input=%lu\n",__FILE__,__LINE__,n);
+                #endif /* XDELTA_DEBUG */
 
                 xd3_avail_input(&compressInfo->xdelta.stream,
                                 compressInfo->xdelta.inputBuffer,
@@ -295,9 +295,9 @@ close(h);
                              compressInfo->xdelta.stream.next_out,
                              compressInfo->xdelta.stream.avail_out
                             );
-              #ifdef XD3_DEBUG
+              #ifdef XDELTA_DEBUG
                 fprintf(stderr,"%s, %d: compress: move output=%u\n",__FILE__,__LINE__,compressInfo->xdelta.stream.avail_out);
-              #endif /* XD3_DEBUG */
+              #endif /* XDELTA_DEBUG */
 
               // done compressed data
               xd3_consume_output(&compressInfo->xdelta.stream);
@@ -316,26 +316,26 @@ close(h);
               }
               compressInfo->xdelta.source.onblk    = bytesRead;
               compressInfo->xdelta.source.curblkno = compressInfo->xdelta.source.getblkno;
-              #ifdef XD3_DEBUG
-                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
-              #endif /* XD3_DEBUG */
+              #ifdef XDELTA_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %lu\n",__FILE__,__LINE__,(uint)compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XDELTA_DEBUG */
               break;
             case XD3_GOTHEADER:
-              #ifdef XD3_DEBUG
-                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
-              #endif /* XD3_DEBUG */
+              #ifdef XDELTA_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %lu\n",__FILE__,__LINE__,(uint)compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XDELTA_DEBUG */
 //fprintf(stderr,"%s,%d: XD3_GOTHEADER\n",__FILE__,__LINE__);
               break;
             case XD3_WINSTART:
-              #ifdef XD3_DEBUG
-                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
-              #endif /* XD3_DEBUG */
+              #ifdef XDELTA_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %lu\n",__FILE__,__LINE__,(uint)compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XDELTA_DEBUG */
 //fprintf(stderr,"%s,%d: XD3_WINSTART\n",__FILE__,__LINE__);
               break;
             case XD3_WINFINISH:
-              #ifdef XD3_DEBUG
-                fprintf(stderr,"%s, %d: compress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
-              #endif /* XD3_DEBUG */
+              #ifdef XDELTA_DEBUG
+                fprintf(stderr,"%s, %d: compress: get block=%u: %lu\n",__FILE__,__LINE__,(uint)compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XDELTA_DEBUG */
 //fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
               break;
             default:
@@ -447,9 +447,9 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
                                compressInfo->xdelta.inputBuffer,
                                n
                               );
-                #ifdef XD3_DEBUG
+                #ifdef XDELTA_DEBUG
                   fprintf(stderr,"%s, %d: decompress: move input=%u\n",__FILE__,__LINE__,compressInfo->xdelta.stream.avail_out);
-                #endif /* XD3_DEBUG */
+                #endif /* XDELTA_DEBUG */
                 xd3_avail_input(&compressInfo->xdelta.stream,
                                 compressInfo->xdelta.inputBuffer,
                                 (usize_t)n
@@ -483,9 +483,9 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
                              compressInfo->xdelta.stream.next_out,
                              compressInfo->xdelta.stream.avail_out
                             );
-              #ifdef XD3_DEBUG
+              #ifdef XDELTA_DEBUG
                 fprintf(stderr,"%s, %d: decompress: move output=%u\n",__FILE__,__LINE__,compressInfo->xdelta.stream.avail_out);
-              #endif /* XD3_DEBUG */
+              #endif /* XDELTA_DEBUG */
 
               // done undecompressed data
               xd3_consume_output(&compressInfo->xdelta.stream);
@@ -506,24 +506,24 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
               }
               compressInfo->xdelta.source.onblk    = bytesRead;
               compressInfo->xdelta.source.curblkno = compressInfo->xdelta.source.getblkno;
-              #ifdef XD3_DEBUG
-                fprintf(stderr,"%s, %d: decompress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
-              #endif /* XD3_DEBUG */
+              #ifdef XDELTA_DEBUG
+                fprintf(stderr,"%s, %d: decompress: get block=%u: %lu\n",__FILE__,__LINE__,(uint)compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XDELTA_DEBUG */
               break;
             case XD3_GOTHEADER:
-              #ifdef XD3_DEBUG
+              #ifdef XDELTA_DEBUG
                 fprintf(stderr,"%s, %d: decompress: XD3_GOTHEADER\n",__FILE__,__LINE__);
-              #endif /* XD3_DEBUG */
+              #endif /* XDELTA_DEBUG */
               break;
             case XD3_WINSTART:
-              #ifdef XD3_DEBUG
+              #ifdef XDELTA_DEBUG
                 fprintf(stderr,"%s, %d: decompress: XD3_WINSTART\n",__FILE__,__LINE__);
-              #endif /* XD3_DEBUG */
+              #endif /* XDELTA_DEBUG */
               break;
             case XD3_WINFINISH:
-              #ifdef XD3_DEBUG
+              #ifdef XDELTA_DEBUG
                 fprintf(stderr,"%s, %d: decompress: XD3_WINFINISH\n",__FILE__,__LINE__);
-              #endif /* XD3_DEBUG */
+              #endif /* XDELTA_DEBUG */
               break;
             default:
               return ERRORX_(INFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
@@ -600,9 +600,9 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
                              compressInfo->xdelta.stream.next_out,
                              compressInfo->xdelta.stream.avail_out
                             );
-              #ifdef XD3_DEBUG
+              #ifdef XDELTA_DEBUG
                 fprintf(stderr,"%s, %d: decompress: length=%u\n",__FILE__,__LINE__,compressInfo->xdelta.stream.avail_out);
-              #endif /* XD3_DEBUG */
+              #endif /* XDELTA_DEBUG */
 
               // done decompressed data
               xd3_consume_output(&compressInfo->xdelta.stream);
@@ -623,25 +623,24 @@ LOCAL Errors CompressXD3_decompressData(CompressInfo *compressInfo)
               }
               compressInfo->xdelta.source.onblk    = bytesRead;
               compressInfo->xdelta.source.curblkno = compressInfo->xdelta.source.getblkno;
-//dumpMemory(FALSE,compressInfo->xdelta.source.curblk,bytesRead);
-              #ifdef XD3_DEBUG
-                fprintf(stderr,"%s, %d: decompress: get block=%u: %u\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno,bytesRead);
-              #endif /* XD3_DEBUG */
+              #ifdef XDELTA_DEBUG
+                fprintf(stderr,"%s, %d: decompress: get block=%u: %lu\n",__FILE__,__LINE__,(uint)compressInfo->xdelta.source.getblkno,bytesRead);
+              #endif /* XDELTA_DEBUG */
               break;
             case XD3_GOTHEADER:
-              #ifdef XD3_DEBUG
+              #ifdef XDELTA_DEBUG
                 fprintf(stderr,"%s, %d: decompress: XD3_GOTHEADER\n",__FILE__,__LINE__);
-              #endif /* XD3_DEBUG */
+              #endif /* XDELTA_DEBUG */
               break;
             case XD3_WINSTART:
-              #ifdef XD3_DEBUG
+              #ifdef XDELTA_DEBUG
                 fprintf(stderr,"%s, %d: decompress: XD3_WINSTART\n",__FILE__,__LINE__);
-              #endif /* XD3_DEBUG */
+              #endif /* XDELTA_DEBUG */
               break;
             case XD3_WINFINISH:
-              #ifdef XD3_DEBUG
+              #ifdef XDELTA_DEBUG
                 fprintf(stderr,"%s, %d: decompress: XD3_WINFINISH\n",__FILE__,__LINE__);
-              #endif /* XD3_DEBUG */
+              #endif /* XDELTA_DEBUG */
               break;
             default:
               return ERRORX_(INFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
