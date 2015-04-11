@@ -167,6 +167,8 @@ typedef struct
   extern "C" {
 #endif
 
+#ifndef NDEBUG
+
 /***********************************************************************\
 * Name   : debugStringInit
 * Purpose: initialize debug functions
@@ -176,7 +178,6 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#ifndef NDEBUG
 LOCAL void debugStringInit(void)
 {
   pthread_mutex_init(&debugStringLock,NULL);
@@ -188,7 +189,96 @@ LOCAL void debugStringInit(void)
     debugMaxStringNextWarningCount = WARN_MAX_STRINGS;
   #endif /* MAX_STRINGS_CHECK */
 }
+
+/***********************************************************************\
+* Name   : debugFindAllocatedString
+* Purpose: find string in allocated-list
+* Input  : string - string
+* Output : -
+* Return : string node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL DebugStringNode *debugFindAllocatedString(ConstString string)
+{
+  DebugStringNode *debugStringNode;
+
+  debugStringNode = debugStringAllocList.head;
+  while ((debugStringNode != NULL) && (debugStringNode->string != string))
+  {
+    debugStringNode = debugStringNode->next;
+  }
+
+  return debugStringNode;
+}
+
+/***********************************************************************\
+* Name   : debugFindFreedString
+* Purpose: find string in free-list
+* Input  : string - string
+* Output : -
+* Return : string node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL DebugStringNode *debugFindFreedString(ConstString string)
+{
+  DebugStringNode *debugStringNode;
+
+  debugStringNode = debugStringFreeList.head;
+  while ((debugStringNode != NULL) && (debugStringNode->string != string))
+  {
+    debugStringNode = debugStringNode->next;
+  }
+
+  return debugStringNode;
+}
+
 #endif /* not NDEBUG */
+
+/***********************************************************************\
+* Name   : printErrorConstString
+* Purpose: print error for modify constant string
+* Input  : string - string
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printErrorConstString(const struct __String *string)
+{
+  #ifndef NDEBUG
+    DebugStringNode *debugStringNode;
+
+    pthread_once(&debugStringInitFlag,debugStringInit);
+
+    pthread_mutex_lock(&debugStringLock);
+    {
+      debugStringNode = debugFindAllocatedString(string);
+      if (debugStringNode != NULL)
+      {
+        fprintf(stderr,
+                "FATAL ERROR: cannot modify constant string '%s' which was allocated at %s, %ld!\n",
+                string->data,
+                debugStringNode->allocFileName,
+                debugStringNode->allocLineNb
+               );
+      }
+      else
+      {
+        fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list\n",
+                string->data
+               );
+      }
+      #ifdef HAVE_BACKTRACE
+        debugDumpCurrentStackTrace(stderr,"",0);
+      #endif /* HAVE_BACKTRACE */
+    }
+    pthread_mutex_unlock(&debugStringLock);
+  #else /* NDEBUG */
+    fprintf(stderr,"FATAL ERROR: cannot modify constant string '%s' - program halted\n",string->data);
+  #endif /* not NDEBUG */
+}
 
 /***********************************************************************\
 * Name   : allocString
@@ -338,11 +428,7 @@ LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpS
     pthread_mutex_lock(&debugStringLock);
     {
       // remove string from allocated list
-      debugStringNode = debugStringAllocList.head;
-      while ((debugStringNode != NULL) && (debugStringNode->string != tmpString))
-      {
-        debugStringNode = debugStringNode->next;
-      }
+      debugStringNode = debugFindAllocatedString(tmpString);
       if (debugStringNode == NULL)
       {
         HALT_INTERNAL_ERROR("Temporary string not found in allocated string list!");
@@ -388,7 +474,7 @@ LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
         if (newData == NULL)
         {
           fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%lu bytes) - program halted: %s\n",newMaxLength*sizeof(char),strerror(errno));
-          exit(128);
+          abort();
         }
         #ifndef NDEBUG
           pthread_once(&debugStringInitFlag,debugStringInit);
@@ -411,12 +497,12 @@ LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
       if ((newLength + 1) > string->maxLength)
       {
         fprintf(stderr,"FATAL ERROR: exceeded static string (required length %lu, max. length %lu) - program halted\n",newLength,(ulong)string->maxLength-1);
-        exit(128);
+        abort();
       }
       break;
     case STRING_TYPE_CONST:
-      fprintf(stderr,"FATAL ERROR: cannot modify constant string - program halted\n");
-      exit(128);
+      printErrorConstString(string);
+      HALT_INTERNAL_ERROR("modify const string");
       break; // not reached
     default:
       HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1997,11 +2083,7 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
       debugStringAllocList.allocatedMemory += sizeof(struct __String)+string->maxLength;
 
       // find string in free-list; reuse or allocate new debug node
-      debugStringNode = debugStringFreeList.head;
-      while ((debugStringNode != NULL) && (debugStringNode->string != string))
-      {
-        debugStringNode = debugStringNode->next;
-      }
+      debugStringNode = debugFindFreedString(string);
       if (debugStringNode != NULL)
       {
         List_remove(&debugStringFreeList,debugStringNode);
@@ -2222,11 +2304,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
       pthread_mutex_lock(&debugStringLock);
       {
         // find string in free-list to check for duplicate free
-        debugStringNode = debugStringFreeList.head;
-        while ((debugStringNode != NULL) && (debugStringNode->string != string))
-        {
-          debugStringNode = debugStringNode->next;
-        }
+        debugStringNode = debugFindFreedString(string);
         if (debugStringNode != NULL)
         {
           fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
@@ -2246,11 +2324,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
         }
 
         // remove string from allocated list, add string to free-list, shorten list
-        debugStringNode = debugStringAllocList.head;
-        while ((debugStringNode != NULL) && (debugStringNode->string != string))
-        {
-          debugStringNode = debugStringNode->next;
-        }
+        debugStringNode = debugFindAllocatedString(string);
         if (debugStringNode != NULL)
         {
           // remove from allocated list
@@ -4904,18 +4978,10 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
 
       pthread_mutex_lock(&debugStringLock);
       {
-        debugStringNode = debugStringAllocList.head;
-        while ((debugStringNode != NULL) && (debugStringNode->string != string))
-        {
-          debugStringNode = debugStringNode->next;
-        }
+        debugStringNode = debugFindAllocatedString(string);
         if (debugStringNode == NULL)
         {
-          debugStringNode = debugStringFreeList.head;
-          while ((debugStringNode != NULL) && (debugStringNode->string != string))
-          {
-            debugStringNode = debugStringNode->next;
-          }
+          debugStringNode = debugFindFreedString(string);
 
           #ifdef HAVE_BACKTRACE
             debugDumpCurrentStackTrace(stderr,"",0);
