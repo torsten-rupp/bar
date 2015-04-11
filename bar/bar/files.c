@@ -1709,12 +1709,20 @@ Errors File_read(FileHandle *fileHandle,
   else
   {
     // read all requested data
+    errno=0;
     while (bufferLength > 0L)
     {
       n = fread(buffer,1,bufferLength,fileHandle->file);
       if (n <= 0)
       {
-        return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
+        if (ferror(fileHandle->file) != 0)
+        {
+          return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
+        }
+        else
+        {
+          return ERROR_END_OF_FILE;
+        }
       }
       buffer = (byte*)buffer+n;
       bufferLength -= (ulong)n;
