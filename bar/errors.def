@@ -313,6 +313,7 @@ ERROR IO_ERROR
   errorText[sizeof(errorText)-1] = '\0';
 
 ERROR READ_FILE                      "read file fail"
+ERROR END_OF_FILE                    "end of file"
 ERROR WRITE_FILE                     "write file fail"
 ERROR DELETE_FILE                    "delete file fail"
 
