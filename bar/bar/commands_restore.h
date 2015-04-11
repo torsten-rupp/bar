@@ -52,14 +52,14 @@ typedef struct
 * Name   : RestoreStatusInfoFunction
 * Purpose: restore status info call-back
 * Input  : userData          - user data
-* @param   error             - error code
-* @param   restoreStatusInfo - restore status info
+*          error             - error code
+*          restoreStatusInfo - restore status info
 * Output : -
-* Return : bool TRUE to continue, FALSE to abort
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-typedef bool(*RestoreStatusInfoFunction)(void                    *userData,
+typedef void(*RestoreStatusInfoFunction)(void                    *userData,
                                          Errors                  error,
                                          const RestoreStatusInfo *restoreStatusInfo
                                         );
@@ -87,11 +87,11 @@ typedef bool(*RestoreStatusInfoFunction)(void                    *userData,
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
 *                                             call back
-*          createStatusInfoFunction         - status info call back
+*          restoreStatusInfoFunction        - status info call back
 *                                             function (can be NULL)
-*          createStatusInfoUserData         - user data for status info
+*          restoreStatusInfoUserData        - user data for status info
 *                                             function
-*          pauseFlag                        - pause flag (can be NULL)
+*          pauseRestoreFlag                 - pause restore flag (can be NULL)
 *          requestedAbortFlag               - request abort flag (can be
 *                                             NULL)
 * Output : -
@@ -108,7 +108,7 @@ Errors Command_restore(const StringList                *storageNameList,
                        void                            *archiveGetCryptPasswordUserData,
                        RestoreStatusInfoFunction       restoreStatusInfoFunction,
                        void                            *restoreStatusInfoUserData,
-                       bool                            *pauseFlag,
+                       bool                            *pauseRestoreFlag,
                        bool                            *requestedAbortFlag
                       );
 
