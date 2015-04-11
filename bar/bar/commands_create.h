@@ -61,8 +61,8 @@ typedef struct
 * Name   : CreateStatusInfoFunction
 * Purpose: create status info call-back
 * Input  : userData         - user data
-* @param   error            - error code
-* @param   createStatusInfo - create status info
+*          error            - error code
+*          createStatusInfo - create status info
 * Output : -
 * Return : -
 * Notes  : -
@@ -129,7 +129,7 @@ Errors Command_create(const String                    jobUUID,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
                       const PatternList               *compressExcludePatternList,
-                      const DeltaSourceList           *deltaSourceList,
+                      DeltaSourceList                 *deltaSourceList,
                       JobOptions                      *jobOptions,
                       ArchiveTypes                    archiveType,
                       const String                    scheduleTitle,
