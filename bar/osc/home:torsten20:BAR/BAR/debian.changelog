@@ -1,16 +1,60 @@
-bar (0.18e) stable; urgency=low
-  * removed nice-level in init scripts
-  * barcontrol: fixed selection and storage of
-    file names via file dialog
-  * barcontrol: fixed restore destination directory
-    bug + overwrite flag
+bar (0.19) stable; urgency=low
+  * added LZO compression
+  * added LZ4 compression
+  * fixed large file support: on some systems large files
+    (>4GB) could be incompletely written
+  * do not modify atime of files when creating or compare
+    archives (NO_ATIME)
+  * barcontrol: added new/clone/rename/delete to status tab
+    option menu
+  * added pre-/post-command
+  * improved crash reporting: include symbol file
+  * improved logging
+  * barcontrol: added different exclude types in
+    context menu (nodump, .nobackup, exclude)
+  * barcontrol: added pre-/post scripts
+  * barcontrol: added archive tree view to restore tab
+  * added "entities" for set of created storage files:
+    keep set of storage in the internal database and show
+    created backups in a tree view in barcontrol
+  * barcontrol: added function in restore tab context
+    menu to assign storage to some entity
+  * started localization support (English, German,
+    and Japanese! Thanks to Satoko Koiwa)
+  * added no-storage to schedule: schedule just to create
+    .bid file
+  * added min/max/age to schedule
+  * barcontrol: show tooltip in restore tab in left
+    halfe of tree/table
+  * barcontrol: show number of entries in entity and
+    storage (tooltip info)
+  * barcontrol: add function in context menu to trigger
+    a specific schedule entry
+  * barcontrol: improved statistic view of no-storage
+    job
+  * upgraded GMP to version 6.0.0a: fix usage of wrong
+    code on AMD architecture.
+    Thanks to Shane for his help to understand this bug!
+  * barcontrol: added option --version
+  * fixed parsing compress algorithm names
+  * improved error when reading encryption algorithm from
+    archives
+  * fixed matching files with \ in name (glob pattern)
+  * improved tests
+  * fixed delete files via webdav-protocol
+  * fixed error if entered passwords are not equal
+  * fixed listing, testing of content in directory:
+    support pattern matching
+  * fixed possible infinite recursion when processing
+    delta compressed files while searching for
+    delta sources
+  * improved error output for libcdio
+  * fixed parsing schedule data
+  * barcontrol: fixed schedule dialog, removed "*" archive
+    type
+  * fixed raise-condition in init database (thanks to Shane)
 
- -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 10 Nov 2015 00:00:00 +0100
-
-bar (0.18d) stable; urgency=low
-  * fix not closed file when --no-storage is specified
-
- -- Torsten Rupp <torsten.rupp@gmx.net>  Mon, 29 Sep 2014 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 12 Apr 2015 00:00:00 +0200
 
 bar (0.18c) stable; urgency=low
   * fixed server network connection wait time in pselect();
@@ -21,7 +65,6 @@ bar (0.18c) stable; urgency=low
     (https://bugs.eclipse.org/bugs/show_bug.cgi?id=372560)
     Thanks to Daniel Webb for his help to find this bug!
   * Upgraded LZMA library to version 5.0.7
-  * Added init script for CentOS
 
  -- Torsten Rupp <torsten.rupp@gmx.net>  Fri, 26 Sep 2014 00:00:00 +0200
 
@@ -1071,3 +1114,4 @@ bar (0.01) stable; urgency=low
   * initial release
 
  -- Torsten Rupp <torsten.rupp@gmx.net>  Thu, 01 Nov 2007 00:00:00 +0100
+
