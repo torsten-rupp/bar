@@ -1272,11 +1272,11 @@ test8 test_largefiles: $(TEST_BAR)
         done
 	@$(ECHO) "ok"
 
-test8-debug test_test_largefiles-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_test_largefiles
+test8-debug test_largefiles-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_largefiles
 
-test8-valgrind test_test_largefiles-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_test_largefiles
+test8-valgrind test_largefiles-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_largefiles
 
 test9 test_dvd: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 9: dvd..."
@@ -2906,6 +2906,43 @@ test_image_operations_diff_image:
 	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
 	@
 	$(DIFF) test/dev0.dump test/dev1.dump
+
+.PHONY: test_image_operations_dryrun
+test_image_operations_dryrun: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
+	# delta tests
+	@$(call functionVerifyParameter,TEST_BAR)
+	#
+	$(INSTALL) -d test
+	$(call functionTestDeviceReset)
+	@
+	# raw zero-data
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images --dry-run)" \
+          test_image_operations_base
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# raw random-data
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images --dry-run)" \
+          test_image_operations_base
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+
 
 .PHONY: test_largefiles_operations
 test_largefiles_operations: \
