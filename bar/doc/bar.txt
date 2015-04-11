@@ -262,11 +262,9 @@ Create an archive:
 
 List contents of an archive:
 
+  bar *.bar
   bar -l home*.bar
-
-or simply
-
-  bar home*.bar
+  bar -L home*.bar
 
 Test archive:
 
