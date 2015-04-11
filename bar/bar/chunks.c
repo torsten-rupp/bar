@@ -882,7 +882,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
   Errors      error;
   uint64      offset;
   ChunkBuffer chunkBuffer;
-  uint32      crc;
+  uLong       crc;
   uint        i;
   void        *p;
   char        errorText[64];
@@ -1217,7 +1217,7 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
                             )
 {
   ChunkBuffer chunkBuffer;
-  uint32      crc;
+  uLong       crc;
   int         i;
   union
   {
@@ -1283,6 +1283,7 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
             uint16 n;
 
             n = (*((uint16*)((byte*)chunkData+definition[i+1])));
+//Note: for some reason Valgrind says here n is undefined, but it is not.
 
             // put 16bit value
             p.u16 = htons(n);
@@ -1322,7 +1323,7 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
             l = (n & 0x00000000FFFFffffLL) >>  0;
             p.u64[0] = htonl(h);
             p.u64[1] = htonl(l);
-            error = putChunkBuffer(&chunkBuffer,p.u64,8L);
+            error = putChunkBuffer(&chunkBuffer,p.data,8L);
             if (error != ERROR_NONE) break;
             crc = crc32(crc,p.data,8);
 
@@ -1963,6 +1964,7 @@ Errors __Chunk_create(const char *__fileName__,
 
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
+  assert(chunkInfo->io->tell != NULL);
   assert(chunkInfo->id != CHUNK_ID_NONE);
   assert(chunkInfo->data != NULL);
 
@@ -2142,6 +2144,7 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
 
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
+  assert(chunkInfo->io->tell != NULL);
   assert(chunkHeader != NULL);
 
   if ((chunkInfo->index+CHUNK_HEADER_SIZE) > (chunkInfo->offset+chunkInfo->size))
