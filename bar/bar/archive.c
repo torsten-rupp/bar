@@ -3116,7 +3116,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       && !archiveInfo->jobOptions->noStorageFlag
      )
   {
-    error = Index_newEntity(indexHandle,
+    error = Index_newEntity(archiveInfo->indexHandle,
                             jobUUID,
                             scheduleUUID,
                             archiveType,
@@ -4124,7 +4124,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   }
   DEBUG_TESTCODE("Archive_newImageEntry2") { Chunk_done(&archiveEntryInfo->file.chunkFile.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->image.chunkImage.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.byteCompressAlgorithm);
-  archiveEntryInfo->image.chunkImage.cryptAlgorithm    = archiveInfo->jobOptions->cryptAlgorithm;
+  archiveEntryInfo->image.chunkImage.cryptAlgorithm    = CRYPT_ALGORITHM_TO_CONSTANT(archiveInfo->jobOptions->cryptAlgorithm);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImage.info,{ Chunk_done(&archiveEntryInfo->image.chunkImage.info); });
 
   // init crypt
@@ -4376,7 +4376,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm = archiveInfo->jobOptions->cryptAlgorithm;
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveInfo->jobOptions->cryptAlgorithm);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectory.info,{ Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info); });
 
   // init crypt
@@ -4595,7 +4595,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  archiveEntryInfo->link.chunkLink.cryptAlgorithm = archiveInfo->jobOptions->cryptAlgorithm;
+  archiveEntryInfo->link.chunkLink.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveInfo->jobOptions->cryptAlgorithm);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLink.info,{ Chunk_done(&archiveEntryInfo->link.chunkLink.info); });
 
   // init crypt
@@ -4895,7 +4895,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     return error;
   }
   archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->hardLink.byteCompressAlgorithm);
-  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm    = archiveInfo->jobOptions->cryptAlgorithm;
+  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm    = CRYPT_ALGORITHM_TO_CONSTANT(archiveInfo->jobOptions->cryptAlgorithm);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLink.info,{ Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info); });
 
   // init crypt
@@ -5216,7 +5216,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  archiveEntryInfo->special.chunkSpecial.cryptAlgorithm = archiveInfo->jobOptions->cryptAlgorithm;
+  archiveEntryInfo->special.chunkSpecial.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveInfo->jobOptions->cryptAlgorithm);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->special.chunkSpecial.info,{ Chunk_done(&archiveEntryInfo->special.chunkSpecial.info); });
 
   // init crypt
