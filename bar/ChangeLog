@@ -5,37 +5,37 @@
     (>4GB) could be incompletely written
   * do not modify atime of files when creating or compare
     archives (NO_ATIME)
-  * barcontrol: added new/clone/rename/delete to status tab
+  * BARControl: added new/clone/rename/delete to status tab
     option menu
   * added pre-/post-command
   * improved crash reporting: include symbol file
   * improved logging
-  * barcontrol: added different exclude types in
+  * BARControl: added different exclude types in
     context menu (nodump, .nobackup, exclude)
-  * barcontrol: added pre-/post scripts
-  * barcontrol: added archive tree view to restore tab
+  * BARControl: added pre-/post scripts
+  * BARControl: added archive tree view to restore tab
   * added "entities" for set of created storage files:
     keep set of storage in the internal database and show
-    created backups in a tree view in barcontrol
-  * barcontrol: added function in restore tab context
+    created backups in a tree view in BARControl
+  * BARControl: added function in restore tab context
     menu to assign storage to some entity
   * started localization support (English, German,
     and Japanese! Thanks to Satoko Koiwa)
   * added no-storage to schedule: schedule just to create
     .bid file
   * added min/max/age to schedule
-  * barcontrol: show tooltip in restore tab in left
-    halfe of tree/table
-  * barcontrol: show number of entries in entity and
+  * BARControl: show tooltip in restore tab in left
+    half of tree/table
+  * BARControl: show number of entries in entity and
     storage (tooltip info)
-  * barcontrol: add function in context menu to trigger
+  * BARControl: add function in context menu to trigger
     a specific schedule entry
-  * barcontrol: improved statistic view of no-storage
+  * BARControl: improved statistic view of no-storage
     job
   * upgraded GMP to version 6.0.0a: fix usage of wrong
     code on AMD architecture.
     Thanks to Shane for his help to understand this bug!
-  * barcontrol: added option --version
+  * BARControl: added option --version
   * fixed parsing compress algorithm names
   * improved error when reading encryption algorithm from
     archives
@@ -50,9 +50,19 @@
     delta sources
   * improved error output for libcdio
   * fixed parsing schedule data
-  * barcontrol: fixed schedule dialog, removed "*" archive
+  * BARControl: fixed schedule dialog, removed "*" archive
     type
-  * fixed raise-condition in init database (thanks to Shane)
+  * fixed race-condition in init database (thanks to Shane)
+
+2014-11-10 0.18e
+  * removed nice-level in init scripts
+  * BARControl: fixed selection and storage of
+    file names via file dialog
+  * BARControl: fixed restore destination directory
+    bug + overwrite flag
+
+2014-09-29 0.18d
+  * fix not closed file when --no-storage is specified
 
 2014-09-26 0.18c
   * fixed server network connection wait time in pselect();
@@ -65,26 +75,26 @@
   * Upgraded LZMA library to version 5.0.7
 
 2014-05-09 0.18b
-  * fixed server start script barserver for Debian
+  * fixed server start script BAR server for Debian
   * do not download epm, breakpad by default
   * fix compilation some third party package: m4 required
 
 2014-05-01 0.18a
   * upgraded OpenSSL to 1.0.1g (fix for Heartbleed bug)
   * fixed replaced storage archives in database
-  * barcontrol: fixed possible exception when session id key
+  * BARControl: fixed possible exception when session id key
     data cannot be parsed (NumberFormatException)
-  * barcontrol: fix delete database index entries
-  * barcontrol: fixed possible exception when insert
+  * BARControl: fix delete database index entries
+  * BARControl: fixed possible exception when insert
     new element into exclude list, compress exclude list
   * fix compile non-debug version without stacktrace function
-  * install bar binary in /usr/bin
+  * install BAR binary in /usr/bin
   * fixed install of man-page
   * fixed include bar-keygen in base package
   * fixed man page
-  * barcontrol: improved error message when a SSL connection
+  * BARControl: improved error message when a SSL connection
     cannot be established
-  * barcontrol: fixed error handling
+  * BARControl: fixed error handling
   * fixed free resources when creating image archives
 
 2014-03-21 0.18
@@ -106,9 +116,9 @@
   * added macros %uuid, %text to storage name template
   * added options --[ftp|ssh|webdav]-max-connections: limit
     number of concurrent network connections for server
-  * barcontrol: added time macros %U2, %U4, %W, %W2 and %W4,
+  * BARControl: added time macros %U2, %U4, %W, %W2 and %W4,
     added macros %T, %uuid, %text
-  * barcontrol: added file selector button to storage name
+  * BARControl: added file selector button to storage name
     input
   * support listing remote directory content
   * start support cross-compilation Linux -> Windows
@@ -121,24 +131,24 @@
   * fixed duplicate archive entries when multiple include options
     are specified (thanks to Stefan A.)
   * fixed writing .bid file when no directory is given
-  * barcontrol: fixed duplicate job
-  * barcontrol: added insert/edit/delete keyboard shortcuts
-  * barcontrol: passwords sent to the bar daemon are now RSA
+  * BARControl: fixed duplicate job
+  * BARControl: added insert/edit/delete keyboard shortcuts
+  * BARControl: passwords sent to the BAR daemon are now RSA
     encrypted! This makes it much harder to steal plain text
     passwords even when no TLS encrypted network connection is
     used.
   * improved tests: added special testcode to execute error
     handling code in tests
   * using gcc to compile is now mandatory (required because of
-    improved error-handlingn with using closure like code)
+    improved error-handling with using closure like code)
   * improved defense against denial-of-service-attack: force
     delay for clients with multiple authorization failure
   * changed schedule entry in job configuration: use a section.
     Entries in the old format are still read, but not created
     anymore.
   * avoid console input in non-interactive mode
-  * fixed barcontrol: list storage ignoring case
-  * fixed barcontrol: delete storage files
+  * fixed BARControl: list storage ignoring case
+  * fixed BARControl: delete storage files
 
 2013-05-05 0.17b
   * fixed parsing of storage specifier (ftp, scp/sftp,
@@ -214,7 +224,7 @@
     explicitly
   * improved error output when log-post command cannot be executed:
     show last 5 lines of stderr
-  * fixed usage of libcrypt: enabled multithread-support
+  * fixed usage of libcrypt: enabled multi-thread-support
   * set read-timeout for SSH connections to avoid possible infinite
     blocking in libssh2-code when remote side may close socket
     unexpected
@@ -230,10 +240,10 @@
     renamed option --index-remove -> --index-database-move
   * BARControl: renamed config option pause-index-update ->
     pause-index-database-update
-  * fixed possible crash in logfile post processor
+  * fixed possible crash in log file post processor
   * BARControl: fix abort job. Set last executed time.
   * BARControl: fix parsing storage name when login name is not given
-  * BARControl: fixed cloneing of schedule entries
+  * BARControl: fixed cloning of schedule entries
   * BARControl: added path selector in include/exclude dialogs
   * BARControl: added confirmation dialog when include/exclude entry
     should be removed
@@ -245,7 +255,7 @@
   * improved band width limitation: specify either a value or name of an
     external file
   * fixed scheduler: do not start job immediately again when execution
-    time was longer than time periode of scheduling
+    time was longer than time period of scheduling
   * added optional time range to max-band-width,
     index-database-max-band-width options to support different limits
     depending on date/time
@@ -272,7 +282,7 @@
   * improved error messages
   * do not print passwords which may be included in FTP
     specifier when creating/list/restore entries
-  * barcontrol: ask for crypt password when restoring
+  * BARControl: ask for crypt password when restoring
     single archive entries
   * fixed URI parser: clear port number if not set
   * improved index database: do not set error state when
@@ -317,7 +327,7 @@
   * BARControl: fixed possible null-pointer-exception on communication
     error
   * BARControl: improved usability. Use tagged+selected entries
-    entires to remove/refresh  in tab restore.
+    entries to remove/refresh  in tab restore.
   * add log type "index"
   * BARControl: fixed list of storage archives when removing an
     entry
@@ -334,7 +344,7 @@
     CD/DVD/BD
 
 2011-05-31 0.16d
-  * barcontrol: fix parsing of ftp/scp/sftp archive names
+  * BARControl: fix parsing of ftp/scp/sftp archive names
   * fix parsing of ftp archive names
   * support for non-passive/passive ftp connections
   * fixed wrong free of resources when archive entry could
@@ -360,26 +370,26 @@
 2011-04-10 0.16b
   * fix error handling when password is wrong
   * create jobs directory if it does not exists
-  * enable creaeting index database by default
-  * barcontrol: fix file name editor drag+drop
-  * barcontrol: ask for password on restore
+  * enable creating index database by default
+  * BARControl: fix file name editor drag+drop
+  * BARControl: ask for password on restore
   * fix memory leak when reading archive directory entries
   * fixed deinit error when password is wrong
   * fixed reading file names which contain \ or LF/CR
-  * barcontrol: fix discarding first character for archive target cd:, bd:
-  * barcontrol: fixed file listing
+  * BARControl: fix discarding first character for archive target cd:, bd:
+  * BARControl: fixed file listing
   * fix error handling when calling external tool for CD/DVD/BD
-  * barcontrol: add year two digits in archive file name editor, fixed
+  * BARControl: add year two digits in archive file name editor, fixed
     century
-  * barcontrol: fix enabling restore-button
+  * BARControl: fix enabling restore-button
   * improved documentation: added archive file name macros, add more
-    entries to faq, small fixes
+    entries to FAQ, small fixes
 
 2010-12-30 0.16a
   * fix wrong storage name in database
-  * barcontrol: fix start/abort button enable/disable for
+  * BARControl: fix start/abort button enable/disable for
     incremental/differential/dry-run jobs
-  * barcontrol: fix tab restore storage filter: edit+reset
+  * BARControl: fix tab restore storage filter: edit+reset
   * clean-up
 
 2010-12-17 0.16
@@ -401,12 +411,12 @@
     data lists, do not write on CD/DVD/BD/devices
   * fixed --no-storage: incremental data list was not written
   * fixed possible deadlock in server when archive files cannot
-    be transmitted to a remote server and local harddisk becomes
+    be transmitted to a remote server and local hard disk becomes
     full
   * added option --compress-exclude to disable compression for
     files, images and hard links which match to the specified
     pattern
-  * barcontrol: added exclude list in storage tab under compress
+  * BARControl: added exclude list in storage tab under compress
   * fixed memory leak
   * support building Debian/Ubuntu packages with SuSE build
     service!
@@ -423,22 +433,22 @@
 
 2010-12-05 0.15f
   * fix SigSegV in string.c:formatString() which can occur on
-    amd64 systems
+    AMD 64bit systems
 
 2010-12-02 0.15e
-  * barcontrol: fix exception when running barcontrol under
+  * BARControl: fix exception when running BARControl under
     Windows and connecting to a Linux server (file separator
     is different on Windows and Linux; this is a temporary fix
     which will be improved in version 0.16)
-  * barcontrol: made columns size, modified, state in restore
+  * BARControl: made columns size, modified, state in restore
     tab, storage list resizable, too
-  * fixed wrong bar binary path in SuSE, Redhat, Mandrake, Fedora
+  * fixed wrong BAR binary path in SuSE, Redhat, Mandrake, Fedora
     start scripts
-  * fixed wrong bar config path in SuSE, Redhat, Mandrake, Fedora
+  * fixed wrong BAR config path in SuSE, Redhat, Mandrake, Fedora
     start scripts
-  * barcontrol: fixed some table column widths (automatic setting
+  * BARControl: fixed some table column widths (automatic setting
     seems to be different on Windows)
-  * barcontrol: fix arguments in start script barcontrol.bat
+  * BARControl: fix arguments in start script BARControl.bat
 
 2010-11-29 0.15d
   * fix SigSegV when deleting a storage archive from
@@ -450,16 +460,16 @@
      - use "java" without any path
      - fix out-dated JAR archives
   * added missing documentation images to distribution
-  * fix creation of barcontrol/barcontrol*.jar
+  * fix creation of BARControl/BARControl*.jar
   * fix error message when archive file already exists
 
 2010-11-17 0.15b
-  * barcontrol: fix sorting of columns
-  * barcontrol: fix not working context menu "exclude", "none" in
+  * BARControl: fix sorting of columns
+  * BARControl: fix not working context menu "exclude", "none" in
     status tab, files list, removed debug code
   * fix archive file name for CD/DVD/BD
-  * barcontrol: fix sorting of columns in jobs tab file/device tree
-  * barcontrol: fix calculating directory size (context menu in
+  * BARControl: fix sorting of columns in jobs tab file/device tree
+  * BARControl: fix calculating directory size (context menu in
     file list in jobs tab)
   * fixed parsing of storage specification for cd/dvd/bd
 
@@ -468,7 +478,7 @@
   * fix typecast in strings.c for 64bit systems
   * fix man create install path
   * support build service (thanks to lalalu42)
-  * add make variale DIST, SYSTEM to install
+  * add make variable DIST, SYSTEM to install
   * update download-script: gnutls 2.10.2
   * fix typing error in strings debug code
   * use getpwnam_r and getgrnam_r to avoid multi-threaded problems
@@ -476,7 +486,7 @@
   * fixed possible infinite blocking in index update (ssh read)
   * fixed memory leak in index thread
   * fixed test for large file support on 64bit systems
-  * fixed ssh-communication problem ("bad record mac" in barcontrol),
+  * fixed ssh-communication problem ("bad record mac" in BARControl),
     improved error messages
   * added different BAR daemon start scripts, fixed start script
   * enable dynamic linkage of system internal libraries
@@ -487,20 +497,20 @@
     file with BAR
   * clean-up BAR command line options:
      - replaced -a|--crypt-asymmetric -> --crypt-type=<name>
-     - added opton --normal to select normal archive type
+     - added option --normal to select normal archive type
        (required to overwrite setting in job file)
      - fixed ordering of options in help
   * added support for CD and BD (options --cd-.../--bd-... and configuration
     entries cd-.../bd-...)
-  * clean-up barcontrol command line options:
+  * clean-up BARControl command line options:
     renamed --job-mode -> --archive-type
   * fixed name of option --dvd-write-image-command
-  * barcontrol: fix option --key-file
+  * BARControl: fix option --key-file
   * renamed command line option --no-bar-on-dvd -> --no-bar-on-medium and
     configuration file entry no-bar-on-dvd -> no-bar-on-medium
   * set key valid time to 365 days when created with openssl
-  * barcontrol: added tool tips help
-  * barcontrol: complete redesign of restore tab
+  * BARControl: added tool tips help
+  * BARControl: complete redesign of restore tab
      - added database of stored files to BAR (sqlite based)
      - search for created archives in database
      - search for stored files in archives in database
@@ -510,29 +520,29 @@
      Note: to use this new feature, you must add the database-*
            configuration options in bar.cfg!
   * temporary base directory is now named bar-XXXXXX
-  * barcontrol: improved pause-function: settings for create, storage,
-    restore and update index. See menu in barcontrol. By default create
+  * BARControl: improved pause-function: settings for create, storage,
+    restore and update index. See menu in BARControl. By default create
     and restored are paused only
-  * barcontrol: add destination types "cd" and "bd", add different images
+  * BARControl: add destination types "cd" and "bd", add different images
     sizes for cd/bd
-  * barcontrol: clean-up layout, rearranged some buttons
-  * barcontrol: updated to SWT 3.6.1
+  * BARControl: clean-up layout, rearranged some buttons
+  * BARControl: updated to SWT 3.6.1
   * create package bar-gui-*.zip with compiled GUI only
   * documentation: renewed screen shots, added documentation of
     new options, fixed documentation of some options, clean-up
   * updated man-page
 
 2010-07-28 0.14
-  * added command line control functions to barcontrol:
+  * added command line control functions to BARControl:
     --list, --job, --job-mode, --abort, --ping, --pause,
     --suspend, --continue
-  * improved barcontrol command line parser
-  * barcontrol: added file selector buttons for ssh keys, device name
-  * fixed barcontrol restore tab: listing path names
+  * improved BARControl command line parser
+  * BARControl: added file selector buttons for ssh keys, device name
+  * fixed BARControl restore tab: listing path names
   * fix C string parser: %s and %S can be empty strings
-  * barcontrol: fixed abort in restore dialog, some clean-up. Note:
+  * BARControl: fixed abort in restore dialog, some clean-up. Note:
     The restore tab will be improved in some of the next releases.
-  * barcontrol: fixed parsing of archive part size (job was ignored
+  * BARControl: fixed parsing of archive part size (job was ignored
     when number was bigger than 32bit; now 63bit are allowed)
   * fixed display of archive/device sizes: units are G,M,K
   * add warning when no BAR server password given
@@ -549,10 +559,10 @@
     file names
   * fix bar-keygen: create bar.jsk in /etc/bar by default
   * improved bar-keygen: check if keys exists, add option --force
-  * improved BAR server: additionall check /etc/ssl/private for
+  * improved BAR server: additional check /etc/ssl/private for
     bar.jks
   * fix some typing errors in manual
-  * fix Makefile of barcontrol: SWT JAR version
+  * fix Makefile of BARControl: SWT JAR version
 
 2010-05-23 0.13b
   * fix assert-error in options -#/-!
@@ -566,7 +576,7 @@
   * fix typing error in "owner"
   * fix wrong parsing of "owner" in server
   * fix memory leak in server
-  * barcontrol: fix opening directories in file tree
+  * BARControl: fix opening directories in file tree
   * added epm to download third-party script
 
 2010-03-21 0.13
@@ -584,7 +594,7 @@
   * added stack backtrace output in string-debug functions
   * fix lost string when directory cannot be created
   * added option --owner
-  * barcontrol: added support for 64bit systems
+  * BARControl: added support for 64bit systems
   * fixed some C compiler warnings
   * fixed creating directory when writing incremental file list
   * improved error messages
@@ -592,8 +602,8 @@
   * improved valgrind suppression rules
   * fixed compilation warnings
   * improved and clean-up command line/config value parsing
-  * set socket timeout in barcontrol (20s)
-  * improved error messages in barcontrol
+  * set socket timeout in BARControl (20s)
+  * improved error messages in BARControl
   * updated SWT JAR to 3.6 (this fix a bug with GTK versions
     >= 2.18)
   * added 64bit SWT JAR for Windows
@@ -612,10 +622,10 @@
 2009-10-20 0.12c
   * fixes in configure: fix large file support for some system
   * fixes in configure: add libcrypto only if available (required
-    for some older libssh2 implemenations)
+    for some older libssh2 implementations)
 
 2009-10-17 0.12b
-  * added option --owner to overwritting settings for
+  * added option --owner to overwriting settings for
     user/group of restored files
   * fixed creating directories: use default user creation
     mask for parent directories
@@ -639,49 +649,49 @@
   * added crypt password in jobs-storage-tab: password can be
     default (read from configuration file), interactive input
     (ask) or specified password
-  * barcontrol: added check if JDK key file is valid
-  * barcontrol: improved password dialog
-  * barcontrol: added password dialog when crypt password mode
+  * BARControl: added check if JDK key file is valid
+  * BARControl: improved password dialog
+  * BARControl: added password dialog when crypt password mode
     is "ask"
   * fixed statics of skipped/error files
-  * barcontrol; added pause button with timeout (default
+  * BARControl; added pause button with timeout (default
     60min)
   * added support for lzma compression
   * added script for simple download of additional packages
   * added support to build additional packages when compiling
-    bar (extract packages to specific sub-directories or use
+    BAR (extract packages to specific sub-directories or use
     links)
-  * barcontrol: added copy job button
-  * barcontrol: check if job exists for new, copy, rename
+  * BARControl: added copy job button
+  * BARControl: check if job exists for new, copy, rename
 
 2009-04-12 0.11b
-  * barcontrol: improved volume dialog: unload tray button
+  * BARControl: improved volume dialog: unload tray button
   * fixed handling of DVDs
-  * barcontrol: fixed progress bar for volume
-  * barcontrol/server: fixed writing crypt-type entry (was empty)
+  * BARControl: fixed progress BAR for volume
+  * BARControl/server: fixed writing crypt-type entry (was empty)
 
 2009-03-31 0.11a
   * fixed accidently removed save/cancel button in
     storage part edit dialog
-  * barcontrol: fixed URI parsing
+  * BARControl: fixed URI parsing
   * fixed string-error in DVD functions
 
 2009-03-22 0.11
   * added selection of multiple days to schedule days
     configuration, e. g. you can specify "Mon,Tue,Sat"
-  * barcontrol: fixed quit (internal threads blocked quit)
-  * barcontrol: changed names of buttons in file tree
-  * barcontrol: added button to open all included directories
+  * BARControl: fixed quit (internal threads blocked quit)
+  * BARControl: changed names of buttons in file tree
+  * BARControl: added button to open all included directories
     in file tree list (green directory symbol at the bottom
     right side)
-  * barcontrol: added function to detect sizes of directories;
+  * BARControl: added function to detect sizes of directories;
     when "directory info" checkbox is enabled and a
     sub-directory is opened the sizes of the directories are
     detected in the background
-  * internal change in protocol bar/barcontrol
+  * internal change in protocol BAR/BARControl
   * fixed some lost strings
   * improved speed: inline some function calls
-  * barcontrol: added version number in about-dialog
+  * BARControl: added version number in about-dialog
   * fixed parsing of schedule data (type was missing)
   * fixed detection of size of current archive (was always 0)
   * new scheme to build a incremental file name from an
@@ -702,7 +712,7 @@
 
 2009-02-14 0.10a
   * fixed layout of login dialog
-  * fixed missing barcontrol.bat.in in distribution
+  * fixed missing BARControl.bat.in in distribution
 
 2009-02-11 0.10
   * fixed some not freed resources
@@ -715,33 +725,33 @@
     file 'foo' in a set of backups, e. g.
     bar *.bar -# "*/foo" -g
   * added option --all: list all entries in group
-  * barcontrol: fixed Java exception when scheduling date/time
+  * BARControl: fixed Java exception when scheduling date/time
     can not be parsed
-  * barcontrol: added "normal" type to start-dialog
+  * BARControl: added "normal" type to start-dialog
   * default value for ssh port is now 22
-  * do not ask for a password if bar is started server- or
+  * do not ask for a password if BAR is started server- or
     batch mode
-  * barcontrol: flush not written configuration data to disk
-    when terminating barcontrol
-  * barcontrol: fixed reseting port number
-  * barcontrol: set default sort mode to "weekday" for scheduling
+  * BARControl: flush not written configuration data to disk
+    when terminating BARControl
+  * BARControl: fixed reseting port number
+  * BARControl: set default sort mode to "weekday" for scheduling
     list
-  * barcontrol: try to login with preset server name and login
+  * BARControl: try to login with preset server name and login
     password. Open login-dialog only when login fail or when option
     --login-dialog is given.
   * delete old archive files (only possible for file, ftp, sftp).
     Can be disabled by --keep-old-archive-files
-  * barcontrol: fixed bug when double-clicking file entry in file
+  * BARControl: fixed bug when double-clicking file entry in file
   * fixed default login name/password for ftp, ssh: use command line
     options if not set otherwise
   * fixed default device name: use command line options if not set
     otherwise
   * fix problem with infinite backup when temporary directory is
-    included in file list. The bar temporary directory and all
+    included in file list. The BAR temporary directory and all
     created files are now not included in a backup. Note: this cannot
-    work when two instances of bar are running doing a backup of
+    work when two instances of BAR are running doing a backup of
     each other.
-  * added bar man page (finally!)
+  * added BAR man page (finally!)
   * improved GUI layout manager
   * added animated busy-dialogs to restore, added abort-function
   * added confirmation dialog to abort job button
@@ -754,7 +764,7 @@
 2008-12-09 0.09h
   * fixed problem with internal data alignment on 64bit systems
   * added test data to distribution
-  * added chunk BAR0 to archive files as indicator for a bar file;
+  * added chunk BAR0 to archive files as indicator for a BAR file;
     chunk is skipped when reading an archive
 
 2008-12-09 0.09g
@@ -767,29 +777,29 @@
   * changed FTP URL to <login name>:<password>@<host name>/<filename>
   * improved password input: check if connection to ftp/ssh-server is
     possible in advance; select the right password
-  * barcontrol: change FTP field names, added password field
+  * BARControl: change FTP field names, added password field
   * fixed problem when writing incremental file list and current
     directory is not writable: create the temporary file in the same
     directory like the destination file
   * removed some debug code
-  * barcontrol: fixed error handling when authorization fail
-  * barcontrol: fixed internal protocol data parser when data contain
+  * BARControl: fixed error handling when authorization fail
+  * BARControl: fixed internal protocol data parser when data contain
     a negative number
   * fixed some wrong file names in "make install"
-  * added barserver start script for Debian (Thanks to Matthias Albert)
+  * added BAR server start script for Debian (Thanks to Matthias Albert)
   * fixed lost string
-  * run bar as daemon in background; added option -D to disable detach
+  * run BAR as daemon in background; added option -D to disable detach
     mode
   * fixed missing server result when new job cannot be created
 
 2008-12-03 0.09d
   * fixed missing server-jobs-directory in BAR server
   * fixed wrong path to bar+bar.cfg binary when installing
-  * fix installation when barcontrol was not built
+  * fix installation when BARControl was not built
 
 2008-12-01 0.09c
-  * barcontrol: fixed #-parsing in archive name editor
-  * fixed missing barcontrol.in, barcontrol.bat.in, barcontrol.xml source
+  * BARControl: fixed #-parsing in archive name editor
+  * fixed missing BARControl.in, BARControl.bat.in, BARControl.xml source
   * fixed creation of scripts from *.in files
   * completed bar-keygen
   * no external SWT jar needed anymore to compile (but can still be used
@@ -802,13 +812,13 @@
     when key is invalid. Sorry this also mean the key data format
     changed, thus you have to generate a new public/private key pair.
     Note: you cannot open old archives with the new keys!
-  * added option -h/--help to barcontrol
-  * barcontrol: read default server name/password/ports from
-    $HOME/.bar/barcontrol.cfg (if this file exists)
+  * added option -h/--help to BARControl
+  * BARControl: read default server name/password/ports from
+    $HOME/.bar/BARControl.cfg (if this file exists)
   * renamed option --job-directory into --server-jobs-directory
   * improved check of options: output error if temporary directory
     cannot be written to
-  * barcontrol: add field for port to scp/sftp connections
+  * BARControl: add field for port to scp/sftp connections
   * change format for archive-file names. Use now URL like names:
     ftp://<name>@<host>/<filename>
     scp://<name>@<host>:<port>/<filename>
@@ -836,7 +846,7 @@
 2008-09-23 0.08a
   * fixed double usage of va_args variable
   * fixed problems with 64bit
-  * fixed typing error in bar.cfg (thanx to Matthias)
+  * fixed typing error in bar.cfg (thank to Matthias)
 
 2008-09-08 0.08
   * added asymmetric encryption with public-key
@@ -853,22 +863,22 @@
 2008-06-29 0.07a
   * fixed executing of external programs: handle signals
   * use /dev/dvd as default device for writing dvds
-  * added storage bytes/s value to barcontrol.tcl
-  * implemented rename job in barcontrol.tcl
+  * added storage bytes/s value to BARControl.tcl
+  * implemented rename job in BARControl.tcl
 
 2008-05-24 0.07
-  * integrated scheduler in bar
+  * integrated scheduler in BAR
   * added pause/continue of jobs
   * some internal bug fixes
-  * improved response time of barcontrol.tcl by read/write-locking
+  * improved response time of BARControl.tcl by read/write-locking
     of shared data structures in server
-  * implemented archive name editor in barcontrol.tcl
-  * clean-up barcontrol.tcl
+  * implemented archive name editor in BARControl.tcl
+  * clean-up BARControl.tcl
   * added FTP protocol
   * changed some option names for better consistency
 
 2008-03-08 0.06
-  * added option --debug to barcontrol.tcl; output debug info
+  * added option --debug to BARControl.tcl; output debug info
     in server
   * fixed memory leak in server
   * improved several error messages
@@ -897,13 +907,13 @@
   * removed option create-list-file; option --full create a list
     file, --incremental use the list and no option generate a
     standard archive (without an incremental list)
-  * added options --full and --incremental to barcontrol.tcl.
+  * added options --full and --incremental to BARControl.tcl.
     With these options the settings in a configuration can be
     overwritten, e. g. useful to make incremental backups
     (define full-backup in configuration file; use --incremental
     to create a incremental backup on-the-fly)
   * do not write bid-file if archive cannot be stored
-  * added file name editor in barcontrol (check the "folder"-image
+  * added file name editor in BARControl (check the "folder"-image
     right to the file name!)
   * fixed missing lock in debug-code of strings.c
   * renamed option --priority -> --nice-level; set nice level
@@ -925,7 +935,7 @@
   * use base name of archive file name for incremental list file
 
 2007-12-15 0.04
-  * added create-dialog to barcontrol.tcl
+  * added create-dialog to BARControl.tcl
   * added incremental backup
   * fixed bug in --request-volume-command (wrong command string)
   * fixed bug when executing external command (reading i/o)
@@ -962,8 +972,8 @@
 2007-11-25 0.02
   * implemented DVD support
   * fixed ssh connections
-  * implemented more functions in barcontrol.tcl
-  * added install for scanx, mclistbox.tcl (needed for barcontrol.tcl)
+  * implemented more functions in BARControl.tcl
+  * added install for scanx, mclistbox.tcl (needed for BARControl.tcl)
   * added config parser
   * added multiple server/device sections in config file
   * WARNING: changed usage of crypt password: encryption
