@@ -1355,6 +1355,22 @@ inline double normDegree360(double n)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : stringClear
+* Purpose: clear string
+* Input  : s - string
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+static inline char *stringClear(char *s)
+{
+  (*s) = '\0';
+
+  return s;
+}
+
+/***********************************************************************\
 * Name   : stringEquals
 * Purpose: compare strings for equal
 * Input  : s1, s2 - strings
