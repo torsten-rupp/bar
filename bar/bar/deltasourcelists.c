@@ -203,50 +203,6 @@ Errors DeltaSourceList_appendCString(DeltaSourceList *deltaSourceList,
   return ERROR_NONE;
 }
 
-bool DeltaSourceList_match(const DeltaSourceList   *deltaSourceList,
-                     ConstString      string,
-                     PatternMatchModes patternMatchMode
-                    )
-{
-  bool      matchFlag;
-  DeltaSourceNode *deltaSourceNode;
-
-  assert(deltaSourceList != NULL);
-  assert(string != NULL);
-
-  matchFlag = FALSE;
-  deltaSourceNode = deltaSourceList->head;
-  while ((deltaSourceNode != NULL) && !matchFlag)
-  {
-//    matchFlag = Pattern_match(&deltaSourceNode->pattern,string,patternMatchMode);
-    deltaSourceNode = deltaSourceNode->next;
-  }
-
-  return matchFlag;
-}
-
-bool DeltaSourceList_matchStringList(const DeltaSourceList   *deltaSourceList,
-                               const StringList  *stringList,
-                               PatternMatchModes patternMatchMode
-                              )
-{
-  bool       matchFlag;
-  StringNode *stringNode;
-
-  assert(deltaSourceList != NULL);
-  assert(stringList != NULL);
-
-  matchFlag  = FALSE;
-  stringNode = stringList->head;
-  while ((stringNode != NULL) && !matchFlag)
-  {
-    matchFlag = DeltaSourceList_match(deltaSourceList,stringNode->string,patternMatchMode);
-    stringNode = stringNode->next;
-  }
-
-  return matchFlag;
-}
-
 #ifdef __cplusplus
   }
 #endif
