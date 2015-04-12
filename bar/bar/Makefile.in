@@ -1179,14 +1179,14 @@ test7 test_storage: $(TEST_BAR)
           ;
 # delta test?
 	$(MAKE) \
-          BAR_STORAGE="ftp://anonymous@localhost/test/" \
+          BAR_STORAGE="ftp://localhost/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ftp-password='$(PASSWORD)' --max-threads=1" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="ftp://anonymous@localhost/test/" \
+          BAR_STORAGE="ftp://localhost/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ftp-password='$(PASSWORD)'" \
