@@ -53,6 +53,8 @@
   * BARControl: fixed schedule dialog, removed "*" archive
     type
   * fixed race-condition in init database (thanks to Shane)
+  * fixed restore: keep root (first /) when not directories
+    are stripped
 
 2014-11-10 0.18e
   * removed nice-level in init scripts
