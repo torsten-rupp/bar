@@ -75,7 +75,7 @@ typedef struct
 * Purpose: get destination file name by stripping directory levels and
 *          add destination directory
 * Input  : destinationFileName - destination file name variable
-*          fileName            - original file name
+*          name                - original name
 *          destination         - destination directory or NULL
 *          directoryStripCount - number of directories to strip from
 *                                original file name
@@ -87,13 +87,13 @@ typedef struct
 LOCAL String getDestinationFileName(String       destinationFileName,
                                     String       fileName,
                                     const String destination,
-                                    uint         directoryStripCount
+                                    int          directoryStripCount
                                    )
 {
   String          pathName,baseName;
   StringTokenizer fileNameTokenizer;
   ConstString     token;
-  uint            z;
+  int             i;
 
   assert(destinationFileName != NULL);
   assert(fileName != NULL);
@@ -105,26 +105,34 @@ LOCAL String getDestinationFileName(String       destinationFileName,
   }
   else
   {
-    File_clearFileName(destinationFileName);
+    String_clear(destinationFileName);
   }
 
-  // split file name
+  // split original name
   File_splitFileName(fileName,&pathName,&baseName);
 
-  // strip directory, create destination directory
-  File_initSplitFileName(&fileNameTokenizer,pathName);
-  z = 0;
-  while ((z< directoryStripCount) && File_getNextSplitFileName(&fileNameTokenizer,&token))
+  // strip directory
+  if (directoryStripCount != DIRECTORY_STRIP_NONE)
   {
-    z++;
+    File_initSplitFileName(&fileNameTokenizer,pathName);
+    i = 0;
+    while (   ((directoryStripCount == DIRECTORY_STRIP_ANY) || (i < directoryStripCount))
+           && File_getNextSplitFileName(&fileNameTokenizer,&token)
+          )
+    {
+      i++;
+    }
+    while (File_getNextSplitFileName(&fileNameTokenizer,&token))
+    {
+      File_appendFileName(destinationFileName,token);
+    }
   }
-  while (File_getNextSplitFileName(&fileNameTokenizer,&token))
+  else
   {
-    File_appendFileName(destinationFileName,token);
+    File_appendFileName(destinationFileName,pathName);
   }
-  File_doneSplitFileName(&fileNameTokenizer);
 
-  // create destination file name
+  // append file name
   File_appendFileName(destinationFileName,baseName);
 
   // free resources

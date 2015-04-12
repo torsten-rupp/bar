@@ -605,7 +605,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_STRUCT_VALUE_INTEGER64("archive-part-size",       JobNode,jobOptions.archivePartSize,             0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_STRUCT_VALUE_INTEGER  ("directory-strip",         JobNode,jobOptions.directoryStripCount,         0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER  ("directory-strip",         JobNode,jobOptions.directoryStripCount,         -1,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("destination",             JobNode,jobOptions.destination                  ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("owner",                   JobNode,jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
 
@@ -2548,7 +2548,7 @@ LOCAL bool readJob(JobNode *jobNode)
   jobNode->jobOptions.archiveType                  = ARCHIVE_TYPE_NORMAL;
   jobNode->jobOptions.archivePartSize              = 0LL;
   jobNode->jobOptions.incrementalListFileName      = NULL;
-  jobNode->jobOptions.directoryStripCount          = 0;
+  jobNode->jobOptions.directoryStripCount          = DIRECTORY_STRIP_NONE;
   jobNode->jobOptions.destination                  = NULL;
   jobNode->jobOptions.patternType                  = PATTERN_TYPE_GLOB;
   jobNode->jobOptions.compressAlgorithm.delta      = COMPRESS_ALGORITHM_NONE;

@@ -468,7 +468,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_INTEGER64    ("archive-part-size",            's',0,1,jobOptions.archivePartSize,                      0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,              "approximated archive part size","unlimited"                               ),
 
-  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,1,jobOptions.directoryStripCount,                  0,MAX_INT,NULL,                                        "number of directories to strip on extract",NULL                           ),
+  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,1,jobOptions.directoryStripCount,                  -1,MAX_INT,NULL,                                       "number of directories to strip on extract",NULL                           ),
   CMD_OPTION_STRING       ("destination",                  0,  0,1,jobOptions.destination,                                                                                 "destination to restore files/images","path"                               ),
   CMD_OPTION_SPECIAL      ("owner",                        0,  0,1,&jobOptions.owner,                               cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
 
@@ -850,7 +850,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_INTEGER64("archive-part-size",            &jobOptions.archivePartSize,-1,                                0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_VALUE_INTEGER  ("directory-strip",              &jobOptions.directoryStripCount,-1,                            0,MAX_INT,NULL),
+  CONFIG_VALUE_INTEGER  ("directory-strip",              &jobOptions.directoryStripCount,-1,                            -1,MAX_INT,NULL),
   CONFIG_VALUE_STRING   ("destination",                  &jobOptions.destination,-1                                     ),
   CONFIG_VALUE_SPECIAL  ("owner",                        &jobOptions.owner,-1,                                          configValueParseOwner,NULL,NULL,NULL,&jobOptions),
 
@@ -3211,7 +3211,7 @@ void initJobOptions(JobOptions *jobOptions)
   memset(jobOptions,0,sizeof(JobOptions));
   jobOptions->archiveType                     = ARCHIVE_TYPE_NORMAL;
   jobOptions->archivePartSize                 = 0LL;
-  jobOptions->directoryStripCount             = 0;
+  jobOptions->directoryStripCount             = DIRECTORY_STRIP_NONE;
   jobOptions->owner.userId                    = FILE_DEFAULT_USER_ID;
   jobOptions->owner.groupId                   = FILE_DEFAULT_GROUP_ID;
   jobOptions->patternType                     = PATTERN_TYPE_GLOB;

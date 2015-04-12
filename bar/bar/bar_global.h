@@ -53,6 +53,7 @@ typedef enum
   ARCHIVE_TYPE_UNKNOWN,
 } ArchiveTypes;
 
+// date/time
 /*
 #define WEEKDAY_ANY_MONTH \
   (  SET_VALUE(MONTH_JAN) \
@@ -78,9 +79,12 @@ typedef enum
    | SET_VALUE(WEEKDAY_SAT) \
    | SET_VALUE(WEEKDAY_SUN) \
   )
-
 #define DATE_ANY -1
 #define TIME_ANY -1
+
+// directory strip
+#define DIRECTORY_STRIP_ANY -1
+#define DIRECTORY_STRIP_NONE 0
 
 // password mode
 typedef enum
@@ -382,7 +386,7 @@ struct JobOptions
 
   String                      incrementalListFileName;   // name of incremental list file
 
-  uint                        directoryStripCount;       // number of directories to strip in restore
+  int                         directoryStripCount;       // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
   String                      destination;               // destination for restore
   JobOptionsOwner             owner;                     // restore owner
 
