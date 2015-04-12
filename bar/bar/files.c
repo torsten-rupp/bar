@@ -620,6 +620,51 @@ String File_getFileBaseNameCString(String baseName, const char *fileName)
   return baseName;
 }
 
+bool File_getRootFileName(String rootName, ConstString fileName)
+{
+  assert(rootName != NULL);
+  assert(fileName != NULL);
+
+  return File_getRootFileNameCString(rootName,String_cString(fileName));
+}
+
+bool File_getRootFileNameCString(String rootName, const char *fileName)
+{
+  size_t n;
+
+  assert(rootName != NULL);
+  assert(fileName != NULL);
+
+  String_clear(rootName);
+  n = strlen(fileName);
+  #if   defined(PLATFORM_LINUX)
+    if ((n >= 1) && (fileName[0] == FILES_PATHNAME_SEPARATOR_CHAR))
+    {
+      String_setChar(rootName,FILES_PATHNAME_SEPARATOR_CHAR);
+    }
+  #elif defined(PLATFORM_WINDOWS)
+    if      (   (n >= 2)
+             && (toupper(fileName[0]) >= 'A') && (toupper(fileName[0]) <= 'Z')
+             && (fileName[1] == ':')
+            )
+    {
+      String_setChar(rootName,toupper(fileName[0]);
+      String_appendChar(rootName,':');
+    }
+    else if (   (n >= 2)
+             && (strncmp(fileName,"\\\\",2) == 0)
+            )
+    {
+    }
+    if ((n >= 3) && (String_index(fileName,2) == FILES_PATHNAME_SEPARATOR_CHAR))
+    {
+      String_appendChar(rootName,FILES_PATHNAME_SEPARATOR_CHAR);
+    }
+  #endif /* PLATFORM_... */
+
+  return rootName;
+}
+
 void File_splitFileName(ConstString fileName, String *pathName, String *baseName)
 {
   assert(fileName != NULL);
@@ -651,6 +696,28 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, ConstString *na
   assert(name != NULL);
 
   return String_getNextToken(stringTokenizer,name,NULL);
+}
+
+bool File_isAbsoluteFileName(ConstString fileName)
+{
+  assert(fileName != NULL);
+
+  return File_isAbsoluteFileNameCString(String_cString(fileName));
+}
+
+bool File_isAbsoluteFileNameCString(const char *fileName)
+{
+  size_t n;
+
+  assert(fileName != NULL);
+
+  n = strlen(fileName);
+  #if   defined(PLATFORM_LINUX)
+    return ((n >= 1) && (fileName[0] == FILES_PATHNAME_SEPARATOR_CHAR));
+  #elif defined(PLATFORM_WINDOWS)
+    return    ((n >= 2) && ((toupper(fileName[0]) >= 'A') && (toupper(fileName[0]) <= 'Z') && (fileName[1] == ':'))
+           || ((n >= 2) && (strncmp(fileName,"\\\\",2) == 0));
+  #endif /* PLATFORM_... */
 }
 
 /*---------------------------------------------------------------------*/

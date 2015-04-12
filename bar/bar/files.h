@@ -388,7 +388,7 @@ String File_getFilePathNameCString(String path, const char *fileName);
 
 /***********************************************************************\
 * Name   : File_getFileBaseName, File_getFileBaseNameCString
-* Purpose: get basename of file
+* Purpose: get basename of file (name without directory)
 * Input  : baseName - basename variable
 *          fileName - file name
 * Output : -
@@ -398,6 +398,19 @@ String File_getFilePathNameCString(String path, const char *fileName);
 
 String File_getFileBaseName(String baseName, ConstString fileName);
 String File_getFileBaseNameCString(String baseName, const char *fileName);
+
+/***********************************************************************\
+* Name   : File_getRootFileName, File_getRootFileNameCString
+* Purpose: get root of file
+* Input  : rootName - rootname variable
+*          fileName - file name
+* Output : -
+* Return : rootName variable
+* Notes  : -
+\***********************************************************************/
+
+bool File_getRootFileName(String rootName, ConstString fileName);
+bool File_getRootFileNameCString(String rootName, const char *fileName);
 
 /***********************************************************************\
 * Name   : File_splitFileName
@@ -434,6 +447,18 @@ void File_doneSplitFileName(StringTokenizer *stringTokenizer);
 \***********************************************************************/
 
 bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, ConstString *name);
+
+/***********************************************************************\
+* Name   : File_isAbsoluteFileName, File_isAbsoluteFileNameCString
+* Purpose: check if file name is absolute
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if file name is absolute, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool File_isAbsoluteFileName(ConstString fileName);
+bool File_isAbsoluteFileNameCString(const char *fileName);
 
 /*---------------------------------------------------------------------*/
 
