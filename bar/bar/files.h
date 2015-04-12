@@ -409,8 +409,8 @@ String File_getFileBaseNameCString(String baseName, const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-bool File_getRootFileName(String rootName, ConstString fileName);
-bool File_getRootFileNameCString(String rootName, const char *fileName);
+String File_getRootFileName(String rootName, ConstString fileName);
+String File_getRootFileNameCString(String rootName, const char *fileName);
 
 /***********************************************************************\
 * Name   : File_splitFileName

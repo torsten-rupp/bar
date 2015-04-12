@@ -620,7 +620,7 @@ String File_getFileBaseNameCString(String baseName, const char *fileName)
   return baseName;
 }
 
-bool File_getRootFileName(String rootName, ConstString fileName)
+String File_getRootFileName(String rootName, ConstString fileName)
 {
   assert(rootName != NULL);
   assert(fileName != NULL);
@@ -628,7 +628,7 @@ bool File_getRootFileName(String rootName, ConstString fileName)
   return File_getRootFileNameCString(rootName,String_cString(fileName));
 }
 
-bool File_getRootFileNameCString(String rootName, const char *fileName)
+String File_getRootFileNameCString(String rootName, const char *fileName)
 {
   size_t n;
 
