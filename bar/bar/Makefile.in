@@ -449,8 +449,6 @@ help:
 	@$(ECHO) "  rundev_ssl"
 	@$(ECHO) ""
 	@$(ECHO) "  test[-debug|-valgrind]"
-	@$(ECHO) "  show_debug_test_code"
-	@$(ECHO) "  run_debug_test_code"
 	@$(ECHO) "  test1[-debug|-valgrind], test_basic[-debug|-valgrind]"
 	@$(ECHO) "  test2[-debug|-valgrind], test_compress[-debug], test_delta_compress[-debug|-valgrind]"
 	@$(ECHO) "  test3[-debug|-valgrind], test_crypt[-debug|-valgrind]"
@@ -462,13 +460,21 @@ help:
 	@$(ECHO) "  test9[-debug|-valgrind], test_dvd[-debug|-valgrind]"
 	@$(ECHO) "  test_combined[-debug|-valgrind]"
 	@$(ECHO) "  test_parameters[-debug|-valgrind]"
-	@$(ECHO) "  test_misc[-debug|-valgrind]|
+	@$(ECHO) "  test_misc[-debug|-valgrind]"
+	@$(ECHO) "  test_all[-debug|-valgrind]"
+	@$(ECHO) ""
+	@$(ECHO) "  test_file_operations"
+	@$(ECHO) "  test_file_operations_dryrun"
 	@$(ECHO) ""
 	@$(ECHO) "  test_image_operations"
 	@$(ECHO) "  test_image_operations_raw"
 	@$(ECHO) "  test_image_operations_ext"
 	@$(ECHO) "  test_image_operations_fat"
 	@$(ECHO) "  test_image_operations_reiserfs"
+	@$(ECHO) "  test_image_operations_dryrun"
+	@$(ECHO) ""
+	@$(ECHO) "  show_debug_test_code"
+	@$(ECHO) "  run_debug_test_code"
 	@$(ECHO) ""
 	@$(ECHO) "  memcheck"
 	@$(ECHO) "  memcheck_extended [CHECK=1|2|2a|2b|2c|2d|2e|3|4|5|6|7]"
@@ -867,6 +873,7 @@ TEST_KEYS = test/key.public \
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_storage test_dvd test_combined test_parameters test_misc
 .PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_parameters-debug test_misc-debug
 .PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_split-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_parameters-valgrind test_misc-valgrind
+.PHONY: test_all test_all-debug test_all-valgrind
 .PHONY: clean_test show_debug_test_code run_debug_test_code
 test:
 	@$(MAKE) QUIET=1 --no-print-directory -s \
@@ -895,27 +902,6 @@ test-win-debug:
 
 clean_test:
 	$(RMRF) $(TEST_FILES_CLEAN)
-
-show_debug_test_code test_code:
-	@$(FIND) . -maxdepth 1 -type f -a \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -print | \
-          ( \
-            while read fileName; do \
-              cat $$fileName | $(PERL) -n -e 'if (/DEBUG_TEST_CODE\("(.*)"\)/) { print "'$$fileName': $$1=1\n"; };'; \
-            done; \
-          )
-
-run_debug_test_code:
-	$(call functionTestCheckExitcode,125,125,initAll1=1 $(TEST_BAR))
-	$(call functionTestCheckExitcode,125,125,initAll2=1 $(TEST_BAR))
-	$(call functionTestCheckExitcode,125,125,initAll3=1 $(TEST_BAR))
-	$(call functionTestCheckExitcode,125,125,initAll4=1 $(TEST_BAR))
-	$(call functionTestCheckExitcode,125,125,initAll5=1 $(TEST_BAR))
-	$(call functionTestCheckExitcode,125,125,initAll6=1 $(TEST_BAR))
-	$(call functionTestCheckExitcode,125,125,initAll7=1 $(TEST_BAR))
-	$(call functionTestCheckExitcode,125,125,initAll8=1 $(TEST_BAR))
-	$(call functionTestCheckExitcode,125,125,initAll9=1 $(TEST_BAR))
-	$(call functionTestCheckExitcode,125,125,initAll10=1 $(TEST_BAR))
-	$(call functionTestCheckExitcode,125,125,initAll11=1 $(TEST_BAR))
 
 test1 test_basic: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 1: basic..."
@@ -1193,14 +1179,14 @@ test7 test_storage: $(TEST_BAR)
           ;
 # delta test?
 	$(MAKE) \
-          BAR_STORAGE="ftp://localhost/test/" \
+          BAR_STORAGE="ftp://anonymous@localhost/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ftp-password='$(PASSWORD)' --max-threads=1" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="ftp://localhost/test/" \
+          BAR_STORAGE="ftp://anonymous@localhost/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ftp-password='$(PASSWORD)'" \
@@ -1344,8 +1330,20 @@ test_combined: $(TEST_BAR)
 test_combined-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_combined
 
-test_combined-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_combined
+test_all:
+	@$(MAKE) QUIET=1 --no-print-directory -s \
+          test_basic \
+          test_compress \
+          test_crypt \
+          test_asymmetric_crypt \
+          test_split \
+          test_image \
+          test_storage \
+          test_largefiles \
+          test_dvd \
+          test_combined \
+          test_parameters \
+          test_misc
 
 test_parameters: \
   $(TEST_BAR) \
@@ -1418,6 +1416,30 @@ test_misc-debug: $(TEST_BAR_DEBUG)
         
 test_misc-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_misc        
+
+test_misc-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_misc        
+
+show_debug_test_code test_code:
+	@$(FIND) . -maxdepth 1 -type f -a \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -print | \
+          ( \
+            while read fileName; do \
+              cat $$fileName | $(PERL) -n -e 'if (/DEBUG_TEST_CODE\("(.*)"\)/) { print "'$$fileName': $$1=1\n"; };'; \
+            done; \
+          )
+
+run_debug_test_code:
+	$(call functionTestCheckExitcode,125,125,initAll1=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll2=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll3=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll4=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll5=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll6=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll7=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll8=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll9=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll10=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll11=1 $(TEST_BAR))
 
 .PHONY: test_file_operations
 test_file_operations: \

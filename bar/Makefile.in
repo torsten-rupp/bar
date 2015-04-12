@@ -177,9 +177,12 @@ help:
 	@$(ECHO) "  test4, test_asymmetric_crypt"
 	@$(ECHO) "  test5, test_split"
 	@$(ECHO) "  test6, test_image"
-	@$(ECHO) "  test7, test_dvd"
+	@$(ECHO) "  test7, test_storage"
+	@$(ECHO) "  test8, test_largefile"
+	@$(ECHO) "  test9, test_dvd"
 	@$(ECHO) "  test_parameters"
 	@$(ECHO) "  test_combined"
+	@$(ECHO) "  test_misc"
 	@$(ECHO) ""
 	@$(ECHO) "  memcheck"
 	@$(ECHO) "  memcheck_extended"
@@ -457,11 +460,19 @@ test5 test_split:
 	@$(MAKE) -C bar test5
 test6 test_image:
 	@$(MAKE) -C bar test6
-test7 test_dvd:
+test7 test_storage:
 	@$(MAKE) -C bar test7
+test8 test_largefile:
+	@$(MAKE) -C bar test8
+test9 test_dvd:
+	@$(MAKE) -C bar test9
 test_parameters:
 	@$(MAKE) -C bar test_parameters
 test_combined:
+	@$(MAKE) -C bar test_combined
+test_misc:
+	@$(MAKE) -C bar test_misc
+test_all:
 	@$(MAKE) -C bar test_all
 
 # memory checks
