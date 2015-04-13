@@ -1186,14 +1186,13 @@ LOCAL void initServer(Server *server, ConstString name, ServerTypes serverType)
       server->ftpServer.password              = NULL;
       break;
     case SERVER_TYPE_SSH:
-      server->sshServer.port                  = 0;
+      server->sshServer.port                  = 22;
       server->sshServer.loginName             = NULL;
       server->sshServer.password              = NULL;
       server->sshServer.publicKeyFileName     = NULL;
       server->sshServer.privateKeyFileName    = NULL;
       break;
     case SERVER_TYPE_WEBDAV:
-//      server->webDAVServer.port               = 0;
       server->webDAVServer.loginName          = NULL;
       server->webDAVServer.password           = NULL;
       server->webDAVServer.publicKeyFileName  = NULL;
@@ -3694,6 +3693,7 @@ Server *getSSHServerSettings(ConstString      hostName,
 
   // get SSH server settings
   sshServer->port               = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                        ) ? jobOptions->sshServer.port               : ((serverNode != NULL) ? serverNode->server.sshServer.port               : globalOptions.defaultSSHServer->sshServer.port              );
+fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,sshServer->port,globalOptions.defaultSSHServer->sshServer.port);
   sshServer->loginName          = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.loginName)         ) ? jobOptions->sshServer.loginName          : ((serverNode != NULL) ? serverNode->server.sshServer.loginName          : globalOptions.defaultSSHServer->sshServer.loginName         );
   sshServer->password           = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->sshServer.password)        ) ? jobOptions->sshServer.password           : ((serverNode != NULL) ? serverNode->server.sshServer.password           : globalOptions.defaultSSHServer->sshServer.password          );
   sshServer->publicKeyFileName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.publicKeyFileName) ) ? jobOptions->sshServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->server.sshServer.publicKeyFileName  : globalOptions.defaultSSHServer->sshServer.publicKeyFileName );
