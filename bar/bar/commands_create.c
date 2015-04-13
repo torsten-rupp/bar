@@ -3762,7 +3762,8 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
                        && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
-    deltaCompressFlag = Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta);
+    deltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
+                        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta);
 
     // create new archive file entry
     error = Archive_newFileEntry(&archiveEntryInfo,
@@ -4084,7 +4085,8 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
                        && !PatternList_match(createInfo->compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
-    deltaCompressFlag = Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta);
+    deltaCompressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
+                        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta);
 
     // create new archive image entry
     error = Archive_newImageEntry(&archiveEntryInfo,
@@ -4782,7 +4784,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                        && !PatternList_matchStringList(createInfo->compressExcludePatternList,nameList,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
-    deltaCompressFlag = Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta);
+    deltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
+                        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta);
 
     // create new archive hard link entry
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
