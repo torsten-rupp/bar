@@ -340,6 +340,7 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
     {
       return ERROR_FTP_SESSION_FAIL;
     }
+    (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,FTP_TIMEOUT);
     (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
     if (globalOptions.verboseLevel >= 6)
     {
@@ -5343,6 +5344,7 @@ Errors Storage_create(StorageHandle *storageHandle,
             return ERROR_FTP_SESSION_FAIL;
           }
           (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FAILONERROR,1L);
+          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_CONNECTTIMEOUT_MS,FTP_TIMEOUT);
           (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -6127,6 +6129,7 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
             return ERROR_FTP_SESSION_FAIL;
           }
           (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FAILONERROR,1L);
+          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_CONNECTTIMEOUT_MS,FTP_TIMEOUT);
           (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -9238,6 +9241,7 @@ Errors Storage_delete(StorageHandle *storageHandle,
           if (curlHandle != NULL)
           {
             (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
+            (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,FTP_TIMEOUT);
             (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
             if (globalOptions.verboseLevel >= 6)
             {
@@ -9663,6 +9667,7 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
             return = ERROR_FTP_SESSION_FAIL;
           }
           (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
+          (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,FTP_TIMEOUT);
           (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -10126,6 +10131,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
           */
           (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
+          (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,FTP_TIMEOUT);
           (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
