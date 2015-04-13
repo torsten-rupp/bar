@@ -192,11 +192,12 @@ CRYPT_NAMES    += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
 endif
 
 # ports used for tests
-TEST_SERVER_PORT=39909
-TEST_SERVER_SSL_PORT=39910
+TEST_SERVER_PORT     = 39909
+TEST_SERVER_SSL_PORT = 39910
 
-# password used for tests
-TEST_PASSWORD=Franz_Kafka:Die_Verwandlung
+# host, password for tests
+TEST_HOST     ?= localhost
+TEST_PASSWORD =  Franz_Kafka:Die_Verwandlung
 
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
@@ -1179,56 +1180,56 @@ test7 test_storage: $(TEST_BAR)
           ;
 # delta test?
 	$(MAKE) \
-          BAR_STORAGE="ftp://localhost/test/" \
+          BAR_STORAGE="ftp://$(TEST_HOST)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ftp-password='$(PASSWORD)' --max-threads=1" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="ftp://localhost/test/" \
+          BAR_STORAGE="ftp://$(TEST_HOST)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ftp-password='$(PASSWORD)'" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="scp://localhost/test/" \
+          BAR_STORAGE="scp://$(TEST_HOST)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)' --max-threads=1" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="scp://localhost/test/" \
+          BAR_STORAGE="scp://$(TEST_HOST)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)'" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="sftp://localhost/test/" \
+          BAR_STORAGE="sftp://$(TEST_HOST)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)' --max-threads=1" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="sftp://localhost/test/" \
+          BAR_STORAGE="sftp://$(TEST_HOST)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)'" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="webdav://localhost/webdav/" \
+          BAR_STORAGE="webdav://$(TEST_HOST)/webdav/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)' --max-threads=1" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="webdav://localhost/webdav/" \
+          BAR_STORAGE="webdav://$(TEST_HOST)/webdav/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)'" \
@@ -3190,18 +3191,18 @@ memcheck8: \
             --server-tls-port=$(TEST_SERVER_SSL_PORT) \
             --server-debug &
 	$(SLEEP) 30
-	$(ECHO) '1 VERSION' | $(NETCAT) localhost $(TEST_SERVER_PORT)
-	$(ECHO) '1 JOB_LIST' | $(NETCAT) localhost $(TEST_SERVER_PORT)
-	$(ECHO) '1 DEVICE_LIST' | $(NETCAT) localhost $(TEST_SERVER_PORT)
-	$(ECHO) '1 FILE_LIST storageDirectory=/tmp'| $(NETCAT) localhost $(TEST_SERVER_PORT)
-	$(ECHO) '1 PASSWORDS_CLEAR' | $(NETCAT) localhost $(TEST_SERVER_PORT)
-	$(ECHO) '1 INDEX_STORAGE_LIST maxCount=10 indexState=* indexMode=* pattern=x'| $(NETCAT) localhost $(TEST_SERVER_PORT)
-	$(ECHO) '1 DEBUG_PRINT_STATISTICS' | $(NETCAT) localhost $(TEST_SERVER_PORT)
-	$(ECHO) '1 DEBUG_PRINT_MEMORY_INFO' | $(NETCAT) localhost $(TEST_SERVER_PORT)
-	$(ECHO) '1 DEBUG_DUMP_MEMORY_INFO' | $(NETCAT) localhost $(TEST_SERVER_PORT)
-	$(ECHO) 'UNKNOWN' | $(NETCAT) localhost $(TEST_SERVER_PORT)
-	$(ECHO) '1 UNKNOWN' | $(NETCAT) localhost $(TEST_SERVER_PORT)
-	$(ECHO) '1 QUIT' | $(NETCAT) localhost $(TEST_SERVER_PORT)
+	$(ECHO) '1 VERSION' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 JOB_LIST' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 DEVICE_LIST' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 FILE_LIST storageDirectory=/tmp'| $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 PASSWORDS_CLEAR' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 INDEX_STORAGE_LIST maxCount=10 indexState=* indexMode=* pattern=x'| $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 DEBUG_PRINT_STATISTICS' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 DEBUG_PRINT_MEMORY_INFO' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 DEBUG_DUMP_MEMORY_INFO' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) 'UNKNOWN' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 UNKNOWN' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 QUIT' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
 
 #valgrind --tool=cachegrind ./bar -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
 
