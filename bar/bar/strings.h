@@ -170,6 +170,12 @@ typedef struct
       String_debugCheckValid(__FILE__,__LINE__,string); \
     } \
     while (0)
+  #define STRING_CHECK_VALID_AT(fileName,lineNb,string) \
+    do \
+    { \
+      String_debugCheckValid(fileName,lineNb,string); \
+    } \
+    while (0)
   #define STRING_UPDATE_VALID(string) \
     do \
     { \

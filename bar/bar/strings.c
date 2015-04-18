@@ -2202,7 +2202,11 @@ String __String_duplicate(const char *__fileName__, ulong __lineNb__, ConstStrin
 {
   struct __String *string;
 
-  STRING_CHECK_VALID(fromString);
+  #ifdef NDEBUG
+    STRING_CHECK_VALID(fromString);
+  #else /* not NDEBUG */
+    STRING_CHECK_VALID_AT(__fileName__,__lineNb__,fromString);
+  #endif /* NDEBUG */
 
   if (fromString != NULL)
   {
@@ -2239,9 +2243,17 @@ String String_copy(String *string, ConstString fromString)
 String __String_copy(const char *__fileName__, ulong __lineNb__, String *string, ConstString fromString)
 #endif /* NDEBUG */
 {
-  STRING_CHECK_VALID(*string);
+  #ifdef NDEBUG
+    STRING_CHECK_VALID(string);
+  #else /* not NDEBUG */
+    STRING_CHECK_VALID_AT(__fileName__,__lineNb__,string);
+  #endif /* NDEBUG */
   STRING_CHECK_ASSIGNABLE(*string);
-  STRING_CHECK_VALID(fromString);
+  #ifdef NDEBUG
+    STRING_CHECK_VALID(fromString);
+  #else /* not NDEBUG */
+    STRING_CHECK_VALID_AT(__fileName__,__lineNb__,fromString);
+  #endif /* NDEBUG */
 
   if (fromString != NULL)
   {
@@ -2291,7 +2303,11 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
     DebugStringNode *debugStringNode;
   #endif /* not NDEBUG */
 
-  STRING_CHECK_VALID(string);
+  #ifdef NDEBUG
+    STRING_CHECK_VALID(string);
+  #else /* not NDEBUG */
+    STRING_CHECK_VALID_AT(__fileName__,__lineNb__,string);
+  #endif /* NDEBUG */
   STRING_CHECK_DYNAMIC(string);
 
   if (string != NULL)
@@ -4958,18 +4974,80 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
     checkSum = STRING_CHECKSUM(string->length,string->maxLength,string->data);
     if (checkSum != string->checkSum)
     {
-      #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,"",0);
-      #endif /* HAVE_BACKTRACE */
-      HALT_INTERNAL_ERROR_AT(__fileName__,
-                             __lineNb__,
-                             "Invalid checksum 0x%08lx in string %p, length %lu (max. %lu) (expected 0x%08lx)!",
-                             string->checkSum,
-                             string,
-                             string->length,
-                             (ulong)string->maxLength,
-                             checkSum
-                            );
+      if (STRING_IS_DYNAMIC(string))
+      {
+        pthread_once(&debugStringInitFlag,debugStringInit);
+
+        pthread_mutex_lock(&debugStringLock);
+        {
+          debugStringNode = debugFindAllocatedString(string);
+          if (debugStringNode != NULL)
+          {
+            #ifdef HAVE_BACKTRACE
+              debugDumpCurrentStackTrace(stderr,"",0);
+            #endif /* HAVE_BACKTRACE */
+            HALT_INTERNAL_ERROR_AT(__fileName__,
+                                   __lineNb__,
+                                   "Invalid checksum 0x%08lx in string %p, length %lu (max. %lu) allocated at %s, %d (expected 0x%08lx)!",
+                                   string->checkSum,
+                                   string,
+                                   string->length,
+                                   (ulong)string->maxLength,
+                                   debugStringNode->allocFileName,
+                                   debugStringNode->allocLineNb,
+                                   checkSum
+                                  );
+          }
+          else
+          {
+            debugStringNode = debugFindFreedString(string);
+            if (debugStringNode != NULL)
+            {
+              fprintf(stderr,"DEBUG WARNING: string %p is not allocated at %s, %lu!\n",
+                      string,
+                      __fileName__,
+                      __lineNb__
+                     );
+            }
+            else
+            {
+              fprintf(stderr,"DEBUG WARNING: string %p is not allocated and not known at %s, %lu!\n",
+                      string,
+                      __fileName__,
+                      __lineNb__
+                     );
+            }
+            #ifdef HAVE_BACKTRACE
+              debugDumpCurrentStackTrace(stderr,"",0);
+            #endif /* HAVE_BACKTRACE */
+            HALT_INTERNAL_ERROR_AT(__fileName__,
+                                   __lineNb__,
+                                   "Invalid checksum 0x%08lx in string %p, length %lu (max. %lu), %d (expected 0x%08lx)!",
+                                   string->checkSum,
+                                   string,
+                                   string->length,
+                                   (ulong)string->maxLength,
+                                   checkSum
+                                  );
+          }
+        }
+        pthread_mutex_unlock(&debugStringLock);
+      }
+      else
+      {
+        #ifdef HAVE_BACKTRACE
+          debugDumpCurrentStackTrace(stderr,"",0);
+        #endif /* HAVE_BACKTRACE */
+        HALT_INTERNAL_ERROR_AT(__fileName__,
+                               __lineNb__,
+                               "Invalid checksum 0x%08lx in string %p, length %lu (max. %lu) allocated at %s, %d (expected 0x%08lx)!",
+                               string->checkSum,
+                               string,
+                               string->length,
+                               (ulong)string->maxLength,
+                               checkSum
+                              );
+      }
     }
 
     if (STRING_IS_DYNAMIC(string))
