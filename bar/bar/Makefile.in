@@ -186,18 +186,28 @@ ifeq ($(COMPRESS_NAMES_LARGE),)
 endif
 
 # supported crypt algorithms
-CRYPT_NAMES    = none
+CRYPT_NAMES  = none
 ifeq (@HAVE_GCRYPT@,1)
-CRYPT_NAMES    += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256
+CRYPT_NAMES  += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256
 endif
 
 # ports used for tests
 TEST_SERVER_PORT     = 39909
 TEST_SERVER_SSL_PORT = 39910
 
-# host, password for tests
-TEST_HOST     ?= localhost
-TEST_PASSWORD =  Franz_Kafka:Die_Verwandlung
+# host, passwords for tests
+TEST_HOST            ?= localhost
+TEST_PASSWORD_CRYPT  =  Franz_Kafka:Die_Verwandlung
+TEST_PASSWORD_SSH    ?=
+
+TEST_HOST_FTP        ?= $(TEST_HOST)
+TEST_PASSWORD_FTP    ?= $(TEST_PASSWORD_SSH)
+TEST_HOST_SCP        ?= $(TEST_HOST)
+TEST_PASSWORD_SCP    ?= $(TEST_PASSWORD_SSH)
+TEST_HOST_SFTP       ?= $(TEST_HOST)
+TEST_PASSWORD_SFTP   ?= $(TEST_PASSWORD_SSH)
+TEST_HOST_WEBDAV     ?= http://localhost/webdav
+TEST_PASSWORD_WEBDAV ?= $(TEST_PASSWORD_SSH)
 
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
@@ -1012,7 +1022,7 @@ test3 test_crypt: $(TEST_BAR)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password='$(TEST_PASSWORD)' --max-threads=1" \
+            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password='$(TEST_PASSWORD_CRYPT)' --max-threads=1" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1022,7 +1032,7 @@ test3 test_crypt: $(TEST_BAR)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" \
+            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1032,7 +1042,7 @@ test3 test_crypt: $(TEST_BAR)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" \
+            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT)" \
             test_file_operations_dryrun \
             ; \
           rc=$$?; \
@@ -1055,7 +1065,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --max-threads=1" \
+            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --max-threads=1" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1065,7 +1075,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private" \
+            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1075,7 +1085,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private" \
+            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private" \
             test_file_operations_dryrun \
             ; \
           rc=$$?; \
@@ -1162,7 +1172,10 @@ test6-valgrind test_image-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_image
 
 test7 test_storage: $(TEST_BAR)
-	@$(call functionVerifyParameter,PASSWORD)
+	@$(call functionVerifyParameter,TEST_PASSWORD_FTP)
+	@$(call functionVerifyParameter,TEST_PASSWORD_SCP)
+	@$(call functionVerifyParameter,TEST_PASSWORD_SFTP)
+	@$(call functionVerifyParameter,TEST_PASSWORD_WEBDAV)
 	@$(ECHO_NO_LF) "Test 7: storage..."
 	$(MAKE) \
           BAR_STORAGE="file://test/" \
@@ -1180,59 +1193,59 @@ test7 test_storage: $(TEST_BAR)
           ;
 # delta test?
 	$(MAKE) \
-          BAR_STORAGE="ftp://$(TEST_HOST)/test/" \
+          BAR_STORAGE="ftp://$(TEST_HOST_FTP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ftp-password='$(PASSWORD)' --max-threads=1" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)' --max-threads=1" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="ftp://$(TEST_HOST)/test/" \
+          BAR_STORAGE="ftp://$(TEST_HOST_FTP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ftp-password='$(PASSWORD)'" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)'" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="scp://$(TEST_HOST)/test/" \
+          BAR_STORAGE="scp://$(TEST_HOST_SCP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)' --max-threads=1" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --max-threads=1" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="scp://$(TEST_HOST)/test/" \
+          BAR_STORAGE="scp://$(TEST_HOST_SCP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)'" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))'" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="sftp://$(TEST_HOST)/test/" \
+          BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)' --max-threads=1" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(TEST_PASSWORD_SFTP)' --max-threads=1" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="sftp://$(TEST_HOST)/test/" \
+          BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)'" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(TEST_PASSWORD_SFTP)'" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="webdav://$(TEST_HOST)/webdav/" \
+          BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/webdav/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)' --max-threads=1" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(TEST_PASSWORD_WEBDAV)' --max-threads=1" \
           test_file_operations_base \
           ;
 	$(MAKE) \
-          BAR_STORAGE="webdav://$(TEST_HOST)/webdav/" \
+          BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/webdav/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)'" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(TEST_PASSWORD_WEBDAV)'" \
           test_file_operations_base \
           ;
 	@$(ECHO) "ok"
@@ -1289,7 +1302,7 @@ test_combined: $(TEST_BAR)
             $(MAKE) \
               BAR_FILE=test-### \
               BAR_PATTERN="test-*" \
-              BAR_OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=100K" \
+              BAR_OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=100K" \
               test_file_operations \
               ; \
             rc=$$?; \
@@ -1299,7 +1312,7 @@ test_combined: $(TEST_BAR)
             $(MAKE) \
               BAR_FILE=test-### \
               BAR_PATTERN="test-*" \
-              BAR_OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=10M" \
+              BAR_OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=10M" \
               test_image_operations \
               ; \
             rc=$$?; \
@@ -1309,7 +1322,7 @@ test_combined: $(TEST_BAR)
             $(MAKE) \
               BAR_FILE=test-### \
               BAR_PATTERN="test-*" \
-              BAR_OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=10M" \
+              BAR_OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=10M" \
               test_image_operations_dryrun \
               ; \
             rc=$$?; \
@@ -1415,9 +1428,6 @@ test_misc: \
 test_misc-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_misc
         
-test_misc-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_misc        
-
 test_misc-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_misc        
 
@@ -1595,7 +1605,7 @@ $(TEST_DATA_DIR)/data_large/random5G.dat:
 
 test/key.public test/key.private:
 	$(INSTALL) -d test
-	$(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | DISPLAY= SSH_ASKPASS= ./bar --generate-keys test/key
+	$(ECHO_NO_LF) -e "$(TEST_PASSWORD_CRYPT)\n$(TEST_PASSWORD_CRYPT)\n" | DISPLAY= SSH_ASKPASS= ./bar --generate-keys test/key
 
 # helper function to check if parameter exists
 # call functionVerifyParameter,<name>
@@ -3079,7 +3089,7 @@ memcheck2c: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --overwrite-archive-files > /dev/null
 memcheck2d: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -3089,7 +3099,7 @@ memcheck2d: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --overwrite-archive-files > /dev/null
 memcheck2e: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -3331,7 +3341,7 @@ endif
 TESTCODE_COMMAND1A=$(TEST_BAR_DEBUG) \
                      --compress-algorithm=lzma9 \
                      --crypt-algorithm=AES256 \
-                     --crypt-password=$(TEST_PASSWORD) \
+                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
                      --crypt-type=asymmetric \
                      --crypt-public-key=$(PWD)/test/key.public \
                      --crypt-private-key=$(PWD)/test/key.private \
@@ -3343,7 +3353,7 @@ TESTCODE_COMMAND1A=$(TEST_BAR_DEBUG) \
 TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
                      --compress-algorithm=lzma9 \
                      --crypt-algorithm=AES256 \
-                     --crypt-password=$(TEST_PASSWORD) \
+                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
                      --crypt-type=asymmetric \
                      --crypt-public-key=$(PWD)/test/key.public \
                      --crypt-private-key=$(PWD)/test/key.private \
@@ -3356,7 +3366,7 @@ TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
 TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
                      --compress-algorithm=lzma9 \
                      --crypt-algorithm=AES256 \
-                     --crypt-password=$(TEST_PASSWORD) \
+                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
                      --crypt-type=asymmetric \
                      --crypt-public-key=$(PWD)/test/key.public \
                      --crypt-private-key=$(PWD)/test/key.private \
@@ -3367,17 +3377,17 @@ TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
                      --log-post-command='true' \
                      -c test/test-\#\#\#.bar $(TEST_DATA_DIR)/data
 TESTCODE_COMMAND2=$(TEST_BAR_DEBUG) \
-                    --crypt-password=$(TEST_PASSWORD) \
+                    --crypt-password=$(TEST_PASSWORD_CRYPT) \
                     --crypt-public-key=$(PWD)/test/key.public \
                     --crypt-private-key=$(PWD)/test/key.private \
                     -l test/test-*.bar
 TESTCODE_COMMAND3=$(TEST_BAR_DEBUG) \
-                    --crypt-password=$(TEST_PASSWORD) \
+                    --crypt-password=$(TEST_PASSWORD_CRYPT) \
                     --crypt-public-key=$(PWD)/test/key.public \
                     --crypt-private-key=$(PWD)/test/key.private \
                     -d test/test-*.bar
 TESTCODE_COMMAND4=$(TEST_BAR_DEBUG) \
-                    --crypt-password=$(TEST_PASSWORD) \
+                    --crypt-password=$(TEST_PASSWORD_CRYPT) \
                     --crypt-public-key=$(PWD)/test/key.public \
                     --crypt-private-key=$(PWD)/test/key.private \
                     --destination=test/restore \
