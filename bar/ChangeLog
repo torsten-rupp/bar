@@ -55,6 +55,8 @@
   * fixed race-condition in init database (thanks to Shane)
   * fixed restore: keep root (first /) when not directories
     are stripped
+  * fixed sending data via scp: close and transmit last
+    data package
 
 2014-11-10 0.18e
   * removed nice-level in init scripts
