@@ -156,6 +156,7 @@ typedef struct
   StorageTypes type;                                       // storage type
   String       hostName;                                   // host name
   uint         hostPort;                                   // host port
+  bool         sslFlag;                                    // TRUE for SSL
   String       loginName;                                  // login name
   Password     *loginPassword;                             // login name
   String       deviceName;                                 // device name
@@ -705,6 +706,7 @@ bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
 *            [<login name>@]<host name>
 * Input  : webdavSpecifier - WebDAV specifier string
 *          hostName        - host name variable (can be NULL)
+*          hostPort        - host port number variable (can be NULL)
 *          loginName       - login name variable (can be NULL)
 *          loginPassword   - login password variable (can be NULL)
 * Output : hostName      - host name (can be NULL)

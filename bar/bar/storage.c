@@ -564,9 +564,9 @@ LOCAL size_t curlFTPParseDirectoryListCallback(const void *buffer,
 /***********************************************************************\
 * Name   : ftpTimeoutCallback
 * Purpose: callback on FTP timeout
-* Input  : loginName - login name
-*          password  - login password
-*          hostName  - host name
+* Input  : control        - FTP handle
+-          transferdBytes - number of transfered bytes
+-          userData       - user data
 * Output : -
 * Return : always 0 to trigger error
 * Notes  : -
@@ -938,10 +938,10 @@ LOCAL bool parseFTPDirectoryLine(String         line,
 /***********************************************************************\
 * Name   : checkSSHLogin
 * Purpose: check if SSH login is possible
-* Input  : loginName          - login name
-*          password           - login password
-*          hostName           - host name
+* Input  : hostName           - host name
 *          hostPort           - host SSH port
+*          loginName          - login name
+*          loginPassword      - login password
 *          publicKeyFileName  - SSH public key file name
 *          privateKeyFileName - SSH private key file name
 * Output : -
@@ -949,10 +949,10 @@ LOCAL bool parseFTPDirectoryLine(String         line,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors checkSSHLogin(ConstString loginName,
-                           Password    *password,
-                           ConstString hostName,
+LOCAL Errors checkSSHLogin(ConstString hostName,
                            uint        hostPort,
+                           ConstString loginName,
+                           Password    *loginPassword,
                            ConstString publicKeyFileName,
                            ConstString privateKeyFileName
                           )
@@ -960,6 +960,7 @@ LOCAL Errors checkSSHLogin(ConstString loginName,
   SocketHandle socketHandle;
   Errors       error;
 
+  printInfo(5,"SSH: host %s:%d\n",String_cString(hostName),hostPort);
   printInfo(5,"SSH: public key '%s'\n",String_cString(publicKeyFileName));
   printInfo(5,"SSH: private key '%s'\n",String_cString(privateKeyFileName));
   error = Network_connect(&socketHandle,
@@ -967,7 +968,7 @@ LOCAL Errors checkSSHLogin(ConstString loginName,
                           hostName,
                           hostPort,
                           loginName,
-                          password,
+                          loginPassword,
                           publicKeyFileName,
                           privateKeyFileName,
                           0
@@ -1329,13 +1330,14 @@ LOCAL size_t curlWebDAVReadDataCallback(void   *buffer,
 
 /***********************************************************************\
 * Name   : curlWebDAVWriteDataCallback
-* Purpose: curl WebDAV write data callback: send data to remote
+* Purpose: curl WebDAV write data callback: get data from remote
+*          and store into buffer
 * Input  : buffer   - buffer with data
 *          size     - size of an element
 *          n        - number of elements
 *          userData - user data
 * Output : -
-* Return : number of written bytes or 0
+* Return : number of stored bytes or 0
 * Notes  : -
 \***********************************************************************/
 
@@ -1358,7 +1360,7 @@ LOCAL size_t curlWebDAVWriteDataCallback(const void *buffer,
   // calculate number of received bytes
   bytesReceived = n*size;
 
-  // increase buffer if required
+  // increase buffer size if required
   if ((storageHandle->webdav.receiveBuffer.length+bytesReceived) > storageHandle->webdav.receiveBuffer.size)
   {
     newSize = ((storageHandle->webdav.receiveBuffer.length+bytesReceived+INCREMENT_BUFFER_SIZE-1)/INCREMENT_BUFFER_SIZE)*INCREMENT_BUFFER_SIZE;
@@ -1371,7 +1373,7 @@ LOCAL size_t curlWebDAVWriteDataCallback(const void *buffer,
     storageHandle->webdav.receiveBuffer.size = newSize;
   }
 
-  // append to data
+  // append data to buffer
   memcpy(storageHandle->webdav.receiveBuffer.data+storageHandle->webdav.receiveBuffer.length,buffer,bytesReceived);
   storageHandle->webdav.receiveBuffer.length += bytesReceived;
 //static size_t totalReceived = 0;
@@ -3338,6 +3340,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           storageHandle->ftp.server = getFTPServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,ftpServer.loginName);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
           if (String_isEmpty(storageHandle->storageSpecifier.hostName))
           {
             AutoFree_cleanup(&autoFreeList);
@@ -3437,6 +3440,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           getFTPServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,ftpServer.loginName);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
           if (String_isEmpty(storageHandle->storageSpecifier.hostName))
           {
             AutoFree_cleanup(&autoFreeList);
@@ -3551,6 +3555,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           storageHandle->scp.server = getSSHServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&sshServer);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,sshServer.loginName);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
           if (storageHandle->storageSpecifier.hostPort == 0) storageHandle->storageSpecifier.hostPort = sshServer.port;
           storageHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
@@ -3572,10 +3577,10 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           error = ERROR_UNKNOWN;
           if ((error == ERROR_UNKNOWN) && !Password_isEmpty(sshServer.password))
           {
-            error = checkSSHLogin(storageHandle->storageSpecifier.loginName,
-                                  sshServer.password,
-                                  storageHandle->storageSpecifier.hostName,
+            error = checkSSHLogin(storageHandle->storageSpecifier.hostName,
                                   storageHandle->storageSpecifier.hostPort,
+                                  storageHandle->storageSpecifier.loginName,
+                                  sshServer.password,
                                   storageHandle->scp.sshPublicKeyFileName,
                                   storageHandle->scp.sshPrivateKeyFileName
                                  );
@@ -3591,10 +3596,10 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
                 && !Password_isEmpty(defaultSSHPassword)
                )
             {
-              error = checkSSHLogin(storageHandle->storageSpecifier.loginName,
-                                    defaultSSHPassword,
-                                    storageHandle->storageSpecifier.hostName,
+              error = checkSSHLogin(storageHandle->storageSpecifier.hostName,
                                     storageHandle->storageSpecifier.hostPort,
+                                    storageHandle->storageSpecifier.loginName,
+                                    defaultSSHPassword,
                                     storageHandle->scp.sshPublicKeyFileName,
                                     storageHandle->scp.sshPrivateKeyFileName
                                    );
@@ -3656,6 +3661,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           storageHandle->sftp.server = getSSHServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&sshServer);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,sshServer.loginName);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
           if (storageHandle->storageSpecifier.hostPort == 0) storageHandle->storageSpecifier.hostPort = sshServer.port;
           storageHandle->sftp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageHandle->sftp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
@@ -3677,10 +3683,10 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           error = ERROR_UNKNOWN;
           if ((error != ERROR_NONE) && (sshServer.password != NULL))
           {
-            error = checkSSHLogin(storageHandle->storageSpecifier.loginName,
-                                  sshServer.password,
-                                  storageHandle->storageSpecifier.hostName,
+            error = checkSSHLogin(storageHandle->storageSpecifier.hostName,
                                   storageHandle->storageSpecifier.hostPort,
+                                  storageHandle->storageSpecifier.loginName,
+                                  sshServer.password,
                                   storageHandle->sftp.sshPublicKeyFileName,
                                   storageHandle->sftp.sshPrivateKeyFileName
                                  );
@@ -3696,10 +3702,10 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
                 && !Password_isEmpty(defaultSSHPassword)
                )
             {
-              error = checkSSHLogin(storageHandle->storageSpecifier.loginName,
-                                    defaultSSHPassword,
-                                    storageHandle->storageSpecifier.hostName,
+              error = checkSSHLogin(storageHandle->storageSpecifier.hostName,
                                     storageHandle->storageSpecifier.hostPort,
+                                    storageHandle->storageSpecifier.loginName,
+                                    defaultSSHPassword,
                                     storageHandle->sftp.sshPublicKeyFileName,
                                     storageHandle->sftp.sshPrivateKeyFileName
                                    );
@@ -3752,6 +3758,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
           storageHandle->webdav.server = getWebDAVServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&webDAVServer);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,webDAVServer.loginName);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
           if (String_isEmpty(storageHandle->storageSpecifier.hostName))
           {
             AutoFree_cleanup(&autoFreeList);
@@ -6996,8 +7003,7 @@ void Storage_close(StorageHandle *storageHandle)
             if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
             {
               libssh2_channel_send_eof(storageHandle->scp.channel);
-//???
-//              libssh2_channel_wait_eof(storageHandle->scp.channel);
+              libssh2_channel_close(storageHandle->scp.channel);
               libssh2_channel_wait_closed(storageHandle->scp.channel);
               libssh2_channel_free(storageHandle->scp.channel);
             }
@@ -7284,8 +7290,8 @@ Errors Storage_read(StorageHandle *storageHandle,
     case STORAGE_TYPE_FTP:
       #if   defined(HAVE_CURL)
         {
-          ulong     i;
-          ulong     n;
+          ulong     index;
+          ulong     bytesAvail;
           ulong     length;
           uint64    startTimestamp,endTimestamp;
           CURLMcode curlmCode;
@@ -7296,21 +7302,21 @@ Errors Storage_read(StorageHandle *storageHandle,
             assert(storageHandle->ftp.curlMultiHandle != NULL);
             assert(storageHandle->ftp.readAheadBuffer.data != NULL);
 
-            // copy as much as available from read-ahead buffer
+            // copy as much data as available from read-ahead buffer
             if (   (storageHandle->ftp.index >= storageHandle->ftp.readAheadBuffer.offset)
                 && (storageHandle->ftp.index < (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length))
                )
             {
-              // copy data
-              i = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
-              n = MIN(size,storageHandle->ftp.readAheadBuffer.length-i);
-              memcpy(buffer,storageHandle->ftp.readAheadBuffer.data+i,n);
+              // copy data from read-ahead buffer
+              index      = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
+              bytesAvail = MIN(size,storageHandle->ftp.readAheadBuffer.length-index);
+              memcpy(buffer,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
 
               // adjust buffer, size, bytes read, index
-              buffer = (byte*)buffer+n;
-              size -= n;
-              if (bytesRead != NULL) (*bytesRead) += n;
-              storageHandle->ftp.index += (uint64)n;
+              buffer = (byte*)buffer+bytesAvail;
+              size -= bytesAvail;
+              if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+              storageHandle->ftp.index += (uint64)bytesAvail;
             }
 
             // read rest of data
@@ -7379,15 +7385,15 @@ Errors Storage_read(StorageHandle *storageHandle,
                 storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
                 storageHandle->ftp.readAheadBuffer.length = storageHandle->ftp.transferedBytes;
 
-                // copy data
-                n = MIN(length,storageHandle->ftp.readAheadBuffer.length);
-                memcpy(buffer,storageHandle->ftp.readAheadBuffer.data,n);
+                // copy data from read-ahead buffer
+                bytesAvail = MIN(length,storageHandle->ftp.readAheadBuffer.length);
+                memcpy(buffer,storageHandle->ftp.readAheadBuffer.data,bytesAvail);
 
                 // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+n;
-                size -= n;
-                if (bytesRead != NULL) (*bytesRead) += n;
-                storageHandle->ftp.index += (uint64)n;
+                buffer = (byte*)buffer+bytesAvail;
+                size -= bytesAvail;
+                if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+                storageHandle->ftp.index += (uint64)bytesAvail;
               }
               else
               {
@@ -7429,13 +7435,13 @@ Errors Storage_read(StorageHandle *storageHandle,
                   error = ERROR_IO_ERROR;
                   break;
                 }
-                n = storageHandle->ftp.transferedBytes;
+                bytesAvail = storageHandle->ftp.transferedBytes;
 
                 // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+n;
-                size -= n;
-                if (bytesRead != NULL) (*bytesRead) += n;
-                storageHandle->ftp.index += (uint64)n;
+                buffer = (byte*)buffer+bytesAvail;
+                size -= bytesAvail;
+                if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+                storageHandle->ftp.index += (uint64)bytesAvail;
               }
 
               // get end time
@@ -7448,7 +7454,7 @@ Errors Storage_read(StorageHandle *storageHandle,
               if (endTimestamp >= startTimestamp)
               {
                 limitBandWidth(&storageHandle->ftp.bandWidthLimiter,
-                               n,
+                               bytesAvail,
                                endTimestamp-startTimestamp
                               );
               }
@@ -7457,11 +7463,11 @@ Errors Storage_read(StorageHandle *storageHandle,
         }
       #elif defined(HAVE_FTP)
         {
-          ulong   i;
-          ulong   n;
+          ulong   index;
+          ulong   bytesAvail;
           ulong   length;
           uint64  startTimestamp,endTimestamp;
-          ssize_t readBytes;
+          ssize_t n;
 
           if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
@@ -7469,21 +7475,21 @@ Errors Storage_read(StorageHandle *storageHandle,
             assert(storageHandle->ftp.data != NULL);
             assert(storageHandle->ftp.readAheadBuffer.data != NULL);
 
-            // copy as much as available from read-ahead buffer
+            // copy as much data as available from read-ahead buffer
             if (   (storageHandle->ftp.index >= storageHandle->ftp.readAheadBuffer.offset)
                 && (storageHandle->ftp.index < (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length))
                )
             {
-              // copy data
-              i = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
-              n = MIN(size,storageHandle->ftp.readAheadBuffer.length-i);
-              memcpy(buffer,storageHandle->ftp.readAheadBuffer.data+i,n);
+              // copy data from read-ahead buffer
+              index = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
+              bytesAvail = MIN(size,storageHandle->ftp.readAheadBuffer.length-index);
+              memcpy(buffer,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
 
               // adjust buffer, size, bytes read, index
-              buffer = (byte*)buffer+n;
-              size -= n;
-              if (bytesRead != NULL) (*bytesRead) += n;
-              storageHandle->ftp.index += (uint64)n;
+              buffer = (byte*)buffer+bytesAvail;
+              size -= bytesAvail;
+              if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+              storageHandle->ftp.index += (uint64)bytesAvail;
             }
 
             // read rest of data
@@ -7511,70 +7517,69 @@ Errors Storage_read(StorageHandle *storageHandle,
               if (length < MAX_BUFFER_SIZE)
               {
                 // read into read-ahead buffer
-                readBytes = FtpRead(storageHandle->ftp.readAheadBuffer.data,
-                                    MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),MAX_BUFFER_SIZE),
-                                    storageHandle->ftp.data
-                                  );
-                if (readBytes == 0)
+                n = FtpRead(storageHandle->ftp.readAheadBuffer.data,
+                            MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),MAX_BUFFER_SIZE),
+                            storageHandle->ftp.data
+                          );
+                if (n == 0)
                 {
                   // wait a short time for more data
                   Misc_udelay(250*1000);
 
                   // read into read-ahead buffer
-                  readBytes = FtpRead(storageHandle->ftp.readAheadBuffer.data,
-                                      MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),MAX_BUFFER_SIZE),
-                                      storageHandle->ftp.data
-                                     );
+                  n = FtpRead(storageHandle->ftp.readAheadBuffer.data,
+                              MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),MAX_BUFFER_SIZE),
+                              storageHandle->ftp.data
+                             );
                 }
-                if (readBytes <= 0)
+                if (n <= 0)
                 {
                   error = ERROR_(IO_ERROR,errno);
                   break;
                 }
                 storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
-                storageHandle->ftp.readAheadBuffer.length = (ulong)readBytes;
+                storageHandle->ftp.readAheadBuffer.length = (ulong)n;
 
-                // copy data
-                n = MIN(length,storageHandle->ftp.readAheadBuffer.length);
-                memcpy(buffer,storageHandle->ftp.readAheadBuffer.data,n);
+                // copy data from read-ahead buffer
+                bytesAvail = MIN(length,storageHandle->ftp.readAheadBuffer.length);
+                memcpy(buffer,storageHandle->ftp.readAheadBuffer.data,bytesAvail);
 
                 // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+n;
-                size -= n;
-                if (bytesRead != NULL) (*bytesRead) += n;
-                storageHandle->ftp.index += (uint64)n;
+                buffer = (byte*)buffer+bytesAvail;
+                size -= bytesAvail;
+                if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+                storageHandle->ftp.index += (uint64)bytesAvail;
               }
               else
               {
                 // read direct
-                readBytes = FtpRead(buffer,
-                                    length,
-                                    storageHandle->ftp.data
-                                   );
-                if (readBytes == 0)
+                n = FtpRead(buffer,
+                            length,
+                            storageHandle->ftp.data
+                           );
+                if (n == 0)
                 {
                   // wait a short time for more data
                   Misc_udelay(250*1000);
 
                   // read direct
-                  readBytes = FtpRead(buffer,
-                                      size,
-                                      storageHandle->ftp.data
-                                     );
-
+                  n = FtpRead(buffer,
+                              size,
+                              storageHandle->ftp.data
+                             );
                 }
-                if (readBytes <= 0)
+                if (n <= 0)
                 {
                   error = ERROR_(IO_ERROR,errno);
                   break;
                 }
-                n = (ulong)readBytes;
+                bytesAvail = (ulong)n;
 
                 // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+n;
-                size -= n;
-                if (bytesRead != NULL) (*bytesRead) += n;
-                storageHandle->ftp.index += (uint64)n;
+                buffer = (byte*)buffer+bytesAvail;
+                size -= bytesAvail;
+                if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+                storageHandle->ftp.index += (uint64)bytesAvail;
               }
 
               // get end time
@@ -7587,7 +7592,7 @@ Errors Storage_read(StorageHandle *storageHandle,
               if (endTimestamp >= startTimestamp)
               {
                 limitBandWidth(&storageHandle->ftp.bandWidthLimiter,
-                               n,
+                               bytesAvail,
                                endTimestamp-startTimestamp
                               );
               }
@@ -7616,68 +7621,19 @@ Errors Storage_read(StorageHandle *storageHandle,
             assert(storageHandle->scp.channel != NULL);
             assert(storageHandle->scp.readAheadBuffer.data != NULL);
 
-            // copy as much as available from read-ahead buffer
-            if (   (storageHandle->scp.index >= storageHandle->scp.readAheadBuffer.offset)
-                && (storageHandle->scp.index < (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length))
-               )
+            while (   (size > 0L)
+                   && (error == ERROR_NONE)
+                  )
             {
-              // copy data from read-ahead buffer
-              index      = (ulong)(storageHandle->scp.index-storageHandle->scp.readAheadBuffer.offset);
-              bytesAvail = MIN(size,storageHandle->scp.readAheadBuffer.length-index);
-              memcpy(buffer,storageHandle->scp.readAheadBuffer.data+index,bytesAvail);
-
-              // adjust buffer, size, bytes read, index
-              buffer = (byte*)buffer+bytesAvail;
-              size -= bytesAvail;
-              if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-              storageHandle->scp.index += (uint64)bytesAvail;
-            }
-
-            // read rest of data
-            while (size > 0L)
-            {
-              assert(storageHandle->scp.index >= (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length));
-
-              // get max. number of bytes to receive in one step
-              if (storageHandle->scp.bandWidthLimiter.maxBandWidthList != NULL)
+              // copy as much data as available from read-ahead buffer
+              if (   (storageHandle->scp.index >= storageHandle->scp.readAheadBuffer.offset)
+                  && (storageHandle->scp.index < (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length))
+                 )
               {
-                length = MIN(storageHandle->scp.bandWidthLimiter.blockSize,size);
-              }
-              else
-              {
-                length = size;
-              }
-              assert(length > 0L);
-
-              // get start time, start received bytes
-              startTimestamp          = Misc_getTimestamp();
-              startTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
-
-              if (length < MAX_BUFFER_SIZE)
-              {
-                // read into read-ahead buffer
-                do
-                {
-                  n = libssh2_channel_read(storageHandle->scp.channel,
-                                           (char*)storageHandle->scp.readAheadBuffer.data,
-                                           MIN((size_t)(storageHandle->scp.size-storageHandle->scp.index),MAX_BUFFER_SIZE)
-                                         );
-                  if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
-                }
-                while (n == LIBSSH2_ERROR_EAGAIN);
-                if (n < 0)
-                {
-                  error = ERROR_(IO_ERROR,errno);
-                  break;
-                }
-                storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;
-                storageHandle->scp.readAheadBuffer.length = (ulong)n;
-//fprintf(stderr,"%s,%d: n=%ld storageHandle->scp.bufferOffset=%llu storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,n,
-//storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
-
                 // copy data from read-ahead buffer
-                bytesAvail = MIN(length,storageHandle->scp.readAheadBuffer.length);
-                memcpy(buffer,storageHandle->scp.readAheadBuffer.data,bytesAvail);
+                index      = (ulong)(storageHandle->scp.index-storageHandle->scp.readAheadBuffer.offset);
+                bytesAvail = MIN(size,storageHandle->scp.readAheadBuffer.length-index);
+                memcpy(buffer,storageHandle->scp.readAheadBuffer.data+index,bytesAvail);
 
                 // adjust buffer, size, bytes read, index
                 buffer = (byte*)buffer+bytesAvail;
@@ -7685,46 +7641,100 @@ Errors Storage_read(StorageHandle *storageHandle,
                 if (bytesRead != NULL) (*bytesRead) += bytesAvail;
                 storageHandle->scp.index += (uint64)bytesAvail;
               }
-              else
+
+              // read rest of data
+              if (size > 0)
               {
-                // read direct
-                do
+                assert(storageHandle->scp.index >= (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length));
+
+                // get max. number of bytes to receive in one step
+                if (storageHandle->scp.bandWidthLimiter.maxBandWidthList != NULL)
                 {
-                  n = libssh2_channel_read(storageHandle->scp.channel,
-                                                   buffer,
-                                                   length
-                                                  );
-                  if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
+                  length = MIN(storageHandle->scp.bandWidthLimiter.blockSize,size);
                 }
-                while (n == LIBSSH2_ERROR_EAGAIN);
-                if (n < 0)
+                else
                 {
-                  error = ERROR_(IO_ERROR,errno);
-                  break;
+                  length = size;
+                }
+                assert(length > 0L);
+
+                // get start time, start received bytes
+                startTimestamp          = Misc_getTimestamp();
+                startTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
+
+                if (length < MAX_BUFFER_SIZE)
+                {
+                  // read into read-ahead buffer
+                  do
+                  {
+                    n = libssh2_channel_read(storageHandle->scp.channel,
+                                             (char*)storageHandle->scp.readAheadBuffer.data,
+                                             MIN((size_t)(storageHandle->scp.size-storageHandle->scp.index),MAX_BUFFER_SIZE)
+                                           );
+                    if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
+                  }
+                  while (n == LIBSSH2_ERROR_EAGAIN);
+                  if (n < 0)
+                  {
+                    error = ERROR_(IO_ERROR,errno);
+                    break;
+                  }
+                  storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;
+                  storageHandle->scp.readAheadBuffer.length = (ulong)n;
+//fprintf(stderr,"%s,%d: n=%ld storageHandle->scp.bufferOffset=%llu storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,n,
+//storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
+
+                  // copy data from read-ahead buffer
+                  bytesAvail = MIN(length,storageHandle->scp.readAheadBuffer.length);
+                  memcpy(buffer,storageHandle->scp.readAheadBuffer.data,bytesAvail);
+
+                  // adjust buffer, size, bytes read, index
+                  buffer = (byte*)buffer+bytesAvail;
+                  size -= bytesAvail;
+                  if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+                  storageHandle->scp.index += (uint64)bytesAvail;
+                }
+                else
+                {
+                  // read direct
+                  do
+                  {
+                    n = libssh2_channel_read(storageHandle->scp.channel,
+                                                     buffer,
+                                                     length
+                                                    );
+                    if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
+                  }
+                  while (n == LIBSSH2_ERROR_EAGAIN);
+                  if (n < 0)
+                  {
+                    error = ERROR_(IO_ERROR,errno);
+                    break;
+                  }
+
+                  // adjust buffer, size, bytes read, index
+                  buffer = (byte*)buffer+(ulong)n;
+                  size -= (ulong)n;
+                  if (bytesRead != NULL) (*bytesRead) += (ulong)n;
+                  storageHandle->scp.index += (uint64)n;
                 }
 
-                // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+(ulong)n;
-                size -= (ulong)n;
-                if (bytesRead != NULL) (*bytesRead) += (ulong)n;
-                storageHandle->scp.index += (uint64)n;
-              }
+                // get end time, end received bytes
+                endTimestamp          = Misc_getTimestamp();
+                endTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
+                assert(endTotalReceivedBytes >= startTotalReceivedBytes);
 
-              // get end time, end received bytes
-              endTimestamp          = Misc_getTimestamp();
-              endTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
-              assert(endTotalReceivedBytes >= startTotalReceivedBytes);
-
-              /* limit used band width if requested (note: when the system time is
-                 changing endTimestamp may become smaller than startTimestamp;
-                 thus do not check this with an assert())
-              */
-              if (endTimestamp >= startTimestamp)
-              {
-                limitBandWidth(&storageHandle->scp.bandWidthLimiter,
-                               endTotalReceivedBytes-startTotalReceivedBytes,
-                               endTimestamp-startTimestamp
-                              );
+                /* limit used band width if requested (note: when the system time is
+                   changing endTimestamp may become smaller than startTimestamp;
+                   thus do not check this with an assert())
+                */
+                if (endTimestamp >= startTimestamp)
+                {
+                  limitBandWidth(&storageHandle->scp.bandWidthLimiter,
+                                 endTotalReceivedBytes-startTotalReceivedBytes,
+                                 endTimestamp-startTimestamp
+                                );
+                }
               }
             }
           }
@@ -7748,109 +7758,117 @@ Errors Storage_read(StorageHandle *storageHandle,
             assert(storageHandle->sftp.sftpHandle != NULL);
             assert(storageHandle->sftp.readAheadBuffer.data != NULL);
 
-            // copy as much as available from read-ahead buffer
-            if (   (storageHandle->sftp.index >= storageHandle->sftp.readAheadBuffer.offset)
-                && (storageHandle->sftp.index < (storageHandle->sftp.readAheadBuffer.offset+storageHandle->sftp.readAheadBuffer.length))
-               )
+            while (   (size > 0)
+                   && (error == ERROR_NONE)
+                  )
             {
-              // copy data from read-ahead buffer
-              index      = (ulong)(storageHandle->sftp.index-storageHandle->sftp.readAheadBuffer.offset);
-              bytesAvail = MIN(size,storageHandle->sftp.readAheadBuffer.length-index);
-              memcpy(buffer,storageHandle->sftp.readAheadBuffer.data+index,bytesAvail);
-
-              // adjust buffer, size, bytes read, index
-              buffer = (byte*)buffer+bytesAvail;
-              size -= bytesAvail;
-              if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-              storageHandle->sftp.index += bytesAvail;
-            }
-
-            // read rest of data
-            if (size > 0)
-            {
-              assert(storageHandle->sftp.index >= (storageHandle->sftp.readAheadBuffer.offset+storageHandle->sftp.readAheadBuffer.length));
-
-              // get max. number of bytes to receive in one step
-              if (storageHandle->sftp.bandWidthLimiter.maxBandWidthList != NULL)
+              // copy as much data as available from read-ahead buffer
+              if (   (storageHandle->sftp.index >= storageHandle->sftp.readAheadBuffer.offset)
+                  && (storageHandle->sftp.index < (storageHandle->sftp.readAheadBuffer.offset+storageHandle->sftp.readAheadBuffer.length))
+                 )
               {
-                length = MIN(storageHandle->sftp.bandWidthLimiter.blockSize,size);
-              }
-              else
-              {
-                length = size;
-              }
-              assert(length > 0L);
-
-              // get start time, start received bytes
-              startTimestamp          = Misc_getTimestamp();
-              startTotalReceivedBytes = storageHandle->sftp.totalReceivedBytes;
-
-              #if   defined(HAVE_SSH2_SFTP_SEEK64)
-                libssh2_sftp_seek64(storageHandle->sftp.sftpHandle,storageHandle->sftp.index);
-              #elif defined(HAVE_SSH2_SFTP_SEEK2)
-                libssh2_sftp_seek2(storageHandle->sftp.sftpHandle,storageHandle->sftp.index);
-              #else /* not HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
-                libssh2_sftp_seek(storageHandle->sftp.sftpHandle,storageHandle->sftp.index);
-              #endif /* HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
-
-              if (length <= MAX_BUFFER_SIZE)
-              {
-                // read into read-ahead buffer
-                n = libssh2_sftp_read(storageHandle->sftp.sftpHandle,
-                                      (char*)storageHandle->sftp.readAheadBuffer.data,
-                                      MIN((size_t)(storageHandle->sftp.size-storageHandle->sftp.index),MAX_BUFFER_SIZE)
-                                     );
-                if (n < 0)
-                {
-                  error = ERROR_(IO_ERROR,errno);
-                  break;
-                }
-                storageHandle->sftp.readAheadBuffer.offset = storageHandle->sftp.index;
-                storageHandle->sftp.readAheadBuffer.length = (ulong)n;
-//fprintf(stderr,"%s,%d: n=%ld storageHandle->sftp.bufferOffset=%llu storageHandle->sftp.bufferLength=%lu\n",__FILE__,__LINE__,n,
-//storageHandle->sftp.readAheadBuffer.offset,storageHandle->sftp.readAheadBuffer.length);
-
                 // copy data from read-ahead buffer
-                bytesAvail = MIN(length,storageHandle->sftp.readAheadBuffer.length);
-                memcpy(buffer,storageHandle->sftp.readAheadBuffer.data,bytesAvail);
+                index      = (ulong)(storageHandle->sftp.index-storageHandle->sftp.readAheadBuffer.offset);
+                bytesAvail = MIN(size,storageHandle->sftp.readAheadBuffer.length-index);
+                memcpy(buffer,storageHandle->sftp.readAheadBuffer.data+index,bytesAvail);
 
                 // adjust buffer, size, bytes read, index
+                buffer = (byte*)buffer+bytesAvail;
+                size -= bytesAvail;
                 if (bytesRead != NULL) (*bytesRead) += bytesAvail;
                 storageHandle->sftp.index += (uint64)bytesAvail;
               }
-              else
+
+              // read rest of data
+              if (size > 0)
               {
-                // read direct
-                n = libssh2_sftp_read(storageHandle->sftp.sftpHandle,
-                                      buffer,
-                                      length
-                                     );
-                if (n < 0)
+                assert(storageHandle->sftp.index >= (storageHandle->sftp.readAheadBuffer.offset+storageHandle->sftp.readAheadBuffer.length));
+
+                // get max. number of bytes to receive in one step
+                if (storageHandle->sftp.bandWidthLimiter.maxBandWidthList != NULL)
                 {
-                  error = ERROR_(IO_ERROR,errno);
-                  break;
+                  length = MIN(storageHandle->sftp.bandWidthLimiter.blockSize,size);
+                }
+                else
+                {
+                  length = size;
+                }
+                assert(length > 0L);
+
+                // get start time, start received bytes
+                startTimestamp          = Misc_getTimestamp();
+                startTotalReceivedBytes = storageHandle->sftp.totalReceivedBytes;
+
+                #if   defined(HAVE_SSH2_SFTP_SEEK64)
+                  libssh2_sftp_seek64(storageHandle->sftp.sftpHandle,storageHandle->sftp.index);
+                #elif defined(HAVE_SSH2_SFTP_SEEK2)
+                  libssh2_sftp_seek2(storageHandle->sftp.sftpHandle,storageHandle->sftp.index);
+                #else /* not HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
+                  libssh2_sftp_seek(storageHandle->sftp.sftpHandle,storageHandle->sftp.index);
+                #endif /* HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
+
+                if (length <= MAX_BUFFER_SIZE)
+                {
+                  // read into read-ahead buffer
+                  n = libssh2_sftp_read(storageHandle->sftp.sftpHandle,
+                                        (char*)storageHandle->sftp.readAheadBuffer.data,
+                                        MIN((size_t)(storageHandle->sftp.size-storageHandle->sftp.index),MAX_BUFFER_SIZE)
+                                       );
+                  if (n < 0)
+                  {
+                    error = ERROR_(IO_ERROR,errno);
+                    break;
+                  }
+                  storageHandle->sftp.readAheadBuffer.offset = storageHandle->sftp.index;
+                  storageHandle->sftp.readAheadBuffer.length = (ulong)n;
+
+                  // copy data from read-ahead buffer
+                  bytesAvail = MIN(length,storageHandle->sftp.readAheadBuffer.length);
+                  memcpy(buffer,storageHandle->sftp.readAheadBuffer.data,bytesAvail);
+
+                  // adjust buffer, size, bytes read, index
+                  buffer = (byte*)buffer+bytesAvail;
+                  size -= bytesAvail;
+                  if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+                  storageHandle->sftp.index += (uint64)bytesAvail;
+                }
+                else
+                {
+                  // read direct
+                  n = libssh2_sftp_read(storageHandle->sftp.sftpHandle,
+                                        buffer,
+                                        length
+                                       );
+                  if (n < 0)
+                  {
+                    error = ERROR_(IO_ERROR,errno);
+                    break;
+                  }
+                  bytesAvail = (ulong)n;
+
+                  // adjust buffer, size, bytes read, index
+                  buffer = (byte*)buffer+(ulong)bytesAvail;
+                  size -= (ulong)bytesAvail;
+                  if (bytesRead != NULL) (*bytesRead) += (ulong)bytesAvail;
+                  storageHandle->sftp.index += (uint64)bytesAvail;
                 }
 
-                // adjust buffer, size, bytes read, index
-                if (bytesRead != NULL) (*bytesRead) += (ulong)n;
-                storageHandle->sftp.index += (uint64)n;
-              }
+                // get end time, end received bytes
+                endTimestamp          = Misc_getTimestamp();
+                endTotalReceivedBytes = storageHandle->sftp.totalReceivedBytes;
+                assert(endTotalReceivedBytes >= startTotalReceivedBytes);
 
-              // get end time, end received bytes
-              endTimestamp          = Misc_getTimestamp();
-              endTotalReceivedBytes = storageHandle->sftp.totalReceivedBytes;
-              assert(endTotalReceivedBytes >= startTotalReceivedBytes);
-
-              /* limit used band width if requested (note: when the system time is
-                 changing endTimestamp may become smaller than startTimestamp;
-                 thus do not check this with an assert())
-              */
-              if (endTimestamp >= startTimestamp)
-              {
-                limitBandWidth(&storageHandle->sftp.bandWidthLimiter,
-                               endTotalReceivedBytes-startTotalReceivedBytes,
-                               endTimestamp-startTimestamp
-                              );
+                /* limit used band width if requested (note: when the system time is
+                   changing endTimestamp may become smaller than startTimestamp;
+                   thus do not check this with an assert())
+                */
+                if (endTimestamp >= startTimestamp)
+                {
+                  limitBandWidth(&storageHandle->sftp.bandWidthLimiter,
+                                 endTotalReceivedBytes-startTotalReceivedBytes,
+                                 endTimestamp-startTimestamp
+                                );
+                }
               }
             }
           }
@@ -7862,8 +7880,8 @@ Errors Storage_read(StorageHandle *storageHandle,
     case STORAGE_TYPE_WEBDAV:
       #ifdef HAVE_CURL
         {
-          ulong     i;
-          ulong     n;
+          ulong     index;
+          ulong     bytesAvail;
           ulong     length;
           uint64    startTimestamp,endTimestamp;
           CURLMcode curlmCode;
@@ -7874,107 +7892,129 @@ Errors Storage_read(StorageHandle *storageHandle,
             assert(storageHandle->webdav.curlMultiHandle != NULL);
             assert(storageHandle->webdav.receiveBuffer.data != NULL);
 
-            // copy as much as available from read-ahead buffer
-            if (   (storageHandle->webdav.index >= storageHandle->webdav.receiveBuffer.offset)
-                && (storageHandle->webdav.index < (storageHandle->webdav.receiveBuffer.offset+storageHandle->webdav.receiveBuffer.length))
-               )
-            {
-              // copy data
-              i = (ulong)(storageHandle->webdav.index-storageHandle->webdav.receiveBuffer.offset);
-              n = MIN(size,storageHandle->webdav.receiveBuffer.length-i);
-              memcpy(buffer,storageHandle->webdav.receiveBuffer.data+i,n);
-
-              // adjust buffer, size, bytes read, index
-              buffer = (byte*)buffer+n;
-              size -= n;
-              if (bytesRead != NULL) (*bytesRead) += n;
-              storageHandle->webdav.index += (uint64)n;
-            }
-
-            // read rest of data
             while (   (size > 0L)
                    && (storageHandle->webdav.index < storageHandle->webdav.size)
                    && (error == ERROR_NONE)
                   )
             {
-              assert(storageHandle->webdav.index >= (storageHandle->webdav.receiveBuffer.offset+storageHandle->webdav.receiveBuffer.length));
-
-              // get max. number of bytes to receive in one step
-              if (storageHandle->webdav.bandWidthLimiter.maxBandWidthList != NULL)
+              // copy as much data as available from receive buffer
+              if (   (storageHandle->webdav.index >= storageHandle->webdav.receiveBuffer.offset)
+                  && (storageHandle->webdav.index < (storageHandle->webdav.receiveBuffer.offset+storageHandle->webdav.receiveBuffer.length))
+                 )
               {
-                length = MIN(storageHandle->webdav.bandWidthLimiter.blockSize,size);
+                // copy data from receive buffer
+                index      = (ulong)(storageHandle->webdav.index-storageHandle->webdav.receiveBuffer.offset);
+                bytesAvail = MIN(size,storageHandle->webdav.receiveBuffer.length-index);
+                memcpy(buffer,storageHandle->webdav.receiveBuffer.data+index,bytesAvail);
+
+                // adjust buffer, size, bytes read, index
+                buffer = (byte*)buffer+bytesAvail;
+                size -= bytesAvail;
+                if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+                storageHandle->webdav.index += (uint64)bytesAvail;
               }
-              else
+
+              // read rest of data
+              if (   (size > 0L)
+                  && (storageHandle->webdav.index < storageHandle->webdav.size)
+                 )
               {
-                length = size;
-              }
-              assert(length > 0L);
+                assert(storageHandle->webdav.index >= (storageHandle->webdav.receiveBuffer.offset+storageHandle->webdav.receiveBuffer.length));
 
-              // get start time
-              startTimestamp = Misc_getTimestamp();
-
-              // receive data
-              storageHandle->webdav.receiveBuffer.length = 0L;
-              runningHandles = 1;
-              while (   (storageHandle->webdav.receiveBuffer.length < length)
-                     && (error == ERROR_NONE)
-                     && (runningHandles > 0)
-                    )
-              {
-                // wait for socket
-                error = waitCurlSocket(storageHandle->webdav.curlMultiHandle);
-
-                // perform curl action
-                if (error == ERROR_NONE)
+                // get max. number of bytes to receive in one step
+                if (storageHandle->webdav.bandWidthLimiter.maxBandWidthList != NULL)
                 {
-                  do
+                  length = MIN(storageHandle->webdav.bandWidthLimiter.blockSize,size);
+                }
+                else
+                {
+                  length = size;
+                }
+                assert(length > 0L);
+
+                // get start time
+                startTimestamp = Misc_getTimestamp();
+
+                // receive data
+                storageHandle->webdav.receiveBuffer.length = 0L;
+                runningHandles = 1;
+                while (   (storageHandle->webdav.receiveBuffer.length < length)
+                       && (runningHandles > 0)
+                       && (error == ERROR_NONE)
+                      )
+                {
+                  // wait for socket
+                  error = waitCurlSocket(storageHandle->webdav.curlMultiHandle);
+
+                  // perform curl action
+                  if (error == ERROR_NONE)
                   {
-                    curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
+                    do
+                    {
+                      curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
 //fprintf(stderr,"%s, %d: curlmCode=%d %ld %ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageHandle->webdav.sendBuffer.index,storageHandle->webdav.sendBuffer.length,runningHandles);
-                  }
-                  while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-                         && (runningHandles > 0)
-                        );
-                  if (curlmCode != CURLM_OK)
-                  {
-                    error = ERRORX_(NETWORK_RECEIVE,0,curl_multi_strerror(curlmCode));
+                    }
+                    while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+                           && (runningHandles > 0)
+                          );
+                    if (curlmCode != CURLM_OK)
+                    {
+                      error = ERRORX_(NETWORK_RECEIVE,0,curl_multi_strerror(curlmCode));
+                    }
                   }
                 }
-              }
-              if (error != ERROR_NONE)
-              {
-                break;
-              }
-              if (storageHandle->webdav.receiveBuffer.length < length)
-              {
-                error = ERROR_IO_ERROR;
-                break;
-              }
-              storageHandle->webdav.receiveBuffer.offset = storageHandle->webdav.index;
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
+                if (runningHandles <= 0)
+                {
+                  const CURLMsg *curlMsg;
+                  int           n,i;
 
-              // copy data
-              n = MIN(length,storageHandle->webdav.receiveBuffer.length);
-              memcpy(buffer,storageHandle->webdav.receiveBuffer.data,n);
+                  error = ERROR_NETWORK_RECEIVE;
+                  curlMsg = curl_multi_info_read(storageHandle->webdav.curlMultiHandle,&n);
+                  for (i = 0; i < n; i++)
+                  {
+                    if ((curlMsg[i].easy_handle == storageHandle->webdav.curlHandle) && (curlMsg[i].msg == CURLMSG_DONE))
+                    {
+                      error = ERRORX_(NETWORK_RECEIVE,0,curl_easy_strerror(curlMsg[i].data.result));
+                      break;
+                    }
+                    curlMsg++;
+                  }
+                }
+                if (storageHandle->webdav.receiveBuffer.length < length)
+                {
+                  error = ERROR_IO_ERROR;
+                  break;
+                }
+                storageHandle->webdav.receiveBuffer.offset = storageHandle->webdav.index;
 
-              // adjust buffer, size, bytes read, index
-              buffer = (byte*)buffer+n;
-              size -= n;
-              if (bytesRead != NULL) (*bytesRead) += n;
-              storageHandle->webdav.index += (uint64)n;
+                // copy data from receive buffer
+                bytesAvail = MIN(length,storageHandle->webdav.receiveBuffer.length);
+                memcpy(buffer,storageHandle->webdav.receiveBuffer.data,bytesAvail);
 
-              // get end time
-              endTimestamp = Misc_getTimestamp();
+                // adjust buffer, size, bytes read, index
+                buffer = (byte*)buffer+bytesAvail;
+                size -= bytesAvail;
+                if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+                storageHandle->webdav.index += (uint64)bytesAvail;
 
-              /* limit used band width if requested (note: when the system time is
-                 changing endTimestamp may become smaller than startTimestamp;
-                 thus do not check this with an assert())
-              */
-              if (endTimestamp >= startTimestamp)
-              {
-                limitBandWidth(&storageHandle->webdav.bandWidthLimiter,
-                               n,
-                               endTimestamp-startTimestamp
-                              );
+                // get end time
+                endTimestamp = Misc_getTimestamp();
+
+                /* limit used band width if requested (note: when the system time is
+                   changing endTimestamp may become smaller than startTimestamp;
+                   thus do not check this with an assert())
+                */
+                if (endTimestamp >= startTimestamp)
+                {
+                  limitBandWidth(&storageHandle->webdav.bandWidthLimiter,
+                                 bytesAvail,
+                                 endTimestamp-startTimestamp
+                                );
+                }
               }
             }
           }
@@ -7990,8 +8030,8 @@ Errors Storage_read(StorageHandle *storageHandle,
         {
           uint64   blockIndex;
           uint     blockOffset;
-          long int readBytes;
-          ulong    n;
+          long int n;
+          ulong    bytesAvail;
 
           assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
           assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
@@ -8013,31 +8053,31 @@ Errors Storage_read(StorageHandle *storageHandle,
                  )
               {
                 // read ISO9660 block
-                readBytes = iso9660_iso_seek_read(storageHandle->opticalDisk.read.iso9660Handle,
-                                                  storageHandle->opticalDisk.read.buffer.data,
-                                                  storageHandle->opticalDisk.read.iso9660Stat->lsn+(lsn_t)blockIndex,
-                                                  1 // read 1 block
-                                                 );
-                if (readBytes < ISO_BLOCKSIZE)
+                n = iso9660_iso_seek_read(storageHandle->opticalDisk.read.iso9660Handle,
+                                          storageHandle->opticalDisk.read.buffer.data,
+                                          storageHandle->opticalDisk.read.iso9660Stat->lsn+(lsn_t)blockIndex,
+                                          1 // read 1 block
+                                         );
+                if (n < ISO_BLOCKSIZE)
                 {
                   error = ERROR_(IO_ERROR,errno);
                   break;
                 }
                 storageHandle->opticalDisk.read.buffer.blockIndex = blockIndex;
                 storageHandle->opticalDisk.read.buffer.length     = (((blockIndex+1)*ISO_BLOCKSIZE) <= (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
-                                                                          ? ISO_BLOCKSIZE
-                                                                          : (ulong)(storageHandle->opticalDisk.read.iso9660Stat->size%ISO_BLOCKSIZE);
+                                                                      ? ISO_BLOCKSIZE
+                                                                      : (ulong)(storageHandle->opticalDisk.read.iso9660Stat->size%ISO_BLOCKSIZE);
               }
 
               // copy data
-              n = MIN(size,storageHandle->opticalDisk.read.buffer.length-blockOffset);
-              memcpy(buffer,storageHandle->opticalDisk.read.buffer.data+blockOffset,n);
+              bytesAvail = MIN(size,storageHandle->opticalDisk.read.buffer.length-blockOffset);
+              memcpy(buffer,storageHandle->opticalDisk.read.buffer.data+blockOffset,bytesAvail);
 
               // adjust buffer, size, bytes read, index
-              buffer = (byte*)buffer+n;
-              size -= n;
-              if (bytesRead != NULL) (*bytesRead) += n;
-              storageHandle->opticalDisk.read.index += n;
+              buffer = (byte*)buffer+bytesAvail;
+              size -= bytesAvail;
+              if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+              storageHandle->opticalDisk.read.index += (uint64)bytesAvail;
             }
           }
         }
@@ -8219,7 +8259,7 @@ Errors Storage_write(StorageHandle *storageHandle,
                   break;
                 }
               }
-              buffer = (byte*)buffer+(ulong)n;
+              buffer = (byte*)buffer+n;
               writtenBytes += (ulong)n;
 
               // get end time
@@ -8318,7 +8358,7 @@ Errors Storage_write(StorageHandle *storageHandle,
                 break;
               }
 #endif /* 0 */
-              buffer = (byte*)buffer+(ulong)n;
+              buffer = (byte*)buffer+n;
               writtenBytes += (ulong)n;
 
 
@@ -8411,7 +8451,7 @@ Errors Storage_write(StorageHandle *storageHandle,
               }
 #endif /* 0 */
               buffer = (byte*)buffer+n;
-              size -= n;
+              writtenBytes += (ulong)n;
 
               /* limit used band width if requested (note: when the system time is
                  changing endTimestamp may become smaller than startTimestamp;
@@ -8955,7 +8995,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 i = storageHandle->scp.index-storageHandle->scp.readAheadBuffer.offset;
                 n = MIN(skip,storageHandle->scp.readAheadBuffer.length-i);
                 skip -= n;
-                storageHandle->scp.index += n;
+                storageHandle->scp.index += (uint64)n;
               }
 
               if (skip > 0LL)
@@ -9017,7 +9057,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 i = storageHandle->sftp.index-storageHandle->sftp.readAheadBuffer.offset;
                 n = MIN(skip,storageHandle->sftp.readAheadBuffer.length-i);
                 skip -= n;
-                storageHandle->sftp.index += n;
+                storageHandle->sftp.index += (uint64)n;
               }
 
               if (skip > 0LL)
@@ -9065,7 +9105,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
               while (skip > 0LL)
               {
-                // skip data in read-ahead buffer
+                // skip data in receive buffer
                 if (   (storageHandle->webdav.index >= storageHandle->webdav.receiveBuffer.offset)
                     && (storageHandle->webdav.index < (storageHandle->webdav.receiveBuffer.offset+storageHandle->webdav.receiveBuffer.length))
                    )
@@ -9648,6 +9688,7 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
           getFTPServerSettings(storageHandle->storageSpecifier.hostName,storageHandle->jobOptions,&ftpServer);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,ftpServer.loginName);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
           if (String_isEmpty(storageHandle->storageSpecifier.hostName))
           {
             return ERROR_NO_HOST_NAME;
@@ -10041,6 +10082,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           storageDirectoryListHandle->ftp.server = getFTPServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,ftpServer.loginName);
           if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
           if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
           {
             AutoFree_cleanup(&autoFreeList);
@@ -10216,6 +10258,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           getFTPServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,ftpServer.loginName);
           if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
           if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
           {
             AutoFree_cleanup(&autoFreeList);
@@ -10383,6 +10426,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           getSSHServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&sshServer);
           if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,sshServer.loginName);
           if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
           if (storageDirectoryListHandle->storageSpecifier.hostPort == 0) storageDirectoryListHandle->storageSpecifier.hostPort = sshServer.port;
           if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
           {
@@ -10491,6 +10535,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           storageDirectoryListHandle->webdav.server = getWebDAVServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&webDAVServer);
           if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,webDAVServer.loginName);
           if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
           if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
           {
             AutoFree_cleanup(&autoFreeList);
