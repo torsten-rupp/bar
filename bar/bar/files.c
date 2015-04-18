@@ -903,13 +903,26 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened multiple times at %s, line %u",
-                            String_cString(debugFileNode->fileHandle->name),
-                            debugFileNode->fileName,
-                            debugFileNode->lineNb,
-                            __fileName__,
-                            __lineNb__
-                           );
+        if (debugFileNode->fileHandle->name != NULL)
+        {
+          HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened multiple times at %s, line %u",
+                              String_cString(debugFileNode->fileHandle->name),
+                              debugFileNode->fileName,
+                              debugFileNode->lineNb,
+                              __fileName__,
+                              __lineNb__
+                             );
+        }
+        else
+        {
+          HALT_INTERNAL_ERROR("File %p at %s, line %lu opened multiple times at %s, line %u",
+                              debugFileNode->fileHandle,
+                              debugFileNode->fileName,
+                              debugFileNode->lineNb,
+                              __fileName__,
+                              __lineNb__
+                             );
+        }
       }
 
       // find file in closed-list; reuse or allocate new debug node
@@ -1420,13 +1433,26 @@ Errors __File_openCString(const char *__fileName__,
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %u",
-                            String_cString(debugFileNode->fileHandle->name),
-                            debugFileNode->fileName,
-                            debugFileNode->lineNb,
-                            __fileName__,
-                            __lineNb__
-                           );
+        if (debugFileNode->fileHandle->name != NULL)
+        {
+          HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %u",
+                              String_cString(debugFileNode->fileHandle->name),
+                              debugFileNode->fileName,
+                              debugFileNode->lineNb,
+                              __fileName__,
+                              __lineNb__
+                             );
+        }
+        else
+        {
+          HALT_INTERNAL_ERROR("File %p at %s, line %lu opened again at %s, line %u",
+                              debugFileNode->fileHandle,
+                              debugFileNode->fileName,
+                              debugFileNode->lineNb,
+                              __fileName__,
+                              __lineNb__
+                             );
+        }
       }
 
       // find file in closed-list; reuse or allocate new debug node
@@ -1577,13 +1603,26 @@ Errors __File_openDescriptor(const char *__fileName__,
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %u",
-                            String_cString(debugFileNode->fileHandle->name),
-                            debugFileNode->fileName,
-                            debugFileNode->lineNb,
-                            __fileName__,
-                            __lineNb__
-                           );
+        if (debugFileNode->fileHandle->name != NULL)
+        {
+          HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %u",
+                              String_cString(debugFileNode->fileHandle->name),
+                              debugFileNode->fileName,
+                              debugFileNode->lineNb,
+                              __fileName__,
+                              __lineNb__
+                             );
+        }
+        else
+        {
+          HALT_INTERNAL_ERROR("File %p at %s, line %lu opened again at %s, line %u",
+                              debugFileNode->fileHandle,
+                              debugFileNode->fileName,
+                              debugFileNode->lineNb,
+                              __fileName__,
+                              __lineNb__
+                             );
+        }
       }
 
       // find file in closed-list; reuse or allocate new debug node
@@ -1645,7 +1684,7 @@ Errors __File_close(const char *__fileName__,
   FILE_CHECK_VALID(fileHandle);
 
   #ifndef NDEBUG
-    if (fileHandle->deleteOnCloseFlag)
+    if (fileHandle->deleteOnCloseFlag && (fileHandle->name != NULL))
     {
       if (unlink(String_cString(fileHandle->name)) != 0)
       {
@@ -4029,13 +4068,23 @@ void File_debugDumpInfo(FILE *handle)
     LIST_ITERATE(&debugOpenFileList,debugFileNode)
     {
       assert(debugFileNode->fileHandle != NULL);
-      assert(debugFileNode->fileHandle->name != NULL);
 
-      fprintf(handle,"DEBUG: file '%s' opened at %s, line %lu\n",
-              String_cString(debugFileNode->fileHandle->name),
-              debugFileNode->fileName,
-              debugFileNode->lineNb
-             );
+      if (debugFileNode->fileHandle->name != NULL)
+      {
+        fprintf(handle,"DEBUG: file '%s' opened at %s, line %lu\n",
+                String_cString(debugFileNode->fileHandle->name),
+                debugFileNode->fileName,
+                debugFileNode->lineNb
+               );
+      }
+      else
+      {
+        fprintf(handle,"DEBUG: file %p opened at %s, line %lu\n",
+                debugFileNode->fileHandle,
+                debugFileNode->fileName,
+                debugFileNode->lineNb
+               );
+      }
     }
   }
   pthread_mutex_unlock(&debugFileLock);
