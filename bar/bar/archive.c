@@ -1683,12 +1683,11 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return error;
     }
-//fprintf(stderr,"%s, %d: &bytesRead=%d\n",__FILE__,__LINE__,bytesRead);
     if (bytesRead <= 0L)
     {
       return ERROR_READ_FILE;
     }
-    if ((bytesRead%archiveEntryInfo->file.byteCompressInfo.blockLength) != 0)
+    if ((bytesRead % archiveEntryInfo->file.byteCompressInfo.blockLength) != 0)
     {
       return ERROR_DECRYPT_FAIL;
     }
@@ -2229,7 +2228,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return ERROR_READ_FILE;
     }
-    if ((bytesRead%archiveEntryInfo->image.byteCompressInfo.blockLength) != 0)
+    if ((bytesRead % archiveEntryInfo->image.byteCompressInfo.blockLength) != 0)
     {
       return ERROR_DECRYPT_FAIL;
     }
@@ -2809,7 +2808,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return ERROR_READ_FILE;
     }
-    if ((bytesRead%archiveEntryInfo->hardLink.byteCompressInfo.blockLength) != 0)
+    if ((bytesRead % archiveEntryInfo->hardLink.byteCompressInfo.blockLength) != 0)
     {
       return ERROR_DECRYPT_FAIL;
     }
@@ -2920,16 +2919,26 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 
   assert(password != NULL);
 
-  passwordNode = LIST_NEW_NODE(PasswordNode);
-  if (passwordNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  passwordNode->password = Password_duplicate(password);
-
   SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    List_append(&decryptPasswordList,passwordNode);
+    // find password
+    passwordNode = decryptPasswordList.head;
+    while ((passwordNode != NULL) && !Password_equals(passwordNode->password,password))
+    {
+      passwordNode = passwordNode->next;
+    }
+    if (passwordNode == NULL)
+    {
+      // add password
+      passwordNode = LIST_NEW_NODE(PasswordNode);
+      if (passwordNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      passwordNode->password = Password_duplicate(password);
+
+      List_append(&decryptPasswordList,passwordNode);
+    }
   }
 
   return passwordNode->password;
