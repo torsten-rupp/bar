@@ -12,7 +12,7 @@
 #define __SERVER__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -26,6 +26,9 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
+#define SERVER_PROTOCOL_VERSION_MAJOR 3
+#define SERVER_PROTOCOL_VERSION_MINOR 0
 
 /***************************** Datatypes *******************************/
 

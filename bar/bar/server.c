@@ -59,9 +59,6 @@
 
 /***************************** Constants *******************************/
 
-#define PROTOCOL_VERSION_MAJOR              3
-#define PROTOCOL_VERSION_MINOR              0
-
 #define SESSION_ID_LENGTH                   64      // max. length of session id
 #define SESSION_KEY_SIZE                    1024    // number of session key bits
 
@@ -379,7 +376,7 @@ typedef struct
     // i/o via file
     struct
     {
-      FileHandle   fileHandle;
+      FileHandle   *fileHandle;
     } file;
 
     // i/o via network and separated processing thread
@@ -4650,8 +4647,8 @@ LOCAL void sendClient(ClientInfo *clientInfo, String data)
   switch (clientInfo->type)
   {
     case CLIENT_TYPE_BATCH:
-      (void)File_write(&clientInfo->file.fileHandle,String_cString(data),String_length(data));
-      (void)File_flush(&clientInfo->file.fileHandle);
+      (void)File_write(clientInfo->file.fileHandle,String_cString(data),String_length(data));
+      (void)File_flush(clientInfo->file.fileHandle);
       break;
     case CLIENT_TYPE_NETWORK:
       if (!clientInfo->network.quitFlag)
@@ -5345,7 +5342,7 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, uint id, const StringMa
 
   UNUSED_VARIABLE(argumentMap);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"major=%d minor=%d",PROTOCOL_VERSION_MAJOR,PROTOCOL_VERSION_MINOR);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"major=%d minor=%d",SERVER_PROTOCOL_VERSION_MAJOR,SERVER_PROTOCOL_VERSION_MINOR);
 }
 
 /***********************************************************************\
@@ -9442,10 +9439,12 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   }
 
   // parse storage name
+  Storage_initSpecifier(&storageSpecifier);
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+    Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
     return;
   }
@@ -9462,6 +9461,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+    Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
     return;
   }
@@ -9479,6 +9479,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   {
     Storage_doneSpecifier(&storageSpecifier);
     sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+    Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
     return;
   }
@@ -9838,14 +9839,13 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
       break;
     }
   }
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // close archive
   Archive_close(&archiveInfo);
 
   // done storage
   (void)Storage_done(&storageHandle);
-
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
@@ -13071,13 +13071,14 @@ LOCAL void initClient(ClientInfo *clientInfo)
 \***********************************************************************/
 
 LOCAL void initBatchClient(ClientInfo *clientInfo,
-                           FileHandle fileHandle
+                           FileHandle *fileHandle
                           )
 {
   assert(clientInfo != NULL);
 
-  clientInfo->type            = CLIENT_TYPE_BATCH;
-  clientInfo->file.fileHandle = fileHandle;
+  clientInfo->type               = CLIENT_TYPE_BATCH;
+  clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
+  clientInfo->file.fileHandle    = fileHandle;
 }
 
 /***********************************************************************\
@@ -14009,12 +14010,14 @@ Errors Server_batch(int inputDescriptor,
   }
 
   // init client
-  initBatchClient(&clientInfo,outputFileHandle);
+  initClient(&clientInfo);
+  initBatchClient(&clientInfo,&outputFileHandle);
 
   // send info
   File_printLine(&outputFileHandle,
                  "BAR VERSION %d %d\n",
-                 PROTOCOL_VERSION_MAJOR,PROTOCOL_VERSION_MINOR
+                 SERVER_PROTOCOL_VERSION_MAJOR,
+                 SERVER_PROTOCOL_VERSION_MINOR
                 );
   File_flush(&outputFileHandle);
 
