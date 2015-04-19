@@ -2496,7 +2496,6 @@ remoteBarFlag=FALSE;
         String_delete(line);
 
         // read archive content
-//asm("int3");
         error       = ERROR_UNKNOWN;
         line        = String_new();
         arguments   = String_new();
@@ -2543,6 +2542,7 @@ remoteBarFlag=FALSE;
               error = ERROR_INVALID_RESPONSE;
               break;
             }
+//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
             StringMap_clear(argumentMap);
             if (!StringMap_parse(argumentMap,arguments,STRING_QUOTES,0,NULL))
             {
@@ -2572,7 +2572,6 @@ remoteBarFlag=FALSE;
                 String               deltaSourceName;
                 uint64               deltaSourceSize;
                 uint64               fragmentOffset,fragmentSize;
-//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,String_cString(type),String_cString(arguments));
 
                 // initialize variables
                 fileName        = String_new();
@@ -2667,7 +2666,6 @@ remoteBarFlag=FALSE;
                 uint64             deltaSourceSize;
                 uint               blockSize;
                 uint64             blockOffset,blockCount;
-//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
                 // initialize variables
                 imageName       = String_new();
@@ -2755,7 +2753,6 @@ remoteBarFlag=FALSE;
                 uint64          dateTime;
                 CryptAlgorithms cryptAlgorithm;
                 CryptTypes      cryptType;
-//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
                 // initialize variables
                 directoryName = String_new();
@@ -2816,7 +2813,6 @@ remoteBarFlag=FALSE;
                 String          linkName,fileName;
                 CryptAlgorithms cryptAlgorithm;
                 CryptTypes      cryptType;
-//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
                 // initialize variables
                 linkName = String_new();
@@ -2887,7 +2883,6 @@ remoteBarFlag=FALSE;
                 String               deltaSourceName;
                 uint64               deltaSourceSize;
                 uint64               fragmentOffset,fragmentSize;
-//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
                 // initialize variables
                 fileName        = String_new();
@@ -2977,7 +2972,6 @@ remoteBarFlag=FALSE;
                 FileSpecialTypes fileSpecialType;
                 uint32           major;
                 uint32           minor;
-//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
                 // initialize variables
                 fileName = String_new();
