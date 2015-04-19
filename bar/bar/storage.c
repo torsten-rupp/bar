@@ -6993,33 +6993,74 @@ void Storage_close(StorageHandle *storageHandle)
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
-        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp);
-
-        switch (storageHandle->mode)
         {
-          case STORAGE_MODE_UNKNOWN:
-            break;
-          case STORAGE_MODE_WRITE:
-            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-            {
-              libssh2_channel_send_eof(storageHandle->scp.channel);
-              libssh2_channel_close(storageHandle->scp.channel);
-              libssh2_channel_wait_closed(storageHandle->scp.channel);
-              libssh2_channel_free(storageHandle->scp.channel);
-            }
-            break;
-          case STORAGE_MODE_READ:
-            libssh2_channel_close(storageHandle->scp.channel);
-            libssh2_channel_wait_closed(storageHandle->scp.channel);
-            libssh2_channel_free(storageHandle->scp.channel);
-            break;
-          #ifndef NDEBUG
-            default:
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; /* not reached */
-          #endif /* NDEBUG */
+          int    result;
+          char   *sshErrorText;
+          Errors error;
+
+          DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp);
+
+          switch (storageHandle->mode)
+          {
+            case STORAGE_MODE_UNKNOWN:
+              break;
+            case STORAGE_MODE_WRITE:
+              if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+              {
+                result = 0;
+
+                if (result == 0)
+                {
+                  do
+                  {
+                    result = libssh2_channel_send_eof(storageHandle->scp.channel);
+                    if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
+                  }
+                  while (result == LIBSSH2_ERROR_EAGAIN);
+                }
+                if (result == 0)
+                {
+                  do
+                  {
+                    result = libssh2_channel_wait_eof(storageHandle->scp.channel);
+                    if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
+                  }
+                  while (result == LIBSSH2_ERROR_EAGAIN);
+                }
+                if (result == 0)
+                {
+                  do
+                  {
+                    result = libssh2_channel_close(storageHandle->scp.channel);
+                    if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
+                  }
+                  while (result == LIBSSH2_ERROR_EAGAIN);
+                }
+                if (result == 0)
+                {
+                  do
+                  {
+                    result = libssh2_channel_wait_closed(storageHandle->scp.channel);
+                    if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
+                  }
+                  while (result == LIBSSH2_ERROR_EAGAIN);
+                }
+                (void)libssh2_channel_free(storageHandle->scp.channel);
+              }
+              break;
+            case STORAGE_MODE_READ:
+              (void)libssh2_channel_close(storageHandle->scp.channel);
+              (void)libssh2_channel_wait_closed(storageHandle->scp.channel);
+              (void)libssh2_channel_free(storageHandle->scp.channel);
+              break;
+            #ifndef NDEBUG
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break; /* not reached */
+            #endif /* NDEBUG */
+          }
+          Network_disconnect(&storageHandle->scp.socketHandle);
         }
-        Network_disconnect(&storageHandle->scp.socketHandle);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
@@ -7034,11 +7075,11 @@ void Storage_close(StorageHandle *storageHandle)
           case STORAGE_MODE_WRITE:
             if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
             {
-              libssh2_sftp_close(storageHandle->sftp.sftpHandle);
+              (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
             }
             break;
           case STORAGE_MODE_READ:
-            libssh2_sftp_close(storageHandle->sftp.sftpHandle);
+            (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
             break;
           #ifndef NDEBUG
             default:
@@ -7524,7 +7565,7 @@ Errors Storage_read(StorageHandle *storageHandle,
                 if (n == 0)
                 {
                   // wait a short time for more data
-                  Misc_udelay(250*1000);
+                  Misc_udelay(250LL*MISC_US_PER_MS);
 
                   // read into read-ahead buffer
                   n = FtpRead(storageHandle->ftp.readAheadBuffer.data,
@@ -7560,7 +7601,7 @@ Errors Storage_read(StorageHandle *storageHandle,
                 if (n == 0)
                 {
                   // wait a short time for more data
-                  Misc_udelay(250*1000);
+                  Misc_udelay(250LL*MISC_US_PER_MS);
 
                   // read direct
                   n = FtpRead(buffer,
@@ -7671,7 +7712,7 @@ Errors Storage_read(StorageHandle *storageHandle,
                                              (char*)storageHandle->scp.readAheadBuffer.data,
                                              MIN((size_t)(storageHandle->scp.size-storageHandle->scp.index),MAX_BUFFER_SIZE)
                                            );
-                    if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
+                    if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
                   }
                   while (n == LIBSSH2_ERROR_EAGAIN);
                   if (n < 0)
@@ -7703,7 +7744,7 @@ Errors Storage_read(StorageHandle *storageHandle,
                                                      buffer,
                                                      length
                                                     );
-                    if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
+                    if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
                   }
                   while (n == LIBSSH2_ERROR_EAGAIN);
                   if (n < 0)
@@ -8326,7 +8367,7 @@ Errors Storage_write(StorageHandle *storageHandle,
                                           buffer,
                                           length
                                          );
-                if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
+                if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
               }
               while (n == LIBSSH2_ERROR_EAGAIN);
 
@@ -8418,7 +8459,7 @@ Errors Storage_write(StorageHandle *storageHandle,
                                        buffer,
                                        length
                                       );
-                if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
+                if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
               }
               while (n == LIBSSH2_ERROR_EAGAIN);
 
@@ -8930,7 +8971,7 @@ Errors Storage_seek(StorageHandle *storageHandle,
                 if (readBytes == 0)
                 {
                   // wait a short time for more data
-                  Misc_udelay(250*1000);
+                  Misc_udelay(250LL*MISC_US_PER_MS);
 
                   // read into read-ahead buffer
                   readBytes = FtpRead(storageHandle->ftp.readAheadBuffer.data,
