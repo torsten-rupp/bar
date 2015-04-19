@@ -1287,6 +1287,16 @@ void* const *StringMap_valueArray(const StringMap stringMap)
   return valueArray;
 }
 
+bool StringMap_parseEnumNumber(const char *name, uint *value)
+{
+  assert(name != NULL);
+  assert(value != NULL);
+
+  (*value) = (uint)atoi(name);
+
+  return TRUE;
+}
+
 #ifndef NDEBUG
 void StringMap_debugDump(FILE *handle, const StringMap stringMap)
 {

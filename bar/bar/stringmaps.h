@@ -92,7 +92,7 @@ typedef String(*StringMapFormatFunction)(void *value, void *userData);
 typedef bool(*StringMapParseFunction)(const String string, void *data, void *userData);
 
 // convert to enum value
-typedef bool(*StringMapParseEnumFunction)(const char*, uint *value);
+typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
 
 /***************************** Variables *******************************/
 
@@ -487,6 +487,17 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quot
 \***********************************************************************/
 
 void* const *StringMap_valueArray(const StringMap stringMap);
+
+/***********************************************************************\
+* Name   : StringMap_parseEnumNumber
+* Purpose: parse number as enum-value
+* Input  : name - number as string
+* Output : value - enum value
+* Return : TRUE if parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool StringMap_parseEnumNumber(const char *name, uint *value);
 
 #ifndef NDEBUG
 /***********************************************************************\
