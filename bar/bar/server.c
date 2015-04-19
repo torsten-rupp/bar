@@ -6383,7 +6383,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
     String_delete(name);
     return;
   }
-  StringMap_getInt64(argumentMap,"timeout",&timeout,0L);
+  StringMap_getInt64(argumentMap,"timeout",&timeout,0LL);
 
   fileCount = 0LL;
   fileSize  = 0LL;
@@ -9407,13 +9407,13 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
 *
 *            type=DIRECTORY name=<name> dateTime=<time stamp> cryptAlgorithm=<n> cryptType=<n>
 *
-*            type=LINK <link name> name=<name> cryptAlgorithm=<n> cryptType=<n>
+*            type=LINK linkName=<link name> name=<name> cryptAlgorithm=<n> cryptType=<n>
 *
 *            type=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> archiveSize=<n [bytes]> deltaCompressAlgorithm=<n> \
 *            byteCompressAlgorithm=<n> cryptAlgorithm=<n> cryptType=<n> deltaSourceName=<name> \
 *            deltaSourceSize=<n [bytes]> fragmentOffset=<n> fragmentSize=<n [bytes]>
 *
-*            type=SPECIAL name=<name>
+*            type=SPECIAL name=<name> cryptAlgorithm=<n> cryptType=<n> fileSpecialType=<n> major=<n> minor=<n>
 *            ...
 \***********************************************************************/
 
@@ -9790,15 +9790,17 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
-            String   name;
-            FileInfo fileInfo;
+            String          name;
+            CryptAlgorithms cryptAlgorithm;
+            CryptTypes      cryptType;
+            FileInfo        fileInfo;
 
             // open archive link
             name = String_new();
             error = Archive_readSpecialEntry(&archiveEntryInfo,
                                              &archiveInfo,
-                                             NULL,  // cryptAlgorithm
-                                             NULL,  // cryptType
+                                             &cryptAlgorithm,
+                                             &cryptType,
                                              name,
                                              &fileInfo,
                                              NULL   // fileExtendedAttributeList
@@ -9816,8 +9818,13 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "type=SPECIAL name=%'S",
-                               name
+                               "type=SPECIAL name=%'S cryptAlgorithm=%d cryptType=%d fileSpecialType=%d major=%d minor=%d",
+                               name,
+                               cryptAlgorithm,
+                               cryptType,
+                               fileInfo.specialType,
+                               fileInfo.major,
+                               fileInfo.minor
                               );
             }
 
