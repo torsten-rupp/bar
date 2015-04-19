@@ -206,7 +206,7 @@ TEST_HOST_SCP        ?= $(TEST_HOST)
 TEST_PASSWORD_SCP    ?= $(TEST_PASSWORD_SSH)
 TEST_HOST_SFTP       ?= $(TEST_HOST)
 TEST_PASSWORD_SFTP   ?= $(TEST_PASSWORD_SSH)
-TEST_HOST_WEBDAV     ?= http://localhost/webdav
+TEST_HOST_WEBDAV     ?= localhost/webdav
 TEST_PASSWORD_WEBDAV ?= $(TEST_PASSWORD_SSH)
 
 # crypt/compress used for all-test (do not select all available compress and
@@ -1238,14 +1238,14 @@ test7 test_storage: $(TEST_BAR)
           BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/webdav/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(TEST_PASSWORD_WEBDAV)' --max-threads=1" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --webdav-password='$(TEST_PASSWORD_WEBDAV)' --max-threads=1" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/webdav/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(TEST_PASSWORD_WEBDAV)'" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --webdav-password='$(TEST_PASSWORD_WEBDAV)'" \
           test_file_operations_base \
           ;
 	@$(ECHO) "ok"
