@@ -467,6 +467,7 @@ help:
 	@$(ECHO) "  test5[-debug|-valgrind], test_split[-debug|-valgrind]"
 	@$(ECHO) "  test6[-debug|-valgrind], test_image[-debug|-valgrind]"
 	@$(ECHO) "  test7[-debug|-valgrind], test_storage[-debug|-valgrind]"
+	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav)[-debug|-valgrind]"
 	@$(ECHO) "  test8[-debug|-valgrind], test_largefiles[-debug|-valgrind]"
 	@$(ECHO) "  test9[-debug|-valgrind], test_dvd[-debug|-valgrind]"
 	@$(ECHO) "  test_combined[-debug|-valgrind]"
@@ -884,6 +885,9 @@ TEST_KEYS = test/key.public \
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_storage test_dvd test_combined test_parameters test_misc
 .PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_parameters-debug test_misc-debug
 .PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_split-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_parameters-valgrind test_misc-valgrind
+.PHONY: test_storage_file test_storage_ftp test_storage_scp test_storage_sftp test_storage_webdav
+.PHONY: test_storage_file-debug test_storage_ftp-debug test_storage_scp-debug test_storage_sftp-debug test_storage_webdav-debug
+.PHONY: test_storage_file-valgrind test_storage_ftp-valgrind test_storage_scp-valgrind test_storage_sftp-valgrind test_storage_webdav-valgrind
 .PHONY: test_all test_all-debug test_all-valgrind
 .PHONY: clean_test show_debug_test_code run_debug_test_code
 test:
@@ -1172,11 +1176,20 @@ test6-valgrind test_image-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_image
 
 test7 test_storage: $(TEST_BAR)
-	@$(call functionVerifyParameter,TEST_PASSWORD_FTP)
-	@$(call functionVerifyParameter,TEST_PASSWORD_SCP)
-	@$(call functionVerifyParameter,TEST_PASSWORD_SFTP)
-	@$(call functionVerifyParameter,TEST_PASSWORD_WEBDAV)
 	@$(ECHO_NO_LF) "Test 7: storage..."
+	@$(MAKE) test_storage_file \
+	         test_storage_ftp \
+	         test_storage_scp \
+	         test_storage_sftp \
+	         test_storage_webdav
+
+test7-debug test_storage-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage
+
+test7-valgrind test_storage-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
+
+test_storage_file: $(TEST_BAR)
 	$(MAKE) \
           BAR_STORAGE="file://test/" \
           BAR_FILE="test" \
@@ -1192,6 +1205,15 @@ test7 test_storage: $(TEST_BAR)
           test_file_operations_base \
           ;
 # delta test?
+
+test_storage_file-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_file
+
+test_storage_file-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_file
+
+test_storage_ftp: $(TEST_BAR)
+	@$(call functionVerifyParameter,TEST_PASSWORD_FTP)
 	$(MAKE) \
           BAR_STORAGE="ftp://$(TEST_HOST_FTP)/test/" \
           BAR_FILE="test" \
@@ -1206,6 +1228,15 @@ test7 test_storage: $(TEST_BAR)
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)'" \
           test_file_operations_base \
           ;
+
+test_storage_ftp-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_ftp
+
+test_storage_ftp-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_ftp
+
+test_storage_scp: $(TEST_BAR)
+	@$(call functionVerifyParameter,TEST_PASSWORD_SCP)
 	$(MAKE) \
           BAR_STORAGE="scp://$(TEST_HOST_SCP)/test/" \
           BAR_FILE="test" \
@@ -1220,6 +1251,15 @@ test7 test_storage: $(TEST_BAR)
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))'" \
           test_file_operations_base \
           ;
+
+test_storage_scp-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_scp
+
+test_storage_scp-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_scp
+
+test_storage_sftp: $(TEST_BAR)
+	@$(call functionVerifyParameter,TEST_PASSWORD_SFTP)
 	$(MAKE) \
           BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/test/" \
           BAR_FILE="test" \
@@ -1234,6 +1274,15 @@ test7 test_storage: $(TEST_BAR)
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(TEST_PASSWORD_SFTP)'" \
           test_file_operations_base \
           ;
+
+test_storage_sftp-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_sftp
+
+test_storage_sftp-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_sftp
+
+test_storage_webdav: $(TEST_BAR)
+	@$(call functionVerifyParameter,TEST_PASSWORD_WEBDAV)
 	$(MAKE) \
           BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/webdav/" \
           BAR_FILE="test" \
@@ -1250,11 +1299,11 @@ test7 test_storage: $(TEST_BAR)
           ;
 	@$(ECHO) "ok"
 
-test7-debug test_storage-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage
+test_storage_webdav-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_webdav
 
-test7-valgrind test_storage-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
+test_storage_webdav-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_webdav
 
 test8 test_largefiles: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 8: large files..."
