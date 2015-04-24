@@ -1714,8 +1714,8 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
 
 LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  PatternTypes    patternType;
-  DeltaSourceNode *deltaSourceNode;
+  String       storageName;
+  PatternTypes patternType;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -1726,21 +1726,20 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
+  // init variables
+  storageName = String_new();
+
   // detect pattern type, get pattern
-  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
-  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
-  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
-  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
+  if      (strncmp(value,"r:",2) == 0) { String_setCString(storageName, value+2); patternType = PATTERN_TYPE_REGEX;          }
+  else if (strncmp(value,"x:",2) == 0) { String_setCString(storageName, value+2); patternType = PATTERN_TYPE_EXTENDED_REGEX; }
+  else if (strncmp(value,"g:",2) == 0) { String_setCString(storageName, value+2); patternType = PATTERN_TYPE_GLOB;           }
+  else                                 { String_setCString(storageName, value  ); patternType = PATTERN_TYPE_GLOB;           }
 
   // append to delta source list
-  deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
-  if (deltaSourceNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  deltaSourceNode->storageName = String_newCString(value);
-  deltaSourceNode->patternType = patternType;
-  List_append((DeltaSourceList*)variable,deltaSourceNode);
+  DeltaSourceList_append((DeltaSourceList*)variable,storageName,patternType);
+
+  // free resources
+  String_delete(storageName);
 
   return TRUE;
 }
