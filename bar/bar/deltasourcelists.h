@@ -159,7 +159,7 @@ void DeltaSourceList_copy(const DeltaSourceList *fromDeltaSourceList,
                          );
 
 /***********************************************************************\
-* Name   : DeltaSourceList_append, DeltaSourceList_appendCString
+* Name   : DeltaSourceList_append
 * Purpose: add entry to entry list
 * Input  : entryList   - entry list
 +          type        - entry type; see ENTRY_TYPE_*
@@ -174,10 +174,6 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
                               ConstString     storageName,
                               PatternTypes    patternType
                              );
-Errors DeltaSourceList_appendCString(DeltaSourceList *deltaSourceList,
-                                     const char      *storageName,
-                                     PatternTypes    patternType
-                                    );
 
 /***********************************************************************\
 * Name   : DeltaSourceList_match, DeltaSourceList_matchStringList
