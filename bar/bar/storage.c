@@ -1215,6 +1215,58 @@ LOCAL bool initDefaultWebDAVPassword(ConstString hostName, ConstString loginName
 }
 
 /***********************************************************************\
+* Name   : initWebDAVHandle
+* Purpose: init WebDAV handle
+* Input  : curlHandle    - CURL handle
+*          url           - URL
+*          loginName     - login name
+*          loginPassword - login password
+*          timeout       - timeout [ms]
+* Output : -
+* Return : CURLE_OK if no error, CURL error code otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL CURLcode initWebDAVHandle(CURL *curlHandle, ConstString url, ConstString loginName, Password *loginPassword, long timeout)
+{
+  CURLcode    curlCode;
+  const char *plainLoginPassword;
+
+  // reset
+  curl_easy_reset(curlHandle);
+  curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
+  if (curlCode != CURLE_OK)
+  {
+    return curlCode;
+  }
+  curlCode = curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,timeout);
+  if (curlCode != CURLE_OK)
+  {
+    return curlCode;
+  }
+  if (globalOptions.verboseLevel >= 6)
+  {
+    // enable debug mode
+    (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
+  }
+
+  // set URL
+  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+  if (curlCode != CURLE_OK)
+  {
+    return curlCode;
+  }
+
+  // set login
+  (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(loginName));
+  plainLoginPassword = Password_deploy(loginPassword);
+  (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+  Password_undeploy(loginPassword);
+
+  return CURLE_OK;
+}
+
+/***********************************************************************\
 * Name   : checkWebDAVLogin
 * Purpose: check if WebDAV login is possible
 * Input  : hostName      - host name
@@ -1230,10 +1282,9 @@ LOCAL Errors checkWebDAVLogin(ConstString hostName,
                               Password    *loginPassword
                              )
 {
-  CURL       *curlHandle;
-  String     url;
-  CURLcode   curlCode;
-  const char *plainLoginPassword;
+  CURL     *curlHandle;
+  String   url;
+  CURLcode curlCode;
 
   // init handle
   curlHandle = curl_easy_init();
@@ -1241,35 +1292,16 @@ LOCAL Errors checkWebDAVLogin(ConstString hostName,
   {
     return ERROR_WEBDAV_SESSION_FAIL;
   }
-  (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
-  if (globalOptions.verboseLevel >= 6)
-  {
-    (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
-  }
 
   // set connect
   url = String_format(String_new(),"http://%S",hostName);
-  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-  }
+  curlCode = initWebDAVHandle(curlHandle,url,loginName,loginPassword,WEBDAV_TIMEOUT);
   String_delete(url);
   if (curlCode != CURLE_OK)
   {
     (void)curl_easy_cleanup(curlHandle);
     return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
   }
-
-  // set login
-  (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(loginName));
-  plainLoginPassword = Password_deploy(loginPassword);
-  (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-  Password_undeploy(loginPassword);
 
   // login
   curlCode = curl_easy_perform(curlHandle);
@@ -1287,7 +1319,8 @@ LOCAL Errors checkWebDAVLogin(ConstString hostName,
 
 /***********************************************************************\
 * Name   : curlWebDAVReadDataCallback
-* Purpose: curl WebDAV read data callback: receive data from remote
+* Purpose: curl WebDAV read data callback: read data from buffer and
+*          send to remote
 * Input  : buffer   - buffer for data
 *          size     - size of an element
 *          n        - number of elements
@@ -1330,7 +1363,7 @@ LOCAL size_t curlWebDAVReadDataCallback(void   *buffer,
 
 /***********************************************************************\
 * Name   : curlWebDAVWriteDataCallback
-* Purpose: curl WebDAV write data callback: get data from remote
+* Purpose: curl WebDAV write data callback: receive data from remote
 *          and store into buffer
 * Input  : buffer   - buffer with data
 *          size     - size of an element
@@ -5745,7 +5778,6 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
         {
           String          baseURL;
           CURLcode        curlCode;
-          const char      *plainLoginPassword;
           CURLMcode       curlMCode;
           String          url;
           String          pathName,baseName;
@@ -5771,13 +5803,6 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
             return ERROR_WEBDAV_SESSION_FAIL;
           }
-          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FAILONERROR,1L);
-          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
-          if (globalOptions.verboseLevel >= 6)
-          {
-            // enable debug mode
-            (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_VERBOSE,1L);
-          }
 
           /* Note: curl trigger from time to time a SIGALRM. The curl option
                    CURLOPT_NOSIGNAL should stop this. But it seems there is
@@ -5792,22 +5817,6 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
           // get base URL
           baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
           if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
-
-          // set WebDAV connect
-          curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(baseURL));
-          if (curlCode != CURLE_OK)
-          {
-            String_delete(baseURL);
-            (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
-            (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
-            return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
-          }
-
-          // set WebDAV login
-          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-          plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-          Password_undeploy(storageHandle->storageSpecifier.loginPassword);
 
           if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
@@ -5825,17 +5834,18 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
                 String_append(url,token);
                 String_appendChar(url,'/');
 
+                // check if sub-directory exists
+                curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
+                                            url,
+                                            storageHandle->storageSpecifier.loginName,
+                                            storageHandle->storageSpecifier.loginPassword,
+                                            WEBDAV_TIMEOUT
+                                          );
+                if (curlCode != CURLE_OK)
+                {
+                  break;
+                }
                 curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
-                if (curlCode != CURLE_OK)
-                {
-                  break;
-                }
-                curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"MKCOL");
-                if (curlCode != CURLE_OK)
-                {
-                  break;
-                }
-                curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
                 if (curlCode != CURLE_OK)
                 {
                   break;
@@ -5843,7 +5853,32 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
                 curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
                 if (curlCode != CURLE_OK)
                 {
-                  break;
+                  // create sub-directory
+                  curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
+                                              url,
+                                              storageHandle->storageSpecifier.loginName,
+                                              storageHandle->storageSpecifier.loginPassword,
+                                              WEBDAV_TIMEOUT
+                                            );
+                  if (curlCode != CURLE_OK)
+                  {
+                    break;
+                  }
+                  curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
+                  if (curlCode != CURLE_OK)
+                  {
+                    break;
+                  }
+                  curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"MKCOL");
+                  if (curlCode != CURLE_OK)
+                  {
+                    break;
+                  }
+                  curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
+                  if (curlCode != CURLE_OK)
+                  {
+                    break;
+                  }
                 }
               }
               File_doneSplitFileName(&nameTokenizer);
@@ -5863,6 +5898,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             // first delete file if overwrite requested
             if ((storageHandle->jobOptions != NULL) && storageHandle->jobOptions->overwriteArchiveFilesFlag)
             {
+              // get URL
               url = String_format(String_duplicate(baseURL),"/");
               File_initSplitFileName(&nameTokenizer,pathName);
               while (File_getNextSplitFileName(&nameTokenizer,&token))
@@ -5873,30 +5909,58 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
               File_doneSplitFileName(&nameTokenizer);
               String_append(url,baseName);
 
-              curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
-              if (curlCode == CURLE_OK)
-              {
-                curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
-              }
-              if (curlCode == CURLE_OK)
-              {
-                curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
-              }
-              if (curlCode == CURLE_OK)
-              {
-                curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
-              }
+              // check if file exists
+              curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
+                                          url,
+                                          storageHandle->storageSpecifier.loginName,
+                                          storageHandle->storageSpecifier.loginPassword,
+                                          WEBDAV_TIMEOUT
+                                         );
               if (curlCode != CURLE_OK)
               {
-                String_delete(url);
-                String_delete(baseName);
-                String_delete(pathName);
-                String_delete(baseURL);
-                (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
-                (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
-                return ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
+                break;
+              }
+              curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
+              if (curlCode != CURLE_OK)
+              {
+                break;
+              }
+              curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
+              if (curlCode == CURLE_OK)
+              {
+                // delete file
+                curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
+                                            url,
+                                            storageHandle->storageSpecifier.loginName,
+                                            storageHandle->storageSpecifier.loginPassword,
+                                            WEBDAV_TIMEOUT
+                                          );
+                if (curlCode != CURLE_OK)
+                {
+                  break;
+                }
+                curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
+                }
+                if (curlCode == CURLE_OK)
+                {
+                  curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
+                }
+                if (curlCode != CURLE_OK)
+                {
+                  String_delete(url);
+                  String_delete(baseName);
+                  String_delete(pathName);
+                  String_delete(baseURL);
+                  (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+                  (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
+                  return ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
+                }
               }
 
+              // free resources
               String_delete(url);
             }
 
@@ -5911,18 +5975,19 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             File_doneSplitFileName(&nameTokenizer);
             String_append(url,baseName);
 
-            curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,0L);
-            if (curlCode == CURLE_OK)
-            {
-              curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"PUT");
-            }
-            if (curlCode == CURLE_OK)
-            {
-              curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
-            }
+            curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
+                                        url,
+                                        storageHandle->storageSpecifier.loginName,
+                                        storageHandle->storageSpecifier.loginPassword,
+                                        WEBDAV_TIMEOUT
+                                       );
             if (curlCode == CURLE_OK)
             {
               curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,0L);
+            }
+            if (curlCode == CURLE_OK)
+            {
+              curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"PUT");
             }
             if (curlCode == CURLE_OK)
             {
@@ -7993,7 +8058,7 @@ Errors Storage_read(StorageHandle *storageHandle,
                     do
                     {
                       curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
-//fprintf(stderr,"%s, %d: curlmCode=%d %ld %ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageHandle->webdav.sendBuffer.index,storageHandle->webdav.sendBuffer.length,runningHandles);
+//fprintf(stderr,"%s, %d: curlmCode=%d %ld receive=%ld length=%ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageHandle->webdav.sendBuffer.index,storageHandle->webdav.receiveBuffer.length,length,runningHandles);
                     }
                     while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
                            && (runningHandles > 0)
@@ -8004,11 +8069,12 @@ Errors Storage_read(StorageHandle *storageHandle,
                     }
                   }
                 }
-                if (error != ERROR_NONE)
+                if      (error != ERROR_NONE)
                 {
                   break;
                 }
-                if (runningHandles <= 0)
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__,length);
+                else if ((storageHandle->webdav.receiveBuffer.length < length) && (runningHandles <= 0))
                 {
                   const CURLMsg *curlMsg;
                   int           n,i;
@@ -8024,10 +8090,6 @@ Errors Storage_read(StorageHandle *storageHandle,
                     }
                     curlMsg++;
                   }
-                }
-                if (storageHandle->webdav.receiveBuffer.length < length)
-                {
-                  error = ERROR_IO_ERROR;
                   break;
                 }
                 storageHandle->webdav.receiveBuffer.offset = storageHandle->webdav.index;
@@ -9993,7 +10055,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 }
                 if (curlCode == CURLE_OK)
                 {
-#warnign INFO, HEAD?
+#warning INFO, HEAD?
                   curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"INFO");
                 }
                 if (curlCode == CURLE_OK)
