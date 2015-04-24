@@ -122,6 +122,7 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - check if crypt password is correct, output error message
 - barcontrol: remove file requester
 - test archives: CRC? fragments?
+- convert local encoding of names always into UTF8
 
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
