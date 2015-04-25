@@ -2919,6 +2919,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 
   assert(password != NULL);
 
+  passwordNode = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find password
@@ -2940,6 +2941,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
       List_append(&decryptPasswordList,passwordNode);
     }
   }
+  assert(passwordNode != NULL);
 
   return passwordNode->password;
 }
