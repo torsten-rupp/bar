@@ -2144,7 +2144,11 @@ public class TabRestore
           for (MenuItem menuItem : widgetStorageTreeAssignToMenu.getItems())
           {
             assert menuItem.getData() instanceof UUIDIndexData;
-            removeUUIDMenuSet.add(menuItem.getMenu());
+
+            Menu menu = menuItem.getMenu();
+            assert(menu != null);
+
+            removeUUIDMenuSet.add(menu);
           }
         }
       });
@@ -5764,7 +5768,7 @@ public class TabRestore
                                              BARControl.tr("Select local storage file"),
                                              widgetStorageName.getText(),
                                              new String[]{BARControl.tr("BAR files"),"*.bar",
-                                                          BARControl.tr("All files"),"*",
+                                                          BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          }
                                             );
           if (fileName != null)
