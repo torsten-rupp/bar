@@ -204,7 +204,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->storageName = String_newCString(storageName);
+    deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
 
     // add to list
