@@ -938,6 +938,21 @@ public class BARControl
 
   // --------------------------- constants --------------------------------
 
+  /** host system
+   */
+  public enum HostSystems
+  {
+    UNKNOWN,
+    LINUX,
+    SOLARIS,
+    WINDOWS,
+    MACOS
+  };
+
+  public static final String ALL_FILE_EXTENSION;
+
+  private static final HostSystems hostSystem;
+
   // command line options
   private static final OptionEnumeration[] archiveTypeEnumeration =
   {
@@ -994,6 +1009,23 @@ public class BARControl
   // ------------------------ native functions ----------------------------
 
   // ---------------------------- methods ---------------------------------
+
+  static
+  {
+    // detect host system
+    String osName = System.getProperty("os.name").toLowerCase();
+
+    if      (osName.indexOf("linux")   >= 0) hostSystem = HostSystems.LINUX;
+    else if (osName.indexOf("solaris") >= 0) hostSystem = HostSystems.SOLARIS;
+    else if (osName.indexOf("mac")     >= 0) hostSystem = HostSystems.MACOS;
+    else if (osName.indexOf("win")     >= 0) hostSystem = HostSystems.WINDOWS;
+    else                                     hostSystem = HostSystems.LINUX;
+
+    // get all-files extension
+//TODO: system dependent?
+//    ALL_FILE_EXTENSION = (hostSystem == HostSystems.WINDOWS) ? "*.*" : "*";
+    ALL_FILE_EXTENSION = "*";
+  }
 
   /** get internationalized text
    * @param text text
@@ -1371,6 +1403,7 @@ public class BARControl
    */
   private void createWindow()
   {
+Dprintf.dprintf("ALL_FILE_EXTENSION=%s",ALL_FILE_EXTENSION);
     // create shell window
     shell = new Shell(display);
     shell.setText("BAR control");
