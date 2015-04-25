@@ -7059,9 +7059,7 @@ void Storage_close(StorageHandle *storageHandle)
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
         {
-          int    result;
-          char   *sshErrorText;
-          Errors error;
+          int result;
 
           DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp);
 
