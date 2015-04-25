@@ -2854,12 +2854,11 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
 
 LOCAL void waitIndexReady(void)
 {
-  if (indexHandle != NULL)
+  assert(indexHandle != NULL);
+
+  while (!quitFlag && !Index_isReady(indexHandle))
   {
-    while (!quitFlag && !Index_isReady(indexHandle))
-    {
-      Misc_udelay(10LL*MISC_US_PER_SECOND);
-    }
+    Misc_udelay(10LL*MISC_US_PER_SECOND);
   }
 }
 
@@ -3134,12 +3133,15 @@ LOCAL void jobThreadCode(void)
   StaticString     (s,64);
   uint             n;
 
-  // wait for index become ready
-  waitIndexReady();
+  if (indexHandle != NULL)
+  {
+    // wait for index become ready
+    waitIndexReady();
+  }
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
-  storageName         = String_new();
+  storageName        = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   PatternList_init(&compressExcludePatternList);
@@ -3471,6 +3473,9 @@ LOCAL Errors deleteStorage(DatabaseId storageId)
   Errors           error;
   StorageHandle    storageHandle;
 
+  assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
+
   // init variables
   resultError = ERROR_UNKNOWN;
   storageName = String_new();
@@ -3587,6 +3592,9 @@ LOCAL Errors deleteEntity(DatabaseId entityId)
   IndexQueryHandle indexQueryHandle;
   DatabaseId       storageId;
 
+  assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
+
   // delete all storage with entity id
   error = Index_initListStorage(&indexQueryHandle,
                                 indexHandle,
@@ -3649,6 +3657,9 @@ LOCAL Errors deleteUUID(const String jobUUID)
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   DatabaseId       entityId;
+
+  assert(indexHandle != NULL);
+  assert(Index_isReady(indexHandle));
 
   // delete all entities with specified job UUID
   error = Index_initListEntities(&indexQueryHandle,
@@ -3717,96 +3728,145 @@ LOCAL void cleanExpiredEntities(void)
   uint64             totalEntries,totalSize;
   String             dateTime;
 
+  assert(indexHandle != NULL);
+
   // wait for index become ready
   waitIndexReady();
 
-  // init variables
-  jobName  = String_new();
-  dateTime = String_new();
-  now      = Misc_getCurrentDateTime();
+  if (!quitFlag)
+  {
+    // init variables
+    jobName  = String_new();
+    dateTime = String_new();
+    now      = Misc_getCurrentDateTime();
 
-  // check entities
-  error = Index_initListEntities(&indexQueryHandle1,
-                                 indexHandle,
-                                 NULL, // jobUUID
-                                 NULL, // scheduldUUID,
-                                 DATABASE_ORDERING_ASCENDING,
-                                 0LL   // offset
-                                );
-  if (error != ERROR_NONE)
-  {
-    String_delete(dateTime);
-    String_delete(jobName);
-    return;
-  }
-  while (   !quitFlag
-         && Index_getNextEntity(&indexQueryHandle1,
-                                &entityId,
-                                jobUUID,
-                                scheduleUUID,
-                                NULL,  // createdDateTime,
-                                NULL,  // archiveType,
-                                NULL,  // totalEntries,
-                                NULL,  // totalSize,
-                                NULL   // lastErrorMessage
-                               )
-        )
-  {
-    if (!String_isEmpty(scheduleUUID))
+    // check entities
+    error = Index_initListEntities(&indexQueryHandle1,
+                                   indexHandle,
+                                   NULL, // jobUUID
+                                   NULL, // scheduldUUID,
+                                   DATABASE_ORDERING_ASCENDING,
+                                   0LL   // offset
+                                  );
+    if (error != ERROR_NONE)
     {
-      // get job name, schedule min./max. keep, max. age
-      minKeep = 0;
-      maxKeep = 0;
-      maxAge  = 0;
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      String_delete(dateTime);
+      String_delete(jobName);
+      return;
+    }
+    while (   !quitFlag
+           && Index_getNextEntity(&indexQueryHandle1,
+                                  &entityId,
+                                  jobUUID,
+                                  scheduleUUID,
+                                  NULL,  // createdDateTime,
+                                  NULL,  // archiveType,
+                                  NULL,  // totalEntries,
+                                  NULL,  // totalSize,
+                                  NULL   // lastErrorMessage
+                                 )
+          )
+    {
+      if (!String_isEmpty(scheduleUUID))
       {
-        jobNode = findJobByUUID(jobUUID);
-        if (jobNode != NULL)
+        // get job name, schedule min./max. keep, max. age
+        minKeep = 0;
+        maxKeep = 0;
+        maxAge  = 0;
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
         {
-          String_set(jobName,jobNode->name);
-        }
-        else
-        {
-          String_clear(jobName);
-        }
-        scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
-        if (scheduleNode != NULL)
-        {
-          minKeep = scheduleNode->minKeep;
-          maxKeep = scheduleNode->maxKeep;
-          maxAge  = scheduleNode->maxAge;
-        }
-      }
-
-      // check if expired
-      if ((maxKeep > 0) || (maxAge > 0))
-      {
-        // delete expired entities
-        if (maxAge > 0)
-        {
-          error = Index_initListEntities(&indexQueryHandle2,
-                                         indexHandle,
-                                         jobUUID,
-                                         scheduleUUID,
-                                         DATABASE_ORDERING_DESCENDING,
-                                         (ulong)minKeep
-                                        );
-          if (error == ERROR_NONE)
+          jobNode = findJobByUUID(jobUUID);
+          if (jobNode != NULL)
           {
-            while (   !quitFlag
-                   && Index_getNextEntity(&indexQueryHandle2,
-                                          &entityId,
-                                          NULL,  // jobUUID
-                                          NULL,  // scheduleUUID
-                                          &createdDateTime,
-                                          &archiveType,
-                                          &totalEntries,
-                                          &totalSize,
-                                          NULL   // lastErrorMessage
-                                         )
-                  )
+            String_set(jobName,jobNode->name);
+          }
+          else
+          {
+            String_clear(jobName);
+          }
+          scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+          if (scheduleNode != NULL)
+          {
+            minKeep = scheduleNode->minKeep;
+            maxKeep = scheduleNode->maxKeep;
+            maxAge  = scheduleNode->maxAge;
+          }
+        }
+
+        // check if expired
+        if ((maxKeep > 0) || (maxAge > 0))
+        {
+          // delete expired entities
+          if (maxAge > 0)
+          {
+            error = Index_initListEntities(&indexQueryHandle2,
+                                           indexHandle,
+                                           jobUUID,
+                                           scheduleUUID,
+                                           DATABASE_ORDERING_DESCENDING,
+                                           (ulong)minKeep
+                                          );
+            if (error == ERROR_NONE)
             {
-              if (now > (createdDateTime+maxAge*SECONDS_PER_DAY))
+              while (   !quitFlag
+                     && Index_getNextEntity(&indexQueryHandle2,
+                                            &entityId,
+                                            NULL,  // jobUUID
+                                            NULL,  // scheduleUUID
+                                            &createdDateTime,
+                                            &archiveType,
+                                            &totalEntries,
+                                            &totalSize,
+                                            NULL   // lastErrorMessage
+                                           )
+                    )
+              {
+                if (now > (createdDateTime+maxAge*SECONDS_PER_DAY))
+                {
+                  error = deleteEntity(entityId);
+                  if (error == ERROR_NONE)
+                  {
+                    Misc_formatDateTime(dateTime,createdDateTime,NULL);
+                    plogMessage(LOG_TYPE_INDEX,
+                                "INDEX",
+                                "Deleted expired entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
+                                String_cString(jobName),
+                                archiveTypeToString(archiveType,"unknown"),
+                                String_cString(dateTime),
+                                totalEntries,
+                                totalSize
+                               );
+                  }
+                }
+              }
+              Index_doneList(&indexQueryHandle2);
+            }
+          }
+
+          // delete surplus entities
+          if ((maxKeep > 0) && (maxKeep >= minKeep))
+          {
+            error = Index_initListEntities(&indexQueryHandle2,
+                                           indexHandle,
+                                           jobUUID,
+                                           scheduleUUID,
+                                           DATABASE_ORDERING_DESCENDING,
+                                           (ulong)maxKeep
+                                          );
+            if (error == ERROR_NONE)
+            {
+              while (   !quitFlag
+                     && Index_getNextEntity(&indexQueryHandle2,
+                                            &entityId,
+                                            NULL,  // jobUUID
+                                            NULL,  // scheduleUUID
+                                            &createdDateTime,
+                                            &archiveType,
+                                            &totalEntries,
+                                            &totalSize,
+                                            NULL   // lastErrorMessage
+                                           )
+                    )
               {
                 error = deleteEntity(entityId);
                 if (error == ERROR_NONE)
@@ -3814,7 +3874,7 @@ LOCAL void cleanExpiredEntities(void)
                   Misc_formatDateTime(dateTime,createdDateTime,NULL);
                   plogMessage(LOG_TYPE_INDEX,
                               "INDEX",
-                              "Deleted expired entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
+                              "Deleted surplus entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
                               String_cString(jobName),
                               archiveTypeToString(archiveType,"unknown"),
                               String_cString(dateTime),
@@ -3823,62 +3883,18 @@ LOCAL void cleanExpiredEntities(void)
                              );
                 }
               }
+              Index_doneList(&indexQueryHandle2);
             }
-            Index_doneList(&indexQueryHandle2);
-          }
-        }
-
-        // delete surplus entities
-        if ((maxKeep > 0) && (maxKeep >= minKeep))
-        {
-          error = Index_initListEntities(&indexQueryHandle2,
-                                         indexHandle,
-                                         jobUUID,
-                                         scheduleUUID,
-                                         DATABASE_ORDERING_DESCENDING,
-                                         (ulong)maxKeep
-                                        );
-          if (error == ERROR_NONE)
-          {
-            while (   !quitFlag
-                   && Index_getNextEntity(&indexQueryHandle2,
-                                          &entityId,
-                                          NULL,  // jobUUID
-                                          NULL,  // scheduleUUID
-                                          &createdDateTime,
-                                          &archiveType,
-                                          &totalEntries,
-                                          &totalSize,
-                                          NULL   // lastErrorMessage
-                                         )
-                  )
-            {
-              error = deleteEntity(entityId);
-              if (error == ERROR_NONE)
-              {
-                Misc_formatDateTime(dateTime,createdDateTime,NULL);
-                plogMessage(LOG_TYPE_INDEX,
-                            "INDEX",
-                            "Deleted surplus entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
-                            String_cString(jobName),
-                            archiveTypeToString(archiveType,"unknown"),
-                            String_cString(dateTime),
-                            totalEntries,
-                            totalSize
-                           );
-              }
-            }
-            Index_doneList(&indexQueryHandle2);
           }
         }
       }
     }
-  }
-  Index_doneList(&indexQueryHandle1);
+    Index_doneList(&indexQueryHandle1);
 
-  // free resources
-  String_delete(dateTime);
-  String_delete(jobName);
+    // free resources
+    String_delete(dateTime);
+    String_delete(jobName);
+  }
 }
 
 /***********************************************************************\
@@ -4182,6 +4198,8 @@ LOCAL void indexThreadCode(void)
   uint64                 totalEntries,totalSize;
   uint                   sleepTime;
 
+  assert(indexHandle != NULL);
+
   // wait for index become ready
   waitIndexReady();
 
@@ -4417,6 +4435,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
   IndexQueryHandle           indexQueryHandle;
   IndexModes                 indexMode;
   uint                       sleepTime;
+
+  assert(indexHandle != NULL);
 
   // wait for index become ready
   waitIndexReady();
@@ -8103,6 +8123,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
@@ -8198,7 +8219,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
       totalEntities        = 0LL;
       totalEntries         = 0LL;
       totalSize            = 0LL;
-      if (indexHandle != NULL)
+      if ((indexHandle != NULL) && Index_isReady(indexHandle))
       {
         error = Index_initListEntities(&indexQueryHandle,
                                        indexHandle,
@@ -9924,12 +9945,12 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_READY,"index database still not initialized");
     return;
   }
 
@@ -10069,12 +10090,12 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_READY,"index database still not initialized");
     return;
   }
 
@@ -10381,13 +10402,13 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     String_delete(pattern);
     return;
   }
   if (!Index_isReady(indexHandle))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_READY,"index database still not initialized");
     return;
   }
 
@@ -10569,12 +10590,12 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_READY,"index database still not initialized");
     return;
   }
 
@@ -10662,12 +10683,12 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_READY,"index database still not initialized");
     return;
   }
 
@@ -10795,13 +10816,13 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     String_delete(pattern);
     return;
   }
   if (!Index_isReady(indexHandle))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_READY,"index database still not initialized");
     return;
   }
 
@@ -10946,13 +10967,13 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     String_delete(storageName);
     return;
   }
   if (!Index_isReady(indexHandle))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_READY,"index database still not initialized");
     return;
   }
 
@@ -11038,12 +11059,12 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_READY,"index database still not initialized");
     return;
   }
 
@@ -11246,12 +11267,12 @@ LOCAL void serverCommand_indexStorageAssign(ClientInfo *clientInfo, uint id, con
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_READY,"index database still not initialized");
     return;
   }
 
@@ -11461,12 +11482,12 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
   if (!Index_isReady(indexHandle))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_READY,"index database still not initialized");
     return;
   }
 
@@ -12028,13 +12049,13 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database available");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     String_delete(entryPattern);
     return;
   }
   if (!Index_isReady(indexHandle))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"index database still not initialized");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_READY,"index database still not initialized");
     return;
   }
 
