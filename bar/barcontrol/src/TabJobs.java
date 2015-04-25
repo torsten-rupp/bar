@@ -3290,7 +3290,7 @@ public class TabJobs
                                                  BARControl.tr("Select source file"),
                                                  deltaSource.getString(),
                                                  new String[]{BARControl.tr("BAR files"),"*.bar",
-                                                              BARControl.tr("All files"),"*",
+                                                              BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                              }
                                                 );
               if (fileName != null)
@@ -3728,7 +3728,7 @@ public class TabJobs
                                                  BARControl.tr("Select public key file"),
                                                  cryptPublicKeyFileName.getString(),
                                                  new String[]{BARControl.tr("Public key"),"*.public",
-                                                              BARControl.tr("All files"),"*",
+                                                              BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                              }
                                                 );
               if (fileName != null)
@@ -4163,7 +4163,7 @@ public class TabJobs
                                                    BARControl.tr("Select storage file name"),
                                                    storageFileName.getString(),
                                                    new String[]{BARControl.tr("BAR files"),"*.bar",
-                                                                BARControl.tr("All files"),"*",
+                                                                BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                                }
                                                   );
                 if (fileName != null)
@@ -4241,7 +4241,7 @@ public class TabJobs
                                                  BARControl.tr("Select incremental file"),
                                                  incrementalListFileName.getString(),
                                                  new String[]{BARControl.tr("BAR incremental data"),"*.bid",
-                                                              BARControl.tr("All files"),"*",
+                                                              BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                              }
                                                 );
               if (fileName != null)
@@ -5144,7 +5144,7 @@ public class TabJobs
                                                    BARControl.tr("Select SSH public key file"),
                                                    incrementalListFileName.getString(),
                                                    new String[]{BARControl.tr("Public key files"),"*.pub",
-                                                                BARControl.tr("All files"),"*",
+                                                                BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                                }
                                                   );
                 if (fileName != null)
@@ -5219,7 +5219,7 @@ public class TabJobs
                 String fileName = Dialogs.fileOpen(shell,
                                                    BARControl.tr("Select SSH private key file"),
                                                    incrementalListFileName.getString(),
-                                                   new String[]{BARControl.tr("All files"),"*",
+                                                   new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                                }
                                                   );
                 if (fileName != null)
@@ -5574,7 +5574,7 @@ public class TabJobs
                                                    BARControl.tr("Select SSH public key file"),
                                                    incrementalListFileName.getString(),
                                                    new String[]{BARControl.tr("Public key files"),"*.pub",
-                                                                BARControl.tr("All files"),"*",
+                                                                BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                                }
                                                   );
                 if (fileName != null)
@@ -5649,7 +5649,7 @@ public class TabJobs
                 String fileName = Dialogs.fileOpen(shell,
                                                    BARControl.tr("Select SSH private key file"),
                                                    incrementalListFileName.getString(),
-                                                   new String[]{BARControl.tr("All files"),"*",
+                                                   new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                                }
                                                   );
                 if (fileName != null)
@@ -5796,7 +5796,7 @@ public class TabJobs
                 String fileName = Dialogs.fileOpen(shell,
                                                    BARControl.tr("Select device name"),
                                                    incrementalListFileName.getString(),
-                                                   new String[]{BARControl.tr("All files"),"*",
+                                                   new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                                }
                                                   );
                 if (fileName != null)
@@ -6079,7 +6079,7 @@ public class TabJobs
                 String fileName = Dialogs.fileOpen(shell,
                                                    BARControl.tr("Select device name"),
                                                    incrementalListFileName.getString(),
-                                                   new String[]{BARControl.tr("All files"),"*",
+                                                   new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                                }
                                                   );
                 if (fileName != null)
@@ -8118,10 +8118,12 @@ throw new Error("NYI");
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            String pathName = Dialogs.directory(shell,
-                                                BARControl.tr("Select path"),
-                                                widgetPattern.getText()
-                                               );
+            String pathName = Dialogs.fileOpen(shell,
+                                               BARControl.tr("Select path"),
+                                               widgetPattern.getText(),
+                                               new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                           }
+                                              );
             if (pathName != null)
             {
               widgetPattern.setText(pathName.trim());
