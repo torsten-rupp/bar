@@ -8123,7 +8123,6 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
