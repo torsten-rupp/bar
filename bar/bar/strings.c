@@ -258,7 +258,7 @@ LOCAL void printErrorConstString(const struct __String *string)
       if (debugStringNode != NULL)
       {
         fprintf(stderr,
-                "FATAL ERROR: cannot modify constant string '%s' which was allocated at %s, %ld!\n",
+                "FATAL ERROR: cannot modify constant string '%s' which was allocated at %s, %lu!\n",
                 string->data,
                 debugStringNode->allocFileName,
                 debugStringNode->allocLineNb
@@ -2246,7 +2246,7 @@ String __String_copy(const char *__fileName__, ulong __lineNb__, String *string,
   #ifdef NDEBUG
     STRING_CHECK_VALID(string);
   #else /* not NDEBUG */
-    STRING_CHECK_VALID_AT(__fileName__,__lineNb__,string);
+    if (string != NULL) STRING_CHECK_VALID_AT(__fileName__,__lineNb__,*string);
   #endif /* NDEBUG */
   STRING_CHECK_ASSIGNABLE(*string);
   #ifdef NDEBUG
@@ -2323,7 +2323,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
         debugStringNode = debugFindFreedString(string);
         if (debugStringNode != NULL)
         {
-          fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
+          fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
                   string,
                   __fileName__,
                   __lineNb__,
@@ -4988,7 +4988,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
             #endif /* HAVE_BACKTRACE */
             HALT_INTERNAL_ERROR_AT(__fileName__,
                                    __lineNb__,
-                                   "Invalid checksum 0x%08lx in string %p, length %lu (max. %lu) allocated at %s, %d (expected 0x%08lx)!",
+                                   "Invalid checksum 0x%08lx in string %p, length %lu (max. %lu) allocated at %s, %lu (expected 0x%08lx)!",
                                    string->checkSum,
                                    string,
                                    string->length,
@@ -5022,7 +5022,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
             #endif /* HAVE_BACKTRACE */
             HALT_INTERNAL_ERROR_AT(__fileName__,
                                    __lineNb__,
-                                   "Invalid checksum 0x%08lx in string %p, length %lu (max. %lu), %d (expected 0x%08lx)!",
+                                   "Invalid checksum 0x%08lx in unknown string %p, length %lu (max. %lu) (expected 0x%08lx)!",
                                    string->checkSum,
                                    string,
                                    string->length,
@@ -5040,7 +5040,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR_AT(__fileName__,
                                __lineNb__,
-                               "Invalid checksum 0x%08lx in string %p, length %lu (max. %lu) allocated at %s, %d (expected 0x%08lx)!",
+                               "Invalid checksum 0x%08lx in static string %p, length %lu (max. %lu) (expected 0x%08lx)!",
                                string->checkSum,
                                string,
                                string->length,
@@ -5068,7 +5068,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
           {
             HALT_INTERNAL_ERROR_AT(__fileName__,
                                    __lineNb__,
-                                   "String %p allocated at %s, %lu is already freed at %s, %ld!",
+                                   "String %p allocated at %s, %lu is already freed at %s, %lu!",
                                    string,
                                    debugStringNode->allocFileName,
                                    debugStringNode->allocLineNb,
