@@ -565,6 +565,7 @@ ERROR DATABASE
 ERROR DATABASE_VERSION_UNKNOWN       "unknown version on index"
 ERROR DATABASE_CREATE_INDEX          "error creating index"
 ERROR DATABASE_INDEX_NOT_FOUND       "index not found"
+ERROR DATABASE_INDEX_NOT_READY       "index still not initialized"
 
 // --- debugging only ---------------------------------------------------
 ERROR TESTCODE
