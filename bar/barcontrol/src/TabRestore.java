@@ -3827,7 +3827,7 @@ public class TabRestore
             }
             else if (treeItem.getData() instanceof StorageIndexData)
             {
-              // toogle check
+              // toggle check
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
               storageIndexData.setChecked(!storageIndexData.isChecked());
 
@@ -3844,51 +3844,54 @@ public class TabRestore
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TreeItem treeItem = (TreeItem)selectionEvent.item;
-          if ((treeItem != null) && (selectionEvent.detail == SWT.CHECK))
+          if (treeItem != null)
           {
-            IndexData indexData = (IndexData)treeItem.getData();
-
-            // set checked
-            indexData.setChecked(treeItem.getChecked());
-
-            // set checked for sub-items: jobs, storage
-            if      (indexData instanceof UUIDIndexData)
+            if (selectionEvent.detail == SWT.CHECK)
             {
-              if (treeItem.getExpanded())
-              {
-                for (TreeItem entityTreeItem : treeItem.getItems())
-                {
-                  EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-                  entityIndexData.setChecked(indexData.isChecked());
+              IndexData indexData = (IndexData)treeItem.getData();
 
-                  if (entityTreeItem.getExpanded())
+              // set checked
+              indexData.setChecked(treeItem.getChecked());
+
+              // set checked for sub-items: jobs, storage
+              if      (indexData instanceof UUIDIndexData)
+              {
+                if (treeItem.getExpanded())
+                {
+                  for (TreeItem entityTreeItem : treeItem.getItems())
                   {
-                    for (TreeItem storageTreeItem : entityTreeItem.getItems())
+                    EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
+                    entityIndexData.setChecked(indexData.isChecked());
+
+                    if (entityTreeItem.getExpanded())
                     {
-                      StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-                      storageIndexData.setChecked(indexData.isChecked());
+                      for (TreeItem storageTreeItem : entityTreeItem.getItems())
+                      {
+                        StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
+                        storageIndexData.setChecked(indexData.isChecked());
+                      }
                     }
                   }
                 }
               }
-            }
-            else if (indexData instanceof EntityIndexData)
-            {
-              if (treeItem.getExpanded())
+              else if (indexData instanceof EntityIndexData)
               {
-                for (TreeItem storageTreeItem : treeItem.getItems())
+                if (treeItem.getExpanded())
                 {
-                  StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-                  storageIndexData.setChecked(indexData.isChecked());
+                  for (TreeItem storageTreeItem : treeItem.getItems())
+                  {
+                    StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
+                    storageIndexData.setChecked(indexData.isChecked());
+                  }
                 }
               }
+
+              // update checked storage list
+              updateCheckedStorageList();
+
+              // trigger update checked
+              checkedStorageEvent.trigger();
             }
-
-            // update checked storage list
-            updateCheckedStorageList();
-
-            // trigger update checked
-            checkedStorageEvent.trigger();
           }
         }
       });
@@ -3956,6 +3959,37 @@ public class TabRestore
           else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
           {
             removeStorageIndex();
+          }
+          else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
+          {
+            // expand/collaps sub-item
+            for (TreeItem treeItem : widgetStorageTree.getSelection())
+            {
+              Event treeEvent = new Event();
+              treeEvent.item = treeItem;
+              if (treeItem.getExpanded())
+              {
+                widgetStorageTree.notifyListeners(SWT.Collapse,treeEvent);
+              }
+              else
+              {
+                widgetStorageTree.notifyListeners(SWT.Expand,treeEvent);
+              }
+            }
+          }
+          else if (Widgets.isAccelerator(keyEvent,SWT.SPACE))
+          {
+            // toggle check
+            for (TreeItem treeItem : widgetStorageTree.getSelection())
+            {
+              IndexData indexData = (IndexData)treeItem.getData();
+              indexData.setChecked(!indexData.isChecked());
+
+              Event treeEvent = new Event();
+              treeEvent.item   = treeItem;
+              treeEvent.detail = SWT.CHECK;
+              widgetStorageTree.notifyListeners(SWT.Selection,treeEvent);
+            }
           }
         }
       });
@@ -4245,7 +4279,7 @@ public class TabRestore
       widgetStorageTree.setMenu(menu);
       widgetStorageTable.setMenu(menu);
 
-      // storage list filters
+      // storage tree filters
       composite = Widgets.newComposite(group);
       composite.setLayout(new TableLayout(0.0,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0}));
       Widgets.layout(composite,2,0,TableLayoutData.WE);
@@ -4901,6 +4935,7 @@ public class TabRestore
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
+        // tree view
         for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
         {
           UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
@@ -4935,6 +4970,7 @@ public class TabRestore
         }
         break;
       case 1:
+        // list view
         for (TableItem tableItem : widgetStorageTable.getItems())
         {
           StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
@@ -4956,31 +4992,60 @@ public class TabRestore
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
-        for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
+        // tree view
+        TreeItem treeItems[] = widgetStorageTree.getSelection();
+        if (treeItems.length <= 0) treeItems = widgetStorageTree.getItems();
+
+        for (TreeItem treeItem : treeItems)
         {
-          UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
-          uuidIndexData.setChecked(checked);
+          IndexData indexData = (IndexData)treeItem.getData();
 
-          if (uuidTreeItem.getExpanded())
+          if      (indexData instanceof UUIDIndexData)
           {
-            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
-            {
-              EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-              entityIndexData.setChecked(checked);
+            UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
+            uuidIndexData.setChecked(checked);
 
-              if (entityTreeItem.getExpanded())
+            if (treeItem.getExpanded())
+            {
+              for (TreeItem entityTreeItem : treeItem.getItems())
               {
-                for (TreeItem storageTreeItem : entityTreeItem.getItems())
+                EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
+                entityIndexData.setChecked(checked);
+
+                if (entityTreeItem.getExpanded())
                 {
-                  StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-                  storageIndexData.setChecked(checked);
+                  for (TreeItem storageTreeItem : entityTreeItem.getItems())
+                  {
+                    StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
+                    storageIndexData.setChecked(checked);
+                  }
                 }
               }
             }
           }
+          else if (indexData instanceof EntityIndexData)
+          {
+            EntityIndexData entityIndexData = (EntityIndexData)indexData;
+            entityIndexData.setChecked(checked);
+
+            if (treeItem.getExpanded())
+            {
+              for (TreeItem storageTreeItem : treeItem.getItems())
+              {
+                StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
+                storageIndexData.setChecked(checked);
+              }
+            }
+          }
+          else if (indexData instanceof StorageIndexData)
+          {
+            StorageIndexData storageIndexData = (StorageIndexData)indexData;
+            storageIndexData.setChecked(checked);
+          }
         }
         break;
       case 1:
+        // list view
         for (TableItem tableItem : widgetStorageTable.getItems())
         {
           StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
@@ -5005,6 +5070,7 @@ public class TabRestore
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
+        // tree view
         for (TreeItem treeItem : widgetStorageTree.getItems())
         {
           StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
@@ -5015,6 +5081,7 @@ public class TabRestore
         }
         break;
       case 1:
+        // list view
         for (TableItem tableItem : widgetStorageTable.getItems())
         {
           StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
@@ -5047,6 +5114,7 @@ public class TabRestore
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
+        // tree view
         for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
         {
           indexData = (IndexData)uuidTreeItem.getData();
@@ -5079,6 +5147,7 @@ public class TabRestore
         }
         break;
       case 1:
+        // list view
         for (TableItem tableItem : widgetStorageTable.getItems())
         {
           indexData = (StorageIndexData)tableItem.getData();
@@ -5110,6 +5179,7 @@ public class TabRestore
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
+        // tree view
         IndexData indexData;
         for (TreeItem treeItem : widgetStorageTree.getSelection())
         {
@@ -5127,31 +5197,9 @@ public class TabRestore
           {
           }
         }
-
-/*
-        for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
-        {
-          if (uuidTreeItem.getExpanded())
-          {
-            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
-            {
-              if (entityTreeItem.getExpanded())
-              {
-                for (TreeItem storageTreeItem : entityTreeItem.getItems())
-                {
-                  StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-                  if (!storageTreeItem.getGrayed())
-                  {
-                    indexDataHashSet.add(storageIndexData);
-                  }
-                }
-              }
-            }
-          }
-        }
-*/
         break;
       case 1:
+        // list view
         for (TableItem tableItem : widgetStorageTable.getSelection())
         {
           StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
@@ -5182,6 +5230,7 @@ public class TabRestore
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
+        // tree view
         for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
         {
           if (!uuidTreeItem.getGrayed() && uuidTreeItem.getChecked()) return true;
@@ -5204,6 +5253,7 @@ public class TabRestore
         }
         break;
       case 1:
+        // list view
         for (TableItem tableItem : widgetStorageTable.getItems())
         {
           IndexData indexData = (IndexData)tableItem.getData();
