@@ -1403,7 +1403,6 @@ public class BARControl
    */
   private void createWindow()
   {
-Dprintf.dprintf("ALL_FILE_EXTENSION=%s",ALL_FILE_EXTENSION);
     // create shell window
     shell = new Shell(display);
     shell.setText("BAR control");
