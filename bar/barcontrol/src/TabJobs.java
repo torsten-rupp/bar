@@ -2047,7 +2047,7 @@ public class TabJobs
           }
           public void keyReleased(KeyEvent keyEvent)
           {
-            if (Widgets.isAccelerator(keyEvent,SWT.CR))
+            if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
             {
               TreeItem treeItem =  widgetFileTree.getSelection()[0];
               if (treeItem != null)
@@ -2580,13 +2580,13 @@ public class TabJobs
             {
               Widgets.invoke(widgetIncludeTableInsert);
             }
-            else if (Widgets.isAccelerator(keyEvent,SWT.CR))
-            {
-              Widgets.invoke(widgetIncludeTableEdit);
-            }
             else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
             {
               Widgets.invoke(widgetIncludeTableRemove);
+            }
+            else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
+            {
+              Widgets.invoke(widgetIncludeTableEdit);
             }
           }
         });
@@ -2764,13 +2764,13 @@ public class TabJobs
             {
               Widgets.invoke(widgetExcludeListInsert);
             }
-            else if (Widgets.isAccelerator(keyEvent,SWT.CR))
-            {
-              Widgets.invoke(widgetExcludeListEdit);
-            }
             else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
             {
               Widgets.invoke(widgetExcludeListRemove);
+            }
+            else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
+            {
+              Widgets.invoke(widgetExcludeListEdit);
             }
           }
         });
@@ -3337,13 +3337,13 @@ public class TabJobs
               {
                 Widgets.invoke(widgetCompressExcludeListInsert);
               }
-              else if (Widgets.isAccelerator(keyEvent,SWT.CR))
-              {
-                Widgets.invoke(widgetCompressExcludeListEdit);
-              }
               else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
               {
                 Widgets.invoke(widgetCompressExcludeListRemove);
+              }
+              else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
+              {
+                Widgets.invoke(widgetCompressExcludeListEdit);
               }
             }
           });
@@ -6456,13 +6456,13 @@ public class TabJobs
             {
               Widgets.invoke(widgetScheduleTableAdd);
             }
-            else if (Widgets.isAccelerator(keyEvent,SWT.CR))
-            {
-              Widgets.invoke(widgetScheduleTableEdit);
-            }
             else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
             {
               Widgets.invoke(widgetScheduleTableRemove);
+            }
+            else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
+            {
+              Widgets.invoke(widgetScheduleTableEdit);
             }
           }
         });
