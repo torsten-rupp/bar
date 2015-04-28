@@ -240,6 +240,73 @@ LOCAL bool initDefaultFTPPassword(ConstString hostName, ConstString loginName, c
 
   return initFlag;
 }
+
+/***********************************************************************\
+* Name   : initFTPHandle
+* Purpose: init FTP handle
+* Input  : curlHandle    - CURL handle
+*          url           - URL
+*          loginName     - login name
+*          loginPassword - login password
+*          timeout       - timeout [ms]
+* Output : -
+* Return : CURLE_OK if no error, CURL error code otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL CURLcode initFTPHandle(CURL *curlHandle, ConstString url, ConstString loginName, Password *loginPassword, long timeout)
+{
+  CURLcode    curlCode;
+  const char *plainLoginPassword;
+
+  // reset
+  curl_easy_reset(curlHandle);
+  curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
+  if (curlCode != CURLE_OK)
+  {
+    return curlCode;
+  }
+  curlCode = curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,timeout);
+  if (curlCode != CURLE_OK)
+  {
+    return curlCode;
+  }
+  curlCode = curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,timeout/1000);
+  if (curlCode != CURLE_OK)
+  {
+    return curlCode;
+  }
+  if (globalOptions.verboseLevel >= 6)
+  {
+    // enable debug mode
+    (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
+  }
+
+  /* Note: curl trigger from time to time a SIGALRM. The curl option
+           CURLOPT_NOSIGNAL should stop this. But it seems there is
+           a bug in curl which cause random crashes when
+           CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+           Instead install a signal handler to catch the not wanted
+           signal.
+  (void)curl_easy_setopt(storageHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+  (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1L);
+  */
+
+  // set URL
+  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+  if (curlCode != CURLE_OK)
+  {
+    return curlCode;
+  }
+
+  // set login
+  (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(loginName));
+  plainLoginPassword = Password_deploy(loginPassword);
+  (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+  Password_undeploy(loginPassword);
+
+  return CURLE_OK;
+}
 #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
 
 #ifdef HAVE_SSH2
@@ -327,7 +394,6 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
     CURL       *curlHandle;
     String     url;
     CURLcode   curlCode;
-    const char *plainLoginPassword;
   #elif defined(HAVE_FTP)
     netbuf     *ftpControl;
     const char *plainLoginPassword;
@@ -340,24 +406,14 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
     {
       return ERROR_FTP_SESSION_FAIL;
     }
-    (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,FTP_TIMEOUT);
-    (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
-    if (globalOptions.verboseLevel >= 6)
-    {
-      (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
-    }
 
     // set connect
     url = String_format(String_new(),"ftp://%S",hostName);
     if (hostPort != 0) String_format(url,":%d",hostPort);
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+    curlCode = initFTPHandle(curlHandle,url,loginName,loginPassword,FTP_TIMEOUT);
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-    }
-    if (curlCode == CURLE_OK)
-    {
-      curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
     }
     String_delete(url);
     if (curlCode != CURLE_OK)
@@ -365,12 +421,6 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
       (void)curl_easy_cleanup(curlHandle);
       return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
     }
-
-    // set login
-    (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(loginName));
-    plainLoginPassword = Password_deploy(loginPassword);
-    (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-    Password_undeploy(loginPassword);
 
     // login
     curlCode = curl_easy_perform(curlHandle);
@@ -1249,6 +1299,16 @@ LOCAL CURLcode initWebDAVHandle(CURL *curlHandle, ConstString url, ConstString l
     // enable debug mode
     (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
   }
+
+  /* Note: curl trigger from time to time a SIGALRM. The curl option
+           CURLOPT_NOSIGNAL should stop this. But it seems there is
+           a bug in curl which cause random crashes when
+           CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+           Instead install a signal handler to catch the not wanted
+           signal.
+  (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+  (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
+  */
 
   // set URL
   curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
@@ -5357,7 +5417,6 @@ Errors Storage_create(StorageHandle *storageHandle,
           String          pathName,baseName;
           String          url;
           CURLcode        curlCode;
-          const char      *plainLoginPassword;
           CURLMcode       curlMCode;
           StringTokenizer nameTokenizer;
           ConstString     token;
@@ -5383,24 +5442,6 @@ Errors Storage_create(StorageHandle *storageHandle,
             curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
             return ERROR_FTP_SESSION_FAIL;
           }
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FAILONERROR,1L);
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_CONNECTTIMEOUT_MS,FTP_TIMEOUT);
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
-          if (globalOptions.verboseLevel >= 6)
-          {
-            // enable debug mode
-            (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_VERBOSE,1L);
-          }
-
-          /* Note: curl trigger from time to time a SIGALRM. The curl option
-                   CURLOPT_NOSIGNAL should stop this. But it seems there is
-                   a bug in curl which cause random crashes when
-                   CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-                   Instead install a signal handler to catch the not wanted
-                   signal.
-          (void)curl_easy_setopt(storageHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1L);
-          */
 
           // get pathname, basename
           pathName = File_getFilePathName(String_new(),archiveName);
@@ -5418,28 +5459,19 @@ Errors Storage_create(StorageHandle *storageHandle,
           File_doneSplitFileName(&nameTokenizer);
           String_append(url,baseName);
 
-          // set FTP connect
-          curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_URL,String_cString(url));
-          if (curlCode != CURLE_OK)
-          {
-            String_delete(url);
-            String_delete(baseName);
-            String_delete(pathName);
-            (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
-            (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
-            return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
-          }
-
-          // set FTP login
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-          plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-          Password_undeploy(storageHandle->storageSpecifier.loginPassword);
-
           if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
           {
             // create directories if necessary
-            curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FTP_CREATE_MISSING_DIRS,1L);
+            curlCode = initFTPHandle(storageHandle->ftp.curlHandle,
+                                     url,
+                                     storageHandle->storageSpecifier.loginName,
+                                     storageHandle->storageSpecifier.loginPassword,
+                                     FTP_TIMEOUT
+                                    );
+            if (curlCode != CURLE_OK)
+            {
+              curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FTP_CREATE_MISSING_DIRS,1L);
+            }
             if (curlCode != CURLE_OK)
             {
               String_delete(url);
@@ -6176,7 +6208,6 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
           String          pathName,baseName;
           String          url;
           CURLcode        curlCode;
-          const char      *plainLoginPassword;
           CURLMcode       curlMCode;
           StringTokenizer nameTokenizer;
           ConstString     token;
@@ -6200,24 +6231,6 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
             curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
             return ERROR_FTP_SESSION_FAIL;
           }
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FAILONERROR,1L);
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_CONNECTTIMEOUT_MS,FTP_TIMEOUT);
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
-          if (globalOptions.verboseLevel >= 6)
-          {
-            // enable debug mode
-            (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_VERBOSE,1L);
-          }
-
-          /* Note: curl trigger from time to time a SIGALRM. The curl option
-                   CURLOPT_NOSIGNAL should stop this. But it seems there is
-                   a bug in curl which cause random crashes when
-                   CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-                   Instead install a signal handler to catch the not wanted
-                   signal.
-          (void)curl_easy_setopt(storageHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1L);
-          */
 
           // get pathname, basename
           pathName = File_getFilePathName(String_new(),archiveName);
@@ -6236,7 +6249,12 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
           String_append(url,baseName);
 
           // set FTP connect
-          curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_URL,String_cString(url));
+          curlCode = initFTPHandle(storageHandle->ftp.curlHandle,
+                                   url,
+                                   storageHandle->storageSpecifier.loginName,
+                                   storageHandle->storageSpecifier.loginPassword,
+                                   FTP_TIMEOUT
+                                  );
           if (curlCode != CURLE_OK)
           {
             String_delete(url);
@@ -6246,12 +6264,6 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
             (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
             return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
           }
-
-          // set FTP login
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-          plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-          Password_undeploy(storageHandle->storageSpecifier.loginPassword);
 
           // check if file exists (Note: by default curl use passive FTP)
           curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOBODY,1L);
@@ -6665,7 +6677,6 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
         {
           String          baseURL;
           CURLcode        curlCode;
-          const char      *plainLoginPassword;
           CURLMcode       curlMCode;
           String          url;
           String          pathName,baseName;
@@ -6701,50 +6712,16 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
             free(storageHandle->webdav.receiveBuffer.data);
             return ERROR_WEBDAV_SESSION_FAIL;
           }
-          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FAILONERROR,1L);
-          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
-          if (globalOptions.verboseLevel >= 6)
-          {
-            // enable debug mode
-            (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_VERBOSE,1L);
-          }
-
-          /* Note: curl trigger from time to time a SIGALRM. The curl option
-                   CURLOPT_NOSIGNAL should stop this. But it seems there is
-                   a bug in curl which cause random crashes when
-                   CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-                   Instead install a signal handler to catch the not wanted
-                   signal.
-          (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
-          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
-          */
 
           // get base URL
           baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
           if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
 
-          // set WebDAV connect
-          curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(baseURL));
-          if (curlCode != CURLE_OK)
-          {
-            String_delete(baseURL);
-            (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
-            (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
-            free(storageHandle->webdav.receiveBuffer.data);
-            return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
-          }
-
-          // set WebDAV login
-          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-          plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-          Password_undeploy(storageHandle->storageSpecifier.loginPassword);
-
           // get pathname, basename
           pathName = File_getFilePathName(String_new(),archiveName);
           baseName = File_getFileBaseName(String_new(),archiveName);
 
-          // check if file exists
+          // get url
           url = String_format(String_duplicate(baseURL),"/");
           File_initSplitFileName(&nameTokenizer,pathName);
           while (File_getNextSplitFileName(&nameTokenizer,&token))
@@ -6755,7 +6732,13 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
           File_doneSplitFileName(&nameTokenizer);
           String_append(url,baseName);
 
-          curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
+          // check if file exists
+          curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
+                                      url,
+                                      storageHandle->storageSpecifier.loginName,
+                                      storageHandle->storageSpecifier.loginPassword,
+                                      WEBDAV_TIMEOUT
+                                    );
           if (curlCode == CURLE_OK)
           {
             curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
@@ -6820,10 +6803,15 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
           File_doneSplitFileName(&nameTokenizer);
           String_append(url,baseName);
 
-          curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"GET");
+          curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
+                                      url,
+                                      storageHandle->storageSpecifier.loginName,
+                                      storageHandle->storageSpecifier.loginPassword,
+                                      WEBDAV_TIMEOUT
+                                    );
           if (curlCode == CURLE_OK)
           {
-            curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
+            curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"GET");
           }
           if (curlCode == CURLE_OK)
           {
@@ -9371,7 +9359,6 @@ Errors Storage_delete(StorageHandle *storageHandle,
           String            pathName,baseName;
           String            url;
           CURLcode          curlCode;
-          const char        *plainLoginPassword;
           StringTokenizer   nameTokenizer;
           ConstString       token;
           String            ftpCommand;
@@ -9381,15 +9368,6 @@ Errors Storage_delete(StorageHandle *storageHandle,
           curlHandle = curl_easy_init();
           if (curlHandle != NULL)
           {
-            (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-            (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,FTP_TIMEOUT);
-            (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
-            if (globalOptions.verboseLevel >= 6)
-            {
-              // enable debug mode
-              (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
-            }
-
             // get pathname, basename
             pathName = File_getFilePathName(String_new(),deleteFileName);
             baseName = File_getFileBaseName(String_new(),deleteFileName);
@@ -9406,23 +9384,15 @@ Errors Storage_delete(StorageHandle *storageHandle,
             File_doneSplitFileName(&nameTokenizer);
             String_append(url,baseName);
 
-            // set FTP login
-            curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-            if (curlCode == CURLE_OK)
-            {
-              (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-              plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-              (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-              Password_undeploy(storageHandle->storageSpecifier.loginPassword);
-            }
-            else
-            {
-              error = ERRORX_(DELETE_FILE,0,curl_multi_strerror(curlCode));
-            }
-
             if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
             {
               // delete file
+              curlCode = initFTPHandle(storageHandle->webdav.curlHandle,
+                                       url,
+                                       storageHandle->storageSpecifier.loginName,
+                                       storageHandle->storageSpecifier.loginPassword,
+                                       FTP_TIMEOUT
+                                      );
               if (curlCode == CURLE_OK)
               {
                 ftpCommand = String_format(String_new(),"*DELE %S",deleteFileName);
@@ -9599,22 +9569,6 @@ whould this be a possible implementation?
           curlHandle = curl_easy_init();
           if (curlHandle != NULL)
           {
-            /* Note: curl trigger from time to time a SIGALRM. The curl option
-                     CURLOPT_NOSIGNAL should stop this. But it seems there is
-                     a bug in curl which cause random crashes when
-                     CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-                     Instead install a signal handler to catch the not wanted
-                     signal.
-            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
-            */
-            (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-            (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
-            if (globalOptions.verboseLevel >= 6)
-            {
-              // enable debug mode
-              (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
-            }
-
             // get base URL
             baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
             if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
@@ -9651,35 +9605,42 @@ whould this be a possible implementation?
             if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
             {
               // delete file
+              curlCode = initWebDAVHandle(curlHandle,
+                                          url,
+                                          storageHandle->storageSpecifier.loginName,
+                                          storageHandle->storageSpecifier.loginPassword,
+                                          WEBDAV_TIMEOUT
+                                         );
               if (curlCode == CURLE_OK)
               {
-                curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-                }
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
-                }
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-                }
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_perform(curlHandle);
-                }
-                if (curlCode != CURLE_OK)
-                {
-                  error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
-                }
+                curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+              }
+              if (curlCode == CURLE_OK)
+              {
+                curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
+              }
+              if (curlCode == CURLE_OK)
+              {
+                curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+              }
+              if (curlCode == CURLE_OK)
+              {
+                curlCode = curl_easy_perform(curlHandle);
+              }
+              if (curlCode != CURLE_OK)
+              {
+                error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
               }
 
               // check if file deleted
               if (curlCode == CURLE_OK)
               {
-                curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
+                curlCode = initWebDAVHandle(curlHandle,
+                                            url,
+                                            storageHandle->storageSpecifier.loginName,
+                                            storageHandle->storageSpecifier.loginPassword,
+                                            WEBDAV_TIMEOUT
+                                           );
                 if (curlCode == CURLE_OK)
                 {
                   curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
@@ -9786,7 +9747,7 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
           struct curl_slist *curlSList;
 
           // get FTP server settings
-          getFTPServerSettings(storageHandle->storageSpecifier.hostName,storageHandle->jobOptions,&ftpServer);
+          getFTPServerSettings(storageHandle->storageSpecifier.hostName,storageHandle->jobOptions,&server);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,ftpServer.loginName);
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
@@ -9808,14 +9769,6 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
             freeServer(ftpServer);
             return = ERROR_FTP_SESSION_FAIL;
           }
-          (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-          (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,FTP_TIMEOUT);
-          (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
-          if (globalOptions.verboseLevel >= 6)
-          {
-            // enable debug mode
-            (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
-          }
 
           // get pathname, basename
           pathName = File_getFilePathName(String_new(),infoFileName);
@@ -9833,29 +9786,19 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
           File_doneSplitFileName(&nameTokenizer);
           String_append(url,baseName);
 
-          // set FTP login
-          curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-          if (curlCode == CURLE_OK)
-          {
-            (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-            plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-            (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-            Password_undeploy(storageHandle->storageSpecifier.loginPassword);
-          }
-          else
-          {
-            String_delete(url);
-            String_delete(baseName);
-            String_delete(pathName);
-            (void)curl_easy_cleanup(curlHandle);
-            freeServer(server);
-            return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
-          }
-
           // get file info
           ftpCommand = String_format(String_new(),"*DIR %S",infoFileName);
           curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
-          curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+          curlCode = initFTPHandle(curlHandle,
+                                   url,
+                                   storageHandle->storageSpecifier.loginName,
+                                   storageHandle->storageSpecifier.loginPassword,
+                                   FTP_TIMEOUT
+                                  );
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+          }
           if (curlCode == CURLE_OK)
           {
             curlCode = curl_easy_setopt(curlHandle,CURLOPT_QUOTE,curlSList);
@@ -9881,7 +9824,7 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
           String_delete(baseName);
           String_delete(pathName);
           (void)curl_easy_cleanup(curlHandle);
-          freeServer(ftp.server);
+          freeServer(&server);
         }
       #elif defined(HAVE_FTP)
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
@@ -9979,6 +9922,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_WEBDAV:
       #ifdef HAVE_CURL
         {
+          Server            server;
           CURL              *curlHandle;
           String            baseURL;
           const char        *plainLoginPassword;
@@ -9988,108 +9932,84 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           StringTokenizer   nameTokenizer;
           ConstString       token;
 
-          // initialize variables
-          curlHandle = curl_easy_init();
-          if (curlHandle != NULL)
+          // get WebDAV server settings
+          getFTPServerSettings(storageHandle->storageSpecifier.hostName,storageHandle->jobOptions,&server);
+          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,ftpServer.loginName);
+          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
+          if (String_isEmpty(storageHandle->storageSpecifier.hostName))
           {
-            /* Note: curl trigger from time to time a SIGALRM. The curl option
-                     CURLOPT_NOSIGNAL should stop this. But it seems there is
-                     a bug in curl which cause random crashes when
-                     CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-                     Instead install a signal handler to catch the not wanted
-                     signal.
-            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
-            */
-            (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-            (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
-            if (globalOptions.verboseLevel >= 6)
-            {
-              // enable debug mode
-              (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
-            }
-
-            // get base URL
-            baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
-            if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
-
-            // get pathname, basename
-            pathName = File_getFilePathName(String_new(),infoFileName);
-            baseName = File_getFileBaseName(String_new(),infoFileName);
-
-            // get URL
-            url = String_format(String_duplicate(baseURL),"/");
-            File_initSplitFileName(&nameTokenizer,pathName);
-            while (File_getNextSplitFileName(&nameTokenizer,&token))
-            {
-              String_append(url,token);
-              String_appendChar(url,'/');
-            }
-            File_doneSplitFileName(&nameTokenizer);
-            String_append(url,baseName);
-
-            // set WebDAV login
-            curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(baseURL));
-            if (curlCode == CURLE_OK)
-            {
-              (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-              plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-              (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-              Password_undeploy(storageHandle->storageSpecifier.loginPassword);
-            }
-            else
-            {
-              error = ERRORX_(FILE_NOT_FOUND_,0,curl_easy_strerror(curlCode));
-            }
-
-            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-            {
-              // get file info
-              if (curlCode == CURLE_OK)
-              {
-                curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-                }
-                if (curlCode == CURLE_OK)
-                {
-#warning INFO, HEAD?
-                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"INFO");
-                }
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-                }
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_perform(curlHandle);
-                }
-                if (curlCode == CURLE_OK)
-                {
-                  error = ERROR_NONE;
-                }
-                else
-                {
-                  error = ERRORX_(FILE_NOT_FOUND_,0,curl_easy_strerror(curlCode));
-                }
-              }
-            }
-            else
-            {
-              error = ERROR_NONE;
-            }
-
-            // free resources
-            String_delete(url);
-            String_delete(baseName);
-            String_delete(pathName);
-            String_delete(baseURL);
-            (void)curl_easy_cleanup(curlHandle);
+            return ERROR_NO_HOST_NAME;
           }
-          else
+
+          // allocate FTP server
+          if (!allocateServer(&server,SERVER_CONNECTION_PRIORITY_LOW,60*1000L))
+          {
+            return ERROR_TOO_MANY_CONNECTIONS;
+          }
+
+          // open Curl handle
+          curlHandle = curl_easy_init();
+          if (curlHandle == NULL)
           {
             error = ERROR_WEBDAV_SESSION_FAIL;
           }
+
+          // get base URL
+          baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
+          if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
+
+          // get pathname, basename
+          pathName = File_getFilePathName(String_new(),infoFileName);
+          baseName = File_getFileBaseName(String_new(),infoFileName);
+
+          // get URL
+          url = String_format(String_duplicate(baseURL),"/");
+          File_initSplitFileName(&nameTokenizer,pathName);
+          while (File_getNextSplitFileName(&nameTokenizer,&token))
+          {
+            String_append(url,token);
+            String_appendChar(url,'/');
+          }
+          File_doneSplitFileName(&nameTokenizer);
+          String_append(url,baseName);
+
+          // get file info
+          curlCode = initWebDAVHandle(curlHandle,
+                                      url,
+                                      storageHandle->storageSpecifier.loginName,
+                                      storageHandle->storageSpecifier.loginPassword,
+                                      WEBDAV_TIMEOUT
+                                    );
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+          }
+          if (curlCode == CURLE_OK)
+          {
+#warning INFO, HEAD?
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"INFO");
+          }
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_perform(curlHandle);
+          }
+          if (curlCode == CURLE_OK)
+          {
+            error = ERROR_NONE;
+          }
+          else
+          {
+            error = ERRORX_(FILE_NOT_FOUND_,0,curl_easy_strerror(curlCode));
+          }
+
+          // free resources
+          String_delete(url);
+          String_delete(baseName);
+          String_delete(pathName);
+          String_delete(baseURL);
+          (void)curl_easy_cleanup(curlHandle);
+          freeServer(&server);
         }
       #else /* not HAVE_CURL */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -10168,7 +10088,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           CURL            *curlHandle;
           String          url;
           CURLcode        curlCode;
-          const char      *plainLoginPassword;
           StringTokenizer nameTokenizer;
           ConstString     token;
 
@@ -10265,21 +10184,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             AutoFree_cleanup(&autoFreeList);
             return ERROR_FTP_SESSION_FAIL;
           }
-          /* Note: curl trigger from time to time a SIGALRM. The curl option
-                   CURLOPT_NOSIGNAL should stop this. But it seems there is
-                   a bug in curl which cause random crashes when
-                   CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-                   Instead install a signal handler to catch the not wanted
-                   signal.
-          (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
-          */
-          (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-          (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,FTP_TIMEOUT);
-          (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
-          if (globalOptions.verboseLevel >= 6)
-          {
-            (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
-          }
 
           // get URL
           url = String_format(String_new(),"ftp://%S",storageDirectoryListHandle->storageSpecifier.hostName);
@@ -10292,26 +10196,17 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
           File_doneSplitFileName(&nameTokenizer);
 
-          // set FTP login
-          curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+          // read directory
+          curlCode = initFTPHandle(curlHandle,
+                                   url,
+                                   storageDirectoryListHandle->storageSpecifier.loginName,
+                                   storageDirectoryListHandle->storageSpecifier.loginPassword,
+                                   FTP_TIMEOUT
+                                  );
           if (curlCode == CURLE_OK)
           {
-            (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageDirectoryListHandle->storageSpecifier.loginName));
-            plainLoginPassword = Password_deploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
-            (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-            Password_undeploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlFTPParseDirectoryListCallback);
           }
-          else
-          {
-            error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
-            String_delete(url);
-            (void)curl_easy_cleanup(curlHandle);
-            AutoFree_cleanup(&autoFreeList);
-            return error;
-          }
-
-          // read directory
-          curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlFTPParseDirectoryListCallback);
           if (curlCode == CURLE_OK)
           {
             curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,storageDirectoryListHandle);
@@ -10620,7 +10515,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           CURL              *curlHandle;
           String            url;
           CURLcode          curlCode;
-          const char        *plainLoginPassword;
           StringTokenizer   nameTokenizer;
           ConstString       token;
           String            directoryData;
@@ -10714,21 +10608,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             AutoFree_cleanup(&autoFreeList);
             return ERROR_WEBDAV_SESSION_FAIL;
           }
-          /* Note: curl trigger from time to time a SIGALRM. The curl option
-                   CURLOPT_NOSIGNAL should stop this. But it seems there is
-                   a bug in curl which cause random crashes when
-                   CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-                   Instead install a signal handler to catch the not wanted
-                   signal.
-          (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
-          */
-          (void)curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-          (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
-          if (globalOptions.verboseLevel >= 6)
-          {
-            // enable debug mode
-            (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
-          }
 
           // get URL
           url = String_format(String_new(),"http://%S",storageDirectoryListHandle->storageSpecifier.hostName);
@@ -10742,28 +10621,19 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           File_doneSplitFileName(&nameTokenizer);
           String_appendChar(url,'/');
 
-          // set WebDAV login
-          curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-          if (curlCode == CURLE_OK)
-          {
-            (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageDirectoryListHandle->storageSpecifier.loginName));
-            plainLoginPassword = Password_deploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
-            (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-            Password_undeploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
-          }
-          else
-          {
-            error = ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
-            String_delete(url);
-            (void)curl_easy_cleanup(curlHandle);
-            AutoFree_cleanup(&autoFreeList);
-            return error;
-          }
-
           // read directory data
           directoryData = String_new();
           curlSList = curl_slist_append(NULL,"Depth: 1");
-          curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
+          curlCode = initWebDAVHandle(curlHandle,
+                                      url,
+                                      storageDirectoryListHandle->storageSpecifier.loginName,
+                                      storageDirectoryListHandle->storageSpecifier.loginPassword,
+                                      WEBDAV_TIMEOUT
+                                    );
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
+          }
           if (curlCode == CURLE_OK)
           {
             curlCode = curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,curlSList);
