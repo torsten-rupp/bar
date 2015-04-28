@@ -198,16 +198,18 @@ TEST_SERVER_SSL_PORT = 39910
 # host, passwords for tests
 TEST_HOST            ?= localhost
 TEST_PASSWORD_CRYPT  =  Franz_Kafka:Die_Verwandlung
-TEST_PASSWORD_SSH    ?=
+TEST_PASSWORD        ?=
 
 TEST_HOST_FTP        ?= $(TEST_HOST)
-TEST_PASSWORD_FTP    ?= $(TEST_PASSWORD_SSH)
+TEST_PASSWORD_FTP    ?= $(TEST_PASSWORD)
+TEST_HOST_SSH        ?= $(TEST_HOST)
+TEST_PASSWORD_SSH    ?= $(TEST_PASSWORD)
 TEST_HOST_SCP        ?= $(TEST_HOST)
-TEST_PASSWORD_SCP    ?= $(TEST_PASSWORD_SSH)
+TEST_PASSWORD_SCP    ?= $(TEST_PASSWORD)
 TEST_HOST_SFTP       ?= $(TEST_HOST)
-TEST_PASSWORD_SFTP   ?= $(TEST_PASSWORD_SSH)
+TEST_PASSWORD_SFTP   ?= $(TEST_PASSWORD)
 TEST_HOST_WEBDAV     ?= localhost/webdav
-TEST_PASSWORD_WEBDAV ?= $(TEST_PASSWORD_SSH)
+TEST_PASSWORD_WEBDAV ?= $(TEST_PASSWORD)
 
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
