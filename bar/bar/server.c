@@ -5602,7 +5602,17 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const StringMap 
       String_doneTokenizer(&stringTokenizer);
     }
     pauseEndTimestamp = Misc_getCurrentDateTime()+(uint64)pauseTime;
-    logMessage(LOG_TYPE_ALWAYS,"pause server for %dmin\n",pauseTime/60);
+
+    String_clear(modeMask);
+    if (pauseFlags.create     ) String_joinCString(modeMask,"create",',');
+    if (pauseFlags.storage    ) String_joinCString(modeMask,"storage",',');
+    if (pauseFlags.restore    ) String_joinCString(modeMask,"restore",',');
+    if (pauseFlags.indexUpdate) String_joinCString(modeMask,"indexUpdate",',');
+    logMessage(LOG_TYPE_ALWAYS,
+               "Pause server for %dmin: %s\n",
+               pauseTime/60,
+               String_cString(modeMask)
+              );
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
