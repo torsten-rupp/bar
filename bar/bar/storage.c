@@ -261,20 +261,20 @@ LOCAL CURLcode initFTPHandle(CURL *curlHandle, ConstString url, ConstString logi
 
   // reset
   curl_easy_reset(curlHandle);
-  curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-  if (curlCode != CURLE_OK)
+
+  curlCode = CURLE_OK;
+
+  if (curlCode == CURLE_OK)
   {
-    return curlCode;
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
   }
-  curlCode = curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,timeout);
-  if (curlCode != CURLE_OK)
+  if (curlCode == CURLE_OK)
   {
-    return curlCode;
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,timeout);
   }
-  curlCode = curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,timeout/1000);
-  if (curlCode != CURLE_OK)
+  if (curlCode == CURLE_OK)
   {
-    return curlCode;
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,timeout/1000);
   }
   if (globalOptions.verboseLevel >= 6)
   {
@@ -293,19 +293,42 @@ LOCAL CURLcode initFTPHandle(CURL *curlHandle, ConstString url, ConstString logi
   */
 
   // set URL
-  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-  if (curlCode != CURLE_OK)
+  if (curlCode == CURLE_OK)
   {
-    return curlCode;
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
   }
 
   // set login
-  (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(loginName));
-  plainLoginPassword = Password_deploy(loginPassword);
-  (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-  Password_undeploy(loginPassword);
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(loginName));
+  }
+  if (curlCode == CURLE_OK)
+  {
+    plainLoginPassword = Password_deploy(loginPassword);
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+    Password_undeploy(loginPassword);
+  }
 
-  return CURLE_OK;
+  // set nop-handlers
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_HEADERFUNCTION,curlNopDataCallback);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_HEADERDATA,0L);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlNopDataCallback);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,0L);
+  }
+
+  return curlCode;
 }
 #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
 
@@ -1284,15 +1307,16 @@ LOCAL CURLcode initWebDAVHandle(CURL *curlHandle, ConstString url, ConstString l
 
   // reset
   curl_easy_reset(curlHandle);
-  curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-  if (curlCode != CURLE_OK)
+
+  curlCode = CURLE_OK;
+
+  if (curlCode == CURLE_OK)
   {
-    return curlCode;
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
   }
-  curlCode = curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,timeout);
-  if (curlCode != CURLE_OK)
+  if (curlCode == CURLE_OK)
   {
-    return curlCode;
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,timeout);
   }
   if (globalOptions.verboseLevel >= 6)
   {
@@ -1311,19 +1335,42 @@ LOCAL CURLcode initWebDAVHandle(CURL *curlHandle, ConstString url, ConstString l
   */
 
   // set URL
-  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-  if (curlCode != CURLE_OK)
+  if (curlCode == CURLE_OK)
   {
-    return curlCode;
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
   }
 
   // set login
-  (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(loginName));
-  plainLoginPassword = Password_deploy(loginPassword);
-  (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-  Password_undeploy(loginPassword);
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(loginName));
+  }
+  if (curlCode == CURLE_OK)
+  {
+    plainLoginPassword = Password_deploy(loginPassword);
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+    Password_undeploy(loginPassword);
+  }
 
-  return CURLE_OK;
+  // set nop-handlers
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_HEADERFUNCTION,curlNopDataCallback);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_HEADERDATA,0L);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlNopDataCallback);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,0L);
+  }
+
+  return curlCode;
 }
 
 /***********************************************************************\
@@ -1505,6 +1552,15 @@ LOCAL size_t curlWebDAVReadDirectoryDataCallback(const void *buffer,
   return size*n;
 }
 
+/***********************************************************************\
+* Name   : waitCurlSocket
+* Purpose: wait for Curl socket
+* Input  : curlMultiHandle - Curl multi handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
 {
   sigset_t        signalMask;
@@ -1574,9 +1630,6 @@ LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
 * Notes  : -
 \***********************************************************************/
 
-uint64 xbytes = 0;
-uint64 xtime  = 0;
-
 LOCAL void initBandWidthLimiter(StorageBandWidthLimiter *storageBandWidthLimiter,
                                 BandWidthList           *maxBandWidthList
                                )
@@ -1599,9 +1652,6 @@ LOCAL void initBandWidthLimiter(StorageBandWidthLimiter *storageBandWidthLimiter
   storageBandWidthLimiter->measurementNextIndex = 0;
   storageBandWidthLimiter->measurementBytes     = 0L;
   storageBandWidthLimiter->measurementTime      = 0LL;
-
-xbytes = 0;
-xtime  = 0;
 }
 #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) || defined(HAVE_SSH2) */
 
@@ -1629,11 +1679,6 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
   uint64 delayTime;          // delay time [us]
 
   assert(storageBandWidthLimiter != NULL);
-
-xbytes += transmittedBytes;
-xtime  += transmissionTime;
-//fprintf(stderr,"%s, %d: %llu bytes/s\n",__FILE__,__LINE__,(xbytes*1000000LL)/xtime);
-
 
   if (storageBandWidthLimiter->maxBandWidthList != NULL)
   {
@@ -5836,16 +5881,6 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             return ERROR_WEBDAV_SESSION_FAIL;
           }
 
-          /* Note: curl trigger from time to time a SIGALRM. The curl option
-                   CURLOPT_NOSIGNAL should stop this. But it seems there is
-                   a bug in curl which cause random crashes when
-                   CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-                   Instead install a signal handler to catch the not wanted
-                   signal.
-          (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
-          (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
-          */
-
           // get base URL
           baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
           if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
@@ -6269,22 +6304,6 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
           curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOBODY,1L);
           if (curlCode == CURLE_OK)
           {
-            curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_HEADERFUNCTION,curlNopDataCallback);
-          }
-          if (curlCode == CURLE_OK)
-          {
-            curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_HEADER,0L);
-          }
-          if (curlCode == CURLE_OK)
-          {
-            curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_WRITEFUNCTION,curlNopDataCallback);
-          }
-          if (curlCode == CURLE_OK)
-          {
-            curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_WRITEDATA,0L);
-          }
-          if (curlCode == CURLE_OK)
-          {
             curlCode = curl_easy_perform(storageHandle->ftp.curlHandle);
           }
           if (curlCode != CURLE_OK)
@@ -6313,8 +6332,11 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
           storageHandle->ftp.size = (uint64)fileSize;
 
           // init FTP download (Note: by default curl use passive FTP)
-          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOBODY,0L);
-          curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_WRITEFUNCTION,curlFTPWriteDataCallback);
+          curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOBODY,0L);
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_WRITEFUNCTION,curlFTPWriteDataCallback);
+          }
           if (curlCode == CURLE_OK)
           {
             curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_WRITEDATA,storageHandle);
@@ -6745,22 +6767,6 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
           }
           if (curlCode == CURLE_OK)
           {
-            curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_HEADERFUNCTION,curlNopDataCallback);
-          }
-          if (curlCode == CURLE_OK)
-          {
-            curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_HEADER,0L);
-          }
-          if (curlCode == CURLE_OK)
-          {
-            curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_WRITEFUNCTION,curlNopDataCallback);
-          }
-          if (curlCode == CURLE_OK)
-          {
-            curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_WRITEDATA,0L);
-          }
-          if (curlCode == CURLE_OK)
-          {
             curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
           }
           if (curlCode != CURLE_OK)
@@ -6999,16 +7005,6 @@ void Storage_close(StorageHandle *storageHandle)
 
         DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->ftp);
 
-        /* Note: curl trigger from time to time a SIGALRM. The curl option
-                 CURLOPT_NOSIGNAL should stop this. But it seems there is
-                 a bug in curl which cause random crashes when
-                 CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-                 Instead install a signal handler to catch the not wanted
-                 signal.
-        (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,0L);
-        (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,0L);
-        */
-
         (void)curl_multi_remove_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
         (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
         (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
@@ -7149,16 +7145,6 @@ void Storage_close(StorageHandle *storageHandle)
         assert(storageHandle->webdav.curlMultiHandle != NULL);
 
         DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->webdav);
-
-        /* Note: curl trigger from time to time a SIGALRM. The curl option
-                 CURLOPT_NOSIGNAL should stop this. But it seems there is
-                 a bug in curl which cause random crashes when
-                 CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-                 Instead install a signal handler to catch the not wanted
-                 signal.
-        (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,0L);
-        (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,0L);
-        */
 
         (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
         (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
@@ -9556,14 +9542,13 @@ whould this be a possible implementation?
     case STORAGE_TYPE_WEBDAV:
       #ifdef HAVE_CURL
         {
-          CURL              *curlHandle;
-          String            baseURL;
-          const char        *plainLoginPassword;
-          CURLcode          curlCode;
-          String            pathName,baseName;
-          String            url;
-          StringTokenizer   nameTokenizer;
-          ConstString       token;
+          CURL            *curlHandle;
+          String          baseURL;
+          CURLcode        curlCode;
+          String          pathName,baseName;
+          String          url;
+          StringTokenizer nameTokenizer;
+          ConstString     token;
 
           // initialize variables
           curlHandle = curl_easy_init();
@@ -9587,20 +9572,6 @@ whould this be a possible implementation?
             }
             File_doneSplitFileName(&nameTokenizer);
             String_append(url,baseName);
-
-            // set WebDAV login
-            curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(baseURL));
-            if (curlCode == CURLE_OK)
-            {
-              (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(storageHandle->storageSpecifier.loginName));
-              plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
-              (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-              Password_undeploy(storageHandle->storageSpecifier.loginPassword);
-            }
-            else
-            {
-              error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
-            }
 
             if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
             {
@@ -9648,10 +9619,6 @@ whould this be a possible implementation?
                 if (curlCode == CURLE_OK)
                 {
                   curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"HEAD");
-                }
-                if (curlCode == CURLE_OK)
-                {
-                  curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
                 }
                 if (curlCode == CURLE_OK)
                 {
