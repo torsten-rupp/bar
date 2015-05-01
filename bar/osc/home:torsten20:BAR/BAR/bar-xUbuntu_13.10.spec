@@ -22,11 +22,11 @@ BuildRequires: e2fsprogs
 BuildRequires: bc
 
 %description
-BAR is backup archiver progWSx2zCTaram. It can create compressed, encrypted
+BAR is backup archiver program. It can create compressed, encrypted
 and splitted archives of files and harddisk images which can be
 stored on a harddisk, cd, dvd, bd or directly on a server via ftp,
-scp or sftp. A server-mode and a scheduler is integrated for making
-automated backups in the background.
+scp, sftp or webdav. A server-mode and a scheduler is integrated for
+creating automated backups in the background.
 
 %prep
 %setup -q
