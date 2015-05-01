@@ -1,4 +1,4 @@
-2015-04-12 0.19
+2015-05-01 0.19
   * added LZO compression
   * added LZ4 compression
   * fixed large file support: on some systems large files
@@ -53,10 +53,12 @@
   * BARControl: fixed schedule dialog, removed "*" archive
     type
   * fixed race-condition in init database (thanks to Shane)
-  * fixed restore: keep root (first /) when not directories
+  * fixed restore: keep root (first /) when no directories
     are stripped
   * fixed sending data via scp: close and transmit last
     data package
+  * fixed superfluous output on stdout of ftp+webdav
+    protocol
 
 2014-11-10 0.18e
   * removed nice-level in init scripts
