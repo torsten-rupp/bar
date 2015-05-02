@@ -10511,7 +10511,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     uuidDataNode->lastCreatedDateTime = lastCreatedDateTime;
     uuidDataNode->totalEntries        = totalEntries;
     uuidDataNode->totalSize           = totalSize;
-    uuidDataNode->lastErrorMessage    = String_duplicate(lastErrorMessage);
+    String_set(uuidDataNode->lastErrorMessage,lastErrorMessage);
   }
   Index_doneList(&indexQueryHandle);
 
