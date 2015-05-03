@@ -257,6 +257,9 @@ downloadPackage()
   fileName=`$WGET -q -O - "$path"|$GREP -E -e \"$pattern\"|$HEAD -1|$SED "s/.*\($pattern\).*/\1/g"`
 #  $ECHO $fileName
   $WGET "$path/$fileName" -O $destinationFileName
+  if test $? -ne 0; then
+    exit 1
+  fi
 }
 
 download()
@@ -268,21 +271,23 @@ download()
   downloadPackage "$OSC_URL/$OSC_PATH/CentOS_CentOS-6/i686"   'bar-.*\.rpm'     bar-$version-centos6_i686.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/CentOS_CentOS-6/x86_64" 'bar-.*\.rpm'     bar-$version-centos6_x86_64.rpm
 
-  downloadPackage "$OSC_URL/$OSC_PATH/Fedora_19/i686"         'bar-.*\.rpm'     bar-$version-fedora19_i686.rpm
-  downloadPackage "$OSC_URL/$OSC_PATH/Fedora_19/x86_64"       'bar-.*\.rpm'     bar-$version-fedora19_x86_64.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/Fedora_20/i686"         'bar-.*\.rpm'     bar-$version-fedora20_i686.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/Fedora_20/x86_64"       'bar-.*\.rpm'     bar-$version-fedora20_x86_64.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/Fedora_21/i686"         'bar-.*\.rpm'     bar-$version-fedora21_i686.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/Fedora_21/x86_64"       'bar-.*\.rpm'     bar-$version-fedora21_x86_64.rpm
 
   downloadPackage "$OSC_URL/$OSC_PATH/RedHat_RHEL-6/i686"     'bar-.*\.rpm'     bar-$version-redhat6_i686.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/RedHat_RHEL-6/x86_64"   'bar-.*\.rpm'     bar-$version-redhat6_x86_64.rpm
 
   downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP3/i586"        'bar-.*\.rpm'     bar-$version-sle11_i586.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP3/x86_64"      'bar-.*\.rpm'     bar-$version-sle11_x86_64.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/SLE_12/i586"            'bar-.*\.rpm'     bar-$version-sle12_i586.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/SLE_12/x86_64"          'bar-.*\.rpm'     bar-$version-sle12_x86_64.rpm
 
-  downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_12.2/i586"     'bar-.*\.rpm'     bar-$version-opensuse12.2_i586.rpm
-  downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_12.2/x86_64"   'bar-.*\.rpm'     bar-$version-opensuse12.2_x86_64.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_13.1/i586"     'bar-.*\.rpm'     bar-$version-opensuse13.1_i586.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_13.1/x86_64"   'bar-.*\.rpm'     bar-$version-opensuse13.1_x86_64.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_13.2/i586"     'bar-.*\.rpm'     bar-$version-opensuse13.2_i586.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_13.2/x86_64"   'bar-.*\.rpm'     bar-$version-opensuse13.2_x86_64.rpm
 
   downloadPackage "$OSC_URL/$OSC_PATH/Debian_6.0/i386"        'bar_.*\.deb'     bar-$version-debian6_i386.deb
   downloadPackage "$OSC_URL/$OSC_PATH/Debian_6.0/i386"        'bar-gui_.*\.deb' bar-gui-$version-debian6_i386.deb
@@ -292,6 +297,10 @@ download()
   downloadPackage "$OSC_URL/$OSC_PATH/Debian_7.0/i386"        'bar-gui_.*\.deb' bar-gui-$version-debian7_i386.deb
   downloadPackage "$OSC_URL/$OSC_PATH/Debian_7.0/amd64"       'bar_.*\.deb'     bar-$version-debian7_amd64.deb
   downloadPackage "$OSC_URL/$OSC_PATH/Debian_7.0/amd64"       'bar-gui_.*\.deb' bar-gui-$version-debian7_amd64.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/Debian_8.0/i386"        'bar_.*\.deb'     bar-$version-debian8_i386.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/Debian_8.0/i386"        'bar-gui_.*\.deb' bar-gui-$version-debian8_i386.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/Debian_8.0/amd64"       'bar_.*\.deb'     bar-$version-debian8_amd64.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/Debian_8.0/amd64"       'bar-gui_.*\.deb' bar-gui-$version-debian8_amd64.deb
 
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_12.04/i386"     'bar_.*\.deb'     bar-$version-ubuntu12.04_i386.deb
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_12.04/i386"     'bar-gui_.*\.deb' bar-gui-$version-ubuntu12.04_i386.deb
@@ -305,6 +314,14 @@ download()
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.10/i386"     'bar-gui_.*\.deb' bar-gui-$version-ubuntu13.10_i386.deb
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.10/amd64"    'bar_.*\.deb'     bar-$version-ubuntu13.10_amd64.deb
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.10/amd64"    'bar-gui_.*\.deb' bar-gui-$version-ubuntu13.10_amd64.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.04/i386"     'bar_.*\.deb'     bar-$version-ubuntu14.04_i386.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.04/i386"     'bar-gui_.*\.deb' bar-gui-$version-ubuntu14.04_i386.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.04/amd64"    'bar_.*\.deb'     bar-$version-ubuntu14.04_amd64.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.04/amd64"    'bar-gui_.*\.deb' bar-gui-$version-ubuntu14.04_amd64.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.10/i386"     'bar_.*\.deb'     bar-$version-ubuntu14.10_i386.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.10/i386"     'bar-gui_.*\.deb' bar-gui-$version-ubuntu14.10_i386.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.10/amd64"    'bar_.*\.deb'     bar-$version-ubuntu14.10_amd64.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.10/amd64"    'bar-gui_.*\.deb' bar-gui-$version-ubuntu14.10_amd64.deb
 }
 
 list()
