@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-04-26 11:22+0200\n"
+"POT-Creation-Date: 2015-05-03 10:05+0200\n"
 "PO-Revision-Date: 2015-04-06 13:24+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -60,7 +60,7 @@ msgstr "Passwort"
 msgid "Login"
 msgstr "Login"
 
-#: src/BARControl.java:1356 src/BARControl.java:2341 src/Dialogs.java:1809
+#: src/BARControl.java:1356 src/BARControl.java:2318 src/Dialogs.java:1809
 #: src/Dialogs.java:1879 src/Dialogs.java:2380 src/Dialogs.java:2563
 #: src/Dialogs.java:2971 src/Dialogs.java:3116 src/Dialogs.java:3272
 #: src/TabJobs.java:6746 src/TabJobs.java:6859 src/TabJobs.java:6984
@@ -148,15 +148,15 @@ msgstr "Über"
 msgid "Written by Torsten Rupp"
 msgstr "Erstellt von Torsten Rupp"
 
-#: src/BARControl.java:2341
+#: src/BARControl.java:2318
 msgid "Connection fail"
 msgstr "Verbindung fehlgeschlagen"
 
-#: src/BARControl.java:2341
+#: src/BARControl.java:2318
 msgid "Error: "
 msgstr "Fehler:"
 
-#: src/BARControl.java:2341
+#: src/BARControl.java:2318
 msgid "Try again"
 msgstr "Neu versuchen"
 
