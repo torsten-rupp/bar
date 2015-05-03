@@ -187,7 +187,7 @@ sub writeJavaPrefix()
 
 sub writeJavaPostfix()
 {
-  print JAVAFILE_HANDLE "  static final int UNKNOWN = $errorNumber;\n";
+  print JAVAFILE_HANDLE "  static final int UNKNOWN = ".($errorNumber+1).";\n";
   print JAVAFILE_HANDLE "}\n";
 }
 
