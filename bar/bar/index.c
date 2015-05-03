@@ -1037,19 +1037,20 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                              );
   if (error == ERROR_NONE)
   {
-    while (Index_getNextFile(&indexQueryHandle,
-                             &databaseId,
-                             storageName,
-                             NULL,  // storageDateTime,
-                             NULL,  // name,
-                             NULL,  // size,
-                             NULL,  // timeModified,
-                             NULL,  // userId,
-                             NULL,  // groupId,
-                             NULL,  // permission,
-                             NULL,  // fragmentOffset,
-                             NULL   // fragmentSize
-                            )
+    while (   !indexHandle->quitFlag
+           && Index_getNextFile(&indexQueryHandle,
+                                &databaseId,
+                                storageName,
+                                NULL,  // storageDateTime,
+                                NULL,  // name,
+                                NULL,  // size,
+                                NULL,  // timeModified,
+                                NULL,  // userId,
+                                NULL,  // groupId,
+                                NULL,  // permission,
+                                NULL,  // fragmentOffset,
+                                NULL   // fragmentSize
+                               )
           )
     {
       if (String_isEmpty(storageName))
@@ -1068,16 +1069,17 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                               );
   if (error == ERROR_NONE)
   {
-    while (Index_getNextImage(&indexQueryHandle,
-                              &databaseId,
-                              storageName,
-                              NULL,  // storageDateTime,
-                              NULL,  // imageName,
-                              NULL,  // fileSystemType,
-                              NULL,  // size,
-                              NULL,  // blockOffset,
-                              NULL   // blockCount
-                             )
+    while (   !indexHandle->quitFlag
+           && Index_getNextImage(&indexQueryHandle,
+                                 &databaseId,
+                                 storageName,
+                                 NULL,  // storageDateTime,
+                                 NULL,  // imageName,
+                                 NULL,  // fileSystemType,
+                                 NULL,  // size,
+                                 NULL,  // blockOffset,
+                                 NULL   // blockCount
+                                )
           )
     {
       if (String_isEmpty(storageName))
@@ -1096,16 +1098,17 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                    );
   if (error == ERROR_NONE)
   {
-    while (Index_getNextDirectory(&indexQueryHandle,
-                                  &databaseId,
-                                  storageName,
-                                  NULL,  // storageDateTime,
-                                  NULL,  // directoryName,
-                                  NULL,  // timeModified,
-                                  NULL,  // userId,
-                                  NULL,  // groupId,
-                                  NULL   // permission
-                                 )
+    while (   !indexHandle->quitFlag
+           && Index_getNextDirectory(&indexQueryHandle,
+                                     &databaseId,
+                                     storageName,
+                                     NULL,  // storageDateTime,
+                                     NULL,  // directoryName,
+                                     NULL,  // timeModified,
+                                     NULL,  // userId,
+                                     NULL,  // groupId,
+                                     NULL   // permission
+                                    )
           )
     {
       if (String_isEmpty(storageName))
@@ -1124,17 +1127,18 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                    );
   if (error == ERROR_NONE)
   {
-    while (Index_getNextLink(&indexQueryHandle,
-                             &databaseId,
-                             storageName,
-                             NULL,  // storageDateTime,
-                             NULL,  // name,
-                             NULL,  // destinationName
-                             NULL,  // timeModified,
-                             NULL,  // userId,
-                             NULL,  // groupId,
-                             NULL   // permission
-                            )
+    while (   !indexHandle->quitFlag
+           && Index_getNextLink(&indexQueryHandle,
+                                &databaseId,
+                                storageName,
+                                NULL,  // storageDateTime,
+                                NULL,  // name,
+                                NULL,  // destinationName
+                                NULL,  // timeModified,
+                                NULL,  // userId,
+                                NULL,  // groupId,
+                                NULL   // permission
+                               )
           )
     {
       if (String_isEmpty(storageName))
@@ -1153,19 +1157,20 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                  );
   if (error == ERROR_NONE)
   {
-    while (Index_getNextHardLink(&indexQueryHandle,
-                                 &databaseId,
-                                 storageName,
-                                 NULL,  // storageDateTime,
-                                 NULL,  // fileName,
-                                 NULL,  // size,
-                                 NULL,  // timeModified,
-                                 NULL,  // userId,
-                                 NULL,  // groupId,
-                                 NULL,  // permission,
-                                 NULL,  // fragmentOffset
-                                 NULL   // fragmentSize
-                                )
+    while (   !indexHandle->quitFlag
+           && Index_getNextHardLink(&indexQueryHandle,
+                                    &databaseId,
+                                    storageName,
+                                    NULL,  // storageDateTime,
+                                    NULL,  // fileName,
+                                    NULL,  // size,
+                                    NULL,  // timeModified,
+                                    NULL,  // userId,
+                                    NULL,  // groupId,
+                                    NULL,  // permission,
+                                    NULL,  // fragmentOffset
+                                    NULL   // fragmentSize
+                                   )
           )
     {
       if (String_isEmpty(storageName))
@@ -1184,16 +1189,17 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                );
   if (error == ERROR_NONE)
   {
-    while (Index_getNextSpecial(&indexQueryHandle,
-                                &databaseId,
-                                storageName,
-                                NULL,  // storageDateTime,
-                                NULL,  // name,
-                                NULL,  // timeModified,
-                                NULL,  // userId,
-                                NULL,  // groupId,
-                                NULL   // permission
-                               )
+    while (   !indexHandle->quitFlag
+           && Index_getNextSpecial(&indexQueryHandle,
+                                   &databaseId,
+                                   storageName,
+                                   NULL,  // storageDateTime,
+                                   NULL,  // name,
+                                   NULL,  // timeModified,
+                                   NULL,  // userId,
+                                   NULL,  // groupId,
+                                   NULL   // permission
+                                  )
           )
     {
       if (String_isEmpty(storageName))
@@ -1344,7 +1350,8 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
     {
       break;
     }
-    while (   !deletedIndex
+    while (   !indexHandle->quitFlag
+           && !deletedIndex
            && Index_getNextStorage(&indexQueryHandle1,
                                    &storageId,
                                    NULL, // entity id
@@ -1379,21 +1386,22 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
       {
         continue;
       }
-      while (Index_getNextStorage(&indexQueryHandle2,
-                                  &duplicateStorageId,
-                                  NULL, // entity id
-                                  NULL, // job UUID
-                                  NULL, // schedule UUID
-                                  NULL, // archive type
-                                  duplicateStorageName,
-                                  NULL, // createdDateTime
-                                  NULL, // entries
-                                  NULL, // size
-                                  NULL, // indexState
-                                  NULL, // indexMode
-                                  NULL, // lastCheckedDateTime
-                                  NULL  // errorMessage
-                                 )
+      while (   !indexHandle->quitFlag
+             && Index_getNextStorage(&indexQueryHandle2,
+                                     &duplicateStorageId,
+                                     NULL, // entity id
+                                     NULL, // job UUID
+                                     NULL, // schedule UUID
+                                     NULL, // archive type
+                                     duplicateStorageName,
+                                     NULL, // createdDateTime
+                                     NULL, // entries
+                                     NULL, // size
+                                     NULL, // indexState
+                                     NULL, // indexMode
+                                     NULL, // lastCheckedDateTime
+                                     NULL  // errorMessage
+                                    )
             )
       {
         if (   (storageId != duplicateStorageId)
@@ -1431,7 +1439,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
     }
     Index_doneList(&indexQueryHandle1);
   }
-  while (deletedIndex);
+  while (!indexHandle->quitFlag &&  deletedIndex);
   if (n > 0L) plogMessage(LOG_TYPE_INDEX,"INDEX","Cleaned %lu duplicate indizes\n",n);
 
   // free resources
