@@ -1663,6 +1663,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->runningInfo.name);
 
   String_delete(jobNode->schedule.customText);
+  String_delete(jobNode->schedule.uuid);
 
   if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
   if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
@@ -4574,21 +4575,22 @@ LOCAL void autoIndexUpdateThreadCode(void)
     {
       now      = Misc_getCurrentDateTime();
       dateTime = String_new();
-      while (Index_getNextStorage(&indexQueryHandle,
-                                  &storageId,
-                                  NULL, // entity id
-                                  NULL, // job UUID
-                                  NULL, // schedule UUID
-                                  NULL, // archive type
-                                  storageName,
-                                  &createdDateTime,
-                                  NULL, // entries
-                                  NULL, // size
-                                  &indexState,
-                                  &indexMode,
-                                  &lastCheckedDateTime,
-                                  NULL  // errorMessage
-                                 )
+      while (   Index_getNextStorage(&indexQueryHandle,
+                                     &storageId,
+                                     NULL, // entity id
+                                     NULL, // job UUID
+                                     NULL, // schedule UUID
+                                     NULL, // archive type
+                                     storageName,
+                                     &createdDateTime,
+                                     NULL, // entries
+                                     NULL, // size
+                                     &indexState,
+                                     &indexMode,
+                                     &lastCheckedDateTime,
+                                     NULL  // errorMessage
+                                    )
+             && !quitFlag
             )
       {
         // get printable name (if possible)
