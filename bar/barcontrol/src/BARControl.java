@@ -1744,20 +1744,6 @@ public class BARControl
 
     Thread.currentThread().setName("BARControl");
 
-/*
-// xgettext -L java -k -ktr -o barcontrol.pot ../src/*.java
-// msgmerge -U german.po barcontrol.pot
-// msgfmt --java2 -d classes -r app.i18n.Messages -l de po/german.po
-I18n i18n = I18nFactory.getI18n(getClass(),"app.i18n.Messages",Locale.GERMAN,0);
-System.out.println(i18n);
-
-String s = tr("hello");
-System.out.println(s);
-s = tr("hello4");
-System.out.println(s);
-System.exit(1);
-//    i18n = I18nFactory.getI18n(getClass(),"app.i18n.Messages",Locale.GERMAN,0);
-*/
     // init localization
     i18n = I18nFactory.getI18n(getClass(),"app.i18n.Messages",Locale.getDefault(),I18nFactory.FALLBACK);
     Dialogs.init(i18n);
@@ -2235,23 +2221,14 @@ System.exit(1);
         }
         if (Settings.debugQuitServerFlag)
         {
-          String[]            errorMessage  = new String[1];
-          ValueMap            resultMap     = new ValueMap();
-          ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
-          int                 errorCode;
-
           // quit server
-          String[] result = new String[1];
-          if (!BARServer.quit(result))
+          if (!BARServer.quit())
           {
             printError("cannot quit server");
             BARServer.disconnect();
             System.exit(1);
           }
         }
-
-        // disconnect
-        BARServer.disconnect();
       }
       else
       {

@@ -628,7 +628,7 @@ class ReadThread extends Thread
 
   // --------------------------- variables --------------------------------
   private BufferedReader        input;
-  private boolean               quitFlag;
+  private boolean               quitFlag = false;
   private HashMap<Long,Command> commandHashMap = new HashMap<Long,Command>();
 
   // ------------------------ native functions ----------------------------
@@ -643,8 +643,6 @@ class ReadThread extends Thread
     this.input = input;
     setDaemon(true);
     setName("BARControl Server Read");
-
-    quitFlag = false;
   }
 
   /** run method
@@ -780,7 +778,10 @@ class ReadThread extends Thread
    */
   public void quit()
   {
+    // request quit
     quitFlag = true;
+
+    // interrupt read-commands
     interrupt();
   }
 
@@ -1183,7 +1184,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       // flush data (ignore errors)
       executeCommand("JOB_FLUSH",0);
-//synchronized(output) { output.write("QUIT"); output.write('\n'); output.flush(); }
 
       // close connection, stop read thread
       readThread.quit();
@@ -1201,21 +1201,34 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** quit BAR server (for debug only)
-   * @param result result
    * @return true if quit command sent, false otherwise
    */
-  public static boolean quit(String[] result)
+  public static boolean quit()
   {
     try
     {
-      String line = "QUIT";
-      output.write(line); output.write('\n'); output.flush();
-      if (Settings.debugLevel > 1) System.err.println("Network: sent '"+line+"'");
+      // flush data (ignore errors)
+      executeCommand("JOB_FLUSH",0);
+
+      // send QUIT command
+      String[] result = new String[1];
+      if (executeCommand("QUIT",0,result) != Errors.NONE)
+      {
+        return false;
+      }
+
+      // close connection, stop read thread
+      readThread.quit();
+      socket.close();
+      try { readThread.join(); } catch (InterruptedException exception) { /* ignored */ }
+
+      // free resources
+      input.close();
+      output.close();
     }
     catch (IOException exception)
     {
-      result[0] = BARControl.reniceIOException(exception).getMessage();
-      return false;
+      // ignored
     }
 
     return true;
