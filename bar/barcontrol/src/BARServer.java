@@ -1217,6 +1217,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         return false;
       }
 
+      // sleep a short time
+      try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ }
+
       // close connection, stop read thread
       readThread.quit();
       socket.close();
