@@ -75,7 +75,8 @@ typedef struct
 {
   const char     *databaseFileName;
   DatabaseHandle databaseHandle;
-  bool           isReady;
+  Errors         initError;
+  bool           initDoneFlag;
   bool           quitFlag;
 } IndexHandle;
 
@@ -206,16 +207,16 @@ Errors Index_init(IndexHandle *indexHandle,
 \***********************************************************************/
 
 #ifdef NDEBUG
-  void Index_done(IndexHandle *indexHandle);
+void Index_done(IndexHandle *indexHandle);
 #else /* not NDEBUG */
-  void __Index_done(const char  *__fileName__,
-                    uint        __lineNb__,
-                    IndexHandle *indexHandle
-                   );
+void __Index_done(const char  *__fileName__,
+                  uint        __lineNb__,
+                  IndexHandle *indexHandle
+                 );
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : Index_isReady
+* Name   : Index_isInitDone
 * Purpose: check if index is ready to use
 * Input  : indexHandle - index handle
 * Output : -
@@ -223,7 +224,15 @@ Errors Index_init(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_isReady(IndexHandle *indexHandle);
+INLINE bool Index_isInitDone(IndexHandle *indexHandle);
+#if defined(NDEBUG) || defined(__INDEX_IMPLEMENATION__)
+INLINE bool Index_isInitDone(IndexHandle *indexHandle)
+{
+  assert(indexHandle != NULL);
+
+  return indexHandle->initDoneFlag;
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Index_findById

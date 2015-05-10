@@ -713,19 +713,19 @@ LOCAL void pauseStorage(const CreateInfo *createInfo)
 }
 
 /***********************************************************************\
-* Name   : waitIndexReady
-* Purpose: wait until index is read or quit
+* Name   : waitIndexInit
+* Purpose: wait until index is initialized or for quit
 * Input  : createInfo - create info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void waitIndexReady(const CreateInfo *createInfo)
+LOCAL void waitIndexInit(const CreateInfo *createInfo)
 {
   assert(indexHandle != NULL);
 
-  while (!isAborted(createInfo) && !Index_isReady(indexHandle))
+  while (!isAborted(createInfo) && !Index_isInitDone(indexHandle))
   {
     Misc_udelay(10LL*MISC_US_PER_SECOND);
   }
@@ -3022,8 +3022,8 @@ LOCAL Errors storeArchiveFile(void        *userData,
 
   if (storageId != DATABASE_ID_NONE)
   {
-    // wait for index become ready
-    waitIndexReady(createInfo);
+    // wait for index init
+    waitIndexInit(createInfo);
 
     // set database storage name
     printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,destinationFileName);
@@ -3357,8 +3357,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // update index database and set state
     if (storageMsg.storageId != DATABASE_ID_NONE)
     {
-      // wait for index become ready
-      waitIndexReady(createInfo);
+      // wait for index init
+      waitIndexInit(createInfo);
 
       // delete old indizes for same storage file
       oldStorageName = String_new();
@@ -5480,8 +5480,8 @@ Errors Command_create(const String                    jobUUID,
                   );
 #if 0
 // NYI: must index be deleted on error?
-        // wait for index become ready
-        waitIndexReady(createInfo);
+        // wait for index init
+        waitIndexInit(createInfo);
 
         if (   (indexHandle != NULL)
             && !archiveInfo->jobOptions->noIndexDatabaseFlag
@@ -5544,8 +5544,8 @@ Errors Command_create(const String                    jobUUID,
               );
 #if 0
 // NYI: must index be deleted on error?
-    // wait for index become ready
-    waitIndexReady(createInfo);
+    // wait for index init
+    waitIndexInit(createInfo);
 
     if (   (indexHandle != NULL)
         && !createInfo.archiveInfo->jobOptions->noIndexDatabaseFlag
@@ -5595,8 +5595,8 @@ createThreadCode(&createInfo);
               );
 #if 0
 // NYI: must index be deleted on error?
-    // wait for index become ready
-    waitIndexReady(createInfo);
+    // wait for index init
+    waitIndexInit(createInfo);
 
     if (   (indexHandle != NULL)
         && !createInfo.archiveInfo->jobOptions->noIndexDatabaseFlag

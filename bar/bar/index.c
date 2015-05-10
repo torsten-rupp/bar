@@ -829,7 +829,13 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
   DatabaseQueryHandle databaseQueryHandle;
 
   assert(indexHandle != NULL);
-  assert(Index_isReady(indexHandle));
+  assert(Index_isInitDone(indexHandle));
+
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   // init variables
   name = String_new();
@@ -882,7 +888,13 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
   String           storageName,printableStorageName;
 
   assert(indexHandle != NULL);
-  assert(Index_isReady(indexHandle));
+  assert(Index_isInitDone(indexHandle));
+
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
@@ -954,7 +966,13 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
   String           storageName,printableStorageName;
 
   assert(indexHandle != NULL);
-  assert(Index_isReady(indexHandle));
+  assert(Index_isInitDone(indexHandle));
+
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
@@ -1015,14 +1033,20 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
 
 LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
 {
+  Errors           error;
   String           storageName;
   ulong            n;
-  Errors           error;
   IndexQueryHandle indexQueryHandle;
   DatabaseId       databaseId;
 
   assert(indexHandle != NULL);
-  assert(Index_isReady(indexHandle));
+  assert(Index_isInitDone(indexHandle));
+
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   // initialize variables
   storageName = String_new();
@@ -1229,16 +1253,22 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
 
 LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
 {
+  Errors           error;
   StorageSpecifier storageSpecifier;
   String           storageName;
   String           printableStorageName;
   ulong            n;
-  Errors           error;
   DatabaseId       storageId;
   IndexQueryHandle indexQueryHandle;
 
   assert(indexHandle != NULL);
-  assert(Index_isReady(indexHandle));
+  assert(Index_isInitDone(indexHandle));
+
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
@@ -1307,19 +1337,25 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
 
 LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
 {
+  Errors           error;
   StorageSpecifier storageSpecifier;
   String           storageName;
   String           duplicateStorageName;
   String           printableStorageName;
   ulong            n;
-  Errors           error;
   DatabaseId       storageId;
   bool             deletedIndex;
   IndexQueryHandle indexQueryHandle1,indexQueryHandle2;
   int64            duplicateStorageId;
 
   assert(indexHandle != NULL);
-  assert(Index_isReady(indexHandle));
+  assert(Index_isInitDone(indexHandle));
+
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
@@ -1462,8 +1498,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
 
 LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
 {
-  Errors error;
-  uint   sleepTime;
+  uint sleepTime;
 
   assert(indexHandle != NULL);
 
@@ -1472,32 +1507,32 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   if (File_existsCString(indexHandle->databaseFileName))
   {
     // upgrade index
-    error = upgradeIndex(indexHandle);
-    if (error != ERROR_NONE)
+    indexHandle->initError = upgradeIndex(indexHandle);
+    if (indexHandle->initError != ERROR_NONE)
     {
-      plogMessage(LOG_TYPE_INDEX,"INDEX","Upgrade index database fail: %s\n",Error_getText(error));
+      plogMessage(LOG_TYPE_ERROR,"INDEX","Upgrade index database fail: %s\n",Error_getText(indexHandle->initError));
       return;
     }
 
     // open database
-    error = openIndex(indexHandle,indexHandle->databaseFileName);
-    if (error != ERROR_NONE)
+    indexHandle->initError = openIndex(indexHandle,indexHandle->databaseFileName);
+    if (indexHandle->initError != ERROR_NONE)
     {
-      plogMessage(LOG_TYPE_INDEX,"INDEX","Open index database fail: %s\n",Error_getText(error));
+      plogMessage(LOG_TYPE_ERROR,"INDEX","Open index database fail: %s\n",Error_getText(indexHandle->initError));
       return;
     }
   }
   else
   {
     // create database
-    error = createIndex(indexHandle,indexHandle->databaseFileName);
-    if (error != ERROR_NONE)
+    indexHandle->initError = createIndex(indexHandle,indexHandle->databaseFileName);
+    if (indexHandle->initError != ERROR_NONE)
     {
-      plogMessage(LOG_TYPE_INDEX,"INDEX","Create index database fail: %s\n",Error_getText(error));
+      plogMessage(LOG_TYPE_ERROR,"INDEX","Create index database fail: %s\n",Error_getText(indexHandle->initError));
       return;
     }
   }
-  indexHandle->isReady = TRUE;
+  indexHandle->initDoneFlag = TRUE;
   plogMessage(LOG_TYPE_INDEX,"INDEX","Done init index database\n");
 
   // single clean-ups
@@ -1537,7 +1572,7 @@ LOCAL void initIndexQueryHandle(IndexQueryHandle *indexQueryHandle, IndexHandle 
 {
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
-  assert(indexHandle->isReady);
+  assert(Index_isInitDone(indexHandle));
 
   indexQueryHandle->indexHandle                = indexHandle;
   indexQueryHandle->storage.type               = STORAGE_TYPE_NONE;
@@ -1561,7 +1596,7 @@ LOCAL void doneIndexQueryHandle(IndexQueryHandle *indexQueryHandle)
 {
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
-  assert(indexQueryHandle->indexHandle->isReady);
+  assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
   if (indexQueryHandle->storage.fileNamePattern    != NULL) Pattern_delete(indexQueryHandle->storage.fileNamePattern);
   if (indexQueryHandle->storage.deviceNamePattern  != NULL) Pattern_delete(indexQueryHandle->storage.deviceNamePattern);
@@ -1822,7 +1857,8 @@ Errors Index_init(IndexHandle *indexHandle,
 
   // init variables
   indexHandle->databaseFileName = databaseFileName;
-  indexHandle->isReady          = FALSE;
+  indexHandle->initError        = ERROR_DATABASE_INDEX_NOT_READY;
+  indexHandle->initDoneFlag     = FALSE;
   indexHandle->quitFlag         = FALSE;
 
   if (!Thread_init(&cleanupIndexThread,"Index init",0,cleanupIndexThreadCode,indexHandle))
@@ -1854,13 +1890,6 @@ Errors Index_init(IndexHandle *indexHandle,
   #endif /* NDEBUG */
 }
 
-bool Index_isReady(IndexHandle *indexHandle)
-{
-  assert(indexHandle != NULL);
-
-  return indexHandle->isReady;
-}
-
 bool Index_findById(IndexHandle *indexHandle,
                     DatabaseId  storageId,
                     String      jobUUID,
@@ -1870,13 +1899,18 @@ bool Index_findById(IndexHandle *indexHandle,
                     uint64      *lastCheckedTimestamp
                    )
 {
-  DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
   bool                result;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -1921,18 +1955,23 @@ bool Index_findByName(IndexHandle  *indexHandle,
                       uint64       *lastCheckedTimestamp
                      )
 {
-  DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
   String              storageName;
   StorageSpecifier    storageSpecifier;
   bool                foundFlag;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
   assert(storageId != NULL);
 
   (*storageId) = DATABASE_ID_NONE;
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -2044,19 +2083,24 @@ bool Index_findByState(IndexHandle   *indexHandle,
                        uint64        *lastCheckedTimestamp
                       )
 {
+  Errors              error;
   String              indexStateSetString;
   DatabaseQueryHandle databaseQueryHandle;
-  Errors              error;
   bool                result;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
   assert(storageId != NULL);
 
   (*storageId) = DATABASE_ID_NONE;
   if (storageName != NULL) String_clear(storageName);
   if (lastCheckedTimestamp != NULL) (*lastCheckedTimestamp) = 0LL;
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
   indexStateSetString = String_new();
   error = Database_prepare(&databaseQueryHandle,
@@ -2098,12 +2142,17 @@ Errors Index_getState(IndexHandle *indexHandle,
                       String      errorMessage
                      )
 {
-  DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -2148,8 +2197,13 @@ Errors Index_setState(IndexHandle *indexHandle,
   String  s;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -2217,13 +2271,18 @@ long Index_countState(IndexHandle *indexHandle,
                       IndexStates indexState
                      )
 {
-  DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
   long                count;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return 0L;
+  }
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -2259,8 +2318,13 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -2296,8 +2360,13 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
 {
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
-  if (!Index_isReady(indexQueryHandle->indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%S %llu %llu %llu %S",
@@ -2313,13 +2382,18 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                         ConstString jobUUID
                        )
 {
-  DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
   DatabaseId          entityId;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   // delete entities of UUID
   error = Database_prepare(&databaseQueryHandle,
@@ -2359,8 +2433,13 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -2412,8 +2491,13 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 {
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
-  if (!Index_isReady(indexQueryHandle->indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %S %llu %u %llu %llu %S",
@@ -2438,9 +2522,14 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
   assert(entityId != NULL);
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -2480,13 +2569,18 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                           DatabaseId  entityId
                          )
 {
-  DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
   DatabaseId          storageId;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   // delete storage of entity
   error = Database_prepare(&databaseQueryHandle,
@@ -2537,13 +2631,18 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              IndexStateSet    indexStateSet
                             )
 {
-  String indexStateSetString;
   Errors error;
+  String indexStateSetString;
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   indexQueryHandle->storage.type = storageType;
@@ -2615,8 +2714,13 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
-  if (!Index_isReady(indexQueryHandle->indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
   Storage_initSpecifier(&storageSpecifier);
   foundFlag = FALSE;
@@ -2732,9 +2836,14 @@ Errors Index_newStorage(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
   assert(storageId != NULL);
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -2780,8 +2889,13 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   // Note: do in single steps to avoid long-time-locking of database!
   error = Database_execute(&indexHandle->databaseHandle,
@@ -2837,8 +2951,13 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   // Note: do in single steps to avoid long-time-locking of database!
   error = Database_execute(&indexHandle->databaseHandle,
@@ -2892,8 +3011,13 @@ Errors Index_storageAssignTo(IndexHandle *indexHandle,
   IndexQueryHandle indexQueryHandle;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   if (storageId != DATABASE_ID_NONE)
   {
@@ -3014,8 +3138,13 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   if (storageName != NULL)
   {
@@ -3059,15 +3188,20 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            String           pattern
                           )
 {
+  Errors error;
   String regexpString;
   String storageIdsString;
   uint   z;
-  Errors error;
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -3138,8 +3272,13 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
 {
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
-  if (!Index_isReady(indexQueryHandle->indexHandle)) return FALSE;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %llu %d %d %d %llu %llu",
@@ -3162,8 +3301,13 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
                        )
 {
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3186,8 +3330,13 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -3252,8 +3401,13 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
 {
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
-  if (!Index_isReady(indexQueryHandle->indexHandle)) return FALSE;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %u %llu %llu %llu",
@@ -3273,8 +3427,13 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
                         )
 {
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3297,8 +3456,13 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -3363,8 +3527,13 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
 {
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
-  if (!Index_isReady(indexQueryHandle->indexHandle)) return FALSE;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %d %d %d",
@@ -3384,8 +3553,13 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
                             )
 {
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3408,8 +3582,13 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -3476,8 +3655,13 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
 {
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
-  if (!Index_isReady(indexQueryHandle->indexHandle)) return FALSE;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %S %llu %d %d %d",
@@ -3498,8 +3682,13 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
                        )
 {
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3522,8 +3711,13 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -3595,8 +3789,13 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
 {
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
-  if (!Index_isReady(indexQueryHandle->indexHandle)) return FALSE;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %llu %d %d %d %llu %llu",
@@ -3619,8 +3818,13 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
                            )
 {
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3643,8 +3847,13 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -3709,8 +3918,13 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
 {
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
-  if (!Index_isReady(indexQueryHandle->indexHandle)) return FALSE;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return FALSE;
+  }
 
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %llu %S %llu %d %d %d",
@@ -3730,8 +3944,13 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
                           )
 {
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3765,9 +3984,14 @@ Errors Index_addFile(IndexHandle *indexHandle,
                     )
 {
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
   assert(fileName != NULL);
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3825,9 +4049,14 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                      )
 {
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
   assert(imageName != NULL);
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3874,9 +4103,14 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                          )
 {
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
   assert(directoryName != NULL);
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3931,8 +4165,13 @@ Errors Index_addLink(IndexHandle *indexHandle,
   assert(destinationName != NULL);
 
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -3988,9 +4227,14 @@ Errors Index_addHardLink(IndexHandle *indexHandle,
                         )
 {
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
   assert(fileName != NULL);
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
@@ -4052,9 +4296,14 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                        )
 {
   assert(indexHandle != NULL);
+  assert(Index_isInitDone(indexHandle));
   assert(name != NULL);
 
-  if (!Index_isReady(indexHandle)) return ERROR_DATABASE_INDEX_NOT_READY;
+  // check init error
+  if (indexHandle->initError != ERROR_NONE)
+  {
+    return indexHandle->initError;
+  }
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK(NULL,NULL),
