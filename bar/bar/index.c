@@ -1510,7 +1510,7 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
     indexHandle->initError = upgradeIndex(indexHandle);
     if (indexHandle->initError != ERROR_NONE)
     {
-      plogMessage(LOG_TYPE_ERROR,"INDEX","Upgrade index database fail: %s\n",Error_getText(indexHandle->initError));
+      plogMessage(LOG_TYPE_ERROR,"INDEX","Upgrade index database '%s' fail: %s\n",indexHandle->databaseFileName,Error_getText(indexHandle->initError));
       return;
     }
 
@@ -1518,7 +1518,7 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
     indexHandle->initError = openIndex(indexHandle,indexHandle->databaseFileName);
     if (indexHandle->initError != ERROR_NONE)
     {
-      plogMessage(LOG_TYPE_ERROR,"INDEX","Open index database fail: %s\n",Error_getText(indexHandle->initError));
+      plogMessage(LOG_TYPE_ERROR,"INDEX","Open index database '%s' fail: %s\n",indexHandle->databaseFileName,Error_getText(indexHandle->initError));
       return;
     }
   }
@@ -1528,7 +1528,7 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
     indexHandle->initError = createIndex(indexHandle,indexHandle->databaseFileName);
     if (indexHandle->initError != ERROR_NONE)
     {
-      plogMessage(LOG_TYPE_ERROR,"INDEX","Create index database fail: %s\n",Error_getText(indexHandle->initError));
+      plogMessage(LOG_TYPE_ERROR,"INDEX","Create index database '$s' fail: %s\n",indexHandle->databaseFileName,Error_getText(indexHandle->initError));
       return;
     }
   }
