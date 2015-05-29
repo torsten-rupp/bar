@@ -680,6 +680,27 @@ bool Storage_parseFTPSpecifier(ConstString ftpSpecifier,
                               );
 
 /***********************************************************************\
+* Name   : Storage_parseSCPSpecifier
+* Purpose: parse scp specifier:
+*            [<login name>@]<host name>[:<host port>]
+* Input  : sshSpecifier - ssh specifier string
+*          hostName     - host name variable (can be NULL)
+*          hostPort     - host port number variable (can be NULL)
+*          loginName    - login name variable (can be NULL)
+* Output : hostName     - host name (can be NULL)
+*          hostPort     - host port number (can be NULL)
+*          loginName    - login name (can be NULL)
+* Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_parseSCPSpecifier(ConstString scpSpecifier,
+                               String      hostName,
+                               uint        *hostPort,
+                               String      loginName
+                              );
+
+/***********************************************************************\
 * Name   : Storage_parseSSHSpecifier
 * Purpose: parse ssh specifier:
 *            [<login name>@]<host name>[:<host port>]
@@ -721,6 +742,23 @@ bool Storage_parseWebDAVSpecifier(ConstString webdavSpecifier,
                                   String      loginName,
                                   Password    *loginPassword
                                  );
+
+/***********************************************************************\
+* Name   : Storage_parseOpticalSpecifier
+* Purpose: parse device specifier:
+*            <device name>:
+* Input  : deviceSpecifier   - device specifier string
+*          defaultDeviceName - default device name
+*          deviceName        - device name variable (can be NULL)
+* Output : deviceName - device name (can be NULL)
+* Return : TRUE if device specifier parsed, FALSE if specifier invalid
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_parseOpticalSpecifier(ConstString opticalSpecifier,
+                                   ConstString defaultDeviceName,
+                                   String      deviceName
+                                  );
 
 /***********************************************************************\
 * Name   : Storage_parseDeviceSpecifier
