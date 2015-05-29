@@ -387,6 +387,12 @@ OTHER_SOURCES        = forward.h \
                        filesystems_fat.c \
                        filesystems_reiserfs.c \
                        \
+                       storage_ftp.c \
+                       storage_scp.c \
+                       storage_webdav.c \
+                       storage_optical.c \
+                       storage_device.c \
+                       \
                        archive_format.pl \
                        archive_format.def \
                        index_definition.pl \
