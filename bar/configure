@@ -776,6 +776,9 @@ enable_link_static
 enable_link_dynamic
 enable_bz2
 enable_lzma
+enable_xz
+enable_lzo
+enable_lz4
 enable_xdelta3
 enable_gcrypt
 enable_ftp
@@ -1417,7 +1420,10 @@ Optional Features:
   --enable-link-dynamic   enable dynamic linkage (same as
                           --disable-link-static)
   --disable-bz2           disable bzip2 support
-  --disable-lzma          disable lzma support
+  --disable-lzma          disable lzma/xz support
+  --disable-xz            disable lzma/xz support
+  --disable-lzo           disable lzo support
+  --disable-lz4           disable lz4 support
   --disable-xdelta3       disable xdelta3 support
   --disable-gcrypt        disable gcrypt support
   --disable-ftp           disable FTP support
@@ -2681,6 +2687,24 @@ if test "${enable_lzma+set}" = set; then :
 
 fi
 
+# Check whether --enable-xz was given.
+if test "${enable_xz+set}" = set; then :
+  enableval=$enable_xz; ENABLE_LZMA=$enableval
+
+fi
+
+# Check whether --enable-lzo was given.
+if test "${enable_lzo+set}" = set; then :
+  enableval=$enable_lzo; ENABLE_LZO=$enableval
+
+fi
+
+# Check whether --enable-lz4 was given.
+if test "${enable_lz4+set}" = set; then :
+  enableval=$enable_lz4; ENABLE_LZ4=$enableval
+
+fi
+
 # Check whether --enable-xdelta3 was given.
 if test "${enable_xdelta3+set}" = set; then :
   enableval=$enable_xdelta3; ENABLE_XDELTA3=$enableval
@@ -2749,9 +2773,19 @@ fi
 
 
 if test $ENABLE_TLS = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gcrypt no enabled, disabled TLS support." >&5
-$as_echo "$as_me: WARNING: gcrypt no enabled, disabled TLS support." >&2;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gcrypt not enabled, disabled TLS." >&5
+$as_echo "$as_me: WARNING: gcrypt not enabled, disabled TLS." >&2;}
   ENABLE_TLS=no
+fi
+if test $ENABLE_CURL = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gcrypt not enabled, disabled curl support." >&5
+$as_echo "$as_me: WARNING: gcrypt not enabled, disabled curl support." >&2;}
+  ENABLE_CURL=no
+fi
+if test $ENABLE_CURL = "yes" -a ! $ENABLE_SSH = "yes"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: ssh not enabled, disabled curl support." >&5
+$as_echo "$as_me: WARNING: ssh not enabled, disabled curl support." >&2;}
+  ENABLE_CURL=no
 fi
 
 
@@ -12729,32 +12763,32 @@ $as_echo "$ac_cv_largefile_defines" >&6; }
 # version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
 # declarations like `int a3[[(sizeof (unsigned char)) >= 0]];'.
 # This bug is HP SR number 8606223364.
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking size of ulong" >&5
-$as_echo_n "checking size of ulong... " >&6; }
-if ${ac_cv_sizeof_ulong+:} false; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking size of unsigned long" >&5
+$as_echo_n "checking size of unsigned long... " >&6; }
+if ${ac_cv_sizeof_unsigned_long+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  if ac_fn_c_compute_int "$LINENO" "(long int) (sizeof (ulong))" "ac_cv_sizeof_ulong"        "$ac_includes_default"; then :
+  if ac_fn_c_compute_int "$LINENO" "(long int) (sizeof (unsigned long))" "ac_cv_sizeof_unsigned_long"        "$ac_includes_default"; then :
 
 else
-  if test "$ac_cv_type_ulong" = yes; then
+  if test "$ac_cv_type_unsigned_long" = yes; then
      { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error 77 "cannot compute sizeof (ulong)
+as_fn_error 77 "cannot compute sizeof (unsigned long)
 See \`config.log' for more details" "$LINENO" 5; }
    else
-     ac_cv_sizeof_ulong=0
+     ac_cv_sizeof_unsigned_long=0
    fi
 fi
 
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_sizeof_ulong" >&5
-$as_echo "$ac_cv_sizeof_ulong" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_sizeof_unsigned_long" >&5
+$as_echo "$ac_cv_sizeof_unsigned_long" >&6; }
 
 
 
 cat >>confdefs.h <<_ACEOF
-#define SIZEOF_ULONG $ac_cv_sizeof_ulong
+#define SIZEOF_UNSIGNED_LONG $ac_cv_sizeof_unsigned_long
 _ACEOF
 
 

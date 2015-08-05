@@ -833,8 +833,23 @@ AC_ARG_ENABLE(
 )
 AC_ARG_ENABLE(
   lzma,
-  AC_HELP_STRING([--disable-lzma],[disable lzma support]),
+  AC_HELP_STRING([--disable-lzma],[disable lzma/xz support]),
   [ENABLE_LZMA=$enableval]
+)
+AC_ARG_ENABLE(
+  xz,
+  AC_HELP_STRING([--disable-xz],[disable lzma/xz support]),
+  [ENABLE_LZMA=$enableval]
+)
+AC_ARG_ENABLE(
+  lzo,
+  AC_HELP_STRING([--disable-lzo],[disable lzo support]),
+  [ENABLE_LZO=$enableval]
+)
+AC_ARG_ENABLE(
+  lz4,
+  AC_HELP_STRING([--disable-lz4],[disable lz4 support]),
+  [ENABLE_LZ4=$enableval]
 )
 AC_ARG_ENABLE(
   xdelta3,
@@ -893,8 +908,16 @@ AC_ARG_ENABLE(
 )
 
 if test $ENABLE_TLS = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
-  AC_MSG_WARN([gcrypt no enabled, disabled TLS support.])
+  AC_MSG_WARN([gcrypt not enabled, disabled TLS.])
   ENABLE_TLS=no
+fi
+if test $ENABLE_CURL = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
+  AC_MSG_WARN([gcrypt not enabled, disabled curl support.])
+  ENABLE_CURL=no
+fi
+if test $ENABLE_CURL = "yes" -a ! $ENABLE_SSH = "yes"; then
+  AC_MSG_WARN([ssh not enabled, disabled curl support.])
+  ENABLE_CURL=no
 fi
 
 dnl ------------------------------ programs ----------------------------
@@ -2824,7 +2847,7 @@ AC_TRY_COMPILE([#include <limits.h>],[unsigned long long int x=ULLONG_MAX;],AC_D
 AC_CHECK_VARIABLE_ATTRIBUTE(__thread,AC_DEFINE(HAVE___THREAD,1,[defined if __thread is available]))
 dnl Note: AC_SYS_LARGEFILE() does not work with gcc? Use my own implementation
 AC_CHECK_LARGEFILE_DEFINES
-AC_CHECK_SIZEOF(ulong)
+AC_CHECK_SIZEOF(unsigned long)
 AC_CHECK_SIZEOF(void *)
 
 AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"],,uuid/uuid.h)
