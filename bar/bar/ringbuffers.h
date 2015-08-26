@@ -134,28 +134,52 @@ typedef char(*RingBufferElementIterateFunction)(void *userData, void *data);
 
 // check if ring buffer is valid (debug only)
 #ifndef NDEBUG
-  #define RINGBUFFER_CHECK_VALID(ringBuffer) \
-    do \
-    { \
-      ulong __n; \
-      \
-      if ((ringBuffer) != NULL) \
+  #ifdef HAVE_BACKTRACE
+    #define RINGBUFFER_CHECK_VALID(ringBuffer) \
+      do \
       { \
-        __n = ((ringBuffer)->nextIn >= (ringBuffer)->nextOut) \
-                ? (ringBuffer)->nextIn-(ringBuffer)->nextOut \
-                : (ringBuffer)->size-ringBuffer->nextOut+(ringBuffer)->nextIn; \
-        if (__n != (ringBuffer)->length) \
+        ulong __n; \
+        \
+        if ((ringBuffer) != NULL) \
         { \
-          debugDumpCurrentStackTrace(stderr,"",0); \
-          HALT_INTERNAL_ERROR("Invalid ring buffer %p, length %lu, expected %lu!",\
-                              ringBuffer,\
-                              (ringBuffer)->length,\
-                              __n \
-                             ); \
+          __n = ((ringBuffer)->nextIn >= (ringBuffer)->nextOut) \
+                  ? (ringBuffer)->nextIn-(ringBuffer)->nextOut \
+                  : (ringBuffer)->size-ringBuffer->nextOut+(ringBuffer)->nextIn; \
+          if (__n != (ringBuffer)->length) \
+          { \
+            debugDumpCurrentStackTrace(stderr,"",0); \
+            HALT_INTERNAL_ERROR("Invalid ring buffer %p, length %lu, expected %lu!",\
+                                ringBuffer,\
+                                (ringBuffer)->length,\
+                                __n \
+                               ); \
+          } \
         } \
       } \
-    } \
-    while (0)
+      while (0)
+  #else
+    #define RINGBUFFER_CHECK_VALID(ringBuffer) \
+      do \
+      { \
+        ulong __n; \
+        \
+        if ((ringBuffer) != NULL) \
+        { \
+          __n = ((ringBuffer)->nextIn >= (ringBuffer)->nextOut) \
+                  ? (ringBuffer)->nextIn-(ringBuffer)->nextOut \
+                  : (ringBuffer)->size-ringBuffer->nextOut+(ringBuffer)->nextIn; \
+          if (__n != (ringBuffer)->length) \
+          { \
+            HALT_INTERNAL_ERROR("Invalid ring buffer %p, length %lu, expected %lu!",\
+                                ringBuffer,\
+                                (ringBuffer)->length,\
+                                __n \
+                               ); \
+          } \
+        } \
+      } \
+      while (0)
+  #endif
 #else /* NDEBUG */
   #define RINGBUFFER_CHECK_VALID(ringBuffer) \
     do \
