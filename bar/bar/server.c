@@ -12920,7 +12920,7 @@ LOCAL bool parseCommand(CommandMsg *commandMsg,
     String_delete(command);
     return FALSE;
   }
-  if (!StringMap_parse(commandMsg->argumentMap,arguments,STRING_QUOTES,0,NULL))
+  if (!StringMap_parse(commandMsg->argumentMap,arguments,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,0,NULL))
   {
     String_delete(arguments);
     String_delete(command);
