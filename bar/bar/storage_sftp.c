@@ -385,7 +385,6 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
     AUTOFREE_ADD(&autoFreeList,storageHandle->sftp.server,{ freeServer(storageHandle->sftp.server); });
 
     // check if SSH login is possible
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = ERROR_UNKNOWN;
     if ((error != ERROR_NONE) && (sshServer.password != NULL))
     {
@@ -401,16 +400,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         Password_set(storageHandle->storageSpecifier.loginPassword,sshServer.password);
       }
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // initialize default password
       if (   initDefaultSSHPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions)
           && !Password_isEmpty(defaultSSHPassword)
          )
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = checkSSHLogin(storageHandle->storageSpecifier.hostName,
                               storageHandle->storageSpecifier.hostPort,
                               storageHandle->storageSpecifier.loginName,
@@ -425,7 +421,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
       else
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
                   ? ERRORX_(INVALID_SSH_PASSWORD,0,String_cString(storageHandle->storageSpecifier.hostName))
                   : ERRORX_(NO_SSH_PASSWORD,0,String_cString(storageHandle->storageSpecifier.hostName));

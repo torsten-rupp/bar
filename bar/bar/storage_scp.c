@@ -460,7 +460,6 @@ LOCAL Errors StorageSCP_done(StorageHandle *storageHandle)
 
   // free SSH server connection
   #ifdef HAVE_SSH2
-fprintf(stderr,"%s, %d: ffffffffffffffff\n",__FILE__,__LINE__);
     freeServer(storageHandle->scp.server);
     free(storageHandle->scp.readAheadBuffer.data);
   #else /* not HAVE_SSH2 */
