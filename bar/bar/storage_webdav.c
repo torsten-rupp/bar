@@ -3,7 +3,7 @@
 * $Revision: 4012 $
 * $Date: 2015-04-28 19:02:40 +0200 (Tue, 28 Apr 2015) $
 * $Author: torsten $
-* Contents: storage functions
+* Contents: storage WebDAV functions
 * Systems: all
 *
 \***********************************************************************/
@@ -64,9 +64,9 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-#if defined(HAVE_CURL)
+#ifdef HAVE_CURL
   LOCAL Password *defaultWebDAVPassword;
-#endif /* defined(HAVE_CURL) */
+#endif /* HAVE_CURL */
 
 /****************************** Macros *********************************/
 
@@ -413,7 +413,7 @@ LOCAL Errors StorageWebDAV_initAll(void)
 
   error = ERROR_NONE;
 
-  #if defined(HAVE_CURL)
+  #ifdef HAVE_CURL
     defaultWebDAVPassword = NULL;
   #endif /* HAVE_CURL */
 
@@ -422,9 +422,9 @@ LOCAL Errors StorageWebDAV_initAll(void)
 
 LOCAL void StorageWebDAV_doneAll(void)
 {
-  #if defined(HAVE_CURL)
+  #ifdef HAVE_CURL
     Password_delete(defaultWebDAVPassword);
-  #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
+  #endif /* HAVE_CURL */
 }
 
 LOCAL bool StorageWebDAV_parseSpecifier(ConstString webdavSpecifier,
@@ -586,9 +586,9 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
                                 ServerConnectionPriorities serverConnectionPriority
                                )
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
-  #if   defined(HAVE_CURL)
+  #ifdef HAVE_CURL
+    AutoFreeList autoFreeList;
+    Errors       error;
     WebDAVServer webDAVServer;
   #endif /* HAVE_CURL */
 
@@ -596,15 +596,16 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
 
-  #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && !defined(HAVE_SSH2)
+  #ifdef HAVE_CURL
     UNUSED_VARIABLE(serverConnectionPriority);
-  #endif /* !defined(HAVE_CURL) && !defined(HAVE_FTP) && !defined(HAVE_SSH2) */
+  #endif /* HAVE_CURL */
 
 #warning TODO remove
   UNUSED_VARIABLE(storageSpecifier);
 
-  #if   defined(HAVE_CURL)
+  #ifdef HAVE_CURL
     // init variables
+    AutoFree_init(&autoFreeList);
     storageHandle->webdav.curlMultiHandle      = NULL;
     storageHandle->webdav.curlHandle           = NULL;
     storageHandle->webdav.index                = 0LL;
@@ -692,6 +693,11 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
       doneBandWidthLimiter(&storageHandle->webdav.bandWidthLimiter);
       return error;
     }
+
+    // free resources
+    AutoFree_done(&autoFreeList);
+
+    return ERROR_NONE;
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(storageSpecifier);
@@ -701,8 +707,6 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL */
-
-  return ERROR_NONE;
 }
 
 LOCAL Errors StorageWebDAV_done(StorageHandle *storageHandle)
@@ -711,7 +715,7 @@ LOCAL Errors StorageWebDAV_done(StorageHandle *storageHandle)
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
   // free WebDAV server connection
-  #if   defined(HAVE_CURL)
+  #ifdef HAVE_CURL
     freeServer(storageHandle->webdav.server);
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
@@ -728,7 +732,7 @@ LOCAL bool StorageWebDAV_isServerAllocationPending(StorageHandle *storageHandle)
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
   serverAllocationPending = FALSE;
-  #if defined(HAVE_CURL)
+  #ifdef HAVE_CURL
     serverAllocationPending = isServerAllocationPending(storageHandle->webdav.server);
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
@@ -835,16 +839,6 @@ LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
   return error;
 }
 
-LOCAL Errors StorageWebDAV_unloadVolume(StorageHandle *storageHandle)
-{
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
-
-  UNUSED_VARIABLE(storageHandle);
-
-  return ERROR_UNKNOWN;
-}
-
 LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
                                   ConstString   archiveName,
                                   uint64        archiveSize
@@ -863,6 +857,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(!String_isEmpty(storageHandle->storageSpecifier.archiveName));
   assert(archiveName != NULL);
 
   #ifdef HAVE_CURL
@@ -1365,9 +1360,8 @@ LOCAL bool StorageWebDAV_eof(StorageHandle *storageHandle)
     }
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
+    return TRUE;
   #endif /* HAVE_CURL */
-
-  return TRUE;
 }
 
 LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
@@ -2114,16 +2108,16 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     ConstString       token;
     String            directoryData;
     struct curl_slist *curlSList;
-  #endif /* HAVE_CURL */
+  #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
   assert(jobOptions != NULL);
 
-  #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && (!defined(HAVE_CURL) || !defined(HAVE_MXML))
+  #if defined(HAVE_CURL) && defined(HAVE_MXML)
     UNUSED_VARIABLE(serverConnectionPriority);
-  #endif
+  #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
 
 #warning TODO remove
 UNUSED_VARIABLE(storageSpecifier);
@@ -2304,13 +2298,13 @@ UNUSED_VARIABLE(storageSpecifier);
     String_delete(url);
     (void)curl_easy_cleanup(curlHandle);
     AutoFree_done(&autoFreeList);
-  #else /* not HAVE_CURL */
+  #else /* not defined(HAVE_CURL) && defined(HAVE_MXML) */
     UNUSED_VARIABLE(storageDirectoryListHandle);
     UNUSED_VARIABLE(storageSpecifier);
     UNUSED_VARIABLE(jobOptions);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
-  #endif /* HAVE_CURL */
+  #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
 
   return ERROR_NONE;
 }
@@ -2320,11 +2314,11 @@ LOCAL void StorageWebDAV_closeDirectoryList(StorageDirectoryListHandle *storageD
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->type == STORAGE_TYPE_WEBDAV);
 
-  #ifdef HAVE_CURL
+  #if defined(HAVE_CURL) && defined(HAVE_MXML)
     mxmlDelete(storageDirectoryListHandle->webdav.rootNode);
-  #else /* not HAVE_CURL */
+  #else /* not defined(HAVE_CURL) && defined(HAVE_MXML) */
     UNUSED_VARIABLE(storageDirectoryListHandle);
-  #endif /* HAVE_CURL */
+  #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
 }
 
 LOCAL bool StorageWebDAV_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
@@ -2335,7 +2329,7 @@ LOCAL bool StorageWebDAV_endOfDirectoryList(StorageDirectoryListHandle *storageD
   assert(storageDirectoryListHandle->type == STORAGE_TYPE_WEBDAV);
 
   endOfDirectoryFlag = TRUE;
-  #ifdef HAVE_CURL
+  #if defined(HAVE_CURL) && defined(HAVE_MXML)
     if (storageDirectoryListHandle->webdav.currentNode == NULL)
     {
       storageDirectoryListHandle->webdav.currentNode = mxmlFindElement(storageDirectoryListHandle->webdav.lastNode,
@@ -2347,9 +2341,9 @@ LOCAL bool StorageWebDAV_endOfDirectoryList(StorageDirectoryListHandle *storageD
                                                                       );
     }
     endOfDirectoryFlag = (storageDirectoryListHandle->webdav.currentNode == NULL);
-  #else /* not HAVE_CURL */
+  #else /* not defined(HAVE_CURL) && defined(HAVE_MXML) */
     UNUSED_VARIABLE(storageDirectoryListHandle);
-  #endif /* HAVE_CURL */
+  #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
 
   return endOfDirectoryFlag;
 }
@@ -2360,7 +2354,7 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
                                             )
 {
   Errors error;
-  #ifdef HAVE_CURL
+  #if defined(HAVE_CURL) && defined(HAVE_MXML)
     mxml_node_t *node;
   #endif /* HAVE_CURL */
 
@@ -2368,7 +2362,7 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
   assert(storageDirectoryListHandle->type == STORAGE_TYPE_WEBDAV);
 
   error = ERROR_NONE;
-  #ifdef HAVE_CURL
+  #if defined(HAVE_CURL) && defined(HAVE_MXML)
     if (storageDirectoryListHandle->webdav.currentNode == NULL)
     {
       storageDirectoryListHandle->webdav.currentNode = mxmlFindElement(storageDirectoryListHandle->webdav.lastNode,
@@ -2448,13 +2442,13 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
     {
       error = ERROR_READ_DIRECTORY;
     }
-  #else /* not HAVE_CURL */
+  #else /* not defined(HAVE_CURL) && defined(HAVE_MXML) */
     UNUSED_VARIABLE(storageDirectoryListHandle);
     UNUSED_VARIABLE(fileName);
     UNUSED_VARIABLE(fileInfo);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
-  #endif /* HAVE_CURL */
+  #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
   assert(error != ERROR_UNKNOWN);
 
   return error;

@@ -3,7 +3,7 @@
 * $Revision: 4012 $
 * $Date: 2015-04-28 19:02:40 +0200 (Tue, 28 Apr 2015) $
 * $Author: torsten $
-* Contents: storage functions
+* Contents: storage device functions
 * Systems: all
 *
 \***********************************************************************/
@@ -705,15 +705,6 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
 
   UNUSED_VARIABLE(archiveSize);
 
-  // init variables
-  storageHandle->mode = STORAGE_MODE_WRITE;
-
-  // check if archive name given
-  if (String_isEmpty(storageHandle->storageSpecifier.archiveName))
-  {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
-  }
-
   // create file name
   String_set(storageHandle->device.fileName,storageHandle->device.directory);
   File_appendFileName(storageHandle->device.fileName,archiveName);
@@ -744,16 +735,9 @@ LOCAL Errors StorageDevice_open(StorageHandle *storageHandle, ConstString archiv
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
   // init variables
-  storageHandle->mode = STORAGE_MODE_READ;
 
-  // get file name
-  if (archiveName == NULL) archiveName = storageHandle->storageSpecifier.archiveName;
-  if (String_isEmpty(archiveName))
-  {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
-  }
-
-  // init variables
+UNUSED_VARIABLE(storageHandle);
+UNUSED_VARIABLE(archiveName);
 
   // open file
 #ifndef WERROR

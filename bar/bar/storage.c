@@ -26,13 +26,7 @@
 #endif /* HAVE_MXML */
 #ifdef HAVE_SSH2
   #include <libssh2.h>
-  #include <libssh2_sftp.h>
 #endif /* HAVE_SSH2 */
-#ifdef HAVE_ISO9660
-  #include <cdio/cdio.h>
-  #include <cdio/iso9660.h>
-  #include <cdio/logging.h>
-#endif /* HAVE_ISO9660 */
 #include <signal.h>
 #include <errno.h>
 #include <assert.h>
@@ -540,77 +534,13 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 
 // ----------------------------------------------------------------------
 
+#include "storage_file.c"
 #include "storage_ftp.c"
 #include "storage_scp.c"
+#include "storage_sftp.c"
 #include "storage_webdav.c"
 #include "storage_optical.c"
 #include "storage_device.c"
-
-#ifdef HAVE_SSH2
-/***********************************************************************\
-* Name   : sftpSendCallback
-* Purpose: sftp send callback: count total sent bytes and pass to
-*          original function
-* Input  : socket   - libssh2 socket
-*          buffer   - buffer with data
-*          length   - length to send
-*          flags    - libssh2 flags
-*          abstract - pointer to user data
-* Output : -
-* Return : number of bytes sent
-* Notes  : parameters are hidden in LIBSSH2_SEND_FUNC()!
-\***********************************************************************/
-
-LOCAL LIBSSH2_SEND_FUNC(sftpSendCallback)
-{
-  StorageHandle *storageHandle;
-  ssize_t       n;
-
-  assert(abstract != NULL);
-
-  storageHandle = *((StorageHandle**)abstract);
-  assert(storageHandle != NULL);
-  assert(storageHandle->sftp.oldSendCallback != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-
-  n = storageHandle->sftp.oldSendCallback(socket,buffer,length,flags,abstract);
-  if (n > 0) storageHandle->sftp.totalSentBytes += (uint64)n;
-
-  return n;
-}
-
-/***********************************************************************\
-* Name   : sftpReceiveCallback
-* Purpose: sftp receive callback: count total received bytes and pass to
-*          original function
-* Input  : socket   - libssh2 socket
-*          buffer   - buffer with data
-*          length   - length to receive
-*          flags    - libssh2 flags
-*          abstract - pointer to user data
-* Output : -
-* Return : number of bytes received
-* Notes  : parameters are hidden in LIBSSH2_RECV_FUNC()!
-\***********************************************************************/
-
-LOCAL LIBSSH2_RECV_FUNC(sftpReceiveCallback)
-{
-  StorageHandle *storageHandle;
-  ssize_t       n;
-
-  assert(abstract != NULL);
-
-  storageHandle = *((StorageHandle**)abstract);
-  assert(storageHandle != NULL);
-  assert(storageHandle->sftp.oldReceiveCallback != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-
-  n = storageHandle->sftp.oldReceiveCallback(socket,buffer,length,flags,abstract);
-  if (n > 0) storageHandle->sftp.totalReceivedBytes += (uint64)n;
-
-  return n;
-}
-#endif /* HAVE_SSH2 */
 
 /*---------------------------------------------------------------------*/
 
@@ -645,6 +575,10 @@ Errors Storage_initAll(void)
     {
       error = StorageSCP_initAll();
     }
+    if (error == ERROR_NONE)
+    {
+      error = StorageSFTP_initAll();
+    }
   #endif /* HAVE_SSH2 */
   #if defined(HAVE_CURL)
     if (error == ERROR_NONE)
@@ -672,13 +606,11 @@ void Storage_doneAll(void)
   #ifdef HAVE_ISO9660
     StorageOptical_doneAll();
   #endif /* HAVE_ISO9660 */
-  #ifdef HAVE_SSH2
-    Password_delete(defaultSSHPassword);
-  #endif /* HAVE_SSH2 */
   #if defined(HAVE_CURL)
     StorageWebDAV_doneAll();
   #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
   #if defined(HAVE_SSH2)
+    StorageSFTP_doneAll();
     StorageSCP_doneAll();
   #endif /* HAVE_SSH2 */
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
@@ -801,19 +733,6 @@ bool Storage_parseFTPSpecifier(ConstString ftpSpecifier,
   return StorageFTP_parseSpecifier(ftpSpecifier,hostName,hostPort,loginName,loginPassword);
 }
 
-bool Storage_parseSCPSpecifier(ConstString scpSpecifier,
-                               String      hostName,
-                               uint        *hostPort,
-                               String      loginName
-                              )
-{
-  assert(scpSpecifier != NULL);
-  assert(hostName != NULL);
-  assert(loginName != NULL);
-
-  return StorageSCP_parseSpecifier(scpSpecifier,hostName,hostPort,loginName);
-}
-
 bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
                                String      hostName,
                                uint        *hostPort,
@@ -877,6 +796,34 @@ bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
   String_delete(s);
 
   return result;
+}
+
+bool Storage_parseSCPSpecifier(ConstString scpSpecifier,
+                               String      hostName,
+                               uint        *hostPort,
+                               String      loginName,
+                               Password    *loginPassword
+                              )
+{
+  assert(scpSpecifier != NULL);
+  assert(hostName != NULL);
+  assert(loginName != NULL);
+
+  return StorageSCP_parseSpecifier(scpSpecifier,hostName,hostPort,loginName,loginPassword);
+}
+
+bool Storage_parseSFTPSpecifier(ConstString sftpSpecifier,
+                                String      hostName,
+                                uint        *hostPort,
+                                String      loginName,
+                                Password    *loginPassword
+                               )
+{
+  assert(sftpSpecifier != NULL);
+  assert(hostName != NULL);
+  assert(loginName != NULL);
+
+  return StorageSFTP_parseSpecifier(sftpSpecifier,hostName,hostPort,loginName,loginPassword);
 }
 
 bool Storage_parseWebDAVSpecifier(ConstString webdavSpecifier,
@@ -1319,7 +1266,7 @@ bool Storage_equalNames(ConstString storageName1,
     switch (storageSpecifier1.type)
     {
       case STORAGE_TYPE_FILESYSTEM:
-        result = String_equals(storageSpecifier1.archiveName,storageSpecifier2.archiveName);
+        result = StorageFile_equalNames(&storageSpecifier1,&storageSpecifier2);
         break;
       case STORAGE_TYPE_FTP:
         result = StorageFTP_equalNames(&storageSpecifier1,&storageSpecifier2);
@@ -1329,6 +1276,8 @@ bool Storage_equalNames(ConstString storageName1,
         result = StorageSCP_equalNames(&storageSpecifier1,&storageSpecifier2);
         break;
       case STORAGE_TYPE_SFTP:
+        result = StorageSFTP_equalNames(&storageSpecifier1,&storageSpecifier2);
+        break;
       case STORAGE_TYPE_WEBDAV:
         result = StorageWebDAV_equalNames(&storageSpecifier1,&storageSpecifier2);
         break;
@@ -1357,7 +1306,6 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
                       )
 {
   ConstString storageFileName;
-  const char  *plainLoginPassword;
 
   assert(storageSpecifier != NULL);
 
@@ -1381,10 +1329,7 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!String_isEmpty(storageFileName))
-      {
-        String_append(storageSpecifier->storageName,storageFileName);
-      }
+      StorageFile_getName(storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_FTP:
       StorageFTP_getName(storageSpecifier,archiveName);
@@ -1399,25 +1344,7 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
       StorageSCP_getName(storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_SFTP:
-      String_appendCString(storageSpecifier->storageName,"sftp://");
-      if (!String_isEmpty(storageSpecifier->loginName))
-      {
-        String_append(storageSpecifier->storageName,storageSpecifier->loginName);
-        if (!Password_isEmpty(storageSpecifier->loginPassword))
-        {
-          String_appendChar(storageSpecifier->storageName,':');
-          plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
-          String_appendCString(storageSpecifier->storageName,plainLoginPassword);
-          Password_undeploy(storageSpecifier->loginPassword);
-        }
-        String_appendChar(storageSpecifier->storageName,'@');
-      }
-      String_append(storageSpecifier->storageName,storageSpecifier->hostName);
-      if (!String_isEmpty(storageFileName))
-      {
-        String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,storageFileName);
-      }
+      StorageSFTP_getName(storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_WEBDAV:
       StorageWebDAV_getName(storageSpecifier,archiveName);
@@ -1475,10 +1402,7 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if (!String_isEmpty(storageFileName))
-      {
-        String_append(storageSpecifier->storageName,storageFileName);
-      }
+      StorageFile_getPrintableName(storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_FTP:
       StorageFTP_getPrintableName(storageSpecifier,archiveName);
@@ -1493,17 +1417,7 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
       StorageSCP_getPrintableName(storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_SFTP:
-      String_appendCString(storageSpecifier->storageName,"sftp://");
-      String_append(storageSpecifier->storageName,storageSpecifier->hostName);
-      if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 22))
-      {
-        String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
-      }
-      if (!String_isEmpty(storageFileName))
-      {
-        String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,storageFileName);
-      }
+      StorageSFTP_getPrintableName(storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_WEBDAV:
       StorageWebDAV_getPrintableName(storageSpecifier,archiveName);
@@ -1605,6 +1519,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
         return error;
       }
       storageHandle->mountedDeviceFlag = TRUE;
+      AUTOFREE_ADD(&autoFreeList,&storageHandle->storageSpecifier,{ Device_umount(jobOptions->mountDeviceName); });
     }
   }
 
@@ -1613,10 +1528,11 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   {
     case STORAGE_TYPE_NONE:
       UNUSED_VARIABLE(maxBandWidthList);
-
       break;
     case STORAGE_TYPE_FILESYSTEM:
       UNUSED_VARIABLE(maxBandWidthList);
+
+      error = StorageFile_init(storageHandle,storageSpecifier,jobOptions);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_init(storageHandle,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
@@ -1631,108 +1547,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
       error = StorageSCP_init(storageHandle,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        {
-          SSHServer sshServer;
-
-          // init variables
-          storageHandle->sftp.sshPublicKeyFileName   = NULL;
-          storageHandle->sftp.sshPrivateKeyFileName  = NULL;
-          storageHandle->sftp.oldSendCallback        = NULL;
-          storageHandle->sftp.oldReceiveCallback     = NULL;
-          storageHandle->sftp.totalSentBytes         = 0LL;
-          storageHandle->sftp.totalReceivedBytes     = 0LL;
-          storageHandle->sftp.sftp                   = NULL;
-          storageHandle->sftp.sftpHandle             = NULL;
-          storageHandle->sftp.readAheadBuffer.offset = 0LL;
-          storageHandle->sftp.readAheadBuffer.length = 0L;
-          initBandWidthLimiter(&storageHandle->sftp.bandWidthLimiter,maxBandWidthList);
-
-          // allocate read-ahead buffer
-          storageHandle->sftp.readAheadBuffer.data = (byte*)malloc(MAX_BUFFER_SIZE);
-          if (storageHandle->sftp.readAheadBuffer.data == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          AUTOFREE_ADD(&autoFreeList,storageHandle->sftp.readAheadBuffer.data,{ free(storageHandle->sftp.readAheadBuffer.data); });
-
-          // get SSH server settings
-          storageHandle->sftp.server = getSSHServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&sshServer);
-          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,sshServer.loginName);
-          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
-          if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
-          if (storageHandle->storageSpecifier.hostPort == 0) storageHandle->storageSpecifier.hostPort = sshServer.port;
-          storageHandle->sftp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
-          storageHandle->sftp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
-          if (String_isEmpty(storageHandle->storageSpecifier.hostName))
-          {
-            AutoFree_cleanup(&autoFreeList);
-            return ERROR_NO_HOST_NAME;
-          }
-
-          // allocate SSH server
-          if (!allocateServer(storageHandle->sftp.server,serverConnectionPriority,60*1000L))
-          {
-            AutoFree_cleanup(&autoFreeList);
-            return ERROR_TOO_MANY_CONNECTIONS;
-          }
-          AUTOFREE_ADD(&autoFreeList,storageHandle->sftp.server,{ freeServer(storageHandle->sftp.server); });
-
-          // check if SSH login is possible
-          error = ERROR_UNKNOWN;
-          if ((error != ERROR_NONE) && (sshServer.password != NULL))
-          {
-            error = checkSSHLogin(storageHandle->storageSpecifier.hostName,
-                                  storageHandle->storageSpecifier.hostPort,
-                                  storageHandle->storageSpecifier.loginName,
-                                  sshServer.password,
-                                  storageHandle->sftp.sshPublicKeyFileName,
-                                  storageHandle->sftp.sshPrivateKeyFileName
-                                 );
-            if (error == ERROR_NONE)
-            {
-              Password_set(storageHandle->storageSpecifier.loginPassword,sshServer.password);
-            }
-          }
-          if (error != ERROR_NONE)
-          {
-            // initialize default password
-            if (   initDefaultSSHPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions)
-                && !Password_isEmpty(defaultSSHPassword)
-               )
-            {
-              error = checkSSHLogin(storageHandle->storageSpecifier.hostName,
-                                    storageHandle->storageSpecifier.hostPort,
-                                    storageHandle->storageSpecifier.loginName,
-                                    defaultSSHPassword,
-                                    storageHandle->sftp.sshPublicKeyFileName,
-                                    storageHandle->sftp.sshPrivateKeyFileName
-                                   );
-              if (error == ERROR_NONE)
-              {
-                Password_set(storageHandle->storageSpecifier.loginPassword,defaultSSHPassword);
-              }
-            }
-            else
-            {
-              error = !Password_isEmpty(defaultSSHPassword) ? ERROR_INVALID_SSH_PASSWORD : ERROR_NO_SSH_PASSWORD;
-            }
-          }
-          assert(error != ERROR_UNKNOWN);
-          if (error != ERROR_NONE)
-          {
-            AutoFree_cleanup(&autoFreeList);
-            return error;
-          }
-
-          // free resources
-        }
-      #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(maxBandWidthList);
-
-        AutoFree_cleanup(&autoFreeList);
-        return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_init(storageHandle,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_init(storageHandle,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
@@ -1752,6 +1567,11 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
       #endif /* NDEBUG */
       break;
+  }
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
   }
 
   storageHandle->runningInfo.volumeNumber   = 0;
@@ -1797,6 +1617,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
+      error = StorageFile_done(storageHandle);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_done(storageHandle);
@@ -1808,12 +1629,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
       error = StorageSCP_done(storageHandle);
       break;
     case STORAGE_TYPE_SFTP:
-      // free SSH server connection
-      #ifdef HAVE_SSH2
-        freeServer(storageHandle->sftp.server);
-        free(storageHandle->sftp.readAheadBuffer.data);
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_done(storageHandle);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_done(storageHandle);
@@ -1876,11 +1692,7 @@ bool Storage_isServerAllocationPending(StorageHandle *storageHandle)
       serverAllocationPending = StorageSCP_isServerAllocationPending(storageHandle);
       break;
     case STORAGE_TYPE_SFTP:
-      #if defined(HAVE_SSH2)
-        serverAllocationPending = isServerAllocationPending(storageHandle->sftp.server);
-      #else /* not HAVE_SSH2 */
-        serverAllocationPending = FALSE;
-      #endif /* HAVE_SSH2 */
+      serverAllocationPending = StorageSFTP_isServerAllocationPending(storageHandle);
       break;
     case STORAGE_TYPE_WEBDAV:
       serverAllocationPending = StorageWebDAV_isServerAllocationPending(storageHandle);
@@ -1923,39 +1735,7 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      {
-        TextMacro textMacros[2];
-
-        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-        {
-          if (!initialFlag)
-          {
-            // init macros
-            TEXT_MACRO_N_STRING (textMacros[0],"%file",  storageHandle->fileSystem.fileHandle.name);
-            TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber              );
-
-            if (globalOptions.file.writePreProcessCommand != NULL)
-            {
-              // write pre-processing
-              if (error == ERROR_NONE)
-              {
-                printInfo(0,"Write pre-processing...");
-                error = Misc_executeCommand(String_cString(globalOptions.file.writePreProcessCommand),
-                                            textMacros,
-                                            SIZE_OF_ARRAY(textMacros),
-                                            CALLBACK(executeIOOutput,NULL),
-                                            CALLBACK(executeIOOutput,NULL)
-                                           );
-                printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
-              }
-            }
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-          }
-        }
-      }
+      error = StorageFile_preProcess(storageHandle,initialFlag);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_preProcess(storageHandle,initialFlag);
@@ -1966,42 +1746,7 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
       error = StorageSCP_preProcess(storageHandle,initialFlag);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        {
-          TextMacro textMacros[1];
-
-          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-          {
-            if (!initialFlag)
-            {
-              // init macros
-              TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber              );
-
-              if (globalOptions.sftp.writePreProcessCommand != NULL)
-              {
-                // write pre-processing
-                if (error == ERROR_NONE)
-                {
-                  printInfo(0,"Write pre-processing...");
-                  error = Misc_executeCommand(String_cString(globalOptions.sftp.writePreProcessCommand),
-                                              textMacros,
-                                              SIZE_OF_ARRAY(textMacros),
-                                              CALLBACK(executeIOOutput,NULL),
-                                              CALLBACK(executeIOOutput,NULL)
-                                             );
-                  printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
-                }
-              }
-              if (error != ERROR_NONE)
-              {
-                break;
-              }
-            }
-          }
-        }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_preProcess(storageHandle,initialFlag);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_preProcess(storageHandle,initialFlag);
@@ -2039,39 +1784,7 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      {
-        TextMacro textMacros[2];
-
-        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-        {
-          if (!finalFlag)
-          {
-            // init macros
-            TEXT_MACRO_N_STRING (textMacros[0],"%file",  storageHandle->fileSystem.fileHandle.name);
-            TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber              );
-
-            if (globalOptions.file.writePostProcessCommand != NULL)
-            {
-              // write post-process
-              if (error == ERROR_NONE)
-              {
-                printInfo(0,"Write post-processing...");
-                error = Misc_executeCommand(String_cString(globalOptions.file.writePostProcessCommand),
-                                            textMacros,
-                                            SIZE_OF_ARRAY(textMacros),
-                                            CALLBACK(executeIOOutput,NULL),
-                                            CALLBACK(executeIOOutput,NULL)
-                                           );
-                printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
-              }
-            }
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-          }
-        }
-      }
+      error = StorageFile_postProcess(storageHandle,finalFlag);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_postProcess(storageHandle,finalFlag);
@@ -2082,42 +1795,7 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
       error = StorageSCP_postProcess(storageHandle,finalFlag);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        {
-          TextMacro textMacros[1];
-
-          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-          {
-            if (!finalFlag)
-            {
-              // init macros
-              TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber);
-
-              if (globalOptions.sftp.writePostProcessCommand != NULL)
-              {
-                // write post-process
-                if (error == ERROR_NONE)
-                {
-                  printInfo(0,"Write post-processing...");
-                  error = Misc_executeCommand(String_cString(globalOptions.sftp.writePostProcessCommand),
-                                              textMacros,
-                                              SIZE_OF_ARRAY(textMacros),
-                                              CALLBACK(executeIOOutput,NULL),
-                                              CALLBACK(executeIOOutput,NULL)
-                                             );
-                  printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
-                }
-              }
-              if (error != ERROR_NONE)
-              {
-                break;
-              }
-            }
-          }
-        }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_postProcess(storageHandle,finalFlag);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_postProcess(storageHandle,finalFlag);
@@ -2175,13 +1853,13 @@ Errors Storage_unloadVolume(StorageHandle *storageHandle)
       break;
     case STORAGE_TYPE_SSH:
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_unloadVolume(storageHandle);
+      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_SFTP:
       error = ERROR_NONE;
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_unloadVolume(storageHandle);
+      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
@@ -2208,7 +1886,6 @@ Errors Storage_create(StorageHandle *storageHandle,
                      )
 {
   Errors error;
-  String directoryName;
 
   assert(storageHandle != NULL);
   assert(archiveName != NULL);
@@ -2225,128 +1902,20 @@ Errors Storage_create(StorageHandle *storageHandle,
 
   switch (storageHandle->storageSpecifier.type)
   {
-    case STORAGE_TYPE_NONE:
-      break;
     case STORAGE_TYPE_FILESYSTEM:
-      // check if archive file exists
-      if ((storageHandle->jobOptions != NULL) && !storageHandle->jobOptions->overwriteArchiveFilesFlag && File_exists(archiveName))
-      {
-        return ERRORX_(FILE_EXISTS_,0,String_cString(archiveName));
-      }
-
-      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-      {
-        // create directory if not existing
-        directoryName = File_getFilePathName(String_new(),archiveName);
-        if (!String_isEmpty(directoryName) && !File_exists(directoryName))
-        {
-          error = File_makeDirectory(directoryName,
-                                     FILE_DEFAULT_USER_ID,
-                                     FILE_DEFAULT_GROUP_ID,
-                                     FILE_DEFAULT_PERMISSION
-                                    );
-          if (error != ERROR_NONE)
-          {
-            String_delete(directoryName);
-            return error;
-          }
-        }
-        String_delete(directoryName);
-
-        // open file
-        error = File_open(&storageHandle->fileSystem.fileHandle,
-                          archiveName,
-                          FILE_OPEN_CREATE
-                         );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        DEBUG_ADD_RESOURCE_TRACE("storage create file",&storageHandle->fileSystem);
-      }
+      error = StorageFile_create(storageHandle,archiveName,archiveSize);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_create(storageHandle,archiveName,archiveSize);
       break;
     case STORAGE_TYPE_SSH:
-      return ERROR_FUNCTION_NOT_SUPPORTED;
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
       error = StorageSCP_create(storageHandle,archiveName,archiveSize);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        {
-          // connect
-          error = Network_connect(&storageHandle->sftp.socketHandle,
-                                  SOCKET_TYPE_SSH,
-                                  storageHandle->storageSpecifier.hostName,
-                                  storageHandle->storageSpecifier.hostPort,
-                                  storageHandle->storageSpecifier.loginName,
-                                  storageHandle->storageSpecifier.loginPassword,
-                                  storageHandle->sftp.sshPublicKeyFileName,
-                                  storageHandle->sftp.sshPrivateKeyFileName,
-                                  0
-                                 );
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
-
-          // install send/receive callback to track number of sent/received bytes
-          storageHandle->sftp.totalSentBytes     = 0LL;
-          storageHandle->sftp.totalReceivedBytes = 0LL;
-          (*(libssh2_session_abstract(Network_getSSHSession(&storageHandle->sftp.socketHandle)))) = storageHandle;
-          storageHandle->sftp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_SEND,sftpSendCallback   );
-          storageHandle->sftp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_RECV,sftpReceiveCallback);
-
-          // init session
-          storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
-          if (storageHandle->sftp.sftp == NULL)
-          {
-            char *sshErrorText;
-
-            libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-            error = ERRORX_(SSH,
-                            libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                            sshErrorText
-                           );
-            Network_disconnect(&storageHandle->sftp.socketHandle);
-            return error;
-          }
-
-          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-          {
-            // create file
-            storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
-                                                                   String_cString(archiveName),
-                                                                   LIBSSH2_FXF_CREAT|LIBSSH2_FXF_WRITE|LIBSSH2_FXF_TRUNC,
-// ???
-LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
-                                                                  );
-            if (storageHandle->sftp.sftpHandle == NULL)
-            {
-              char *sshErrorText;
-
-              libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-              error = ERRORX_(SSH,
-                              libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                              sshErrorText
-                             );
-              libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-              Network_disconnect(&storageHandle->sftp.socketHandle);
-              return error;
-            }
-          }
-
-          DEBUG_ADD_RESOURCE_TRACE("storage create sftp",&storageHandle->sftp);
-        }
-      #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(fileSize);
-        return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_create(storageHandle,archiveName,archiveSize);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_create(storageHandle,archiveName,archiveSize);
@@ -2366,7 +1935,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
       break;
   }
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
@@ -2391,23 +1960,7 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      // check if file exists
-      if (!File_exists(archiveName))
-      {
-        return ERRORX_(FILE_NOT_FOUND_,0,String_cString(archiveName));
-      }
-
-      // open file
-      error = File_open(&storageHandle->fileSystem.fileHandle,
-                        archiveName,
-                        FILE_OPEN_READ
-                       );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      DEBUG_ADD_RESOURCE_TRACE("storage open file",&storageHandle->fileSystem);
+      error = StorageFile_open(storageHandle,archiveName);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_open(storageHandle,archiveName);
@@ -2419,93 +1972,7 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
       error = StorageSCP_open(storageHandle,archiveName);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        {
-          LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
-
-          // init variables
-          storageHandle->sftp.index                  = 0LL;
-          storageHandle->sftp.readAheadBuffer.offset = 0LL;
-          storageHandle->sftp.readAheadBuffer.length = 0L;
-
-          // connect
-          error = Network_connect(&storageHandle->sftp.socketHandle,
-                                  SOCKET_TYPE_SSH,
-                                  storageHandle->storageSpecifier.hostName,
-                                  storageHandle->storageSpecifier.hostPort,
-                                  storageHandle->storageSpecifier.loginName,
-                                  storageHandle->storageSpecifier.loginPassword,
-                                  storageHandle->sftp.sshPublicKeyFileName,
-                                  storageHandle->sftp.sshPrivateKeyFileName,
-                                  0
-                                 );
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
-
-          // install send/receive callback to track number of sent/received bytes
-          storageHandle->sftp.totalSentBytes     = 0LL;
-          storageHandle->sftp.totalReceivedBytes = 0LL;
-          (*(libssh2_session_abstract(Network_getSSHSession(&storageHandle->sftp.socketHandle)))) = storageHandle;
-          storageHandle->sftp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_SEND,sftpSendCallback   );
-          storageHandle->sftp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_RECV,sftpReceiveCallback);
-
-          // init session
-          storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
-          if (storageHandle->sftp.sftp == NULL)
-          {
-            error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)));
-            Network_disconnect(&storageHandle->sftp.socketHandle);
-            return error;
-          }
-
-          // open file
-          storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
-                                                                 String_cString(archiveName),
-                                                                 LIBSSH2_FXF_READ,
-                                                                 0
-                                                                );
-          if (storageHandle->sftp.sftpHandle == NULL)
-          {
-            char *sshErrorText;
-
-            libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-            error = ERRORX_(SSH,
-                            libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                            sshErrorText
-                           );
-            libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-            Network_disconnect(&storageHandle->sftp.socketHandle);
-            return error;
-          }
-
-          // get file size
-          if (libssh2_sftp_fstat(storageHandle->sftp.sftpHandle,
-                                 &sftpAttributes
-                                ) != 0
-             )
-          {
-            char *sshErrorText;
-
-            libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-            error = ERRORX_(SSH,
-                            libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                            sshErrorText
-                           );
-            libssh2_sftp_close(storageHandle->sftp.sftpHandle);
-            libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-            Network_disconnect(&storageHandle->sftp.socketHandle);
-            return error;
-          }
-          storageHandle->sftp.size = sftpAttributes.filesize;
-
-          DEBUG_ADD_RESOURCE_TRACE("storage open sftp",&storageHandle->sftp);
-        }
-      #else /* not HAVE_SSH2 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_open(storageHandle,archiveName);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_open(storageHandle,archiveName);
@@ -2525,7 +1992,7 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
       break;
   }
 
-  return ERROR_NONE;
+  return error;
 }
 
 void Storage_close(StorageHandle *storageHandle)
@@ -2538,27 +2005,7 @@ void Storage_close(StorageHandle *storageHandle)
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->fileSystem);
-
-      switch (storageHandle->mode)
-      {
-        case STORAGE_MODE_UNKNOWN:
-          break;
-        case STORAGE_MODE_WRITE:
-          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-          {
-            File_close(&storageHandle->fileSystem.fileHandle);
-          }
-          break;
-        case STORAGE_MODE_READ:
-          File_close(&storageHandle->fileSystem.fileHandle);
-          break;
-        #ifndef NDEBUG
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; /* not reached */
-        #endif /* NDEBUG */
-      }
+      StorageFile_close(storageHandle);
       break;
     case STORAGE_TYPE_FTP:
       StorageFTP_close(storageHandle);
@@ -2569,32 +2016,7 @@ void Storage_close(StorageHandle *storageHandle)
       StorageSCP_close(storageHandle);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp);
-
-        switch (storageHandle->mode)
-        {
-          case STORAGE_MODE_UNKNOWN:
-            break;
-          case STORAGE_MODE_WRITE:
-            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-            {
-              (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
-            }
-            break;
-          case STORAGE_MODE_READ:
-            (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
-            break;
-          #ifndef NDEBUG
-            default:
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; /* not reached */
-          #endif /* NDEBUG */
-        }
-        libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-        Network_disconnect(&storageHandle->sftp.socketHandle);
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
+      StorageSFTP_close(storageHandle);
       break;
     case STORAGE_TYPE_WEBDAV:
       StorageWebDAV_close(storageHandle);
@@ -2626,14 +2048,7 @@ bool Storage_eof(StorageHandle *storageHandle)
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-      {
-        return File_eof(&storageHandle->fileSystem.fileHandle);
-      }
-      else
-      {
-        return TRUE;
-      }
+      return StorageFile_eof(storageHandle);
       break;
     case STORAGE_TYPE_FTP:
       return StorageFTP_eof(storageHandle);
@@ -2648,18 +2063,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       return StorageSCP_eof(storageHandle);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-        {
-          return storageHandle->sftp.index >= storageHandle->sftp.size;
-        }
-        else
-        {
-          return TRUE;
-        }
-      #else /* not HAVE_SSH2 */
-        return TRUE;
-      #endif /* HAVE_SSH2 */
+      return StorageSFTP_eof(storageHandle);
       break;
     case STORAGE_TYPE_WEBDAV:
       return StorageWebDAV_eof(storageHandle);
@@ -2703,10 +2107,7 @@ Errors Storage_read(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-      {
-        error = File_read(&storageHandle->fileSystem.fileHandle,buffer,size,bytesRead);
-      }
+      error = StorageFile_read(storageHandle,buffer,size,bytesRead);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_read(storageHandle,buffer,size,bytesRead);
@@ -2718,138 +2119,7 @@ Errors Storage_read(StorageHandle *storageHandle,
       error = StorageSCP_read(storageHandle,buffer,size,bytesRead);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        {
-          ulong   index;
-          ulong   bytesAvail;
-          ulong   length;
-          uint64  startTimestamp,endTimestamp;
-          uint64  startTotalReceivedBytes,endTotalReceivedBytes;
-          ssize_t n;
-
-          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-          {
-            assert(storageHandle->sftp.sftpHandle != NULL);
-            assert(storageHandle->sftp.readAheadBuffer.data != NULL);
-
-            while (   (size > 0)
-                   && (error == ERROR_NONE)
-                  )
-            {
-              // copy as much data as available from read-ahead buffer
-              if (   (storageHandle->sftp.index >= storageHandle->sftp.readAheadBuffer.offset)
-                  && (storageHandle->sftp.index < (storageHandle->sftp.readAheadBuffer.offset+storageHandle->sftp.readAheadBuffer.length))
-                 )
-              {
-                // copy data from read-ahead buffer
-                index      = (ulong)(storageHandle->sftp.index-storageHandle->sftp.readAheadBuffer.offset);
-                bytesAvail = MIN(size,storageHandle->sftp.readAheadBuffer.length-index);
-                memcpy(buffer,storageHandle->sftp.readAheadBuffer.data+index,bytesAvail);
-
-                // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+bytesAvail;
-                size -= bytesAvail;
-                if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-                storageHandle->sftp.index += (uint64)bytesAvail;
-              }
-
-              // read rest of data
-              if (size > 0)
-              {
-                assert(storageHandle->sftp.index >= (storageHandle->sftp.readAheadBuffer.offset+storageHandle->sftp.readAheadBuffer.length));
-
-                // get max. number of bytes to receive in one step
-                if (storageHandle->sftp.bandWidthLimiter.maxBandWidthList != NULL)
-                {
-                  length = MIN(storageHandle->sftp.bandWidthLimiter.blockSize,size);
-                }
-                else
-                {
-                  length = size;
-                }
-                assert(length > 0L);
-
-                // get start time, start received bytes
-                startTimestamp          = Misc_getTimestamp();
-                startTotalReceivedBytes = storageHandle->sftp.totalReceivedBytes;
-
-                #if   defined(HAVE_SSH2_SFTP_SEEK64)
-                  libssh2_sftp_seek64(storageHandle->sftp.sftpHandle,storageHandle->sftp.index);
-                #elif defined(HAVE_SSH2_SFTP_SEEK2)
-                  libssh2_sftp_seek2(storageHandle->sftp.sftpHandle,storageHandle->sftp.index);
-                #else /* not HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
-                  libssh2_sftp_seek(storageHandle->sftp.sftpHandle,storageHandle->sftp.index);
-                #endif /* HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
-
-                if (length <= MAX_BUFFER_SIZE)
-                {
-                  // read into read-ahead buffer
-                  n = libssh2_sftp_read(storageHandle->sftp.sftpHandle,
-                                        (char*)storageHandle->sftp.readAheadBuffer.data,
-                                        MIN((size_t)(storageHandle->sftp.size-storageHandle->sftp.index),MAX_BUFFER_SIZE)
-                                       );
-                  if (n < 0)
-                  {
-                    error = ERROR_(IO_ERROR,errno);
-                    break;
-                  }
-                  storageHandle->sftp.readAheadBuffer.offset = storageHandle->sftp.index;
-                  storageHandle->sftp.readAheadBuffer.length = (ulong)n;
-
-                  // copy data from read-ahead buffer
-                  bytesAvail = MIN(length,storageHandle->sftp.readAheadBuffer.length);
-                  memcpy(buffer,storageHandle->sftp.readAheadBuffer.data,bytesAvail);
-
-                  // adjust buffer, size, bytes read, index
-                  buffer = (byte*)buffer+bytesAvail;
-                  size -= bytesAvail;
-                  if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-                  storageHandle->sftp.index += (uint64)bytesAvail;
-                }
-                else
-                {
-                  // read direct
-                  n = libssh2_sftp_read(storageHandle->sftp.sftpHandle,
-                                        buffer,
-                                        length
-                                       );
-                  if (n < 0)
-                  {
-                    error = ERROR_(IO_ERROR,errno);
-                    break;
-                  }
-                  bytesAvail = (ulong)n;
-
-                  // adjust buffer, size, bytes read, index
-                  buffer = (byte*)buffer+(ulong)bytesAvail;
-                  size -= (ulong)bytesAvail;
-                  if (bytesRead != NULL) (*bytesRead) += (ulong)bytesAvail;
-                  storageHandle->sftp.index += (uint64)bytesAvail;
-                }
-
-                // get end time, end received bytes
-                endTimestamp          = Misc_getTimestamp();
-                endTotalReceivedBytes = storageHandle->sftp.totalReceivedBytes;
-                assert(endTotalReceivedBytes >= startTotalReceivedBytes);
-
-                /* limit used band width if requested (note: when the system time is
-                   changing endTimestamp may become smaller than startTimestamp;
-                   thus do not check this with an assert())
-                */
-                if (endTimestamp >= startTimestamp)
-                {
-                  limitBandWidth(&storageHandle->sftp.bandWidthLimiter,
-                                 endTotalReceivedBytes-startTotalReceivedBytes,
-                                 endTimestamp-startTimestamp
-                                );
-                }
-              }
-            }
-          }
-        }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_read(storageHandle,buffer,size,bytesRead);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_read(storageHandle,buffer,size,bytesRead);
@@ -2891,10 +2161,7 @@ Errors Storage_write(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-      {
-        error = File_write(&storageHandle->fileSystem.fileHandle,buffer,size);
-      }
+      error = StorageFile_write(storageHandle,buffer,size);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_write(storageHandle,buffer,size);
@@ -2906,95 +2173,7 @@ Errors Storage_write(StorageHandle *storageHandle,
       error = StorageSCP_write(storageHandle,buffer,size);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        {
-          ulong   writtenBytes;
-          ulong   length;
-          uint64  startTimestamp,endTimestamp;
-          uint64  startTotalSentBytes,endTotalSentBytes;
-          ssize_t n;
-
-          if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-          {
-            assert(storageHandle->sftp.sftpHandle != NULL);
-
-            writtenBytes = 0L;
-            while (writtenBytes < size)
-            {
-              // get max. number of bytes to send in one step
-              if (storageHandle->sftp.bandWidthLimiter.maxBandWidthList != NULL)
-              {
-                length = MIN(storageHandle->sftp.bandWidthLimiter.blockSize,size-writtenBytes);
-              }
-              else
-              {
-                length = size-writtenBytes;
-              }
-              assert(length > 0L);
-
-              // get start time, start received bytes
-              startTimestamp      = Misc_getTimestamp();
-              startTotalSentBytes = storageHandle->sftp.totalSentBytes;
-
-              // send data
-              do
-              {
-                n = libssh2_sftp_write(storageHandle->sftp.sftpHandle,
-                                       buffer,
-                                       length
-                                      );
-                if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
-              }
-              while (n == LIBSSH2_ERROR_EAGAIN);
-
-              // get end time, end received bytes
-              endTimestamp      = Misc_getTimestamp();
-              endTotalSentBytes = storageHandle->sftp.totalSentBytes;
-              assert(endTotalSentBytes >= startTotalSentBytes);
-
-// ??? is it possible in blocking-mode that write() return 0 and this is not an error?
-#if 1
-              if      (n == 0)
-              {
-                // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
-                if (!waitSSHSessionSocket(&storageHandle->sftp.socketHandle))
-                {
-                  error = ERROR_NETWORK_SEND;
-                  break;
-                }
-              }
-              else if (n < 0)
-              {
-                error = ERROR_NETWORK_SEND;
-                break;
-              }
-#else /* 0 */
-              if (n <= 0)
-              {
-                error = ERROR_NETWORK_SEND;
-                break;
-              }
-#endif /* 0 */
-              buffer = (byte*)buffer+n;
-              writtenBytes += (ulong)n;
-
-              /* limit used band width if requested (note: when the system time is
-                 changing endTimestamp may become smaller than startTimestamp;
-                 thus do not check this with an assert())
-              */
-              if (endTimestamp >= startTimestamp)
-              {
-                limitBandWidth(&storageHandle->sftp.bandWidthLimiter,
-                               endTotalSentBytes-startTotalSentBytes,
-                               endTimestamp-startTimestamp
-                              );
-              }
-            }
-          }
-        }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_write(storageHandle,buffer,size);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_write(storageHandle,buffer,size);
@@ -3031,10 +2210,7 @@ uint64 Storage_getSize(StorageHandle *storageHandle)
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-      {
-        size = File_getSize(&storageHandle->fileSystem.fileHandle);
-      }
+      size = StorageFile_getSize(storageHandle);
       break;
     case STORAGE_TYPE_FTP:
       size = StorageFTP_getSize(storageHandle);
@@ -3049,13 +2225,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       size = StorageSCP_getSize(storageHandle);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-        {
-          size = storageHandle->sftp.size;
-        }
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
+      size = StorageSFTP_getSize(storageHandle);
       break;
     case STORAGE_TYPE_WEBDAV:
       size = StorageWebDAV_getSize(storageHandle);
@@ -3096,10 +2266,7 @@ Errors Storage_tell(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-      {
-        error = File_tell(&storageHandle->fileSystem.fileHandle,offset);
-      }
+      error = StorageFile_tell(storageHandle,offset);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_tell(storageHandle,offset);
@@ -3115,15 +2282,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       error = StorageSCP_tell(storageHandle,offset);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-        {
-          (*offset) = storageHandle->sftp.index;
-          error     = ERROR_NONE;
-        }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_tell(storageHandle,offset);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_tell(storageHandle,offset);
@@ -3163,10 +2322,7 @@ Errors Storage_seek(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-      {
-        error = File_seek(&storageHandle->fileSystem.fileHandle,offset);
-      }
+      error = StorageFile_seek(storageHandle,offset);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_seek(storageHandle,offset);
@@ -3182,54 +2338,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       error = StorageSCP_seek(storageHandle,offset);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-        {
-          assert(storageHandle->sftp.sftpHandle != NULL);
-          assert(storageHandle->sftp.readAheadBuffer.data != NULL);
-
-          if      (offset > storageHandle->sftp.index)
-          {
-            uint64 skip;
-            uint64 i;
-            uint64 n;
-
-            skip = offset-storageHandle->sftp.index;
-            if (skip > 0LL)
-            {
-              // skip data in read-ahead buffer
-              if (   (storageHandle->sftp.index >= storageHandle->sftp.readAheadBuffer.offset)
-                  && (storageHandle->sftp.index < (storageHandle->sftp.readAheadBuffer.offset+storageHandle->sftp.readAheadBuffer.length))
-                 )
-              {
-                i = storageHandle->sftp.index-storageHandle->sftp.readAheadBuffer.offset;
-                n = MIN(skip,storageHandle->sftp.readAheadBuffer.length-i);
-                skip -= n;
-                storageHandle->sftp.index += (uint64)n;
-              }
-
-              if (skip > 0LL)
-              {
-                #if   defined(HAVE_SSH2_SFTP_SEEK64)
-                  libssh2_sftp_seek64(storageHandle->sftp.sftpHandle,offset);
-                #elif defined(HAVE_SSH2_SFTP_SEEK2)
-                  libssh2_sftp_seek2(storageHandle->sftp.sftpHandle,offset);
-                #else /* not HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
-                  libssh2_sftp_seek(storageHandle->sftp.sftpHandle,(size_t)offset);
-                #endif /* HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
-                storageHandle->sftp.index = offset;
-              }
-            }
-          }
-          else if (offset < storageHandle->sftp.index)
-          {
-// NYI: ??? support seek backward
-            error = ERROR_FUNCTION_NOT_SUPPORTED;
-          }
-        }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_seek(storageHandle,offset);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_seek(storageHandle,offset);
@@ -3257,13 +2366,10 @@ Errors Storage_delete(StorageHandle *storageHandle,
                       ConstString   storageFileName
                      )
 {
-  ConstString deleteFileName;
-  Errors      error;
+  Errors error;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-
-  deleteFileName = (storageFileName != NULL) ? storageFileName : storageHandle->storageSpecifier.archiveName;
 
   error = ERROR_UNKNOWN;
   switch (storageHandle->storageSpecifier.type)
@@ -3271,14 +2377,7 @@ Errors Storage_delete(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-      {
-        error = File_delete(deleteFileName,FALSE);
-      }
-      else
-      {
-        error = ERROR_NONE;
-      }
+      error = StorageFile_delete(storageHandle,storageFileName);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_delete(storageHandle,storageFileName);
@@ -3293,69 +2392,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       error = StorageSCP_delete(storageHandle,storageFileName);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_WEBDAVSSH2
-        error = Network_connect(&storageHandle->sftp.socketHandle,
-                                SOCKET_TYPE_SSH,
-                                storageHandle->storageSpecifier.hostName,
-                                storageHandle->storageSpecifier.hostPort,
-                                storageHandle->storageSpecifier.loginName,
-                                storageHandle->storageSpecifier.loginPassword,
-                                storageHandle->sftp.sshPublicKeyFileName,
-                                storageHandle->sftp.sshPrivateKeyFileName,
-                                0
-                               );
-        if (error == ERROR_NONE)
-        {
-          libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
-
-          // init session
-          storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
-          if (storageHandle->sftp.sftp != NULL)
-          {
-            if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-            {
-              // delete file
-              if (libssh2_sftp_unlink(storageHandle->sftp.sftp,
-                                      String_cString(deleteFileName)
-                                     ) == 0
-                 )
-              {
-                error = ERROR_NONE;
-              }
-              else
-              {
-                 char *sshErrorText;
-
-                 libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-                 error = ERRORX_(SSH,
-                                 libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                                 sshErrorText
-                                );
-              }
-            }
-            else
-            {
-              error = ERROR_NONE;
-            }
-
-            libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-          }
-          else
-          {
-            char *sshErrorText;
-
-            libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-            error = ERRORX_(SSH,
-                            libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                            sshErrorText
-                           );
-            Network_disconnect(&storageHandle->sftp.socketHandle);
-          }
-          Network_disconnect(&storageHandle->sftp.socketHandle);
-        }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_delete(storageHandle,storageFileName);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_delete(storageHandle,storageFileName);
@@ -3402,7 +2439,7 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = File_getFileInfo(infoFileName,fileInfo);
+      errors = StorageFile_getFileInfo(storageHandle,fileName,fileInfo);
       break;
     case STORAGE_TYPE_FTP:
       errors = StorageFTP_getFileInfo(storageHandle,fileName,fileInfo);
@@ -3417,82 +2454,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       errors = StorageSCP_getFileInfo(storageHandle,fileName,fileInfo);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        {
-          LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
-
-          error = Network_connect(&storageHandle->sftp.socketHandle,
-                                  SOCKET_TYPE_SSH,
-                                  storageHandle->storageSpecifier.hostName,
-                                  storageHandle->storageSpecifier.hostPort,
-                                  storageHandle->storageSpecifier.loginName,
-                                  storageHandle->storageSpecifier.loginPassword,
-                                  storageHandle->sftp.sshPublicKeyFileName,
-                                  storageHandle->sftp.sshPrivateKeyFileName,
-                                  0
-                                 );
-          if (error == ERROR_NONE)
-          {
-            libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
-
-            // init session
-            storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
-            if (storageHandle->sftp.sftp != NULL)
-            {
-              // get file fino
-              if (libssh2_sftp_lstat(storageHandle->sftp.sftp,
-                                     String_cString(infoFileName),
-                                     &sftpAttributes
-                                    ) == 0
-                 )
-              {
-                if      (LIBSSH2_SFTP_S_ISREG (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_FILE;
-                else if (LIBSSH2_SFTP_S_ISDIR (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_DIRECTORY;
-                else if (LIBSSH2_SFTP_S_ISLNK (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_LINK;
-                else if (LIBSSH2_SFTP_S_ISCHR (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_SPECIAL;
-                else if (LIBSSH2_SFTP_S_ISBLK (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_SPECIAL;
-                else if (LIBSSH2_SFTP_S_ISFIFO(sftpAttributes.flags)) fileInfo->type = FILE_TYPE_SPECIAL;
-                else if (LIBSSH2_SFTP_S_ISSOCK(sftpAttributes.flags)) fileInfo->type = FILE_TYPE_SPECIAL;
-                else                                                  fileInfo->type = FILE_TYPE_UNKNOWN;
-                fileInfo->size            = (uint64)sftpAttributes.filesize;
-                fileInfo->timeLastAccess  = (uint64)sftpAttributes.atime;
-                fileInfo->timeModified    = (uint64)sftpAttributes.mtime;
-                fileInfo->userId          = sftpAttributes.uid;
-                fileInfo->groupId         = sftpAttributes.gid;
-                fileInfo->permission      = (FilePermission)sftpAttributes.permissions;
-
-                error = ERROR_NONE;
-              }
-              else
-              {
-                 char *sshErrorText;
-
-                 libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-                 error = ERRORX_(SSH,
-                                 libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                                 sshErrorText
-                                );
-              }
-
-              libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-            }
-            else
-            {
-              char *sshErrorText;
-
-              libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-              error = ERRORX_(SSH,
-                              libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
-                              sshErrorText
-                             );
-              Network_disconnect(&storageHandle->sftp.socketHandle);
-            }
-            Network_disconnect(&storageHandle->sftp.socketHandle);
-          }
-        }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      errors = StorageSFTP_getFileInfo(storageHandle,fileName,fileInfo);
       break;
     case STORAGE_TYPE_WEBDAV:
       errors = StorageWebDAV_getFileInfo(storageHandle,fileName,fileInfo);
@@ -3548,20 +2510,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      UNUSED_VARIABLE(jobOptions);
-
-      // init variables
-      storageDirectoryListHandle->type = STORAGE_TYPE_FILESYSTEM;
-
-      // open directory
-      error = File_openDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,
-                                     storageSpecifier->archiveName
-                                    );
-      if (error != ERROR_NONE)
-      {
-        AutoFree_cleanup(&autoFreeList);
-        return error;
-      }
+      error = StorageFile_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority);
@@ -3579,117 +2528,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       error = StorageSCP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        {
-          SSHServer sshServer;
-
-          // init variables
-          storageDirectoryListHandle->type               = STORAGE_TYPE_SFTP;
-          storageDirectoryListHandle->sftp.pathName      = String_new();
-          storageDirectoryListHandle->sftp.buffer        = (char*)malloc(MAX_FILENAME_LENGTH);
-          if (storageDirectoryListHandle->sftp.buffer == NULL)
-          {
-            String_delete(storageDirectoryListHandle->sftp.pathName);
-            AutoFree_cleanup(&autoFreeList);
-            return ERROR_INSUFFICIENT_MEMORY;
-          }
-          storageDirectoryListHandle->sftp.bufferLength  = 0;
-          storageDirectoryListHandle->sftp.entryReadFlag = FALSE;
-          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.buffer,{ free(storageDirectoryListHandle->sftp.buffer); });
-          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.pathName,{ String_delete(storageDirectoryListHandle->sftp.pathName); });
-
-          // set pathname
-          String_set(storageDirectoryListHandle->sftp.pathName,storageDirectoryListHandle->storageSpecifier.archiveName);
-
-          // get SSH server settings
-          getSSHServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&sshServer);
-          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,sshServer.loginName);
-          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
-          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
-          if (storageDirectoryListHandle->storageSpecifier.hostPort == 0) storageDirectoryListHandle->storageSpecifier.hostPort = sshServer.port;
-          if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
-          {
-            AutoFree_cleanup(&autoFreeList);
-            return ERROR_NO_HOST_NAME;
-          }
-
-          // open network connection
-          error = ERROR_UNKNOWN;
-          if ((error == ERROR_UNKNOWN) && !Password_isEmpty(sshServer.password))
-          {
-            error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
-                                    SOCKET_TYPE_SSH,
-                                    storageDirectoryListHandle->storageSpecifier.hostName,
-                                    storageDirectoryListHandle->storageSpecifier.hostPort,
-                                    storageDirectoryListHandle->storageSpecifier.loginName,
-                                    sshServer.password,
-                                    sshServer.publicKeyFileName,
-                                    sshServer.privateKeyFileName,
-                                    0
-                                   );
-          }
-          if (error == ERROR_UNKNOWN)
-          {
-            // initialize default password
-            if (   initDefaultSSHPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions)
-                && !Password_isEmpty(defaultSSHPassword)
-               )
-            {
-              error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
-                                      SOCKET_TYPE_SSH,
-                                      storageDirectoryListHandle->storageSpecifier.hostName,
-                                      storageDirectoryListHandle->storageSpecifier.hostPort,
-                                      storageDirectoryListHandle->storageSpecifier.loginName,
-                                      defaultSSHPassword,
-                                      sshServer.publicKeyFileName,
-                                      sshServer.privateKeyFileName,
-                                      0
-                                     );
-            }
-            else
-            {
-              error = !Password_isEmpty(defaultSSHPassword)
-                        ? ERRORX_(INVALID_SSH_PASSWORD,0,String_cString(storageDirectoryListHandle->storageSpecifier.hostName))
-                        : ERRORX_(NO_SSH_PASSWORD,0,String_cString(storageDirectoryListHandle->storageSpecifier.hostName));
-            }
-          }
-          assert(error != ERROR_UNKNOWN);
-          if (error != ERROR_NONE)
-          {
-            AutoFree_cleanup(&autoFreeList);
-            return error;
-          }
-          libssh2_session_set_timeout(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle),READ_TIMEOUT);
-          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.socketHandle,{ Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle); });
-
-          // init SFTP session
-          storageDirectoryListHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle));
-          if (storageDirectoryListHandle->sftp.sftp == NULL)
-          {
-            error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
-            AutoFree_cleanup(&autoFreeList);
-            return error;
-          }
-          AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.sftp,{ libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp); });
-
-          // open directory for reading
-          storageDirectoryListHandle->sftp.sftpHandle = libssh2_sftp_opendir(storageDirectoryListHandle->sftp.sftp,
-                                                                             String_cString(storageDirectoryListHandle->sftp.pathName)
-                                                                            );
-          if (storageDirectoryListHandle->sftp.sftpHandle == NULL)
-          {
-            error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
-            AutoFree_cleanup(&autoFreeList);
-            return error;
-          }
-
-          // free resources
-        }
-      #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(jobOptions);
-
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority);
@@ -3710,7 +2549,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
   }
   AutoFree_done(&autoFreeList);
 
-  return ERROR_NONE;
+  return error;
 }
 
 void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
@@ -3722,7 +2561,7 @@ void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryList
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      File_closeDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle);
+      StorageFile_closeDirectoryList(storageDirectoryListHandle);
       break;
     case STORAGE_TYPE_FTP:
       StorageFTP_closeDirectoryList(storageDirectoryListHandle);
@@ -3737,14 +2576,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       StorageSCP_closeDirectoryList(storageDirectoryListHandle);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        libssh2_sftp_closedir(storageDirectoryListHandle->sftp.sftpHandle);
-        libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp);
-        Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
-        free(storageDirectoryListHandle->sftp.buffer);
-        String_delete(storageDirectoryListHandle->sftp.pathName);
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
+      StorageSFTP_closeDirectoryList(storageDirectoryListHandle);
       break;
     case STORAGE_TYPE_WEBDAV:
       StorageWebDAV_closeDirectoryList(storageDirectoryListHandle);
@@ -3778,7 +2610,7 @@ bool Storage_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryList
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      endOfDirectoryFlag = File_endOfDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle);
+      endOfDirectoryFlag = StorageFile_endOfDirectoryList(storageDirectoryListHandle);
       break;
     case STORAGE_TYPE_FTP:
       endOfDirectoryFlag = StorageFTP_endOfDirectoryList(storageDirectoryListHandle);
@@ -3793,39 +2625,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       endOfDirectoryFlag = StorageSCP_endOfDirectoryList(storageDirectoryListHandle);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        {
-          int n;
-
-          // read entry iff not already read
-          while (!storageDirectoryListHandle->sftp.entryReadFlag)
-          {
-            n = libssh2_sftp_readdir(storageDirectoryListHandle->sftp.sftpHandle,
-                                     storageDirectoryListHandle->sftp.buffer,
-                                     MAX_FILENAME_LENGTH,
-                                     &storageDirectoryListHandle->sftp.attributes
-                                    );
-            if (n > 0)
-            {
-              if (   !S_ISDIR(storageDirectoryListHandle->sftp.attributes.flags)
-                  && ((n != 1) || (strncmp(storageDirectoryListHandle->sftp.buffer,".", 1) != 0))
-                  && ((n != 2) || (strncmp(storageDirectoryListHandle->sftp.buffer,"..",2) != 0))
-                 )
-              {
-                storageDirectoryListHandle->sftp.bufferLength = n;
-                storageDirectoryListHandle->sftp.entryReadFlag = TRUE;
-              }
-            }
-            else
-            {
-              break;
-            }
-          }
-
-          endOfDirectoryFlag = !storageDirectoryListHandle->sftp.entryReadFlag;
-        }
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
+      endOfDirectoryFlag = StorageSFTP_endOfDirectoryList(storageDirectoryListHandle);
       break;
     case STORAGE_TYPE_WEBDAV:
       endOfDirectoryFlag = StorageWebDAV_endOfDirectoryList(storageDirectoryListHandle);
@@ -3863,14 +2663,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = File_readDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,fileName);
-      if (error == ERROR_NONE)
-      {
-        if (fileInfo != NULL)
-        {
-          (void)File_getFileInfo(fileName,fileInfo);
-        }
-      }
+      error = StorageFile_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);
@@ -3882,107 +2675,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       error = StorageSCP_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);
       break;
     case STORAGE_TYPE_SFTP:
-      #ifdef HAVE_SSH2
-        {
-          int n;
-
-          if (!storageDirectoryListHandle->sftp.entryReadFlag)
-          {
-            do
-            {
-              n = libssh2_sftp_readdir(storageDirectoryListHandle->sftp.sftpHandle,
-                                       storageDirectoryListHandle->sftp.buffer,
-                                       MAX_FILENAME_LENGTH,
-                                       &storageDirectoryListHandle->sftp.attributes
-                                      );
-              if      (n > 0)
-              {
-                if (   !S_ISDIR(storageDirectoryListHandle->sftp.attributes.flags)
-                    && ((n != 1) || (strncmp(storageDirectoryListHandle->sftp.buffer,".", 1) != 0))
-                    && ((n != 2) || (strncmp(storageDirectoryListHandle->sftp.buffer,"..",2) != 0))
-                   )
-                {
-                  storageDirectoryListHandle->sftp.entryReadFlag = TRUE;
-                  error = ERROR_NONE;
-                }
-              }
-              else
-              {
-                error = ERROR_(IO_ERROR,errno);
-              }
-            }
-            while (!storageDirectoryListHandle->sftp.entryReadFlag && (error == ERROR_NONE));
-          }
-          else
-          {
-            error = ERROR_NONE;
-          }
-
-          if (storageDirectoryListHandle->sftp.entryReadFlag)
-          {
-            String_set(fileName,storageDirectoryListHandle->sftp.pathName);
-            File_appendFileNameBuffer(fileName,storageDirectoryListHandle->sftp.buffer,storageDirectoryListHandle->sftp.bufferLength);
-
-            if (fileInfo != NULL)
-            {
-              if      (S_ISREG(storageDirectoryListHandle->sftp.attributes.permissions))
-              {
-                fileInfo->type        = FILE_TYPE_FILE;
-              }
-              else if (S_ISDIR(storageDirectoryListHandle->sftp.attributes.permissions))
-              {
-                fileInfo->type        = FILE_TYPE_DIRECTORY;
-              }
-              #ifdef HAVE_S_ISLNK
-              else if (S_ISLNK(storageDirectoryListHandle->sftp.attributes.permissions))
-              {
-                fileInfo->type        = FILE_TYPE_LINK;
-              }
-              #endif /* HAVE_S_ISLNK */
-              else if (S_ISCHR(storageDirectoryListHandle->sftp.attributes.permissions))
-              {
-                fileInfo->type        = FILE_TYPE_SPECIAL;
-                fileInfo->specialType = FILE_SPECIAL_TYPE_CHARACTER_DEVICE;
-              }
-              else if (S_ISBLK(storageDirectoryListHandle->sftp.attributes.permissions))
-              {
-                fileInfo->type        = FILE_TYPE_SPECIAL;
-                fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
-              }
-              else if (S_ISFIFO(storageDirectoryListHandle->sftp.attributes.permissions))
-              {
-                fileInfo->type        = FILE_TYPE_SPECIAL;
-                fileInfo->specialType = FILE_SPECIAL_TYPE_FIFO;
-              }
-              #ifdef HAVE_S_ISSOCK
-              else if (S_ISSOCK(storageDirectoryListHandle->sftp.attributes.permissions))
-              {
-                fileInfo->type        = FILE_TYPE_SPECIAL;
-                fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
-              }
-              #endif /* HAVE_S_ISSOCK */
-              else
-              {
-                fileInfo->type        = FILE_TYPE_UNKNOWN;
-              }
-              fileInfo->size            = storageDirectoryListHandle->sftp.attributes.filesize;
-              fileInfo->timeLastAccess  = storageDirectoryListHandle->sftp.attributes.atime;
-              fileInfo->timeModified    = storageDirectoryListHandle->sftp.attributes.mtime;
-              fileInfo->timeLastChanged = 0LL;
-              fileInfo->userId          = storageDirectoryListHandle->sftp.attributes.uid;
-              fileInfo->groupId         = storageDirectoryListHandle->sftp.attributes.gid;
-              fileInfo->permission      = storageDirectoryListHandle->sftp.attributes.permissions;
-              fileInfo->major           = 0;
-              fileInfo->minor           = 0;
-              memset(&fileInfo->cast,0,sizeof(FileCast));
-            }
-
-            storageDirectoryListHandle->sftp.entryReadFlag = FALSE;
-          }
-        }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = StorageSFTP_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);
       break;
     case STORAGE_TYPE_WEBDAV:
       error = StorageWebDAV_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);

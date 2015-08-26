@@ -3,7 +3,7 @@
 * $Revision: 4012 $
 * $Date: 2015-04-28 19:02:40 +0200 (Tue, 28 Apr 2015) $
 * $Author: torsten $
-* Contents: storage functions
+* Contents: storage optical functions
 * Systems: all
 *
 \***********************************************************************/
@@ -1129,19 +1129,11 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
   String directoryName;
 
   assert(storageHandle != NULL);
-  assert(archiveName != NULL);
   assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(!String_isEmpty(storageHandle->storageSpecifier.archiveName));
+  assert(archiveName != NULL);
 
   UNUSED_VARIABLE(archiveSize);
-
-  // init variables
-  storageHandle->mode = STORAGE_MODE_WRITE;
-
-  // check if archive name given
-  if (String_isEmpty(storageHandle->storageSpecifier.archiveName))
-  {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
-  }
 
   // create file name
   String_set(storageHandle->opticalDisk.write.fileName,storageHandle->opticalDisk.write.directory);
@@ -1187,16 +1179,6 @@ LOCAL Errors StorageOptical_open(StorageHandle *storageHandle, ConstString archi
   assert(storageHandle != NULL);
   assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
 
-  // init variables
-  storageHandle->mode = STORAGE_MODE_READ;
-
-  // get file name
-  if (archiveName == NULL) archiveName = storageHandle->storageSpecifier.archiveName;
-  if (String_isEmpty(archiveName))
-  {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
-  }
-
   #ifdef HAVE_ISO9660
     {
       // initialize variables
@@ -1240,11 +1222,11 @@ LOCAL Errors StorageOptical_open(StorageHandle *storageHandle, ConstString archi
 
       DEBUG_ADD_RESOURCE_TRACE("storage open cd/dvd/bd",&storageHandle->opticalDisk);
     }
+
+    return ERROR_NONE;
   #else /* not HAVE_ISO9660 */
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_ISO9660 */
-
-  return ERROR_NONE;
 }
 
 LOCAL void StorageOptical_close(StorageHandle *storageHandle)
@@ -1302,10 +1284,9 @@ LOCAL bool StorageOptical_eof(StorageHandle *storageHandle)
       return TRUE;
     }
   #else /* not HAVE_ISO9660 */
+    UNUSED_VARIABLE(storageHandle);
     return TRUE;
   #endif /* HAVE_ISO9660 */
-
-  return TRUE;
 }
 
 LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
@@ -1529,18 +1510,13 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
   assert(jobOptions != NULL);
 
-  #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && (!defined(HAVE_CURL) || !defined(HAVE_MXML))
-    UNUSED_VARIABLE(serverConnectionPriority);
-  #endif
-
   // initialize variables
   AutoFree_init(&autoFreeList);
   Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
   AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->storageSpecifier,{ Storage_doneSpecifier(&storageDirectoryListHandle->storageSpecifier); });
 
-  // open directory listing
-  error = ERROR_UNKNOWN;
   // init variables
+  error = ERROR_UNKNOWN;
   switch (storageDirectoryListHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_CD : storageDirectoryListHandle->type = STORAGE_TYPE_CD;  break;
@@ -1553,6 +1529,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
       break; /* not reached */
   }
 
+  // open directory listing
   #ifdef HAVE_ISO9660
     UNUSED_VARIABLE(jobOptions);
 
@@ -1639,6 +1616,8 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
     }
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.directoryListHandle,{ File_closeDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle); });
   #endif /* HAVE_ISO9660 */
+
+  AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
 }

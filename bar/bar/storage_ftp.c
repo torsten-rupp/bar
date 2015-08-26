@@ -3,7 +3,7 @@
 * $Revision: 4012 $
 * $Date: 2015-04-28 19:02:40 +0200 (Tue, 28 Apr 2015) $
 * $Author: torsten $
-* Contents: storage functions
+* Contents: storage FTP functions
 * Systems: all
 *
 \***********************************************************************/
@@ -1432,8 +1432,9 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageHandle != NULL);
-  assert(archiveName != NULL);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(!String_isEmpty(storageHandle->storageSpecifier.archiveName));
+  assert(archiveName != NULL);
 
   #if   defined(HAVE_CURL)
     // initialize variables
@@ -2056,9 +2057,8 @@ LOCAL bool StorageFTP_eof(StorageHandle *storageHandle)
       return TRUE;
     }
   #else /* not HAVE_CURL || HAVE_FTP */
-   UNUSED_VARIABLE(storageHandle);
-
-   return TRUE;
+    UNUSED_VARIABLE(storageHandle);
+    return TRUE;
   #endif /* HAVE_CURL || HAVE_FTP */
 }
 
@@ -2809,9 +2809,9 @@ LOCAL Errors StorageFTP_delete(StorageHandle *storageHandle,
                                 ConstString   storageFileName
                                )
 {
-  ConstString deleteFileName;
   Errors      error;
   #if   defined(HAVE_CURL)
+    ConstString       deleteFileName;
     CURL              *curlHandle;
     String            pathName,baseName;
     String            url;
@@ -2828,10 +2828,10 @@ LOCAL Errors StorageFTP_delete(StorageHandle *storageHandle,
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
-  deleteFileName = (storageFileName != NULL) ? storageFileName : storageHandle->storageSpecifier.archiveName;
-
   error = ERROR_UNKNOWN;
   #if   defined(HAVE_CURL)
+    deleteFileName = (storageFileName != NULL) ? storageFileName : storageHandle->storageSpecifier.archiveName;
+
     // open Curl handle
     curlHandle = curl_easy_init();
     if (curlHandle != NULL)
@@ -2904,6 +2904,8 @@ LOCAL Errors StorageFTP_delete(StorageHandle *storageHandle,
     }
   #elif defined(HAVE_FTP)
     assert(storageHandle->ftp.data != NULL);
+
+    deleteFileName = (storageFileName != NULL) ? storageFileName : storageHandle->storageSpecifier.archiveName;
 
     if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
     {

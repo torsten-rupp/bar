@@ -3,7 +3,7 @@
 * $Revision: 4012 $
 * $Date: 2015-04-28 19:02:40 +0200 (Tue, 28 Apr 2015) $
 * $Author: torsten $
-* Contents: storage functions
+* Contents: storage SCP functions
 * Systems: all
 *
 \***********************************************************************/
@@ -26,7 +26,6 @@
 #endif /* HAVE_MXML */
 #ifdef HAVE_SSH2
   #include <libssh2.h>
-  #include <libssh2_sftp.h>
 #endif /* HAVE_SSH2 */
 #include <signal.h>
 #include <errno.h>
@@ -156,24 +155,18 @@ LOCAL Errors StorageSCP_initAll(void)
 
   error = ERROR_NONE;
 
-  #ifdef HAVE_SSH2
-    defaultSSHPassword = Password_new();
-  #endif /* HAVE_SSH2 */
-
   return error;
 }
 
 LOCAL void StorageSCP_doneAll(void)
 {
-  #ifdef HAVE_SSH2
-    Password_delete(defaultSSHPassword);
-  #endif /* HAVE_SSH2 */
 }
 
 LOCAL bool StorageSCP_parseSpecifier(ConstString sshSpecifier,
                                      String      hostName,
                                      uint        *hostPort,
-                                     String      loginName
+                                     String      loginName,
+                                     Password    *loginPassword
                                     )
 {
   const char* LOGINNAME_MAP_FROM[] = {"\\@"};
@@ -189,6 +182,7 @@ LOCAL bool StorageSCP_parseSpecifier(ConstString sshSpecifier,
   String_clear(hostName);
   if (hostPort != NULL) (*hostPort) = 0;
   String_clear(loginName);
+  if (loginPassword != NULL) Password_clear(loginPassword);
 
   s = String_new();
   if      (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^:]+?):(\\d*)/{0,1}$",NULL,NULL,loginName,STRING_NO_ASSIGN,hostName,s,NULL))
@@ -240,9 +234,9 @@ LOCAL bool StorageSCP_equalNames(const StorageSpecifier *storageSpecifier1,
                                 )
 {
   assert(storageSpecifier1 != NULL);
-  assert(storageSpecifier1->type == STORAGE_TYPE_FTP);
+  assert(storageSpecifier1->type == STORAGE_TYPE_SCP);
   assert(storageSpecifier2 != NULL);
-  assert(storageSpecifier2->type == STORAGE_TYPE_FTP);
+  assert(storageSpecifier2->type == STORAGE_TYPE_SCP);
 
   return    String_equals(storageSpecifier1->hostName,storageSpecifier2->hostName)
          && String_equals(storageSpecifier1->loginName,storageSpecifier2->loginName)
@@ -434,7 +428,7 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
       }
       else
       {
-        error = !Password_isEmpty(defaultSSHPassword)
+        error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
                   ? ERRORX_(INVALID_SSH_PASSWORD,0,String_cString(storageHandle->storageSpecifier.hostName))
                   : ERRORX_(NO_SSH_PASSWORD,0,String_cString(storageHandle->storageSpecifier.hostName));
       }
@@ -466,6 +460,7 @@ LOCAL Errors StorageSCP_done(StorageHandle *storageHandle)
 
   // free SSH server connection
   #ifdef HAVE_SSH2
+fprintf(stderr,"%s, %d: ffffffffffffffff\n",__FILE__,__LINE__);
     freeServer(storageHandle->scp.server);
     free(storageHandle->scp.readAheadBuffer.data);
   #else /* not HAVE_SSH2 */
@@ -583,16 +578,6 @@ LOCAL Errors StorageSCP_postProcess(StorageHandle *storageHandle,
   return error;
 }
 
-LOCAL Errors StorageSCP_unloadVolume(StorageHandle *storageHandle)
-{
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_SCP);
-
-  UNUSED_VARIABLE(storageHandle);
-
-  return ERROR_NONE;
-}
-
 LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                                ConstString   archiveName,
                                uint64        archiveSize
@@ -602,18 +587,10 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(!String_isEmpty(storageHandle->storageSpecifier.archiveName));
   assert(archiveName != NULL);
 
   UNUSED_VARIABLE(archiveSize);
-
-  // init variables
-  storageHandle->mode = STORAGE_MODE_WRITE;
-
-  // check if archive name given
-  if (String_isEmpty(storageHandle->storageSpecifier.archiveName))
-  {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
-  }
 
   #ifdef HAVE_SSH2
     // connect
@@ -631,7 +608,7 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
     {
       return error;
     }
-    libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->sftp.socketHandle),READ_TIMEOUT);
+    libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->scp.socketHandle),READ_TIMEOUT);
 
     // install send/receive callback to track number of sent/received bytes
     storageHandle->scp.totalSentBytes     = 0LL;
@@ -747,11 +724,11 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle, ConstString archiveNa
     storageHandle->scp.size = (uint64)fileInfo.st_size;
 
     DEBUG_ADD_RESOURCE_TRACE("storage open scp",&storageHandle->scp);
+
+    return ERROR_NONE;
   #else /* not HAVE_SSH2 */
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
-
-  return ERROR_NONE;
 }
 
 LOCAL void StorageSCP_close(StorageHandle *storageHandle)
@@ -846,10 +823,9 @@ LOCAL bool StorageSCP_eof(StorageHandle *storageHandle)
       return TRUE;
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageHandle);
     return TRUE;
   #endif /* HAVE_SSH2 */
-
-  return TRUE;
 }
 
 LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,

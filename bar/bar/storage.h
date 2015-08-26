@@ -680,27 +680,6 @@ bool Storage_parseFTPSpecifier(ConstString ftpSpecifier,
                               );
 
 /***********************************************************************\
-* Name   : Storage_parseSCPSpecifier
-* Purpose: parse scp specifier:
-*            [<login name>@]<host name>[:<host port>]
-* Input  : sshSpecifier - ssh specifier string
-*          hostName     - host name variable (can be NULL)
-*          hostPort     - host port number variable (can be NULL)
-*          loginName    - login name variable (can be NULL)
-* Output : hostName     - host name (can be NULL)
-*          hostPort     - host port number (can be NULL)
-*          loginName    - login name (can be NULL)
-* Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
-* Notes  : -
-\***********************************************************************/
-
-bool Storage_parseSCPSpecifier(ConstString scpSpecifier,
-                               String      hostName,
-                               uint        *hostPort,
-                               String      loginName
-                              );
-
-/***********************************************************************\
 * Name   : Storage_parseSSHSpecifier
 * Purpose: parse ssh specifier:
 *            [<login name>@]<host name>[:<host port>]
@@ -708,9 +687,9 @@ bool Storage_parseSCPSpecifier(ConstString scpSpecifier,
 *          hostName     - host name variable (can be NULL)
 *          hostPort     - host port number variable (can be NULL)
 *          loginName    - login name variable (can be NULL)
-* Output : hostName     - host name (can be NULL)
-*          hostPort     - host port number (can be NULL)
-*          loginName    - login name (can be NULL)
+* Output : hostName  - host name (can be NULL)
+*          hostPort  - host port number (can be NULL)
+*          loginName - login name (can be NULL)
 * Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
@@ -720,6 +699,52 @@ bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
                                uint        *hostPort,
                                String      loginName
                               );
+
+/***********************************************************************\
+* Name   : Storage_parseSCPSpecifier
+* Purpose: parse scp specifier:
+*            [<login name>@]<host name>[:<host port>]
+* Input  : sshSpecifier - ssh specifier string
+*          hostName     - host name variable (can be NULL)
+*          hostPort     - host port number variable (can be NULL)
+*          loginName    - login name variable (can be NULL)
+* Output : hostName      - host name (can be NULL)
+*          hostPort      - host port number (can be NULL)
+*          loginName     - login name (can be NULL)
+*          loginPassword - login password
+* Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_parseSCPSpecifier(ConstString scpSpecifier,
+                               String      hostName,
+                               uint        *hostPort,
+                               String      loginName,
+                               Password    *loginPassword
+                              );
+
+/***********************************************************************\
+* Name   : Storage_parseSFTPSpecifier
+* Purpose: parse sftp specifier:
+*            [<login name>@]<host name>[:<host port>]
+* Input  : sftpSpecifier - ssh specifier string
+*          hostName      - host name variable (can be NULL)
+*          hostPort      - host port number variable (can be NULL)
+*          loginName     - login name variable (can be NULL)
+* Output : hostName      - host name (can be NULL)
+*          hostPort      - host port number (can be NULL)
+*          loginName     - login name (can be NULL)
+*          loginPassword - login password
+* Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_parseSFTPSpecifier(ConstString sftpSpecifier,
+                                String      hostName,
+                                uint        *hostPort,
+                                String      loginName,
+                                Password    *loginPassword
+                               );
 
 /***********************************************************************\
 * Name   : Storage_parseWebDAVSpecifier
