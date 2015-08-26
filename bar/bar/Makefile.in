@@ -387,6 +387,7 @@ OTHER_SOURCES        = forward.h \
                        filesystems_fat.c \
                        filesystems_reiserfs.c \
                        \
+                       storage_file.c \
                        storage_ftp.c \
                        storage_scp.c \
                        storage_sftp.c \
