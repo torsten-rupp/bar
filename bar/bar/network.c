@@ -440,6 +440,12 @@ Errors Network_connect(SocketHandle *socketHandle,
           return ERRORX_(HOST_NOT_FOUND,0,String_cString(hostName));
         }
 
+        // check login name
+        if (String_isEmpty(loginName))
+        {
+          return ERROR_NO_LOGIN_NAME;
+        }
+
         // connect
         socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
         if (socketHandle->handle == -1)
@@ -458,13 +464,6 @@ Errors Network_connect(SocketHandle *socketHandle,
           error = ERROR_(CONNECT_FAIL,errno);
           close(socketHandle->handle);
           return error;
-        }
-
-        // check login name
-        if (String_isEmpty(loginName))
-        {
-          close(socketHandle->handle);
-          return ERROR_NO_LOGIN_NAME;
         }
 
         // init session
@@ -519,7 +518,15 @@ Errors Network_connect(SocketHandle *socketHandle,
                                                ) != 0)
         {
           ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
-          error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,ssh2ErrorText);
+          // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
+          if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
+          {
+            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"Unable to initialize private key from file");
+          }
+          else
+          {
+            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,ssh2ErrorText);
+          }
           Password_undeploy(password);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
@@ -536,7 +543,15 @@ Errors Network_connect(SocketHandle *socketHandle,
            )
         {
           ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
-          error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,ssh2ErrorText);
+          // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
+          if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
+          {
+            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"Unable to initialize private key");
+          }
+          else
+          {
+            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,ssh2ErrorText);
+          }
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
           close(socketHandle->handle);
