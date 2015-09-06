@@ -28,6 +28,15 @@
 /* backtrace() available */
 #undef HAVE_BACKTRACE
 
+/* backtrace_symbols() available */
+#undef HAVE_BACKTRACE_SYMBOLS
+
+/* Define to 1 if you have the <bfd.h> header file. */
+#undef HAVE_BFD_H
+
+/* bfd_init() available */
+#undef HAVE_BFD_INIT
+
 /* bindtextdomain() available */
 #undef HAVE_BINDTEXTDOMAIN
 
@@ -493,8 +502,8 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* The size of `ulong', as computed by sizeof. */
-#undef SIZEOF_ULONG
+/* The size of `unsigned long', as computed by sizeof. */
+#undef SIZEOF_UNSIGNED_LONG
 
 /* The size of `void *', as computed by sizeof. */
 #undef SIZEOF_VOID_P

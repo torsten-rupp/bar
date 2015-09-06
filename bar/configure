@@ -694,6 +694,7 @@ HAVE_LZ4
 HAVE_LZO
 HAVE_LZMA
 HAVE_BZ2
+ENABLE_EPM
 ENABLE_GUI_I18N
 ENABLE_GUI
 ENABLE_ISO9660
@@ -789,6 +790,7 @@ enable_iso9660
 enable_crashdump
 enable_gui
 enable_gui_i18n
+enable_epm
 enable_package_compile
 enable_package_check
 '
@@ -1434,6 +1436,7 @@ Optional Features:
   --disable-crashdump     disable crash dump support
   --disable-gui           disable GUI support (barcontrol)
   --disable-gui-i18n      disable GUI localization support (barcontrol)
+  --disable-epm           disable EPM support
   --disable-package-compile
                           disable compilation of external packages
   --enable-package-check  enable check packages
@@ -2569,6 +2572,7 @@ ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
+ENABLE_EPM="yes"
 ENABLE_PACKAGE_COMPILE="yes"
 
 # error log
@@ -2762,6 +2766,12 @@ fi
 # Check whether --enable-gui-i18n was given.
 if test "${enable_gui_i18n+set}" = set; then :
   enableval=$enable_gui_i18n; ENABLE_GUI_I18N=$enableval
+
+fi
+
+# Check whether --enable-epm was given.
+if test "${enable_epm+set}" = set; then :
+  enableval=$enable_epm; ENABLE_EPM=$enableval
 
 fi
 
@@ -3511,66 +3521,67 @@ fi
 done
 
 
-if test -d epm -o -d "`readlink epm`"; then
-  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+if test $ENABLE_EPM = "yes"; then
+  if test -d epm -o -d "`readlink epm`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
-    cwd=`pwd`
+      cwd=`pwd`
 
 
   $as_echo_n "compile epm... " >&6
 
-    result=1
-    if test $result -eq 1; then
-      (cd epm; ./configure \
-        --prefix=$cwd/packages \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+      result=1
+      if test $result -eq 1; then
+        (cd epm; ./configure \
+          --prefix=$cwd/packages \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
 
   echo --- error log -------------------------------------------------------------------------
   cat $tmpFile | while read s; do echo "  $s"; done
   echo ---------------------------------------------------------------------------------------
 
-        result=0
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd epm; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+      if test $result -eq 1; then
+        (cd epm; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
 
   echo --- error log -------------------------------------------------------------------------
   cat $tmpFile | while read s; do echo "  $s"; done
   echo ---------------------------------------------------------------------------------------
 
-        result=0
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd epm; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+      if test $result -eq 1; then
+        (cd epm; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
 
   echo --- error log -------------------------------------------------------------------------
   cat $tmpFile | while read s; do echo "  $s"; done
   echo ---------------------------------------------------------------------------------------
 
-        result=0
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
 $as_echo "done" >&6; }
+      fi
     fi
-  fi
 
-  EPM=$cwd/packages/bin/epm
+    EPM=$cwd/packages/bin/epm
 
-else
-  for ac_prog in epm
+  else
+    for ac_prog in epm
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -3615,6 +3626,7 @@ fi
   test -n "$EPM" && break
 done
 
+  fi
 fi
 if test -n "$EPM"; then
 
@@ -6459,6 +6471,64 @@ else
   as_fn_error $? "pthread library not found" "$LINENO" 5
 fi
 
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing bfd_init" >&5
+$as_echo_n "checking for library containing bfd_init... " >&6; }
+if ${ac_cv_search_libraries_bfd_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in bfd ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void bfd_init();"; fi`
+                                         return (int)bfd_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_bfd_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_bfd_init+:} false; then :
+
+else
+  ac_cv_search_libraries_bfd_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_bfd_init" >&5
+$as_echo "$ac_cv_search_libraries_bfd_init" >&6; }
+  ac_result=$ac_cv_search_libraries_bfd_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES bfd"
+fi
+
     ;;
   mingw*)
 
@@ -7173,12 +7243,11 @@ if test $ENABLE_LZMA = "yes"; then
             # patch to disable usage of lib-command when RANLIB is set
             # patch created with:
             #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
-            if test -d packages/xz-5.0.4; then
-              (cd packages/xz-5.0.4; patch --batch -N -p1 <$cwd/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
-            else
-              { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: xz-5.0.4 not available - skipped libtool patch!" >&5
-$as_echo "$as_me: WARNING: xz-5.0.4 not available - skipped libtool patch!" >&2;}
-            fi
+#            if test -d packages/xz-5.0.4; then
+#              (cd packages/xz-5.0.4; patch --batch -N -p1 <$cwd/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([xz-5.0.4 not available - skipped libtool patch!])
+#            fi
             ;;
           *)
             ;;
@@ -7986,7 +8055,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       if test $result1 -eq 1; then
         (cd libgpg-error; ./configure \
           --prefix=$cwd/packages \
-          --disable-shared \
+          --enable-shared \
           --enable-static \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
@@ -8043,12 +8112,11 @@ $as_echo "done" >&6; }
             #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
             #   diff -u libgcrypt-1.5.0.org/aclocal.m4 libgcrypt-1.5.0/aclocal.m4       >> libgcrypt-1.5.0-libtool.patch
             #   diff -u libgcrypt-1.5.0.org/configure libgcrypt-1.5.0/configure         >> libgcrypt-1.5.0-libtool.patch
-            if test -d packages/libgcrypt-1.5.0; then
-              (cd packages/libgcrypt-1.5.0; patch --batch -N -p1 <$cwd/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
-            else
-              { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libgcrypt-1.5.0 not available - skipped libtool patch!" >&5
-$as_echo "$as_me: WARNING: libgcrypt-1.5.0 not available - skipped libtool patch!" >&2;}
-            fi
+#            if test -d packages/libgcrypt-1.5.0; then
+#              (cd packages/libgcrypt-1.5.0; patch --batch -N -p1 <$cwd/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([libgcrypt-1.5.0 not available - skipped libtool patch!])
+#            fi
             ;;
           *)
             ;;
@@ -8060,7 +8128,7 @@ $as_echo "$as_me: WARNING: libgcrypt-1.5.0 not available - skipped libtool patch
           --prefix=$cwd/packages \
           --with-gpg-error-prefix=$cwd/packages \
           --enable-maintainer-mode \
-          --disable-shared \
+          --enable-shared \
           --enable-static \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
         ) 1>$tmpFile 2>&1
@@ -8076,7 +8144,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result2 -eq 1; then
-        (cd libgcrypt; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd libgcrypt; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -8575,7 +8643,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result1 -eq 1; then
-        (cd gmp; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd gmp; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -8629,7 +8697,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result2 -eq 1; then
-        (cd nettle; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd nettle; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -8687,7 +8755,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result3 -eq 1; then
-        (cd gnutls; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd gnutls; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -9200,7 +9268,7 @@ $as_echo "fail (configure)" >&6; }
       fi
       if test $result -eq 1; then
         # Note: OpenSSL does not support "make -j..."
-        (cd openssl; make clean; make) 1>$tmpFile 2>&1
+        (cd openssl; make clean; make `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -9257,12 +9325,11 @@ $as_echo "#define HAVE_SSL 1" >>confdefs.h
             #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
             #   diff -u libssh2-1.4.2.org/aclocal.m4 libssh2-1.4.2/aclocal.m4       >> libssh2-1.4.2-libtool.patch
             #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
-            if test -d packages/libssh2-1.4.2; then
-              (cd packages/libssh2-1.4.2; patch --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
-            else
-              { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libssh2-1.4.2 not available - skipped libtool patch!" >&5
-$as_echo "$as_me: WARNING: libssh2-1.4.2 not available - skipped libtool patch!" >&2;}
-            fi
+#            if test -d packages/libssh2-1.4.2; then
+#              (cd packages/libssh2-1.4.2; patch --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
+#            fi
             ;;
           *)
             ;;
@@ -9289,7 +9356,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd libssh2; make clean; make -C src) 1>$tmpFile 2>&1
+        (cd libssh2; make clean; make -C src `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -9841,12 +9908,11 @@ $as_echo "done" >&6; }
             #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
-            if test -d packages/curl-7.28.1; then
-              (cd packages/curl-7.28.1; patch --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
-            else
-              { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: curl-7.28.1 not available - skipped libtool patch!" >&5
-$as_echo "$as_me: WARNING: curl-7.28.1 not available - skipped libtool patch!" >&2;}
-            fi
+#            if test -d packages/curl-7.28.1; then
+#              (cd packages/curl-7.28.1; patch --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
+#            fi
             ;;
           *)
             ;;
@@ -11338,12 +11404,11 @@ if test $ENABLE_PCRE = "yes"; then
             #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
             #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
             #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
-            if test -d packages/pcre-8.32; then
-              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
-            else
-              { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pcre-8.32 not available - skipped libtool patch!" >&5
-$as_echo "$as_me: WARNING: pcre-8.32 not available - skipped libtool patch!" >&2;}
-            fi
+#            if test -d packages/pcre-8.32; then
+#              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
+#            fi
             ;;
           *)
             ;;
@@ -11369,7 +11434,9 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd pcre; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+#????
+        (echo $LIBTOOL; cd pcre; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`)
+# 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -11728,7 +11795,7 @@ $as_echo "fail (install)" >&6; }
         fi
 
         # fix broken install of breakpad: does not install all header files?
-set -x
+#set -x
         install -d $cwd/packages/include/breakpad
         install -d $cwd/packages/include/breakpad/google_breakpad/processor
         install breakpad/src/google_breakpad/processor/*.h $cwd/packages/include/breakpad/google_breakpad/processor
@@ -11741,7 +11808,7 @@ set -x
         install breakpad/src/third_party/libdisasm/libdisasm.a $cwd/packages/lib
 # 1>$tmpFile 2>&1
 find $cwd/packages/include/breakpad -type f -name '*.h'
-set +x
+#set +x
       fi
       if test $result -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
@@ -12578,6 +12645,7 @@ done
 
 for ac_header in \
                  arpa/inet.h \
+                 bfd.h \
                  grp.h \
                  libintl.h \
                  linux/fs.h \
@@ -17263,6 +17331,56 @@ fi
 
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for backtrace_symbols" >&5
+$as_echo_n "checking for backtrace_symbols... " >&6; }
+if ${ac_cv_func_backtrace_symbols+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_backtrace_symbols="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void backtrace_symbols();"; fi`
+                                         #ifdef backtrace_symbols
+                                         #else
+                                           return (int)backtrace_symbols;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_backtrace_symbols=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_backtrace_symbols" >&5
+$as_echo "$ac_cv_func_backtrace_symbols" >&6; }
+  if test "$ac_cv_func_backtrace_symbols" != no; then :
+
+$as_echo "#define HAVE_BACKTRACE_SYMBOLS 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for setlocale" >&5
 $as_echo_n "checking for setlocale... " >&6; }
@@ -17457,6 +17575,57 @@ $as_echo "$ac_cv_func_gettext" >&6; }
   if test "$ac_cv_func_gettext" != no; then :
 
 $as_echo "#define HAVE_GETTEXT 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for bfd_init" >&5
+$as_echo_n "checking for bfd_init... " >&6; }
+if ${ac_cv_func_bfd_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_bfd_init="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void bfd_init();"; fi`
+                                         #ifdef bfd_init
+                                         #else
+                                           return (int)bfd_init;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_bfd_init=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_bfd_init" >&5
+$as_echo "$ac_cv_func_bfd_init" >&6; }
+  if test "$ac_cv_func_bfd_init" != no; then :
+
+$as_echo "#define HAVE_BFD_INIT 1" >>confdefs.h
 
 elif :; then :
 

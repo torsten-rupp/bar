@@ -593,6 +593,7 @@ AC_SUBST(ENABLE_TLS)                        dnl "yes" for tls support, "no" othe
 AC_SUBST(ENABLE_ISO9660)                    dnl "yes" for iso9660 support, "no" otherwise
 AC_SUBST(ENABLE_GUI)                        dnl "yes" for GUI support, "no" otherwise
 AC_SUBST(ENABLE_GUI_I18N)                   dnl "yes" for GUI i18n support, "no" otherwise
+AC_SUBST(ENABLE_EPM)                        dnl "yes" for EPM support, "no" otherwise
 
 AC_SUBST(HAVE_BZ2)                          dnl "1" for bzip2 support, "" otherwise
 AC_SUBST(HAVE_LZMA)                         dnl "1" for lzma support, "" otherwise
@@ -725,6 +726,7 @@ ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
+ENABLE_EPM="yes"
 ENABLE_PACKAGE_COMPILE="yes"
 
 # error log
@@ -902,6 +904,11 @@ AC_ARG_ENABLE(
   [ENABLE_GUI_I18N=$enableval]
 )
 AC_ARG_ENABLE(
+  epm,
+  AC_HELP_STRING([--disable-epm],[disable EPM support]),
+  [ENABLE_EPM=$enableval]
+)
+AC_ARG_ENABLE(
   package-compile,
   AC_HELP_STRING([--disable-package-compile],[disable compilation of external packages]),
   [ENABLE_PACKAGE_COMPILE=$enableval]
@@ -979,49 +986,51 @@ fi
 
 AC_PATH_PROGS(SVNVERSION,svnversion)
 
-if test -d epm -o -d "`readlink epm`"; then
-  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-    dnl compile epm
+if test $ENABLE_EPM = "yes"; then
+  if test -d epm -o -d "`readlink epm`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile epm
 
-    cwd=`pwd`
+      cwd=`pwd`
 
-    AC_MSG_COMPILE([epm])
-    result=1
-    if test $result -eq 1; then
-      (cd epm; ./configure \
-        --prefix=$cwd/packages \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
+      AC_MSG_COMPILE([epm])
+      result=1
+      if test $result -eq 1; then
+        (cd epm; ./configure \
+          --prefix=$cwd/packages \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd epm; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd epm; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
       fi
     fi
-    if test $result -eq 1; then
-      (cd epm; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd epm; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
-    fi
+
+    EPM=$cwd/packages/bin/epm
+    AC_PROVIDE(AC_PROG_EPM)
+  else
+    AC_PATH_PROGS(EPM,epm)
   fi
-
-  EPM=$cwd/packages/bin/epm
-  AC_PROVIDE(AC_PROG_EPM)
-else
-  AC_PATH_PROGS(EPM,epm)
 fi
 if test -n "$EPM"; then
   AC_PROG_EPM_VERSION
@@ -1180,6 +1189,7 @@ case $host_os in
     AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
+    AC_SEARCH_LIBRARIES(bfd_init,bfd,[LIBRARIES="$LIBRARIES bfd"])
     ;;
   mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
@@ -1352,11 +1362,11 @@ if test $ENABLE_LZMA = "yes"; then
             # patch to disable usage of lib-command when RANLIB is set
             # patch created with:
             #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
-            if test -d packages/xz-5.0.4; then
-              (cd packages/xz-5.0.4; patch --batch -N -p1 <$cwd/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
-            else
-              AC_MSG_WARN([xz-5.0.4 not available - skipped libtool patch!])
-            fi
+#            if test -d packages/xz-5.0.4; then
+#              (cd packages/xz-5.0.4; patch --batch -N -p1 <$cwd/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([xz-5.0.4 not available - skipped libtool patch!])
+#            fi
             ;;
           *)
             ;;
@@ -1571,7 +1581,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       if test $result1 -eq 1; then
         (cd libgpg-error; ./configure \
           --prefix=$cwd/packages \
-          --disable-shared \
+          --enable-shared \
           --enable-static \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
@@ -1610,11 +1620,11 @@ if test $ENABLE_GCRYPT = "yes"; then
             #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
             #   diff -u libgcrypt-1.5.0.org/aclocal.m4 libgcrypt-1.5.0/aclocal.m4       >> libgcrypt-1.5.0-libtool.patch
             #   diff -u libgcrypt-1.5.0.org/configure libgcrypt-1.5.0/configure         >> libgcrypt-1.5.0-libtool.patch
-            if test -d packages/libgcrypt-1.5.0; then
-              (cd packages/libgcrypt-1.5.0; patch --batch -N -p1 <$cwd/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
-            else
-              AC_MSG_WARN([libgcrypt-1.5.0 not available - skipped libtool patch!])
-            fi
+#            if test -d packages/libgcrypt-1.5.0; then
+#              (cd packages/libgcrypt-1.5.0; patch --batch -N -p1 <$cwd/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([libgcrypt-1.5.0 not available - skipped libtool patch!])
+#            fi
             ;;
           *)
             ;;
@@ -1626,7 +1636,7 @@ if test $ENABLE_GCRYPT = "yes"; then
           --prefix=$cwd/packages \
           --with-gpg-error-prefix=$cwd/packages \
           --enable-maintainer-mode \
-          --disable-shared \
+          --enable-shared \
           --enable-static \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
         ) 1>$tmpFile 2>&1
@@ -1637,7 +1647,7 @@ if test $ENABLE_GCRYPT = "yes"; then
         fi
       fi
       if test $result2 -eq 1; then
-        (cd libgcrypt; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd libgcrypt; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1753,7 +1763,7 @@ if test $ENABLE_TLS = "yes"; then
         fi
       fi
       if test $result1 -eq 1; then
-        (cd gmp; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd gmp; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1789,7 +1799,7 @@ if test $ENABLE_TLS = "yes"; then
         fi
       fi
       if test $result2 -eq 1; then
-        (cd nettle; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd nettle; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1829,7 +1839,7 @@ if test $ENABLE_TLS = "yes"; then
         fi
       fi
       if test $result3 -eq 1; then
-        (cd gnutls; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd gnutls; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1944,7 +1954,7 @@ if test $ENABLE_SSH = "yes"; then
       fi
       if test $result -eq 1; then
         # Note: OpenSSL does not support "make -j..."
-        (cd openssl; make clean; make) 1>$tmpFile 2>&1
+        (cd openssl; make clean; make `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1987,11 +1997,11 @@ if test $ENABLE_SSH = "yes"; then
             #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
             #   diff -u libssh2-1.4.2.org/aclocal.m4 libssh2-1.4.2/aclocal.m4       >> libssh2-1.4.2-libtool.patch
             #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
-            if test -d packages/libssh2-1.4.2; then
-              (cd packages/libssh2-1.4.2; patch --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
-            else
-              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
-            fi
+#            if test -d packages/libssh2-1.4.2; then
+#              (cd packages/libssh2-1.4.2; patch --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
+#            fi
             ;;
           *)
             ;;
@@ -2013,7 +2023,7 @@ if test $ENABLE_SSH = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd libssh2; make clean; make -C src) 1>$tmpFile 2>&1
+        (cd libssh2; make clean; make -C src `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2171,11 +2181,11 @@ if test $ENABLE_CURL = "yes"; then
             #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
-            if test -d packages/curl-7.28.1; then
-              (cd packages/curl-7.28.1; patch --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
-            else
-              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
-            fi
+#            if test -d packages/curl-7.28.1; then
+#              (cd packages/curl-7.28.1; patch --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
+#            fi
             ;;
           *)
             ;;
@@ -2558,11 +2568,11 @@ if test $ENABLE_PCRE = "yes"; then
             #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
             #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
             #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
-            if test -d packages/pcre-8.32; then
-              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
-            else
-              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
-            fi
+#            if test -d packages/pcre-8.32; then
+#              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
+#            fi
             ;;
           *)
             ;;
@@ -2583,7 +2593,9 @@ if test $ENABLE_PCRE = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd pcre; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+#????
+        (echo $LIBTOOL; cd pcre; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`)
+# 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2725,7 +2737,7 @@ if test $ENABLE_BREAKPAD = "yes"; then
         fi
 
         # fix broken install of breakpad: does not install all header files?
-set -x
+#set -x
         install -d $cwd/packages/include/breakpad
         install -d $cwd/packages/include/breakpad/google_breakpad/processor
         install breakpad/src/google_breakpad/processor/*.h $cwd/packages/include/breakpad/google_breakpad/processor
@@ -2738,7 +2750,7 @@ set -x
         install breakpad/src/third_party/libdisasm/libdisasm.a $cwd/packages/lib
 # 1>$tmpFile 2>&1
 find $cwd/packages/include/breakpad -type f -name '*.h'
-set +x
+#set +x
       fi
       if test $result -eq 1; then
         AC_MSG_RESULT([done])
@@ -2815,6 +2827,7 @@ AC_SET_TOOLCHAIN_SETTINGS($CC_FLAGS,
 # headers
 AC_CHECK_HEADERS(\
                  arpa/inet.h \
+                 bfd.h \
                  grp.h \
                  libintl.h \
                  linux/fs.h \
@@ -2996,13 +3009,16 @@ AC_CHECK_FUNCTION(iso9660_iso_seek_read,     AC_DEFINE(HAVE_ISO9660_ISO_SEEK_REA
 AC_CHECK_FUNCTION(uuid_generate,     AC_DEFINE(HAVE_UUID_GENERATE,     1,[uuid_generate() available]))
 AC_CHECK_FUNCTION(uuid_unparse_lower,AC_DEFINE(HAVE_UUID_UNPARSE_LOWER,1,[uuid_unparse_lower() available]))
 
-AC_CHECK_FUNCTION(sysconf,  AC_DEFINE(HAVE_SYSCONF,  1,[sysconf() available]))
-AC_CHECK_FUNCTION(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]))
+AC_CHECK_FUNCTION(sysconf,          AC_DEFINE(HAVE_SYSCONF,          1,[sysconf() available]))
+AC_CHECK_FUNCTION(backtrace,        AC_DEFINE(HAVE_BACKTRACE,        1,[backtrace() available]))
+AC_CHECK_FUNCTION(backtrace_symbols,AC_DEFINE(HAVE_BACKTRACE_SYMBOLS,1,[backtrace_symbols() available]))
 
 AC_CHECK_FUNCTION(setlocale,     AC_DEFINE(HAVE_SETLOCALE,     1,[setlocale() available]))
 AC_CHECK_FUNCTION(textdomain,    AC_DEFINE(HAVE_TEXTDOMAIN,    1,[textdomain() available]))
 AC_CHECK_FUNCTION(bindtextdomain,AC_DEFINE(HAVE_BINDTEXTDOMAIN,1,[bindtextdomain() available]))
 AC_CHECK_FUNCTION(gettext,       AC_DEFINE(HAVE_GETTEXT,       1,[gettext() available]))
+
+AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,      1,[bfd_init() available]))
 
 if test "$HAVE_SSH2"; then
   AC_CHECK_FUNCTION(CRYPTO_set_id_callback,     ,AC_ERROR([CRYPTO_set_id_callback() required for SSH2]),openssl/crypto.h)
