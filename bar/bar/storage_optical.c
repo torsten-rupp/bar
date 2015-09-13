@@ -23,7 +23,6 @@
   #include <cdio/iso9660.h>
   #include <cdio/logging.h>
 #endif /* HAVE_ISO9660 */
-#include <signal.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -1512,8 +1511,6 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
 
   // initialize variables
   AutoFree_init(&autoFreeList);
-  Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
-  AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->storageSpecifier,{ Storage_doneSpecifier(&storageDirectoryListHandle->storageSpecifier); });
 
   // init variables
   error = ERROR_UNKNOWN;
