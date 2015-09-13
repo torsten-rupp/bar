@@ -26,7 +26,6 @@
   #include <libssh2.h>
   #include <libssh2_sftp.h>
 #endif /* HAVE_SSH2 */
-#include <signal.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -1385,8 +1384,6 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
 
   // initialize variables
   AutoFree_init(&autoFreeList);
-  Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
-  AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->storageSpecifier,{ Storage_doneSpecifier(&storageDirectoryListHandle->storageSpecifier); });
 
   // open directory listing
   error = ERROR_UNKNOWN;
