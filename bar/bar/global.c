@@ -797,9 +797,9 @@ void debugDumpCurrentStackTrace(FILE *handle, const char *title, uint indent)
 
     free(currentStackTrace);
   #else /* not defined(HAVE_BACKTRACE) */
-    for (i = 0; i < indent; i++) fputcf(' ',handle);
+    for (i = 0; i < indent; i++) fputc(' ',handle);
     fprintf(handle,"%s\n",title);
-    for (i = 0; i < indent; i++) fputcf(' ',handle);
+    for (i = 0; i < indent; i++) fputc(' ',handle);
     fprintf(handle,"  not available\n");
   #endif /* defined(HAVE_BACKTRACE) */
 }
