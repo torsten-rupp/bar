@@ -6181,6 +6181,7 @@ UNUSED_VARIABLE(value);
       if (!File_isDirectory(name))
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
+        Semaphore_unlock(&jobList.lock);
         String_delete(value);
         String_delete(name);
         String_delete(attribute);
@@ -6315,6 +6316,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, uint id, con
       if (!File_isDirectory(name))
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
+        Semaphore_unlock(&jobList.lock);
         String_delete(name);
         String_delete(attribute);
         return;
@@ -13719,7 +13721,6 @@ Errors Server_run(uint             port,
     {
       FD_ZERO(&selectSet);
     }
-    assert(n >= 0);
 
     // connect new clients
     if (serverFlag && FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet))
