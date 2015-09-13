@@ -2487,8 +2487,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
                                  ServerConnectionPriorities serverConnectionPriority
                                 )
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
+  Errors error;
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
@@ -2499,9 +2498,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   #endif
 
   // initialize variables
-  AutoFree_init(&autoFreeList);
   Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
-  AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->storageSpecifier,{ Storage_doneSpecifier(&storageDirectoryListHandle->storageSpecifier); });
 
   // open directory listing
   error = ERROR_UNKNOWN;
@@ -2547,9 +2544,13 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* NDEBUG */
       break;
   }
-  AutoFree_done(&autoFreeList);
+  if (error != ERROR_NONE)
+  {
+    Storage_doneSpecifier(&storageDirectoryListHandle->storageSpecifier);
+    return error;
+  }
 
-  return error;
+  return ERROR_NONE;
 }
 
 void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
