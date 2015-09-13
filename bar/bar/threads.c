@@ -19,6 +19,7 @@
 #include <semaphore.h>
 #include <limits.h>
 #include <unistd.h>
+#include <signal.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -33,6 +34,9 @@
 #define THREAD_LOCAL_STOAGE_HASHTABLE_SIZE      15
 #define THREAD_LOCAL_STOAGE_HASHTABLE_INCREMENT 16
 
+#ifndef NDEBUG
+#endif /* NDEBUG */
+
 /***************************** Datatypes *******************************/
 typedef struct
 {
@@ -44,6 +48,24 @@ typedef struct
 } ThreadStartInfo;
 
 /***************************** Variables *******************************/
+#ifndef NDEBUG
+  typedef struct
+  {
+    sem_t lock;
+    void  *(*startCode)(void*);
+    void  *argument;
+  } StackTraceThreadStartInfo;
+
+
+  LOCAL struct sigaction debugSignalQuitPrevHandler;
+  LOCAL pthread_once_t   debugStackTraceInitFlag    = PTHREAD_ONCE_INIT;
+  LOCAL pthread_mutex_t  debugStackTraceLock        = PTHREAD_MUTEX_INITIALIZER;
+  LOCAL pthread_cond_t   debugStackTraceDone        = PTHREAD_COND_INITIALIZER;
+  LOCAL bool             debugStackTraceRun = false;
+  LOCAL pthread_t        debugStackTraceThreadIds[256];
+  LOCAL uint             debugStackTraceThreadIdCount = 0;
+  LOCAL uint             debugStackTraceThreadIndex;
+#endif /* NDEBUG */
 
 /****************************** Macros *********************************/
 
@@ -56,6 +78,235 @@ typedef struct
 #endif
 
 // ----------------------------------------------------------------------
+
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : debugStackTraceAddThread
+* Purpose: add thread for stack trace
+* Input  : threadId - thread id
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugStackTraceAddThread(pthread_t threadId)
+{
+  assert(debugStackTraceThreadIdCount < SIZE_OF_ARRAY(debugStackTraceThreadIds));
+
+  debugStackTraceThreadIds[debugStackTraceThreadIdCount] = threadId;
+  debugStackTraceThreadIdCount++;
+}
+
+/***********************************************************************\
+* Name   : debugStackTraceRemoveThread
+* Purpose: remove thread from stack trace
+* Input  : threadId - thread id
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugStackTraceRemoveThread(pthread_t threadId)
+{
+  uint i;
+
+  assert(debugStackTraceThreadIdCount > 0);
+
+  i = 0;
+  while ((i < debugStackTraceThreadIdCount) && pthread_equal(debugStackTraceThreadIds[i],threadId) == 0)
+  {
+    i++;
+  }
+  if (i < debugStackTraceThreadIdCount)
+  {
+    memmove(&debugStackTraceThreadIds[i+0],
+            &debugStackTraceThreadIds[i+1],
+            (debugStackTraceThreadIdCount-i-1)*sizeof(pthread_t)
+           );
+    debugStackTraceThreadIdCount--;
+  }
+}
+
+LOCAL void debugStackTraceWrapStartCode(void *userData)
+{
+  StackTraceThreadStartInfo *stackTraceThreadStartInfo = (StackTraceThreadStartInfo*)userData;
+  void                      *(*startCode)(void*);
+  void                      *argument;
+  pthread_t                 threadId;
+
+  assert(stackTraceThreadStartInfo != NULL);
+  assert(stackTraceThreadStartInfo->startCode != NULL);
+
+  // get copy of start data, pthread id
+  startCode = stackTraceThreadStartInfo->startCode;
+  argument  = stackTraceThreadStartInfo->argument;
+  threadId  = pthread_self();
+
+  // add thread
+  pthread_mutex_lock(&debugStackTraceLock);
+  {
+    debugStackTraceAddThread(threadId);
+  }
+  pthread_mutex_unlock(&debugStackTraceLock);
+
+  // signal thread start done
+  sem_post(&stackTraceThreadStartInfo->lock);
+
+  // run thread code
+  startCode(argument);
+
+  // remove thread
+  pthread_mutex_lock(&debugStackTraceLock);
+  {
+    debugStackTraceRemoveThread(threadId);
+  }
+  pthread_mutex_unlock(&debugStackTraceLock);
+}
+
+/***********************************************************************\
+* Name   : __wrap_pthread_create
+* Purpose: wrapper function for pthread_create
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+int __wrap_pthread_create(pthread_t *thread,
+                          const     pthread_attr_t *attr,
+                          void      *(*startCode)(void*),
+                          void      *argument
+                         );
+int __wrap_pthread_create(pthread_t *thread,
+                                const     pthread_attr_t *attr,
+                                void      *(*startCode)(void*),
+                                void      *argument
+                               )
+{
+  // real pthread_create()
+  extern int __real_pthread_create(pthread_t *thread,
+                                   const     pthread_attr_t *attr,
+                                   void      *(*startCode)(void*),
+                                   void      *argument
+                                  ) __attribute((weak));
+  StackTraceThreadStartInfo stackTraceThreadStartInfo;
+  int                       result;
+
+  assert(__real_pthread_create != NULL);
+  assert(thread != NULL);
+  assert(startCode != NULL);
+
+  // init thread
+  sem_init(&stackTraceThreadStartInfo.lock,0,0);
+  stackTraceThreadStartInfo.startCode = startCode;
+  stackTraceThreadStartInfo.argument  = argument;
+  result = __real_pthread_create(thread,attr,debugStackTraceWrapStartCode,&stackTraceThreadStartInfo);
+  if (result == 0)
+  {
+    // wait until thread started
+    sem_wait(&stackTraceThreadStartInfo.lock);
+  }
+
+  // free resources
+  sem_destroy(&stackTraceThreadStartInfo.lock);
+
+  return result;
+}
+
+/***********************************************************************\
+* Name   : debugSignalQuitHandler
+* Purpose: signal-quit handler to print stack trace
+* Input  : signalNumber - signal number
+*          siginfo      - signal info
+*          context      - context variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugSignalQuitHandler(int signalNumber, siginfo_t *siginfo, void *context)
+{
+  char     title[64];
+  sigset_t mask;
+
+  if (signalNumber == SIGQUIT)
+  {
+    pthread_mutex_lock(&debugStackTraceLock);
+    {
+      if (debugStackTraceRun)
+      {
+        snprintf(title,sizeof(title),"Thread stack trace %02d/%02d: 0x%x",debugStackTraceThreadIndex+1,debugStackTraceThreadIdCount,pthread_self());
+        #ifndef NDEBUG
+          debugDumpCurrentStackTrace(stderr,title,0);
+        #else
+          fprintf(stderr,"  not available");
+        #endif
+        fprintf(stderr,"\n");
+
+        pthread_cond_signal(&debugStackTraceDone);
+//fprintf(stderr,"%s, %d: sent back %x\n",__FILE__,__LINE__,debugStackTraceThreadId);
+      }
+      else
+      {
+        // mark running
+        debugStackTraceRun = true;
+
+        // print stack trace of main thread
+        snprintf(title,sizeof(title),"Thread stack trace %02d/%02d: 0x%x",0,debugStackTraceThreadIdCount,pthread_self());
+        #ifndef NDEBUG
+          debugDumpCurrentStackTrace(stderr,title,0);
+        #else
+          fprintf(stderr,"  not available");
+        #endif
+        fprintf(stderr,"\n");
+
+        // trigger print stack trace in all threads
+        for (debugStackTraceThreadIndex = 0; debugStackTraceThreadIndex < debugStackTraceThreadIdCount; debugStackTraceThreadIndex++)
+        {
+          if (pthread_equal(debugStackTraceThreadIds[debugStackTraceThreadIndex],pthread_self()) == 0)
+          {
+           // trigger print stack trace in thread
+//fprintf(stderr,"%s, %d: send %x\n",__FILE__,__LINE__,debugStackTraceThreads[debugStackTraceThreadIndex]);
+            pthread_kill(debugStackTraceThreadIds[debugStackTraceThreadIndex],SIGQUIT);
+
+           // wait for done signal
+           pthread_cond_wait(&debugStackTraceDone,&debugStackTraceLock);
+          }
+        }
+
+        // mark not running
+        debugStackTraceRun = false;
+      }
+    }
+    pthread_mutex_unlock(&debugStackTraceLock);
+  }
+
+  if (debugSignalQuitPrevHandler.sa_sigaction != NULL)
+  {
+    debugSignalQuitPrevHandler.sa_sigaction(signalNumber,siginfo,context);
+  }
+}
+
+/***********************************************************************\
+* Name   : debugStackTraceInit
+* Purpose: init debug stack trace
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugStackTraceInit(void)
+{
+  struct sigaction sa;
+
+  // install signal handler for Ctrl-\ (SIGQUIT) for printing debug information
+  sigfillset(&sa.sa_mask);
+  sa.sa_flags     = SA_SIGINFO;
+  sa.sa_sigaction = debugSignalQuitHandler;
+  sigaction(SIGQUIT,&sa,&debugSignalQuitPrevHandler);
+}
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : threadStart
@@ -74,9 +325,12 @@ LOCAL void threadStart(ThreadStartInfo *startInfo)
 
   assert(startInfo != NULL);
 
+  // get local copy of start data
   niceLevel     = startInfo->niceLevel;
   entryFunction = startInfo->entryFunction;
   userData      = startInfo->userData;
+
+  // signal thread started
   sem_post(&startInfo->lock);
 
   #if   defined(PLATFORM_LINUX)
@@ -87,6 +341,7 @@ LOCAL void threadStart(ThreadStartInfo *startInfo)
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
 
+  // run thread code
   assert(entryFunction != NULL);
   entryFunction(userData);
 }
@@ -125,6 +380,10 @@ bool Thread_init(Thread     *thread,
   assert(thread != NULL);
   assert(name != NULL);
   assert(entryFunction != NULL);
+
+  #ifndef NDEBUG
+    pthread_once(&debugStackTraceInitFlag,debugStackTraceInit);
+  #endif /* NDEBUG */
 
   // init thread info
   sem_init(&startInfo.lock,0,0);

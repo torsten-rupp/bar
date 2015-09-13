@@ -61,8 +61,10 @@ typedef struct
 /***************************** Variables *******************************/
 
 #ifndef NDEBUG
+  LOCAL void               (*debugSignalQuitPrevHandler)(int);
   LOCAL pthread_once_t     debugSemaphoreInitFlag = PTHREAD_ONCE_INIT;
-  LOCAL pthread_mutex_t    debugSemaphoreLock;
+  LOCAL pthread_mutex_t    debugSemaphoreLock     = PTHREAD_MUTEX_INITIALIZER;
+  LOCAL pthread_t          debugSemaphoreThreadId;
   LOCAL DebugSemaphoreList debugSemaphoreList;
   LOCAL void(*debugSemaphorePrevSignalHandler)(int);
 #endif /* not NDEBUG */
@@ -133,6 +135,8 @@ typedef struct
       { \
         struct timespec __tp; \
         \
+        assert(timeout != SEMAPHORE_WAIT_FOREVER); \
+        \
         pthread_once(&debugSemaphoreInitFlag,debugInit); \
         pthread_mutex_lock(&debugSemaphoreLock); \
         { \
@@ -180,6 +184,8 @@ typedef struct
       do \
       { \
         struct timespec __tp; \
+        \
+        assert(timeout != SEMAPHORE_WAIT_FOREVER); \
         \
         clock_gettime(CLOCK_REALTIME,&__tp); \
         __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
@@ -413,11 +419,11 @@ typedef struct
 LOCAL void debugInit(void)
 {
   // init variables
-  pthread_mutex_init(&debugSemaphoreLock,NULL);
+  debugSemaphoreThreadId = pthread_self();
   List_init(&debugSemaphoreList);
 
   // install signal handler for Ctrl-\ (SIGQUIT) for printing debug information
-  debugSemaphorePrevSignalHandler = signal(SIGQUIT,debugSemaphoreSignalHandler);
+  debugSignalQuitPrevHandler = signal(SIGQUIT,debugSemaphoreSignalHandler);
 }
 
 /***********************************************************************\
@@ -431,13 +437,14 @@ LOCAL void debugInit(void)
 
 LOCAL void debugSemaphoreSignalHandler(int signalNumber)
 {
-  if (signalNumber == SIGQUIT)
+  if ((signalNumber == SIGQUIT) && pthread_equal(debugSemaphoreThreadId,pthread_self()))
   {
     Semaphore_debugPrintInfo();
   }
-  if (debugSemaphorePrevSignalHandler != NULL)
+
+  if (debugSignalQuitPrevHandler != NULL)
   {
-    debugSemaphorePrevSignalHandler(signalNumber);
+    debugSignalQuitPrevHandler(signalNumber);
   }
 }
 
@@ -516,7 +523,7 @@ LOCAL bool lock(const char         *fileName,
       }
       __SEMAPHORE_REQUEST_UNLOCK(semaphore);
 
-      // lock temporary
+      // read: aquire lock temporary and increment read-lock counter
       if (timeout != SEMAPHORE_WAIT_FOREVER)
       {
         __SEMAPHORE_LOCK_TIMEOUT(DEBUG_FLAG_READ,DEBUG_LOCK_TYPE_READ,"R",semaphore,timeout,lockedFlag);
@@ -524,7 +531,8 @@ LOCAL bool lock(const char         *fileName,
         {
           __SEMAPHORE_REQUEST_LOCK(semaphore);
           {
-            semaphore->readRequestCount++;
+            assert(semaphore->readRequestCount > 0);
+            semaphore->readRequestCount--;
           }
           __SEMAPHORE_REQUEST_UNLOCK(semaphore);
           return FALSE;
@@ -535,6 +543,7 @@ LOCAL bool lock(const char         *fileName,
         __SEMAPHORE_LOCK(DEBUG_FLAG_READ,DEBUG_LOCK_TYPE_READ,"R",semaphore);
       }
       {
+        // check if re-lock with weaker access -> error
         if (semaphore->readWriteLockCount > 0)
         {
           #ifndef NDEBUG
@@ -577,6 +586,7 @@ LOCAL bool lock(const char         *fileName,
         #endif /* not NDEBUG */
 
 #if 0
+//Note: read-lock requests will not wait for running read/write-locks, because aquiring a read/write lock is waiting for running read-locks (see below)
         // wait until no more other read/write-locks
         if      (timeout != SEMAPHORE_WAIT_FOREVER)
         {
@@ -606,8 +616,9 @@ LOCAL bool lock(const char         *fileName,
         }
         assert(semaphore->readWriteLockCount == 0);
 #endif /* 0 */
+        assert((semaphore->lockType == SEMAPHORE_LOCK_TYPE_NONE) || (semaphore->lockType == SEMAPHORE_LOCK_TYPE_READ));
 
-        // set/increment read-lock if there is no read/write-lock
+        // increment read-lock count and set lock type
         semaphore->readLockCount++;
         semaphore->lockType = SEMAPHORE_LOCK_TYPE_READ;
 
@@ -633,7 +644,7 @@ LOCAL bool lock(const char         *fileName,
       }
       __SEMAPHORE_REQUEST_UNLOCK(semaphore);
 
-      // lock permanent
+      // write: aquire lock permanent
       if (timeout != SEMAPHORE_WAIT_FOREVER)
       {
         __SEMAPHORE_LOCK_TIMEOUT(DEBUG_FLAG_READ_WRITE,DEBUG_LOCK_TYPE_READ_WRITE,"RW",semaphore,timeout,lockedFlag);
@@ -704,6 +715,7 @@ LOCAL bool lock(const char         *fileName,
         }
       }
       assert(semaphore->readLockCount == 0);
+      assert((semaphore->lockType == SEMAPHORE_LOCK_TYPE_NONE) || (semaphore->lockType == SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
       // set/increment read/write-lock
       semaphore->readWriteLockCount++;
@@ -757,6 +769,7 @@ LOCAL void unlock(const char *fileName, ulong lineNb, Semaphore *semaphore)
       __SEMAPHORE_LOCK(DEBUG_FLAG_READ,DEBUG_LOCK_TYPE_READ,"R",semaphore);
       {
         assert(semaphore->readLockCount > 0);
+        assert((semaphore->lockType == SEMAPHORE_LOCK_TYPE_READ) || (semaphore->lockType == SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
         #ifndef NDEBUG
           // debug lock code: remove lock information
@@ -806,6 +819,7 @@ LOCAL void unlock(const char *fileName, ulong lineNb, Semaphore *semaphore)
     case SEMAPHORE_LOCK_TYPE_READ_WRITE:
       assert(semaphore->readLockCount == 0);
       assert(semaphore->readWriteLockCount > 0);
+      assert(semaphore->lockType == SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
       #ifndef NDEBUG
         // debug trace code: remove lock information
@@ -1299,7 +1313,6 @@ void Semaphore_debugPrintInfo(void)
   const Semaphore *semaphore;
   uint            z;
 
-  fprintf(stderr,"\n");
   fprintf(stderr,"Semaphore debug info:\n");
   LIST_ITERATE(&debugSemaphoreList,semaphore)
   {
@@ -1308,6 +1321,7 @@ void Semaphore_debugPrintInfo(void)
       case SEMAPHORE_LOCK_TYPE_NONE:
         assert(semaphore->readLockCount == 0);
         assert(semaphore->readWriteLockCount == 0);
+        fprintf(stderr,"  '%s':\n",semaphore->name);
         break;
       case SEMAPHORE_LOCK_TYPE_READ:
         fprintf(stderr,"  '%s':\n",semaphore->name);
