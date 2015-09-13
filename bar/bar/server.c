@@ -10453,6 +10453,10 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
         }
         uuidDataNode->jobUUID             = String_duplicate(jobNode->uuid);
         uuidDataNode->name                = String_duplicate(jobNode->uuid);
+        uuidDataNode->lastCreatedDateTime = 0LL;
+        uuidDataNode->totalEntries        = 0LL;
+        uuidDataNode->totalSize           = 0LL;
+        uuidDataNode->lastErrorMessage    = String_new();
 
         List_append(&uuidDataList,uuidDataNode);
       }
@@ -10461,7 +10465,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
       uuidDataNode->lastCreatedDateTime = 0;
       uuidDataNode->totalEntries        = 0LL;
       uuidDataNode->totalSize           = 0LL;
-      uuidDataNode->lastErrorMessage    = String_new();
+      String_clear(uuidDataNode->lastErrorMessage);
     }
   }
 
@@ -10505,8 +10509,12 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
         String_delete(pattern);
         return;
       }
-      uuidDataNode->jobUUID = String_duplicate(jobUUID);
-      uuidDataNode->name    = String_duplicate(jobUUID);
+      uuidDataNode->jobUUID             = String_duplicate(jobUUID);
+      uuidDataNode->name                = String_duplicate(jobUUID);
+      uuidDataNode->lastCreatedDateTime = 0LL;
+      uuidDataNode->totalEntries        = 0LL;
+      uuidDataNode->totalSize           = 0LL;
+      uuidDataNode->lastErrorMessage    = String_new();
 
       List_append(&uuidDataList,uuidDataNode);
     }
