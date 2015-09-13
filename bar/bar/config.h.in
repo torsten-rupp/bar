@@ -31,6 +31,9 @@
 /* backtrace_symbols() available */
 #undef HAVE_BACKTRACE_SYMBOLS
 
+/* libbfd installed */
+#undef HAVE_BFD
+
 /* Define to 1 if you have the <bfd.h> header file. */
 #undef HAVE_BFD_H
 
