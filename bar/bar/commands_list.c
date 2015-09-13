@@ -2544,7 +2544,7 @@ remoteBarFlag=FALSE;
             }
 //fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
             StringMap_clear(argumentMap);
-            if (!StringMap_parse(argumentMap,arguments,STRING_QUOTES,0,NULL))
+            if (!StringMap_parse(argumentMap,arguments,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,0,NULL))
             {
               error = ERROR_INVALID_RESPONSE;
               break;
