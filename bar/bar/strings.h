@@ -50,8 +50,8 @@ extern const struct __String* STRING_EMPTY;
 typedef struct __String* String;
 typedef struct __String const* ConstString;
 
-#ifndef SIZEOF_ULONG
-  #define SIZEOF_ULONG 4
+#ifndef SIZEOF_UNSIGNED_LONG
+  #define SIZEOF_UNSIGNED_LONG 4
 #endif
 struct __String
 {
