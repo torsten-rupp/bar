@@ -552,8 +552,7 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
                                            const JobOptions           *jobOptions
                                           )
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
+  Errors error;
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
@@ -563,9 +562,6 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
   UNUSED_VARIABLE(jobOptions);
 
   // initialize variables
-  AutoFree_init(&autoFreeList);
-  Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
-  AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->storageSpecifier,{ Storage_doneSpecifier(&storageDirectoryListHandle->storageSpecifier); });
 
   // init variables
   storageDirectoryListHandle->type = STORAGE_TYPE_FILESYSTEM;
@@ -576,11 +572,8 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
                                 );
   if (error != ERROR_NONE)
   {
-    AutoFree_cleanup(&autoFreeList);
     return error;
   }
-
-  AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
 }
