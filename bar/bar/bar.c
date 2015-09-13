@@ -19,7 +19,9 @@
 #ifdef HAVE_SYS_RESOURCE_H
   #include <sys/resource.h>
 #endif
-#include <libintl.h>
+#ifdef HAVE_LIBINTL_H
+  #include <libintl.h>
+#endif
 #include <errno.h>
 #include <locale.h>
 #include <assert.h>
@@ -2425,7 +2427,7 @@ LOCAL Errors initAll(void)
   AutoFree_init(&autoFreeList);
 
   // initialize i18n
-  #if defined(HAVE_SETLOCALE) && defined(HAVE_TEXTDOMAIN)
+  #if defined(HAVE_SETLOCALE) && defined(HAVE_BINDTEXTDOMAIN) && defined(HAVE_TEXTDOMAIN)
     setlocale(LC_ALL,"");
     #ifdef HAVE_BINDTEXTDOMAIN
       localePath = getenv("__BAR_LOCALE__");
