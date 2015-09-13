@@ -22,6 +22,7 @@
 #include <bfd.h>
 #include <demangle.h>
 #include <link.h>
+#include <unistd.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -32,6 +33,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define DEBUG_SYMBOL_FILE_EXTENSION ".sym"
 
 /**************************** Datatypes ********************************/
 
@@ -340,13 +342,12 @@ LOCAL bfd* openBFD(const char    *fileName,
   abfd = bfd_openr(fileName,NULL);
   if (abfd == NULL)
   {
-    fprintf(stderr,"ERROR: can not open file '%s' (error: %s)\n",fileName,strerror(errno));
     return NULL;
   }
 
   if (bfd_check_format(abfd,bfd_archive))
   {
-    fprintf(stderr,"ERROR: invalid format\n");
+    fprintf(stderr,"ERROR: invalid format of file '%s' (error: %s)\n",fileName,strerror(errno));
     bfd_close(abfd);
     return NULL;
   }
@@ -357,7 +358,7 @@ LOCAL bfd* openBFD(const char    *fileName,
     {
       free(matching);
     }
-    fprintf(stderr,"ERROR: format does not match\n");
+    fprintf(stderr,"ERROR: format does not match for file file '%s'\n",fileName);
     bfd_close(abfd);
     return NULL;
   }
@@ -409,6 +410,8 @@ LOCAL bool getSymbolInfoFromFile(const char     *fileName,
                                  void           *symbolUserData
                                 )
 {
+  char          debugSymbolFileName[PATH_MAX];
+  ssize_t       n;
   bfd*          abfd;
   const asymbol **symbols;
   ulong         symbolCount;
@@ -416,14 +419,31 @@ LOCAL bool getSymbolInfoFromFile(const char     *fileName,
 
   assert(fileName != NULL);
 
-  abfd = openBFD(fileName,&symbols,&symbolCount);
+  // open file.<debug symbol extension> or file
+  abfd = NULL;
   if (abfd == NULL)
   {
-    return 0;
+    n = readlink(fileName,debugSymbolFileName,sizeof(debugSymbolFileName));
+    if (n > 0)
+    {
+      debugSymbolFileName[n] = '\0';
+      strncat(debugSymbolFileName,DEBUG_SYMBOL_FILE_EXTENSION,sizeof(debugSymbolFileName)-n);
+      abfd = openBFD(debugSymbolFileName,&symbols,&symbolCount);
+    }
+  }
+  if (abfd == NULL)
+  {
+    abfd = openBFD(fileName,&symbols,&symbolCount);
+  }
+  if (abfd == NULL)
+  {
+    return FALSE;
   }
 
+  // get symbol info
   result = addressToSymbolInfo(abfd,symbols,symbolCount,address,symbolFunction,symbolUserData);
 
+  // close file
   closeBFD(abfd,symbols,symbolCount);
 
   return result;
