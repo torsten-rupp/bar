@@ -225,6 +225,7 @@ typedef struct
 #define GLOBAL extern
 #define LOCAL static
 
+#undef INLINE
 #ifdef NDEBUG
   #define INLINE static inline
   #define LOCAL_INLINE static inline
@@ -233,6 +234,10 @@ typedef struct
   #define LOCAL_INLINE static
 #endif /* NDEBUG */
 
+#undef ATTRIBUTE_PACKED
+#undef ATTRIBUTE_WARN_UNUSED_RESULT
+#undef ATTRIBUTE_NO_INSTRUMENT_FUNCTION
+#undef ATTRIBUTE_AUTO
 #ifdef __GNUC__
   #define ATTRIBUTE_PACKED             __attribute__((__packed__))
   #define ATTRIBUTE_WARN_UNUSED_RESULT __attribute__((__warn_unused_result__))
@@ -1375,7 +1380,7 @@ static inline char *stringClear(char *s)
 * Purpose: compare strings for equal
 * Input  : s1, s2 - strings
 * Output : -
-* Return : TRUE if equals
+* Return : TRUE iff equals
 * Notes  : -
 \***********************************************************************/
 
@@ -1389,7 +1394,7 @@ static inline bool stringEquals(const char *s1, const char *s2)
 * Purpose: compare strings for equal and ignore case
 * Input  : s1, s2 - strings
 * Output : -
-* Return : TRUE if equals
+* Return : TRUE iff equals
 * Notes  : -
 \***********************************************************************/
 
@@ -1399,11 +1404,41 @@ static inline bool stringEqualsIgnoreCase(const char *s1, const char *s2)
 }
 
 /***********************************************************************\
+* Name   : stringStartsWith
+* Purpose: check if string starts with prefix
+* Input  : s      - string
+*          prefix - prefix
+* Output : -
+* Return : TRUE iff s start with prefix
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringStartsWith(const char *s, const char *prefix)
+{
+  return strncmp(s,prefix,strlen(prefix)) == 0;
+}
+
+/***********************************************************************\
+* Name   : stringEqualsIgnoreCase
+* Purpose: check if string starts with prefix
+* Input  : s      - string
+*          prefix - prefix
+* Output : -
+* Return : TRUE iff s start with prefix
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringStartsWithIgnoreCase(const char *s, const char *prefix)
+{
+  return strncasecmp(s,prefix,strlen(prefix)) == 0;
+}
+
+/***********************************************************************\
 * Name   : stringIsEmpty
 * Purpose: check if string is NULL or empty
 * Input  : s - string
 * Output : -
-* Return : TRUE if empty
+* Return : TRUE iff empty
 * Notes  : -
 \***********************************************************************/
 
