@@ -58,10 +58,10 @@ typedef struct
 
 
   LOCAL struct sigaction debugSignalQuitPrevHandler;
-  LOCAL pthread_once_t   debugStackTraceInitFlag    = PTHREAD_ONCE_INIT;
-  LOCAL pthread_mutex_t  debugStackTraceLock        = PTHREAD_MUTEX_INITIALIZER;
-  LOCAL pthread_cond_t   debugStackTraceDone        = PTHREAD_COND_INITIALIZER;
-  LOCAL bool             debugStackTraceRun = false;
+  LOCAL pthread_once_t   debugStackTraceInitFlag      = PTHREAD_ONCE_INIT;
+  LOCAL pthread_mutex_t  debugStackTraceLock          = PTHREAD_MUTEX_INITIALIZER;
+  LOCAL pthread_cond_t   debugStackTraceDone          = PTHREAD_COND_INITIALIZER;
+  LOCAL bool             debugStackTraceRun           = FALSE;
   LOCAL pthread_t        debugStackTraceThreadIds[256];
   LOCAL uint             debugStackTraceThreadIdCount = 0;
   LOCAL uint             debugStackTraceThreadIndex;
@@ -249,7 +249,7 @@ LOCAL void debugSignalQuitHandler(int signalNumber, siginfo_t *siginfo, void *co
       else
       {
         // mark running
-        debugStackTraceRun = true;
+        debugStackTraceRun = TRUE;
 
         // print stack trace of main thread
         snprintf(title,sizeof(title),"Thread stack trace %02d/%02d: 0x%x",0,debugStackTraceThreadIdCount,pthread_self());
@@ -275,7 +275,7 @@ LOCAL void debugSignalQuitHandler(int signalNumber, siginfo_t *siginfo, void *co
         }
 
         // mark not running
-        debugStackTraceRun = false;
+        debugStackTraceRun = FALSE;
       }
     }
     pthread_mutex_unlock(&debugStackTraceLock);
