@@ -42,6 +42,8 @@ typedef enum
   STRINGMAP_TYPE_DATA
 } StringMapTypes;
 
+#define STRINGMAP_ASSIGN "="
+
 /***************************** Datatypes *******************************/
 
 // string map type
@@ -463,19 +465,21 @@ bool StringMap_contains(const StringMap stringMap, const char *name);
 /***********************************************************************\
 * Name   : StringMap_parse
 * Purpose: parse string map
-* Input  : stringMap  - stringMap variable
-*          quoteChars - quote characters
-*          index      - start index or STRING_BEGIN
+* Input  : stringMap      - stringMap variable
+*          assignChars    - assignment characters or NULL
+*          quoteChars     - quote characters or NULL
+*          separatorChars - separator characters or NULL
+*          index          - start index or STRING_BEGIN
 * Output : nextIndex  - index of next character in string not parsed or
 *                       STRING_END if string completely parsed (can be
 *                       NULL)
 * Return : TRUE is fully parsed or nextIndex != NULL , FALSE on error
 * Notes  : parses map of the format:
-*            <name>=<value> ...
+*            <name><separator><value> ...
 \***********************************************************************/
 
-bool StringMap_parse(StringMap stringMap, const String string, const char *quoteChars, ulong index, long *nextIndex);
-bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quoteChars, ulong index, long *nextIndex);
+bool StringMap_parse(StringMap stringMap, ConstString string, const char *assignChars, const char *quoteChars, const char *separatorChars, ulong index, long *nextIndex);
+bool StringMap_parseCString(StringMap stringMap, const char *s, const char *assignChars, const char *quoteChars, const char *separatorChars, ulong index, long *nextIndex);
 
 /***********************************************************************\
 * Name   : StringMap_toCStringArray

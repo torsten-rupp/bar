@@ -1104,14 +1104,14 @@ bool StringMap_contains(const StringMap stringMap, const char *name)
   return (findStringMapEntry(stringMap,name) != NULL);
 }
 
-bool StringMap_parse(StringMap stringMap, const String string, const char *quoteChars, ulong index, long *nextIndex)
+bool StringMap_parse(StringMap stringMap, ConstString string, const char *assignChars, const char *quoteChars, const char *separatorChars, ulong index, long *nextIndex)
 {
   assert(stringMap != NULL);
 
-  return StringMap_parseCString(stringMap,String_cString(string),quoteChars,index,nextIndex);
+  return StringMap_parseCString(stringMap,String_cString(string),assignChars,quoteChars,separatorChars,index,nextIndex);
 }
 
-bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quoteChars, ulong index, long *nextIndex)
+bool StringMap_parseCString(StringMap stringMap, const char *s, const char *assignChars, const char *quoteChars, const char *separatorChars, ulong index, long *nextIndex)
 {
   const char *quoteChar;
   uint       length;
@@ -1130,8 +1130,12 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quot
   index = STRING_BEGIN;
   while (index < length)
   {
-    // skip spaces
-    while ((index < length) && isspace(s[index]))
+    // skip spaces, separators
+    while (   (index < length)
+           && (   isspace(s[index])
+               || ((separatorChars != NULL) && (strchr(separatorChars,s[index]) != NULL))
+              )
+          )
     {
       index++;
     }
@@ -1156,8 +1160,8 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quot
            && (isalnum(s[index]) || (s[index] == '_'))
           );
 
-    // check '='
-    if (   (index >= length) || (s[index] != '='))
+    // check for assign
+    if ((index >= length) || (strchr(assignChars,s[index]) == NULL))
     {
       if (nextIndex != NULL) (*nextIndex) = index;
       String_delete(value);
@@ -1168,7 +1172,10 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *quot
 
     // get value as text
     String_clear(value);
-    while ((index < length) && !isspace(s[index]))
+    while (   (index < length)
+           && !isspace(s[index])
+           && ((separatorChars == NULL) || (strchr(separatorChars,s[index]) == NULL))
+          )
     {
       if (   (s[index] == STRING_ESCAPE_CHARACTER)
           && ((index+1) < length)
