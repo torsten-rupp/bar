@@ -17,7 +17,11 @@ import java.lang.String;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
+import java.text.NumberFormat;
+import java.text.ParseException;
+
 import java.util.HashMap;
+import java.util.Locale;
 
 /****************************** Classes ********************************/
 
@@ -173,7 +177,14 @@ class ValueMap extends HashMap<String,Object>
     {
       if (object instanceof String)
       {
-        return Double.parseDouble((String)object);
+        try
+        {
+          return NumberFormat.getInstance(Locale.ENGLISH).parse((String)object).doubleValue();
+        }
+        catch (ParseException exception)
+        {
+          throw new IllegalArgumentException(exception);
+        }
       }
       else
       {
@@ -794,7 +805,14 @@ public class StringParser
                     arguments[argumentIndex] = Long.parseLong(buffer.toString(),10);
                     break;
                   case DOUBLE:
-                    arguments[argumentIndex] = Double.parseDouble(buffer.toString());
+                    try
+                    {
+                      arguments[argumentIndex] = NumberFormat.getInstance(Locale.ENGLISH).parse(buffer.toString()).doubleValue();
+                    }
+                    catch (ParseException exception)
+                    {
+                      return -1;
+                    }
                     break;
                 }
                 argumentIndex++;
@@ -940,7 +958,14 @@ public class StringParser
               // convert
               try
               {
-                arguments[argumentIndex] = Double.parseDouble(buffer.toString());
+                try
+                {
+                  arguments[argumentIndex] = NumberFormat.getInstance(Locale.ENGLISH).parse(buffer.toString()).doubleValue();
+                }
+                catch (ParseException exception)
+                {
+                  return -1;
+                }
                 argumentIndex++;
               }
               catch (NumberFormatException exception)
@@ -1382,7 +1407,14 @@ public class StringParser
           }
           else if ((type == double.class) || (type == Double.class))
           {
-            valueMap.put(name,Double.parseDouble(value));
+            try
+            {
+              valueMap.put(name,NumberFormat.getInstance(Locale.ENGLISH).parse(value).doubleValue());
+            }
+            catch (ParseException exception)
+            {
+              throw new IllegalArgumentException(exception);
+            }
           }
           else if ((type == boolean.class) || (type == Boolean.class))
           {

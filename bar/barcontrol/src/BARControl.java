@@ -790,10 +790,10 @@ class Units
    */
   public static String getByteSize(double n)
   {
-    if      (n >= 1024*1024*1024) return String.format(Locale.US,"%.1f",n/(1024*1024*1024));
-    else if (n >=      1024*1024) return String.format(Locale.US,"%.1f",n/(     1024*1024));
-    else if (n >=           1024) return String.format(Locale.US,"%.1f",n/(          1024));
-    else                          return String.format(Locale.US,"%d"  ,(long)n           );
+    if      (n >= 1024*1024*1024) return String.format("%.1f",n/(1024*1024*1024));
+    else if (n >=      1024*1024) return String.format("%.1f",n/(     1024*1024));
+    else if (n >=           1024) return String.format("%.1f",n/(          1024));
+    else                          return String.format("%d"  ,(long)n           );
   }
 
   /** get byte size unit

@@ -1133,7 +1133,7 @@ public class TabStatus
 
       widgetButtonQuit = Widgets.newButton(composite,null,BARControl.tr("Quit"));
       widgetButtonQuit.setToolTipText(BARControl.tr("Quit BARControl program."));
-      Widgets.layout(widgetButtonQuit,0,5,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetButtonQuit,0,5,TableLayoutData.E,0,0,0,0,80,SWT.DEFAULT);
       widgetButtonQuit.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1514,8 +1514,8 @@ public class TabStatus
           storageProgress.set      (getProgress(resultMap.getLong("storageDoneBytes"),resultMap.getLong("storageTotalBytes")));
           volumeNumber.set         (resultMap.getLong("volumeNumber"));
           volumeProgress.set       (resultMap.getDouble("volumeProgress")*100.0);
-          totalEntriesProgress.set (getProgress(resultMap.getLong("doneEntries"),resultMap.getLong("totalEntries")));
-          totalBytesProgress.set   (getProgress(resultMap.getLong("doneBytes"),resultMap.getLong("totalBytes")));
+          totalEntriesProgress.set (getProgress(doneEntries.getLong(),totalEntries.getLong()));
+          totalBytesProgress.set   (getProgress(doneBytes.getLong(),totalBytes.getLong()));
           requestedVolumeNumber.set(resultMap.getInt("requestedVolumeNumber"));
           message.set              (resultMap.getString("message"));
 
