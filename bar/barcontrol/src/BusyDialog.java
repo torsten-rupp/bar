@@ -237,7 +237,7 @@ class BusyDialog
 
         if ((flags & LIST) != 0)
         {
-          widgetList = new List(subComposite,SWT.BORDER);
+          widgetList = new List(subComposite,SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL);
           widgetList.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE)); row++;
         }
         else
