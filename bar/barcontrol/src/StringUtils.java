@@ -293,6 +293,128 @@ public class StringUtils
     return unescape(string,true);
   }
 
+  /** enclose in quote character
+   * @param string string
+   * @param enclosingQuotes true to add enclosing quotes "
+   * @param quoteChar quote character
+   * @return quoted string
+   */
+  public static String quote(String string, char quoteChar)
+  {
+    StringBuilder buffer = new StringBuilder();
+
+    buffer.append(quoteChar);
+    if (string != null)
+    {
+      for (int index = 0; index < string.length(); index++)
+      {
+        char ch = string.charAt(index);
+
+        if      (ch == quoteChar)
+        {
+          buffer.append("\\"+quoteChar);
+        }
+        else
+        {
+          buffer.append(ch);
+        }
+      }
+    }
+    buffer.append(quoteChar);
+
+    return buffer.toString();
+  }
+
+  /** enclose in "
+   * @param string string
+   * @param enclosingQuotes true to add enclosing quotes "
+   * @return quoted string
+   */
+  public static String quote(String string)
+  {
+    return quote(string,'"');
+  }
+
+  /** remove enclosing quote
+   * @param string string
+   * @param enclosingQuotes true to remove enclosing quotes ' or "
+   * @param quoteChars quote characters
+   * @return unescaped string
+   */
+  public static String unquote(String string, String quoteChars)
+  {
+    boolean      quotedFlag;
+    char         quoteChar;
+    int          startIndex,endIndex;
+    StringBuffer buffer = new StringBuffer();
+
+    if (string != null)
+    {
+      quotedFlag = false;
+      quoteChar  = '\0';
+      startIndex = 0;
+      endIndex   = string.length();
+
+      // check for outer quotes
+      if (string.length() >= 2)
+      {
+        for (int i = 0; i < quoteChars.length(); i++)
+        {
+          quoteChar = quoteChars.charAt(i);
+          if  (   (string.charAt(0) == quoteChar)
+               && (string.charAt(string.length()-1) == quoteChar)
+              )
+          {
+            quotedFlag = true;
+            startIndex = 1;
+            endIndex   = string.length()-1;
+            break;
+          }
+        }
+      }
+
+      // unescape quote characters
+      int index = startIndex;
+      while (index < endIndex)
+      {
+        char ch = string.charAt(index);
+
+        if ((ch == '\\') && ((index+1) < endIndex) && quotedFlag && (string.charAt(index+1) == quoteChar))
+        {
+          buffer.append(quoteChar);
+          index += 2;
+        }
+        else
+        {
+          buffer.append(ch);
+          index += 1;
+        }
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  /** remove enclosing ' or "
+   * @param string string
+   * @param quoteChar quote character
+   * @return unescaped string
+   */
+  public static String unquote(String string, char quoteChar)
+  {
+    return unquote(string,Character.toString(quoteChar));
+  }
+
+  /** remove enclosing ' or "
+   * @param string string
+   * @param enclosingQuotes true to add enclosing quotes "
+   * @return unescaped string
+   */
+  public static String unquote(String string)
+  {
+    return unquote(string,"\"'");
+  }
+
   /** map strings in string
    * @param string string
    * @param index start index for mapping
@@ -392,14 +514,26 @@ public class StringUtils
    * @param quoteChar quote char
    * @return string
    */
-  public static String join(Object[] objects, String joinString, char quoteChar)
+  public static String join(Object[] objects, int index, int count, String joinString, char quoteChar)
   {
     StringBuilder buffer = new StringBuilder();
     String        string;
-    if (objects != null)
+
+    if (index < 0) throw new IndexOutOfBoundsException();
+
+    if ((objects != null) && (index < objects.length))
     {
-      for (Object object : objects)
+      if (count > objects.length) throw new IndexOutOfBoundsException();
+
+      if (count < 0)
       {
+        count = objects.length-index;
+      }
+
+      for (int i = 0; i < count; i++)
+      {
+        Object object = objects[index+i];
+
         if (buffer.length() > 0) buffer.append(joinString);
         string = object.toString();
         buffer.append((quoteChar != '\0') ? escape(string,true,quoteChar) : string);
@@ -411,13 +545,46 @@ public class StringUtils
 
   /** join object array
    * @param objects objects to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @param quoteChar quote char
+   * @return string
+   */
+  public static String join(Object[] objects, String joinString, char quoteChar)
+  {
+    return join(objects,0,-1,joinString,quoteChar);
+  }
+
+  /** join object array
+   * @param objects objects to join (convert to string with toString())
+   * @param joinChar character used to join two strings
+   * @param quoteChar quote char
+   * @return string
+   */
+  public static String join(Object[] objects, int index, int count, char joinChar, char quoteChar)
+  {
+    return join(objects,index,count,Character.toString(joinChar),quoteChar);
+  }
+
+  /** join object array
+   * @param objects objects to join (convert to string with toString())
    * @param joinChar character used to join two strings
    * @param quoteChar quote char
    * @return string
    */
   public static String join(Object[] objects, char joinChar, char quoteChar)
   {
-    return join(objects,Character.toString(joinChar),quoteChar);
+    return join(objects,0,-1,joinChar,quoteChar);
+  }
+
+  /** join object array
+   * @param objects objects to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @param quoteFlag true iff escape strings
+   * @return string
+   */
+  public static String join(Object[] objects, int index, int count, String joinString, boolean quoteFlag)
+  {
+    return join(objects,index,count,joinString,(quoteFlag) ? '"' : '\0');
   }
 
   /** join object array
@@ -428,7 +595,18 @@ public class StringUtils
    */
   public static String join(Object[] objects, String joinString, boolean quoteFlag)
   {
-    return join(objects,joinString,(quoteFlag) ? '"' : '\0');
+    return join(objects,0,-1,joinString,(quoteFlag) ? '"' : '\0');
+  }
+
+  /** join object array
+   * @param objects objects to join (convert to string with toString())
+   * @param joinChar character used to join two strings
+   * @param quoteFlag true iff escape strings
+   * @return string
+   */
+  public static String join(Object[] objects, int index, int count, char joinChar, boolean quoteFlag)
+  {
+    return join(objects,index,count,Character.toString(joinChar),quoteFlag);
   }
 
   /** join object array
@@ -439,7 +617,17 @@ public class StringUtils
    */
   public static String join(Object[] objects, char joinChar, boolean quoteFlag)
   {
-    return join(objects,Character.toString(joinChar),quoteFlag);
+    return join(objects,0,-1,Character.toString(joinChar),quoteFlag);
+  }
+
+  /** join object array
+   * @param objects objects to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @return string
+   */
+  public static String join(Object[] objects, int index, int count, String joinString)
+  {
+    return join(objects,index,count,joinString,'\0');
   }
 
   /** join object array
@@ -449,7 +637,17 @@ public class StringUtils
    */
   public static String join(Object[] objects, String joinString)
   {
-    return join(objects,joinString,'\0');
+    return join(objects,0,-1,joinString);
+  }
+
+  /** join object array
+   * @param objects objects to join (convert to string with toString())
+   * @param joinChar character used to join two strings
+   * @return string
+   */
+  public static String join(Object[] objects, int index, int count, char joinChar)
+  {
+    return join(objects,index,count,Character.toString(joinChar));
   }
 
   /** join object array
@@ -459,7 +657,16 @@ public class StringUtils
    */
   public static String join(Object[] objects, char joinChar)
   {
-    return join(objects,Character.toString(joinChar));
+    return join(objects,0,-1,joinChar);
+  }
+
+  /** join string array with single space
+   * @param strings strings to join
+   * @return string
+   */
+  public static String join(String[] strings, int index, int count)
+  {
+    return join(strings," ");
   }
 
   /** join string array with single space
@@ -468,7 +675,7 @@ public class StringUtils
    */
   public static String join(String[] strings)
   {
-    return join(strings," ");
+    return join(strings,0,-1," ");
   }
 
   /** join boolean array
