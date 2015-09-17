@@ -85,6 +85,9 @@
 /* fork() available */
 #undef HAVE_FORK
 
+/* freelocale() available */
+#undef HAVE_FREELOCALE
+
 /* fseeko() available */
 #undef HAVE_FSEEKO
 
@@ -265,6 +268,9 @@
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
 
+/* newlocale() available */
+#undef HAVE_NEWLOCALE
+
 /* O_DIRECTORY available */
 #undef HAVE_O_DIRECTORY
 
@@ -441,6 +447,9 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* uselocale() available */
+#undef HAVE_USELOCALE
 
 /* uuid_generate() available */
 #undef HAVE_UUID_GENERATE
