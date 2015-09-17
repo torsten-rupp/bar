@@ -1707,27 +1707,38 @@ void debugResourceCheck(void);
 
 #if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
 /***********************************************************************\
-* Name   : debugDumpStackTrace, debugDumpCurrentStackTrace
+* Name   : debugDumpStackTrace
 * Purpose: print function names of stack trace
 * Input  : handle         - output stream
-*          title          - title text
 *          indent         - indention of output
 *          stackTrace     - stack trace
 *          stackTraceSize - size of stack trace
+*          skipFrameCount - number of frames to skip
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 void debugDumpStackTrace(FILE       *handle,
-                         const char *title,
                          uint       indent,
                          void const *stackTrace[],
-                         uint       stackTraceSize
+                         uint       stackTraceSize,
+                         uint       skipFrameCount
                         );
-void debugDumpCurrentStackTrace(FILE       *handle,
-                                const char *title,
-                                uint       indent
+
+/***********************************************************************\
+* Name   : debugDumpStackTrace, debugDumpCurrentStackTrace
+* Purpose: print function names of stack trace of current thread
+* Input  : handle - output stream
+*          indent - indention of output
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugDumpCurrentStackTrace(FILE *handle,
+                                uint indent,
+                                uint skipFrameCount
                                );
 #endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
 

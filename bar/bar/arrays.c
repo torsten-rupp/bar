@@ -196,7 +196,7 @@ void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction
                   array
                  );
           #ifdef HAVE_BACKTRACE
-            debugDumpCurrentStackTrace(stderr,"",0);
+            debugDumpCurrentStackTrace(stderr,0,0);
           #endif /* HAVE_BACKTRACE */
           HALT_INTERNAL_ERROR("array not found");
         }

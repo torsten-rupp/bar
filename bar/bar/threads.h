@@ -93,7 +93,7 @@ uint Thread_getNumberOfCores(void);
 *          name          - name
 *          niceLevel     - nice level or 0 for default level
 *          entryFunction - thread entry function
-*          userData      - thread user data
+*          argument      - thread argument
 * Output : -
 * Return : TRUE if thread started, FALSE otherwise
 * Notes  : -
@@ -103,7 +103,7 @@ bool Thread_init(Thread     *thread,
                  const char *name,
                  int        niceLevel,
                  const void *entryFunction,
-                 void       *userData
+                 void       *argument
                 );
 
 /***********************************************************************\

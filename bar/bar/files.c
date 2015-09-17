@@ -200,7 +200,7 @@ LOCAL void fileCheckValid(const char       *fileName,
     if (debugFileNode != NULL)
     {
       #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,"",0);
+        debugDumpCurrentStackTrace(stderr,0,0);
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR_AT(fileName,
                              lineNb,
@@ -220,7 +220,7 @@ LOCAL void fileCheckValid(const char       *fileName,
     if (debugFileNode == NULL)
     {
       #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,"",0);
+        debugDumpCurrentStackTrace(stderr,0,0);
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR("File 0x%08lx is not open",
                           (ulong)fileHandle
@@ -901,7 +901,7 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
       if (debugFileNode != NULL)
       {
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,"",0);
+          debugDumpCurrentStackTrace(stderr,0,0);
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {
@@ -1431,7 +1431,7 @@ Errors __File_openCString(const char *__fileName__,
       if (debugFileNode != NULL)
       {
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,"",0);
+          debugDumpCurrentStackTrace(stderr,0,0);
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {
@@ -1601,7 +1601,7 @@ Errors __File_openDescriptor(const char *__fileName__,
       if (debugFileNode != NULL)
       {
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,"",0);
+          debugDumpCurrentStackTrace(stderr,0,0);
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {
@@ -1750,7 +1750,7 @@ Errors __File_close(const char *__fileName__,
       else
       {
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,"",0);
+          debugDumpCurrentStackTrace(stderr,0,0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR("File '%p' not found in debug list at %s, line %u",
                             fileHandle->file,
