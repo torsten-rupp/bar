@@ -88,6 +88,7 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
+import org.eclipse.swt.widgets.TypedListener;
 import org.eclipse.swt.widgets.Widget;
 
 import org.eclipse.swt.widgets.Listener;
@@ -1874,6 +1875,11 @@ class Widgets
       else if (control instanceof DateTime)
       {
       }
+      else if (control instanceof Composite)
+      {
+        Composite composite = (Composite)control;
+        composite.setFocus();
+      }
       else
       {
         throw new Error("Internal error: unknown control in setFocus(): "+control);
@@ -1902,7 +1908,13 @@ class Widgets
           {
           }
         };
-        if      (controls[i] instanceof Button)
+        if      (controls[i] instanceof Composite)
+        {
+          TypedListener typedListener = new TypedListener(selectionListener);
+          ((Composite)controls[i]).addListener(SWT.Selection, typedListener);
+          ((Composite)controls[i]).addListener(SWT.DefaultSelection, typedListener);
+        }
+        else if (controls[i] instanceof Button)
         {
           ((Button)controls[i]).addSelectionListener(selectionListener);
         }
@@ -2144,6 +2156,30 @@ does not work on Windows? Even cursor keys trigger traversal event?
 
   //-----------------------------------------------------------------------
 
+  /** get data from widget
+   * @param widget widget
+   * @param defaultValue default data value
+   * @return data value
+   */
+  public static <T> T getData(Widget widget, T defaultValue)
+  {
+    T value;
+
+    Object data = widget.getData();
+    if (data != null)
+    {
+      value = (T)data;
+    }
+    else
+    {
+      value = defaultValue;
+    }
+
+    return value;
+  }
+
+  //-----------------------------------------------------------------------
+
   /** create empty space
    * @param composite composite widget
    * @return control space control
@@ -2231,14 +2267,14 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param style label style
    * @return new image
    */
-  public static Control newImage(Composite composite, Image image, int style)
+  public static Label newImage(Composite composite, Image image, int style)
   {
     Label label;
 
     label = new Label(composite,style);
     label.setImage(image);
 
-    return (Control)label;
+    return label;
   }
 
   /** create new image
@@ -2246,7 +2282,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param image image
    * @return new image
    */
-  public static Control newImage(Composite composite, Image image)
+  public static Label newImage(Composite composite, Image image)
   {
     return newImage(composite,image,SWT.LEFT);
   }
@@ -2301,6 +2337,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
 
     label = new Label(composite,style|SWT.BORDER);
     label.setText("0");
+
 
     return label;
   }
@@ -2373,10 +2410,11 @@ does not work on Windows? Even cursor keys trigger traversal event?
   /** create new button
    * @param composite composite widget
    * @param text text
+   * @param style SWT style flags
    * @param accelerator accelerator key code or SWT.NONE
    * @return new button
    */
-  public static Button newButton(Composite composite, String text, int accelerator)
+  public static Button newButton(Composite composite, String text, int style, int accelerator)
   {
     Button button;
 
@@ -2393,7 +2431,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
         text = text+" ["+buttonAcceleratorToText(accelerator)+"]";
       }
     }
-    button = new Button(composite,SWT.PUSH);
+    button = new Button(composite,style|SWT.PUSH);
     button.setText(text);
 
     return button;
@@ -2402,11 +2440,39 @@ does not work on Windows? Even cursor keys trigger traversal event?
   /** create new button
    * @param composite composite widget
    * @param text text
+   * @param style SWT style flags
+   * @return new button
+   */
+  public static Button newButton(Composite composite, String text, int style)
+  {
+    return newButton(composite,text,style,0);
+  }
+
+  /** create new button
+   * @param composite composite widget
+   * @param text text
+   * @param style SWT style flags
    * @return new button
    */
   public static Button newButton(Composite composite, String text)
   {
-    return newButton(composite,text,0);
+    return newButton(composite,text,SWT.NONE);
+  }
+
+  /** create new button with image
+   * @param composite composite widget
+   * @param image image
+   * @param style SWT style flags
+   * @return new button
+   */
+  public static Button newButton(Composite composite, Image image, int style)
+  {
+    Button button;
+
+    button = new Button(composite,style|SWT.PUSH);
+    button.setImage(image);
+
+    return button;
   }
 
   /** create new button with image
@@ -2416,10 +2482,23 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newButton(Composite composite, Image image)
   {
+    return newButton(composite,image,SWT.NONE);
+  }
+
+  /** create new button with image
+   * @param composite composite widget
+   * @param image image
+   * @param text text
+   * @param style SWT style flags
+   * @return new button
+   */
+  public static Button newButton(Composite composite, Image image, String text, int style)
+  {
     Button button;
 
-    button = new Button(composite,SWT.PUSH);
+    button = new Button(composite,style|SWT.PUSH);
     button.setImage(image);
+    button.setText(text);
 
     return button;
   }
@@ -2432,13 +2511,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newButton(Composite composite, Image image, String text)
   {
-    Button button;
-
-    button = new Button(composite,SWT.PUSH);
-    button.setImage(image);
-    button.setText(text);
-
-    return button;
+    return newButton(composite,image,text,SWT.NONE);
   }
 
   /** create new button
@@ -4795,7 +4868,7 @@ e composite widget
           TableItem tableItems[] = table.getItems();
           for (int i = 0; i < tableItems.length; i++)
           {
-            if (tableItems[i].getData().equals(data))
+            if (data.equals(tableItems[i].getData()))
             {
               index[0] = i;
               break;
@@ -5302,7 +5375,7 @@ e composite widget
         {
           for (TableItem tableItem : table.getItems())
           {
-            if (tableItem.getData().equals(data))
+            if (data.equals(tableItem.getData()))
             {
               for (int i = 0; i < values.length; i++)
               {
@@ -5421,7 +5494,7 @@ e composite widget
   {
     for (TableItem tableItem : table.getItems())
     {
-      if (tableItem.getData().equals(data))
+      if (data.equals(tableItem.getData()))
       {
         return tableItem;
       }
@@ -5448,7 +5521,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (tableItem.getData().equals(data))
+              if (data.equals(tableItem.getData()))
               {
                 tableItem.setForeground(foregroundColor);
                 tableItem.setBackground(backgroundColor);
@@ -5490,7 +5563,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (tableItem.getData().equals(data))
+              if (data.equals(tableItem.getData()))
               {
                 tableItem.setForeground(columnNb,foregroundColor);
                 tableItem.setBackground(columnNb,backgroundColor);
@@ -5531,7 +5604,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (tableItem.getData().equals(data))
+              if (data.equals(tableItem.getData()))
               {
                 tableItem.setFont(font);
                 break;
@@ -5571,7 +5644,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (tableItem.getData().equals(data))
+              if (data.equals(tableItem.getData()))
               {
                 tableItem.setFont(columnNb,font);
                 break;
@@ -5611,7 +5684,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (tableItem.getData().equals(data))
+              if (data.equals(tableItem.getData()))
               {
                 tableItem.setChecked(checked);
                 break;
@@ -5639,7 +5712,7 @@ e composite widget
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (tableItem.getData().equals(data))
+              if (data.equals(tableItem.getData()))
               {
                 table.remove(table.indexOf(tableItem));
                 break;
@@ -5755,7 +5828,7 @@ e composite widget
             TableItem tableItems[] = table.getItems();
             for (TableItem tableItem : tableItems)
             {
-              if (tableItem.getData().equals(data))
+              if (data.equals(tableItem.getData()))
               {
                 table.setSelection(tableItem);
                 break;
@@ -5957,6 +6030,16 @@ e composite widget
     return insertTreeItem(tree,-1,data,folderFlag,values);
   }
 
+  /** add tree item at end
+   * @param tree tree widget
+   * @param data data
+   * @return new tree item
+   */
+  public static TreeItem addTreeItem(Tree tree, Object data, Object... values)
+  {
+    return addTreeItem(tree,data,false,values);
+  }
+
   /** insert sub-tree item
    * @param parentTreeItem parent tree item
    * @param index index (0..n)
@@ -6043,7 +6126,7 @@ e composite widget
    */
   public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, Image image, boolean folderFlag, Object... values)
   {
-    return insertTreeItem(parentTreeItem,-1,data,image,folderFlag);
+    return insertTreeItem(parentTreeItem,-1,data,image,folderFlag,values);
   }
 
   /** add sub-tree item at end
@@ -6058,6 +6141,17 @@ e composite widget
     return addTreeItem(parentTreeItem,data,null,folderFlag,values);
   }
 
+  /** add sub-tree item at end
+   * @param parentTreeItem parent tree item
+   * @param data data
+   * @param values values list
+   * @return new tree item
+   */
+  public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, Object... values)
+  {
+    return addTreeItem(parentTreeItem,data,false,values);
+  }
+
   /** get tree item from sub-tree items
    * @param parentTreeItem parent tree item
    * @param data tree item data
@@ -6067,7 +6161,7 @@ e composite widget
   {
     for (TreeItem treeItem : parentTreeItem.getItems())
     {
-      if (treeItem.getData().equals(data))
+      if (data.equals(treeItem.getData()))
       {
         return treeItem;
       }
@@ -6095,7 +6189,7 @@ e composite widget
 
     for (TreeItem treeItem : tree.getItems())
     {
-      if (treeItem.getData().equals(data))
+      if (data.equals(treeItem.getData()))
       {
         return treeItem;
       }
@@ -6129,7 +6223,7 @@ e composite widget
           {
             for (TreeItem treeItem : tree.getItems())
             {
-              if (treeItem.getData().equals(data))
+              if (data.equals(treeItem.getData()))
               {
                 treeItem.setChecked(checked);
                 break;
@@ -6201,7 +6295,7 @@ e composite widget
         {
           for (TreeItem treeItem : tree.getItems())
           {
-            if (treeItem.getData().equals(data))
+            if (data.equals(treeItem.getData()))
             {
               for (int i = 0; i < values.length; i++)
               {
@@ -6239,6 +6333,36 @@ e composite widget
   }
 
   /** remove tree item
+   * @param treeItem tree item
+   * @param data item data
+   * @param true iff tree item removed
+   */
+  private static boolean removeTreeItem(TreeItem treeItem, Object data)
+  {
+    if (data.equals(treeItem.getData()))
+    {
+      treeItem.dispose();
+      return true;
+    }
+    else
+    {
+      for (TreeItem subTreeItem : treeItem.getItems())
+      {
+        if (removeTreeItem(subTreeItem,data))
+        {
+          if (treeItem.getItemCount() <= 0)
+          {
+            treeItem.setExpanded(false);
+            new TreeItem(treeItem,SWT.NONE);
+          }
+          return true;
+        }
+      }
+      return false;
+    }
+  }
+
+  /** remove tree item
    * @param tree tree
    * @param data item data
    */
@@ -6254,15 +6378,8 @@ e composite widget
           {
             for (TreeItem treeItem : tree.getItems())
             {
-              if (treeItem.getData().equals(data))
+              if (removeTreeItem(treeItem,data))
               {
-                TreeItem parentTreeItem = treeItem.getParentItem();
-                treeItem.dispose();
-                if ((parentTreeItem != null) && (parentTreeItem.getItemCount() <= 0))
-                {
-                  parentTreeItem.setExpanded(false);
-                  new TreeItem(parentTreeItem,SWT.NONE);
-                }
                 break;
               }
             }
@@ -6311,8 +6428,9 @@ e composite widget
     }
   }
 
-  /** remove all tree items
+  /** remove all tree items of tree item
    * @param tree tree
+   * @treeItem tree item
    */
   public static void removeAllTreeItems(final Tree tree, final TreeItem treeItem)
   {
@@ -6327,6 +6445,26 @@ e composite widget
             treeItem.removeAll();
             new TreeItem(treeItem,SWT.NONE);
             treeItem.setExpanded(false);
+          }
+        }
+      });
+    }
+  }
+
+  /** remove all tree items
+   * @param tree tree
+   */
+  public static void removeAllTreeItems(final Tree tree)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            tree.removeAll();
           }
         }
       });
@@ -6684,6 +6822,66 @@ private static void printTree(Tree tree)
     }
   }
 
+  /** get selected tree item
+   * @param tree tree
+   * @param default default value
+   * @return selected tree item data
+   */
+  public static <T> T getSelectedTreeItem(final Tree tree, T defaultValue)
+  {
+    final Object data[] = new Object[]{defaultValue};
+
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            TreeItem treeItems[] = tree.getSelection();
+            if (treeItems.length > 0)
+            {
+              data[0] = treeItems[0].getData();
+            }
+          }
+        }
+      });
+    }
+
+    return (T)data[0];
+  }
+
+  /** set selected tree item
+   * @param tree table
+   * @param data item data
+   */
+  public static <T> void setSelectedTreeItem(final Tree tree, final T data)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            tree.deselectAll();
+            TreeItem treeItems[] = tree.getItems();
+            for (TreeItem treeItem : treeItems)
+            {
+              if (data.equals(treeItem.getData()))
+              {
+                tree.setSelection(treeItem);
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
   //-----------------------------------------------------------------------
 
   /** create new sash widget (pane)
@@ -6760,7 +6958,7 @@ private static void printTree(Tree tree)
       {
         TabFolder tabFolder          = (TabFolder)mouseEvent.widget;
         TabItem   selectedTabItems[] = tabFolder.getSelection();
-        if (selectedTabItems != null)
+        if ((selectedTabItems != null) && (selectedTabItems.length > 0))
         {
           if (selectedTabItems[0].getImage() != null)
           {
@@ -7706,13 +7904,36 @@ private static void printTree(Tree tree)
    * @param menu menu
    * @param text menu item text
    * @param selected true iff checkbox menu item is selected
+   * @param accelerator accelerator key or SWT.NONE
+   * @return new menu item
+   */
+  public static MenuItem addMenuCheckbox(Menu menu, String text, boolean selected, int accelerator)
+  {
+    MenuItem menuItem = addMenuCheckbox(menu,null,text,null,null,accelerator);
+    menuItem.setSelection(selected);
+    return menuItem;
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param selected true iff checkbox menu item is selected
    * @return new menu item
    */
   public static MenuItem addMenuCheckbox(Menu menu, String text, boolean selected)
   {
-    MenuItem menuItem = addMenuCheckbox(menu,null,text,null,null);
-    menuItem.setSelection(selected);
-    return menuItem;
+    return addMenuCheckbox(menu,text,selected,SWT.NONE);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param accelerator accelerator key or SWT.NONE
+   * @return new menu item
+   */
+  public static MenuItem addMenuCheckbox(Menu menu, String text, int accelerator)
+  {
+    return addMenuCheckbox(menu,null,text,null,null,accelerator);
   }
 
   /** add new menu item
@@ -7722,7 +7943,7 @@ private static void printTree(Tree tree)
    */
   public static MenuItem addMenuCheckbox(Menu menu, String text)
   {
-    return addMenuCheckbox(menu,text,null,null,null);
+    return addMenuCheckbox(menu,text,SWT.NONE);
   }
 
   /** add new menu item
@@ -8123,122 +8344,212 @@ private static void printTree(Tree tree)
     widgetEvent.trigger();
   }
 
-  /** signal modified
-   * @param control control
+  /** signal notifcation of control and all sub-controls
+   * @param receiver receiver widget
    * @param type event type to generate
-   * @param widget widget of event
-   * @param index index of event
-   * @param item item of event
+   * @param event event
    */
-  public static void notify(Control control, int type, Widget widget, int index, Widget item)
+  private static void notify(Widget receiver, int type, Event event)
   {
-    if (!control.isDisposed() && control.isEnabled())
+    if (!receiver.isDisposed())
     {
-      Event event = new Event();
-      event.widget = widget;
-      event.index  = index;
-      event.item   = item;
-      control.notifyListeners(type,event);
+      if (receiver instanceof Control)
+      {
+        Control control = (Control)receiver;
+        if (control.isEnabled())
+        {
+          control.notifyListeners(type,event);
+          if (event.doit)
+          {
+            if (control instanceof Composite)
+            {
+              Composite composite = (Composite)control;
+              if (!composite.isDisposed())
+              {
+                for (Control child : composite.getChildren())
+                {
+                  notify(child,type,event);
+                  if (!event.doit) break;
+                }
+              }
+            }
+          }
+        }
+      }
+      else
+      {
+        receiver.notifyListeners(type,event);
+      }
     }
   }
 
-  /** signal modified
-   * @param control control
+  /** signal notifcation
+   * @param receiver receiver widget
    * @param type event type to generate
    * @param widget widget of event
+   * @param index index of event
    * @param text text of event
    * @param item item of event
+   * @param data data of event
    */
-  public static void notify(Control control, int type, Widget widget, String text, Widget item)
+  public static void notify(final Widget receiver, final int type, final Widget widget, final int index, final String text, final Widget item, final Object data)
   {
-    if (!control.isDisposed() && control.isEnabled())
+    if (!receiver.isDisposed())
     {
-      Event event = new Event();
-      event.widget = widget;
-      event.text   = text;
-      event.item   = item;
-      control.notifyListeners(type,event);
+      receiver.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          Event event = new Event();
+          event.widget = widget;
+          event.index  = index;
+          event.text   = text;
+          event.item   = item;
+          event.data   = data;
+          Widgets.notify(receiver,type,event);
+        }
+      });
     }
   }
 
-  /** event notification
-   * @param control control
+  /** signal notifcation
+   * @param receiver receiver widget
+   * @param type event type to generate
+   * @param widget widget of event
+   * @param index index of event
+   * @param item item of event
+   * @param data data of event
+   */
+  public static void notify(Widget receiver, int type, Widget widget, int index, Widget item, Object data)
+  {
+    notify(receiver,type,widget,index,(String)null,item,data);
+  }
+
+  /** signal notifcation
+   * @param receiver receiver widget
+   * @param type event type to generate
+   * @param widget widget of event
+   * @param text text of event
+   * @param item item of event
+   * @param data data of event
+   */
+  public static void notify(Widget receiver, int type, Widget widget, String text, Widget item, Object data)
+  {
+    notify(receiver,type,widget,-1,text,item,data);
+  }
+
+  /** signal notifcation
+   * @param receiver receiver widget
+   * @param type event type to generate
+   * @param widget widget of event
+   * @param index index of event
+   * @param item item of event
+   */
+  public static void notify(Widget receiver, int type, Widget widget, int index, Widget item)
+  {
+    notify(receiver,type,widget,index,item,null);
+  }
+
+  /** signal notifcation
+   * @param receiver receiver widget
+   * @param type event type to generate
+   * @param widget widget of event
+   * @param text text of event
+   * @param item item of event
+   */
+  public static void notify(Widget receiver, int type, Widget widget, String text, Widget item)
+  {
+    notify(receiver,type,widget,text,item,null);
+  }
+
+  /** signal notifcation
+   * @param receiver receiver widget
    * @param type event type to generate
    * @param index index of event
    * @param widget widget of event
    */
-  public static void notify(Control control, int type, int index, Widget widget)
+  public static void notify(Widget receiver, int type, int index, Widget widget)
   {
-    notify(control,type,widget,index,null);
+    notify(receiver,type,widget,index,null);
   }
 
-  /** event notification
-   * @param control control
+  /** signal notifcation
+   * @param receiver receiver widget
    * @param type event type to generate
    * @param text text of event
    * @param widget widget of event
    */
-  public static void notify(Control control, int type, String text, Widget widget)
+  public static void notify(Widget receiver, int type, String text, Widget widget)
   {
-    notify(control,type,widget,text,null);
+    notify(receiver,type,widget,text,null);
   }
 
-  /** event notification
-   * @param control control
+  /** signal notifcation
+   * @param receiver receiver widget
    * @param type event type to generate
    * @param widget widget of event
    * @param item item of event
    */
-  public static void notify(Control control, int type, Widget widget, Widget item)
+  public static void notify(Widget receiver, int type, Widget widget, Widget item)
   {
-    notify(control,type,widget,-1,item);
+    notify(receiver,type,widget,-1,item);
   }
 
-  /** event notification
-   * @param control control
+  /** signal notifcation
+   * @param receiver receiver widget
    * @param type event type to generate
    * @param widget widget of event
    */
-  public static void notify(Control control, int type, Widget widget)
+  public static void notify(Widget receiver, int type, Widget widget)
   {
-    notify(control,type,widget,-1,null);
+    notify(receiver,type,widget,-1,null);
   }
 
-  /** event notification
-   * @param control control
+  /** signal notifcation
+   * @param receiver receiver widget
    * @param type event type to generate
    * @param index index of event
    */
-  public static void notify(Control control, int type, int index)
+  public static void notify(Widget receiver, int type, int index)
   {
-    notify(control,type,control,index,null);
+    notify(receiver,type,receiver,index,(Widget)null);
   }
 
-  /** event notification
-   * @param control control
+  /** signal notifcation
+   * @param receiver receiver widget
    * @param type event type to generate
    * @param text text of event
    */
-  public static void notify(Control control, int type, String text)
+  public static void notify(Widget receiver, int type, String text)
   {
-    notify(control,type,control,text,null);
+    notify(receiver,type,receiver,text,(Widget)null);
   }
 
-  /** event notification
-   * @param control control
+  /** signal notifcation
+   * @param receiver receiver widget
+   * @param type event type to generate
+   * @param index index of event
+   */
+  public static void notify(Widget receiver, int type, Object data)
+  {
+    notify(receiver,type,receiver,-1,(String)null,(Widget)null,data);
+  }
+
+  /** signal notifcation
+   * @param receiver receiver widget
    * @param type event type to generate
    */
-  public static void notify(Control control, int type)
+  public static void notify(Widget receiver, int type)
   {
-    notify(control,type,control);
+    notify(receiver,type,receiver);
   }
 
-  /** event notification
-   * @param control control
+  /** signal notifcation
+   * @param receiver receiver widget
    */
-  public static void notify(Control control)
+  public static void notify(Widget receiver)
   {
-    notify(control,SWT.Selection);
+    notify(receiver,SWT.Selection);
   }
 
   //-----------------------------------------------------------------------
