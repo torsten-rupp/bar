@@ -62,6 +62,9 @@ endif
 
 LD                     = $(if @CXX@,@CXX@,@CC@)
 LD_FLAGS               = @LD_FLAGS@
+LD_FLAGS_RELEASE       =
+LD_FLAGS_DEBUG         = -Wl,-wrap,pthread_create
+LD_FLAGS_VALGRIND      =
 LD_LIBRARY_PATHS       = @LIBRARY_PATHS@
 LD_LIBRARIES           = @LIBRARIES@
 LD_STATIC_LIBRARIES    = @STATIC_LIBRARIES@
@@ -328,6 +331,7 @@ BAR_SOURCES          = bar.c \
                        dictionaries.c \
                        bitmaps.c \
                        database.c \
+                       $(if @HAVE_BFD_H@,stacktraces.c) \
 
 BAR_HEADERS          = $(patsubst %.c,%.h,$(filter %.c,$(BAR_SOURCES))) \
                        $(patsubst %.cpp,%.h,$(filter %.cpp,$(BAR_SOURCES))) \
@@ -412,6 +416,7 @@ INTERMEDIATE         = errors.c \
 
 TARGETS              = bar@EXEEXT@ \
                        bar-debug@EXEEXT@ \
+                       bar-debug@EXEEXT@.sym \
                        bar-valgrind@EXEEXT@ \
                        $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
                        $(if @HAVE_BREAKPAD@,release/bar.sym debug/bar.sym) \
@@ -537,12 +542,12 @@ Makefile.depend:
 bar@EXEEXT@: \
   $(BAR_OBJECTS_RELEASE) \
   $(EXTERN_OBJECTS)
-	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_RELEASE) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 ifeq (@HAVE_BREAKPAD@,1)
 	$(MAKE) release/bar.sym.bz2.o
-	$(LD) $(LD_FLAGS) -o $@ $^ release/bar.sym.bz2.o $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_RELEASE) -o $@ $^ release/bar.sym.bz2.o $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 endif
@@ -550,15 +555,18 @@ endif
 bar-debug@EXEEXT@: \
   $(BAR_OBJECTS_DEBUG) \
   $(EXTERN_OBJECTS)
-	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 ifeq (@HAVE_BREAKPAD@,1)
 	$(MAKE) debug/bar.sym.bz2.o
-	$(LD) $(LD_FLAGS) -o $@ $^ debug/bar.sym.bz2.o $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ debug/bar.sym.bz2.o $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 endif
+
+bar-debug@EXEEXT@.sym: bar-debug@EXEEXT@
+	$(OBJCOPY) --only-keep-debug bar-debug@EXEEXT@ $@
 
 # Note: a special valgrind version is needed because of a bug in valgrind
 #       reporting false positives when gcc builtin-functions are used.
@@ -566,7 +574,7 @@ endif
 bar-valgrind@EXEEXT@: \
   $(BAR_OBJECTS_VALGRIND) \
   $(EXTERN_OBJECTS)
-	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_VALGRIND) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 
@@ -3718,6 +3726,7 @@ install: \
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-debug@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) -m 644 bar-debug@EXEEXT@.sym "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-keygen@SHELLEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
 	if test ! -f "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; then \
