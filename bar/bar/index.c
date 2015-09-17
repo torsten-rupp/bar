@@ -2363,7 +2363,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
   // check init error
-  if (indexHandle->initError != ERROR_NONE)
+  if (indexQueryHandle->indexHandle->initError != ERROR_NONE)
   {
     return FALSE;
   }
@@ -2464,7 +2464,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                            String_isEmpty(scheduleUUID) ? 1 : 0,
                            scheduleUUID,
                            getOrderingString(ordering),
-                           MAX_UINT,
+                           MAX_ULONG,
                            offset
                           );
   if (error != ERROR_NONE)
@@ -2494,7 +2494,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
   // check init error
-  if (indexHandle->initError != ERROR_NONE)
+  if (indexQueryHandle->indexHandle->initError != ERROR_NONE)
   {
     return FALSE;
   }
@@ -2717,7 +2717,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
   // check init error
-  if (indexHandle->initError != ERROR_NONE)
+  if (indexQueryHandle->indexHandle->initError != ERROR_NONE)
   {
     return FALSE;
   }
@@ -3275,7 +3275,7 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
   assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
   // check init error
-  if (indexHandle->initError != ERROR_NONE)
+  if (indexQueryHandle->indexHandle->initError != ERROR_NONE)
   {
     return FALSE;
   }
@@ -3404,7 +3404,7 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
   assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
   // check init error
-  if (indexHandle->initError != ERROR_NONE)
+  if (indexQueryHandle->indexHandle->initError != ERROR_NONE)
   {
     return FALSE;
   }
@@ -3530,7 +3530,7 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
   assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
   // check init error
-  if (indexHandle->initError != ERROR_NONE)
+  if (indexQueryHandle->indexHandle->initError != ERROR_NONE)
   {
     return FALSE;
   }
@@ -3658,7 +3658,7 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
   assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
   // check init error
-  if (indexHandle->initError != ERROR_NONE)
+  if (indexQueryHandle->indexHandle->initError != ERROR_NONE)
   {
     return FALSE;
   }
@@ -3792,7 +3792,7 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
   assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
   // check init error
-  if (indexHandle->initError != ERROR_NONE)
+  if (indexQueryHandle->indexHandle->initError != ERROR_NONE)
   {
     return FALSE;
   }
@@ -3921,7 +3921,7 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
   assert(Index_isInitDone(indexQueryHandle->indexHandle));
 
   // check init error
-  if (indexHandle->initError != ERROR_NONE)
+  if (indexQueryHandle->indexHandle->initError != ERROR_NONE)
   {
     return FALSE;
   }
