@@ -17,6 +17,7 @@
   #include <sys/select.h>
 #endif /* HAVE_SYS_SELECT_H */
 #include <pthread.h>
+#include <locale.h>
 #include <time.h>
 #include <signal.h>
 #include <assert.h>
@@ -666,6 +667,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
 /***************************** Variables *******************************/
 
+LOCAL locale_t              POSIXLocale;
 LOCAL ClientList            clientList;
 LOCAL AuthorizationFailList authorizationFailList;
 LOCAL const Password        *serverPassword;
@@ -4655,7 +4657,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void sendClient(ClientInfo *clientInfo, String data)
+LOCAL void sendClient(ClientInfo *clientInfo, ConstString data)
 {
   SemaphoreLock semaphoreLock;
 
@@ -4705,16 +4707,21 @@ LOCAL void sendClient(ClientInfo *clientInfo, String data)
 
 LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, uint errorCode, const char *format, ...)
 {
-  String  result;
-  va_list arguments;
+  locale_t locale;
+  String   result;
+  va_list  arguments;
 
   result = String_new();
 
-  String_format(result,"%d %d %d ",id,completeFlag ? 1 : 0,Error_getCode(errorCode));
-  va_start(arguments,format);
-  String_vformat(result,format,arguments);
-  va_end(arguments);
-  String_appendChar(result,'\n');
+  locale = uselocale(POSIXLocale);
+  {
+    String_format(result,"%d %d %d ",id,completeFlag ? 1 : 0,Error_getCode(errorCode));
+    va_start(arguments,format);
+    String_vformat(result,format,arguments);
+    va_end(arguments);
+    String_appendChar(result,'\n');
+  }
+  uselocale(locale);
 
   sendClient(clientInfo,result);
 
@@ -13478,11 +13485,14 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
 
 Errors Server_initAll(void)
 {
+  POSIXLocale = newlocale(LC_ALL,"POSIX",0);
+
   return ERROR_NONE;
 }
 
 void Server_doneAll(void)
 {
+  freelocale(POSIXLocale);
 }
 
 Errors Server_run(uint             port,
