@@ -344,7 +344,7 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
   close(minidumpFileDescriptor);
 
   if (IS_DEBUG_TESTCODE("minidump")) exit(EXITCODE_TESTCODE);
-exit(1);
+
   return succeeded;
 
   #undef __TO_STRING
