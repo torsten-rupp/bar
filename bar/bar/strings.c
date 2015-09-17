@@ -271,7 +271,7 @@ LOCAL void printErrorConstString(const struct __String *string)
                );
       }
       #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,"",0);
+        debugDumpCurrentStackTrace(stderr,0,0);
       #endif /* HAVE_BACKTRACE */
     }
     pthread_mutex_unlock(&debugStringLock);
@@ -2333,8 +2333,10 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
                   debugStringNode->allocLineNb
                  );
           #ifdef HAVE_BACKTRACE
-            debugDumpStackTrace(stderr,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
-            debugDumpStackTrace(stderr,"deleted at",2,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize);
+            fprintf(stderr,"  allocated at\n");
+            debugDumpStackTrace(stderr,4,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
+            fprintf(stderr,"  deleted at\n");
+            debugDumpStackTrace(stderr,4,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize,0);
           #endif /* HAVE_BACKTRACE */
           HALT_INTERNAL_ERROR("string delete fail");
         }
@@ -2373,7 +2375,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
                   __lineNb__
                  );
           #ifdef HAVE_BACKTRACE
-            debugDumpCurrentStackTrace(stderr,"",0);
+            debugDumpCurrentStackTrace(stderr,0,0);
           #endif /* HAVE_BACKTRACE */
           HALT_INTERNAL_ERROR("string delete fail");
         }
@@ -4984,7 +4986,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
           if (debugStringNode != NULL)
           {
             #ifdef HAVE_BACKTRACE
-              debugDumpCurrentStackTrace(stderr,"",0);
+              debugDumpCurrentStackTrace(stderr,0,0);
             #endif /* HAVE_BACKTRACE */
             HALT_INTERNAL_ERROR_AT(__fileName__,
                                    __lineNb__,
@@ -5018,7 +5020,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
                      );
             }
             #ifdef HAVE_BACKTRACE
-              debugDumpCurrentStackTrace(stderr,"",0);
+              debugDumpCurrentStackTrace(stderr,0,0);
             #endif /* HAVE_BACKTRACE */
             HALT_INTERNAL_ERROR_AT(__fileName__,
                                    __lineNb__,
@@ -5036,7 +5038,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
       else
       {
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,"",0);
+          debugDumpCurrentStackTrace(stderr,0,0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR_AT(__fileName__,
                                __lineNb__,
@@ -5062,7 +5064,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
           debugStringNode = debugFindFreedString(string);
 
           #ifdef HAVE_BACKTRACE
-            debugDumpCurrentStackTrace(stderr,"",0);
+            debugDumpCurrentStackTrace(stderr,0,0);
           #endif /* HAVE_BACKTRACE */
           if (debugStringNode != NULL)
           {
@@ -5123,7 +5125,8 @@ void String_debugDumpInfo(FILE *handle)
               debugStringNode->allocLineNb
              );
       #ifdef HAVE_BACKTRACE
-        debugDumpStackTrace(handle,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
+        fprintf(stderr,"  allocated at\n");
+        debugDumpStackTrace(handle,4,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
       #endif /* HAVE_BACKTRACE */
     }
   }
