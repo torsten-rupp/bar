@@ -3272,6 +3272,18 @@ public class TabRestore
   // date/time format
   private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+  /** file types
+   */
+  enum FileTypes
+  {
+    FILE,
+    DIRECTORY,
+    LINK,
+    HARDLINK,
+    SPECIAL,
+    UNKNOWN
+  };
+
   // --------------------------- variables --------------------------------
 
   // global variable references
@@ -3309,6 +3321,220 @@ public class TabRestore
 
   UpdateEntryListThread       updateEntryListThread = new UpdateEntryListThread();
   private EntryDataMap        entryDataMap          = new EntryDataMap();
+
+  public ListDirectory remoteListDirectory = new ListDirectory()
+  {
+    /** remote file
+     */
+    class RemoteFile extends File
+    {
+      private FileTypes fileType;
+      private long      size;
+      private long      dateTime;
+
+      /** create remote file
+       * @param name name
+       * @param fileType file type
+       * @param size size [bytes]
+       * @param dateTime last modified date/time
+       */
+      public RemoteFile(String name, FileTypes fileType, long size, long dateTime)
+      {
+        super(name);
+
+        this.fileType = fileType;
+        this.size     = size;
+        this.dateTime = dateTime;
+      }
+
+      /** create remote file
+       * @param name name
+       * @param fileType file type
+       * @param dateTime last modified date/time
+       */
+      public RemoteFile(String name, FileTypes fileType, long dateTime)
+      {
+        this(name,fileType,0,dateTime);
+      }
+
+      /** get file size
+       * @return size [bytes]
+       */
+      public long length()
+      {
+        return size;
+      }
+
+      /** get last modified
+       * @return last modified date/time
+       */
+      public long lastModified()
+      {
+        return dateTime*1000;
+      }
+
+      /** check if file is file
+       * @return true iff file
+       */
+      public boolean isFile()
+      {
+        return fileType == FileTypes.FILE;
+      }
+
+      /** check if file is directory
+       * @return true iff directory
+       */
+      public boolean isDirectory()
+      {
+        return fileType == FileTypes.DIRECTORY;
+      }
+
+      /** check if file is hidden
+       * @return always false
+       */
+      public boolean isHidden()
+      {
+        return getName().startsWith(".");
+      }
+
+      /** check if file exists
+       * @return always true
+       */
+      public boolean exists()
+      {
+        return true;
+      }
+    };
+
+    private ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+    Iterator<ValueMap>          iterator;
+
+    public String[] getShortcuts()
+    {
+      ArrayList<String> shortcutList = new ArrayList<String>();
+
+      String[] resultErrorMessage = new String[1];
+      int error = BARServer.executeCommand(StringParser.format("ROOT_LIST"),
+                                           0,
+                                           resultErrorMessage,
+                                           resultMapList
+                                          );
+      if (error == Errors.NONE)
+      {
+        for (ValueMap resultMap : resultMapList)
+        {
+          shortcutList.add(resultMap.getString("name"));
+        }
+      }
+
+      return shortcutList.toArray(new String[shortcutList.size()]);
+    }
+
+    public void setShortcuts(String shortcuts[])
+    {
+Dprintf.dprintf("");
+    }
+
+    public boolean open(String pathName)
+    {
+      String[] resultErrorMessage = new String[1];
+      int error = BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
+                                                               pathName
+                                                              ),
+                                           0,
+                                           resultErrorMessage,
+                                           resultMapList
+                                          );
+      if (error == Errors.NONE)
+      {
+        iterator = resultMapList.listIterator();
+        return true;
+      }
+      else
+      {
+        return false;
+      }
+    }
+    public void close()
+    {
+      iterator = null;
+    }
+    public File getNext()
+    {
+      File file = null;
+
+      if (iterator.hasNext())
+      {
+        ValueMap valueMap = iterator.next();
+        try
+        {
+          FileTypes fileType = valueMap.getEnum("fileType",FileTypes.class);
+          switch (fileType)
+          {
+            case FILE:
+              {
+                String  name         = valueMap.getString ("name"         );
+                long    size         = valueMap.getLong   ("size"         );
+                long    dateTime     = valueMap.getLong   ("dateTime"     );
+                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+
+                file = new RemoteFile(name,FileTypes.FILE,size,dateTime);
+              }
+              break;
+            case DIRECTORY:
+              {
+                String  name         = valueMap.getString ("name"          );
+                long    dateTime     = valueMap.getLong   ("dateTime"      );
+                boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
+                boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
+
+                file = new RemoteFile(name,FileTypes.DIRECTORY,dateTime);
+              }
+              break;
+            case LINK:
+              {
+                String  name         = valueMap.getString ("name"    );
+                long    dateTime     = valueMap.getLong   ("dateTime");
+                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+
+                file = new RemoteFile(name,FileTypes.LINK,dateTime);
+              }
+              break;
+            case HARDLINK:
+              {
+                String  name         = valueMap.getString ("name"    );
+                long    size         = valueMap.getLong   ("size"    );
+                long    dateTime     = valueMap.getLong   ("dateTime");
+                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+
+                file = new RemoteFile(name,FileTypes.HARDLINK,size,dateTime);
+              }
+              break;
+            case SPECIAL:
+              {
+                String  name         = valueMap.getString ("name"          );
+                long    size         = valueMap.getLong   ("size",    0L   );
+                long    dateTime     = valueMap.getLong   ("dateTime"      );
+                boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
+                boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
+
+                file = new RemoteFile(name,FileTypes.SPECIAL,dateTime);
+              }
+              break;
+          }
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
+          }
+        }
+      }
+
+      return file;
+    }
+  };
 
   // ------------------------ native functions ----------------------------
 
@@ -4901,11 +5127,23 @@ public class TabRestore
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
-          String pathName = Dialogs.directory(shell,
-                                              BARControl.tr("Select path"),
-                                              widgetRestoreTo.getText()
-                                             );
+          String pathName;
+          if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+          {
+            pathName = Dialogs.file(shell,
+                                    Dialogs.FileDialogTypes.DIRECTORY,
+                                    BARControl.tr("Select path"),
+                                    widgetRestoreTo.getText(),
+                                    remoteListDirectory
+                                   );
+          }
+          else
+          {
+           pathName = Dialogs.directory(shell,
+                                        BARControl.tr("Select path"),
+                                        widgetRestoreTo.getText()
+                                       );
+          }
           if (pathName != null)
           {
             widgetRestoreTo.setSelection(true);
