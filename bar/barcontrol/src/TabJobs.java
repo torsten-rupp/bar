@@ -3484,6 +3484,7 @@ Dprintf.dprintf("");
           Widgets.addModifyListener(new WidgetModifyListener(text,deltaSource));
 
           button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+          button.setToolTipText(BARControl.tr("Select remote file. CTRL+click to select local file."));
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
           Widgets.addModifyListener(new WidgetModifyListener(button,deltaCompressAlgorithm)
           {
@@ -3933,6 +3934,7 @@ Dprintf.dprintf("");
           Widgets.addModifyListener(new WidgetModifyListener(text,cryptPublicKeyFileName));
 
           button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+          button.setToolTipText(BARControl.tr("Select remote file. CTRL+click to select local file."));
           Widgets.layout(button,0,5,TableLayoutData.DEFAULT);
           Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
           {
@@ -4396,6 +4398,7 @@ Dprintf.dprintf("");
           });
 
           button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+          button.setToolTipText(BARControl.tr("Select remote file. CTRL+click to select local file."));
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -4493,6 +4496,7 @@ Dprintf.dprintf("");
           Widgets.addModifyListener(new WidgetModifyListener(text,incrementalListFileName));
 
           button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+          button.setToolTipText(BARControl.tr("Select remote file. CTRL+click to select local file."));
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -4890,6 +4894,7 @@ Dprintf.dprintf("");
               Widgets.addModifyListener(new WidgetModifyListener(text,mountDeviceName));
 
               button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+              button.setToolTipText(BARControl.tr("Select remote path. CTRL+click to select local path."));
               Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
               button.addSelectionListener(new SelectionListener()
               {
@@ -5426,6 +5431,7 @@ Dprintf.dprintf("");
             Widgets.addModifyListener(new WidgetModifyListener(text,sshPublicKeyFileName));
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            button.setToolTipText(BARControl.tr("Select remote file. CTRL+click to select local file."));
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
@@ -5519,6 +5525,7 @@ Dprintf.dprintf("");
             Widgets.addModifyListener(new WidgetModifyListener(text,sshPrivateKeyFileName));
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            button.setToolTipText(BARControl.tr("Select remote file. CTRL+click to select local file."));
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
@@ -5889,6 +5896,7 @@ Dprintf.dprintf("");
             Widgets.addModifyListener(new WidgetModifyListener(text,sshPublicKeyFileName));
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            button.setToolTipText(BARControl.tr("Select remote file. CTRL+click to select local file."));
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
@@ -5982,6 +5990,7 @@ Dprintf.dprintf("");
             Widgets.addModifyListener(new WidgetModifyListener(text,sshPrivateKeyFileName));
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            button.setToolTipText(BARControl.tr("Select remote file. CTRL+click to select local file."));
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
@@ -6145,6 +6154,7 @@ Dprintf.dprintf("");
             Widgets.addModifyListener(new WidgetModifyListener(text,storageDeviceName));
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            button.setToolTipText(BARControl.tr("Select remote device. CTRL+click to select local device."));
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
@@ -6444,6 +6454,7 @@ Dprintf.dprintf("");
             Widgets.addModifyListener(new WidgetModifyListener(text,storageDeviceName));
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            button.setToolTipText(BARControl.tr("Select remote device. CTRL+click to select local device."));
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
@@ -8503,6 +8514,7 @@ throw new Error("NYI");
         Widgets.layout(widgetPattern,0,0,TableLayoutData.WE);
 
         button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+        button.setToolTipText(BARControl.tr("Select remote path. CTRL+click to select local path."));
         Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
         button.addSelectionListener(new SelectionListener()
         {
@@ -8849,6 +8861,7 @@ throw new Error("NYI");
       Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
 
       button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+      button.setToolTipText(BARControl.tr("Select remote path. CTRL+click to select local path."));
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -9296,6 +9309,7 @@ throw new Error("NYI");
       Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
 
       button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+      button.setToolTipText(BARControl.tr("Select remote path. CTRL+click to select local path."));
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
