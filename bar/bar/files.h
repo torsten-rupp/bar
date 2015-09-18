@@ -205,6 +205,16 @@ typedef struct
   #endif /* not HAVE_O_NOATIME */
 } FileHandle;
 
+// root list handle
+typedef struct
+{
+  StringList fileSystemNames;
+  FILE       *mounts;
+  char       line[1024];
+  bool       parseFlag;
+  char       name[256];
+} RootListHandle;
+
 // directory list handle
 typedef struct
 {
@@ -853,6 +863,53 @@ Errors File_touch(ConstString fileName);
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : File_openRootList
+* Purpose: open root list for reading
+* Input  : rootListHandle - root list handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_openRootList(RootListHandle *rootListHandle);
+
+/***********************************************************************\
+* Name   : File_closeRootList
+* Purpose: close root list
+* Input  : rootListHandle - root list handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_closeRootList(RootListHandle *rootListHandle);
+
+/***********************************************************************\
+* Name   : File_endOfRootList
+* Purpose: check if end of root list reached
+* Input  : rootListHandle - root list handle
+* Output : -
+* Return : TRUE if not more root entries to read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool File_endOfRootList(RootListHandle *rootListHandle);
+
+/***********************************************************************\
+* Name   : File_readRootList
+* Purpose: read next directory list entry
+* Input  : rootListHandle - root list handle
+*          name           - name variable
+* Output : name - next name
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_readRootList(RootListHandle *rootListHandle,
+                         String              name
+                        );
+
+/***********************************************************************\
 * Name   : File_openDirectoryList
 * Purpose: open directory for reading
 * Input  : directoryListHandle - directory list handle
@@ -871,7 +928,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
 
 /***********************************************************************\
 * Name   : File_closeDirectoryList
-* Purpose: close directory .ist
+* Purpose: close directory list
 * Input  : directoryListHandle - directory list handle
 * Output : -
 * Return : -
@@ -885,7 +942,7 @@ void File_closeDirectoryList(DirectoryListHandle *directoryListHandle);
 * Purpose: check if end of directory list reached
 * Input  : directoryHandle - directory handle
 * Output : -
-* Return : TRUE if not more diretory entries to read, FALSE otherwise
+* Return : TRUE if not more directory entries to read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
