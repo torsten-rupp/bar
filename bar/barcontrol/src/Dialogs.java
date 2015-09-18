@@ -9,13 +9,34 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
-import java.lang.reflect.Field;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.File;
+import java.io.InputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
-import java.util.List;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.DragSource;
+import org.eclipse.swt.dnd.DragSourceEvent;
+import org.eclipse.swt.dnd.DragSourceListener;
+import org.eclipse.swt.dnd.DropTarget;
+import org.eclipse.swt.dnd.DropTargetAdapter;
+import org.eclipse.swt.dnd.DropTargetEvent;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.TraverseEvent;
@@ -38,11 +59,15 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Monitor;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Slider;
 import org.eclipse.swt.widgets.Spinner;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 
 import org.xnap.commons.i18n.I18n;
@@ -486,6 +511,77 @@ class BooleanFieldUpdater
     {
       throw new Error(exception);
     }
+  }
+}
+
+/** list directory
+ */
+abstract class ListDirectory
+{
+  /** get short cut names
+   * @return short cut names
+   */
+  public String[] getShortcuts()
+  {
+    return null;
+  }
+
+  /** set short cut names
+   * @param shortcuts short cut names
+   */
+  public void setShortcuts(String shortcuts[])
+  {
+  }
+
+  /** open list files in directory
+   * @param pathName path name
+   * @return true iff open
+   */
+  abstract public boolean open(String pathName);
+
+  /** close list files in directory
+   */
+  abstract public void close();
+
+  /** get next entry in directory
+   * @return entry
+   */
+  abstract public File getNext();
+
+  /** check if directory
+   * @param file file to check
+   * @return true if file is directory
+   */
+  public boolean isDirectory(File file)
+  {
+    return file.isDirectory();
+  }
+
+  /** check if file
+   * @param file file to check
+   * @return true if file is file
+   */
+  public boolean isFile(File file)
+  {
+    return file.isFile();
+  }
+
+  /** check if hidden
+   * @param file file to check
+   * @return true if file is hidden
+   */
+  public boolean isHidden(File file)
+  {
+    return file.isHidden();
+  }
+
+  /** check if exists
+   * @param file file to check
+   * @return true if file exists
+   */
+  public boolean exists(File file)
+  {
+    return file.exists();
   }
 }
 
@@ -1432,7 +1528,7 @@ class Dialogs
    * @param extendedMessage extended message
    * @param message error message
    */
-  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, List<String> extendedMessage, String message)
+  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, java.util.List<String> extendedMessage, String message)
   {
     error(parentShell,showAgainFieldFlag,extendedMessage.toArray(new String[extendedMessage.size()]),message);
   }
@@ -1475,7 +1571,7 @@ class Dialogs
    * @param format format string
    * @param arguments optional arguments
    */
-  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, List<String> extendedMessage, String format, Object... arguments)
+  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, java.util.List<String> extendedMessage, String format, Object... arguments)
   {
     error(parentShell,showAgainFieldFlag,extendedMessage,String.format(format,arguments));
   }
@@ -1497,7 +1593,7 @@ class Dialogs
    * @param format format string
    * @param arguments optional arguments
    */
-  public static void error(Shell parentShell, List<String> extendedMessage, String format, Object... arguments)
+  public static void error(Shell parentShell, java.util.List<String> extendedMessage, String format, Object... arguments)
   {
     error(parentShell,(BooleanFieldUpdater)null,extendedMessage,String.format(format,arguments));
   }
@@ -2608,6 +2704,876 @@ class Dialogs
     return password(parentShell,title,null);
   }
 
+  private static Point fileGeometry = new Point(600,400);
+
+  public enum FileDialogTypes
+  {
+    OPEN,
+    SAVE,
+    DIRECTORY
+  };
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
+   * @param fileName fileName or null
+   * @param fileExtensions array with {name,pattern} or null
+   * @param defaultFileExtension default file extension pattern or null
+   * @return file name or null
+   */
+  public static String file(Shell               parentShell,
+                            FileDialogTypes     type,
+                            String              title,
+                            String              oldFileName,
+                            final String[]      fileExtensions,
+                            String              defaultFileExtension,
+                            final ListDirectory listDirectory
+                           )
+  {
+    /** dialog data
+     */
+    class Data
+    {
+      boolean showHidden;
+    }
+
+    /** file comparator
+    */
+    class FileComparator implements Comparator<File>
+    {
+      // Note: enum in inner classes are not possible in Java, thus use the old way...
+      private final static int SORTMODE_NAME     = 0;
+      private final static int SORTMODE_TYPE     = 1;
+      private final static int SORTMODE_MODIFIED = 2;
+      private final static int SORTMODE_SIZE     = 3;
+
+      private int sortMode;
+
+      /** create file data comparator
+       * @param sortMode sort mode
+       */
+      FileComparator(int sortMode)
+      {
+        this.sortMode = sortMode;
+      }
+
+      /** set sort mode
+       * @param sortMode sort mode
+       */
+      public void setSortMode(int sortMode)
+      {
+        this.sortMode = sortMode;
+      }
+
+      /** compare file tree data
+       * @param file1, file2 file data to compare
+       * @return -1 iff file1 < file2,
+                  0 iff file1 = file2,
+                  1 iff file1 > file2
+       */
+      public int compare(File file1, File file2)
+      {
+//System.out.println(String.format("file1=%s file2=%s",file1,file2));
+        switch (sortMode)
+        {
+          case SORTMODE_NAME:
+            return file1.getName().compareTo(file2.getName());
+          case SORTMODE_TYPE:
+            if      (file1.isDirectory())
+            {
+              if   (file2.isDirectory()) return 0;
+              else                       return 1;
+            }
+            else
+            {
+              if   (file2.isDirectory()) return -1;
+              else                       return 0;
+            }
+          case SORTMODE_MODIFIED:
+            if      (file1.lastModified() < file2.lastModified()) return -1;
+            else if (file1.lastModified() > file2.lastModified()) return  1;
+            else                                                  return  0;
+          case SORTMODE_SIZE:
+            if      (file1.length() < file2.length()) return -1;
+            else if (file1.length() > file2.length()) return  1;
+            else                                      return  0;
+          default:
+            return 0;
+        }
+      }
+
+      /** convert data to string
+       * @return string
+       */
+      public String toString()
+      {
+        return "FileComparator {"+sortMode+"}";
+      }
+    }
+
+    /** updater
+    */
+    class Updater
+    {
+      private FileComparator   fileComparator;
+      private ListDirectory    listDirectory;
+      private SimpleDateFormat simpleDateFormat;
+      private Pattern          fileFilterPattern;
+      private boolean          showHidden;
+      private boolean          showFiles;
+
+      /** create update file list
+       * @param listDirectory list directory
+       * @param fileComparator file comparator
+       */
+      public Updater(FileComparator fileComparator, ListDirectory listDirectory, boolean showFiles)
+      {
+        this.fileComparator    = fileComparator;
+        this.listDirectory     = listDirectory;
+        this.simpleDateFormat  = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        this.fileFilterPattern = null;
+        this.showHidden        = false;
+        this.showFiles         = showFiles;
+      }
+
+      /** update shortcut list
+       * @param list list widget
+       */
+      public void shortcutList(List list, HashSet<String> shortcutSet)
+      {
+        HashSet<String> nameSet = new HashSet<String>();
+
+        if (shortcutSet != null)
+        {
+          for (String shortcut : shortcutSet)
+          {
+            nameSet.add(shortcut);
+          }
+        }
+
+        ArrayList<File> pathList = new ArrayList<File>();
+        for (String name : nameSet)
+        {
+          pathList.add(new File(name));
+        }
+        Collections.sort(pathList,fileComparator);
+
+        list.removeAll();
+        for (File path : pathList)
+        {
+          list.add(path.getAbsolutePath());
+        }
+      }
+
+      /** update file list
+       * @param table table widget
+       * @param path path
+       */
+      public void fileList(Table table, String path)
+      {
+        if (!table.isDisposed())
+        {
+          table.removeAll();
+
+          if (listDirectory.open(path))
+          {
+            File file;
+            while ((file = listDirectory.getNext()) != null)
+            {
+              if (   (showHidden || !listDirectory.isHidden(file))
+                  && (showFiles || !listDirectory.isFile(file))
+                  && ((fileFilterPattern == null) || fileFilterPattern.matcher(file.getName()).matches())
+                 )
+              {
+                TableItem tableItems[] = table.getItems();
+                int index = 0;
+                while (   (index < tableItems.length)
+                       && (fileComparator.compare(file,(File)tableItems[index].getData()) > 0)
+                      )
+                {
+                  index++;
+                }
+
+                TableItem tableItem = new TableItem(table,SWT.NONE,index);
+                tableItem.setData(file);
+                tableItem.setText(0,file.getName());
+                if (file.isDirectory()) tableItem.setText(1,"DIR");
+                else                    tableItem.setText(1,"FILE");
+                tableItem.setText(2,simpleDateFormat.format(new Date(file.lastModified())));
+                if (file.isDirectory()) tableItem.setText(3,"");
+                else                    tableItem.setText(3,Long.toString(file.length()));
+              }
+            }
+            listDirectory.close();
+          }
+        }
+      }
+
+      /** set filter
+       * @param filter glob filter string
+       */
+      public void setFileFilter(String fileFilter)
+      {
+        this.showHidden = showHidden;
+
+        // convert glob-pattern => regular expression
+        StringBuilder buffer = new StringBuilder();
+        int i = 0;
+        while (i < fileFilter.length())
+        {
+          char ch = fileFilter.charAt(i);
+          switch (ch)
+          {
+            case '\\':
+              i++;
+              buffer.append(ch);
+              if (i < fileFilter.length())
+              {
+                buffer.append(fileFilter.charAt(i));
+              }
+              break;
+            case '*':
+              buffer.append(".*");
+              break;
+            case '?':
+              buffer.append(".");
+              break;
+            case '.':
+            case '+':
+            case '(':
+            case ')':
+            case '[':
+            case ']':
+            case '{':
+            case '}':
+            case '^':
+            case '&':
+              buffer.append('\\');
+              buffer.append(ch);
+              break;
+            default:
+              buffer.append(ch);
+          }
+          i++;
+        }
+
+        // compile regualar expression
+        fileFilterPattern = Pattern.compile(buffer.toString());
+      }
+
+      /** set show hidden
+       * @param showHidden true to show hidden files, too
+       */
+      public void setShowHidden(boolean showHidden)
+      {
+        this.showHidden = showHidden;
+      }
+
+      /** set show files
+       * @param showFiles true to show files, too
+       */
+      public void setShowFiles(boolean showFiles)
+      {
+        this.showFiles = showFiles;
+      }
+    }
+
+    // create: hexdump -v -e '1/1 "(byte)0x%02x" "\n"' folderUp.png | awk 'BEGIN {n=0;} /.*/ { if (n > 8) { printf("\n"); n=0; }; f=1; printf("%s,",$1); n++; }'
+    final byte[] IMAGE_FOLDER_UP_DATA_ARRAY =
+    {
+      (byte)0x89,(byte)0x50,(byte)0x4e,(byte)0x47,(byte)0x0d,(byte)0x0a,(byte)0x1a,(byte)0x0a,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x0d,(byte)0x49,(byte)0x48,(byte)0x44,(byte)0x52,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x10,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x10,(byte)0x08,(byte)0x06,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x1f,(byte)0xf3,(byte)0xff,(byte)0x61,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x04,(byte)0x67,(byte)0x41,(byte)0x4d,(byte)0x41,(byte)0x00,(byte)0x00,(byte)0xaf,(byte)0xc8,
+      (byte)0x37,(byte)0x05,(byte)0x8a,(byte)0xe9,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x19,(byte)0x74,
+      (byte)0x45,(byte)0x58,(byte)0x74,(byte)0x53,(byte)0x6f,(byte)0x66,(byte)0x74,(byte)0x77,(byte)0x61,
+      (byte)0x72,(byte)0x65,(byte)0x00,(byte)0x41,(byte)0x64,(byte)0x6f,(byte)0x62,(byte)0x65,(byte)0x20,
+      (byte)0x49,(byte)0x6d,(byte)0x61,(byte)0x67,(byte)0x65,(byte)0x52,(byte)0x65,(byte)0x61,(byte)0x64,
+      (byte)0x79,(byte)0x71,(byte)0xc9,(byte)0x65,(byte)0x3c,(byte)0x00,(byte)0x00,(byte)0x02,(byte)0xc6,
+      (byte)0x49,(byte)0x44,(byte)0x41,(byte)0x54,(byte)0x78,(byte)0xda,(byte)0x62,(byte)0xfc,(byte)0xff,
+      (byte)0xff,(byte)0x3f,(byte)0x03,(byte)0x25,(byte)0x00,(byte)0x20,(byte)0x80,(byte)0x98,(byte)0x18,
+      (byte)0x28,(byte)0x04,(byte)0x00,(byte)0x01,(byte)0xc4,(byte)0x02,(byte)0x22,(byte)0x6e,(byte)0x6d,
+      (byte)0x35,(byte)0xbd,(byte)0xc0,(byte)0xc1,(byte)0xa7,(byte)0xa5,(byte)0xc5,(byte)0xc8,(byte)0x88,
+      (byte)0x6c,(byte)0xde,(byte)0x7f,(byte)0x86,(byte)0x9f,(byte)0x9f,(byte)0xef,(byte)0x3e,(byte)0xfe,
+      (byte)0xfb,(byte)0xe7,(byte)0x83,(byte)0x25,(byte)0x90,(byte)0xf3,(byte)0x13,(byte)0x45,(byte)0x17,
+      (byte)0x23,(byte)0x98,(byte)0xfc,(byte)0xaa,(byte)0xee,(byte)0x73,(byte)0xf9,(byte)0x0f,(byte)0x40,
+      (byte)0x00,(byte)0x81,(byte)0x0d,(byte)0x60,(byte)0xfc,(byte)0xcf,(byte)0xa4,(byte)0x21,(byte)0x6b,
+      (byte)0x33,(byte)0x9f,(byte)0x95,(byte)0x91,(byte)0x91,(byte)0x11,(byte)0xa4,(byte)0x0f,(byte)0xac,
+      (byte)0x99,(byte)0x01,(byte)0xc8,(byte)0xfe,(byte)0xf3,(byte)0xe3,(byte)0x8d,(byte)0xd2,(byte)0xcb,
+      (byte)0x0b,(byte)0x8d,(byte)0x8f,(byte)0xff,(byte)0x43,(byte)0x45,(byte)0x41,(byte)0x80,(byte)0x99,
+      (byte)0x8d,(byte)0xef,(byte)0xff,(byte)0xff,(byte)0xbf,(byte)0xbf,(byte)0x5f,(byte)0x7d,(byte)0x79,
+      (byte)0xbe,(byte)0xaf,(byte)0x14,(byte)0xc8,(byte)0x5d,(byte)0x05,(byte)0x10,(byte)0x40,(byte)0x60,
+      (byte)0x03,(byte)0x18,(byte)0xfe,(byte)0xfc,(byte)0xff,(byte)0xc1,(byte)0xf0,(byte)0xef,(byte)0x17,
+      (byte)0xfb,(byte)0xcf,(byte)0x17,(byte)0xd3,(byte)0x19,(byte)0xfe,(byte)0xfe,(byte)0x62,(byte)0x66,
+      (byte)0x60,(byte)0x60,(byte)0xe2,(byte)0x03,(byte)0xea,(byte)0xe7,(byte)0x65,(byte)0xe0,(byte)0x90,
+      (byte)0x72,(byte)0x66,(byte)0x90,(byte)0x32,(byte)0xeb,(byte)0x64,(byte)0x63,(byte)0x00,(byte)0x87,
+      (byte)0xd3,(byte)0x3f,(byte)0xa0,(byte)0x31,(byte)0xff,(byte)0xc0,(byte)0x86,(byte)0x33,(byte)0x32,
+      (byte)0xf1,(byte)0x48,(byte)0xdc,(byte)0xde,(byte)0x64,(byte)0x53,(byte)0x07,(byte)0x32,(byte)0x00,
+      (byte)0x20,(byte)0x80,(byte)0x20,(byte)0x06,(byte)0xfc,(byte)0x66,(byte)0x64,(byte)0xfa,(byte)0xff,
+      (byte)0xef,(byte)0x17,(byte)0x50,(byte)0x33,(byte)0x50,(byte)0xed,(byte)0xbf,(byte)0xff,(byte)0x0c,
+      (byte)0xff,(byte)0xbe,(byte)0x3f,(byte)0x62,(byte)0xf8,(byte)0xfd,(byte)0xf5,(byte)0x25,(byte)0xc3,
+      (byte)0x97,(byte)0x57,(byte)0x07,(byte)0x18,(byte)0x58,(byte)0x39,(byte)0x24,(byte)0x81,(byte)0x7a,
+      (byte)0x7e,(byte)0x03,(byte)0xf5,(byte)0xff,(byte)0x02,(byte)0x9a,(byte)0xf3,(byte)0x07,(byte)0x64,
+      (byte)0x1b,(byte)0x03,(byte)0xaf,(byte)0x46,(byte)0x39,(byte)0x48,(byte)0xa1,(byte)0x3c,(byte)0x48,
+      (byte)0x2b,(byte)0x40,(byte)0x00,(byte)0x41,(byte)0x0c,(byte)0x60,(byte)0xfc,(byte)0xcf,(byte)0xf1,
+      (byte)0xef,(byte)0xcf,(byte)0x77,(byte)0x86,(byte)0x5f,(byte)0xdf,(byte)0x80,(byte)0x6a,(byte)0x7f,
+      (byte)0x7d,(byte)0x65,(byte)0xf8,(byte)0xfd,(byte)0xf9,(byte)0x13,(byte)0x50,(byte)0x51,(byte)0x3c,
+      (byte)0x03,(byte)0x87,(byte)0xb0,(byte)0x26,(byte)0xd4,(byte)0xc3,(byte)0x30,(byte)0x17,(byte)0xfc,
+      (byte)0x87,(byte)0xb8,(byte)0x80,(byte)0x45,(byte)0x80,(byte)0x81,(byte)0xe1,(byte)0x2f,(byte)0x13,
+      (byte)0x58,(byte)0x2f,(byte)0x40,(byte)0x00,(byte)0x41,(byte)0x5d,(byte)0xc0,(byte)0xc4,(byte)0xc0,
+      (byte)0xc2,(byte)0x29,(byte)0xc6,(byte)0x20,(byte)0xa0,(byte)0x99,(byte)0x02,(byte)0x57,(byte)0x08,
+      (byte)0x74,(byte)0x07,(byte)0xd0,(byte)0xd2,(byte)0xa7,(byte)0x0c,(byte)0x7f,(byte)0x3e,(byte)0xec,
+      (byte)0x61,(byte)0xf8,(byte)0xff,(byte)0xf7,(byte)0x23,(byte)0x43,(byte)0xfd,(byte)0xd1,(byte)0xed,
+      (byte)0x0c,(byte)0xef,(byte)0xbf,(byte)0x7f,(byte)0x65,(byte)0xe8,(byte)0xb7,(byte)0xd4,(byte)0x66,
+      (byte)0xe0,(byte)0x90,(byte)0xa9,(byte)0x06,(byte)0x06,(byte)0x2b,(byte)0x24,(byte)0x58,(byte)0x00,
+      (byte)0x02,(byte)0x08,(byte)0x6a,(byte)0x00,(byte)0x30,(byte)0x35,(byte)0xfc,(byte)0x05,(byte)0x06,
+      (byte)0xc3,(byte)0xb7,(byte)0x4b,(byte)0x60,(byte)0xc5,(byte)0xff,(byte)0xff,(byte)0x7e,(byte)0x66,
+      (byte)0xf8,(byte)0xff,(byte)0xe7,(byte)0x03,(byte)0xc3,(byte)0xbf,(byte)0xdf,(byte)0xef,(byte)0xc1,
+      (byte)0x7c,(byte)0xa0,(byte)0x29,(byte)0x0c,(byte)0x3f,(byte)0xfe,(byte)0xfc,(byte)0x60,(byte)0x90,
+      (byte)0x11,(byte)0xd1,(byte)0x64,(byte)0x48,(byte)0x3e,(byte)0x70,(byte)0x86,(byte)0x61,(byte)0x69,
+      (byte)0x34,(byte)0x30,(byte)0x52,(byte)0x7e,(byte)0x43,(byte)0x02,(byte)0x15,(byte)0x20,(byte)0x80,
+      (byte)0x20,(byte)0x06,(byte)0xfc,(byte)0x04,(byte)0xda,(byte)0xf9,(byte)0xef,(byte)0x0f,(byte)0x50,
+      (byte)0xc3,(byte)0x6b,(byte)0xa0,(byte)0xc6,(byte)0x8f,(byte)0x60,(byte)0x4d,(byte)0xe5,(byte)0xfb,
+      (byte)0x57,(byte)0x80,(byte)0xfd,(byte)0xfe,(byte)0x0b,(byte)0x28,(byte)0xfe,(byte)0xeb,(byte)0xcf,
+      (byte)0x1f,(byte)0x06,(byte)0x49,(byte)0x41,(byte)0x55,(byte)0x06,(byte)0x4d,(byte)0x09,(byte)0x73,
+      (byte)0x86,(byte)0xcf,(byte)0x3f,(byte)0xbe,(byte)0x32,(byte)0xf8,(byte)0xcc,(byte)0xf3,(byte)0x62,
+      (byte)0x98,(byte)0xc8,(byte)0x2e,(byte)0x0d,(byte)0xd6,(byte)0x0a,(byte)0x10,(byte)0x40,(byte)0x10,
+      (byte)0x03,(byte)0x7e,(byte)0xfd,(byte)0xff,(byte)0xcf,(byte)0xc8,(byte)0xf0,(byte)0x17,(byte)0xa8,
+      (byte)0xf9,(byte)0x1d,(byte)0xd8,(byte)0x66,(byte)0x10,(byte)0xfe,(byte)0x03,(byte)0x0c,(byte)0x34,
+      (byte)0x57,(byte)0xed,(byte)0x78,(byte)0x86,(byte)0xbf,(byte)0xc0,(byte)0x90,(byte)0xff,(byte)0xfb,
+      (byte)0xef,(byte)0x2f,(byte)0xd0,(byte)0x43,(byte)0xff,(byte)0x19,(byte)0x9e,(byte)0x7d,(byte)0x7c,
+      (byte)0xcc,(byte)0xa0,(byte)0x2b,(byte)0x63,(byte)0xcd,(byte)0xf0,(byte)0xe5,(byte)0xd7,(byte)0x77,
+      (byte)0x86,(byte)0xf8,(byte)0x47,(byte)0x87,(byte)0x38,(byte)0xbe,(byte)0xb6,(byte)0x30,(byte)0x31,
+      (byte)0x02,(byte)0x04,(byte)0x10,(byte)0xd8,(byte)0x80,(byte)0xff,(byte)0xbf,(byte)0xfe,(byte)0xbd,
+      (byte)0xff,(byte)0xf3,(byte)0xed,(byte)0x2d,(byte)0xd7,(byte)0xef,(byte)0x2f,(byte)0x6c,(byte)0xbc,
+      (byte)0x0c,(byte)0xff,(byte)0x78,(byte)0x99,(byte)0xfe,(byte)0xff,(byte)0x67,(byte)0x05,(byte)0x3a,
+      (byte)0xf9,(byte)0x17,(byte)0x58,(byte)0xf3,(byte)0xc3,(byte)0xb7,(byte)0xb7,(byte)0x19,(byte)0x7e,
+      (byte)0x03,(byte)0x5d,(byte)0xf1,(byte)0xe7,(byte)0xdf,(byte)0x6f,(byte)0x86,(byte)0xdf,(byte)0x7f,
+      (byte)0x7f,(byte)0x33,(byte)0x7c,(byte)0xfa,(byte)0xf9,(byte)0x99,(byte)0xc1,(byte)0x40,(byte)0xd6,
+      (byte)0x96,(byte)0xe1,(byte)0xcb,(byte)0xef,(byte)0x6f,(byte)0x0c,(byte)0x27,(byte)0xef,(byte)0x1f,
+      (byte)0xf9,(byte)0x01,(byte)0x10,(byte)0x40,(byte)0x10,(byte)0x03,(byte)0x7e,(byte)0xfc,(byte)0xec,
+      (byte)0xba,(byte)0x37,(byte)0x23,(byte)0xd0,(byte)0x0c,(byte)0x68,(byte)0x89,(byte)0x0b,(byte)0x30,
+      (byte)0xd0,(byte)0x79,(byte)0x41,(byte)0x62,(byte)0x3f,(byte)0x84,(byte)0xff,(byte)0x70,(byte)0xfc,
+      (byte)0xf9,(byte)0xfb,(byte)0x87,(byte)0x41,(byte)0x9c,(byte)0x4f,(byte)0x0e,(byte)0xa8,(byte)0xf9,
+      (byte)0x2f,(byte)0xd8,(byte)0xb0,(byte)0xe7,(byte)0x1f,(byte)0x1f,(byte)0x31,(byte)0x08,(byte)0xf1,
+      (byte)0x48,(byte)0x30,(byte)0x9c,(byte)0x7b,(byte)0x7c,(byte)0x94,(byte)0xe1,(byte)0xfa,(byte)0xbd,
+      (byte)0x13,(byte)0xef,(byte)0xbf,(byte)0xfd,(byte)0x66,(byte)0x90,(byte)0x06,(byte)0x08,(byte)0x20,
+      (byte)0x46,(byte)0x5c,(byte)0x99,(byte)0x29,(byte)0x68,(byte)0x86,(byte)0xd2,(byte)0xdf,(byte)0x1f,
+      (byte)0xbf,(byte)0x7e,(byte)0x01,(byte)0xc3,(byte)0xe0,(byte)0x17,(byte)0xd8,(byte)0x35,(byte)0xca,
+      (byte)0x22,(byte)0xda,(byte)0x4c,(byte)0x16,(byte)0x4a,(byte)0x6e,(byte)0x0c,(byte)0x67,(byte)0x1e,
+      (byte)0x1d,(byte)0x63,(byte)0xd8,(byte)0x7b,(byte)0x6b,(byte)0xd7,(byte)0xa5,(byte)0x5f,(byte)0x7f,
+      (byte)0x18,(byte)0xcc,(byte)0x9e,(byte)0xb5,(byte)0xfd,(byte)0xff,(byte)0x09,(byte)0x10,(byte)0x40,
+      (byte)0x8c,(byte)0xc4,(byte)0xe6,(byte)0x46,(byte)0x9d,(byte)0x16,(byte)0xa6,(byte)0xd7,(byte)0x26,
+      (byte)0x72,(byte)0x4e,(byte)0x22,(byte)0x07,(byte)0x6e,(byte)0xed,(byte)0x3d,(byte)0xfb,(byte)0xeb,
+      (byte)0x1f,(byte)0x83,(byte)0x15,(byte)0x50,(byte)0xf3,(byte)0x2f,(byte)0x90,(byte)0x38,(byte)0x40,
+      (byte)0x00,(byte)0x11,(byte)0x6d,(byte)0x80,(byte)0x52,(byte)0x1d,(byte)0xe3,(byte)0xeb,(byte)0xbf,
+      (byte)0xff,(byte)0x98,(byte)0x45,(byte)0xbe,(byte)0xff,(byte)0xfb,(byte)0xcb,(byte)0xfa,(byte)0xaa,
+      (byte)0x0d,(byte)0x9c,(byte)0x24,(byte)0xc1,(byte)0x00,(byte)0x20,(byte)0xc0,(byte)0x00,(byte)0xcb,
+      (byte)0x1e,(byte)0x5a,(byte)0x91,(byte)0xb7,(byte)0xaa,(byte)0x51,(byte)0x64,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x49,(byte)0x45,(byte)0x4e,(byte)0x44,(byte)0xae,(byte)0x42,(byte)0x60,
+      (byte)0x82
+    };
+
+    int         row;
+    Composite   composite;
+    Label       label;
+    Button      button;
+    TableColumn tableColumn;
+
+    if (!parentShell.isDisposed())
+    {
+      final String[] result = new String[1];
+
+      final FileComparator  fileComparator = new FileComparator(FileComparator.SORTMODE_NAME);;
+      final Updater         updater        = new Updater(fileComparator,listDirectory,(type != FileDialogTypes.DIRECTORY));
+      final HashSet<String> shortcutSet    = new HashSet<String>();
+
+      // load images
+      final Image IMAGE_FOLDER_UP;
+      try
+      {
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(IMAGE_FOLDER_UP_DATA_ARRAY);
+        IMAGE_FOLDER_UP = new Image(parentShell.getDisplay(),new ImageData(inputStream));
+        inputStream.close();
+      }
+      catch (Exception exception)
+      {
+        throw new Error(exception);
+      }
+
+      final Shell dialog = openModal(parentShell,title);
+      dialog.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,0.0,0.0},1.0));
+
+      final Text   widgetPath;
+      final Button widgetFolderUp;
+      final List   widgetShortcutList;
+      final Table  widgetFileList;
+      final Combo  widgetFilter;
+      final Button widgetShowHidden;
+      final Text   widgetName;
+      final Button widgetDone;
+      final File   dragFile[] = new File[1];
+      DragSource   dragSource;
+      DropTarget   dropTarget;
+
+      // path
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+      {
+        label = new Label(composite,SWT.NONE);
+        label.setText(Dialogs.tr("Path")+":");
+        Widgets.layout(label,0,0,TableLayoutData.W);
+
+        widgetPath = new Text(composite,SWT.NONE);
+        Widgets.layout(widgetPath,0,1,TableLayoutData.WE);
+
+        widgetFolderUp = new Button(composite,SWT.PUSH);
+        widgetFolderUp.setImage(IMAGE_FOLDER_UP);
+        Widgets.layout(widgetFolderUp,0,2,TableLayoutData.E);
+      }
+
+      // lists
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(1.0,new double[]{0.25,0.75},4));
+      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE));
+      {
+        widgetShortcutList = new List(composite,SWT.BORDER);
+        widgetShortcutList.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+
+        widgetFileList = new Table(composite,SWT.BORDER);
+        widgetFileList.setHeaderVisible(true);
+        widgetFileList.setLinesVisible(true);
+        widgetFileList.setLayout(new TableLayout(new double[]{1.0,0.0,0.0,0.0},1.0));
+        widgetFileList.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE));
+
+        SelectionListener selectionListener = new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            TableColumn tableColumn = (TableColumn)selectionEvent.widget;
+
+            if      (tableColumn == widgetFileList.getColumn(0)) fileComparator.setSortMode(FileComparator.SORTMODE_NAME    );
+            else if (tableColumn == widgetFileList.getColumn(1)) fileComparator.setSortMode(FileComparator.SORTMODE_TYPE    );
+            else if (tableColumn == widgetFileList.getColumn(2)) fileComparator.setSortMode(FileComparator.SORTMODE_MODIFIED);
+            else if (tableColumn == widgetFileList.getColumn(3)) fileComparator.setSortMode(FileComparator.SORTMODE_SIZE    );
+            Widgets.sortTableColumn(widgetFileList,tableColumn,fileComparator);
+          }
+        };
+
+        tableColumn = new TableColumn(widgetFileList,SWT.LEFT);
+        tableColumn.setText("Name");
+        tableColumn.setData(new TableLayoutData(0,0,TableLayoutData.WE,0,0,0,0,600,SWT.DEFAULT));
+        tableColumn.setResizable(true);
+        tableColumn.addSelectionListener(selectionListener);
+
+        tableColumn = new TableColumn(widgetFileList,SWT.LEFT);
+        tableColumn.setText("Type");
+        tableColumn.setData(new TableLayoutData(0,1,TableLayoutData.NONE));
+        tableColumn.setWidth(50);
+        tableColumn.setResizable(false);
+        tableColumn.addSelectionListener(selectionListener);
+
+        tableColumn = new TableColumn(widgetFileList,SWT.LEFT);
+        tableColumn.setText("Modified");
+        tableColumn.setData(new TableLayoutData(0,2,TableLayoutData.NONE));
+        tableColumn.setWidth(160);
+        tableColumn.setResizable(false);
+        tableColumn.addSelectionListener(selectionListener);
+
+        tableColumn = new TableColumn(widgetFileList,SWT.RIGHT);
+        tableColumn.setText("Size");
+        tableColumn.setData(new TableLayoutData(0,3,TableLayoutData.NONE));
+        tableColumn.setWidth(80);
+        tableColumn.setResizable(false);
+        tableColumn.addSelectionListener(selectionListener);
+      }
+
+      // filter, name
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0},4));
+      composite.setLayoutData(new TableLayoutData(2,0,TableLayoutData.WE));
+      {
+        if (fileExtensions != null)
+        {
+          label = new Label(composite,SWT.NONE);
+          label.setText(Dialogs.tr("Filter")+":");
+          Widgets.layout(label,0,0,TableLayoutData.W);
+
+          widgetFilter = new Combo(composite,SWT.NONE);
+          widgetFilter.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
+        }
+        else
+        {
+          widgetFilter = null;
+        }
+
+        widgetShowHidden = new Button(composite,SWT.CHECK);
+        widgetShowHidden.setText("show hidden");
+        widgetShowHidden.setLayoutData(new TableLayoutData(0,2,TableLayoutData.E));
+
+        if (type == FileDialogTypes.SAVE)
+        {
+          label = new Label(composite,SWT.NONE);
+          label.setText(Dialogs.tr("Name")+":");
+          Widgets.layout(label,1,0,TableLayoutData.W);
+
+          widgetName = new Text(composite,SWT.NONE);
+          Widgets.layout(widgetName,1,1,TableLayoutData.WE,0,2);
+        }
+        else
+        {
+          widgetName = null;
+        }
+      }
+
+      // buttons
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayoutData(new TableLayoutData(4,0,TableLayoutData.WE,0,0,4));
+      {
+        widgetDone = new Button(composite,SWT.CENTER);
+        switch (type)
+        {
+          case OPEN:
+          default:
+            widgetDone.setText(Dialogs.tr("Open"));
+            break;
+          case SAVE:
+            widgetDone.setText(Dialogs.tr("Save"));
+            break;
+          case DIRECTORY:
+            widgetDone.setText(Dialogs.tr("Select"));
+            break;
+        }
+        widgetDone.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+
+        button = new Button(composite,SWT.CENTER);
+        button.setText("Cancel");
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,null);
+          }
+        });
+      }
+
+      // install listeners
+      widgetPath.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          updater.fileList(widgetFileList,widgetPath.getText());
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      widgetFolderUp.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          File path = (File)widgetPath.getData();
+
+          File parentPath = path.getParentFile();
+          if (parentPath != null)
+          {
+            widgetPath.setData(parentPath);
+            widgetPath.setText(parentPath.getAbsolutePath());
+            updater.fileList(widgetFileList,widgetPath.getText());
+          }
+        }
+      });
+      widgetShortcutList.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          int index = widgetShortcutList.getSelectionIndex();
+          if (index >= 0)
+          {
+            String root = widgetShortcutList.getItem(index);
+
+            File newPath = new File(root);
+            if      (listDirectory.isDirectory(newPath))
+            {
+              widgetPath.setData(newPath);
+              widgetPath.setText(newPath.getAbsolutePath());
+
+              updater.fileList(widgetFileList,widgetPath.getText());
+            }
+            else if (listDirectory.exists(newPath))
+            {
+              error(dialog,Dialogs.tr("'{0}' is not a directory!",newPath.getAbsolutePath()));
+            }
+            else
+            {
+              error(dialog,Dialogs.tr("'{0}' does not exists",newPath.getAbsolutePath()));
+            }
+          }
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      widgetFileList.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          int index = widgetFileList.getSelectionIndex();
+          if (index >= 0)
+          {
+            TableItem tableItem = widgetFileList.getItem(index);
+            File      file      = (File)tableItem.getData();
+
+            if (file.isDirectory())
+            {
+              File newPath = new File((File)widgetPath.getData(),file.getName());
+              widgetPath.setData(newPath);
+              widgetPath.setText(newPath.getAbsolutePath());
+
+              updater.fileList(widgetFileList,widgetPath.getText());
+            }
+          }
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          int index = widgetFileList.getSelectionIndex();
+          if (index >= 0)
+          {
+            TableItem tableItem = widgetFileList.getItem(index);
+            File      file      = (File)tableItem.getData();
+
+            if (listDirectory.isFile(file))
+            {
+              if (widgetName != null) widgetName.setText(file.getName());
+            }
+          }
+        }
+      });
+      widgetFileList.addMouseListener(new MouseListener()
+      {
+        public void mouseDoubleClick(MouseEvent mouseEvent)
+        {
+          TableItem[] tableItems = widgetFileList.getSelection();
+          if (tableItems.length > 0)
+          {
+            File file = (File)tableItems[0].getData();
+            if (file.isDirectory())
+            {
+              updater.fileList(widgetFileList,file.getAbsolutePath());
+            }
+            else
+            {
+              fileGeometry = dialog.getSize();
+              close(dialog,
+                    (widgetName != null)
+                      ? new File(widgetPath.getText(),widgetName.getText()).getAbsolutePath()
+                      : new File(widgetPath.getText()).getAbsolutePath()
+                   );
+            }
+          }
+        }
+        public void mouseDown(MouseEvent mouseEvent)
+        {
+        }
+        public void mouseUp(MouseEvent mouseEvent)
+        {
+        }
+      });
+      if (widgetFilter != null)
+      {
+        widgetFilter.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            int index = widgetFilter.getSelectionIndex();
+            if (index >= 0)
+            {
+              widgetFilter.setText(fileExtensions[index*2+1]);
+
+              updater.setFileFilter(widgetFilter.getText());
+              updater.fileList(widgetFileList,widgetPath.getText());
+            }
+          }
+        });
+      }
+      widgetShowHidden.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          updater.setShowHidden(widgetShowHidden.getSelection());
+          updater.fileList(widgetFileList,widgetPath.getText());
+        }
+      });
+      widgetDone.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          fileGeometry = dialog.getSize();
+          close(dialog,
+                (widgetName != null)
+                  ? new File((File)widgetPath.getData(),widgetName.getText()).getAbsolutePath()
+                  : ((File)widgetPath.getData()).getAbsolutePath()
+               );
+        }
+      });
+
+      // drag+drop
+      dragSource = new DragSource(widgetFileList,DND.DROP_MOVE);
+      dragSource.setTransfer(new Transfer[]{TextTransfer.getInstance()});
+      dragSource.addDragListener(new DragSourceListener()
+      {
+        public void dragStart(DragSourceEvent dragSourceEvent)
+        {
+          Point point = new Point(dragSourceEvent.x,dragSourceEvent.y);
+          TableItem tableItem = widgetFileList.getItem(point);
+          if ((tableItem != null) && listDirectory.isDirectory((File)tableItem.getData()))
+          {
+            dragFile[0] = (File)tableItem.getData();
+          }
+          else
+          {
+            dragSourceEvent.doit = false;
+          }
+        }
+        public void dragSetData(DragSourceEvent dragSourceEvent)
+        {
+          Point point         = new Point(dragSourceEvent.x,dragSourceEvent.y);
+          TableItem tableItem = widgetFileList.getItem(point);
+          if (tableItem != null)
+          {
+            dragSourceEvent.data = dragFile[0].getAbsolutePath();
+          }
+        }
+        public void dragFinished(DragSourceEvent dragSourceEvent)
+        {
+          dragFile[0] = null;
+        }
+      });
+      dropTarget = new DropTarget(widgetShortcutList,DND.DROP_MOVE|DND.DROP_COPY);
+      dropTarget.setTransfer(new Transfer[]{TextTransfer.getInstance()});
+      dropTarget.addDropListener(new DropTargetAdapter()
+      {
+        public void dragLeave(DropTargetEvent dropTargetEvent)
+        {
+        }
+        public void dragOver(DropTargetEvent dropTargetEvent)
+        {
+        }
+        public void drop(DropTargetEvent dropTargetEvent)
+        {
+          if (dropTargetEvent.data != null)
+          {
+            if (dropTargetEvent.data instanceof String)
+            {
+              shortcutSet.add((String)dropTargetEvent.data);
+              listDirectory.setShortcuts(shortcutSet.toArray(new String[shortcutSet.size()]));
+
+              updater.shortcutList(widgetShortcutList,shortcutSet);
+            }
+          }
+          else
+          {
+            dropTargetEvent.detail = DND.DROP_NONE;
+          }
+        }
+      });
+
+      // show
+      show(dialog,fileGeometry);
+
+      // update shortcuts
+      String shortcuts[] = listDirectory.getShortcuts();
+      if (shortcuts != null)
+      {
+        for (String shortcut : shortcuts)
+        {
+          shortcutSet.add(shortcut);
+        }
+      }
+      updater.shortcutList(widgetShortcutList,shortcutSet);
+
+      // update path, name
+      File file = new File(oldFileName);
+      File parentFile = file.getParentFile();
+      widgetPath.setData(parentFile);
+      if (parentFile != null)
+      {
+        widgetPath.setText(file.getParentFile().getAbsolutePath());
+      }
+      if (widgetName != null) widgetName.setText(file.getName());
+
+      if ((fileExtensions != null) && (widgetFilter != null))
+      {
+        // update file extensions
+        for (int i = 0; i < fileExtensions.length; i+= 2)
+        {
+          widgetFilter.add(fileExtensions[i+0]+" ("+fileExtensions[i+1]+")");
+        }
+        widgetFilter.setText(defaultFileExtension);
+        updater.setFileFilter(defaultFileExtension);
+       }
+
+      // update file list
+      updater.fileList(widgetFileList,widgetPath.getText());
+
+      if (widgetName != null)
+      {
+        widgetName.setFocus();
+        widgetName.setSelection(new Point(0,widgetName.getText().length()));
+      }
+      else
+      {
+        widgetPath.setFocus();
+        widgetPath.setSelection(new Point(0,widgetPath.getText().length()));
+      }
+      return (String)run(dialog,null);
+    }
+    else
+    {
+      return null;
+    }
+  }
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
+   * @param fileName fileName or null
+   * @return file name or null
+   */
+  public static String file(Shell               parentShell,
+                            FileDialogTypes     type,
+                            String              title,
+                            String              oldFileName,
+                            final ListDirectory listDirectory
+                           )
+  {
+    return file(parentShell,type,title,oldFileName,(String[])null,(String)null,listDirectory);
+  }
+
   /** open a file dialog
    * @param parentShell parent shell
    * @param type SWT.OPEN or SWT.SAVE
@@ -2617,7 +3583,13 @@ class Dialogs
    * @param defaultFileExtension default file extension pattern or null
    * @return file name or null
    */
-  private static String file(Shell parentShell, int type, String title, String oldFileName, String[] fileExtensions, String defaultFileExtension)
+  private static String file(Shell    parentShell,
+                             int      type,
+                             String   title,
+                             String   oldFileName,
+                             String[] fileExtensions,
+                             String   defaultFileExtension
+                            )
   {
     File oldFile = (oldFileName != null)?new File(oldFileName):null;
 
@@ -2681,7 +3653,12 @@ class Dialogs
    * @param defaultFileExtension default file extension pattern or null
    * @return file name or null
    */
-  public static String fileOpen(Shell parentShell, String title, String fileName, String[] fileExtensions, String defaultFileExtension)
+  public static String fileOpen(Shell    parentShell,
+                                String   title,
+                                String   fileName,
+                                String[] fileExtensions,
+                                String   defaultFileExtension
+                               )
   {
     return file(parentShell,SWT.OPEN,title,fileName,fileExtensions,defaultFileExtension);
   }
@@ -2693,7 +3670,11 @@ class Dialogs
    * @param fileExtensions array with {name,pattern} or null
    * @return file name or null
    */
-  public static String fileOpen(Shell parentShell, String title, String fileName, String[] fileExtensions)
+  public static String fileOpen(Shell    parentShell,
+                                String   title,
+                                String   fileName,
+                                String[] fileExtensions
+                               )
   {
     return fileOpen(parentShell,title,fileName,fileExtensions,null);
   }
@@ -2704,7 +3685,10 @@ class Dialogs
    * @param fileName fileName or null
    * @return file name or null
    */
-  public static String fileOpen(Shell parentShell, String title, String fileName)
+  public static String fileOpen(Shell  parentShell,
+                                String title,
+                                String fileName
+                               )
   {
     return fileOpen(parentShell,title,fileName,null);
   }
@@ -2714,7 +3698,9 @@ class Dialogs
    * @param title title text
    * @return file name or null
    */
-  public static String fileOpen(Shell parentShell, String title)
+  public static String fileOpen(Shell  parentShell,
+                                String title
+                               )
   {
     return fileOpen(parentShell,title,null);
   }
@@ -2727,7 +3713,12 @@ class Dialogs
    * @param defaultFileExtension default file extension pattern or null
    * @return file name or null
    */
-  public static String fileSave(Shell parentShell, String title, String fileName, String[] fileExtensions, String defaultFileExtension)
+  public static String fileSave(Shell    parentShell,
+                                String   title,
+                                String   fileName,
+                                String[] fileExtensions,
+                                String   defaultFileExtension
+                               )
   {
     return file(parentShell,SWT.SAVE,title,fileName,fileExtensions,defaultFileExtension);
   }
@@ -2739,7 +3730,11 @@ class Dialogs
    * @param fileExtensions array with {name,pattern} or null
    * @return file name or null
    */
-  public static String fileSave(Shell parentShell, String title, String fileName, String[] fileExtensions)
+  public static String fileSave(Shell    parentShell,
+                                String   title,
+                                String   fileName,
+                                String[] fileExtensions
+                               )
   {
     return fileSave(parentShell,title,fileName,fileExtensions,null);
   }
@@ -2751,7 +3746,11 @@ class Dialogs
    * @param defaultFileExtension default file extension pattern or null
    * @return file name or null
    */
-  public static String fileSave(Shell parentShell, String title, String fileName, String defaultFileExtension)
+  public static String fileSave(Shell  parentShell,
+                                String title,
+                                String fileName,
+                                String defaultFileExtension
+                               )
   {
     return fileSave(parentShell,title,fileName,null,defaultFileExtension);
   }
@@ -2762,7 +3761,10 @@ class Dialogs
    * @param fileName fileName or null
    * @return file name or null
    */
-  public static String fileSave(Shell parentShell, String title, String fileName)
+  public static String fileSave(Shell  parentShell,
+                                String title,
+                                String fileName
+                               )
   {
     return fileSave(parentShell,title,fileName,(String)null);
   }
@@ -2772,7 +3774,9 @@ class Dialogs
    * @param title title text
    * @return file name or null
    */
-  public static String fileSave(Shell parentShell, String title)
+  public static String fileSave(Shell  parentShell,
+                                String title
+                               )
   {
     return fileSave(parentShell,title,null);
   }
@@ -2784,7 +3788,11 @@ class Dialogs
    * @param pathName path name or null
    * @return directory name or null
    */
-  public static String directory(Shell parentShell, String title, String text, String pathName)
+  public static String directory(Shell  parentShell,
+                                 String title,
+                                 String text,
+                                 String pathName
+                                )
   {
     DirectoryDialog dialog = new DirectoryDialog(parentShell);
     dialog.setText(title);
@@ -2803,7 +3811,10 @@ class Dialogs
    * @param pathName path name or null
    * @return directory name or null
    */
-  public static String directory(Shell parentShell, String title, String pathName)
+  public static String directory(Shell  parentShell,
+                                 String title,
+                                 String pathName
+                                )
   {
     return directory(parentShell,title,null,pathName);
   }
@@ -2813,7 +3824,9 @@ class Dialogs
    * @param title title text
    * @return directory name or null
    */
-  public static String directory(Shell parentShell, String title)
+  public static String directory(Shell  parentShell,
+                                 String title
+                                )
   {
     return directory(parentShell,title,null);
   }
@@ -2828,14 +3841,21 @@ class Dialogs
    * @param toolTipText tooltip text (can be null)
    * @return path or null on cancel
    */
-  public static String path(Shell parentShell, String title, String text, String value, String okText, String cancelText, String toolTipText)
+  public static String path(Shell  parentShell,
+                            String title,
+                            String text,
+                            String value,
+                            String okText,
+                            String cancelText,
+                            String toolTipText
+                           )
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"directory.png");
 
-    int             row;
-    Composite       composite;
-    Label           label;
-    Button          button;
+    int       row;
+    Composite composite;
+    Label     label;
+    Button    button;
 
     if (!parentShell.isDisposed())
     {
@@ -2954,7 +3974,13 @@ class Dialogs
    * @param cancelText cancel button text
    * @return path or null on cancel
    */
-  public static String path(Shell parentShell, String title, String text, String value, String okText, String cancelText)
+  public static String path(Shell  parentShell,
+                            String title,
+                            String text,
+                            String value,
+                            String okText,
+                            String cancelText
+                           )
   {
     return path(parentShell,title,text,value,okText,cancelText,null);
   }
@@ -2966,7 +3992,11 @@ class Dialogs
    * @param value value to edit (can be null)
    * @return path or null on cancel
    */
-  public static String path(Shell parentShell, String title, String text, String value)
+  public static String path(Shell  parentShell,
+                            String title,
+                            String text,
+                            String value
+                           )
   {
     return path(parentShell,title,text,value,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
@@ -2977,7 +4007,10 @@ class Dialogs
    * @param text text before input element
    * @return path or null on cancel
    */
-  public static String path(Shell parentShell, String title, String text)
+  public static String path(Shell  parentShell,
+                            String title,
+                            String text
+                           )
   {
     return path(parentShell,title,text,null);
   }
@@ -2992,12 +4025,19 @@ class Dialogs
    * @param toolTipText tooltip text (can be null)
    * @return string or null on cancel
    */
-  public static String string(Shell parentShell, String title, String text, String value, String okText, String cancelText, String toolTipText)
+  public static String string(Shell  parentShell,
+                              String title,
+                              String text,
+                              String value,
+                              String okText,
+                              String cancelText,
+                              String toolTipText
+                             )
   {
-    int             row;
-    Composite       composite;
-    Label           label;
-    Button          button;
+    int       row;
+    Composite composite;
+    Label     label;
+    Button    button;
 
     if (!parentShell.isDisposed())
     {
@@ -3098,7 +4138,13 @@ class Dialogs
    * @param cancelText cancel button text
    * @return string or null on cancel
    */
-  public static String string(Shell parentShell, String title, String text, String value, String okText, String cancelText)
+  public static String string(Shell  parentShell,
+                              String title,
+                              String text,
+                              String value,
+                              String okText,
+                              String cancelText
+                             )
   {
     return string(parentShell,title,text,value,okText,cancelText,null);
   }
@@ -3111,7 +4157,12 @@ class Dialogs
    * @param okText OK button text
    * @return string or null on cancel
    */
-  public static String string(Shell parentShell, String title, String text, String value, String okText)
+  public static String string(Shell  parentShell,
+                              String title,
+                              String text,
+                              String value,
+                              String okText
+                             )
   {
     return string(parentShell,title,text,value,okText,Dialogs.tr("Cancel"));
   }
@@ -3124,7 +4175,11 @@ class Dialogs
    * @param value value to edit (can be null)
    * @return string or null on cancel
    */
-  public static String string(Shell parentShell, String title, String text, String value)
+  public static String string(Shell  parentShell,
+                              String title,
+                              String text,
+                              String value
+                             )
   {
     return string(parentShell,title,text,value,Dialogs.tr("Save"));
   }
@@ -3135,7 +4190,10 @@ class Dialogs
    * @param text text before input element
    * @return string or null on cancel
    */
-  public static String string(Shell parentShell, String title, String text)
+  public static String string(Shell  parentShell,
+                              String title,
+                              String text
+                             )
   {
     return string(parentShell,title,text,"");
   }
@@ -3151,12 +4209,21 @@ class Dialogs
    * @param toolTipText tooltip text (can be null)
    * @return value or null on cancel
    */
-  public static Integer integer(Shell parentShell, String title, String text, int value, int minValue, int maxValue, String okText, String cancelText, String toolTipText)
+  public static Integer integer(Shell  parentShell,
+                                String title,
+                                String text,
+                                int    value,
+                                int    minValue,
+                                int    maxValue,
+                                String okText,
+                                String cancelText,
+                                String toolTipText
+                               )
   {
-    int             row;
-    Composite       composite;
-    Label           label;
-    Button          button;
+    int       row;
+    Composite composite;
+    Label     label;
+    Button    button;
 
     if (!parentShell.isDisposed())
     {
@@ -3254,7 +4321,15 @@ class Dialogs
    * @param cancelText cancel button text
    * @return value or null on cancel
    */
-  public static Integer integer(Shell parentShell, String title, String text, int value, int minValue, int maxValue, String okText, String cancelText)
+  public static Integer integer(Shell  parentShell,
+                                String title,
+                                String text,
+                                int    value,
+                                int    minValue,
+                                int    maxValue,
+                                String okText,
+                                String cancelText
+                               )
   {
     return integer(parentShell,title,text,value,minValue,maxValue,okText,cancelText,null);
   }
@@ -3267,7 +4342,13 @@ class Dialogs
    * @param minValue,maxValue min./max. value
    * @return value or null on cancel
    */
-  public static Integer integer(Shell parentShell, String title, String text, int value, int minValue, int maxValue)
+  public static Integer integer(Shell  parentShell,
+                                String title,
+                                String text,
+                                int    value,
+                                int    minValue,
+                                int    maxValue
+                               )
   {
     return integer(parentShell,title,text,value,minValue,maxValue,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
@@ -3284,12 +4365,22 @@ class Dialogs
    * @param toolTipText tooltip text (can be null)
    * @return value or null on cancel
    */
-  public static Integer slider(Shell parentShell, String title, String text, final int value, int minValue, int maxValue, final int increment, String okText, String cancelText, String toolTipText)
+  public static Integer slider(Shell     parentShell,
+                               String    title,
+                               String    text,
+                               final int value,
+                               int       minValue,
+                               int       maxValue,
+                               final int increment,
+                               String    okText,
+                               String    cancelText,
+                               String    toolTipText
+                              )
   {
-    int             row;
-    Composite       composite,subComposite;
-    Label           label;
-    Button          button;
+    int       row;
+    Composite composite,subComposite;
+    Label     label;
+    Button    button;
 
     if (increment < 1) throw new IllegalArgumentException();
 
