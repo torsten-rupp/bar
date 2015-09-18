@@ -5826,6 +5826,77 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
 }
 
 /***********************************************************************\
+* Name   : serverCommand_rootList
+* Purpose: root list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+*            name=<name> size=<n [bytes]>
+\***********************************************************************/
+
+LOCAL void serverCommand_rootList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  Errors         error;
+  RootListHandle rootListHandle;
+  String         name;
+  DeviceInfo     deviceInfo;
+  uint64         size;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // open root list
+  error = File_openRootList(&rootListHandle);
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"open root list fail: %s",Error_getText(error));
+    return;
+  }
+
+  // read root list entries
+  name = String_new();
+  while (!File_endOfRootList(&rootListHandle))
+  {
+    error = File_readRootList(&rootListHandle,name);
+    if (error == ERROR_NONE)
+    {
+      error = Device_getDeviceInfo(&deviceInfo,name);
+      if (error == ERROR_NONE)
+      {
+        size = deviceInfo.size;
+      }
+      else
+      {
+        size = 0;
+      }
+
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                       "name=%'S size=%llu",
+                       name,
+                       size
+                      );
+    }
+    else
+    {
+      sendClientResult(clientInfo,id,FALSE,error,"open root list fail");
+    }
+  }
+  String_delete(name);
+
+  // close root list
+  File_closeRootList(&rootListHandle);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+}
+
+/***********************************************************************\
 * Name   : serverCommand_fileList
 * Purpose: file list
 * Input  : clientInfo    - client info
@@ -12778,6 +12849,7 @@ SERVER_COMMANDS[] =
   { "SUSPEND",                    serverCommand_suspend,                 AUTHORIZATION_STATE_OK      },
   { "CONTINUE",                   serverCommand_continue,                AUTHORIZATION_STATE_OK      },
   { "DEVICE_LIST",                serverCommand_deviceList,              AUTHORIZATION_STATE_OK      },
+  { "ROOT_LIST",                  serverCommand_rootList,                AUTHORIZATION_STATE_OK      },
   { "FILE_LIST",                  serverCommand_fileList,                AUTHORIZATION_STATE_OK      },
   { "FILE_ATTRIBUTE_GET",         serverCommand_fileAttributeGet,        AUTHORIZATION_STATE_OK      },
   { "FILE_ATTRIBUTE_SET",         serverCommand_fileAttributeSet,        AUTHORIZATION_STATE_OK      },
