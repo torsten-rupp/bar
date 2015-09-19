@@ -619,6 +619,7 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/packages
         # copy existing packages to avoid download (which may fail because of an instable Internet)
 	$(INSTALL) \
+          packages/binutils-*.tar.bz2 \
           packages/bzip2-*.tar.gz \
           packages/c-ares-*.tar.gz \
           packages/curl-*.tar.bz2 \
@@ -634,6 +635,7 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
           packages/lz4-*.tar.gz \
           packages/lzo-*.tar.gz \
           packages/mxml-*.tar.gz \
+          packages/mtx-*.tar.gz \
           packages/nettle-*.tar.gz \
           packages/openssl-*.tar.gz \
           packages/pcre-*.tar.bz2 \
