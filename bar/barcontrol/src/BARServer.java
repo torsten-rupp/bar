@@ -895,32 +895,32 @@ class BARServer
 
     commandId = 0;
 
-    // connect to server
+    // get all possible bar.jks file names
+    String[] javaSSLKeyFileNames = null;
+    if (serverKeyFileName != null)
+    {
+      javaSSLKeyFileNames = new String[]
+      {
+        serverKeyFileName
+      };
+    }
+    else
+    {
+      javaSSLKeyFileNames = new String[]
+      {
+        JAVA_SSL_KEY_FILE_NAME,
+        System.getProperty("user.home")+File.separator+".bar"+File.separator+JAVA_SSL_KEY_FILE_NAME,
+        Config.CONFIG_DIR+File.separator+JAVA_SSL_KEY_FILE_NAME,
+        Config.TLS_DIR+File.separator+"private"+File.separator+JAVA_SSL_KEY_FILE_NAME
+      };
+    }
+
+    // connect to server: first try TLS, then plain
     socket = null;
     String connectErrorMessage = null;
-    if ((socket == null) && (tlsPort != 0))
+    if ((socket == null) && (port != 0))
     {
-      // get all possible bar.jks file names
-      String[] javaSSLKeyFileNames = null;
-      if (serverKeyFileName != null)
-      {
-        javaSSLKeyFileNames = new String[]
-        {
-          serverKeyFileName
-        };
-      }
-      else
-      {
-        javaSSLKeyFileNames = new String[]
-        {
-          JAVA_SSL_KEY_FILE_NAME,
-          System.getProperty("user.home")+File.separator+".bar"+File.separator+JAVA_SSL_KEY_FILE_NAME,
-          Config.CONFIG_DIR+File.separator+JAVA_SSL_KEY_FILE_NAME,
-          Config.TLS_DIR+File.separator+"private"+File.separator+JAVA_SSL_KEY_FILE_NAME
-        };
-      }
-
-      // try to connect with key
+      // try to create TLS socket with plain socket+startSSL
       for (String javaSSLKeyFileName : javaSSLKeyFileNames)
       {
         File file = new File(javaSSLKeyFileName);
@@ -930,11 +930,37 @@ class BARServer
 //Dprintf.dprintf("javaSSLKeyFileName=%s\n",javaSSLKeyFileName);
           try
           {
-            SSLSocket        sslSocket;
             SSLSocketFactory sslSocketFactory;
+            SSLSocket        sslSocket;
 
             sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
-            sslSocket        = (SSLSocket)sslSocketFactory.createSocket(hostname,tlsPort);
+
+            Socket plainSocket = new Socket(hostname,port);
+            plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
+
+            input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream()));
+            output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream()));
+
+            // get session
+            startSession(input,output);
+
+            // send startSSL, wait for response
+            String[] errorMessage = new String[1];
+            if (syncExecuteCommand(StringParser.format("START_SSL"),
+                                   errorMessage
+                                  ) != Errors.NONE
+               )
+            {
+              throw new ConnectionError("Start SSL fail");
+            }
+
+            // create TLS socket on plain socket
+            sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,hostname,tlsPort,false);
+            sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
+            sslSocket.startHandshake();
+
+            input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
+            output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
 
 /*
 String[] ss;
@@ -958,15 +984,104 @@ Dprintf.dprintf("getEnabledProtocols=%s",s);
 sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
 sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 */
-            sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
-            sslSocket.startHandshake();
 
 //java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
 //Dprintf.dprintf("serverCerts=%s\n",serverCerts);
 
+            // connection established => done
+            socket = sslSocket;
+            break;
+          }
+          catch (ConnectionError exception)
+          {
+            connectErrorMessage = exception.getMessage();
+          }
+          catch (SocketTimeoutException exception)
+          {
+            connectErrorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
+          }
+          catch (ConnectException exception)
+          {
+            connectErrorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
+          }
+          catch (NoRouteToHostException exception)
+          {
+            connectErrorMessage = "host '"+hostname+"' unreachable (no route to host)";
+          }
+          catch (UnknownHostException exception)
+          {
+            connectErrorMessage = "unknown host '"+hostname+"'";
+          }
+          catch (RuntimeException exception)
+          {
+            connectErrorMessage = exception.getMessage();
+          }
+          catch (IOException exception)
+          {
+            connectErrorMessage = BARControl.reniceIOException(exception).getMessage();
+          }
+          catch (Exception exception)
+          {
+            connectErrorMessage = exception.getMessage();
+          }
+        }
+      }
+    }
+    if ((socket == null) && (tlsPort != 0))
+    {
+      // try to create TLS socket
+      for (String javaSSLKeyFileName : javaSSLKeyFileNames)
+      {
+        File file = new File(javaSSLKeyFileName);
+        if (file.exists() && file.isFile() && file.canRead())
+        {
+          System.setProperty("javax.net.ssl.trustStore",javaSSLKeyFileName);
+//Dprintf.dprintf("javaSSLKeyFileName=%s\n",javaSSLKeyFileName);
+          try
+          {
+            SSLSocketFactory sslSocketFactory;
+            SSLSocket        sslSocket;
+
+            sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
+
+            // create TLS socket
+            sslSocket = (SSLSocket)sslSocketFactory.createSocket(hostname,tlsPort);
+            sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
+            sslSocket.startHandshake();
+
             input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
             output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
 
+            // get session
+            startSession(input,output);
+
+/*
+String[] ss;
+
+ss = sslSocket.getSupportedCipherSuites();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedCipherSuites=%s",s);
+}
+ss = sslSocket.getSupportedProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedProtocols=%s",s);
+}
+ss = sslSocket.getEnabledProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getEnabledProtocols=%s",s);
+}
+//sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5","SSL_RSA_WITH_RC4_128_SHA","TLS_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_DSS_WITH_AES_128_CBC_SHA"," SSL_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"," SSL_RSA_WITH_DES_CBC_SHA"," SSL_DHE_RSA_WITH_DES_CBC_SHA"," SSL_DHE_DSS_WITH_DES_CBC_SHA"," SSL_RSA_EXPORT_WITH_RC4_40_MD5"," SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
+*/
+
+//java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
+//Dprintf.dprintf("serverCerts=%s\n",serverCerts);
+
+            // connection established => done
             socket = sslSocket;
             break;
           }
@@ -1010,6 +1125,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
         input  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+
+        startSession(input,output);
       }
       catch (SocketTimeoutException exception)
       {
@@ -1039,86 +1156,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       else                                throw new ConnectionError("no server ports specified");
     }
 
-    sessionId           = null;
-    passwordEncryptType = null;
-    passwordCipher      = null;
+    // authorize, get version, file separator
     try
     {
-      String   line;
       String[] errorMessage = new String[1];
       ValueMap valueMap     = new ValueMap();
-      String[] data;
-
-      // read session data
-      line = input.readLine();
-      if (line == null)
-      {
-        throw new CommunicationError("No result from server");
-      }
-      if (Settings.debugLevel > 1) System.err.println("Network: received '"+line+"'");
-      data = line.split(" ",2);
-      if ((data.length < 2) || !data[0].equals("SESSION"))
-      {
-        throw new CommunicationError("Invalid response from server");
-      }
-      if (!StringParser.parse(data[1],
-                              new TypeMap("id",String.class,
-                                          "encryptTypes",String.class,
-                                          "n",String.class,
-                                          "e",String.class
-                                         ),
-                              valueMap
-                             )
-         )
-      {
-        throw new CommunicationError("Invalid response from server");
-      }
-      sessionId = decodeHex(valueMap.getString("id"));
-
-      // get password chipher
-      String[] encryptTypes = valueMap.getString("encryptTypes").split(",");
-      int      i            = 0;
-      while ((i < encryptTypes.length) && (passwordCipher == null))
-      {
-        if      (encryptTypes[i].equalsIgnoreCase("RSA"))
-        {
-          // encrypted passwords with RSA
-          try
-          {
-            BigInteger n = valueMap.containsKey("n") ? new BigInteger(valueMap.getString("n"),16) : null;
-            BigInteger e = valueMap.containsKey("e") ? new BigInteger(valueMap.getString("e"),16) : null;
-//Dprintf.dprintf("n=%s e=%s",n,e);
-
-            RSAPublicKeySpec rsaPublicKeySpec = new RSAPublicKeySpec(n,e);
-            PublicKey        publicKey        = KeyFactory.getInstance("RSA").generatePublic(rsaPublicKeySpec);
-
-            passwordEncryptType = "RSA";
-            passwordCipher      = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-//            passwordCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-1AndMGF1Padding");
-//            passwordCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
-            passwordKey         = publicKey;
-          }
-          catch (Exception exception)
-          {
-            if (Settings.debugLevel > 0)
-            {
-              BARControl.printStackTrace(exception);
-            }
-          }
-        }
-        else if (encryptTypes[i].equalsIgnoreCase("NONE"))
-        {
-          passwordEncryptType = "NONE";
-          passwordCipher      = new NullCipher();
-          passwordKey         = null;
-        }
-
-        i++;
-      }
-      if (passwordCipher == null)
-      {
-        throw new CommunicationError("Init password cipher fail");
-      }
 
       // authorize
       if (syncExecuteCommand(StringParser.format("AUTHORIZE encryptType=%s encryptedPassword=%s",
@@ -1891,6 +1933,97 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
 
     return stringBuffer.toString();
+  }
+
+  /** start session: read session id, password encryption type and key
+   * @param input,output input/output streams
+   */
+  private static void startSession(BufferedReader input, BufferedWriter output)
+    throws IOException
+  {
+    sessionId           = null;
+    passwordEncryptType = null;
+    passwordCipher      = null;
+
+    String   line;
+    String[] errorMessage = new String[1];
+    ValueMap valueMap     = new ValueMap();
+    String[] data;
+
+    // read session data
+    line = input.readLine();
+    if (line == null)
+    {
+      throw new CommunicationError("No result from server");
+    }
+    if (Settings.debugLevel > 1) System.err.println("Network: received '"+line+"'");
+    data = line.split(" ",2);
+    if ((data.length < 2) || !data[0].equals("SESSION"))
+    {
+      throw new CommunicationError("Invalid response from server");
+    }
+    if (!StringParser.parse(data[1],
+                            new TypeMap("id",String.class,
+                                        "encryptTypes",String.class,
+                                        "n",String.class,
+                                        "e",String.class
+                                       ),
+                            valueMap
+                           )
+       )
+    {
+      throw new CommunicationError("Invalid response from server");
+    }
+    sessionId = decodeHex(valueMap.getString("id"));
+    if (sessionId == null)
+    {
+      throw new CommunicationError("No session id");
+    }
+
+    // get password chipher
+    String[] encryptTypes = valueMap.getString("encryptTypes").split(",");
+    int      i            = 0;
+    while ((i < encryptTypes.length) && (passwordCipher == null))
+    {
+      if      (encryptTypes[i].equalsIgnoreCase("RSA"))
+      {
+        // encrypted passwords with RSA
+        try
+        {
+          BigInteger n = valueMap.containsKey("n") ? new BigInteger(valueMap.getString("n"),16) : null;
+          BigInteger e = valueMap.containsKey("e") ? new BigInteger(valueMap.getString("e"),16) : null;
+//Dprintf.dprintf("n=%s e=%s",n,e);
+
+          RSAPublicKeySpec rsaPublicKeySpec = new RSAPublicKeySpec(n,e);
+          PublicKey        publicKey        = KeyFactory.getInstance("RSA").generatePublic(rsaPublicKeySpec);
+
+          passwordEncryptType = "RSA";
+          passwordCipher      = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+//            passwordCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-1AndMGF1Padding");
+//            passwordCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+          passwordKey         = publicKey;
+        }
+        catch (Exception exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            BARControl.printStackTrace(exception);
+          }
+        }
+      }
+      else if (encryptTypes[i].equalsIgnoreCase("NONE"))
+      {
+        passwordEncryptType = "NONE";
+        passwordCipher      = new NullCipher();
+        passwordKey         = null;
+      }
+
+      i++;
+    }
+    if (passwordCipher == null)
+    {
+      throw new CommunicationError("Init password cipher fail");
+    }
   }
 
   /** execute command syncronous
