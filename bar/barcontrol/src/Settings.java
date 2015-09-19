@@ -52,6 +52,9 @@ public class Settings
   // --------------------------- variables --------------------------------
 
   // program settings
+//TODO: load/store
+  public static String           jobListColumnOrder              = null;
+
   public static boolean          pauseCreateFlag                 = true;
   public static boolean          pauseStorageFlag                = false;
   public static boolean          pauseRestoreFlag                = true;
