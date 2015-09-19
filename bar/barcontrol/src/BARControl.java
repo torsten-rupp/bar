@@ -917,8 +917,8 @@ public class BARControl
     {
       this.serverName = !serverName.equals("")?serverName:Settings.serverName;
       this.password   = Settings.serverPassword;
-      this.port       = (port != 0)?port:Settings.serverPort;
-      this.tlsPort    = (port != 0)?tlsPort:Settings.serverTLSPort;
+      this.port       = (port != 0) ? port    : Settings.serverPort;
+      this.tlsPort    = (port != 0) ? tlsPort : Settings.serverTLSPort;
     }
   }
 
