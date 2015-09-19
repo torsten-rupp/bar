@@ -416,7 +416,6 @@ INTERMEDIATE         = errors.c \
 
 TARGETS              = bar@EXEEXT@ \
                        bar-debug@EXEEXT@ \
-                       bar-debug@EXEEXT@.sym \
                        bar-valgrind@EXEEXT@ \
                        $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
                        $(if @HAVE_BREAKPAD@,release/bar.sym debug/bar.sym) \
@@ -558,6 +557,7 @@ bar-debug@EXEEXT@: \
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
+	$(OBJCOPY) --only-keep-debug bar-debug@EXEEXT@ $@
 ifeq (@HAVE_BREAKPAD@,1)
 	$(MAKE) debug/bar.sym.bz2.o
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ debug/bar.sym.bz2.o $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
