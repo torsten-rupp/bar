@@ -61,6 +61,7 @@ class JobData
 {
   String uuid;
   String name;
+  String hostName;
   String state;
   String archiveType;
   long   archivePartSize;
@@ -78,6 +79,7 @@ class JobData
   /** create job data
    * @param uuid job UUID
    * @param name name
+   * @param hostName host name
    * @param state job state
    * @param archiveType archive type
    * @param archivePartSize archive part size
@@ -89,9 +91,10 @@ class JobData
    * @param lastExecutedDateTime last executed date/time [s]
    * @param estimatedRestTime estimated rest time [s]
    */
-  JobData(String uuid, String name, String state, String archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
+  JobData(String uuid, String name, String hostName, String state, String archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
   {
     this.uuid                   = uuid;
+    this.hostName               = hostName;
     this.name                   = name;
     this.state                  = state;
     this.archiveType            = archiveType;
@@ -181,7 +184,7 @@ class JobData
    */
   public String toString()
   {
-    return "Job {"+uuid+", "+name+", "+state+", "+archiveType+"}";
+    return "Job {"+uuid+", "+name+", "+hostName+", "+state+", "+archiveType+"}";
   }
 };
 
@@ -366,6 +369,8 @@ public class TabStatus
   // widgets
   public  Composite   widgetTab;
   private Table       widgetJobTable;
+  private Menu        widgetJobTableHeaderMenu;
+  private Menu        widgetJobTableBodyMenu;
   private Shell       widgetMessageToolTip = null;
   private Group       widgetSelectedJob;
   public  Button      widgetButtonStart;
@@ -444,7 +449,7 @@ public class TabStatus
     // list with jobs
     widgetJobTable = Widgets.newTable(widgetTab,SWT.NONE);
     widgetJobTable.setToolTipText(BARControl.tr("List with job entries.\nClick to select job, right-click to open context menu."));
-    widgetJobTable.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}));
+    widgetJobTable.setLayout(new TableLayout(null,new double[]{1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}));
     Widgets.layout(widgetJobTable,0,0,TableLayoutData.NSWE);
     widgetJobTable.addSelectionListener(new SelectionListener()
     {
@@ -469,34 +474,198 @@ public class TabStatus
         Widgets.sortTableColumn(widgetJobTable,tableColumn,jobDataComparator);
       }
     };
+    Listener jobListColumnMoveListener = new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        int[]    columnOrder = widgetJobTable.getColumnOrder();
+        String[] names       = new String[columnOrder.length];
+        for (int i = 0; i < columnOrder.length; i++)
+        {
+          names[i] = widgetJobTable.getColumn(i).getText();
+        }
+        Settings.jobListColumnOrder = StringUtils.join(names,",");
+      }
+    };
+// use Settings.jobListColumnOrder, column width
     tableColumn = Widgets.addTableColumn(widgetJobTable,0,BARControl.tr("Name"),          SWT.LEFT, 110,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobTable,1,BARControl.tr("State"),         SWT.LEFT,  90,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,1,BARControl.tr("Host"),          SWT.LEFT, 130,true );
+    tableColumn.setToolTipText(BARControl.tr("Click to sort for host."));
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
+    tableColumn.addSelectionListener(jobListColumnSelectionListener);
+    tableColumn = Widgets.addTableColumn(widgetJobTable,2,BARControl.tr("State"),         SWT.LEFT,  90,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for state."));
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobTable,2,BARControl.tr("Type"),          SWT.LEFT,  90,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,3,BARControl.tr("Type"),          SWT.LEFT,  90,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for type."));
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobTable,3,BARControl.tr("Part size"),     SWT.RIGHT, 80,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,4,BARControl.tr("Part size"),     SWT.RIGHT, 80,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for part size."));
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobTable,4,BARControl.tr("Compress"),      SWT.LEFT,  80,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,5,BARControl.tr("Compress"),      SWT.LEFT,  80,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for used compress algorithm."));
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobTable,5,BARControl.tr("Crypt"),         SWT.LEFT, 100,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,6,BARControl.tr("Crypt"),         SWT.LEFT, 100,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for used encryption algorithm."));
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobTable,6,BARControl.tr("Last executed"), SWT.LEFT, 150,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,7,BARControl.tr("Last executed"), SWT.LEFT, 150,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for last date/time job was executed."));
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobTable,7,BARControl.tr("Estimated time"),SWT.LEFT, 120,false);
+    tableColumn = Widgets.addTableColumn(widgetJobTable,8,BARControl.tr("Estimated time"),SWT.LEFT, 120,false);
     tableColumn.setToolTipText(BARControl.tr("Click to sort for estimated rest time to execute job."));
+    tableColumn.setMoveable(true);
+    tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
 
-    menu = Widgets.newPopupMenu(shell);
+    widgetJobTableHeaderMenu = Widgets.newPopupMenu(shell);
     {
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Start\u2026"));
+      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Name"));
+      menuItem.setSelection(true);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.showTableColumn(widgetJobTable,0,widget.getSelection());
+        }
+      });
+
+      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Host"));
+      menuItem.setSelection(true);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.showTableColumn(widgetJobTable,1,widget.getSelection());
+        }
+      });
+
+      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("State"));
+      menuItem.setSelection(true);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.showTableColumn(widgetJobTable,2,widget.getSelection());
+        }
+      });
+
+      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Type"));
+      menuItem.setSelection(true);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.showTableColumn(widgetJobTable,3,widget.getSelection());
+        }
+      });
+
+      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Part size"));
+      menuItem.setSelection(true);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.showTableColumn(widgetJobTable,4,widget.getSelection());
+        }
+      });
+
+      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Compress"));
+      menuItem.setSelection(true);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.showTableColumn(widgetJobTable,5,widget.getSelection());
+        }
+      });
+
+      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Crypt"));
+      menuItem.setSelection(true);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.showTableColumn(widgetJobTable,6,widget.getSelection());
+        }
+      });
+
+      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Last executed"));
+      menuItem.setSelection(true);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.showTableColumn(widgetJobTable,7,widget.getSelection());
+        }
+      });
+
+      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Estimated time"));
+      menuItem.setSelection(true);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          MenuItem widget = (MenuItem)selectionEvent.widget;
+          Widgets.showTableColumn(widgetJobTable,8,widget.getSelection());
+        }
+      });
+    }
+
+    widgetJobTableBodyMenu = Widgets.newPopupMenu(shell);
+    {
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Start\u2026"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -509,7 +678,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Abort\u2026"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Abort\u2026"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -522,7 +691,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Pause"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Pause"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -535,7 +704,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Continue"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Continue"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -548,7 +717,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Volume"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Volume"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -561,9 +730,9 @@ public class TabStatus
         }
       });
 
-      Widgets.addMenuSeparator(menu);
+      Widgets.addMenuSeparator(widgetJobTableBodyMenu);
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("New\u2026"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("New\u2026"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -575,7 +744,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Clone\u2026"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -587,7 +756,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Rename\u2026"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Rename\u2026"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -599,7 +768,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Delete\u2026"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Delete\u2026"));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -611,7 +780,29 @@ public class TabStatus
         }
       });
     }
-    widgetJobTable.setMenu(menu);
+    widgetJobTable.addListener(SWT.MenuDetect, new Listener()
+    {
+      @Override
+      public void handleEvent(Event event)
+      {
+        Table widget = (Table)event.widget;
+
+        Point p = display.map(null, widget, new Point(event.x, event.y));
+        Rectangle clientArea = widget.getClientArea();
+        boolean isInHeader =    (clientArea.y <= p.y)
+                             && (p.y < (clientArea.y + widget.getHeaderHeight()));
+        widget.setMenu(isInHeader ? widgetJobTableHeaderMenu : widgetJobTableBodyMenu);
+      }
+    });
+    widgetJobTable.addListener(SWT.Dispose, new Listener()
+    {
+      @Override
+      public void handleEvent(Event event)
+      {
+        widgetJobTableHeaderMenu.dispose();
+        widgetJobTableBodyMenu.dispose();
+      }
+    });
 
     // selected job group
     widgetSelectedJob = Widgets.newGroup(widgetTab,BARControl.tr("Selected")+" ''",SWT.NONE);
@@ -1196,6 +1387,7 @@ public class TabStatus
           // get data
           String jobUUID                = resultMap.getString("jobUUID"               );
           String name                   = resultMap.getString("name"                  );
+          String hostName               = resultMap.getString("hostName",""           );
           String state                  = resultMap.getString("state"                 );
           String archiveType            = resultMap.getString("archiveType"           );
           long   archivePartSize        = resultMap.getLong  ("archivePartSize"       );
@@ -1211,6 +1403,7 @@ public class TabStatus
           if (jobData != null)
           {
             jobData.name                   = name;
+            jobData.hostName               = hostName;
             jobData.state                  = state;
             jobData.archiveType            = archiveType;
             jobData.archivePartSize        = archivePartSize;
@@ -1226,6 +1419,7 @@ public class TabStatus
           {
             jobData = new JobData(jobUUID,
                                   name,
+                                  hostName,
                                   state,
                                   archiveType,
                                   archivePartSize,
@@ -1267,6 +1461,7 @@ public class TabStatus
                   Widgets.updateTableItem(tableItem,
                                           jobData,
                                           jobData.name,
+                                          jobData.hostName,
                                           (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
                                           jobData.archiveType,
                                           (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
@@ -1286,6 +1481,7 @@ public class TabStatus
                                                       findJobTableItemIndex(jobData),
                                                       jobData,
                                                       jobData.name,
+                                                      jobData.hostName,
                                                       (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
                                                       jobData.archiveType,
                                                       (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
@@ -1315,6 +1511,7 @@ public class TabStatus
       }
       catch (CommunicationError error)
       {
+Dprintf.dprintf("");
         Dialogs.error(shell,BARControl.tr("Cannot get job list:\n\n{0}",error.getMessage()));
         return;
       }
