@@ -666,10 +666,12 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 };
 
 /***************************** Variables *******************************/
-
 LOCAL locale_t              POSIXLocale;
 LOCAL ClientList            clientList;
 LOCAL AuthorizationFailList authorizationFailList;
+LOCAL const char            *serverCAFileName;
+LOCAL const char            *serverCertFileName;
+LOCAL const char            *serverKeyFileName;
 LOCAL const Password        *serverPassword;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
@@ -5284,6 +5286,49 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String
                    "error=%'s",
                    Error_getText(error)
                   );
+}
+
+/***********************************************************************\
+* Name   : serverCommand_startSSL
+* Purpose: start SSL connection
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  #ifdef HAVE_GNU_TLS
+    Errors error;
+  #endif /* HAVE_GNU_TLS */
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
+
+  #ifdef HAVE_GNU_TLS
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+    error = Network_startSSL(&clientInfo->network.socketHandle,
+                             serverCAFileName,
+                             serverCertFileName,
+                             serverKeyFileName
+                            );
+    if (error != ERROR_NONE)
+    {
+      Network_disconnect(&clientInfo->network.socketHandle);
+    }
+  #else /* not HAVE_GNU_TLS */
+    sendClientResult(clientInfo,id,TRUE,ERROR_FUNCTION_NOT_SUPPORTED,"not available");
+  #endif /* HAVE_GNU_TLS */
+
+  // free resources
 }
 
 /***********************************************************************\
@@ -12839,6 +12884,7 @@ const struct
 SERVER_COMMANDS[] =
 {
   { "ERROR_INFO",                 serverCommand_errorInfo,               AUTHORIZATION_STATE_OK      },
+  { "START_SSL",                  serverCommand_startSSL,                AUTHORIZATION_STATE_WAITING },
   { "AUTHORIZE",                  serverCommand_authorize,               AUTHORIZATION_STATE_WAITING },
   { "VERSION",                    serverCommand_version,                 AUTHORIZATION_STATE_OK      },
   { "QUIT",                       serverCommand_quit,                    AUTHORIZATION_STATE_OK      },
@@ -13242,6 +13288,7 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   {
     HALT_FATAL_ERROR("Cannot initialize client command message queue!");
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Semaphore_init(&clientInfo->network.writeLock);
   for (z = 0; z < MAX_NETWORK_CLIENT_THREADS; z++)
   {
@@ -13295,6 +13342,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       {
         Thread_done(&clientInfo->network.threads[z]);
       }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       Semaphore_done(&clientInfo->network.writeLock);
       MsgQueue_done(&clientInfo->network.commandMsgQueue,(MsgQueueMsgFreeFunction)freeCommandMsg,NULL);
       String_delete(clientInfo->network.name);
@@ -13599,6 +13647,9 @@ Errors Server_run(uint             port,
 
   // initialize variables
   AutoFree_init(&autoFreeList);
+  serverCAFileName        = caFileName;
+  serverCertFileName      = certFileName;
+  serverKeyFileName       = keyFileName;
   serverPassword          = password;
   serverJobsDirectory     = jobsDirectory;
   serverDefaultJobOptions = defaultJobOptions;
