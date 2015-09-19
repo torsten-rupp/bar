@@ -113,7 +113,8 @@ enum WidgetVariableTypes
  */
 class WidgetVariable
 {
-  private WidgetVariableTypes type;
+//  private WidgetVariableTypes type;
+public WidgetVariableTypes type;
   private boolean             b;
   private long                l;
   private double              d;
@@ -408,15 +409,16 @@ class WidgetModifyListener
   }
 
   /** compare variables
-   * @param object variable object
+   * @param otherWidgetVariable variable object
    * @return true iff equal variable object is equal to some variable
    */
-  public boolean equals(Object object)
+  public boolean equals(WidgetVariable otherVariable)
   {
     for (WidgetVariable variable : variables)
     {
       if (variable != null)
       {
+/*
         switch (variable.getType())
         {
           case BOOLEAN:
@@ -424,12 +426,14 @@ class WidgetModifyListener
           case DOUBLE:
           case STRING:
           case ENUMERATION:
-            if (variable.equals(object.toString())) return true;
+            if (variable.equals(otherVariable.toString())) return true;
             break;
           case OBJECT:
-            if (variable.equals(object)) return true;
+            if (variable.equals(otherVariable)) return true;
             break;
         }
+/**/
+        if (variable == otherVariable) return true;
       }
     }
 
@@ -4785,8 +4789,7 @@ e composite widget
 
   /** show table column
    * @param tableColumn table column to show
-   * @param width table column width
-   * @param showFlag true to show colume, false for hide
+   * @param showFlag true to show column, false for hide
    */
   public static void showTableColumn(TableColumn tableColumn, boolean showFlag)
   {
@@ -4803,6 +4806,29 @@ e composite widget
       tableColumn.setResizable(false);
     }
   }
+
+  /** show table column
+   * @param table table
+   * @param columnNb column number
+   * @param showFlag true to show column, false for hide
+   */
+  public static void showTableColumn(Table table, int columnNb, boolean showFlag)
+  {
+    TableColumn     tableColumn     = table.getColumn(columnNb);
+    TableLayoutData tableLayoutData = (TableLayoutData)tableColumn.getData();
+    if (showFlag)
+    {
+      tableColumn.setWidth(tableLayoutData.minWidth);
+      tableColumn.setResizable((tableLayoutData.minWidth != SWT.DEFAULT) || (tableLayoutData.maxWidth != SWT.DEFAULT));
+    }
+    else
+    {
+      tableLayoutData.minWidth = tableColumn.getWidth();
+      tableColumn.setWidth(0);
+      tableColumn.setResizable(false);
+    }
+  }
+
 
   /** show table column
    * @param tableColumn table column to show
@@ -8317,11 +8343,11 @@ private static void printTree(Tree tree)
   /** execute modify listeners
    * @param variable modified variable
    */
-  public static void modified(Object object)
+  public static void modified(WidgetVariable widgetVariable)
   {
     for (WidgetModifyListener widgetModifyListener : listenersList)
     {
-      if (widgetModifyListener.equals(object))
+      if (widgetModifyListener.equals(widgetVariable))
       {
         widgetModifyListener.modified();
       }
