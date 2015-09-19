@@ -612,6 +612,7 @@ AC_SUBST(HAVE_ISO9660)                      dnl "1" for ISO9660 support, "" othe
 AC_SUBST(HAVE_PCRE)                         dnl "1" for pcre support, "" otherwise
 AC_SUBST(HAVE_PTHREADS_W32)                 dnl "1" for pthreads-w32 support, "" otherwise
 AC_SUBST(HAVE_BREAKPAD)                     dnl "1" for BreakPad support, "" otherwise
+AC_SUBST(HAVE_BFD)                          dnl "1" for BFD support, "" otherwise
 
 AC_SUBST(INSTALL_DIR)                       dnl installation directory
 AC_SUBST(INSTALL_BIN_DIR)                   dnl installation directory for binaries
@@ -724,6 +725,7 @@ ENABLE_ISO9660="yes"
 ENABLE_PCRE="yes"
 ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
+ENABLE_BFD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
 ENABLE_EPM="yes"
@@ -894,6 +896,11 @@ AC_ARG_ENABLE(
   [ENABLE_BREAKPAD=$enableval]
 )
 AC_ARG_ENABLE(
+  bfd,
+  AC_HELP_STRING([--disable-bfd],[disable BFD support]),
+  [ENABLE_BFD=$enableval]
+)
+AC_ARG_ENABLE(
   gui,
   AC_HELP_STRING([--disable-gui],[disable GUI support (barcontrol)]),
   [ENABLE_GUI=$enableval]
@@ -924,6 +931,10 @@ if test $ENABLE_CURL = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
 fi
 if test $ENABLE_CURL = "yes" -a ! $ENABLE_SSH = "yes"; then
   AC_MSG_WARN([ssh not enabled, disabled curl support.])
+  ENABLE_CURL=no
+fi
+if test $ENABLE_CURL = "yes" -a ! $ENABLE_TLS = "yes"; then
+  AC_MSG_WARN([TLS not enabled, disabled curl support.])
   ENABLE_CURL=no
 fi
 
@@ -1189,7 +1200,6 @@ case $host_os in
     AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
-    AC_SEARCH_LIBRARIES(bfd_init,bfd,[LIBRARIES="$LIBRARIES bfd"])
     ;;
   mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
@@ -1283,11 +1293,10 @@ else
       AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_Z=1;LIBRARIES="z $LIBRARIES";AC_DEFINE(HAVE_Z,1,[z installed])])
     fi
   fi
-
-  if test -z "$HAVE_Z"; then
-    if test ! \( -d zlib -o -d "`readlink zlib`" \); then
-      AC_MSG_WARN([zlib not compiled: zlib package missing])
-    fi
+fi
+if test -z "$HAVE_Z"; then
+  if test ! \( -d zlib -o -d "`readlink zlib`" \); then
+    AC_MSG_WARN([zlib not compiled: zlib package missing])
   fi
 fi
 
@@ -1339,11 +1348,11 @@ if test $ENABLE_BZ2 = "yes"; then
         AC_SEARCH_LIBRARIES(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;LIBRARIES="bz2 $LIBRARIES";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
       fi
     fi
+  fi
 
-    if test -z "$HAVE_BZ2"; then
-      if test ! \( -d bzip2 -o -d "`readlink bzip2`" \); then
-        AC_MSG_WARN([bzip2 not compiled: bzip2 package missing])
-      fi
+  if test -z "$HAVE_BZ2"; then
+    if test ! \( -d bzip2 -o -d "`readlink bzip2`" \); then
+      AC_MSG_WARN([bzip2 not compiled: bzip2 package missing])
     fi
   fi
 fi
@@ -1425,11 +1434,11 @@ if test $ENABLE_LZMA = "yes"; then
         AC_SEARCH_LIBRARIES(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="lzma $LIBRARIES";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
       fi
     fi
+  fi
 
-    if test -z "$HAVE_LZMA"; then
-      if test ! \( -d xz -o -d "`readlink xz`" \); then
-        AC_MSG_WARN([lzma not compiled: xz package missing])
-      fi
+  if test -z "$HAVE_LZMA"; then
+    if test ! \( -d xz -o -d "`readlink xz`" \); then
+      AC_MSG_WARN([lzma not compiled: xz package missing])
     fi
   fi
 fi
@@ -1492,11 +1501,11 @@ if test $ENABLE_LZO = "yes"; then
         AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;LIBRARIES="lzo2 $LIBRARIES";AC_DEFINE(HAVE_LZO,1,[lzo installed])])
       fi
     fi
+  fi
 
-    if test -z "$HAVE_LZO"; then
-      if test ! \( -d lzo -o -d "`readlink lzo`" \); then
-        AC_MSG_WARN([lzo not compiled: lzo package missing])
-      fi
+  if test -z "$HAVE_LZO"; then
+    if test ! \( -d lzo -o -d "`readlink lzo`" \); then
+      AC_MSG_WARN([lzo not compiled: lzo package missing])
     fi
   fi
 fi
@@ -1550,11 +1559,11 @@ if test $ENABLE_LZ4 = "yes"; then
         AC_SEARCH_LIBRARIES(LZ4_compress,lz4,[HAVE_LZ4=1;LIBRARIES="lz4 $LIBRARIES";AC_DEFINE(HAVE_LZ4,1,[lz4 installed])])
       fi
     fi
+  fi
 
-    if test -z "$HAVE_LZ4"; then
-      if test ! \( -d lz4 -o -d "`readlink lz4`" \); then
-        AC_MSG_WARN([lz4 not compiled: lz4 package missing])
-      fi
+  if test -z "$HAVE_LZ4"; then
+    if test ! \( -d lz4 -o -d "`readlink lz4`" \); then
+      AC_MSG_WARN([lz4 not compiled: lz4 package missing])
     fi
   fi
 fi
@@ -1581,7 +1590,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       if test $result1 -eq 1; then
         (cd libgpg-error; ./configure \
           --prefix=$cwd/packages \
-          --enable-shared \
+          --disable-shared \
           --enable-static \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
@@ -1636,7 +1645,7 @@ if test $ENABLE_GCRYPT = "yes"; then
           --prefix=$cwd/packages \
           --with-gpg-error-prefix=$cwd/packages \
           --enable-maintainer-mode \
-          --enable-shared \
+          --disable-shared \
           --enable-static \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
         ) 1>$tmpFile 2>&1
@@ -1714,14 +1723,14 @@ if test $ENABLE_GCRYPT = "yes"; then
       ],
       [#include <gcrypt.h>]
     )
+  fi
 
-    if test -z "$HAVE_GCRYPT"; then
-      if test ! \( -d libgpg-error -o -d "`readlink libgpg-error`" \); then
-        AC_MSG_WARN([libgcrypt not compiled: libgpg-error package missing])
-      fi
-      if test ! \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
-        AC_MSG_WARN([libgcrypt not compiled: libgcrypt package missing])
-      fi
+  if test -z "$HAVE_GCRYPT"; then
+    if test ! \( -d libgpg-error -o -d "`readlink libgpg-error`" \); then
+      AC_MSG_WARN([libgcrypt not compiled: libgpg-error package missing])
+    fi
+    if test ! \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
+      AC_MSG_WARN([libgcrypt not compiled: libgcrypt package missing])
     fi
   fi
 fi
@@ -1888,17 +1897,17 @@ if test $ENABLE_TLS = "yes"; then
         AC_SEARCH_LIBRARIES(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
       fi
     fi
+  fi
 
-    if test -z "$HAVE_GNU_TLS"; then
-      if test ! \( -d gmp -o -d "`readlink gmp`" \); then
-        AC_MSG_WARN([gnutls not compiled: gmp package missing])
-      fi
-      if test ! \( -d nettle -o -d "`readlink nettle`" \); then
-        AC_MSG_WARN([gnutls not compiled: nettle package missing])
-      fi
-      if test ! \( -d gnutls -o -d "`readlink gnutls`" \); then
-        AC_MSG_WARN([gnutls not compiled: gnutls package missing])
-      fi
+  if test -z "$HAVE_GNU_TLS"; then
+    if test ! \( -d gmp -o -d "`readlink gmp`" \); then
+      AC_MSG_WARN([gnutls not compiled: gmp package missing])
+    fi
+    if test ! \( -d nettle -o -d "`readlink nettle`" \); then
+      AC_MSG_WARN([gnutls not compiled: nettle package missing])
+    fi
+    if test ! \( -d gnutls -o -d "`readlink gnutls`" \); then
+      AC_MSG_WARN([gnutls not compiled: gnutls package missing])
     fi
   fi
 fi
@@ -2068,11 +2077,11 @@ if test $ENABLE_SSH = "yes"; then
         AC_SEARCH_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
       fi
     fi
+  fi
 
-    if test -z "$HAVE_SSH2"; then
-      if test ! \( -d libssh2 -o -d "`readlink libssh2`" \); then
-        AC_MSG_WARN([libssh2 not compiled: libssh2 package missing])
-      fi
+  if test -z "$HAVE_SSH2"; then
+    if test ! \( -d libssh2 -o -d "`readlink libssh2`" \); then
+      AC_MSG_WARN([libssh2 not compiled: libssh2 package missing])
     fi
   fi
 
@@ -2342,21 +2351,22 @@ if test $ENABLE_CURL = "yes"; then
         AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
       fi
     fi
+  fi
 
-    if test -z "$HAVE_CURL"; then
-      if test ! \( -d curl -o -d "`readlink curl`" \); then
-        AC_MSG_WARN([curl not compiled: curl package missing])
-      fi
+  if test -z "$HAVE_CURL"; then
+    if test ! \( -d curl -o -d "`readlink curl`" \); then
+      AC_MSG_WARN([curl not compiled: curl package missing])
     fi
-    if test -z "$HAVE_CARES"; then
-      if test ! \( -d c-ares -o -d "`readlink c-ares`" \); then
-        AC_MSG_WARN([libssh2 not compiled: c-ares package missing])
-      fi
+  fi
+  if test -z "$HAVE_CARES"; then
+    if test ! \( -d c-ares -o -d "`readlink c-ares`" \); then
+      AC_MSG_WARN([libssh2 not compiled: c-ares package missing])
     fi
-    if test -z "$HAVE_MXML"; then
-      if test ! \( -d mxml -o -d "`readlink mxml`" \); then
-        AC_MSG_WARN([libssh2 not compiled: mxml package missing])
-      fi
+  fi
+
+  if test -z "$HAVE_MXML"; then
+    if test ! \( -d mxml -o -d "`readlink mxml`" \); then
+      AC_MSG_WARN([libssh2 not compiled: mxml package missing])
     fi
   fi
 
@@ -2370,7 +2380,7 @@ if test $ENABLE_CURL = "yes"; then
   fi
 fi
 
-# compile/ ftplib (Note: not used if curl is available)
+# compile ftplib (Note: not used if curl is available)
 if test $ENABLE_FTP = "yes" -a -z "$HAVE_CURL"; then
   if test -d ftplib -o -d "`readlink ftplib`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -2416,11 +2426,11 @@ if test $ENABLE_FTP = "yes" -a -z "$HAVE_CURL"; then
         AC_SEARCH_LIBRARIES(FtpInit,ftp,[HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
       fi
     fi
+  fi
 
-    if test -z "$HAVE_FTP"; then
-      if test ! \( -d ftplib -o -d "`readlink ftplib`" \); then
-        AC_MSG_WARN([ftplib not compiled: ftplib package missing])
-      fi
+  if test -z "$HAVE_FTP"; then
+    if test ! \( -d ftplib -o -d "`readlink ftplib`" \); then
+      AC_MSG_WARN([ftplib not compiled: ftplib package missing])
     fi
   fi
 fi
@@ -2542,11 +2552,11 @@ if test $ENABLE_ISO9660 = "yes"; then
         AC_SEARCH_LIBRARIES(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
       fi
     fi
+  fi
 
-    if test -z "$HAVE_ISO9660"; then
-      if test ! \( -d libcdio -o -d "`readlink libcdio`" \); then
-        AC_MSG_WARN([libcdio not compiled: libcdio package missing])
-      fi
+  if test -z "$HAVE_ISO9660"; then
+    if test ! \( -d libcdio -o -d "`readlink libcdio`" \); then
+      AC_MSG_WARN([libcdio not compiled: libcdio package missing])
     fi
   fi
 fi
@@ -2643,11 +2653,11 @@ if test $ENABLE_PCRE = "yes"; then
         AC_SEARCH_LIBRARIES(pcre,pcre_compile,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
       fi
     fi
+  fi
 
-    if test -z "$HAVE_PCRE"; then
-      if test ! \( -d pcre -o -d "`readlink pcre`" \); then
-        AC_MSG_WARN([pcre not compiled: pcre package missing])
-      fi
+  if test -z "$HAVE_PCRE"; then
+    if test ! \( -d pcre -o -d "`readlink pcre`" \); then
+      AC_MSG_WARN([pcre not compiled: pcre package missing])
     fi
   fi
 fi
@@ -2697,6 +2707,7 @@ case "$host_os" in
     ;;
 esac
 
+# compile/use breakpad
 if test $ENABLE_BREAKPAD = "yes"; then
   if test -d breakpad -o -d "`readlink breakpad`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -2780,16 +2791,103 @@ find $cwd/packages/include/breakpad -type f -name '*.h'
       fi
     fi
 
-    if test -z "$HAVE_BREAKPAD"; then
-      if test ! \( -d breakpad -o -d "`readlink breakpad`" \); then
-        AC_MSG_WARN([breakpad not compiled: breakpad package missing])
-      fi
-    fi
-
     AC_PATH_PROGS(DUMP_SYMS,dump_syms)
+  fi
+
+  if test -z "$HAVE_BREAKPAD"; then
+    if test ! \( -d breakpad -o -d "`readlink breakpad`" \); then
+      AC_MSG_WARN([breakpad not compiled: breakpad package missing])
+    fi
   fi
 fi
 
+# compile/use binutils
+if test $ENABLE_BFD = "yes"; then
+  if test -d binutils -o -d "`readlink binutils`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile binutils BFD library
+
+      AC_MSG_COMPILE([bfd])
+      result=1
+      if test $result -eq 1; then
+        if test "$ENABLE_DEBUG" = "yes"; then
+          (cd binutils; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
+            --prefix=$cwd/packages \
+          ) 1>$tmpFile 2>&1
+        else
+          (cd binutils; ./configure \
+            --prefix=$cwd/packages \
+            --disable-host-shared \
+            --disable-ld \
+          ) 1>$tmpFile 2>&1
+        fi
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd binutils; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd binutils; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+
+        # fix incomplete install: does not install all header files?
+        install -d $cwd/packages/include
+        install binutils/include/libiberty.h binutils/include/demangle.h $cwd/packages/include
+        install -d $cwd/packages/lib
+        install binutils/libiberty/libiberty.a $cwd/packages/lib
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_BFD=1
+      # PACKAGE required to make bfd.h happy
+      CC_DEFINES="$CC_DEFINES PACKAGE"
+      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z"
+      AC_DEFINE(HAVE_BFD,1,[libbfd installed (local)])
+
+      AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/packages/bin)
+    fi
+  else
+    dnl search for installed BFD library
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
+    else
+      if test -z "$HAVE_BFD"; then
+        AC_SEARCH_STATIC_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[static libbfd installed])])
+      fi
+      if test -z "$HAVE_BFD"; then
+        AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
+      fi
+    fi
+  fi
+
+  if test -z "$HAVE_BFD"; then
+    if test ! \( -d binutils -o -d "`readlink binutils`" \); then
+      AC_MSG_WARN([libbfd not compiled: binutils package missing])
+    fi
+  fi
+fi
+
+# check mandatory packages
 AC_ARG_ENABLE(
   package-check,
   AC_HELP_STRING([--enable-package-check],[enable check packages]),
@@ -3014,6 +3112,9 @@ AC_CHECK_FUNCTION(backtrace,        AC_DEFINE(HAVE_BACKTRACE,        1,[backtrac
 AC_CHECK_FUNCTION(backtrace_symbols,AC_DEFINE(HAVE_BACKTRACE_SYMBOLS,1,[backtrace_symbols() available]))
 
 AC_CHECK_FUNCTION(setlocale,     AC_DEFINE(HAVE_SETLOCALE,     1,[setlocale() available]))
+AC_CHECK_FUNCTION(uselocale,     AC_DEFINE(HAVE_USELOCALE,     1,[uselocale() available]))
+AC_CHECK_FUNCTION(newlocale,     AC_DEFINE(HAVE_NEWLOCALE,     1,[newlocale() available]))
+AC_CHECK_FUNCTION(freelocale,    AC_DEFINE(HAVE_FREELOCALE,    1,[freelocale() available]))
 AC_CHECK_FUNCTION(textdomain,    AC_DEFINE(HAVE_TEXTDOMAIN,    1,[textdomain() available]))
 AC_CHECK_FUNCTION(bindtextdomain,AC_DEFINE(HAVE_BINDTEXTDOMAIN,1,[bindtextdomain() available]))
 AC_CHECK_FUNCTION(gettext,       AC_DEFINE(HAVE_GETTEXT,       1,[gettext() available]))
@@ -3202,9 +3303,8 @@ AC_CONFIG_FILES(epm.list)
 AC_CONFIG_COMMANDS(BUILD_NOTE,
                    [echo "";
                     echo "Configuration $VERSION_MAJOR.$VERSION_MINOR ($VERSION_SVN):";
-                    echo "  host              : $host";
-                    echo "  debug version     : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  Host              : $host";
+                    echo "  Dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
                     echo "  zip compression   : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
                     echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
                     echo "  lzma compression  : `if test "$HAVE_LZMA"; then echo "yes ($VERSION_LZMA)"; else echo no; fi`";
@@ -3218,10 +3318,13 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
-                    echo "  Crash dump support: `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
                     echo "  GUI support       : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support  : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory     : $SWT_DIR"
+                    echo ""
+                    echo "  Debug version     : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
+                    echo "  Crash dump support: `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
+                    echo "  Stacktrace support: `if test "$HAVE_BFD"; then echo yes; else echo no; fi`";
                     echo ""
                     echo "  Packages support  : `if test -n "$EPM"; then echo yes; else echo no; fi`"
                     echo ""
@@ -3253,8 +3356,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_MINOR="$VERSION_MINOR"
                    VERSION_SVN="$VERSION_SVN"
+
                    host="$host"
-                   ENABLE_DEBUG=$ENABLE_DEBUG
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
                    HAVE_Z=$HAVE_Z
                    HAVE_BZ2=$HAVE_BZ2
@@ -3270,15 +3373,22 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_PCRE=$HAVE_PCRE
+
+                   HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
+                   ENABLE_DEBUG=$ENABLE_DEBUG
+
+                   EPM="$EPM"
+
                    ENABLE_GUI=$ENABLE_GUI
                    ENABLE_GUI_I18N=$ENABLE_GUI_I18N
+
                    SWT_DIR="$SWT_DIR"
                    INSTALL_DIR="$INSTALL_DIR"
                    INSTALL_BIN_DIR="$INSTALL_BIN_DIR"
                    CONFIG_DIR="$CONFIG_DIR"
                    TLS_DIR="$TLS_DIR"
-                   EPM="$EPM"
+
                    VERSION_Z="$VERSION_Z"
                    VERSION_BZ2="$VERSION_BZ2"
                    VERSION_LZMA="$VERSION_LZMA"
