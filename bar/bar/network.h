@@ -50,6 +50,7 @@ typedef struct
 {
   SocketTypes type;
   int         handle;
+  uint        flags;
   union
   {
     #ifdef HAVE_FTP
@@ -68,7 +69,9 @@ typedef struct
     #ifdef HAVE_GNU_TLS
       struct
       {
-        gnutls_session_t session;
+        gnutls_certificate_credentials_t credentials;
+        gnutls_dh_params_t               dhParams;
+        gnutls_session_t                 session;
       } gnuTLS;
     #endif /* HAVE_GNU_TLS */
   };
@@ -85,9 +88,9 @@ typedef struct
   ServerSocketTypes socketType;
   int               handle;
   #ifdef HAVE_GNU_TLS
-    bool                             initTLSFlag;
-    gnutls_certificate_credentials_t gnuTLSCredentials;
-    gnutls_dh_params_t               gnuTLSDHParams;
+    const char        *caFileName;
+    const char        *certFileName;
+    const char        *keyFileName;
   #endif /* HAVE_GNU_TLS */
 } ServerSocketHandle;
 
@@ -384,6 +387,24 @@ Errors Network_accept(SocketHandle             *socketHandle,
                       const ServerSocketHandle *serverSocketHandle,
                       uint                     flags
                      );
+
+/***********************************************************************\
+* Name   : Network_startSSL
+* Purpose: start SSL encryption on socket connection
+* Input  : serverSocketHandle - server socket handle
+*          caFileName        - file with TLS CA or NULL
+*          certFileName      - file with TLS cerificate or NULL
+*          keyFileName       - file with TLS key or NULL
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_startSSL(SocketHandle *socketHandle,
+                        const char   *caFileName,
+                        const char   *certFileName,
+                        const char   *keyFileName
+                       );
 
 /***********************************************************************\
 * Name   : Network_getLocalInfo
