@@ -81,6 +81,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
@@ -1607,6 +1608,8 @@ public class TabJobs
   private Button       widgetScheduleTableAdd,widgetScheduleTableEdit,widgetScheduleTableRemove;
 
   // BAR variables
+  private WidgetVariable  hostName                = new WidgetVariable("");
+  private WidgetVariable  hostPort                = new WidgetVariable(0);
   private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental","differential"});
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable(false);
   private WidgetVariable  archivePartSize         = new WidgetVariable(0);
@@ -1897,6 +1900,7 @@ Dprintf.dprintf("");
     Label       label;
     Button      button;
     Combo       combo;
+    Spinner     spinner;
     TreeColumn  treeColumn;
     TreeItem    treeItem;
     Control     control;
@@ -1939,7 +1943,7 @@ Dprintf.dprintf("");
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Jobs")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
-    widgetTab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,2));
+    widgetTab.setLayout(new TableLayout(new double[]{0.0,0.0,1.0,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
 
     // job selector
@@ -2063,10 +2067,163 @@ Dprintf.dprintf("");
       });
     }
 
+    composite = Widgets.newComposite(widgetTab);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0,0.0}));
+    Widgets.layout(composite,1,0,TableLayoutData.WE);
+    {
+      label = Widgets.newLabel(composite,BARControl.tr("Host")+":");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+
+      text = Widgets.newText(composite);
+      text.setToolTipText(BARControl.tr("Host to run job. Leave empty to run on local host."));
+      text.setEnabled(false);
+      Widgets.layout(text,0,1,TableLayoutData.WE);
+      Widgets.addEventListener(new WidgetEventListener(text,selectJobEvent)
+      {
+        public void trigger(Control control)
+        {
+          Widgets.setEnabled(control,selectedJobData != null);
+        }
+      });
+      text.addModifyListener(new ModifyListener()
+      {
+        public void modifyText(ModifyEvent modifyEvent)
+        {
+          Text  widget = (Text)modifyEvent.widget;
+          Color color  = COLOR_MODIFIED;
+          String s = widget.getText();
+          if (hostName.getString().equals(s)) color = null;
+          widget.setBackground(color);
+        }
+      });
+      text.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          Text   widget = (Text)selectionEvent.widget;
+          String string = widget.getText();
+          hostName.set(string);
+          BARServer.setJobOption(selectedJobData.uuid,"host-name",string);
+          widget.setBackground(null);
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      text.addFocusListener(new FocusListener()
+      {
+        public void focusGained(FocusEvent focusEvent)
+        {
+        }
+        public void focusLost(FocusEvent focusEvent)
+        {
+          Text   widget = (Text)focusEvent.widget;
+          String string = widget.getText();
+
+          hostName.set(string);
+          BARServer.setJobOption(selectedJobData.uuid,"host-name",string);
+          widget.setBackground(null);
+        }
+      });
+      Widgets.addModifyListener(new WidgetModifyListener(text,hostName));
+
+      label = Widgets.newLabel(composite,BARControl.tr("Port")+":");
+      Widgets.layout(label,0,2,TableLayoutData.W);
+
+      spinner = Widgets.newSpinner(composite);
+      spinner.setToolTipText(BARControl.tr("Port number. Set to 0 to use default port number from configuration file."));
+      spinner.setMinimum(0);
+      spinner.setMaximum(65535);
+      spinner.setEnabled(false);
+      Widgets.layout(spinner,0,3,TableLayoutData.W,0,0,0,0,70,SWT.DEFAULT);
+      Widgets.addEventListener(new WidgetEventListener(spinner,selectJobEvent)
+      {
+        public void trigger(Control control)
+        {
+          Widgets.setEnabled(control,selectedJobData != null);
+        }
+      });
+      spinner.addModifyListener(new ModifyListener()
+      {
+        public void modifyText(ModifyEvent modifyEvent)
+        {
+          Spinner widget = (Spinner)modifyEvent.widget;
+          Color   color  = COLOR_MODIFIED;
+          int     n      = widget.getSelection();
+
+          if (hostPort.getLong() == n) color = null;
+
+          widget.setBackground(color);
+          widget.setData("showedErrorDialog",false);
+        }
+      });
+      spinner.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          Spinner widget = (Spinner)selectionEvent.widget;
+          int     n      = widget.getSelection();
+
+          hostPort.set(n);
+          BARServer.setJobOption(selectedJobData.uuid,"host-port",n);
+          widget.setBackground(null);
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Spinner widget = (Spinner)selectionEvent.widget;
+          int     n      = widget.getSelection();
+
+          hostPort.set(n);
+          BARServer.setJobOption(selectedJobData.uuid,"host-port",n);
+          widget.setBackground(null);
+        }
+      });
+      spinner.addFocusListener(new FocusListener()
+      {
+        public void focusGained(FocusEvent focusEvent)
+        {
+          Spinner widget = (Spinner)focusEvent.widget;
+          widget.setData("showedErrorDialog",false);
+        }
+        public void focusLost(FocusEvent focusEvent)
+        {
+          Spinner widget = (Spinner)focusEvent.widget;
+          int     n      = widget.getSelection();
+
+          hostPort.set(n);
+          BARServer.setJobOption(selectedJobData.uuid,"host-port",n);
+          widget.setBackground(null);
+        }
+      });
+      Widgets.addModifyListener(new WidgetModifyListener(spinner,hostPort));
+
+      button = Widgets.newCheckbox(composite,BARControl.tr("SSL"));
+      button.setToolTipText(BARControl.tr("Enable to force SSL connection."));
+      button.setEnabled(false);
+      Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
+      Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
+      {
+        public void trigger(Control control)
+        {
+          Widgets.setEnabled(control,selectedJobData != null);
+        }
+      });
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+Dprintf.dprintf("");
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
     // create sub-tabs
     widgetTabFolder = Widgets.newTabFolder(widgetTab);
     Widgets.setEnabled(widgetTabFolder,false);
-    Widgets.layout(widgetTabFolder,1,0,TableLayoutData.NSWE);
+    Widgets.layout(widgetTabFolder,2,0,TableLayoutData.NSWE);
     {
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Files"));
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
@@ -7579,6 +7736,8 @@ throw new Error("NYI");
     if (selectedJobData != null)
     {
       // get job data
+      hostName.set(BARServer.getStringJobOption(selectedJobData.uuid,"host-name"));
+      hostPort.set(BARServer.getLongJobOption(selectedJobData.uuid,"host-port"));
       parseArchiveName(BARServer.getStringJobOption(selectedJobData.uuid,"archive-name"));
       archiveType.set(BARServer.getStringJobOption(selectedJobData.uuid,"archive-type"));
       archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"archive-part-size"),0));
