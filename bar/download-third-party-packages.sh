@@ -26,10 +26,13 @@ WGET_OPTIONS="--timeout=30 --tries=3"
 UNZIP="unzip"
 XZ="xz"
 
+LIBGPG_ERROR_VERSION=1.19
 GMP_VERSION=6.0.0a
 PCRE_VERSION=8.36
 MTX_VERSION=1.3.12
+BINUTILS_VERSION=2.25
 BREAKPAD_REVISION=1430
+EPM_VERSION=4.2
 
 # --------------------------------- variables --------------------------------
 
@@ -55,8 +58,9 @@ gnutlsFlag=0
 libcdioFlag=0
 pcreFlag=0
 mtxFlag=0
-breakpadFlag=0
+binutilsFlag=0
 pthreadsW32Flag=0
+breakpadFlag=0
 epmFlag=0
 launch4jFlag=0
 jreWindowsFlag=0
@@ -162,13 +166,17 @@ while test $# != 0; do
           allFlag=0
           mtxFlag=1
           ;;
-        breakpad|minidump)
+        binutils|bfd)
           allFlag=0
-          breakpadFlag=1
+          binutilsFlag=1
           ;;
         pthreads-w32|pthreads-W32|pthreadsw32|pthreadsW32)
           allFlag=0
           pthreadsW32Flag=1
+          ;;
+        breakpad|minidump)
+          allFlag=0
+          breakpadFlag=1
           ;;
         epm)
           allFlag=0
@@ -261,13 +269,17 @@ while test $# != 0; do
       allFlag=0
       mtxFlag=1
       ;;
-    breakpad|minidump)
+    binutils|bfd)
       allFlag=0
-      breakpadFlag=1
+      binutilsFlag=1
       ;;
     pthreads-w32|pthreads-W32|pthreadsw32|pthreadsW32)
       allFlag=0
       pthreadsW32Flag=1
+      ;;
+    breakpad|minidump)
+      allFlag=0
+      breakpadFlag=1
       ;;
     epm)
       allFlag=0
@@ -309,10 +321,11 @@ if test $helpFlag -eq 1; then
   $ECHO " gnutls"
   $ECHO " libcdio"
   $ECHO " pcre"
+  $ECHO " binutils"
+  $ECHO ""
+  $ECHO "Additional optional packages:"
+  $ECHO ""
   $ECHO " breakpad"
-  $ECHO ""
-  $ECHO "Additional packages:"
-  $ECHO ""
   $ECHO " epm"
   $ECHO " launch4j"
   $ECHO " jre-windows"
@@ -521,11 +534,11 @@ if test $cleanFlag -eq 0; then
      else
        cd $tmpDirectory
      fi
-     if test ! -f libgpg-error-1.10.tar.bz2; then
-       $WGET $WGET_OPTIONS 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.10.tar.bz2'
+     if test ! -f libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2; then
+       $WGET $WGET_OPTIONS "ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xjf libgpg-error-1.10.tar.bz2
+       $TAR xjf libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2
      fi
      if test ! -f libgcrypt-1.5.0.tar.bz2; then
        $WGET $WGET_OPTIONS 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.5.0.tar.bz2'
@@ -540,10 +553,10 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/libgpg-error-1.10 libgpg-error
+        $LN -f -s $destination/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error
         $LN -f -s $destination/libgcrypt-1.5.0 libgcrypt
       else
-        $LN -f -s $tmpDirectory/libgpg-error-1.10 libgpg-error
+        $LN -f -s $tmpDirectory/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error
         $LN -f -s $tmpDirectory/libgcrypt-1.5.0 libgcrypt
       fi
     fi
@@ -838,7 +851,7 @@ if test $cleanFlag -eq 0; then
        cd $tmpDirectory
      fi
 
-     if test ! -f pcre-$MTX_VERSION.tar.bz2; then
+     if test ! -f mtx-$MTX_VERSION.tar.gz; then
        $WGET $WGET_OPTIONS "http://sourceforge.net/projects/mtx/files/mtx-stable/$MTX_VERSION/mtx-$MTX_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
@@ -854,8 +867,8 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
-    # breakpad
+  if test $allFlag -eq 1 -o $binutilsFlag -eq 1; then
+    # binutils
     (
      if test -n "$destination"; then
        cd $destination
@@ -863,17 +876,18 @@ if test $cleanFlag -eq 0; then
        cd $tmpDirectory
      fi
 
-     if test ! -d breakpad; then
-       $ECHO_NO_NEW_LINE "Checkout 'http://google-breakpad.googlecode.com/svn/trunk', revision $BREAKPAD_REVISION..."
-       $SVN checkout 'http://google-breakpad.googlecode.com/svn/trunk' breakpad -r$BREAKPAD_REVISION >/dev/null
-       $ECHO "done"
+     if test ! -f binutils-$BINUTILS_VERSION.tar.bz2; then
+       $WGET $WGET_OPTIONS "http://ftp.gnu.org/gnu/binutils/binutils-$BINUTILS_VERSION.tar.bz2"
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xjf binutils-$BINUTILS_VERSION.tar.bz2
      fi
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/breakpad breakpad
+        $LN -f -s $destination/binutils-$BINUTILS_VERSION binutils
       else
-        $LN -f -s $tmpDirectory/breakpad breakpad
+        $LN -f -s $tmpDirectory/binutils-$BINUTILS_VERSION binutils
       fi
     fi
   fi
@@ -903,30 +917,54 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  if test $epmFlag -eq 1; then
-    # epm 4.1
+  if test $breakpadFlag -eq 1; then
+    # breakpad
     (
      if test -n "$destination"; then
        cd $destination
      else
        cd $tmpDirectory
      fi
-     if test ! -f epm-4.2-source.tar.bz2; then
-       $WGET $WGET_OPTIONS 'http://www.msweet.org/files/project2/epm-4.2-source.tar.bz2'
-     fi
-     if test $noDecompressFlag -eq 0; then
-       $TAR xjf epm-4.2-source.tar.bz2
 
-       # patch to support creating RPM packages on different machines:
-       #   diff -u epm-4.1.org/rpm.c epm-4.1/rpm.c > epm-4.1-rpm.patch
-       (cd epm-4.2; $PATCH --batch -N -p1 < ../../misc/epm-4.1-rpm.patch) 1>/dev/null 2>/dev/null
+     if test ! -d breakpad; then
+       $ECHO_NO_NEW_LINE "Checkout 'http://google-breakpad.googlecode.com/svn/trunk', revision $BREAKPAD_REVISION..."
+       $SVN checkout 'http://google-breakpad.googlecode.com/svn/trunk' breakpad -r$BREAKPAD_REVISION >/dev/null
+       $ECHO "done"
      fi
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/epm-4.2 epm
+        $LN -f -s $destination/breakpad breakpad
       else
-        $LN -f -s $tmpDirectory/epm-4.2 epm
+        $LN -f -s $tmpDirectory/breakpad breakpad
+      fi
+    fi
+  fi
+
+  if test $epmFlag -eq 1; then
+    # epm
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+     if test ! -f epm-$EPM_VERSION-source.tar.bz2; then
+       $WGET $WGET_OPTIONS 'http://www.msweet.org/files/project2/epm-$EPM_VERSION-source.tar.bz2'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xjf epm-$EPM_VERSION-source.tar.bz2
+
+       # patch to support creating RPM packages on different machines:
+       #   diff -u epm-4.1.org/rpm.c epm-4.1/rpm.c > epm-4.1-rpm.patch
+       (cd epm-$EPM_VERSION; $PATCH --batch -N -p1 < ../../misc/epm-4.1-rpm.patch) 1>/dev/null 2>/dev/null
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      if test -n "$destination"; then
+        $LN -f -s $destination/epm-$EPM_VERSION epm
+      else
+        $LN -f -s $tmpDirectory/epm-$EPM_VERSION epm
       fi
     fi
   fi
@@ -1107,16 +1145,29 @@ else
     $RMF mtx
   fi
 
-  if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
-    # breakpad
-    $RMRF $tmpDirectory/breakpad
-    $RMF breakpad
+  if test $allFlag -eq 1 -o $binutilsFlag -eq 1; then
+    # binutils
+    $RMRF $tmpDirectory/binutils
+    $RMF binutils
   fi
 
   if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
     # pthreadW32
     $RMRF $tmpDirectory/pthreads-w32-*
     $RMF pcre
+  fi
+
+  if test $breakpadFlag -eq 1; then
+    # breakpad
+    $RMRF $tmpDirectory/breakpad
+    $RMF breakpad
+  fi
+
+  if test $epmFlag -eq 1; then
+    # epm
+    $RMF $tmpDirectory/epm-*.tar.bz2
+    $RMRF $tmpDirectory/epm-*
+    $RMF epm
   fi
 
   if test $launch4jFlag -eq 1; then
@@ -1131,13 +1182,6 @@ else
     $RMF $tmpDirectory/openjdk-*.zip
     $RMRF $tmpDirectory/openjdk-*
     $RMF jre_windows jre_windows_64
-  fi
-
-  if test $epmFlag -eq 1; then
-    # epm
-    $RMF $tmpDirectory/epm-*.tar.bz2
-    $RMRF $tmpDirectory/epm-*
-    $RMF epm
   fi
 fi
 
