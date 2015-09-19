@@ -1610,6 +1610,7 @@ public class TabJobs
   // BAR variables
   private WidgetVariable  hostName                = new WidgetVariable("");
   private WidgetVariable  hostPort                = new WidgetVariable(0);
+  private WidgetVariable  hostForceSSL            = new WidgetVariable(false);
   private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental","differential"});
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable(false);
   private WidgetVariable  archivePartSize         = new WidgetVariable(0);
@@ -2212,12 +2213,14 @@ Dprintf.dprintf("");
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
-Dprintf.dprintf("");
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
+          Button widget = (Button)selectionEvent.widget;
+          BARServer.setJobOption(selectedJobData.uuid,"host-force-ssl",widget.getSelection());
         }
       });
+      Widgets.addModifyListener(new WidgetModifyListener(button,hostForceSSL));
     }
 
     // create sub-tabs
@@ -7738,6 +7741,7 @@ throw new Error("NYI");
       // get job data
       hostName.set(BARServer.getStringJobOption(selectedJobData.uuid,"host-name"));
       hostPort.set(BARServer.getLongJobOption(selectedJobData.uuid,"host-port"));
+      hostForceSSL.set(BARServer.getBooleanJobOption(selectedJobData.uuid,"host-force-ssl"));
       parseArchiveName(BARServer.getStringJobOption(selectedJobData.uuid,"archive-name"));
       archiveType.set(BARServer.getStringJobOption(selectedJobData.uuid,"archive-type"));
       archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"archive-part-size"),0));
