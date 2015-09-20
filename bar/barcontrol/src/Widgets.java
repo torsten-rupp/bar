@@ -113,8 +113,7 @@ enum WidgetVariableTypes
  */
 class WidgetVariable
 {
-//  private WidgetVariableTypes type;
-public WidgetVariableTypes type;
+  private WidgetVariableTypes type;
   private boolean             b;
   private long                l;
   private double              d;
@@ -4855,9 +4854,9 @@ e composite widget
   {
     TableColumn[] tableColumns = table.getColumns();
     int[] width = new int[tableColumns.length];
-    for (int z = 0; z < tableColumns.length; z++)
+    for (int i = 0; i < tableColumns.length; i++)
     {
-      width[z] = tableColumns[z].getWidth();
+      width[i] = tableColumns[i].getWidth();
     }
 
     return width;
@@ -4870,10 +4869,40 @@ e composite widget
   public static void setTableColumnWidth(Table table, int[] width)
   {
     TableColumn[] tableColumns = table.getColumns();
-    for (int z = 0; z < Math.min(tableColumns.length,width.length); z++)
+    for (int i = 0; i < Math.min(tableColumns.length,width.length); i++)
     {
-      tableColumns[z].setWidth(width[z]);
+      tableColumns[i].setWidth(width[i]);
     }
+  }
+
+  /** set width of table columns
+   * @param table table
+   * @param width column width array
+   */
+  public static void adjustTableColumnWidth(Table table)
+  {
+    TableColumn[] tableColumns = table.getColumns();
+    int[]         width        = new int[tableColumns.length];
+
+    for (int i = 0; i < tableColumns.length; i++)
+    {
+      width[i] = 0;
+    }
+
+    GC gc = new GC(table);
+    int margin = gc.textExtent("H").x;
+    TableItem tableItems[] = table.getItems();
+    for (int i = 0; i < tableColumns.length; i++)
+    {
+      for (TableItem tableItem : tableItems)
+      {
+        gc.setFont(tableItem.getFont(i));
+        width[i] = Math.max(width[i],margin+gc.textExtent(tableItem.getText(i)).x+margin);
+      }
+    }
+    gc.dispose();
+
+    setTableColumnWidth(table,width);
   }
 
   /** get index of combo item
