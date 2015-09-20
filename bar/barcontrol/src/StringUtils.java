@@ -47,6 +47,20 @@ public class StringUtils
 
   // ---------------------------- methods ---------------------------------
 
+  /** find string in string array
+   * @param strings string array
+   * @param string string to find
+   * @return index or -1 if not found
+   */
+  public static int indexOf(String strings[], String string)
+  {
+    for (int i = 0; i < strings.length; i++)
+    {
+      if (strings[i].equals(string)) return i;
+    }
+    return -1;
+  }
+
   /** trim characters from string at string beginning
    * @param string string
    * @param chars characters to trim
