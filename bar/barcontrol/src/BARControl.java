@@ -2181,6 +2181,7 @@ public class BARControl
             // get data
             String jobUUID                = resultMap_.getString("jobUUID"               );
             String name                   = resultMap_.getString("name"                  );
+            String hostName               = resultMap_.getString("hostName"              );
             String state                  = resultMap_.getString("state"                 );
             String archiveType            = resultMap_.getString("archiveType"           );
             long   archivePartSize        = resultMap_.getLong  ("archivePartSize"       );
@@ -2204,9 +2205,10 @@ public class BARControl
               cryptPasswordMode = "-";
             }
 
-            System.out.println(String.format("%-40s %-10s %-11s %12d %-25s %-12s %-10s %-8s %s %8d",
+            System.out.println(String.format("%-40s %-40s %-10s %-11s %12d %-25s %-12s %-10s %-8s %s %8d",
                                              name,
-                                             (serverState == null)?state:serverState,
+                                             hostName,
+                                             (serverState == null) ? state : serverState,
                                              type,
                                              archivePartSize,
                                              compressAlgorithms,
