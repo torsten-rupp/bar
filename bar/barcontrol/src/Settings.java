@@ -345,7 +345,6 @@ public class Settings
   private static long lastModified = 0L;
 
   // program settings
-//  @SettingValue
   @SettingValue(type=SettingValueAdapterSimpleStringArray.class)
   public static SimpleStringArray jobListColumnOrder              = null;
   @SettingValue(type=SettingValueAdapterWidthArray.class)

@@ -669,7 +669,6 @@ public class TabStatus
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-Dprintf.dprintf("");
           Widgets.adjustTableColumnWidth(widgetJobTable);
         }
       });
