@@ -1120,13 +1120,15 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       try
       {
-        socket = new Socket(hostname,port);
-        socket.setSoTimeout(SOCKET_READ_TIMEOUT);
+        Socket plainSocket = new Socket(hostname,port);
+        plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 
-        input  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+        input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream()));
+        output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream()));
 
         startSession(input,output);
+
+        socket = plainSocket;
       }
       catch (SocketTimeoutException exception)
       {
