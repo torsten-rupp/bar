@@ -1313,49 +1313,51 @@ void Semaphore_debugPrintInfo(void)
   const Semaphore *semaphore;
   uint            z;
 
-  fprintf(stderr,"Semaphore debug info:\n");
-  LIST_ITERATE(&debugSemaphoreList,semaphore)
+  pthread_mutex_lock(&debugConsoleLock);
   {
-    switch (semaphore->lockType)
+    fprintf(stderr,"Semaphore debug info:\n");
+    LIST_ITERATE(&debugSemaphoreList,semaphore)
     {
-      case SEMAPHORE_LOCK_TYPE_NONE:
-        assert(semaphore->readLockCount == 0);
-        assert(semaphore->readWriteLockCount == 0);
-        fprintf(stderr,"  '%s':\n",semaphore->name);
-        break;
-      case SEMAPHORE_LOCK_TYPE_READ:
-        fprintf(stderr,"  '%s':\n",semaphore->name);
-        fprintf(stderr,"    locked 'read'\n");
-        for (z = 0; z < semaphore->lockedByCount; z++)
-        {
-          fprintf(stderr,
-                  "    by thread 0x%lx at %s, line %lu\n",
-                  semaphore->lockedBy[z].thread,
-                  semaphore->lockedBy[z].fileName,
-                  semaphore->lockedBy[z].lineNb
-                 );
-        }
-        break;
-      case SEMAPHORE_LOCK_TYPE_READ_WRITE:
-        fprintf(stderr,"  '%s':\n",semaphore->name);
-        fprintf(stderr,"    locked 'read/write'\n");
-        for (z = 0; z < semaphore->lockedByCount; z++)
-        {
-          fprintf(stderr,
-                  "    by thread 0x%lx at %s, line %lu\n",
-                  semaphore->lockedBy[z].thread,
-                  semaphore->lockedBy[z].fileName,
-                  semaphore->lockedBy[z].lineNb
-                 );
-        }
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; /* not reached */
-      #endif /* NDEBUG */
+      fprintf(stderr,"  '%s' (%s, %ld):\n",semaphore->name,semaphore->fileName,semaphore->lineNb);
+      switch (semaphore->lockType)
+      {
+        case SEMAPHORE_LOCK_TYPE_NONE:
+          assert(semaphore->readLockCount == 0);
+          assert(semaphore->readWriteLockCount == 0);
+          break;
+        case SEMAPHORE_LOCK_TYPE_READ:
+          fprintf(stderr,"    locked 'read'\n");
+          for (z = 0; z < semaphore->lockedByCount; z++)
+          {
+            fprintf(stderr,
+                    "    by thread 0x%lx at %s, line %lu\n",
+                    semaphore->lockedBy[z].thread,
+                    semaphore->lockedBy[z].fileName,
+                    semaphore->lockedBy[z].lineNb
+                   );
+          }
+          break;
+        case SEMAPHORE_LOCK_TYPE_READ_WRITE:
+          fprintf(stderr,"    locked 'read/write'\n");
+          for (z = 0; z < semaphore->lockedByCount; z++)
+          {
+            fprintf(stderr,
+                    "    by thread 0x%lx at %s, line %lu\n",
+                    semaphore->lockedBy[z].thread,
+                    semaphore->lockedBy[z].fileName,
+                    semaphore->lockedBy[z].lineNb
+                   );
+          }
+          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
+      }
     }
   }
+  pthread_mutex_unlock(&debugConsoleLock);
 }
 #endif /* not NDEBUG */
 

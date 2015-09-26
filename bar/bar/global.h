@@ -218,7 +218,8 @@ typedef struct
 /**************************** Variables ********************************/
 
 #ifndef NDEBUG
-  extern const char *__testCodeName__;
+  extern pthread_mutex_t debugConsoleLock;    // lock console
+  extern const char      *__testCodeName__;   // name of test code to execute
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/

@@ -81,7 +81,8 @@
 #endif /* not NDEBUG */
 
 #ifndef NDEBUG
-  const char *__testCodeName__;
+  pthread_mutex_t debugConsoleLock = PTHREAD_MUTEX_INITIALIZER;
+  const char      *__testCodeName__;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
