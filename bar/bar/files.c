@@ -600,7 +600,6 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
 
 String File_getFilePathName(String pathName, ConstString fileName)
 {
-  assert(fileName != NULL);
   assert(pathName != NULL);
 
   return File_getFilePathNameCString(pathName,String_cString(fileName));
@@ -610,20 +609,20 @@ String File_getFilePathNameCString(String pathName, const char *fileName)
 {
   const char *lastPathSeparator;
 
-  assert(fileName != NULL);
   assert(pathName != NULL);
 
-  // find last path separator
-  lastPathSeparator = strrchr(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+  String_clear(pathName);
 
-  // get path
-  if (lastPathSeparator != NULL)
+  if (fileName != NULL)
   {
-    String_setBuffer(pathName,fileName,lastPathSeparator-fileName);
-  }
-  else
-  {
-    String_clear(pathName);
+    // find last path separator
+    lastPathSeparator = strrchr(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+
+    // get path
+    if (lastPathSeparator != NULL)
+    {
+      String_setBuffer(pathName,fileName,lastPathSeparator-fileName);
+    }
   }
 
   return pathName;
@@ -631,7 +630,6 @@ String File_getFilePathNameCString(String pathName, const char *fileName)
 
 String File_getFileBaseName(String baseName, ConstString fileName)
 {
-  assert(fileName != NULL);
   assert(baseName != NULL);
 
   return File_getFileBaseNameCString(baseName,String_cString(fileName));
@@ -641,20 +639,26 @@ String File_getFileBaseNameCString(String baseName, const char *fileName)
 {
   const char *lastPathSeparator;
 
-  assert(fileName != NULL);
   assert(baseName != NULL);
 
-  // find last path separator
-  lastPathSeparator = strrchr(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
-
-  // get path
-  if (lastPathSeparator != NULL)
+  if (fileName != NULL)
   {
-    String_setCString(baseName,lastPathSeparator+1);
+    // find last path separator
+    lastPathSeparator = strrchr(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+
+    // get path
+    if (lastPathSeparator != NULL)
+    {
+      String_setCString(baseName,lastPathSeparator+1);
+    }
+    else
+    {
+      String_setCString(baseName,fileName);
+    }
   }
   else
   {
-    String_setCString(baseName,fileName);
+    String_clear(baseName);
   }
 
   return baseName;
@@ -663,7 +667,6 @@ String File_getFileBaseNameCString(String baseName, const char *fileName)
 String File_getRootFileName(String rootName, ConstString fileName)
 {
   assert(rootName != NULL);
-  assert(fileName != NULL);
 
   return File_getRootFileNameCString(rootName,String_cString(fileName));
 }
@@ -673,34 +676,36 @@ String File_getRootFileNameCString(String rootName, const char *fileName)
   size_t n;
 
   assert(rootName != NULL);
-  assert(fileName != NULL);
 
   String_clear(rootName);
-  n = strlen(fileName);
-  #if   defined(PLATFORM_LINUX)
-    if ((n >= 1) && (fileName[0] == FILES_PATHNAME_SEPARATOR_CHAR))
-    {
-      String_setChar(rootName,FILES_PATHNAME_SEPARATOR_CHAR);
-    }
-  #elif defined(PLATFORM_WINDOWS)
-    if      (   (n >= 2)
-             && (toupper(fileName[0]) >= 'A') && (toupper(fileName[0]) <= 'Z')
-             && (fileName[1] == ':')
-            )
-    {
-      String_setChar(rootName,toupper(fileName[0]);
-      String_appendChar(rootName,':');
-    }
-    else if (   (n >= 2)
-             && (strncmp(fileName,"\\\\",2) == 0)
-            )
-    {
-    }
-    if ((n >= 3) && (String_index(fileName,2) == FILES_PATHNAME_SEPARATOR_CHAR))
-    {
-      String_appendChar(rootName,FILES_PATHNAME_SEPARATOR_CHAR);
-    }
-  #endif /* PLATFORM_... */
+  if (fileName != NULL)
+  {
+    n = strlen(fileName);
+    #if   defined(PLATFORM_LINUX)
+      if ((n >= 1) && (fileName[0] == FILES_PATHNAME_SEPARATOR_CHAR))
+      {
+        String_setChar(rootName,FILES_PATHNAME_SEPARATOR_CHAR);
+      }
+    #elif defined(PLATFORM_WINDOWS)
+      if      (   (n >= 2)
+               && (toupper(fileName[0]) >= 'A') && (toupper(fileName[0]) <= 'Z')
+               && (fileName[1] == ':')
+              )
+      {
+        String_setChar(rootName,toupper(fileName[0]);
+        String_appendChar(rootName,':');
+      }
+      else if (   (n >= 2)
+               && (strncmp(fileName,"\\\\",2) == 0)
+              )
+      {
+      }
+      if ((n >= 3) && (String_index(fileName,2) == FILES_PATHNAME_SEPARATOR_CHAR))
+      {
+        String_appendChar(rootName,FILES_PATHNAME_SEPARATOR_CHAR);
+      }
+    #endif /* PLATFORM_... */
+  }
 
   return rootName;
 }
