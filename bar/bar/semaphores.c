@@ -1356,6 +1356,7 @@ void Semaphore_debugPrintInfo(void)
         #endif /* NDEBUG */
       }
     }
+    fprintf(stderr,"\n");
   }
   pthread_mutex_unlock(&debugConsoleLock);
 }
