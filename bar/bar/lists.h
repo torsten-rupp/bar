@@ -381,6 +381,19 @@ void List_move(void       *fromList,
               );
 
 /***********************************************************************\
+* Name   : List_exchange
+* Purpose: exchange list content
+* Input  : list1,list2 - lists
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void List_exchange(void *list1,
+                   void *list2
+                  );
+
+/***********************************************************************\
 * Name   : List_isEmpty
 * Purpose: check if list is empty
 * Input  : list - list

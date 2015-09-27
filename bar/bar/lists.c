@@ -616,6 +616,21 @@ void List_move(void       *fromList,
   }
 }
 
+void List_exchange(void *list1,
+                   void *list2
+                  )
+{
+  Node          *node;
+  unsigned long count;
+
+  assert(list1 != NULL);
+  assert(list2 != NULL);
+
+  node  = ((List*)list1)->head;  ((List*)list1)->head  = ((List*)list2)->head;  ((List*)list2)->head  = node;
+  node  = ((List*)list1)->tail;  ((List*)list1)->tail  = ((List*)list2)->tail;  ((List*)list2)->tail  = node;
+  count = ((List*)list1)->count; ((List*)list1)->count = ((List*)list2)->count; ((List*)list2)->count = count;
+}
+
 #ifdef NDEBUG
 void List_insert(void *list,
                  void *node,
