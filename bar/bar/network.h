@@ -36,6 +36,7 @@
 
 /***************************** Constants *******************************/
 
+#define SOCKET_FLAG_NONE         0
 #define SOCKET_FLAG_NON_BLOCKING (1 << 0)
 
 /***************************** Datatypes *******************************/
@@ -159,6 +160,17 @@ Errors Network_initAll(void);
 void Network_doneAll(void);
 
 /***********************************************************************\
+* Name   : Network_getHostName
+* Purpose: get host name
+* Input  : hostName - host name variable
+* Output : -
+* Return : host name
+* Notes  : -
+\***********************************************************************/
+
+String Network_getHostName(String hostName);
+
+/***********************************************************************\
 * Name   : Network_exists, Network_existsCString
 * Purpose: check if host name is valid
 * Input  : hostName - host name
@@ -176,11 +188,11 @@ bool Network_hostExistsCString(const char *hostName);
 * Input  : socketType            - socket type; see SOCKET_TYPE_*
 *          hostName              - host name
 *          hostPort              - host port (host byte order)
-*          flags                 - socket falgs
 *          loginName             - login user name
 *          password              - SSH password
 *          sshPublicKeyFileName  - SSH public key file for login
 *          sshPrivateKeyFileName - SSH private key file for login
+*          flags                 - socket flags; see SOCKET_FLAG_*
 * Output : socketHandle - socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -

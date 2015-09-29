@@ -367,6 +367,23 @@ void Network_doneAll(void)
   #endif /* HAVE_SSH2 */
 }
 
+String Network_getHostName(String hostName)
+{
+  char buffer[256];
+
+  assert(hostName != NULL);
+
+  String_clear(hostName);
+
+  if (gethostname(buffer,sizeof(buffer)) == 0)
+  {
+    buffer[sizeof(buffer)-1] = '\0';
+    String_setCString(hostName,buffer);
+  }
+
+  return hostName;
+}
+
 bool Network_hostExists(ConstString hostName)
 {
   return Network_hostExistsCString(String_cString(hostName));
