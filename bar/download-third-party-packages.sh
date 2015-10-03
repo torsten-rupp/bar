@@ -28,6 +28,7 @@ XZ="xz"
 
 LIBGPG_ERROR_VERSION=1.19
 GMP_VERSION=6.0.0a
+LIBSSH2_VERSION=1.6.0
 PCRE_VERSION=8.36
 MTX_VERSION=1.3.12
 BINUTILS_VERSION=2.25
@@ -702,11 +703,11 @@ if test $cleanFlag -eq 0; then
      else
        cd $tmpDirectory
      fi
-     if test ! -f libssh2-1.4.2.tar.gz; then
-       $WGET $WGET_OPTIONS 'http://www.libssh2.org/download/libssh2-1.4.2.tar.gz'
+     if test ! -f libssh2-$LIBSSH2_VERSION.tar.gz; then
+       $WGET $WGET_OPTIONS "http://www.libssh2.org/download/libssh2-$LIBSSH2_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf libssh2-1.4.2.tar.gz
+       $TAR xzf libssh2-$LIBSSH2_VERSION.tar.gz
 
        # patch to support keep alive for libssh 2.1.1 (ignore errors):
        #   diff -u libssh2-1.1.org/include/libssh2.h libssh2-1.1/include/libssh2.h >  libssh2-1.1-keepalive.patch
@@ -716,9 +717,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/libssh2-1.4.2 libssh2
+        $LN -f -s $destination/libssh2-$LIBSSH2_VERSION libssh2
       else
-        $LN -f -s $tmpDirectory/libssh2-1.4.2 libssh2
+        $LN -f -s $tmpDirectory/libssh2-$LIBSSH2_VERSION libssh2
       fi
     fi
   fi
