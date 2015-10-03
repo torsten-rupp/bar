@@ -328,6 +328,9 @@
 /* SSH2 has libssh2_sftp_seek64() function */
 #undef HAVE_SSH2_SFTP_SEEK64
 
+/* SSH2 has libssh2_userauth_publickey_frommemory() function */
+#undef HAVE_SSH2_USERAUTH_PUBLICKEY_FROMMEMORY
+
 /* ssl installed (local) */
 #undef HAVE_SSL
 
