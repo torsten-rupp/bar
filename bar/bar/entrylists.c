@@ -266,31 +266,31 @@ void EntryList_move(EntryList       *fromEntryList,
 
 Errors EntryList_append(EntryList    *entryList,
                         EntryTypes   type,
-                        ConstString  pattern,
+                        ConstString  string,
                         PatternTypes patternType
                        )
 {
   assert(entryList != NULL);
-  assert(pattern != NULL);
+  assert(string != NULL);
 
-  return EntryList_appendCString(entryList,type,String_cString(pattern),patternType);
+  return EntryList_appendCString(entryList,type,String_cString(string),patternType);
 }
 
 Errors EntryList_appendCString(EntryList    *entryList,
                                EntryTypes   type,
-                               const char   *pattern,
+                               const char   *string,
                                PatternTypes patternType
                               )
 {
   EntryNode *entryNode;
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
-    String    string;
+    String    escapedString;
   #endif /* PLATFORM_... */
   Errors    error;
 
   assert(entryList != NULL);
-  assert(pattern != NULL);
+  assert(string != NULL);
 
   // allocate entry node
   entryNode = LIST_NEW_NODE(EntryNode);
@@ -298,29 +298,30 @@ Errors EntryList_appendCString(EntryList    *entryList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  entryNode->type   = type;
-  entryNode->string = String_newCString(pattern);
+  entryNode->type        = type;
+  entryNode->string      = String_newCString(string);
+  entryNode->patternType = patternType;
 
   // init pattern
   #if   defined(PLATFORM_LINUX)
     error = Pattern_initCString(&entryNode->pattern,
-                                pattern,
+                                string,
                                 patternType,
                                 PATTERN_FLAG_NONE
                                );
   #elif defined(PLATFORM_WINDOWS)
     // escape all '\' by '\\'
-    string = String_newCString(pattern);
+    escapedString = String_newCString(string);
     String_replaceAllCString(string,STRING_BEGIN,"\\","\\\\");
 
     error = Pattern_init(&entryNode->pattern,
-                         string,
+                         escapedString,
                          patternType,
                          PATTERN_FLAG_IGNORE_CASE
                         );
 
     // free resources
-    String_delete(string);
+    String_delete(escapedString);
   #endif /* PLATFORM_... */
   if (error != ERROR_NONE)
   {

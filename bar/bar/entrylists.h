@@ -51,9 +51,10 @@ typedef struct EntryNode
 {
   LIST_NODE_HEADER(struct EntryNode);
 
-  EntryTypes type;                      // entry type; see ENTRY_TYPES_...
-  String     string;                    // entry string pattern
-  Pattern    pattern;                   // compiled entry pattern
+  EntryTypes   type;                    // entry type; see ENTRY_TYPES_...
+  String       string;                  // entry string pattern
+  PatternTypes patternType;             // pattern type
+  Pattern      pattern;                 // compiled entry pattern
 } EntryNode;
 
 typedef struct
@@ -210,7 +211,7 @@ void EntryList_move(EntryList       *fromEntryList,
 * Purpose: add entry to entry list
 * Input  : entryList   - entry list
 +          type        - entry type; see ENTRY_TYPE_*
-*          pattern     - pattern
+*          string      - string
 *          patternType - pattern type; see PATTERN_TYPE_*
 * Output : -
 * Return : ERROR_NONE or error code
@@ -219,12 +220,12 @@ void EntryList_move(EntryList       *fromEntryList,
 
 Errors EntryList_append(EntryList    *entryList,
                         EntryTypes   type,
-                        ConstString  pattern,
+                        ConstString  string,
                         PatternTypes patternType
                        );
 Errors EntryList_appendCString(EntryList    *entryList,
                                EntryTypes   type,
-                               const char   *pattern,
+                               const char   *string,
                                PatternTypes patternType
                               );
 

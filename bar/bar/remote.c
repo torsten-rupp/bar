@@ -90,6 +90,15 @@ LOCAL RemoteServerList remoteServerList;
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : Remote_findServer
+* Purpose: find remote server connection
+* Input  : remoteHost - remote host
+* Output : -
+* Return : remote server or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
 LOCAL RemoteServerNode *Remote_findServer(const RemoteHost *remoteHost)
 {
   RemoteServerNode *remoteServerNode;
@@ -130,11 +139,14 @@ LOCAL bool parseEnumState(const char *name, uint *value)
 #endif
 
 /***********************************************************************\
-* Name   :
-* Purpose:
-* Input  : -
+* Name   : Remote_setJobOptionInteger
+* Purpose: set job int value
+* Input  : remoteHost - remote host
+*          jobUUID    - job UUID
+*          name       - value name
+*          value      - value
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -147,11 +159,14 @@ LOCAL Errors Remote_setJobOptionInteger(const RemoteHost *remoteHost, ConstStrin
 }
 
 /***********************************************************************\
-* Name   :
-* Purpose:
-* Input  : -
+* Name   : Remote_setJobOptionInteger64
+* Purpose: set job int64 value
+* Input  : remoteHost - remote host
+*          jobUUID    - job UUID
+*          name       - value name
+*          value      - value
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -164,11 +179,14 @@ LOCAL Errors Remote_setJobOptionInteger64(const RemoteHost *remoteHost, ConstStr
 }
 
 /***********************************************************************\
-* Name   :
-* Purpose:
-* Input  : -
+* Name   : Remote_setJobOptionBoolean
+* Purpose: set job boolean value
+* Input  : remoteHost - remote host
+*          jobUUID    - job UUID
+*          name       - value name
+*          value      - value
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -181,11 +199,14 @@ LOCAL Errors Remote_setJobOptionBoolean(const RemoteHost *remoteHost, ConstStrin
 }
 
 /***********************************************************************\
-* Name   :
-* Purpose:
-* Input  : -
+* Name   : Remote_setJobOptionString
+* Purpose: set job string value
+* Input  : remoteHost - remote host
+*          jobUUID    - job UUID
+*          name       - value name
+*          value      - value
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -198,11 +219,14 @@ LOCAL Errors Remote_setJobOptionString(const RemoteHost *remoteHost, ConstString
 }
 
 /***********************************************************************\
-* Name   :
-* Purpose:
-* Input  : -
+* Name   : Remote_setJobOptionCString
+* Purpose: set job c-string value
+* Input  : remoteHost - remote host
+*          jobUUID    - job UUID
+*          name       - value name
+*          value      - value
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -215,11 +239,14 @@ LOCAL Errors Remote_setJobOptionCString(const RemoteHost *remoteHost, ConstStrin
 }
 
 /***********************************************************************\
-* Name   :
-* Purpose:
-* Input  : -
+* Name   : Remote_setJobOptionPassword
+* Purpose: set job password option
+* Input  : remoteHost - remote host
+*          jobUUID    - job UUID
+*          name       - value name
+*          password   - password
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -290,7 +317,6 @@ Errors Remote_serverConnect(SocketHandle *socketHandle,
   line = String_new();
 
   // connect to remote host
-fprintf(stderr,"%s, %d: %s:%d\n",__FILE__,__LINE__,String_cString(hostName),hostPort);
   error = Network_connect(socketHandle,
                           hostForceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
                           hostName,
@@ -305,7 +331,6 @@ fprintf(stderr,"%s, %d: %s:%d\n",__FILE__,__LINE__,String_cString(hostName),host
                          );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %d %s\n",__FILE__,__LINE__,error,Error_getText(error));
     String_delete(line);
     return error;
   }
@@ -314,7 +339,6 @@ fprintf(stderr,"%s, %d: %d %s\n",__FILE__,__LINE__,error,Error_getText(error));
   error = Network_readLine(socketHandle,line,30LL*1000);
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %d %s\n",__FILE__,__LINE__,error,Error_getText(error));
     String_delete(line);
     return error;
   }
@@ -585,7 +609,7 @@ fprintf(stderr,"%s, %d: %d: Remote_jobStart %s\n",__FILE__,__LINE__,error,Error_
                                                            "INCLUDE_LIST_ADD jobUUID=%S entryType=%s patternType=%s pattern=%'S",
                                                            jobUUID,
                                                            entryTypeText,
-                                                           "GLOB", // TODO
+                                                           ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,entryNode->patternType,NULL),
                                                            entryNode->string
                                                           );
   }
@@ -597,7 +621,7 @@ fprintf(stderr,"%s, %d: %d: Remote_jobStart %s\n",__FILE__,__LINE__,error,Error_
                                                            NULL,
                                                            "EXCLUDE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                            jobUUID,
-                                                           "GLOB", // TODO
+                                                           ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->patternType,NULL),
                                                            patternNode->string
                                                           );
   }
@@ -609,7 +633,7 @@ fprintf(stderr,"%s, %d: %d: Remote_jobStart %s\n",__FILE__,__LINE__,error,Error_
                                                            NULL,
                                                            "EXCLUDE_COMPRESS_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                            jobUUID,
-                                                           "GLOB", // TODO
+                                                           ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->patternType,NULL),
                                                            patternNode->string
                                                           );
   }
@@ -621,7 +645,7 @@ fprintf(stderr,"%s, %d: %d: Remote_jobStart %s\n",__FILE__,__LINE__,error,Error_
                                                            NULL,
                                                            "SOURCE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                            jobUUID,
-                                                           "GLOB", // TODO
+                                                           ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,deltaSourceNode->patternType,NULL),
                                                            deltaSourceNode->storageName
                                                           );
   }

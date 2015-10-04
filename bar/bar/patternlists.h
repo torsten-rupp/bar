@@ -44,8 +44,9 @@ typedef struct PatternNode
 {
   LIST_NODE_HEADER(struct PatternNode);
 
-  String  string;
-  Pattern pattern;
+  String       string;
+  PatternTypes patternType;
+  Pattern      pattern;
 } PatternNode;
 
 typedef struct
@@ -198,7 +199,7 @@ void PatternList_move(PatternList       *fromPatternList,
 * Name   : PatternList_append, PatternList_appendCString
 * Purpose: add pattern to pattern list
 * Input  : patternList - pattern list
-*          pattern     - pattern
+*          string      - pattern
 *          patternType - pattern type; see PATTERN_TTYPE_*
 * Output : -
 * Return : ERROR_NONE or error code
@@ -206,11 +207,11 @@ void PatternList_move(PatternList       *fromPatternList,
 \***********************************************************************/
 
 Errors PatternList_append(PatternList  *patternList,
-                          ConstString  pattern,
+                          ConstString  string,
                           PatternTypes patternType
                          );
 Errors PatternList_appendCString(PatternList  *patternList,
-                                 const char   *pattern,
+                                 const char   *string,
                                  PatternTypes patternType
                                 );
 

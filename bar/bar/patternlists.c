@@ -185,18 +185,18 @@ void PatternList_move(PatternList       *fromPatternList,
 }
 
 Errors PatternList_append(PatternList  *patternList,
-                          ConstString  pattern,
+                          ConstString  string,
                           PatternTypes patternType
                          )
 {
   assert(patternList != NULL);
-  assert(pattern != NULL);
+  assert(string != NULL);
 
-  return PatternList_appendCString(patternList,String_cString(pattern),patternType);
+  return PatternList_appendCString(patternList,String_cString(string),patternType);
 }
 
 Errors PatternList_appendCString(PatternList  *patternList,
-                                 const char   *pattern,
+                                 const char   *string,
                                  PatternTypes patternType
                                 )
 {
@@ -204,7 +204,7 @@ Errors PatternList_appendCString(PatternList  *patternList,
   Errors      error;
 
   assert(patternList != NULL);
-  assert(pattern != NULL);
+  assert(string != NULL);
 
   // allocate pattern node
   patternNode = LIST_NEW_NODE(PatternNode);
@@ -212,11 +212,12 @@ Errors PatternList_appendCString(PatternList  *patternList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  patternNode->string = String_newCString(pattern);
+  patternNode->string      = String_newCString(string);
+  patternNode->patternType = patternType;
 
   // init pattern
   error = Pattern_initCString(&patternNode->pattern,
-                              pattern,
+                              string,
                               patternType,
                               PATTERN_FLAG_IGNORE_CASE
                              );
