@@ -865,7 +865,6 @@ bool CmdOption_getInteger64Option(int64                 *value,
 * Name   : CmdOption_selectToString
 * Purpose: get select string
 * Input  : selects       - select name/value array
-*          selectCount   - size of select name/value array
 *          value         - value
 *          defaultString - default string or NULL
 * Output : -
@@ -874,7 +873,6 @@ bool CmdOption_getInteger64Option(int64                 *value,
 \***********************************************************************/
 
 const char *CmdOption_selectToString(const CommandLineOptionSelect selects[],
-                                     uint                          selectCount,
                                      uint                          value,
                                      const char                    *defaultString
                                     );

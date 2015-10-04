@@ -1378,18 +1378,17 @@ bool CmdOption_getInteger64Option(int64                 *value,
 }
 
 const char *CmdOption_selectToString(const CommandLineOptionSelect selects[],
-                                     uint                          selectCount,
                                      uint                          value,
                                      const char                    *defaultString
                                     )
 {
-  uint i;
+  const CommandLineOptionSelect *select;
 
   assert(selects != NULL);
 
-  for (i = 0; i < selectCount; i++)
+  ITERATE_SELECT(select,selects)
   {
-    if (selects[i].value == value) return selects[i].name;
+    if (select->value == value) return select->name;
   }
 
   return defaultString;
