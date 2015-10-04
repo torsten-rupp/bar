@@ -566,6 +566,32 @@ double Misc_performanceFilterGetValue(const PerformanceFilter *performanceFilter
 
 double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilter);
 
+/***********************************************************************\
+* Name   : Misc_base64Encode
+* Purpose: encode base64
+* Input  : s      - string variable
+*          data   - data to encode
+*          length - length of data to encode
+* Output : -
+* Return : encoded string
+* Notes  : -
+\***********************************************************************/
+
+String Misc_base64Encode(String s, const byte *data, uint length);
+
+/***********************************************************************\
+* Name   : Misc_base64Decode
+* Purpose: decode base64
+* Input  : data      - data variable
+*          maxLength - max. length of data
+*          s         - base64 string
+* Output : -
+* Return : length of decoded data or -1 on error
+* Notes  : -
+\***********************************************************************/
+
+int Misc_base64Decode(byte *data, uint maxLength, const String s);
+
 #ifdef __cplusplus
   }
 #endif
