@@ -51,9 +51,9 @@ typedef struct EntryNode
 {
   LIST_NODE_HEADER(struct EntryNode);
 
-  EntryTypes type;
-  String     string;
-  Pattern    pattern;
+  EntryTypes type;                      // entry type; see ENTRY_TYPES_...
+  String     string;                    // entry string pattern
+  Pattern    pattern;                   // compiled entry pattern
 } EntryNode;
 
 typedef struct
