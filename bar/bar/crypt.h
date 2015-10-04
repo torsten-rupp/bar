@@ -199,13 +199,12 @@ bool Crypt_parseAlgorithm(const char *name, CryptAlgorithms *cryptAlgorithm);
 * Name   : Crypt_typeToString
 * Purpose: get name of crypt type
 * Input  : cryptType    - crypt type
-*          defaultValue - default value
 * Output : -
 * Return : mode string
 * Notes  : -
 \***********************************************************************/
 
-const char *Crypt_typeToString(CryptTypes cryptType, const char *defaultValue);
+const char *Crypt_typeToString(CryptTypes cryptType);
 
 /***********************************************************************\
 * Name   : Crypt_isEncrypted
