@@ -79,6 +79,18 @@ typedef enum
 #define MAX_CONNECTION_COUNT_UNLIMITED MAX_INT
 #define MAX_STORAGE_SIZE_UNLIMITED     MAX_INT64
 
+// config values
+extern const ConfigValueUnit   CONFIG_VALUE_BYTES_UNITS[];
+extern const ConfigValueUnit   CONFIG_VALUE_BITS_UNITS[];
+extern const ConfigValueSelect CONFIG_VALUE_ARCHIVE_TYPES[];
+extern const ConfigValueSelect CONFIG_VALUE_PATTERN_TYPES[];
+extern const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[];
+extern const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[];
+extern const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[];
+extern const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[];
+extern const ConfigValueUnit   CONFIG_VALUE_TIME_UNITS[];
+extern const ConfigValueSet    CONFIG_VALUE_LOG_TYPES[];
+
 /***************************** Datatypes *******************************/
 
 typedef struct
@@ -92,6 +104,7 @@ extern GlobalOptions globalOptions;          // global options
 extern String        tmpDirectory;           // temporary directory
 extern IndexHandle   *indexHandle;           // index handle
 extern Semaphore     consoleLock;            // lock console
+extern locale_t      POSIXLocale;            // POSIX locale
 
 /****************************** Macros *********************************/
 
@@ -345,6 +358,74 @@ void doneJobOptions(JobOptions *jobOptions);
 ulong getBandWidth(BandWidthList *bandWidthList);
 
 /***********************************************************************\
+* Name   : initKey
+* Purpose: init empty public/private key
+* Input  : key - key
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void initKey(Key *key);
+
+/***********************************************************************\
+* Name   : duplicateKey
+* Purpose: duplicate public/private key
+* Input  : toKey   - key variable
+*          fromKey - from key
+* Output : -
+* Return : TRUE iff key duplicated
+* Notes  : -
+\***********************************************************************/
+
+bool duplicateKey(Key *toKey, const Key *fromKey);
+
+/***********************************************************************\
+* Name   : doneKey
+* Purpose: free public/private key
+* Input  : key - key
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneKey(Key *key);
+
+/***********************************************************************\
+* Name   : clearKey
+* Purpose: clear public/private key
+* Input  : key - key
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void clearKey(Key *key);
+
+/***********************************************************************\
+* Name   : isKeyAvailable
+* Purpose: check if public/private key is available
+* Input  : key - key
+* Output : -
+* Return : TRUE iff key is available
+* Notes  : -
+\***********************************************************************/
+
+bool isKeyAvailable(const Key *key);
+
+/***********************************************************************\
+* Name   : readKeyFile
+* Purpose: read public/private key file
+* Input  : key      - key variable
+*          fileName - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors readKeyFile(Key *key, const char *fileName);
+
+/***********************************************************************\
 * Name   : getFTPServerSettings
 * Purpose: get FTP server settings
 * Input  : hostName   - FTP server host name
@@ -538,6 +619,63 @@ bool parseDateTimeNumber(ConstString s, int *n);
 \***********************************************************************/
 
 bool parseDateMonth(ConstString s, int *month);
+
+/***********************************************************************\
+* Name   : configValueParsePassword
+* Purpose: config value option call back for parsing password
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParsePassword(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+
+/***********************************************************************\
+* Name   : configValueFormatInitPassord
+* Purpose: init format config password
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitPassord(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDonePassword
+* Purpose: done format of config password setting
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDonePassword(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatPassword
+* Purpose: format password config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatPassword(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseBandWidth
@@ -836,63 +974,6 @@ bool configValueFormatDeltaSource(void **formatUserData, void *userData, String 
 bool configValueParseString(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
-* Name   : configValueParsePassword
-* Purpose: config value option call back for parsing password
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParsePassword(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
-
-/***********************************************************************\
-* Name   : configValueFormatInitPassord
-* Purpose: init format config password
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitPassord(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDonePassword
-* Purpose: done format of config password setting
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDonePassword(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatPassword
-* Purpose: format password config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool configValueFormatPassword(void **formatUserData, void *userData, String line);
-
-/***********************************************************************\
 * Name   : configValueParseDeltaCompressAlgorithm
 * Purpose: config value option call back for parsing delta compress
 *          algorithm
@@ -910,7 +991,7 @@ bool configValueParseDeltaCompressAlgorithm(void *userData, void *variable, cons
 
 /***********************************************************************\
 * Name   : configValueFormatInitDeltaCompressAlgorithm
-* Purpose: init format config compress algorithm
+* Purpose: init format config compress algorithms
 * Input  : userData - user data
 *          variable - config variable
 * Output : formatUserData - format user data
@@ -966,7 +1047,7 @@ bool configValueFormatDeltaCompressAlgorithm(void **formatUserData, void *userDa
 bool configValueParseByteCompressAlgorithm(void *userData, void *variable, const char *name, const char *value);
 
 /***********************************************************************\
-* Name   : configValueFormatInitByteCompressAlgorithm
+* Name   : configValueFormatInitByteCompressAlgorithms
 * Purpose: init format config compress algorithm
 * Input  : userData - user data
 *          variable - config variable
@@ -1007,7 +1088,7 @@ void configValueFormatDoneByteCompressAlgorithm(void **formatUserData, void *use
 bool configValueFormatByteCompressAlgorithm(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : configValueParseCompressAlgorithm
+* Name   : configValueParseCompressAlgorithms
 * Purpose: config value option call back for parsing compress algorithm
 * Input  : userData - user data
 *          variable - config variable
@@ -1019,10 +1100,10 @@ bool configValueFormatByteCompressAlgorithm(void **formatUserData, void *userDat
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+bool configValueParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
-* Name   : configValueFormatInitCompressAlgorithm
+* Name   : configValueFormatInitCompressAlgorithms
 * Purpose: init format config compress algorithm
 * Input  : userData - user data
 *          variable - config variable
@@ -1032,10 +1113,10 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatInitCompressAlgorithm(void **formatUserData, void *userData, void *variable);
+void configValueFormatInitCompressAlgorithms(void **formatUserData, void *userData, void *variable);
 
 /***********************************************************************\
-* Name   : configValueFormatDoneCompressAlgorithm
+* Name   : configValueFormatDoneCompressAlgorithms
 * Purpose: done format of config compress algorithm
 * Input  : formatUserData - format user data
 *          userData       - user data
@@ -1045,10 +1126,10 @@ void configValueFormatInitCompressAlgorithm(void **formatUserData, void *userDat
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatDoneCompressAlgorithm(void **formatUserData, void *userData);
+void configValueFormatDoneCompressAlgorithms(void **formatUserData, void *userData);
 
 /***********************************************************************\
-* Name   : configValueFormatCompressAlgorithm
+* Name   : configValueFormatCompressAlgorithms
 * Purpose: format compress algorithm config statement
 * Input  : formatUserData - format user data
 *          userData       - user data
@@ -1060,30 +1141,22 @@ void configValueFormatDoneCompressAlgorithm(void **formatUserData, void *userDat
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatCompressAlgorithm(void **formatUserData, void *userData, String line);
+bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : archiveTypeToString
-* Purpose: get name for archive type
-* Input  : archiveType  - archive type
-*          defaultValue - default value
+* Name   : configValueReadKeyFile
+* Purpose: config value option call back for reading key
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
 * Output : -
-* Return : name
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
 * Notes  : -
 \***********************************************************************/
 
-const char *archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue);
-
-/***********************************************************************\
-* Name   : parseArchiveType
-* Purpose: parse archive type
-* Input  : name - normal|full|incremental|differential
-* Output : archiveType - archive type
-* Return : TRUE iff parsed
-* Notes  : -
-\***********************************************************************/
-
-bool parseArchiveType(const char *name, ArchiveTypes *archiveType);
+bool configValueReadKeyFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
 * Name   : initFilePattern
@@ -1097,6 +1170,7 @@ bool parseArchiveType(const char *name, ArchiveTypes *archiveType);
 \***********************************************************************/
 
 Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType);
+
 
 #ifdef __cplusplus
   }

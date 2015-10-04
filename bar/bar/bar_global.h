@@ -106,6 +106,13 @@ typedef enum
 // week day sets
 typedef long WeekDaySet;                                 // week days set or WEEKDAY_SET_ANY
 
+// key data
+typedef struct
+{
+  void *data;                                            // key data
+  uint length;                                           // length of key data
+} Key;
+
 // band width usage
 typedef struct BandWidthNode
 {
@@ -146,8 +153,8 @@ typedef struct
   uint             port;                                 // server port (ssh,scp,sftp)
   String           loginName;                            // login name
   Password         *password;                            // login password
-  String           publicKeyFileName;                    // public key file name (ssh,scp,sftp)
-  String           privateKeyFileName;                   // private key file name (ssh,scp,sftp)
+  Key              publicKey;                            // public key data (ssh,scp,sftp)
+  Key              privateKey;                           // private key data (ssh,scp,sftp)
 } SSHServer;
 
 // WebDAV server settings
@@ -155,8 +162,8 @@ typedef struct
 {
   String           loginName;                            // login name
   Password         *password;                            // login password
-  String           publicKeyFileName;                    // public key file name
-  String           privateKeyFileName;                   // private key file name
+  Key              publicKey;                            // public key data
+  Key              privateKey;                           // private key data
 } WebDAVServer;
 
 // server types
@@ -371,64 +378,66 @@ typedef struct
   uint32 groupId;                                        // restore group id
 } JobOptionsOwner;
 
+// job compress algorithms
 typedef struct
 {
   CompressAlgorithms delta;                              // delta compress algorithm to use
   CompressAlgorithms byte;                               // byte compress algorithm to use
-} JobOptionsCompressAlgorithm;
+} JobOptionsCompressAlgorithms;
 
 // see forward declaration in forward.h
 struct JobOptions
 {
-  ArchiveTypes                archiveType;               // archive type (normal, full, incremental, differential)
+  ArchiveTypes                 archiveType;               // archive type (normal, full, incremental, differential)
 
-  uint64                      archivePartSize;           // archive part size [bytes]
+  uint64                       archivePartSize;           // archive part size [bytes]
 
-  String                      incrementalListFileName;   // name of incremental list file
+  String                       incrementalListFileName;   // name of incremental list file
 
-  int                         directoryStripCount;       // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
-  String                      destination;               // destination for restore
-  JobOptionsOwner             owner;                     // restore owner
+  int                          directoryStripCount;       // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
+  String                       destination;               // destination for restore
+  JobOptionsOwner              owner;                     // restore owner
 
-  PatternTypes                patternType;               // pattern type
+  PatternTypes                 patternType;               // pattern type
 
-  JobOptionsCompressAlgorithm compressAlgorithm;         // compress algorithms
+  JobOptionsCompressAlgorithms compressAlgorithms;        // compress algorithms
 
-  CryptTypes                  cryptType;                 // crypt type (symmetric, asymmetric)
-  CryptAlgorithms             cryptAlgorithm;            // crypt algorithm to use
-  PasswordModes               cryptPasswordMode;         // crypt password mode
-  Password                    *cryptPassword;            // crypt password
-  String                      cryptPublicKeyFileName;
-  String                      cryptPrivateKeyFileName;
+  CryptTypes                   cryptType;                 // crypt type (symmetric, asymmetric)
+  CryptAlgorithms              cryptAlgorithm;            // crypt algorithm to use
+  PasswordModes                cryptPasswordMode;         // crypt password mode
+  Password                     *cryptPassword;            // crypt password
+//TODO: key data instead of file anme
+  String                       cryptPublicKeyFileName;
+  String                       cryptPrivateKeyFileName;
 
-  String                      preProcessCommand;         // command to execute before start of job
-  String                      postProcessCommand;        // command to execute after after termination of job
+  String                       preProcessCommand;         // command to execute before start of job
+  String                       postProcessCommand;        // command to execute after after termination of job
 
-  String                      mountDeviceName;           // device to mount/unmount
-  FTPServer                   ftpServer;                 // job specific FTP server settings
-  SSHServer                   sshServer;                 // job specific SSH server settings
-  WebDAVServer                webDAVServer;              // job specific WebDAV server settings
-  OpticalDisk                 opticalDisk;               // job specific optical disk settings
-  String                      deviceName;                // device name to use
-  Device                      device;                    // job specific device settings
+  String                       mountDeviceName;           // device to mount/unmount
+  FTPServer                    ftpServer;                 // job specific FTP server settings
+  SSHServer                    sshServer;                 // job specific SSH server settings
+  WebDAVServer                 webDAVServer;              // job specific WebDAV server settings
+  OpticalDisk                  opticalDisk;               // job specific optical disk settings
+  String                       deviceName;                // device name to use
+  Device                       device;                    // job specific device settings
 
-  uint64                      volumeSize;                // volume size or 0LL for default [bytes]
+  uint64                       volumeSize;                // volume size or 0LL for default [bytes]
 
-  bool                        skipUnreadableFlag;        // TRUE for skipping unreadable files
-  bool                        forceDeltaCompressionFlag; // TRUE to force delta compression of files
-  bool                        ignoreNoDumpAttributeFlag; // TRUE for ignoring no-dump attribute
-  bool                        overwriteArchiveFilesFlag; // TRUE for overwrite existing archive files
-  bool                        overwriteFilesFlag;        // TURE for overwrite existing files on restore
-  bool                        errorCorrectionCodesFlag;  // TRUE iff error correction codes should be added
-  bool                        alwaysCreateImageFlag;     // TRUE iff always create image for CD/DVD/BD/device
-  bool                        waitFirstVolumeFlag;       // TRUE for wait for first volume
-  bool                        rawImagesFlag;             // TRUE for storing raw images
-  bool                        noFragmentsCheckFlag;      // TRUE to skip checking file fragments for completeness
-  bool                        noIndexDatabaseFlag;       // TRUE for do not store index database for archives
-  bool                        dryRunFlag;                // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
-  bool                        noStorageFlag;             // TRUE to skip storage, only create incremental data file
-  bool                        noBAROnMediumFlag;         // TRUE for not storing BAR on medium
-  bool                        stopOnErrorFlag;
+  bool                         skipUnreadableFlag;        // TRUE for skipping unreadable files
+  bool                         forceDeltaCompressionFlag; // TRUE to force delta compression of files
+  bool                         ignoreNoDumpAttributeFlag; // TRUE for ignoring no-dump attribute
+  bool                         overwriteArchiveFilesFlag; // TRUE for overwrite existing archive files
+  bool                         overwriteFilesFlag;        // TURE for overwrite existing files on restore
+  bool                         errorCorrectionCodesFlag;  // TRUE iff error correction codes should be added
+  bool                         alwaysCreateImageFlag;     // TRUE iff always create image for CD/DVD/BD/device
+  bool                         waitFirstVolumeFlag;       // TRUE for wait for first volume
+  bool                         rawImagesFlag;             // TRUE for storing raw images
+  bool                         noFragmentsCheckFlag;      // TRUE to skip checking file fragments for completeness
+  bool                         noIndexDatabaseFlag;       // TRUE for do not store index database for archives
+  bool                         dryRunFlag;                // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
+  bool                         noStorageFlag;             // TRUE to skip storage, only create incremental data file
+  bool                         noBAROnMediumFlag;         // TRUE for not storing BAR on medium
+  bool                         stopOnErrorFlag;
 };
 
 /***************************** Variables *******************************/

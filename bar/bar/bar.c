@@ -173,58 +173,59 @@ typedef enum
 
 /***************************** Variables *******************************/
 
-GlobalOptions                globalOptions;
-String                       tmpDirectory;
-IndexHandle                  *indexHandle;
-Semaphore                    consoleLock;
+GlobalOptions         globalOptions;
+String                tmpDirectory;
+IndexHandle           *indexHandle;
+Semaphore             consoleLock;
+locale_t              POSIXLocale;
 
-LOCAL Commands               command;
-LOCAL String                 jobName;
+LOCAL Commands        command;
+LOCAL String          jobName;
 
-LOCAL JobOptions             jobOptions;
-LOCAL String                 uuid;
-LOCAL String                 storageName;
-LOCAL ServerList             serverList;
-LOCAL Semaphore              serverListLock;
-LOCAL DeviceList             deviceList;
-LOCAL EntryList              includeEntryList;
-LOCAL PatternList            excludePatternList;
-LOCAL PatternList            compressExcludePatternList;
-LOCAL DeltaSourceList        deltaSourceList;
-LOCAL Server                 defaultFTPServer;
-LOCAL Server                 defaultSSHServer;
-LOCAL Server                 defaultWebDAVServer;
-LOCAL Device                 defaultDevice;
-LOCAL Server                 *currentFTPServer;
-LOCAL Server                 *currentSSHServer;
-LOCAL Server                 *currentWebDAVServer;
-LOCAL Device                 *currentDevice;
-LOCAL bool                   daemonFlag;
-LOCAL bool                   noDetachFlag;
-LOCAL uint                   serverPort;
-LOCAL uint                   serverTLSPort;
-LOCAL const char             *serverCAFileName;
-LOCAL const char             *serverCertFileName;
-LOCAL const char             *serverKeyFileName;
-LOCAL Password               *serverPassword;
-LOCAL const char             *serverJobsDirectory;
+LOCAL JobOptions      jobOptions;
+LOCAL String          uuid;
+LOCAL String          storageName;
+LOCAL ServerList      serverList;
+LOCAL Semaphore       serverListLock;
+LOCAL DeviceList      deviceList;
+LOCAL EntryList       includeEntryList;
+LOCAL PatternList     excludePatternList;
+LOCAL PatternList     compressExcludePatternList;
+LOCAL DeltaSourceList deltaSourceList;
+LOCAL Server          defaultFTPServer;
+LOCAL Server          defaultSSHServer;
+LOCAL Server          defaultWebDAVServer;
+LOCAL Device          defaultDevice;
+LOCAL Server          *currentFTPServer;
+LOCAL Server          *currentSSHServer;
+LOCAL Server          *currentWebDAVServer;
+LOCAL Device          *currentDevice;
+LOCAL bool            daemonFlag;
+LOCAL bool            noDetachFlag;
+LOCAL uint            serverPort;
+LOCAL uint            serverTLSPort;
+LOCAL const char      *serverCAFileName;
+LOCAL const char      *serverCertFileName;
+LOCAL const char      *serverKeyFileName;
+LOCAL Password        *serverPassword;
+LOCAL const char      *serverJobsDirectory;
 
-LOCAL const char             *indexDatabaseFileName;
+LOCAL const char      *indexDatabaseFileName;
 
-LOCAL ulong                  logTypes;
-LOCAL const char             *logFileName;
-LOCAL const char             *logPostCommand;
+LOCAL ulong           logTypes;
+LOCAL const char      *logFileName;
+LOCAL const char      *logPostCommand;
 
-LOCAL bool                   batchFlag;
-LOCAL bool                   versionFlag;
-LOCAL bool                   helpFlag,xhelpFlag,helpInternalFlag;
+LOCAL bool            batchFlag;
+LOCAL bool            versionFlag;
+LOCAL bool            helpFlag,xhelpFlag,helpInternalFlag;
 
-LOCAL const char             *pidFileName;
+LOCAL const char      *pidFileName;
 
-LOCAL String                 keyFileName;
-LOCAL uint                   keyBits;
+LOCAL String          keyFileName;
+LOCAL uint            keyBits;
 
-LOCAL IndexHandle            __indexHandle;
+LOCAL IndexHandle     __indexHandle;
 
 /*---------------------------------------------------------------------*/
 
@@ -253,125 +254,118 @@ LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *
 LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 
-LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] =
-{
+LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] = CMD_VALUE_UNIT_ARRAY
+(
   {"G",1024LL*1024LL*1024LL},
   {"M",1024LL*1024LL},
   {"K",1024LL},
-};
+);
 
-LOCAL const CommandLineUnit COMMAND_LINE_BITS_UNITS[] =
-{
+LOCAL const CommandLineUnit COMMAND_LINE_BITS_UNITS[] = CMD_VALUE_UNIT_ARRAY
+(
   {"K",1024LL},
-};
+);
 
-LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_PATTERN_TYPES[] =
-{
+LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_PATTERN_TYPES[] = CMD_VALUE_SELECT_ARRAY
+(
   {"glob",    PATTERN_TYPE_GLOB,          "glob patterns: * and ?"                      },
   {"regex",   PATTERN_TYPE_REGEX,         "regular expression pattern matching"         },
   {"extended",PATTERN_TYPE_EXTENDED_REGEX,"extended regular expression pattern matching"},
-};
+);
 
-LOCAL const struct
-{
-  const char         *name;
-  CompressAlgorithms compressAlgorithm;
-} COMPRESS_ALGORITHMS_DELTA[] =
-{
-  {"none", COMPRESS_ALGORITHM_NONE},
+LOCAL const CommandLineOptionSelect COMPRESS_ALGORITHMS_DELTA[] = CMD_VALUE_SELECT_ARRAY
+(
+  {"none", COMPRESS_ALGORITHM_NONE,NULL},
 
   #ifdef HAVE_XDELTA
-    {"xdelta1",COMPRESS_ALGORITHM_XDELTA_1},
-    {"xdelta2",COMPRESS_ALGORITHM_XDELTA_2},
-    {"xdelta3",COMPRESS_ALGORITHM_XDELTA_3},
-    {"xdelta4",COMPRESS_ALGORITHM_XDELTA_4},
-    {"xdelta5",COMPRESS_ALGORITHM_XDELTA_5},
-    {"xdelta6",COMPRESS_ALGORITHM_XDELTA_6},
-    {"xdelta7",COMPRESS_ALGORITHM_XDELTA_7},
-    {"xdelta8",COMPRESS_ALGORITHM_XDELTA_8},
-    {"xdelta9",COMPRESS_ALGORITHM_XDELTA_9},
+    {"xdelta1",COMPRESS_ALGORITHM_XDELTA_1,NULL},
+    {"xdelta2",COMPRESS_ALGORITHM_XDELTA_2,NULL},
+    {"xdelta3",COMPRESS_ALGORITHM_XDELTA_3,NULL},
+    {"xdelta4",COMPRESS_ALGORITHM_XDELTA_4,NULL},
+    {"xdelta5",COMPRESS_ALGORITHM_XDELTA_5,NULL},
+    {"xdelta6",COMPRESS_ALGORITHM_XDELTA_6,NULL},
+    {"xdelta7",COMPRESS_ALGORITHM_XDELTA_7,NULL},
+    {"xdelta8",COMPRESS_ALGORITHM_XDELTA_8,NULL},
+    {"xdelta9",COMPRESS_ALGORITHM_XDELTA_9,NULL},
   #endif /* HAVE_XDELTA */
-};
+);
 
-LOCAL const struct
-{
-  const char         *name;
-  CompressAlgorithms compressAlgorithm;
-} COMPRESS_ALGORITHMS_BYTE[] =
-{
-  {"none",COMPRESS_ALGORITHM_NONE},
+LOCAL CommandLineOptionSelect COMPRESS_ALGORITHMS_BYTE[] = CMD_VALUE_SELECT_ARRAY
+(
+  {"none",COMPRESS_ALGORITHM_NONE,NULL},
 
-  {"zip0",COMPRESS_ALGORITHM_ZIP_0},
-  {"zip1",COMPRESS_ALGORITHM_ZIP_1},
-  {"zip2",COMPRESS_ALGORITHM_ZIP_2},
-  {"zip3",COMPRESS_ALGORITHM_ZIP_3},
-  {"zip4",COMPRESS_ALGORITHM_ZIP_4},
-  {"zip5",COMPRESS_ALGORITHM_ZIP_5},
-  {"zip6",COMPRESS_ALGORITHM_ZIP_6},
-  {"zip7",COMPRESS_ALGORITHM_ZIP_7},
-  {"zip8",COMPRESS_ALGORITHM_ZIP_8},
-  {"zip9",COMPRESS_ALGORITHM_ZIP_9},
+  {"zip0",COMPRESS_ALGORITHM_ZIP_0,NULL},
+  {"zip1",COMPRESS_ALGORITHM_ZIP_1,NULL},
+  {"zip2",COMPRESS_ALGORITHM_ZIP_2,NULL},
+  {"zip3",COMPRESS_ALGORITHM_ZIP_3,NULL},
+  {"zip4",COMPRESS_ALGORITHM_ZIP_4,NULL},
+  {"zip5",COMPRESS_ALGORITHM_ZIP_5,NULL},
+  {"zip6",COMPRESS_ALGORITHM_ZIP_6,NULL},
+  {"zip7",COMPRESS_ALGORITHM_ZIP_7,NULL},
+  {"zip8",COMPRESS_ALGORITHM_ZIP_8,NULL},
+  {"zip9",COMPRESS_ALGORITHM_ZIP_9,NULL},
 
   #ifdef HAVE_BZ2
-    {"bzip1",COMPRESS_ALGORITHM_BZIP2_1},
-    {"bzip2",COMPRESS_ALGORITHM_BZIP2_2},
-    {"bzip3",COMPRESS_ALGORITHM_BZIP2_3},
-    {"bzip4",COMPRESS_ALGORITHM_BZIP2_4},
-    {"bzip5",COMPRESS_ALGORITHM_BZIP2_5},
-    {"bzip6",COMPRESS_ALGORITHM_BZIP2_6},
-    {"bzip7",COMPRESS_ALGORITHM_BZIP2_7},
-    {"bzip8",COMPRESS_ALGORITHM_BZIP2_8},
-    {"bzip9",COMPRESS_ALGORITHM_BZIP2_9},
+    {"bzip1",COMPRESS_ALGORITHM_BZIP2_1,NULL},
+    {"bzip2",COMPRESS_ALGORITHM_BZIP2_2,NULL},
+    {"bzip3",COMPRESS_ALGORITHM_BZIP2_3,NULL},
+    {"bzip4",COMPRESS_ALGORITHM_BZIP2_4,NULL},
+    {"bzip5",COMPRESS_ALGORITHM_BZIP2_5,NULL},
+    {"bzip6",COMPRESS_ALGORITHM_BZIP2_6,NULL},
+    {"bzip7",COMPRESS_ALGORITHM_BZIP2_7,NULL},
+    {"bzip8",COMPRESS_ALGORITHM_BZIP2_8,NULL},
+    {"bzip9",COMPRESS_ALGORITHM_BZIP2_9,NULL},
   #endif /* HAVE_BZ2 */
 
   #ifdef HAVE_LZMA
-    {"lzma1",COMPRESS_ALGORITHM_LZMA_1},
-    {"lzma2",COMPRESS_ALGORITHM_LZMA_2},
-    {"lzma3",COMPRESS_ALGORITHM_LZMA_3},
-    {"lzma4",COMPRESS_ALGORITHM_LZMA_4},
-    {"lzma5",COMPRESS_ALGORITHM_LZMA_5},
-    {"lzma6",COMPRESS_ALGORITHM_LZMA_6},
-    {"lzma7",COMPRESS_ALGORITHM_LZMA_7},
-    {"lzma8",COMPRESS_ALGORITHM_LZMA_8},
-    {"lzma9",COMPRESS_ALGORITHM_LZMA_9},
+    {"lzma1",COMPRESS_ALGORITHM_LZMA_1,NULL},
+    {"lzma2",COMPRESS_ALGORITHM_LZMA_2,NULL},
+    {"lzma3",COMPRESS_ALGORITHM_LZMA_3,NULL},
+    {"lzma4",COMPRESS_ALGORITHM_LZMA_4,NULL},
+    {"lzma5",COMPRESS_ALGORITHM_LZMA_5,NULL},
+    {"lzma6",COMPRESS_ALGORITHM_LZMA_6,NULL},
+    {"lzma7",COMPRESS_ALGORITHM_LZMA_7,NULL},
+    {"lzma8",COMPRESS_ALGORITHM_LZMA_8,NULL},
+    {"lzma9",COMPRESS_ALGORITHM_LZMA_9,NULL},
   #endif /* HAVE_LZMA */
 
   #ifdef HAVE_LZO
-    {"lzo1",COMPRESS_ALGORITHM_LZO_1},
-    {"lzo2",COMPRESS_ALGORITHM_LZO_2},
-    {"lzo3",COMPRESS_ALGORITHM_LZO_3},
-    {"lzo4",COMPRESS_ALGORITHM_LZO_4},
-    {"lzo5",COMPRESS_ALGORITHM_LZO_5},
+    {"lzo1",COMPRESS_ALGORITHM_LZO_1,NULL},
+    {"lzo2",COMPRESS_ALGORITHM_LZO_2,NULL},
+    {"lzo3",COMPRESS_ALGORITHM_LZO_3,NULL},
+    {"lzo4",COMPRESS_ALGORITHM_LZO_4,NULL},
+    {"lzo5",COMPRESS_ALGORITHM_LZO_5,NULL},
   #endif /* HAVE_LZO */
 
   #ifdef HAVE_LZ4
-    {"lz4-0", COMPRESS_ALGORITHM_LZ4_0},
-    {"lz4-1", COMPRESS_ALGORITHM_LZ4_1},
-    {"lz4-2", COMPRESS_ALGORITHM_LZ4_2},
-    {"lz4-3", COMPRESS_ALGORITHM_LZ4_3},
-    {"lz4-4", COMPRESS_ALGORITHM_LZ4_4},
-    {"lz4-5", COMPRESS_ALGORITHM_LZ4_5},
-    {"lz4-6", COMPRESS_ALGORITHM_LZ4_6},
-    {"lz4-7", COMPRESS_ALGORITHM_LZ4_7},
-    {"lz4-8", COMPRESS_ALGORITHM_LZ4_8},
-    {"lz4-9", COMPRESS_ALGORITHM_LZ4_9},
-    {"lz4-10",COMPRESS_ALGORITHM_LZ4_10},
-    {"lz4-11",COMPRESS_ALGORITHM_LZ4_11},
-    {"lz4-12",COMPRESS_ALGORITHM_LZ4_12},
-    {"lz4-13",COMPRESS_ALGORITHM_LZ4_13},
-    {"lz4-14",COMPRESS_ALGORITHM_LZ4_14},
-    {"lz4-15",COMPRESS_ALGORITHM_LZ4_15},
-    {"lz4-16",COMPRESS_ALGORITHM_LZ4_16},
+    {"lz4-0", COMPRESS_ALGORITHM_LZ4_0,NULL},
+    {"lz4-1", COMPRESS_ALGORITHM_LZ4_1,NULL},
+    {"lz4-2", COMPRESS_ALGORITHM_LZ4_2,NULL},
+    {"lz4-3", COMPRESS_ALGORITHM_LZ4_3,NULL},
+    {"lz4-4", COMPRESS_ALGORITHM_LZ4_4,NULL},
+    {"lz4-5", COMPRESS_ALGORITHM_LZ4_5,NULL},
+    {"lz4-6", COMPRESS_ALGORITHM_LZ4_6,NULL},
+    {"lz4-7", COMPRESS_ALGORITHM_LZ4_7,NULL},
+    {"lz4-8", COMPRESS_ALGORITHM_LZ4_8,NULL},
+    {"lz4-9", COMPRESS_ALGORITHM_LZ4_9,NULL},
+    {"lz4-10",COMPRESS_ALGORITHM_LZ4_10,NULL},
+    {"lz4-11",COMPRESS_ALGORITHM_LZ4_11,NULL},
+    {"lz4-12",COMPRESS_ALGORITHM_LZ4_12,NULL},
+    {"lz4-13",COMPRESS_ALGORITHM_LZ4_13,NULL},
+    {"lz4-14",COMPRESS_ALGORITHM_LZ4_14,NULL},
+    {"lz4-15",COMPRESS_ALGORITHM_LZ4_15,NULL},
+    {"lz4-16",COMPRESS_ALGORITHM_LZ4_16,NULL},
   #endif /* HAVE_LZO */
-};
+);
 
-LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS[] =
-{
+LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS[] = CMD_VALUE_SELECT_ARRAY
+(
   {"none",      CRYPT_ALGORITHM_NONE,          "no encryption"         },
 
   #ifdef HAVE_GCRYPT
@@ -390,34 +384,27 @@ LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS[] =
     {"CAMELLIA192",CRYPT_ALGORITHM_CAMELLIA192,"Camellia cipher 192bit"},
     {"CAMELLIA256",CRYPT_ALGORITHM_CAMELLIA256,"Camellia cipher 256bit"},
   #endif /* HAVE_GCRYPT */
-};
+);
 
-LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_TYPES[] =
-{
+LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_TYPES[] = CMD_VALUE_SELECT_ARRAY
+(
   #ifdef HAVE_GCRYPT
     {"symmetric", CRYPT_TYPE_SYMMETRIC, "symmetric"},
     {"asymmetric",CRYPT_TYPE_ASYMMETRIC,"asymmetric"},
   #endif /* HAVE_GCRYPT */
-};
+);
 
-LOCAL const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[] =
-{
-  {"default",PASSWORD_MODE_DEFAULT,},
-  {"ask",    PASSWORD_MODE_ASK,    },
-  {"config", PASSWORD_MODE_CONFIG, },
-};
-
-LOCAL const CommandLineUnit COMMAND_LINE_TIME_UNITS[] =
-{
+LOCAL const CommandLineUnit COMMAND_LINE_TIME_UNITS[] = CMD_VALUE_UNIT_ARRAY
+(
   {"weeks",7*24*60*60},
   {"days",24*60*60},
   {"h",60*60},
   {"m",60},
   {"s",1},
-};
+);
 
-LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] =
-{
+LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] = CMD_VALUE_SET_ARRAY
+(
   {"none",      LOG_TYPE_NONE,               "no logging"               },
   {"errors",    LOG_TYPE_ERROR,              "log errors"               },
   {"warnings",  LOG_TYPE_WARNING,            "log warnings"             },
@@ -434,7 +421,7 @@ LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] =
   {"index",     LOG_TYPE_INDEX,              "index database"           },
 
   {"all",       LOG_TYPE_ALL,                "log everything"           },
-};
+);
 
 LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
@@ -474,7 +461,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("destination",                  0,  0,1,jobOptions.destination,                                                                                 "destination to restore files/images","path"                               ),
   CMD_OPTION_SPECIAL      ("owner",                        0,  0,1,&jobOptions.owner,                               cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
 
-  CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,1,&jobOptions.compressAlgorithm,                   cmdOptionParseCompressAlgorithm,NULL,                  "select compress algorithms to use\n"
+  CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,1,&jobOptions.compressAlgorithms,                  cmdOptionParseCompressAlgorithms,NULL,                 "select compress algorithms to use\n"
                                                                                                                                                                            "  none         : no compression (default)\n"
                                                                                                                                                                            "  zip0..zip9   : ZIP compression level 0..9"
                                                                                                                                                                            #ifdef HAVE_BZ2
@@ -518,8 +505,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,1,defaultSSHServer.sshServer.port,                 0,65535,NULL,                                          "ssh port",NULL                                                            ),
   CMD_OPTION_STRING       ("ssh-login-name",               0,  0,1,defaultSSHServer.sshServer.loginName,                                                                   "ssh login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,1,&defaultSSHServer.sshServer.password,            cmdOptionParsePassword,NULL,                           "ssh password (use with care!)","password"                                 ),
-  CMD_OPTION_STRING       ("ssh-public-key",               0,  1,1,defaultSSHServer.sshServer.publicKeyFileName,                                                           "ssh public key file name","file name"                                     ),
-  CMD_OPTION_STRING       ("ssh-private-key",              0,  1,1,defaultSSHServer.sshServer.privateKeyFileName,                                                          "ssh private key file name","file name"                                    ),
+  CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,1,&defaultSSHServer.sshServer.publicKey,           cmdOptionReadKeyFile,NULL,                             "ssh public key file name","file name"                                     ),
+  CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,1,&defaultSSHServer.sshServer.privateKey,          cmdOptionReadKeyFile,NULL,                             "ssh private key file name","file name"                                    ),
   CMD_OPTION_INTEGER      ("ssh-max-connections",          0,  0,1,defaultSSHServer.maxConnectionCount,             0,MAX_INT,NULL,                                        "max. number of concurrent ssh connections","unlimited"                    ),
 //TODO
 //  CMD_OPTION_INTEGER64    ("ssh-max-storage-size",         0,  0,1,defaultSSHServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on ssh server","unlimited"                  ),
@@ -683,36 +670,36 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
-LOCAL const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] =
-{
+const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
+(
   {"K",1024LL},
   {"M",1024LL*1024LL},
   {"G",1024LL*1024LL*1024LL},
   {"T",1024LL*1024LL*1024LL*1024LL},
-};
+);
 
-LOCAL const ConfigValueUnit CONFIG_VALUE_BITS_UNITS[] =
-{
+const ConfigValueUnit CONFIG_VALUE_BITS_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
+(
   {"K",1024LL},
-};
+);
 
-LOCAL const ConfigValueSelect CONFIG_VALUE_ARCHIVE_TYPES[] =
-{
+const ConfigValueSelect CONFIG_VALUE_ARCHIVE_TYPES[] = CONFIG_VALUE_SELECT_ARRAY
+(
   {"normal",      ARCHIVE_TYPE_NORMAL,     },
   {"full",        ARCHIVE_TYPE_FULL,       },
   {"incremental", ARCHIVE_TYPE_INCREMENTAL },
   {"differential",ARCHIVE_TYPE_DIFFERENTIAL},
-};
+);
 
-LOCAL const ConfigValueSelect CONFIG_VALUE_PATTERN_TYPES[] =
-{
+const ConfigValueSelect CONFIG_VALUE_PATTERN_TYPES[] = CONFIG_VALUE_SELECT_ARRAY
+(
   {"glob",    PATTERN_TYPE_GLOB,         },
   {"regex",   PATTERN_TYPE_REGEX,        },
   {"extended",PATTERN_TYPE_EXTENDED_REGEX},
-};
+);
 
-LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
-{
+const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] = CONFIG_VALUE_SELECT_ARRAY
+(
   {"none", COMPRESS_ALGORITHM_NONE,  },
 
   {"zip0", COMPRESS_ALGORITHM_ZIP_0, },
@@ -761,10 +748,10 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
     {"xdelta8",COMPRESS_ALGORITHM_XDELTA_8},
     {"xdelta9",COMPRESS_ALGORITHM_XDELTA_9},
   #endif /* HAVE_XDELTA3 */
-};
+);
 
-LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
-{
+const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] = CONFIG_VALUE_SELECT_ARRAY
+(
   {"none",CRYPT_ALGORITHM_NONE},
 
   #ifdef HAVE_GCRYPT
@@ -783,27 +770,34 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
     {"CAMELLIA192",CRYPT_ALGORITHM_CAMELLIA192},
     {"CAMELLIA256",CRYPT_ALGORITHM_CAMELLIA256},
   #endif /* HAVE_GCRYPT */
-};
+);
 
-LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[] =
-{
+const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[] = CONFIG_VALUE_SELECT_ARRAY
+(
   #ifdef HAVE_GCRYPT
     {"symmetric", CRYPT_TYPE_SYMMETRIC },
     {"asymmetric",CRYPT_TYPE_ASYMMETRIC},
   #endif /* HAVE_GCRYPT */
-};
+);
 
-LOCAL const ConfigValueUnit CONFIG_VALUE_TIME_UNITS[] =
-{
+const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[] = CONFIG_VALUE_SELECT_ARRAY
+(
+  {"default",PASSWORD_MODE_DEFAULT,},
+  {"ask",    PASSWORD_MODE_ASK,    },
+  {"config", PASSWORD_MODE_CONFIG, },
+);
+
+const ConfigValueUnit CONFIG_VALUE_TIME_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
+(
   {"weeks",7*24*60*60},
   {"days",24*60*60},
   {"h",60*60},
   {"m",60},
   {"s",1},
-};
+);
 
-LOCAL const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] =
-{
+const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] = CONFIG_VALUE_SET_ARRAY
+(
   {"none",      LOG_TYPE_NONE               },
   {"errors",    LOG_TYPE_ERROR              },
   {"warnings",  LOG_TYPE_WARNING            },
@@ -820,7 +814,7 @@ LOCAL const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] =
   {"index",     LOG_TYPE_INDEX,             },
 
   {"all",       LOG_TYPE_ALL                },
-};
+);
 
 LOCAL const ConfigValue CONFIG_VALUES[] =
 {
@@ -845,6 +839,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   // global job settings
   CONFIG_VALUE_STRING   ("UUID",                         &uuid,-1                                                       ),
+  CONFIG_VALUE_IGNORE   ("host-name"),
+  CONFIG_VALUE_IGNORE   ("host-port"),
   CONFIG_VALUE_STRING   ("archive-name",                 &storageName,-1                                                ),
   CONFIG_VALUE_SELECT   ("archive-type",                 &jobOptions.archiveType,-1,                                    CONFIG_VALUE_ARCHIVE_TYPES),
 
@@ -858,7 +854,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_SELECT   ("pattern-type",                 &jobOptions.patternType,-1,                                    CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_VALUE_SPECIAL  ("compress-algorithm",           &jobOptions.compressAlgorithm,-1,                              configValueParseCompressAlgorithm,NULL,NULL,NULL,&jobOptions),
+  CONFIG_VALUE_SPECIAL  ("compress-algorithm",           &jobOptions.compressAlgorithms,-1,                             configValueParseCompressAlgorithms,NULL,NULL,NULL,&jobOptions),
 
   CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                                 CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_VALUE_SELECT   ("crypt-type",                   &jobOptions.cryptType,-1,                                      CONFIG_VALUE_CRYPT_TYPES),
@@ -876,8 +872,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER  ("ssh-port",                     &currentSSHServer,offsetof(Server,sshServer.port),             0,65535,NULL),
   CONFIG_VALUE_STRING   ("ssh-login-name",               &currentSSHServer,offsetof(Server,sshServer.loginName)         ),
   CONFIG_VALUE_SPECIAL  ("ssh-password",                 &currentSSHServer,offsetof(Server,sshServer.password),         configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_STRING   ("ssh-public-key",               &currentSSHServer,offsetof(Server,sshServer.publicKeyFileName) ),
-  CONFIG_VALUE_STRING   ("ssh-private-key",              &currentSSHServer,offsetof(Server,sshServer.privateKeyFileName)),
+  CONFIG_VALUE_SPECIAL  ("ssh-public-key",               &currentSSHServer,offsetof(Server,sshServer.publicKey),        configValueReadKeyFile,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL  ("ssh-private-key",              &currentSSHServer,offsetof(Server,sshServer.privateKey),       configValueReadKeyFile,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_INTEGER  ("ssh-max-connections",          &currentSSHServer,offsetof(Server,maxConnectionCount),         0,MAX_INT,NULL),
 //TODO
 //  CONFIG_VALUE_INTEGER64("ssh-max-storage-size",         &currentSSHServer,offsetof(Server,maxStorageSize),          0LL,MAX_INT64,NULL),
@@ -1191,14 +1187,14 @@ LOCAL void initServer(Server *server, ConstString name, ServerTypes serverType)
       server->sshServer.port                  = 22;
       server->sshServer.loginName             = NULL;
       server->sshServer.password              = NULL;
-      server->sshServer.publicKeyFileName     = NULL;
-      server->sshServer.privateKeyFileName    = NULL;
+      initKey(&server->sshServer.publicKey);
+      initKey(&server->sshServer.privateKey);
       break;
     case SERVER_TYPE_WEBDAV:
       server->webDAVServer.loginName          = NULL;
       server->webDAVServer.password           = NULL;
-      server->webDAVServer.publicKeyFileName  = NULL;
-      server->webDAVServer.privateKeyFileName = NULL;
+      initKey(&server->webDAVServer.publicKey);
+      initKey(&server->webDAVServer.privateKey);
       break;
     #ifndef NDEBUG
       default:
@@ -1233,14 +1229,14 @@ LOCAL void doneServer(Server *server)
       if (server->ftpServer.loginName != NULL) String_delete(server->ftpServer.loginName);
       break;
     case SERVER_TYPE_SSH:
-      if (server->sshServer.privateKeyFileName != NULL) String_delete(server->sshServer.privateKeyFileName);
-      if (server->sshServer.publicKeyFileName != NULL) String_delete(server->sshServer.publicKeyFileName);
+      if (isKeyAvailable(&server->sshServer.privateKey)) doneKey(&server->sshServer.privateKey);
+      if (isKeyAvailable(&server->sshServer.publicKey)) doneKey(&server->sshServer.publicKey);
       if (server->sshServer.password != NULL) Password_delete(server->sshServer.password);
       if (server->sshServer.loginName != NULL) String_delete(server->sshServer.loginName);
       break;
     case SERVER_TYPE_WEBDAV:
-      if (server->webDAVServer.privateKeyFileName != NULL) String_delete(server->webDAVServer.privateKeyFileName);
-      if (server->webDAVServer.publicKeyFileName != NULL) String_delete(server->webDAVServer.publicKeyFileName);
+      if (isKeyAvailable(&server->webDAVServer.privateKey)) doneKey(&server->webDAVServer.privateKey);
+      if (isKeyAvailable(&server->webDAVServer.publicKey)) doneKey(&server->webDAVServer.publicKey);
       if (server->webDAVServer.password != NULL) Password_delete(server->webDAVServer.password);
       if (server->webDAVServer.loginName != NULL) String_delete(server->webDAVServer.loginName);
       break;
@@ -1438,7 +1434,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   }
 
   // parse file
-  if (isPrintInfo(2) || printInfoFlag) printf("Reading configuration file '%s'...",String_cString(fileName));
+  if (isPrintInfo(2) || printInfoFlag) { printf("Reading configuration file '%s'...",String_cString(fileName)); fflush(stdout); }
   failFlag   = FALSE;
   line       = String_new();
   lineNb     = 0;
@@ -1506,7 +1502,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                             )
          )
       {
-        if (printInfoFlag) printf("FAIL!\n");
+        if (isPrintInfo(2) || printInfoFlag) printf("FAIL!\n");
         printError("Unknown or invalid config entry '%s' with value '%s' in %s, line %ld\n",
                    String_cString(name),
                    String_cString(value),
@@ -1742,6 +1738,122 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
 
   // free resources
   String_delete(storageName);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseCompressAlgorithms
+* Purpose: command line option call back for parsing compress algorithm
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  char                          algorithm1[256],algorithm2[256];
+  CompressAlgorithms            compressAlgorithmDelta,compressAlgorithmByte;
+  bool                          foundFlag;
+  const CommandLineOptionSelect *select;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+
+  compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
+  compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
+
+  // parse
+  if (   String_scanCString(value,"%256s+%256s",algorithm1,algorithm2)
+      || String_scanCString(value,"%256s,%256s",algorithm1,algorithm2)
+     )
+  {
+    foundFlag = FALSE;
+    for (select = COMPRESS_ALGORITHMS_DELTA; select->name != NULL; select++)
+    {
+      if (stringEqualsIgnoreCase(algorithm1,select->name))
+      {
+        compressAlgorithmDelta = (CompressAlgorithms)select->value;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    for (select = COMPRESS_ALGORITHMS_BYTE; select->name != NULL; select++)
+    {
+      if (stringEqualsIgnoreCase(algorithm1,select->name))
+      {
+        compressAlgorithmByte = (CompressAlgorithms)select->value;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    if (!foundFlag)
+    {
+      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm1);
+      return FALSE;
+    }
+
+    foundFlag = FALSE;
+    for (select = COMPRESS_ALGORITHMS_DELTA; select->name != NULL; select++)
+    {
+      if (stringEqualsIgnoreCase(algorithm2,select->name))
+      {
+        compressAlgorithmDelta = (CompressAlgorithms)select->value;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    for (select = COMPRESS_ALGORITHMS_BYTE; select->name != NULL; select++)
+    {
+      if (stringEqualsIgnoreCase(algorithm2,select->name))
+      {
+        compressAlgorithmByte = (CompressAlgorithms)select->value;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    if (!foundFlag)
+    {
+      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm2);
+      return FALSE;
+    }
+  }
+  else
+  {
+    foundFlag = FALSE;
+    for (select = COMPRESS_ALGORITHMS_DELTA; select->name != NULL; select++)
+    {
+      if (stringEqualsIgnoreCase(value,select->name))
+      {
+        compressAlgorithmDelta = (CompressAlgorithms)select->value;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    for (select = COMPRESS_ALGORITHMS_BYTE; select->name != NULL; select++)
+    {
+      if (stringEqualsIgnoreCase(value,select->name))
+      {
+        compressAlgorithmByte = (CompressAlgorithms)select->value;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    if (!foundFlag)
+    {
+      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",value);
+      return FALSE;
+    }
+  }
+
+  // store compress algorithm values
+  ((JobOptionsCompressAlgorithms*)variable)->delta = compressAlgorithmDelta;
+  ((JobOptionsCompressAlgorithms*)variable)->byte  = compressAlgorithmByte;
 
   return TRUE;
 }
@@ -2016,20 +2128,18 @@ LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *na
 }
 
 /***********************************************************************\
-* Name   : cmdOptionParseCompressAlgorithm
-* Purpose: command line option call back for parsing compress algorithm
+* Name   : cmdOptionReadKeyFile
+* Purpose: command line option call back for reading key file
 * Input  : -
 * Output : -
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  char               algorithm1[256],algorithm2[256];
-  CompressAlgorithms compressAlgorithmDelta,compressAlgorithmByte;
-  bool               foundFlag;
-  uint               z;
+  Key    *key = (Key*)variable;
+  Errors error;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2037,96 +2147,14 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
 
-  compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
-  compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
-
-  // parse
-  if (   String_scanCString(value,"%256s+%256s",algorithm1,algorithm2)
-      || String_scanCString(value,"%256s,%256s",algorithm1,algorithm2)
-     )
+  error = readKeyFile(key,value);
+  if (error != ERROR_NONE)
   {
-    foundFlag = FALSE;
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
-    {
-      if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
-      {
-        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
-        foundFlag = TRUE;
-        break;
-      }
-    }
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
-    {
-      if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
-      {
-        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
-        foundFlag = TRUE;
-        break;
-      }
-    }
-    if (!foundFlag)
-    {
-      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm1);
-      return FALSE;
-    }
-
-    foundFlag = FALSE;
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
-    {
-      if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
-      {
-        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
-        foundFlag = TRUE;
-        break;
-      }
-    }
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
-    {
-      if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
-      {
-        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
-        foundFlag = TRUE;
-        break;
-      }
-    }
-    if (!foundFlag)
-    {
-      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm2);
-      return FALSE;
-    }
+    return FALSE;
   }
-  else
-  {
-    foundFlag = FALSE;
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
-    {
-      if (strcasecmp(value,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
-      {
-        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
-        foundFlag = TRUE;
-        break;
-      }
-    }
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
-    {
-      if (strcasecmp(value,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
-      {
-        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
-        foundFlag = TRUE;
-        break;
-      }
-    }
-    if (!foundFlag)
-    {
-      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",value);
-      return FALSE;
-    }
-  }
-
-  // store compress algorithm values
-  ((JobOptionsCompressAlgorithm*)variable)->delta = compressAlgorithmDelta;
-  ((JobOptionsCompressAlgorithm*)variable)->byte  = compressAlgorithmByte;
 
   return TRUE;
 }
@@ -2617,8 +2645,9 @@ LOCAL Errors initAll(void)
   Semaphore_init(&logLock);
   logFile                                = NULL;
   tmpLogFile                             = NULL;
-
   Semaphore_init(&consoleLock);
+  POSIXLocale                            = newlocale(LC_ALL,"POSIX",0);
+
   Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
   lastOutputLine                         = NULL;
 
@@ -2629,14 +2658,14 @@ LOCAL Errors initAll(void)
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
   if (File_exists(fileName))
   {
-    defaultSSHServer.sshServer.publicKeyFileName       = String_duplicate(fileName);
-    defaultWebDAVServer.webDAVServer.publicKeyFileName = String_duplicate(fileName);
+    readKeyFile(&defaultSSHServer.sshServer.publicKey,String_cString(fileName));
+    readKeyFile(&defaultWebDAVServer.webDAVServer.publicKey,String_cString(fileName));
   }
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
   if (File_exists(fileName))
   {
-    defaultSSHServer.sshServer.privateKeyFileName       = String_duplicate(fileName);
-    defaultWebDAVServer.webDAVServer.privateKeyFileName = String_duplicate(fileName);
+    readKeyFile(&defaultSSHServer.sshServer.privateKey,String_cString(fileName));
+    readKeyFile(&defaultWebDAVServer.webDAVServer.privateKey,String_cString(fileName));
   }
   String_delete(fileName);
 
@@ -2666,6 +2695,7 @@ LOCAL void doneAll(void)
   ConfigValue_done(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
 
   // deinitialize variables
+  freelocale(POSIXLocale);
   Semaphore_done(&consoleLock);
   Semaphore_done(&logLock);
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
@@ -3215,8 +3245,8 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->owner.userId                    = FILE_DEFAULT_USER_ID;
   jobOptions->owner.groupId                   = FILE_DEFAULT_GROUP_ID;
   jobOptions->patternType                     = PATTERN_TYPE_GLOB;
-  jobOptions->compressAlgorithm.delta         = COMPRESS_ALGORITHM_NONE;
-  jobOptions->compressAlgorithm.byte          = COMPRESS_ALGORITHM_NONE;
+  jobOptions->compressAlgorithms.delta        = COMPRESS_ALGORITHM_NONE;
+  jobOptions->compressAlgorithms.byte         = COMPRESS_ALGORITHM_NONE;
   jobOptions->cryptAlgorithm                  = CRYPT_ALGORITHM_NONE;
   #ifdef HAVE_GCRYPT
     jobOptions->cryptType                     = CRYPT_TYPE_SYMMETRIC;
@@ -3280,13 +3310,13 @@ void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions)
 
   toJobOptions->sshServer.loginName                 = String_duplicate(fromJobOptions->sshServer.loginName);
   toJobOptions->sshServer.password                  = Password_duplicate(fromJobOptions->sshServer.password);
-  toJobOptions->sshServer.publicKeyFileName         = String_duplicate(fromJobOptions->sshServer.publicKeyFileName);
-  toJobOptions->sshServer.privateKeyFileName        = String_duplicate(fromJobOptions->sshServer.privateKeyFileName);
+  duplicateKey(&toJobOptions->sshServer.publicKey,&fromJobOptions->sshServer.publicKey);
+  duplicateKey(&toJobOptions->sshServer.privateKey,&fromJobOptions->sshServer.privateKey);
 
   toJobOptions->webDAVServer.loginName              = String_duplicate(fromJobOptions->webDAVServer.loginName);
   toJobOptions->webDAVServer.password               = Password_duplicate(fromJobOptions->webDAVServer.password);
-  toJobOptions->webDAVServer.publicKeyFileName      = String_duplicate(fromJobOptions->webDAVServer.publicKeyFileName);
-  toJobOptions->webDAVServer.privateKeyFileName     = String_duplicate(fromJobOptions->webDAVServer.privateKeyFileName);
+  duplicateKey(&toJobOptions->webDAVServer.publicKey,&fromJobOptions->webDAVServer.publicKey);
+  duplicateKey(&toJobOptions->webDAVServer.privateKey,&fromJobOptions->webDAVServer.privateKey);
 
   toJobOptions->opticalDisk.requestVolumeCommand    = String_duplicate(fromJobOptions->opticalDisk.requestVolumeCommand);
   toJobOptions->opticalDisk.unloadVolumeCommand     = String_duplicate(fromJobOptions->opticalDisk.unloadVolumeCommand);
@@ -3343,13 +3373,13 @@ void doneJobOptions(JobOptions *jobOptions)
   String_delete(jobOptions->opticalDisk.unloadVolumeCommand);
   String_delete(jobOptions->opticalDisk.requestVolumeCommand);
 
-  String_delete(jobOptions->webDAVServer.privateKeyFileName);
-  String_delete(jobOptions->webDAVServer.publicKeyFileName);
+  doneKey(&jobOptions->webDAVServer.privateKey);
+  doneKey(&jobOptions->webDAVServer.publicKey);
   Password_delete(jobOptions->webDAVServer.password);
   String_delete(jobOptions->webDAVServer.loginName);
 
-  String_delete(jobOptions->sshServer.privateKeyFileName);
-  String_delete(jobOptions->sshServer.publicKeyFileName);
+  doneKey(&jobOptions->sshServer.privateKey);
+  doneKey(&jobOptions->sshServer.publicKey);
   Password_delete(jobOptions->sshServer.password);
   String_delete(jobOptions->sshServer.loginName);
 
@@ -3512,6 +3542,114 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   }
 
   return n;
+}
+
+void initKey(Key *key)
+{
+  assert(key != NULL);
+
+  key->data   = NULL;
+  key->length = 0;
+}
+
+bool duplicateKey(Key *toKey, const Key *fromKey)
+{
+  void *data;
+
+  assert(toKey != NULL);
+  assert(fromKey != NULL);
+
+  data = Password_allocSecure(fromKey->length);
+  if (data == NULL)
+  {
+    return FALSE;
+  }
+  memcpy(data,fromKey->data,fromKey->length);
+
+  toKey->data   = data;
+  toKey->length = fromKey->length;
+
+  return TRUE;
+}
+
+void doneKey(Key *key)
+{
+  assert(key != NULL);
+
+  if (key->data != NULL)
+  {
+    Password_freeSecure(key->data);
+  }
+}
+
+void clearKey(Key *key)
+{
+  assert(key != NULL);
+
+  if (key->data != NULL) Password_freeSecure(key->data);
+  key->data   = NULL;
+  key->length = 0;
+}
+
+bool isKeyAvailable(const Key *key)
+{
+  assert(key != NULL);
+
+  return key->data != NULL;
+}
+
+Errors readKeyFile(Key *key, const char *fileName)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  uint       length;
+  void       *data;
+
+  assert(key != NULL);
+  assert(fileName != NULL);
+
+  key->data   = NULL;
+  key->length = 0;
+
+  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // get file size
+  length = (uint)File_getSize(&fileHandle);
+
+  // allocate secure memory
+  data = Password_allocSecure(length);
+  if (data == NULL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  // read file data
+  error = File_read(&fileHandle,
+                    data,
+                    length,
+                    NULL
+                   );
+  if (error != ERROR_NONE)
+  {
+    Password_freeSecure(data);
+    (void)File_close(&fileHandle);
+    return error;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  // store data
+  if (key->data != NULL) Password_freeSecure(key->data);
+  key->data   = data;
+  key->length = length;
+
+  return ERROR_NONE;
 }
 
 bool allocateServer(Server *server, ServerConnectionPriorities priority, long timeout)
@@ -3693,11 +3831,11 @@ Server *getSSHServerSettings(ConstString      hostName,
   }
 
   // get SSH server settings
-  sshServer->port               = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                        ) ? jobOptions->sshServer.port               : ((serverNode != NULL) ? serverNode->server.sshServer.port               : globalOptions.defaultSSHServer->sshServer.port              );
-  sshServer->loginName          = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.loginName)         ) ? jobOptions->sshServer.loginName          : ((serverNode != NULL) ? serverNode->server.sshServer.loginName          : globalOptions.defaultSSHServer->sshServer.loginName         );
-  sshServer->password           = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->sshServer.password)        ) ? jobOptions->sshServer.password           : ((serverNode != NULL) ? serverNode->server.sshServer.password           : globalOptions.defaultSSHServer->sshServer.password          );
-  sshServer->publicKeyFileName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.publicKeyFileName) ) ? jobOptions->sshServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->server.sshServer.publicKeyFileName  : globalOptions.defaultSSHServer->sshServer.publicKeyFileName );
-  sshServer->privateKeyFileName = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.privateKeyFileName)) ? jobOptions->sshServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->server.sshServer.privateKeyFileName : globalOptions.defaultSSHServer->sshServer.privateKeyFileName);
+  sshServer->port       = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                ) ? jobOptions->sshServer.port       : ((serverNode != NULL) ? serverNode->server.sshServer.port       : globalOptions.defaultSSHServer->sshServer.port      );
+  sshServer->loginName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.loginName) ) ? jobOptions->sshServer.loginName  : ((serverNode != NULL) ? serverNode->server.sshServer.loginName  : globalOptions.defaultSSHServer->sshServer.loginName );
+  sshServer->password   = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->sshServer.password)) ? jobOptions->sshServer.password   : ((serverNode != NULL) ? serverNode->server.sshServer.password   : globalOptions.defaultSSHServer->sshServer.password  );
+  sshServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.publicKey) ) ? jobOptions->sshServer.publicKey  : ((serverNode != NULL) ? serverNode->server.sshServer.publicKey  : globalOptions.defaultSSHServer->sshServer.publicKey );
+  sshServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.privateKey)) ? jobOptions->sshServer.privateKey : ((serverNode != NULL) ? serverNode->server.sshServer.privateKey : globalOptions.defaultSSHServer->sshServer.privateKey);
 
   return (serverNode != NULL) ? &serverNode->server : &defaultSSHServer;
 }
@@ -3724,11 +3862,11 @@ Server *getWebDAVServerSettings(ConstString      hostName,
   }
 
   // get WebDAV server settings
-//  webDAVServer->port               = ((jobOptions != NULL) && (jobOptions->webDAVServer.port != 0) ? jobOptions->webDAVServer.port : ((serverNode != NULL) ? serverNode->webDAVServer.port : globalOptions.defaultWebDAVServer->port );
-  webDAVServer->loginName          = ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.loginName)         ) ? jobOptions->webDAVServer.loginName          : ((serverNode != NULL) ? serverNode->server.webDAVServer.loginName          : globalOptions.defaultWebDAVServer->webDAVServer.loginName         );
-  webDAVServer->password           = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->webDAVServer.password)        ) ? jobOptions->webDAVServer.password           : ((serverNode != NULL) ? serverNode->server.webDAVServer.password           : globalOptions.defaultWebDAVServer->webDAVServer.password          );
-  webDAVServer->publicKeyFileName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.publicKeyFileName) ) ? jobOptions->webDAVServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->server.webDAVServer.publicKeyFileName  : globalOptions.defaultWebDAVServer->webDAVServer.publicKeyFileName );
-  webDAVServer->privateKeyFileName = ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.privateKeyFileName)) ? jobOptions->webDAVServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->server.webDAVServer.privateKeyFileName : globalOptions.defaultWebDAVServer->webDAVServer.privateKeyFileName);
+//  webDAVServer->port       = ((jobOptions != NULL) && (jobOptions->webDAVServer.port != 0) ? jobOptions->webDAVServer.port : ((serverNode != NULL) ? serverNode->webDAVServer.port : globalOptions.defaultWebDAVServer->port );
+  webDAVServer->loginName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.loginName) ) ? jobOptions->webDAVServer.loginName  : ((serverNode != NULL) ? serverNode->server.webDAVServer.loginName  : globalOptions.defaultWebDAVServer->webDAVServer.loginName );
+  webDAVServer->password   = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->webDAVServer.password)) ? jobOptions->webDAVServer.password   : ((serverNode != NULL) ? serverNode->server.webDAVServer.password   : globalOptions.defaultWebDAVServer->webDAVServer.password  );
+  webDAVServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.publicKey) ) ? jobOptions->webDAVServer.publicKey  : ((serverNode != NULL) ? serverNode->server.webDAVServer.publicKey  : globalOptions.defaultWebDAVServer->webDAVServer.publicKey );
+  webDAVServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.privateKey)) ? jobOptions->webDAVServer.privateKey : ((serverNode != NULL) ? serverNode->server.webDAVServer.privateKey : globalOptions.defaultWebDAVServer->webDAVServer.privateKey);
 
   return (serverNode != NULL) ? &serverNode->server : &defaultWebDAVServer;
 }
@@ -4060,6 +4198,67 @@ bool parseDateMonth(ConstString s, int *month)
   String_delete(name);
 
   return TRUE;
+}
+
+bool configValueParsePassword(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if ((*(Password**)variable) == NULL)
+  {
+    (*(Password**)variable) = Password_new();
+  }
+  Password_setCString(*(Password**)variable,value);
+
+  return TRUE;
+}
+
+void configValueFormatInitPassord(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (*(Password**)variable);
+}
+
+void configValueFormatDonePassword(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatPassword(void **formatUserData, void *userData, String line)
+{
+  Password   *password;
+  const char *s;
+
+  assert(formatUserData != NULL);
+  assert(line != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  password = (Password*)(*formatUserData);
+  if (password != NULL)
+  {
+    s = Password_deploy(password);
+    String_format(line,"%'s",s);
+    Password_undeploy(password);
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 bool configValueParseBandWidth(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
@@ -4558,73 +4757,12 @@ bool configValueParseString(void *userData, void *variable, const char *name, co
   return TRUE;
 }
 
-bool configValueParsePassword(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+bool configValueParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  if ((*(Password**)variable) == NULL)
-  {
-    (*(Password**)variable) = Password_new();
-  }
-  Password_setCString(*(Password**)variable,value);
-
-  return TRUE;
-}
-
-void configValueFormatInitPassord(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (*(Password**)variable);
-}
-
-void configValueFormatDonePassword(void **formatUserData, void *userData)
-{
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-bool configValueFormatPassword(void **formatUserData, void *userData, String line)
-{
-  Password   *password;
-  const char *s;
-
-  assert(formatUserData != NULL);
-  assert(line != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  password = (Password*)(*formatUserData);
-  if (password != NULL)
-  {
-    s = Password_deploy(password);
-    String_format(line,"%'s",s);
-    Password_undeploy(password);
-
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-bool configValueParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  char               algorithm1[256],algorithm2[256];
-  CompressAlgorithms compressAlgorithmDelta,compressAlgorithmByte;
-  bool               foundFlag;
-  uint               z;
+  char                          algorithm1[256],algorithm2[256];
+  CompressAlgorithms            compressAlgorithmDelta,compressAlgorithmByte;
+  bool                          foundFlag;
+  const CommandLineOptionSelect *select;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -4641,25 +4779,25 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
      )
   {
     foundFlag = FALSE;
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+    for (select = COMPRESS_ALGORITHMS_DELTA; select->name != NULL; select++)
     {
-      if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      if (stringEqualsIgnoreCase(algorithm1,select->name))
       {
-        if (COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm != COMPRESS_ALGORITHM_NONE)
+        if ((CompressAlgorithms)select->value != COMPRESS_ALGORITHM_NONE)
         {
-          compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+          compressAlgorithmDelta = (CompressAlgorithms)select->value;
         }
         foundFlag = TRUE;
         break;
       }
     }
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+    for (select = COMPRESS_ALGORITHMS_BYTE; select->name != NULL; select++)
     {
-      if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      if (stringEqualsIgnoreCase(algorithm1,select->name))
       {
-        if (COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm != COMPRESS_ALGORITHM_NONE)
+        if ((CompressAlgorithms)select->value != COMPRESS_ALGORITHM_NONE)
         {
-          compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+          compressAlgorithmByte = (CompressAlgorithms)select->value;
         }
         foundFlag = TRUE;
         break;
@@ -4672,25 +4810,25 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
     }
 
     foundFlag = FALSE;
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+    for (select = COMPRESS_ALGORITHMS_DELTA; select->name != NULL; select++)
     {
-      if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      if (stringEqualsIgnoreCase(algorithm2,select->name))
       {
-        if (COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm != COMPRESS_ALGORITHM_NONE)
+        if ((CompressAlgorithms)select->value != COMPRESS_ALGORITHM_NONE)
         {
-          compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+          compressAlgorithmDelta = (CompressAlgorithms)select->value;
         }
         foundFlag = TRUE;
         break;
       }
     }
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+    for (select = COMPRESS_ALGORITHMS_BYTE; select->name != NULL; select++)
     {
-      if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      if (stringEqualsIgnoreCase(algorithm2,select->name))
       {
-        if (COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm != COMPRESS_ALGORITHM_NONE)
+        if ((CompressAlgorithms)select->value != COMPRESS_ALGORITHM_NONE)
         {
-          compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+          compressAlgorithmByte = (CompressAlgorithms)select->value;
         }
         foundFlag = TRUE;
         break;
@@ -4705,25 +4843,25 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
   else
   {
     foundFlag = FALSE;
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+    for (select = COMPRESS_ALGORITHMS_DELTA; select->name != NULL; select++)
     {
-      if (strcasecmp(value,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      if (stringEqualsIgnoreCase(value,select->name))
       {
-        if (COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm != COMPRESS_ALGORITHM_NONE)
+        if ((CompressAlgorithms)select->value != COMPRESS_ALGORITHM_NONE)
         {
-          compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+          compressAlgorithmDelta = (CompressAlgorithms)select->value;
         }
         foundFlag = TRUE;
         break;
       }
     }
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+    for (select = COMPRESS_ALGORITHMS_BYTE; select->name != NULL; select++)
     {
-      if (strcasecmp(value,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      if (stringEqualsIgnoreCase(value,select->name))
       {
-        if (COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm != COMPRESS_ALGORITHM_NONE)
+        if ((CompressAlgorithms)select->value != COMPRESS_ALGORITHM_NONE)
         {
-          compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+          compressAlgorithmByte = (CompressAlgorithms)select->value;
         }
         foundFlag = TRUE;
         break;
@@ -4737,43 +4875,43 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
   }
 
   // store compress algorithm values
-  ((JobOptionsCompressAlgorithm*)variable)->delta = compressAlgorithmDelta;
-  ((JobOptionsCompressAlgorithm*)variable)->byte  = compressAlgorithmByte;
+  ((JobOptionsCompressAlgorithms*)variable)->delta = compressAlgorithmDelta;
+  ((JobOptionsCompressAlgorithms*)variable)->byte  = compressAlgorithmByte;
 
   return TRUE;
 }
 
-void configValueFormatInitCompressAlgorithm(void **formatUserData, void *userData, void *variable)
+void configValueFormatInitCompressAlgorithms(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  (*formatUserData) = (JobOptionsCompressAlgorithm*)variable;
+  (*formatUserData) = (JobOptionsCompressAlgorithms*)variable;
 }
 
-void configValueFormatDoneCompressAlgorithm(void **formatUserData, void *userData)
+void configValueFormatDoneCompressAlgorithms(void **formatUserData, void *userData)
 {
   UNUSED_VARIABLE(formatUserData);
   UNUSED_VARIABLE(userData);
 }
 
-bool configValueFormatCompressAlgorithm(void **formatUserData, void *userData, String line)
+bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, String line)
 {
-  JobOptionsCompressAlgorithm *jobOptionsCompressAlgorithm;
+  JobOptionsCompressAlgorithms *jobOptionsCompressAlgorithms;
 
   assert(formatUserData != NULL);
   assert(line != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  jobOptionsCompressAlgorithm = (JobOptionsCompressAlgorithm*)(*formatUserData);
-  if (jobOptionsCompressAlgorithm != NULL)
+  jobOptionsCompressAlgorithms = (JobOptionsCompressAlgorithms*)(*formatUserData);
+  if (jobOptionsCompressAlgorithms != NULL)
   {
     String_format(line,
                   "%s+%s",
-                  Compress_getAlgorithmName(jobOptionsCompressAlgorithm->delta),
-                  Compress_getAlgorithmName(jobOptionsCompressAlgorithm->byte)
+                  CmdOption_selectToString(COMPRESS_ALGORITHMS_DELTA,jobOptionsCompressAlgorithms->delta,NULL),
+                  CmdOption_selectToString(COMPRESS_ALGORITHMS_BYTE, jobOptionsCompressAlgorithms->byte, NULL)
                  );
     (*formatUserData) = NULL;
 
@@ -4785,53 +4923,29 @@ bool configValueFormatCompressAlgorithm(void **formatUserData, void *userData, S
   }
 }
 
-const char *archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue)
+bool configValueReadKeyFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  uint       z;
-  const char *name;
+  Key    *key = (Key*)variable;
+  Errors error;
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
-         && (ARCHIVE_TYPES[z].archiveType != archiveType)
-        )
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if (File_existsCString(value))
   {
-    z++;
-  }
-  if (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
-  {
-    name = ARCHIVE_TYPES[z].name;
-  }
-  else
-  {
-    name = defaultValue;
+    error = readKeyFile(key,value);
+    if (error != ERROR_NONE)
+    {
+      return FALSE;
+    }
   }
 
-  return name;
-}
-
-bool parseArchiveType(const char *name, ArchiveTypes *archiveType)
-{
-  uint z;
-
-  assert(name != NULL);
-  assert(archiveType != NULL);
-
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
-         && !stringEqualsIgnoreCase(ARCHIVE_TYPES[z].name,name)
-        )
-  {
-    z++;
-  }
-  if (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
-  {
-    (*archiveType) = ARCHIVE_TYPES[z].archiveType;
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
+  return TRUE;
 }
 
 Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType)
