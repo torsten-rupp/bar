@@ -185,14 +185,16 @@ bool Network_hostExistsCString(const char *hostName);
 /***********************************************************************\
 * Name   : Network_connect
 * Purpose: connect to host
-* Input  : socketType            - socket type; see SOCKET_TYPE_*
-*          hostName              - host name
-*          hostPort              - host port (host byte order)
-*          loginName             - login user name
-*          password              - SSH password
-*          sshPublicKeyFileName  - SSH public key file for login
-*          sshPrivateKeyFileName - SSH private key file for login
-*          flags                 - socket flags; see SOCKET_FLAG_*
+* Input  : socketType          - socket type; see SOCKET_TYPE_*
+*          hostName            - host name
+*          hostPort            - host port (host byte order)
+*          loginName           -  login user name
+*          password            - SSH password
+*          sshPublicKeyData    - SSh public key data for login or NULL
+*          sshPublicKeyLength  - SSH public key data length
+*          sshPrivateKeyData   - SSH private key data for login or NULL
+*          sshPrivateKeyLength - SSH private key data length
+*          flags               - socket flags; see SOCKET_FLAG_*
 * Output : socketHandle - socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -204,8 +206,10 @@ Errors Network_connect(SocketHandle *socketHandle,
                        uint         hostPort,
                        ConstString  loginName,
                        Password     *password,
-                       ConstString  sshPublicKeyFileName,
-                       ConstString  sshPrivateKeyFileName,
+                       const void   *sshPublicKeyData,
+                       uint         sshPublicKeyDataLength,
+                       const void   *sshPrivateKeyData,
+                       uint         sshPrivateKeyDataLength,
                        uint         flags
                       );
 

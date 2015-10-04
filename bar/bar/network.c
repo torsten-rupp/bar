@@ -80,9 +80,6 @@
 
 /***************************** Variables *******************************/
 #ifdef HAVE_SSH2
-  LOCAL String           defaultSSHPublicKeyFileName;
-  LOCAL String           defaultSSHPrivateKeyFileName;
-
   LOCAL uint             cryptoMaxLocks;
   LOCAL pthread_mutex_t* cryptoLocks;
   LOCAL long*            cryptoLockCounters;
@@ -289,18 +286,6 @@ Errors Network_initAll(void)
   #endif /* HAVE_SSH2 */
 
   #ifdef HAVE_SSH2
-    // init variables
-    defaultSSHPublicKeyFileName  = String_new();
-    defaultSSHPrivateKeyFileName = String_new();
-
-    // set default public/private key file names
-    File_setFileNameCString(defaultSSHPublicKeyFileName,getenv("HOME"));
-    File_appendFileNameCString(defaultSSHPublicKeyFileName,".ssh");
-    File_appendFileNameCString(defaultSSHPublicKeyFileName,"id_rsa.pub");
-    File_setFileNameCString(defaultSSHPrivateKeyFileName,getenv("HOME"));
-    File_appendFileNameCString(defaultSSHPrivateKeyFileName,".ssh");
-    File_appendFileNameCString(defaultSSHPrivateKeyFileName,"id_rsa");
-
     // initialize crypto multi-thread support
     cryptoMaxLocks = (uint)CRYPTO_num_locks();
     cryptoLocks = (pthread_mutex_t*)OPENSSL_malloc(cryptoMaxLocks*sizeof(pthread_mutex_t));
@@ -360,9 +345,6 @@ void Network_doneAll(void)
     }
     OPENSSL_free(cryptoLockCounters);
     OPENSSL_free(cryptoLocks);
-
-    String_delete(defaultSSHPublicKeyFileName); defaultSSHPublicKeyFileName=NULL;
-    String_delete(defaultSSHPrivateKeyFileName); defaultSSHPrivateKeyFileName=NULL;
   #else /* not HAVE_SSH2 */
   #endif /* HAVE_SSH2 */
 }
@@ -420,8 +402,10 @@ Errors Network_connect(SocketHandle *socketHandle,
                        uint         hostPort,
                        ConstString  loginName,
                        Password     *password,
-                       ConstString  sshPublicKeyFileName,
-                       ConstString  sshPrivateKeyFileName,
+                       const void   *sshPublicKeyData,
+                       uint         sshPublicKeyLength,
+                       const void   *sshPrivateKeyData,
+                       uint         sshPrivateKeyLength,
                        uint         flags
                       )
 {
@@ -539,8 +523,11 @@ Errors Network_connect(SocketHandle *socketHandle,
         #elif defined(PLATFORM_WINDOWS)
           u_long     n;
         #endif /* PLATFORM_... */
+        int result;
 
         assert(loginName != NULL);
+        assert(sshPublicKeyData != NULL);
+        assert(sshPrivateKeyData != NULL);
 
         // initialize variables
 
@@ -602,7 +589,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                    ) != 0
            )
         {
-          error = ERROR_(CONNECT_FAIL,errno);
+          error = ERRORX_(CONNECT_FAIL,errno,strerror(errno));
           close(socketHandle->handle);
           return error;
         }
@@ -649,14 +636,18 @@ Errors Network_connect(SocketHandle *socketHandle,
         #endif /* HAVE_SSH2_KEEPALIVE_CONFIG */
 
 #if 1
-        // authorize with key file
+        // authorize with key
         plainPassword = Password_deploy(password);
-        if (libssh2_userauth_publickey_fromfile(socketHandle->ssh2.session,
-                                                String_cString(loginName),
-                                                String_cString(!String_isEmpty(sshPublicKeyFileName ) ? sshPublicKeyFileName  : defaultSSHPublicKeyFileName ),
-                                                String_cString(!String_isEmpty(sshPrivateKeyFileName) ? sshPrivateKeyFileName : defaultSSHPrivateKeyFileName),
-                                                plainPassword
-                                               ) != 0)
+        result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
+                                                       String_cString(loginName),
+                                                       String_length(loginName),
+                                                       sshPublicKeyData,
+                                                       sshPublicKeyLength,
+                                                       sshPrivateKeyData,
+                                                       sshPrivateKeyLength,
+                                                       plainPassword
+                                                      );
+        if (result != 0)
         {
           ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
           // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
