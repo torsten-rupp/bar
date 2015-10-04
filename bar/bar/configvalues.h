@@ -96,19 +96,16 @@ typedef struct
   {
     int                     min,max;              // valid range
     const ConfigValueUnit   *units;               // list with units
-    uint                    unitCount;            // number of units
   } integerValue;
   struct
   {
     int64                   min,max;              // valid range
     const ConfigValueUnit   *units;               // list with units
-    uint                    unitCount;            // number of units
   } integer64Value;
   struct
   {
     double                  min,max;              // valid range
     const ConfigValueUnit   *units;               // list with units
-    uint                    unitCount;            // number of units
   } doubleValue;
   struct
   {
@@ -119,13 +116,11 @@ typedef struct
   } enumValue;
   struct
   {
-    const ConfigValueSelect *select;              // array with select values
-    uint                    selectCount;          // number of select values
+    const ConfigValueSelect *selects;             // array with select values
   } selectValue;
   struct
   {
-    const ConfigValueSet    *set;                 // array with set values
-    uint                    setCount;             // number of set values
+    const ConfigValueSet    *sets;                // array with set values
   } setValue;
   struct
   {
@@ -160,19 +155,19 @@ CONFIG_VALUE_CSTRING        (<name>,<variable>,<offset>|-1,                     
 CONFIG_VALUE_STRING         (<name>,<variable>,<offset>|-1,                                                     )
 CONFIG_VALUE_SPECIAL        (<name>,<function>,<offset>|-1,<parse>,<formatInit>,<formatDone>,<format>,<userData>)
 
-const ConfigValueUnit COMMAND_LINE_UNITS[] =
-{
+const ConfigValueUnit COMMAND_LINE_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
+(
   {"k",1024},
   {"m",1024*1024},
   {"g",1024*1024*1024},
-};
+);
 
-const ConfigValueSelect CONFIG_VALUE_SELECT_TYPES[] =
-{
+const ConfigValueSelect CONFIG_VALUE_SELECT_TYPES[] = CONFIG_VALUE_SELECT_ARRAY
+(
   {"c",   1,"type1"},
   {"h",   2,"type2"},
   {"both",3,"type3"},
-};
+);
 
 const ConfigValue CONFIG_VALUES[] =
 {
@@ -245,6 +240,51 @@ typedef struct
 /******************************* Macros *******************************/
 
 /***********************************************************************\
+* Name   : CONFIG_VALUE_UNIT_ARRAY
+* Purpose: define unit array
+* Input  : ... - unit values
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CONFIG_VALUE_UNIT_ARRAY(...) \
+{ \
+  __VA_ARGS__ \
+  {NULL,0} \
+}; \
+
+/***********************************************************************\
+* Name   : CONFIG_VALUE_SELECT_ARRAY
+* Purpose: define select array
+* Input  : ... - select values
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CONFIG_VALUE_SELECT_ARRAY(...) \
+{ \
+  __VA_ARGS__ \
+  {NULL,0} \
+}
+
+/***********************************************************************\
+* Name   : CONFIG_VALUE_SET_ARRAY
+* Purpose: define set array
+* Input  : ... - set values
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CONFIG_VALUE_SET_ARRAY(...) \
+{ \
+  __VA_ARGS__ \
+  {NULL,0} \
+}
+
+/***********************************************************************\
 * Name   : CONFIG_VALUE_INTEGER, CONFIG_STRUCT_VALUE_INTEGER
 * Purpose: define an int-value, support units for number
 * Input  : name            - name
@@ -265,13 +305,13 @@ typedef struct
     CONFIG_VALUE_TYPE_INTEGER,\
     {variablePointer},\
     offset,\
-    {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
-    {0LL,0LL,NULL,0},\
-    {0.0,0.0,NULL,0},\
+    {min,max,units},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
     {},\
     {0},\
-    {NULL,0}, \
-    {NULL,0},\
+    {NULL}, \
+    {NULL},\
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
@@ -300,13 +340,13 @@ typedef struct
     CONFIG_VALUE_TYPE_INTEGER64,\
     {variablePointer},\
     offset,\
-    {0,0,NULL,0},\
-    {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
-    {0.0,0.0,NULL,0},\
+    {0,0,NULL},\
+    {min,max,units},\
+    {0.0,0.0,NULL},\
     {},\
     {0},\
-    {NULL,0},\
-    {NULL,0}, \
+    {NULL},\
+    {NULL}, \
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL}\
@@ -335,13 +375,13 @@ typedef struct
     CONFIG_VALUE_TYPE_DOUBLE,\
     {variablePointer},\
     offset,\
-    {0,0,NULL,0},\
-    {0LL,0LL,NULL,0},\
-    {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {min,max,units},\
     {},\
     {0},\
-    {NULL,0},\
-    {NULL,0}, \
+    {NULL},\
+    {NULL}, \
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
@@ -368,13 +408,13 @@ typedef struct
     CONFIG_VALUE_TYPE_BOOLEAN,\
     {variablePointer},\
     offset,\
-    {0,0,NULL,0},\
-    {0LL,0LL,NULL,0},\
-    {0.0,0.0,NULL,0},\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
     {},\
     {0},\
-    {NULL,0},\
-    {NULL,0}, \
+    {NULL},\
+    {NULL}, \
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
@@ -401,13 +441,13 @@ typedef struct
     CONFIG_VALUE_TYPE_BOOLEAN,\
     {variablePointer},\
     offset,\
-    {0,0,NULL,0},\
-    {0LL,0LL,NULL,0},\
-    {0.0,0.0,NULL,0},\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
     {TRUE},\
     {0},\
-    {NULL,0},\
-    {NULL,0}, \
+    {NULL},\
+    {NULL}, \
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
@@ -435,13 +475,13 @@ typedef struct
     CONFIG_VALUE_TYPE_ENUM,\
     {variablePointer},\
     offset,\
-    {0,0,NULL,0},\
-    {0LL,0LL,NULL,0},\
-    {0.0,0.0,NULL,0},\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
     {},\
     {value},\
-    {NULL,0},\
-    {NULL,0}, \
+    {NULL},\
+    {NULL}, \
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
@@ -469,13 +509,13 @@ typedef struct
     CONFIG_VALUE_TYPE_SELECT,\
     {variablePointer},\
     offset,\
-    {0,0,NULL,0},\
-    {0LL,0LL,NULL,0},\
-    {0.0,0.0,NULL,0},\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
     {},\
     {0},\
-    {selects,sizeof(selects)/sizeof(ConfigValueSelect)},\
-    {NULL,0}, \
+    {selects},\
+    {NULL}, \
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
@@ -503,13 +543,13 @@ typedef struct
     CONFIG_VALUE_TYPE_SET,\
     {variablePointer},\
     offset,\
-    {0,0,NULL,0},\
-    {0LL,0LL,NULL,0},\
-    {0.0,0.0,NULL,0},\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
     {},\
     {0},\
-    {NULL,0}, \
-    {set,sizeof(set)/sizeof(ConfigValueSet)},\
+    {NULL}, \
+    {set},\
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
@@ -536,13 +576,13 @@ typedef struct
     CONFIG_VALUE_TYPE_CSTRING,\
     {variablePointer},\
     offset,\
-    {0,0,NULL,0},\
-    {0LL,0LL,NULL,0},\
-    {0.0,0.0,NULL,0},\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
     {},\
     {0},\
-    {NULL,0},\
-    {NULL,0}, \
+    {NULL},\
+    {NULL}, \
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
@@ -569,13 +609,13 @@ typedef struct
     CONFIG_VALUE_TYPE_STRING,\
     {variablePointer},\
     offset,\
-    {0,0,NULL,0},\
-    {0LL,0LL,NULL,0},\
-    {0.0,0.0,NULL,0},\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
     {},\
     {0},\
-    {NULL,0},\
-    {NULL,0}, \
+    {NULL},\
+    {NULL}, \
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
@@ -608,13 +648,13 @@ typedef struct
     CONFIG_VALUE_TYPE_SPECIAL,\
     {variablePointer},\
     offset,\
-    {0,0,NULL,0},\
-    {0LL,0LL,NULL,0},\
-    {0.0,0.0,NULL,0},\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
     {},\
     {0},\
-    {NULL,0},\
-    {NULL,0}, \
+    {NULL},\
+    {NULL}, \
     {},\
     {},\
     {parse,formatInit,formatDone,format,userData}\
@@ -637,13 +677,13 @@ typedef struct
     CONFIG_VALUE_TYPE_IGNORE,\
     {},\
     0,\
-    {0,0,NULL,0},\
-    {0LL,0LL,NULL,0},\
-    {0.0,0.0,NULL,0},\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
     {},\
     {0},\
-    {NULL,0},\
-    {NULL,0}, \
+    {NULL},\
+    {NULL}, \
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
@@ -668,13 +708,13 @@ typedef struct
     CONFIG_VALUE_TYPE_BEGIN_SECTION,\
     {NULL},\
     offset,\
-    {0,0,NULL,0},\
-    {0LL,0LL,NULL,0},\
-    {0.0,0.0,NULL,0},\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
     {},\
     {0},\
-    {NULL,0},\
-    {NULL,0}, \
+    {NULL},\
+    {NULL}, \
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
@@ -686,13 +726,13 @@ typedef struct
     CONFIG_VALUE_TYPE_END_SECTION,\
     {NULL},\
     0,\
-    {0,0,NULL,0},\
-    {0LL,0LL,NULL,0},\
-    {0.0,0.0,NULL,0},\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
     {},\
     {0},\
-    {NULL,0},\
-    {NULL,0}, \
+    {NULL},\
+    {NULL}, \
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
@@ -1020,10 +1060,9 @@ bool ConfigValue_parse(const char        *name,
 /***********************************************************************\
 * Name   : ConfigValue_getIntegerValue
 * Purpose: get integer value
-* Input  : value             - value variable
-*          string            - string
-*          units             - units array or NULL
-*          unitCount         - size of unit array
+* Input  : value  - value variable
+*          string - string
+*          units  - units array or NULL
 * Output : value - value
 * Return : TRUE if got integer, false otherwise
 * Notes  : -
@@ -1031,17 +1070,15 @@ bool ConfigValue_parse(const char        *name,
 
 bool ConfigValue_getIntegerValue(int                   *value,
                                  const char            *string,
-                                 const ConfigValueUnit *units,
-                                 uint                  unitCount
+                                 const ConfigValueUnit *units
                                 );
 
 /***********************************************************************\
 * Name   : ConfigValue_getInteger64Value
 * Purpose: get integer value
-* Input  : value             - value variable
-*          string            - string
-*          units             - units array or NULL
-*          unitCount         - size of unit array
+* Input  : value  - value variable
+*          string - string
+*          units  - units array or NULL
 * Output : value - value
 * Return : TRUE if got integer, false otherwise
 * Notes  : -
@@ -1049,8 +1086,7 @@ bool ConfigValue_getIntegerValue(int                   *value,
 
 bool ConfigValue_getInteger64Value(int64                 *value,
                                    const char            *string,
-                                   const ConfigValueUnit *units,
-                                   uint                  unitCount
+                                   const ConfigValueUnit *units
                                   );
 
 /***********************************************************************\
@@ -1094,6 +1130,22 @@ void ConfigValue_formatDone(ConfigValueFormat *configValueFormat);
 bool ConfigValue_format(ConfigValueFormat *configValueFormat,
                         String            line
                        );
+
+/***********************************************************************\
+* Name   : ConfigValue_selectToString
+* Purpose: get select string
+* Input  : selects       - select name/value array
+*          value         - value
+*          defaultString - default string or NULL
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+const char *ConfigValue_selectToString(const ConfigValueSelect selects[],
+                                       uint                    value,
+                                       const char              *defaultString
+                                      );
 
 #ifdef __GNUG__
 }

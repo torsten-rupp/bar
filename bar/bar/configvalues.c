@@ -28,6 +28,23 @@
 /***************************** Variables ******************************/
 
 /******************************* Macros *******************************/
+#define ITERATE_UNITS(unit,units) \
+  for ((unit) = units; \
+       (unit)->name != NULL; \
+       (unit)++ \
+      )
+
+#define ITERATE_SELECT(select,selects) \
+  for ((select) = selects; \
+       (select)->name != NULL; \
+       (select)++ \
+      )
+
+#define ITERATE_SET(set,sets) \
+  for ((set) = sets; \
+       (set)->name != NULL; \
+       (set)++ \
+      )
 
 /***************************** Functions ******************************/
 
@@ -36,12 +53,266 @@ extern "C" {
 #endif
 
 /***********************************************************************\
+* Name   : findUnit
+* Purpose: find unit by name
+* Input  : units    - units array
+*          unitName - unit name
+* Output : -
+* Return : unit or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const ConfigValueUnit *findUnit(const ConfigValueUnit *units, const char *unitName)
+{
+  const ConfigValueUnit *unit;
+
+  if (units != NULL)
+  {
+    unit = units;
+    while (   (unit->name != NULL)
+           && !stringEquals(unit->name,unitName)
+          )
+    {
+      unit++;
+    }
+    return (unit->name != NULL) ? unit : NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/***********************************************************************\
+* Name   : findIntegerUnitByValue
+* Purpose: find unit by value
+* Input  : units - units array
+*          value - value
+* Output : -
+* Return : unit or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const ConfigValueUnit *findIntegerUnitByValue(const ConfigValueUnit *units, int value)
+{
+  const ConfigValueUnit *unit;
+
+  if (units != NULL)
+  {
+    unit = units;
+    while (   (unit->name != NULL)
+           && ((value % units->factor) != 0)
+          )
+    {
+      unit++;
+    }
+    return (unit->name != NULL) ? unit : NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/***********************************************************************\
+* Name   : findInteger64UnitByValue
+* Purpose: find unit by value
+* Input  : units - units array
+*          value - value
+* Output : -
+* Return : unit or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const ConfigValueUnit *findInteger64UnitByValue(const ConfigValueUnit *units, int64 value)
+{
+  const ConfigValueUnit *unit;
+
+  if (units != NULL)
+  {
+    unit = units;
+    while (   (unit->name != NULL)
+           && ((value % units->factor) != 0)
+          )
+    {
+      unit++;
+    }
+    return (unit->name != NULL) ? unit : NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/***********************************************************************\
+* Name   : findDoubleUnitByValue
+* Purpose: find unit by name
+* Input  : units - units array
+*          value - value
+* Output : -
+* Return : unit or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+#ifdef __GNUC__
+  #pragma GCC push_options
+  #pragma GCC diagnostic ignored "-Wfloat-equal"
+#endif /* __GNUC__ */
+
+LOCAL const ConfigValueUnit *findDoubleUnitByValue(const ConfigValueUnit *units, double value)
+{
+  const ConfigValueUnit *unit;
+
+  if (units != NULL)
+  {
+    unit = units;
+    while (   (unit->name != NULL)
+           && (fmod(value,units->factor) != 0.0)
+          )
+    {
+      unit++;
+    }
+    return (unit->name != NULL) ? unit : NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+#pragma GCC pop_options
+
+/***********************************************************************\
+* Name   : findSelect
+* Purpose: find select by name
+* Input  : selects    - selects array
+*          selectName - select name
+* Output : -
+* Return : select or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const ConfigValueSelect *findSelect(const ConfigValueSelect *selects, const char *selectName)
+{
+  const ConfigValueSelect *select;
+
+  if (selects != NULL)
+  {
+    select = selects;
+    while (   (select->name != NULL)
+           && !stringEquals(select->name,selectName)
+          )
+    {
+      select++;
+    }
+    return (select->name != NULL) ? select : NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/***********************************************************************\
+* Name   : findSelectByValue
+* Purpose: find select by value
+* Input  : selects - selects array
+*          value   - value
+* Output : -
+* Return : select or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const ConfigValueSelect *findSelectByValue(const ConfigValueSelect *selects, uint value)
+{
+  const ConfigValueSelect *select;
+
+  if (selects != NULL)
+  {
+    select = selects;
+    while (   (select->name != NULL)
+           && (select->value != value)
+          )
+    {
+      select++;
+    }
+    return (select->name != NULL) ? select : NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/***********************************************************************\
+* Name   : findSet
+* Purpose: find set by name
+* Input  : sets    - sets array
+*          setName - set name
+* Output : -
+* Return : set or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const ConfigValueSet *findSet(const ConfigValueSet *sets, const char *setName)
+{
+  const ConfigValueSet *set;
+
+  if (sets != NULL)
+  {
+    set = sets;
+    while (   (set->name != NULL)
+           && !stringEquals(set->name,setName)
+          )
+    {
+      set++;
+    }
+    return (set->name != NULL) ? set : NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/***********************************************************************\
+* Name   : findSetByValue
+* Purpose: find set by value
+* Input  : sets  - sets array
+*          value - value
+* Output : -
+* Return : set or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const ConfigValueSet *findSetByValue(const ConfigValueSet *sets, uint value)
+{
+  const ConfigValueSet *set;
+
+  if (sets != NULL)
+  {
+    set = sets;
+    while (   (set->name != NULL)
+           && (set->value != value)
+          )
+    {
+      set++;
+    }
+    return (set->name != NULL) ? set : NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/***********************************************************************\
 * Name   : getIntegerOption
 * Purpose: get integer value
-* Input  : value             - value variable
-*          string            - string
-*          units             - units array or NULL
-*          unitCount         - size of unit array
+* Input  : value  - value variable
+*          string - string
+*          units  - units array or NULL
 * Output : value - value
 * Return : TRUE if got integer, false otherwise
 * Notes  : -
@@ -50,14 +321,14 @@ extern "C" {
 LOCAL bool getIntegerValue(int                   *value,
                            const char            *string,
                            const ConfigValueUnit *units,
-                           uint                  unitCount,
                            FILE                  *errorOutputHandle,
                            const char            *errorPrefix
                           )
 {
-  uint  i,j,z;
-  char  number[128],unit[32];
-  ulong factor;
+  uint                  i,j;
+  char                  number[128],unitName[32];
+  const ConfigValueUnit *unit;
+  ulong                 factor;
 
   assert(value != NULL);
   assert(string != NULL);
@@ -67,28 +338,22 @@ LOCAL bool getIntegerValue(int                   *value,
   if (i > 0)
   {
     while ((i > 1) && !isdigit(string[i-1])) { i--; }
-    j = MIN(i,               sizeof(number)-1); strncpy(number,&string[0],j); number[j] = '\0';
-    j = MIN(strlen(string)-i,sizeof(unit)  -1); strncpy(unit,  &string[i],j); unit[j]   = '\0';
+    j = MIN(i,               sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
+    j = MIN(strlen(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
   }
   else
   {
-    number[0] = '\0';
-    unit[0]   = '\0';
+    number[0]   = '\0';
+    unitName[0] = '\0';
   }
 
   // find factor
-  if (unit[0] != '\0')
+  if (unitName[0] != '\0')
   {
     if (units != NULL)
     {
-      z = 0;
-      while (   (z < unitCount)
-             && !stringEquals(units[z].name,unit)
-            )
-      {
-        z++;
-      }
-      if (z >= unitCount)
+      unit = findUnit(units,unitName);
+      if (unit == NULL)
       {
         if (errorOutputHandle != NULL)
         {
@@ -97,15 +362,15 @@ LOCAL bool getIntegerValue(int                   *value,
                   (errorPrefix != NULL) ? errorPrefix : "",
                   string
                  );
-          for (z = 0; z < unitCount; z++)
+          ITERATE_UNITS(unit,units)
           {
-            fprintf(errorOutputHandle," %s",units[z].name);
+            fprintf(errorOutputHandle," %s",unit->name);
           }
           fprintf(errorOutputHandle,".\n");
         }
         return FALSE;
       }
-      factor = units[z].factor;
+      factor = unit->factor;
     }
     else
     {
@@ -131,10 +396,9 @@ LOCAL bool getIntegerValue(int                   *value,
 /***********************************************************************\
 * Name   : getInteger64Value
 * Purpose: get integer64 value
-* Input  : value             - value variable
-*          string            - string
-*          units             - units array or NULL
-*          unitCount         - size of unit array
+* Input  : value  - value variable
+*          string - string
+*          units  - units array or NULL
 * Output : value - value
 * Return : TRUE if got integer, false otherwise
 * Notes  : -
@@ -143,14 +407,14 @@ LOCAL bool getIntegerValue(int                   *value,
 LOCAL bool getInteger64Value(int64                 *value,
                              const char            *string,
                              const ConfigValueUnit *units,
-                             uint                  unitCount,
                              FILE                  *errorOutputHandle,
                              const char            *errorPrefix
                             )
 {
-  uint  i,j,z;
-  char  number[128],unit[32];
-  ulong factor;
+  uint                  i,j;
+  char                  number[128],unitName[32];
+  const ConfigValueUnit *unit;
+  ulong                 factor;
 
   assert(value != NULL);
   assert(string != NULL);
@@ -160,28 +424,22 @@ LOCAL bool getInteger64Value(int64                 *value,
   if (i > 0)
   {
     while ((i > 1) && !isdigit(string[i-1])) { i--; }
-    j = MIN(i,               sizeof(number)-1); strncpy(number,&string[0],j); number[j] = '\0';
-    j = MIN(strlen(string)-i,sizeof(unit)  -1); strncpy(unit,  &string[i],j); unit[j]   = '\0';
+    j = MIN(i,               sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
+    j = MIN(strlen(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
   }
   else
   {
-    number[0] = '\0';
-    unit[0]   = '\0';
+    number[0]   = '\0';
+    unitName[0] = '\0';
   }
 
   // find factor
-  if (unit[0] != '\0')
+  if (unitName[0] != '\0')
   {
     if (units != NULL)
     {
-      z = 0;
-      while (   (z < unitCount)
-             && !stringEquals(units[z].name,unit)
-            )
-      {
-        z++;
-      }
-      if (z >= unitCount)
+      unit = findUnit(units,unitName);
+      if (unit == NULL)
       {
         if (errorOutputHandle != NULL)
         {
@@ -190,15 +448,15 @@ LOCAL bool getInteger64Value(int64                 *value,
                   (errorPrefix != NULL) ? errorPrefix : "",
                   string
                  );
-          for (z = 0; z < unitCount; z++)
+          ITERATE_UNITS(unit,units)
           {
-            fprintf(errorOutputHandle," %s",units[z].name);
+            fprintf(errorOutputHandle," %s",unit->name);
           }
           fprintf(errorOutputHandle,".\n");
         }
         return FALSE;
       }
-      factor = units[z].factor;
+      factor = unit->factor;
     }
     else
     {
@@ -259,7 +517,6 @@ LOCAL bool processValue(const ConfigValue *configValue,
         if (!getIntegerValue(&data,
                              value,
                              configValue->integerValue.units,
-                             configValue->integerValue.unitCount,
                              errorOutputHandle,
                              errorPrefix
                             )
@@ -317,7 +574,6 @@ LOCAL bool processValue(const ConfigValue *configValue,
         if (!getInteger64Value(&data,
                                value,
                                configValue->integer64Value.units,
-                               configValue->integer64Value.unitCount,
                                errorOutputHandle,
                                errorPrefix
                               )
@@ -369,38 +625,33 @@ LOCAL bool processValue(const ConfigValue *configValue,
       break;
     case CONFIG_VALUE_TYPE_DOUBLE:
       {
-        uint   i,j,z;
-        char   number[128],unit[32];
-        ulong  factor;
-        double data;
+        uint                  i,j;
+        char                  number[128],unitName[32];
+        const ConfigValueUnit *unit;
+        ulong                 factor;
+        double                data;
 
         // split number, unit
         i = strlen(value);
         if (i > 0)
         {
           while ((i > 1) && !isdigit(value[i-1])) { i--; }
-          j = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],j);number[j] = '\0';
-          j = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],j);unit[j]   = '\0';
+          j = MIN(i,              sizeof(number  )-1); strncpy(number,  &value[0],j);number  [j] = '\0';
+          j = MIN(strlen(value)-i,sizeof(unitName)-1); strncpy(unitName,&value[i],j);unitName[j] = '\0';
         }
         else
         {
-          number[0] = '\0';
-          unit[0]   = '\0';
+          number[0]   = '\0';
+          unitName[0] = '\0';
         }
 
         // find factor
-        if (unit[0] != '\0')
+        if (unitName[0] != '\0')
         {
           if (configValue->doubleValue.units != NULL)
           {
-            z = 0;
-            while (   (z < configValue->doubleValue.unitCount)
-                   && stringEquals(configValue->doubleValue.units[z].name,unit)
-                  )
-            {
-              z++;
-            }
-            if (z >= configValue->doubleValue.unitCount)
+            unit = findUnit(configValue->doubleValue.units,unitName);
+            if (unit == NULL)
             {
               if (errorOutputHandle != NULL)
               {
@@ -409,15 +660,15 @@ LOCAL bool processValue(const ConfigValue *configValue,
                         (errorPrefix != NULL)?errorPrefix:"",
                         value
                        );
-                for (z = 0; z < configValue->integerValue.unitCount; z++)
+                ITERATE_UNITS(unit,configValue->doubleValue.units)
                 {
-                  fprintf(errorOutputHandle," %s",configValue->integerValue.units[z].name);
+                  fprintf(errorOutputHandle," %s",unit->name);
                 }
                 fprintf(errorOutputHandle,".\n");
               }
               return FALSE;
             }
-            factor = configValue->doubleValue.units[z].factor;
+            factor = unit->factor;
           }
           else
           {
@@ -562,17 +813,11 @@ LOCAL bool processValue(const ConfigValue *configValue,
       break;
     case CONFIG_VALUE_TYPE_SELECT:
       {
-        uint z;
+        const ConfigValueSelect *select;
 
-        // find select value
-        z = 0;
-        while (   (z < configValue->selectValue.selectCount)
-               && !stringEquals(configValue->selectValue.select[z].name,value)
-              )
-        {
-          z++;
-        }
-        if (z >= configValue->selectValue.selectCount)
+        // find select
+        select = findSelect(configValue->selectValue.selects,value);
+        if (select == NULL)
         {
           if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
                                                  "%sUnknown value '%s' for config value '%s'!\n",
@@ -589,7 +834,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           if (variable != NULL)
           {
             configVariable.select = (uint*)((byte*)variable+configValue->offset);
-            (*configVariable.select) = configValue->selectValue.select[z].value;
+            (*configVariable.select) = select->value;
           }
           else
           {
@@ -597,21 +842,22 @@ LOCAL bool processValue(const ConfigValue *configValue,
             if ((*configValue->variable.reference) != NULL)
             {
               configVariable.select = (uint*)((byte*)(*configValue->variable.reference)+configValue->offset);
-              (*configVariable.select) = configValue->selectValue.select[z].value;
+              (*configVariable.select) = select->value;
             }
           }
         }
         else
         {
           assert(configValue->variable.select != NULL);
-          (*configValue->variable.select) = configValue->selectValue.select[z].value;
+          (*configValue->variable.select) = select->value;
         }
       }
       break;
     case CONFIG_VALUE_TYPE_SET:
       {
-        uint i,j,z;
-        char setName[128];
+        uint                 i,j;
+        char                 setName[128];
+        const ConfigValueSet *set;
 
         // find and store set values
         assert(configValue->variable.set != NULL);
@@ -636,12 +882,8 @@ LOCAL bool processValue(const ConfigValue *configValue,
           if (setName[0] != '\0')
           {
             // find value
-            z = 0;
-            while ((z < configValue->setValue.setCount) && !stringEquals(configValue->setValue.set[z].name,setName))
-            {
-              z++;
-            }
-            if (z >= configValue->setValue.setCount)
+            set = findSet(configValue->setValue.sets,setName);
+            if (set == NULL)
             {
               if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
                                                      "%sUnknown value '%s' for config value '%s'!\n",
@@ -658,7 +900,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
               if (variable != NULL)
               {
                 configVariable.set = (ulong*)((byte*)variable+configValue->offset);
-                (*configVariable.set) |= configValue->setValue.set[z].value;
+                (*configVariable.set) |= set->value;
               }
               else
               {
@@ -666,14 +908,14 @@ LOCAL bool processValue(const ConfigValue *configValue,
                 if ((*configValue->variable.reference) != NULL)
                 {
                   configVariable.set = (ulong*)((byte*)(*configValue->variable.reference)+configValue->offset);
-                  (*configVariable.set) |= configValue->setValue.set[z].value;
+                  (*configVariable.set) |= set->value;
                 }
               }
             }
             else
             {
               assert(configValue->variable.set != NULL);
-              (*configValue->variable.set) |= configValue->setValue.set[z].value;
+              (*configValue->variable.set) |= set->value;
             }
           }
         }
@@ -964,20 +1206,18 @@ bool ConfigValue_parse(const char        *name,
 
 bool ConfigValue_getIntegerValue(int                   *value,
                                  const char            *string,
-                                 const ConfigValueUnit *units,
-                                 uint                  unitCount
+                                 const ConfigValueUnit *units
                                 )
 {
-  return getIntegerValue(value,string,units,unitCount,NULL,NULL);
+  return getIntegerValue(value,string,units,NULL,NULL);
 }
 
 bool ConfigValue_getInteger64Value(int64                 *value,
                                    const char            *string,
-                                   const ConfigValueUnit *units,
-                                   uint                  unitCount
+                                   const ConfigValueUnit *units
                                   )
 {
-  return getInteger64Value(value,string,units,unitCount,NULL,NULL);
+  return getInteger64Value(value,string,units,NULL,NULL);
 }
 
 void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
@@ -1128,11 +1368,13 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
                         String            line
                        )
 {
-  ConfigVariable configVariable;
-  uint           z;
-  const char     *unit;
-  ulong          factor;
-  String         s;
+  ConfigVariable          configVariable;
+  const char              *unitName;
+  const ConfigValueUnit   *unit;
+  ulong                   factor;
+  String                  s;
+  const ConfigValueSelect *select;
+  const ConfigValueSet    *set;
 
   assert(configValueFormat != NULL);
   assert(line != NULL);
@@ -1179,33 +1421,27 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         // find usable unit
         if ((configValueFormat->configValue->integerValue.units != NULL) && ((*configVariable.i) != 0))
         {
-          z = 0;
-          while (   (z < configValueFormat->configValue->integerValue.unitCount)
-                 && (((*configVariable.i) % configValueFormat->configValue->integerValue.units[z].factor) != 0)
-                )
+          unit = findIntegerUnitByValue(configValueFormat->configValue->integerValue.units,*configVariable.i);
+          if (unit != NULL)
           {
-            z++;
-          }
-          if (z < configValueFormat->configValue->integerValue.unitCount)
-          {
-            unit   = configValueFormat->configValue->integerValue.units[z].name;
-            factor = configValueFormat->configValue->integerValue.units[z].factor;
+            unitName = unit->name;
+            factor   = unit->factor;
           }
           else
           {
-            unit   = NULL;
-            factor = 0;
+            unitName = NULL;
+            factor   = 0;
           }
         }
         else
         {
-          unit   = NULL;
-          factor = 0;
+          unitName = NULL;
+          factor   = 0;
         }
 
         if (factor > 0)
         {
-          String_format(line,"%ld%s",(*configVariable.i)/factor,unit);
+          String_format(line,"%ld%s",(*configVariable.i)/factor,unitName);
         }
         else
         {
@@ -1237,33 +1473,27 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         // find usable unit
         if ((configValueFormat->configValue->integer64Value.units != NULL) && ((*configVariable.l) != 0L))
         {
-          z = 0;
-          while (   (z < configValueFormat->configValue->integer64Value.unitCount)
-                 && (((*configVariable.l) % configValueFormat->configValue->integer64Value.units[z].factor) != 0)
-                )
+          unit = findInteger64UnitByValue(configValueFormat->configValue->integer64Value.units,*configVariable.l);
+          if (unit != NULL)
           {
-            z++;
-          }
-          if (z < configValueFormat->configValue->integer64Value.unitCount)
-          {
-            unit   = configValueFormat->configValue->integer64Value.units[z].name;
-            factor = configValueFormat->configValue->integer64Value.units[z].factor;
+            unitName = unit->name;
+            factor   = unit->factor;
           }
           else
           {
-            unit   = NULL;
-            factor = 0;
+            unitName = NULL;
+            factor   = 0;
           }
         }
         else
         {
-          unit   = NULL;
-          factor = 0;
+          unitName = NULL;
+          factor   = 0;
         }
 
         if (factor > 0)
         {
-          String_format(line,"%lld%s",(*configVariable.l)/factor,unit);
+          String_format(line,"%lld%s",(*configVariable.l)/factor,unitName);
         }
         else
         {
@@ -1295,33 +1525,27 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         // find usable unit
         if ((configValueFormat->configValue->doubleValue.units != NULL) && ((*configVariable.d) != 0.0))
         {
-          z = 0;
-          while (   (z < configValueFormat->configValue->doubleValue.unitCount)
-                 && (fmod((*configVariable.d),configValueFormat->configValue->doubleValue.units[z].factor) != 0)
-                )
+          unit = findDoubleUnitByValue(configValueFormat->configValue->doubleValue.units,*configVariable.d);
+          if (unit != NULL)
           {
-            z++;
-          }
-          if (z < configValueFormat->configValue->doubleValue.unitCount)
-          {
-            unit   = configValueFormat->configValue->doubleValue.units[z].name;
-            factor = configValueFormat->configValue->doubleValue.units[z].factor;
+            unitName = unit->name;
+            factor   = unit->factor;
           }
           else
           {
-            unit   = NULL;
-            factor = 0;
+            unitName = NULL;
+            factor   = 0;
           }
         }
         else
         {
-          unit   = NULL;
-          factor = 0;
+          unitName = NULL;
+          factor   = 0;
         }
 
         if (factor > 0)
         {
-          String_format(line,"%lf",(*configVariable.d)/factor,unit);
+          String_format(line,"%lf",(*configVariable.d)/factor,unitName);
         }
         else
         {
@@ -1399,16 +1623,10 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           assert(configValueFormat->configValue->variable.select != NULL);
           configVariable.select = configValueFormat->configValue->variable.select;
         }
-        z = 0;
-        while (   (z < configValueFormat->configValue->selectValue.selectCount)
-               && ((*configVariable.select) != configValueFormat->configValue->selectValue.select[z].value)
-              )
-        {
-          z++;
-        }
+        select = findSelectByValue(configValueFormat->configValue->selectValue.selects,*configVariable.select);
 
         // format value
-        String_format(line,"%s",(z < configValueFormat->configValue->selectValue.selectCount)?configValueFormat->configValue->selectValue.select[z].name:"");
+        String_format(line,"%s",(select != NULL) ? select->name : "");
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
@@ -1432,12 +1650,12 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           configVariable.set = configValueFormat->configValue->variable.set;
         }
         s = String_new();
-        for (z = 0; z < configValueFormat->configValue->selectValue.selectCount; z++)
+        ITERATE_SET(set,configValueFormat->configValue->setValue.sets)
         {
-          if ((*configVariable.set) & configValueFormat->configValue->setValue.set[z].value)
+          if ((*configVariable.set) & set->value)
           {
             if (String_length(s) > 0L) String_appendChar(s,',');
-            String_appendCString(s,configValueFormat->configValue->setValue.set[z].name);
+            String_appendCString(s,set->name);
           }
         }
 
@@ -1608,6 +1826,23 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
   {
     return FALSE;
   }
+}
+
+const char *ConfigValue_selectToString(const ConfigValueSelect selects[],
+                                       uint                    value,
+                                       const char              *defaultString
+                                      )
+{
+  const ConfigValueSelect *select;
+
+  assert(selects != NULL);
+
+  ITERATE_SELECT(select,selects)
+  {
+    if (select->value == value) return select->name;
+  }
+
+  return defaultString;
 }
 
 #ifdef __GNUC__

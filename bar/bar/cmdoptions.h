@@ -110,24 +110,22 @@ typedef struct CommandLineOption
   {
     bool                          rangeFlag;            // TRUE iff range should be printed in help
     int                           min,max;              // valid range
-    const CommandLineUnit         *units;               // list with units
-    uint                          unitCount;            // number of units
+    const CommandLineUnit         *units;               // array with units
     const char                    *descriptionArgument; // optional description text argument
   } integerOption;
   struct
   {
     bool                          rangeFlag;            // TRUE iff range should be printed in help
     int64                         min,max;              // valid range
-    const CommandLineUnit         *units;               // list with units
-    uint                          unitCount;            // number of units
+    const CommandLineUnit         *units;               // array with units
     const char                    *descriptionArgument; // optional description text argument
   } integer64Option;
   struct
   {
     bool                          rangeFlag;            // TRUE iff range should be printed in help
     double                        min,max;              // valid range
-    const CommandLineUnit         *units;               // list with units
-    uint                          unitCount;            // number of units
+    const CommandLineUnit         *units;               // array with units
+    const char                    *descriptionArgument; // optional description text argument
   } doubleOption;
   struct
   {
@@ -139,13 +137,11 @@ typedef struct CommandLineOption
   } enumOption;
   struct
   {
-    const CommandLineOptionSelect *selects;             // list with select values
-    uint                          selectCount;          // number of select values
+    const CommandLineOptionSelect *selects;             // array with select values
   } selectOption;
   struct
   {
-    const CommandLineOptionSet    *set;                 // list with set values
-    uint                          setCount;             // number of set values
+    const CommandLineOptionSet    *sets;                // array with set values
   } setOption;
   struct
   {
@@ -238,6 +234,51 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 /******************************* Macros *******************************/
 
 /***********************************************************************\
+* Name   : CMD_VALUE_UNIT_ARRAY
+* Purpose: define unit array
+* Input  : ... - unit values
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CMD_VALUE_UNIT_ARRAY(...) \
+{ \
+  __VA_ARGS__ \
+  {NULL,0} \
+}; \
+
+/***********************************************************************\
+* Name   : CMD_VALUE_SELECT_ARRAY
+* Purpose: define select array
+* Input  : ... - select values
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CMD_VALUE_SELECT_ARRAY(...) \
+{ \
+  __VA_ARGS__ \
+  {NULL,0,NULL} \
+}
+
+/***********************************************************************\
+* Name   : CMD_VALUE_SET_ARRAY
+* Purpose: define set array
+* Input  : ... - set values
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CMD_VALUE_SET_ARRAY(...) \
+{ \
+  __VA_ARGS__ \
+  {NULL,0,NULL} \
+}
+
+/***********************************************************************\
 * Name   : CMD_OPTION_INTEGER, CMD_OPTION_INTEGER_RANGE
 * Purpose: define an int command line option
 * Input  : name                - option name
@@ -266,13 +307,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_INTEGER,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,min,max,units,sizeof(units)/sizeof(CommandLineUnit),descriptionArgument},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE,min,max,units,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0},\
-    {NULL,0},\
-    {NULL,0},\
+    {NULL},\
+    {NULL},\
     {NULL},\
     {NULL,NULL,NULL},\
     description \
@@ -286,13 +327,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_INTEGER,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {TRUE,min,max,units,sizeof(units)/sizeof(CommandLineUnit),descriptionArgument},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0.0,0.0,NULL,0},\
+    {TRUE,min,max,units,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0},\
-    {NULL,0},\
-    {NULL,0},\
+    {NULL},\
+    {NULL},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -327,13 +368,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_INTEGER64,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,min,max,units,sizeof(units)/sizeof(CommandLineUnit),descriptionArgument},\
-    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,min,max,units,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0},\
-    {NULL,0},\
-    {NULL,0},\
+    {NULL},\
+    {NULL},\
     {NULL},\
     {NULL,NULL,NULL},\
     description \
@@ -347,13 +388,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_INTEGER64,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {TRUE,min,max,units,sizeof(units)/sizeof(CommandLineUnit),descriptionArgument},\
-    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE,0,0,NULL,NULL},\
+    {TRUE,min,max,units,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0},\
-    {NULL,0},\
-    {NULL,0},\
+    {NULL},\
+    {NULL},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -384,13 +425,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_DOUBLE,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,min,max,units,NULL},\
     {FALSE},\
     {0},\
-    {NULL,0},\
-    {NULL,0},\
+    {NULL},\
+    {NULL},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -404,13 +445,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_DOUBLE,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {TRUE,min,max,units,sizeof(units)/sizeof(CommandLineUnit)},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {TRUE,min,max,units,NULL},\
     {FALSE},\
     {0},\
-    {NULL,0},\
-    {NULL,0},\
+    {NULL},\
+    {NULL},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -439,13 +480,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_BOOLEAN,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0},\
-    {NULL,0},\
-    {NULL,0},\
+    {NULL},\
+    {NULL},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -459,13 +500,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_BOOLEAN,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
     {TRUE},\
     {0},\
-    {NULL,0},\
-    {NULL,0},\
+    {NULL},\
+    {NULL},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -495,13 +536,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_ENUM,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {value},\
-    {NULL,0},\
-    {NULL,0},\
+    {NULL},\
+    {NULL},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -531,13 +572,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_SELECT,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0},\
-    {selects,sizeof(selects)/sizeof(CommandLineOptionSelect)},\
-    {NULL,0},\
+    {selects},\
+    {NULL},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -567,13 +608,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_SET,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0},\
-    {NULL,0},\
-    {set,sizeof(set)/sizeof(CommandLineOptionSet)},\
+    {NULL},\
+    {set},\
     {NULL},\
     {NULL,NULL,NULL},\
     description\
@@ -604,13 +645,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_CSTRING,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0},\
-    {NULL,0},\
-    {NULL,0},\
+    {NULL},\
+    {NULL},\
     {descriptionArgument},\
     {NULL,NULL,NULL},\
     description\
@@ -641,13 +682,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_STRING,\
     {&variable},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0},\
-    {NULL,0},\
-    {NULL,0},\
+    {NULL},\
+    {NULL},\
     {descriptionArgument},\
     {NULL,NULL,NULL},\
     description\
@@ -680,13 +721,13 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     CMD_OPTION_TYPE_SPECIAL,\
     {variablePointer},\
     {0,0LL,0.0,FALSE,{0},{NULL}},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0,0,NULL,0,NULL},\
-    {FALSE,0.0,0.0,NULL,0},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
     {FALSE},\
     {0},\
-    {NULL,0},\
-    {NULL,0},\
+    {NULL},\
+    {NULL},\
     {NULL},\
     {parseSpecial,userData,descriptionArgument},\
     description\
@@ -791,7 +832,6 @@ bool CmdOption_parseString(const CommandLineOption *commandLineOption,
 *          string            - string
 *          option            - option name
 *          units             - units array or NULL
-*          unitCount         - size of unit array
 * Output : value - value
 * Return : TRUE if got integer, false otherwise
 * Notes  : -
@@ -800,8 +840,7 @@ bool CmdOption_parseString(const CommandLineOption *commandLineOption,
 bool CmdOption_getIntegerOption(int                   *value,
                                 const char            *string,
                                 const char            *option,
-                                const CommandLineUnit *units,
-                                uint                  unitCount
+                                const CommandLineUnit *units
                                );
 
 /***********************************************************************\
@@ -811,7 +850,6 @@ bool CmdOption_getIntegerOption(int                   *value,
 *          string            - string
 *          option            - option name
 *          units             - units array or NULL
-*          unitCount         - size of unit array
 * Output : value - value
 * Return : TRUE if got integer, false otherwise
 * Notes  : -
@@ -820,9 +858,26 @@ bool CmdOption_getIntegerOption(int                   *value,
 bool CmdOption_getInteger64Option(int64                 *value,
                                   const char            *string,
                                   const char            *option,
-                                  const CommandLineUnit *units,
-                                  uint                  unitCount
+                                  const CommandLineUnit *units
                                  );
+
+/***********************************************************************\
+* Name   : CmdOption_selectToString
+* Purpose: get select string
+* Input  : selects       - select name/value array
+*          selectCount   - size of select name/value array
+*          value         - value
+*          defaultString - default string or NULL
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+const char *CmdOption_selectToString(const CommandLineOptionSelect selects[],
+                                     uint                          selectCount,
+                                     uint                          value,
+                                     const char                    *defaultString
+                                    );
 
 /***********************************************************************
 * Name   : CmdOption_printHelp
