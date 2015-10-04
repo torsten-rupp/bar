@@ -542,7 +542,7 @@ void Compress_doneAll(void)
 {
 }
 
-const char *Compress_getAlgorithmName(CompressAlgorithms compressAlgorithm)
+const char *Compress_algorithmToString(CompressAlgorithms compressAlgorithm)
 {
   uint       z;
   const char *s;
@@ -566,7 +566,7 @@ const char *Compress_getAlgorithmName(CompressAlgorithms compressAlgorithm)
   return s;
 }
 
-CompressAlgorithms Compress_getAlgorithm(const char *name)
+CompressAlgorithms Compress_parseAlgorithm(const char *name)
 {
   uint               z;
   CompressAlgorithms compressAlgorithm;

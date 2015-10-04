@@ -325,7 +325,7 @@ Errors Compress_initAll(void);
 void Compress_doneAll(void);
 
 /***********************************************************************\
-* Name   : Compress_getAlgorithmName
+* Name   : Compress_algorithmToString
 * Purpose: get name of compress algorithm
 * Input  : compressAlgorithm - compress algorithm
 * Output : -
@@ -333,18 +333,18 @@ void Compress_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-const char *Compress_getAlgorithmName(CompressAlgorithms compressAlgorithm);
+const char *Compress_algorithmToString(CompressAlgorithms compressAlgorithm);
 
 /***********************************************************************\
-* Name   : Compress_getAlgorithm
-* Purpose: get compress algorithm
+* Name   : Compress_parseAlgorithm
+* Purpose: parse compress algorithm
 * Input  : name - algorithm name
 * Output : -
 * Return : compress algorithm
 * Notes  : -
 \***********************************************************************/
 
-CompressAlgorithms Compress_getAlgorithm(const char *name);
+CompressAlgorithms Compress_parseAlgorithm(const char *name);
 
 /***********************************************************************\
 * Name   : Compress_isValidAlgorithm
