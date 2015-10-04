@@ -1176,6 +1176,7 @@ LOCAL void formatString(struct __String *string,
           break;
         default:
 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+#if 0
           length = snprintf(buffer,sizeof(buffer),formatToken.token);
           if (length < sizeof(buffer))
           {
@@ -1188,6 +1189,7 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
             string->length += length;
             STRING_UPDATE_VALID(string);
           }
+#endif
           break;
       }
     }
