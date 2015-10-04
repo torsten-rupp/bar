@@ -312,6 +312,7 @@ BAR_SOURCES          = bar.c \
                        index.c \
                        network.c \
                        server.c \
+                       remote.c \
                        $(if @HAVE_BREAKPAD@,minidump.cpp) \
                        \
                        global.c \
@@ -764,7 +765,7 @@ rundev1 rundevd: bar-debug@EXEEXT@
 
 rundevd2: bar-debug@EXEEXT@
 	$(INSTALL) -d jobs
-	nice ./bar-debug@EXEEXT@ --daemon -D --index-database=bar-index2.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39999 --server-tls-port=0 --log-file=/tmp/bar.log --log=all --server-debug
+	nice ./bar-debug@EXEEXT@ --daemon -D --index-database=bar-index2.db --index-database-keep-time=365days --server-jobs-directory=jobs2 --server-port=39999 --server-tls-port=0 --log-file=/tmp/bar2.log --log=all --server-debug
 
 rundevddd: bar-debug@EXEEXT@
 	$(INSTALL) -d jobs
