@@ -91,7 +91,7 @@ typedef struct __StringMap* StringMap;
 
 // format/convert value
 typedef String(*StringMapFormatFunction)(void *value, void *userData);
-typedef bool(*StringMapParseFunction)(const String string, void *data, void *userData);
+typedef bool(*StringMapParseFunction)(ConstString string, void *data, void *userData);
 
 // convert to enum value
 typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
@@ -101,22 +101,24 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define StringMap_new()                                                                        __StringMap_new(__FILE__,__LINE__)
-  #define StringMap_duplicate(stringMap)                                                         __StringMap_duplicate(__FILE__,__LINE__,stringMap)
-  #define StringMap_delete(stringMap)                                                            __StringMap_delete(__FILE__,__LINE__,stringMap)
-  #define StringMap_putText(stringMap,name,value)                                                __StringMap_putText(__FILE__,__LINE__,stringMap,name,value)
-  #define StringMap_putTextCString(stringMap,name,value)                                         __StringMap_putTextCString(__FILE__,__LINE__,stringMap,name,text)
-  #define StringMap_put(stringMap,name,value)                                                    __StringMap_put(__FILE__,__LINE__,stringMap,name,value)
-  #define StringMap_putInt(stringMap,name,data)                                                  __StringMap_putInt(__FILE__,__LINE__,stringMap,name,data)
-  #define StringMap_putInt64(stringMap,name,data)                                                __StringMap_putInt64(__FILE__,__LINE__,stringMap,name,data)
-  #define StringMap_putUInt(stringMap,name,data)                                                 __StringMap_putUInt(__FILE__,__LINE__,stringMap,name,data)
-  #define StringMap_putUInt64(stringMap,name,data)                                               __StringMap_putUInt64(__FILE__,__LINE__,stringMap,name,data)
-  #define StringMap_putDouble(stringMap,name,data)                                               __StringMap_putDouble(__FILE__,__LINE__,stringMap,name,data)
-  #define StringMap_putChar(stringMap,name,data)                                                 __StringMap_putChar(__FILE__,__LINE__,stringMap,name,data)
-  #define StringMap_putCString(stringMap,name,data)                                              __StringMap_putCString(__FILE__,__LINE__,stringMap,name,data)
-  #define StringMap_putString(stringMap,name,data)                                               __StringMap_putString(__FILE__,__LINE__,stringMap,name,data)
-  #define StringMap_putData(stringMap,name,data,stringMapFormatFunction,stringMapFormatUserData) __StringMap_putData(__FILE__,__LINE__,stringMap,name,data,stringMapFormatFunction,stringMapFormatUserData)
-  #define StringMap_remove(stringMap,name)                                                       __StringMap_remove(__FILE__,__LINE__,stringMap,name)
+  #define StringMap_new()               __StringMap_new(__FILE__,__LINE__)
+  #define StringMap_duplicate(...)      __StringMap_duplicate(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_delete(...)         __StringMap_delete(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putText(...)        __StringMap_putText(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putTextCString(...) __StringMap_putTextCString(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_put(...)            __StringMap_put(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putInt(...)         __StringMap_putInt(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putLong(...)        __StringMap_putLong(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putInt64(...)       __StringMap_putInt64(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putUInt(...)        __StringMap_putUInt(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putULong(...)       __StringMap_putULong(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putUInt64(...)      __StringMap_putUInt64(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putDouble(...)      __StringMap_putDouble(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putChar(...)        __StringMap_putChar(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putCString(...)     __StringMap_putCString(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putString(...)      __StringMap_putString(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putData(...)        __StringMap_putData(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_remove(...)         __StringMap_remove(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***********************************************************************\
@@ -309,10 +311,10 @@ StringMapValue StringMap_indexValue(const StringMap stringMap, uint index);
 \***********************************************************************/
 
 #ifdef NDEBUG
-void StringMap_putText(StringMap stringMap, const char *name, String text);
+void StringMap_putText(StringMap stringMap, const char *name, ConstString text);
 void StringMap_putTextCString(StringMap stringMap, const char *name, const char *text);
 #else /* not NDEBUG */
-void __StringMap_putText(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, String text);
+void __StringMap_putText(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, ConstString text);
 void __StringMap_putTextCString(const char *__fileName__,ulong __lineNb__, StringMap stringMap, const char *name, const char *text);
 #endif /* NDEBUG */
 
@@ -346,25 +348,29 @@ void __StringMap_put(const char *__fileName__, ulong __lineNb__, StringMap strin
 
 #ifdef NDEBUG
 void StringMap_putInt(StringMap stringMap, const char *name, int data);
+void StringMap_putLong(StringMap stringMap, const char *name, long data);
 void StringMap_putInt64(StringMap stringMap, const char *name, int64 data);
-void StringMap_putUInt(StringMap stringMap, const char *name, int data);
-void StringMap_putUInt64(StringMap stringMap, const char *name, int64 data);
+void StringMap_putUInt(StringMap stringMap, const char *name, uint data);
+void StringMap_putULong(StringMap stringMap, const char *name, ulong data);
+void StringMap_putUInt64(StringMap stringMap, const char *name, uint64 data);
 void StringMap_putDouble(StringMap stringMap, const char *name, double data);
 void StringMap_putBool(StringMap stringMap, const char *name, bool data);
 void StringMap_putChar(StringMap stringMap, const char *name, char data);
 void StringMap_putCString(StringMap stringMap, const char *name, const char *data);
-void StringMap_putString(StringMap stringMap, const char *name, String data);
+void StringMap_putString(StringMap stringMap, const char *name, ConstString data);
 void StringMap_putData(StringMap stringMap, const char *name, void *data, StringMapFormatFunction stringMapFormatFunction, void *stringMapFormatUserData);
 #else /* not NDEBUG */
 void __StringMap_putInt(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, int data);
+void __StringMap_putLong(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, long data);
 void __StringMap_putInt64(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, int64 data);
-void __StringMap_putUInt(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, int data);
-void __StringMap_putUInt64(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, int64 data);
+void __StringMap_putUInt(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, uint data);
+void __StringMap_putULong(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, ulong data);
+void __StringMap_putUInt64(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, uint64 data);
 void __StringMap_putDouble(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, double data);
 void __StringMap_putBool(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, bool data);
 void __StringMap_putChar(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, char data);
 void __StringMap_putCString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, const char *data);
-void __StringMap_putString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, String data);
+void __StringMap_putString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, ConstString data);
 void __StringMap_putData(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, void *data, StringMapFormatFunction stringMapFormatFunction, void *stringMapFormatUserData);
 #endif /* NDEBUG */
 
@@ -379,7 +385,7 @@ void __StringMap_putData(const char *__fileName__, ulong __lineNb__, StringMap s
 * Notes  : -
 \***********************************************************************/
 
-String StringMap_getText(const StringMap stringMap, const char *name, const String defaultValue);
+ConstString StringMap_getText(const StringMap stringMap, const char *name, ConstString defaultValue);
 const char *StringMap_getTextCString(const StringMap stringMap, const char *name, const char *defaultValue);
 
 /***********************************************************************\
@@ -410,8 +416,10 @@ StringMapValue StringMap_get(const StringMap stringMap, const char *name);
 \***********************************************************************/
 
 bool StringMap_getInt(const StringMap stringMap, const char *name, int *data, int defaultValue);
+bool StringMap_getLong(const StringMap stringMap, const char *name, long *data, long defaultValue);
 bool StringMap_getInt64(const StringMap stringMap, const char *name, int64 *data, int64 defaultValue);
 bool StringMap_getUInt(const StringMap stringMap, const char *name, uint *data, uint defaultValue);
+bool StringMap_getULong(const StringMap stringMap, const char *name, ulong *data, ulong defaultValue);
 bool StringMap_getUInt64(const StringMap stringMap, const char *name, uint64 *data, uint64 defaultValue);
 bool StringMap_getDouble(const StringMap stringMap, const char *name, double *data, double defaultValue);
 bool StringMap_getBool(const StringMap stringMap, const char *name, bool *data, bool defaultValue);
@@ -419,7 +427,7 @@ bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, 
 bool StringMap_getEnumSet(const StringMap stringMap, const char *name, uint64 *data, StringMapParseEnumFunction stringMapParseEnumFunction, uint64 allValue, const char *separatorChars, uint64 defaultValue);
 bool StringMap_getChar(const StringMap stringMap, const char *name, char *data, char defaultValue);
 bool StringMap_getCString(const StringMap stringMap, const char *name, char *data, uint maxLength, const char *defaultValue);
-bool StringMap_getString(const StringMap stringMap, const char *name, String data, const String defaultValue);
+bool StringMap_getString(const StringMap stringMap, const char *name, String data, ConstString defaultValue);
 bool StringMap_getData(const StringMap stringMap, const char *name, void *data, StringMapParseFunction stringMapParseFunction, void *stringMapParseUserData);
 
 /***********************************************************************\
@@ -464,8 +472,9 @@ bool StringMap_contains(const StringMap stringMap, const char *name);
 
 /***********************************************************************\
 * Name   : StringMap_parse
-* Purpose: parse string map
+* Purpose: parse into string map
 * Input  : stringMap      - stringMap variable
+*          string,s       - string to parse
 *          assignChars    - assignment characters or NULL
 *          quoteChars     - quote characters or NULL
 *          separatorChars - separator characters or NULL

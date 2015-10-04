@@ -32,7 +32,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define STRINGMAP_START_SIZE 16   // string map start size
+#define STRINGMAP_START_SIZE 32   // string map start size
 #define STRINGMAP_DELTA_SIZE 16   // string map delta increasing size
 
 const StringMapValue STRINGMAP_VALUE_NONE = {NULL,{0}};
@@ -110,45 +110,80 @@ LOCAL StringMapEntry *addStringMapEntry(struct __StringMap *stringMap, const cha
 LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, ulong __lineNb__, struct __StringMap *stringMap, const char *name)
 #endif /* NDEBUG */
 {
-  uint           i;
+  uint           hashIndex;
   uint           n;
+  uint           i;
+  uint           newStringMapSize;
   StringMapEntry *newStringMapEntries;
 
   assert(stringMap != NULL);
 
-  i = calculateHash(name)%stringMap->size;
+  hashIndex = calculateHash(name)%stringMap->size;
   n = 0;
-  while (   (stringMap->stringMapEntries[i].name != NULL)
+  while (   (stringMap->stringMapEntries[hashIndex].name != NULL)
          && (n < stringMap->size)
         )
   {
-    i = (i+1)%stringMap->size;
+    hashIndex = (hashIndex+1)%stringMap->size;
     n++;
   }
 
   if (n >= stringMap->size)
   {
-    newStringMapEntries = (StringMapEntry*)realloc(stringMap->stringMapEntries,sizeof(StringMapEntry)*(stringMap->size+STRINGMAP_DELTA_SIZE));
+    // allocate new entries
+    newStringMapSize    = stringMap->size+STRINGMAP_DELTA_SIZE;
+    newStringMapEntries = (StringMapEntry*)malloc(sizeof(StringMapEntry)*newStringMapSize);
     if (newStringMapEntries == NULL)
     {
       return NULL;
     }
-    for (i = stringMap->size; i < stringMap->size+STRINGMAP_DELTA_SIZE; i++)
+
+    // init new entries
+    for (i = 0; i < newStringMapSize; i++)
     {
-      stringMap->stringMapEntries[i].name = NULL;
+      newStringMapEntries[i].name         = NULL;
+      newStringMapEntries[i].type         = STRINGMAP_TYPE_NONE;
+      newStringMapEntries[i].value.text   = NULL;
+      newStringMapEntries[i].value.data.p = NULL;
+      #ifndef NDEBUG
+        newStringMapEntries[i].fileName = NULL;
+        newStringMapEntries[i].lineNb   = 0L;
+      #endif /* NDEBUG */
     }
-    stringMap->size += STRINGMAP_DELTA_SIZE;
+
+    // rehash existing entries
+    for (i = 0; i < stringMap->size; i++)
+    {
+      assert(stringMap->stringMapEntries[i].name != NULL);
+
+      hashIndex = calculateHash(stringMap->stringMapEntries[i].name)%newStringMapSize;
+      n = 0;
+      while (   (newStringMapEntries[hashIndex].name != NULL)
+             && (n < newStringMapSize)
+            )
+      {
+        hashIndex = (hashIndex+1)%newStringMapSize;
+        n++;
+      }
+      assert(n < newStringMapSize);
+      newStringMapEntries[hashIndex] = stringMap->stringMapEntries[i];
+    }
+
+    // free old entries, set new entries
+    free(stringMap->stringMapEntries);
+    stringMap->stringMapEntries = newStringMapEntries;
+    stringMap->size             = newStringMapSize;
   }
 
   if (n < stringMap->size)
   {
-    stringMap->stringMapEntries[i].name = strdup(name);
+    stringMap->stringMapEntries[hashIndex].name = strdup(name);
     #ifndef NDEBUG
-      stringMap->stringMapEntries[i].fileName  = __fileName__;
-      stringMap->stringMapEntries[i].lineNb    = __lineNb__;
+      stringMap->stringMapEntries[hashIndex].fileName  = __fileName__;
+      stringMap->stringMapEntries[hashIndex].lineNb    = __lineNb__;
     #endif /* NDEBUG */
 
-    return &stringMap->stringMapEntries[i];
+    return &stringMap->stringMapEntries[hashIndex];
   }
   else
   {
@@ -239,12 +274,14 @@ StringMap __StringMap_new(const char *__fileName__, ulong __lineNb__)
   struct __StringMap *stringMap;
   uint               i;
 
+  // allocate string map
   stringMap = (struct __StringMap *)malloc(sizeof(struct __StringMap));
   if (stringMap == NULL)
   {
     return NULL;
   }
 
+  // init entries
   stringMap->size             = STRINGMAP_START_SIZE;
   stringMap->stringMapEntries = malloc(sizeof(StringMapEntry)*STRINGMAP_START_SIZE);
   if (stringMap == NULL)
@@ -432,9 +469,9 @@ StringMapValue StringMap_indexValue(const StringMap stringMap, uint index)
 }
 
 #ifdef NDEBUG
-void StringMap_putText(StringMap stringMap, const char *name, String text)
+void StringMap_putText(StringMap stringMap, const char *name, ConstString text)
 #else /* not NDEBUG */
-void __StringMap_putText(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, String text)
+void __StringMap_putText(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, ConstString text)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -450,7 +487,7 @@ void __StringMap_putText(const char *__fileName__, ulong __lineNb__, StringMap s
 
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type       = STRINGMAP_TYPE_NONE;
+    stringMapEntry->type       = STRINGMAP_TYPE_STRING;
     stringMapEntry->value.text = String_duplicate(text);
   }
 }
@@ -474,7 +511,7 @@ void __StringMap_putTextCString(const char *__fileName__, ulong __lineNb__, Stri
 
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type       = STRINGMAP_TYPE_NONE;
+    stringMapEntry->type       = STRINGMAP_TYPE_STRING;
     stringMapEntry->value.text = String_newCString(text);
   }
 }
@@ -528,6 +565,30 @@ void __StringMap_putInt(const char *__fileName__, ulong __lineNb__, StringMap st
 }
 
 #ifdef NDEBUG
+void StringMap_putLong(StringMap stringMap, const char *name, long value)
+#else /* not NDEBUG */
+void __StringMap_putLong(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, long value)
+#endif /* NDEBUG */
+{
+  StringMapEntry *stringMapEntry;
+
+  assert(stringMap != NULL);
+  assert(name != NULL);
+
+  #ifdef NDEBUG
+    stringMapEntry = addStringMapEntry(stringMap,name);
+  #else /* not NDEBUG */
+    stringMapEntry = addStringMapEntry(__fileName__,__lineNb__,stringMap,name);
+  #endif /* NDEBUG */
+  if (stringMapEntry != NULL)
+  {
+    stringMapEntry->type         = STRINGMAP_TYPE_INT64;
+    stringMapEntry->value.text   = NULL;
+    stringMapEntry->value.data.l = value;
+  }
+}
+
+#ifdef NDEBUG
 void StringMap_putInt64(StringMap stringMap, const char *name, int64 value)
 #else /* not NDEBUG */
 void __StringMap_putInt64(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, int64 value)
@@ -548,6 +609,78 @@ void __StringMap_putInt64(const char *__fileName__, ulong __lineNb__, StringMap 
     stringMapEntry->type         = STRINGMAP_TYPE_INT64;
     stringMapEntry->value.text   = NULL;
     stringMapEntry->value.data.l = value;
+  }
+}
+
+#ifdef NDEBUG
+void StringMap_putUInt(StringMap stringMap, const char *name, uint value)
+#else /* not NDEBUG */
+void __StringMap_putUInt(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, uint value)
+#endif /* NDEBUG */
+{
+  StringMapEntry *stringMapEntry;
+
+  assert(stringMap != NULL);
+  assert(name != NULL);
+
+  #ifdef NDEBUG
+    stringMapEntry = addStringMapEntry(stringMap,name);
+  #else /* not NDEBUG */
+    stringMapEntry = addStringMapEntry(__fileName__,__lineNb__,stringMap,name);
+  #endif /* NDEBUG */
+  if (stringMapEntry != NULL)
+  {
+    stringMapEntry->type          = STRINGMAP_TYPE_UINT;
+    stringMapEntry->value.text    = NULL;
+    stringMapEntry->value.data.ui = value;
+  }
+}
+
+#ifdef NDEBUG
+void StringMap_putULong(StringMap stringMap, const char *name, ulong value)
+#else /* not NDEBUG */
+void __StringMap_putULong(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, ulong value)
+#endif /* NDEBUG */
+{
+  StringMapEntry *stringMapEntry;
+
+  assert(stringMap != NULL);
+  assert(name != NULL);
+
+  #ifdef NDEBUG
+    stringMapEntry = addStringMapEntry(stringMap,name);
+  #else /* not NDEBUG */
+    stringMapEntry = addStringMapEntry(__fileName__,__lineNb__,stringMap,name);
+  #endif /* NDEBUG */
+  if (stringMapEntry != NULL)
+  {
+    stringMapEntry->type          = STRINGMAP_TYPE_UINT64;
+    stringMapEntry->value.text    = NULL;
+    stringMapEntry->value.data.ul = value;
+  }
+}
+
+#ifdef NDEBUG
+void StringMap_putUInt64(StringMap stringMap, const char *name, uint64 value)
+#else /* not NDEBUG */
+void __StringMap_putUInt64(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, uint64 value)
+#endif /* NDEBUG */
+{
+  StringMapEntry *stringMapEntry;
+
+  assert(stringMap != NULL);
+  assert(name != NULL);
+
+  #ifdef NDEBUG
+    stringMapEntry = addStringMapEntry(stringMap,name);
+  #else /* not NDEBUG */
+    stringMapEntry = addStringMapEntry(__fileName__,__lineNb__,stringMap,name);
+  #endif /* NDEBUG */
+  if (stringMapEntry != NULL)
+  {
+    stringMapEntry->type          = STRINGMAP_TYPE_UINT64;
+    stringMapEntry->value.text    = NULL;
+    stringMapEntry->value.data.ul = value;
   }
 }
 
@@ -649,9 +782,9 @@ void __StringMap_putCString(const char *__fileName__, ulong __lineNb__, StringMa
 }
 
 #ifdef NDEBUG
-void StringMap_putString(StringMap stringMap, const char *name, String value)
+void StringMap_putString(StringMap stringMap, const char *name, ConstString value)
 #else /* not NDEBUG */
-void __StringMap_putString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, String value)
+void __StringMap_putString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, ConstString value)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -697,7 +830,7 @@ void __StringMap_putData(const char *__fileName__, ulong __lineNb__, StringMap s
   }
 }
 
-String StringMap_getText(const StringMap stringMap, const char *name, const String defaultValue)
+ConstString StringMap_getText(const StringMap stringMap, const char *name, ConstString defaultValue)
 {
   const StringMapEntry *stringMapEntry;
 
@@ -773,6 +906,28 @@ bool StringMap_getInt(const StringMap stringMap, const char *name, int *data, in
   }
 }
 
+bool StringMap_getLong(const StringMap stringMap, const char *name, long *data, long defaultValue)
+{
+  StringMapEntry *stringMapEntry;
+  char           *nextData;
+
+  assert(stringMap != NULL);
+  assert(name != NULL);
+  assert(data != NULL);
+
+  stringMapEntry = findStringMapEntry(stringMap,name);
+  if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
+  {
+    (*data) = (ulong)strtoll(String_cString(stringMapEntry->value.text),&nextData,0);
+    return ((*nextData) == '\0');
+  }
+  else
+  {
+    (*data) = defaultValue;
+    return FALSE;
+  }
+}
+
 bool StringMap_getInt64(const StringMap stringMap, const char *name, int64 *data, int64 defaultValue)
 {
   StringMapEntry *stringMapEntry;
@@ -785,7 +940,7 @@ bool StringMap_getInt64(const StringMap stringMap, const char *name, int64 *data
   stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
-    (*data) = strtoll(String_cString(stringMapEntry->value.text),&nextData,0);
+    (*data) = (int64)strtoll(String_cString(stringMapEntry->value.text),&nextData,0);
     return ((*nextData) == '\0');
   }
   else
@@ -808,6 +963,28 @@ bool StringMap_getUInt(const StringMap stringMap, const char *name, uint *data, 
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
     (*data) = (uint)strtol(String_cString(stringMapEntry->value.text),&nextData,0);
+    return ((*nextData) == '\0');
+  }
+  else
+  {
+    (*data) = defaultValue;
+    return FALSE;
+  }
+}
+
+bool StringMap_getULong(const StringMap stringMap, const char *name, ulong *data, ulong defaultValue)
+{
+  StringMapEntry *stringMapEntry;
+  char           *nextData;
+
+  assert(stringMap != NULL);
+  assert(name != NULL);
+  assert(data != NULL);
+
+  stringMapEntry = findStringMapEntry(stringMap,name);
+  if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
+  {
+    (*data) = (ulong)strtol(String_cString(stringMapEntry->value.text),&nextData,0);
     return ((*nextData) == '\0');
   }
   else
@@ -1019,7 +1196,7 @@ bool StringMap_getCString(const StringMap stringMap, const char *name, char *dat
   }
 }
 
-bool StringMap_getString(const StringMap stringMap, const char *name, String data, const String defaultValue)
+bool StringMap_getString(const StringMap stringMap, const char *name, String data, ConstString defaultValue)
 {
   StringMapEntry *stringMapEntry;
 
@@ -1126,8 +1303,6 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *assi
   length = strlen(s);
   name   = String_new();
   value  = String_new();
-
-  index = STRING_BEGIN;
   while (index < length)
   {
     // skip spaces, separators
@@ -1140,119 +1315,122 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *assi
       index++;
     }
 
-    // get name
-    String_clear(name);
-    if (   (index < length)
-        && (!isalpha(s[index]) && (s[index] != '_'))
-       )
+    if (index < length)
     {
-      if (nextIndex != NULL) (*nextIndex) = index;
-      String_delete(value);
-      String_delete(name);
-      return FALSE;
-    }
-    do
-    {
-      String_appendChar(name,s[index]);
-      index++;
-    }
-    while (   (index < length)
-           && (isalnum(s[index]) || (s[index] == '_'))
-          );
-
-    // check for assign
-    if ((index >= length) || (strchr(assignChars,s[index]) == NULL))
-    {
-      if (nextIndex != NULL) (*nextIndex) = index;
-      String_delete(value);
-      String_delete(name);
-      return FALSE;
-    }
-    index++;
-
-    // get value as text
-    String_clear(value);
-    while (   (index < length)
-           && !isspace(s[index])
-           && ((separatorChars == NULL) || (strchr(separatorChars,s[index]) == NULL))
-          )
-    {
-      if (   (s[index] == STRING_ESCAPE_CHARACTER)
-          && ((index+1) < length)
-          && (strchr(quoteChars,s[index+1]) != NULL)
+      // get name
+      String_clear(name);
+      if (   (index < length)
+          && (!isalpha(s[index]) && (s[index] != '_'))
          )
       {
-        // quoted quote
-        String_appendChar(value, s[index+1]);
-        index += 2;
+        if (nextIndex != NULL) (*nextIndex) = index;
+        String_delete(value);
+        String_delete(name);
+        return FALSE;
       }
-      else
+      do
       {
-        // check for string quote
-        quoteChar = strchr(quoteChars,s[index]);
-        if (quoteChar != NULL)
+        String_appendChar(name,s[index]);
+        index++;
+      }
+      while (   (index < length)
+             && (isalnum(s[index]) || (s[index] == '_'))
+            );
+
+      // check for assign
+      if ((index >= length) || (strchr(assignChars,s[index]) == NULL))
+      {
+        if (nextIndex != NULL) (*nextIndex) = index;
+        String_delete(value);
+        String_delete(name);
+        return FALSE;
+      }
+      index++;
+
+      // get value as text
+      String_clear(value);
+      while (   (index < length)
+             && !isspace(s[index])
+             && ((separatorChars == NULL) || (strchr(separatorChars,s[index]) == NULL))
+            )
+      {
+        if (   (s[index] == STRING_ESCAPE_CHARACTER)
+            && ((index+1) < length)
+            && (strchr(quoteChars,s[index+1]) != NULL)
+           )
         {
-          // skip quote-char
-          index++;
-
-          // get string
-          while ((index < length) && (s[index] != (*quoteChar)))
-          {
-            if (   ((index+1) < length)
-                && (s[index] == STRING_ESCAPE_CHARACTER)
-               )
-            {
-              index++;
-
-              if      (strchr(quoteChars,s[index]) != NULL)
-              {
-                // quoted quote
-                String_appendChar(value,s[index]);
-              }
-              else
-              {
-                // search for known mapped character
-                i = 0;
-                while ((i < STRING_ESCAPE_CHARACTER_MAP_LENGTH) && (STRING_ESCAPE_CHARACTERS_MAP_TO[i] != s[index]))
-                {
-                  i++;
-                }
-
-                if (i < STRING_ESCAPE_CHARACTER_MAP_LENGTH)
-                {
-                  // mapped character
-                  String_appendChar(value,STRING_ESCAPE_CHARACTERS_MAP_FROM[i]);
-                }
-                else
-                {
-                  // non-mapped character
-                  String_appendChar(value,s[index]);
-                }
-              }
-            }
-            else
-            {
-              String_appendChar(value,s[index]);
-            }
-            index++;
-          }
-
-          // skip quote-char
-          if (index < length)
-          {
-            index++;
-          }
+          // quoted quote
+          String_appendChar(value, s[index+1]);
+          index += 2;
         }
         else
         {
-          String_appendChar(value,s[index]);
-          index++;
+          // check for string quote
+          quoteChar = strchr(quoteChars,s[index]);
+          if (quoteChar != NULL)
+          {
+            // skip quote-char
+            index++;
+
+            // get string
+            while ((index < length) && (s[index] != (*quoteChar)))
+            {
+              if (   ((index+1) < length)
+                  && (s[index] == STRING_ESCAPE_CHARACTER)
+                 )
+              {
+                index++;
+
+                if      (strchr(quoteChars,s[index]) != NULL)
+                {
+                  // quoted quote
+                  String_appendChar(value,s[index]);
+                }
+                else
+                {
+                  // search for known mapped character
+                  i = 0;
+                  while ((i < STRING_ESCAPE_CHARACTER_MAP_LENGTH) && (STRING_ESCAPE_CHARACTERS_MAP_TO[i] != s[index]))
+                  {
+                    i++;
+                  }
+
+                  if (i < STRING_ESCAPE_CHARACTER_MAP_LENGTH)
+                  {
+                    // mapped character
+                    String_appendChar(value,STRING_ESCAPE_CHARACTERS_MAP_FROM[i]);
+                  }
+                  else
+                  {
+                    // non-mapped character
+                    String_appendChar(value,s[index]);
+                  }
+                }
+              }
+              else
+              {
+                String_appendChar(value,s[index]);
+              }
+              index++;
+            }
+
+            // skip quote-char
+            if (index < length)
+            {
+              index++;
+            }
+          }
+          else
+          {
+            String_appendChar(value,s[index]);
+            index++;
+          }
         }
       }
-    }
 
-    // store value
-    StringMap_putText(stringMap,name->data,value);
+      // store value
+      StringMap_putText(stringMap,name->data,value);
+    }
   }
 
   if (nextIndex != NULL)
