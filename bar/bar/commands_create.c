@@ -24,6 +24,7 @@
 #include "global.h"
 #include "autofree.h"
 #include "strings.h"
+#include "stringmaps.h"
 #include "lists.h"
 #include "stringlists.h"
 #include "threads.h"
@@ -86,16 +87,16 @@ typedef struct
 typedef struct
 {
   StorageSpecifier            *storageSpecifier;                  // storage specifier structure
-  String                      jobUUID;                            // unique job id to store or NULL
-  String                      scheduleUUID;                       // unique schedule id to store or NULL
+  ConstString                 jobUUID;                            // unique job id to store or NULL
+  ConstString                 scheduleUUID;                       // unique schedule id to store or NULL
   const EntryList             *includeEntryList;                  // list of included entries
   const PatternList           *excludePatternList;                // list of exclude patterns
   const PatternList           *compressExcludePatternList;        // exclude compression pattern list
   const DeltaSourceList       *deltaSourceList;                   // delta sources
   const JobOptions            *jobOptions;
   ArchiveTypes                archiveType;                        // archive type to create
-  String                      scheduleTitle;                      // schedule title or NULL
-  String                      scheduleCustomText;                 // schedule custom text or NULL
+  ConstString                 scheduleTitle;                      // schedule title or NULL
+  ConstString                 scheduleCustomText;                 // schedule custom text or NULL
   bool                        *pauseCreateFlag;                   // TRUE for pause creation
   bool                        *pauseStorageFlag;                  // TRUE for pause storage
   bool                        *requestedAbortFlag;                // TRUE to abort create
@@ -227,6 +228,40 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 }
 
 /***********************************************************************\
+* Name   : initStatusInfo
+* Purpose: initialize status info
+* Input  : statusInfo - status info variable
+* Output : statusInfo - initialized create status variable
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initStatusInfo(CreateStatusInfo *statusInfo)
+{
+  assert(statusInfo != NULL);
+
+  statusInfo->doneEntries         = 0L;
+  statusInfo->doneBytes           = 0LL;
+  statusInfo->totalEntries        = 0L;
+  statusInfo->totalBytes          = 0LL;
+  statusInfo->collectTotalSumDone = FALSE;
+  statusInfo->skippedEntries      = 0L;
+  statusInfo->skippedBytes        = 0LL;
+  statusInfo->errorEntries        = 0L;
+  statusInfo->errorBytes          = 0LL;
+  statusInfo->archiveBytes        = 0LL;
+  statusInfo->compressionRatio    = 0.0;
+  statusInfo->name                = String_new();
+  statusInfo->entryDoneBytes      = 0LL;
+  statusInfo->entryTotalBytes     = 0LL;
+  statusInfo->storageName         = String_new();
+  statusInfo->storageDoneBytes    = 0LL;
+  statusInfo->storageTotalBytes   = 0LL;
+  statusInfo->volumeNumber        = 0;
+  statusInfo->volumeProgress      = 0.0;
+}
+
+/***********************************************************************\
 * Name   : initCreateInfo
 * Purpose: initialize create info
 * Input  : createInfo                 - create info variable
@@ -256,16 +291,16 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 
 LOCAL void initCreateInfo(CreateInfo               *createInfo,
                           StorageSpecifier         *storageSpecifier,
-                          const String             jobUUID,
-                          const String             scheduleUUID,
+                          ConstString              jobUUID,
+                          ConstString              scheduleUUID,
                           const EntryList          *includeEntryList,
                           const PatternList        *excludePatternList,
                           const PatternList        *compressExcludePatternList,
                           const DeltaSourceList    *deltaSourceList,
                           JobOptions               *jobOptions,
                           ArchiveTypes             archiveType,
-                          const String             scheduleTitle,
-                          const String             scheduleCustomText,
+                          ConstString              scheduleTitle,
+                          ConstString              scheduleCustomText,
                           CreateStatusInfoFunction createStatusInfoFunction,
                           void                     *createStatusInfoUserData,
                           bool                     *pauseCreateFlag,
@@ -299,25 +334,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   createInfo->failError                      = ERROR_NONE;
   createInfo->statusInfoFunction             = createStatusInfoFunction;
   createInfo->statusInfoUserData             = createStatusInfoUserData;
-  createInfo->statusInfo.doneEntries         = 0L;
-  createInfo->statusInfo.doneBytes           = 0LL;
-  createInfo->statusInfo.totalEntries        = 0L;
-  createInfo->statusInfo.totalBytes          = 0LL;
-  createInfo->statusInfo.collectTotalSumDone = FALSE;
-  createInfo->statusInfo.skippedEntries      = 0L;
-  createInfo->statusInfo.skippedBytes        = 0LL;
-  createInfo->statusInfo.errorEntries        = 0L;
-  createInfo->statusInfo.errorBytes          = 0LL;
-  createInfo->statusInfo.archiveBytes        = 0LL;
-  createInfo->statusInfo.compressionRatio    = 0.0;
-  createInfo->statusInfo.name                = String_new();
-  createInfo->statusInfo.entryDoneBytes      = 0LL;
-  createInfo->statusInfo.entryTotalBytes     = 0LL;
-  createInfo->statusInfo.storageName         = String_new();
-  createInfo->statusInfo.storageDoneBytes    = 0LL;
-  createInfo->statusInfo.storageTotalBytes   = 0LL;
-  createInfo->statusInfo.volumeNumber        = 0;
-  createInfo->statusInfo.volumeProgress      = 0.0;
+  initStatusInfo(&createInfo->statusInfo);
 
   if (   (archiveType == ARCHIVE_TYPE_FULL)
       || (archiveType == ARCHIVE_TYPE_INCREMENTAL)
@@ -1188,10 +1205,10 @@ LOCAL void appendSpecialToEntryList(MsgQueue     *entryMsgQueue,
 
 LOCAL Errors formatArchiveFileName(String       fileName,
                                    FormatModes  formatMode,
-                                   const String templateFileName,
+                                   ConstString  templateFileName,
                                    ArchiveTypes archiveType,
-                                   const String scheduleTitle,
-                                   const String scheduleCustomText,
+                                   ConstString  scheduleTitle,
+                                   ConstString  scheduleCustomText,
                                    time_t       time,
                                    int          partNumber,
                                    bool         lastPartFlag
@@ -3763,7 +3780,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
 
     // check if file data should be delta compressed
     deltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta);
+                        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta);
 
     // create new archive file entry
     error = Archive_newFileEntry(&archiveEntryInfo,
@@ -4086,7 +4103,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
 
     // check if file data should be delta compressed
     deltaCompressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
-                        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta);
+                        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta);
 
     // create new archive image entry
     error = Archive_newImageEntry(&archiveEntryInfo,
@@ -4785,7 +4802,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
     // check if file data should be delta compressed
     deltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta);
+                        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta);
 
     // create new archive hard link entry
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
@@ -5319,17 +5336,19 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_create(const String                    jobUUID,
-                      const String                    scheduleUUID,
-                      const String                    storageName,
+Errors Command_create(ConstString                     jobUUID,
+//                      ConstString                     hostName,
+//                      uint                            hostPort,
+                      ConstString                     scheduleUUID,
+                      ConstString                     storageName,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
                       const PatternList               *compressExcludePatternList,
                       DeltaSourceList                 *deltaSourceList,
                       JobOptions                      *jobOptions,
                       ArchiveTypes                    archiveType,
-                      const String                    scheduleTitle,
-                      const String                    scheduleCustomText,
+                      ConstString                     scheduleTitle,
+                      ConstString                     scheduleCustomText,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData,
                       CreateStatusInfoFunction        createStatusInfoFunction,
@@ -5389,7 +5408,7 @@ Errors Command_create(const String                    jobUUID,
   DEBUG_TESTCODE("Command_create1") { Storage_doneSpecifier(&storageSpecifier); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
-  // init threads
+  // init create info
   initCreateInfo(&createInfo,
                  &storageSpecifier,
                  jobUUID,
@@ -5407,6 +5426,8 @@ Errors Command_create(const String                    jobUUID,
                  pauseStorageFlag,
                  requestedAbortFlag
                 );
+
+  // init threads
   createThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
   createThreads = (Thread*)malloc(createThreadCount*sizeof(Thread));
   if (createThreads == NULL)
