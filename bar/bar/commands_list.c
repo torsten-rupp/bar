@@ -416,29 +416,29 @@ LOCAL void printFileInfo(ConstString        storageName,
     {
       String_format(compressString,
                     "%s+%s",
-                    Compress_getAlgorithmName(deltaCompressAlgorithm),
-                    Compress_getAlgorithmName(byteCompressAlgorithm)
+                    Compress_algorithmToString(deltaCompressAlgorithm),
+                    Compress_algorithmToString(byteCompressAlgorithm)
                    );
     }
     else if (Compress_isCompressed(deltaCompressAlgorithm))
     {
       String_format(compressString,
                     "%s",
-                    Compress_getAlgorithmName(deltaCompressAlgorithm)
+                    Compress_algorithmToString(deltaCompressAlgorithm)
                    );
     }
     else if (Compress_isCompressed(byteCompressAlgorithm))
     {
       String_format(compressString,
                     "%s",
-                    Compress_getAlgorithmName(byteCompressAlgorithm)
+                    Compress_algorithmToString(byteCompressAlgorithm)
                    );
     }
     else
     {
       String_format(compressString,
                     "%s",
-                    Compress_getAlgorithmName(deltaCompressAlgorithm)
+                    Compress_algorithmToString(deltaCompressAlgorithm)
                    );
     }
 
@@ -573,29 +573,29 @@ LOCAL void printImageInfo(ConstString        storageName,
     {
       String_format(compressString,
                     "%s+%s",
-                    Compress_getAlgorithmName(deltaCompressAlgorithm),
-                    Compress_getAlgorithmName(byteCompressAlgorithm)
+                    Compress_algorithmToString(deltaCompressAlgorithm),
+                    Compress_algorithmToString(byteCompressAlgorithm)
                    );
     }
     else if (Compress_isCompressed(deltaCompressAlgorithm))
     {
       String_format(compressString,
                     "%s",
-                    Compress_getAlgorithmName(deltaCompressAlgorithm)
+                    Compress_algorithmToString(deltaCompressAlgorithm)
                    );
     }
     else if (Compress_isCompressed(byteCompressAlgorithm))
     {
       String_format(compressString,
                     "%s",
-                    Compress_getAlgorithmName(byteCompressAlgorithm)
+                    Compress_algorithmToString(byteCompressAlgorithm)
                    );
     }
     else
     {
       String_format(compressString,
                     "%s",
-                    Compress_getAlgorithmName(deltaCompressAlgorithm)
+                    Compress_algorithmToString(deltaCompressAlgorithm)
                    );
     }
 
@@ -869,29 +869,29 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
     {
       String_format(compressString,
                     "%s+%s",
-                    Compress_getAlgorithmName(deltaCompressAlgorithm),
-                    Compress_getAlgorithmName(byteCompressAlgorithm)
+                    Compress_algorithmToString(deltaCompressAlgorithm),
+                    Compress_algorithmToString(byteCompressAlgorithm)
                    );
     }
     else if (Compress_isCompressed(deltaCompressAlgorithm))
     {
       String_format(compressString,
                     "%s",
-                    Compress_getAlgorithmName(deltaCompressAlgorithm)
+                    Compress_algorithmToString(deltaCompressAlgorithm)
                    );
     }
     else if (Compress_isCompressed(byteCompressAlgorithm))
     {
       String_format(compressString,
                     "%s",
-                    Compress_getAlgorithmName(byteCompressAlgorithm)
+                    Compress_algorithmToString(byteCompressAlgorithm)
                    );
     }
     else
     {
       String_format(compressString,
                     "%s",
-                    Compress_getAlgorithmName(deltaCompressAlgorithm)
+                    Compress_algorithmToString(deltaCompressAlgorithm)
                    );
     }
 
@@ -2409,8 +2409,10 @@ remoteBarFlag=FALSE;
                                   storageSpecifier->hostPort,
                                   storageSpecifier->loginName,
                                   sshServer.password,
-                                  sshServer.publicKeyFileName,
-                                  sshServer.privateKeyFileName,
+                                  sshServer.publicKey.data,
+                                  sshServer.publicKey.length,
+                                  sshServer.privateKey.data,
+                                  sshServer.privateKey.length,
                                   0
                                  );
           if (error != ERROR_NONE)
@@ -2429,8 +2431,10 @@ remoteBarFlag=FALSE;
                                     storageSpecifier->hostPort,
                                     storageSpecifier->loginName,
                                     &sshPassword,
-                                    sshServer.publicKeyFileName,
-                                    sshServer.privateKeyFileName,
+                                    sshServer.publicKey.data,
+                                    sshServer.publicKey.length,
+                                    sshServer.privateKey.data,
+                                    sshServer.privateKey.length,
                                     0
                                    );
 
