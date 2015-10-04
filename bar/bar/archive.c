@@ -3671,7 +3671,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_FILE;
 
   archiveEntryInfo->file.deltaCompressAlgorithm    = COMPRESS_ALGORITHM_NONE;
-  archiveEntryInfo->file.byteCompressAlgorithm     = byteCompressFlag ? archiveInfo->jobOptions->compressAlgorithm.byte : COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->file.byteCompressAlgorithm     = byteCompressFlag ? archiveInfo->jobOptions->compressAlgorithms.byte : COMPRESS_ALGORITHM_NONE;
 
   archiveEntryInfo->file.fileExtendedAttributeList = fileExtendedAttributeList;
 
@@ -3724,7 +3724,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     if      (error == ERROR_NONE)
     {
       archiveEntryInfo->file.deltaSourceHandleInitFlag   = TRUE;
-      archiveEntryInfo->file.deltaCompressAlgorithm = archiveInfo->jobOptions->compressAlgorithm.delta;
+      archiveEntryInfo->file.deltaCompressAlgorithm = archiveInfo->jobOptions->compressAlgorithms.delta;
       AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.deltaSourceHandle,{ DeltaSource_closeEntry(&archiveEntryInfo->file.deltaSourceHandle); });
     }
     else if (archiveInfo->jobOptions->forceDeltaCompressionFlag)
@@ -4046,7 +4046,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveEntryInfo->image.blockSize              = deviceInfo->blockSize;
 
   archiveEntryInfo->image.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
-  archiveEntryInfo->image.byteCompressAlgorithm  = byteCompressFlag ?archiveInfo->jobOptions->compressAlgorithm.byte :COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->image.byteCompressAlgorithm  = byteCompressFlag ?archiveInfo->jobOptions->compressAlgorithms.byte :COMPRESS_ALGORITHM_NONE;
 
   archiveEntryInfo->image.deltaSourceHandleInitFlag   = FALSE;
 
@@ -4097,7 +4097,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     if (error == ERROR_NONE)
     {
       archiveEntryInfo->image.deltaSourceHandleInitFlag   = TRUE;
-      archiveEntryInfo->image.deltaCompressAlgorithm = archiveInfo->jobOptions->compressAlgorithm.delta;
+      archiveEntryInfo->image.deltaCompressAlgorithm = archiveInfo->jobOptions->compressAlgorithms.delta;
       AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.deltaSourceHandle,{ DeltaSource_closeEntry(&archiveEntryInfo->image.deltaSourceHandle); });
     }
     else
@@ -4814,7 +4814,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveEntryInfo->archiveEntryType                   = ARCHIVE_ENTRY_TYPE_HARDLINK;
 
   archiveEntryInfo->hardLink.deltaCompressAlgorithm    = COMPRESS_ALGORITHM_NONE;
-  archiveEntryInfo->hardLink.byteCompressAlgorithm     = byteCompressFlag ?archiveInfo->jobOptions->compressAlgorithm.byte :COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->hardLink.byteCompressAlgorithm     = byteCompressFlag ?archiveInfo->jobOptions->compressAlgorithms.byte :COMPRESS_ALGORITHM_NONE;
 
   archiveEntryInfo->hardLink.fileNameList              = fileNameList;
   archiveEntryInfo->hardLink.fileExtendedAttributeList = fileExtendedAttributeList;
@@ -4872,7 +4872,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     if      (error == ERROR_NONE)
     {
       archiveEntryInfo->hardLink.deltaSourceHandleInitFlag   = TRUE;
-      archiveEntryInfo->hardLink.deltaCompressAlgorithm = archiveInfo->jobOptions->compressAlgorithm.delta;
+      archiveEntryInfo->hardLink.deltaCompressAlgorithm = archiveInfo->jobOptions->compressAlgorithms.delta;
       AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.deltaSourceHandle,{ DeltaSource_closeEntry(&archiveEntryInfo->hardLink.deltaSourceHandle); });
     }
     else if (archiveInfo->jobOptions->forceDeltaCompressionFlag)
