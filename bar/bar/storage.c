@@ -450,7 +450,11 @@ LOCAL bool initDefaultSSHPassword(ConstString hostName, ConstString loginName, c
 *          loginName          - login name
 *          loginPassword      - login password
 *          publicKeyFileName  - SSH public key file name
+*          publicKey          - SSH public key
+*          publicKeyLength    - SSH public key length
 *          privateKeyFileName - SSH private key file name
+*          privateKey         - SSH private key
+*          privateKeyLength   - SSH private key length
 * Output : -
 * Return : ERROR_NONE if login is possible, error code otherwise
 * Notes  : -
@@ -460,24 +464,31 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
                            uint        hostPort,
                            ConstString loginName,
                            Password    *loginPassword,
-                           ConstString publicKeyFileName,
-                           ConstString privateKeyFileName
+//                           ConstString publicKeyFileName,
+//                           ConstString privateKeyFileName
+                           void        *publicKey,
+                           uint        publicKeyLength,
+                           void        *privateKey,
+                           uint        privateKeyLength
                           )
 {
   SocketHandle socketHandle;
   Errors       error;
 
   printInfo(5,"SSH: host %s:%d\n",String_cString(hostName),hostPort);
-  printInfo(5,"SSH: public key '%s'\n",String_cString(publicKeyFileName));
-  printInfo(5,"SSH: private key '%s'\n",String_cString(privateKeyFileName));
+#warning remove
+//  printInfo(5,"SSH: public key '%s'\n",String_cString(publicKeyFileName));
+//  printInfo(5,"SSH: private key '%s'\n",String_cString(privateKeyFileName));
   error = Network_connect(&socketHandle,
                           SOCKET_TYPE_SSH,
                           hostName,
                           hostPort,
                           loginName,
                           loginPassword,
-                          publicKeyFileName,
-                          privateKeyFileName,
+                          publicKey,
+                          publicKeyLength,
+                          privateKey,
+                          privateKeyLength,
                           0
                          );
   if (error != ERROR_NONE)

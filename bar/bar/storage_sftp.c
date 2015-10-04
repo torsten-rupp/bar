@@ -367,8 +367,8 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
     if (storageHandle->storageSpecifier.hostPort == 0) storageHandle->storageSpecifier.hostPort = sshServer.port;
-    storageHandle->sftp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
-    storageHandle->sftp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
+    storageHandle->sftp.publicKey  = sshServer.publicKey;
+    storageHandle->sftp.privateKey = sshServer.privateKey;
     if (String_isEmpty(storageHandle->storageSpecifier.hostName))
     {
       AutoFree_cleanup(&autoFreeList);
@@ -391,8 +391,12 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
                             storageHandle->storageSpecifier.hostPort,
                             storageHandle->storageSpecifier.loginName,
                             sshServer.password,
-                            storageHandle->sftp.sshPublicKeyFileName,
-                            storageHandle->sftp.sshPrivateKeyFileName
+//                            storageHandle->sftp.sshPublicKeyFileName,
+//                            storageHandle->sftp.sshPrivateKeyFileName
+                            storageHandle->sftp.publicKey.data,
+                            storageHandle->sftp.publicKey.length,
+                            storageHandle->sftp.privateKey.data,
+                            storageHandle->sftp.privateKey.length
                            );
       if (error == ERROR_NONE)
       {
@@ -410,8 +414,12 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
                               storageHandle->storageSpecifier.hostPort,
                               storageHandle->storageSpecifier.loginName,
                               defaultSSHPassword,
-                              storageHandle->sftp.sshPublicKeyFileName,
-                              storageHandle->sftp.sshPrivateKeyFileName
+//                              storageHandle->sftp.sshPublicKeyFileName,
+//                              storageHandle->sftp.sshPrivateKeyFileName
+                              storageHandle->sftp.publicKey.data,
+                              storageHandle->sftp.publicKey.length,
+                              storageHandle->sftp.privateKey.data,
+                              storageHandle->sftp.privateKey.length
                              );
         if (error == ERROR_NONE)
         {
@@ -593,8 +601,10 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
                               storageHandle->storageSpecifier.hostPort,
                               storageHandle->storageSpecifier.loginName,
                               storageHandle->storageSpecifier.loginPassword,
-                              storageHandle->sftp.sshPublicKeyFileName,
-                              storageHandle->sftp.sshPrivateKeyFileName,
+                              storageHandle->sftp.publicKey.data,
+                              storageHandle->sftp.publicKey.length,
+                              storageHandle->sftp.privateKey.data,
+                              storageHandle->sftp.privateKey.length,
                               0
                              );
       if (error != ERROR_NONE)
@@ -682,8 +692,10 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle, ConstString archiveN
                               storageHandle->storageSpecifier.hostPort,
                               storageHandle->storageSpecifier.loginName,
                               storageHandle->storageSpecifier.loginPassword,
-                              storageHandle->sftp.sshPublicKeyFileName,
-                              storageHandle->sftp.sshPrivateKeyFileName,
+                              storageHandle->sftp.publicKey.data,
+                              storageHandle->sftp.publicKey.length,
+                              storageHandle->sftp.privateKey.data,
+                              storageHandle->sftp.privateKey.length,
                               0
                              );
       if (error != ERROR_NONE)
@@ -1201,8 +1213,10 @@ LOCAL Errors StorageSFTP_delete(StorageHandle *storageHandle,
                             storageHandle->storageSpecifier.hostPort,
                             storageHandle->storageSpecifier.loginName,
                             storageHandle->storageSpecifier.loginPassword,
-                            storageHandle->sftp.sshPublicKeyFileName,
-                            storageHandle->sftp.sshPrivateKeyFileName,
+                            storageHandle->sftp.publicKey.data,
+                            storageHandle->sftp.publicKey.length,
+                            storageHandle->sftp.privateKey.data,
+                            storageHandle->sftp.privateKey.length,
                             0
                            );
     if (error == ERROR_NONE)
@@ -1290,8 +1304,10 @@ LOCAL Errors StorageSFTP_getFileInfo(StorageHandle *storageHandle,
                               storageHandle->storageSpecifier.hostPort,
                               storageHandle->storageSpecifier.loginName,
                               storageHandle->storageSpecifier.loginPassword,
-                              storageHandle->sftp.sshPublicKeyFileName,
-                              storageHandle->sftp.sshPrivateKeyFileName,
+                              sshServer.publicKey,
+                              sshServer.publicKeyLength,
+                              sshServer.privateKey,
+                              sshServer.privateKeyLength,
                               0
                              );
       if (error == ERROR_NONE)
@@ -1431,8 +1447,10 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                                 storageDirectoryListHandle->storageSpecifier.hostPort,
                                 storageDirectoryListHandle->storageSpecifier.loginName,
                                 sshServer.password,
-                                sshServer.publicKeyFileName,
-                                sshServer.privateKeyFileName,
+                                sshServer.publicKey.data,
+                                sshServer.publicKey.length,
+                                sshServer.privateKey.data,
+                                sshServer.privateKey.length,
                                 0
                                );
       }
@@ -1449,8 +1467,10 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                                   storageDirectoryListHandle->storageSpecifier.hostPort,
                                   storageDirectoryListHandle->storageSpecifier.loginName,
                                   defaultSSHPassword,
-                                  sshServer.publicKeyFileName,
-                                  sshServer.privateKeyFileName,
+                                  sshServer.publicKey.data,
+                                  sshServer.publicKey.length,
+                                  sshServer.privateKey.data,
+                                  sshServer.privateKey.length,
                                   0
                                  );
         }

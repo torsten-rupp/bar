@@ -646,7 +646,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
     }
     for (z = 0; z < SIZE_OF_ARRAY(MONTH_DEFINITIONS); z++)
     {
-      if (strcasecmp(MONTH_DEFINITIONS[z].name,s) == 0)
+      if (stringEqualsIgnoreCase(MONTH_DEFINITIONS[z].name,s))
       {
         month = MONTH_DEFINITIONS[z].month;
         break;
@@ -709,7 +709,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
     }
     for (z = 0; z < SIZE_OF_ARRAY(MONTH_DEFINITIONS); z++)
     {
-      if (strcasecmp(MONTH_DEFINITIONS[z].name,s) == 0)
+      if (stringEqualsIgnoreCase(MONTH_DEFINITIONS[z].name,s))
       {
         month = MONTH_DEFINITIONS[z].month;
         break;

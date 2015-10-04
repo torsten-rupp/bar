@@ -288,8 +288,10 @@ typedef struct
 //        uint                    hostPort;                  // ssh server port number
 //        String                  loginName;                 // ssh login name
 //        Password                *password;                 // ssh login password
-        String                  sshPublicKeyFileName;      // ssh public key file name
-        String                  sshPrivateKeyFileName;     // ssh private key file name
+//        String                  sshPublicKeyFileName;      // ssh public key file name
+//        String                  sshPrivateKeyFileName;     // ssh private key file name
+        Key                     publicKey;                   // ssh public key data (ssh,scp,sftp)
+        Key                     privateKey;                  // ssh private key data (ssh,scp,sftp)
 
         SocketHandle            socketHandle;
         LIBSSH2_CHANNEL         *channel;                  // ssh channel
@@ -306,6 +308,8 @@ typedef struct
         Server                  *server;
         String                  sshPublicKeyFileName;      // ssh public key file name
         String                  sshPrivateKeyFileName;     // ssh private key file name
+        Key                     publicKey;                 // ssh public key data (ssh,scp,sftp)
+        Key                     privateKey;                // ssh private key data (ssh,scp,sftp)
 
         SocketHandle            socketHandle;
         LIBSSH2_CHANNEL         *channel;                  // scp channel
@@ -330,6 +334,8 @@ typedef struct
         Server                  *server;
         String                  sshPublicKeyFileName;      // ssh public key file name
         String                  sshPrivateKeyFileName;     // ssh private key file name
+        Key                     publicKey;                 // ssh public key data (ssh,scp,sftp)
+        Key                     privateKey;                // ssh private key data (ssh,scp,sftp)
 
         SocketHandle            socketHandle;
         LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)

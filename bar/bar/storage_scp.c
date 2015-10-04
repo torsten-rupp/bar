@@ -375,8 +375,9 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
     if (storageHandle->storageSpecifier.hostPort == 0) storageHandle->storageSpecifier.hostPort = sshServer.port;
-    storageHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
-    storageHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
+#warning TODO!!!!!
+//    storageHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
+//    storageHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
     if (String_isEmpty(storageHandle->storageSpecifier.hostName))
     {
       AutoFree_cleanup(&autoFreeList);
@@ -399,8 +400,12 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
                             storageHandle->storageSpecifier.hostPort,
                             storageHandle->storageSpecifier.loginName,
                             sshServer.password,
-                            storageHandle->scp.sshPublicKeyFileName,
-                            storageHandle->scp.sshPrivateKeyFileName
+//                            storageHandle->scp.sshPublicKeyFileName,
+//                            storageHandle->scp.sshPrivateKeyFileName
+                            storageHandle->scp.publicKey.data,
+                            storageHandle->scp.publicKey.length,
+                            storageHandle->scp.privateKey.data,
+                            storageHandle->scp.privateKey.length
                            );
       if (error == ERROR_NONE)
       {
@@ -418,8 +423,12 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
                               storageHandle->storageSpecifier.hostPort,
                               storageHandle->storageSpecifier.loginName,
                               defaultSSHPassword,
-                              storageHandle->scp.sshPublicKeyFileName,
-                              storageHandle->scp.sshPrivateKeyFileName
+//                              storageHandle->scp.sshPublicKeyFileName,
+//                              storageHandle->scp.sshPrivateKeyFileName
+                              storageHandle->scp.publicKey.data,
+                              storageHandle->scp.publicKey.length,
+                              storageHandle->scp.privateKey.data,
+                              storageHandle->scp.privateKey.length
                              );
         if (error == ERROR_NONE)
         {
@@ -599,8 +608,10 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                             storageHandle->storageSpecifier.hostPort,
                             storageHandle->storageSpecifier.loginName,
                             storageHandle->storageSpecifier.loginPassword,
-                            storageHandle->scp.sshPublicKeyFileName,
-                            storageHandle->scp.sshPrivateKeyFileName,
+                            storageHandle->scp.publicKey.data,
+                            storageHandle->scp.publicKey.length,
+                            storageHandle->scp.privateKey.data,
+                            storageHandle->scp.privateKey.length,
                             0
                            );
     if (error != ERROR_NONE)
@@ -686,8 +697,10 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle, ConstString archiveNa
                             storageHandle->storageSpecifier.hostPort,
                             storageHandle->storageSpecifier.loginName,
                             storageHandle->storageSpecifier.loginPassword,
-                            storageHandle->scp.sshPublicKeyFileName,
-                            storageHandle->scp.sshPrivateKeyFileName,
+                            storageHandle->scp.publicKey.data,
+                            storageHandle->scp.publicKey.length,
+                            storageHandle->scp.privateKey.data,
+                            storageHandle->scp.privateKey.length,
                             0
                            );
     if (error != ERROR_NONE)
