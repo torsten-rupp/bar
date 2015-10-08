@@ -19,7 +19,7 @@
 #include <assert.h>
 
 #include "global.h"
-#include "stringmaps.h"
+#include "strings.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -28,6 +28,7 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
+
 // remote host
 typedef struct
 {
@@ -46,13 +47,62 @@ typedef struct
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : Remote_initHost
+* Purpose: init remote host info
+* Input  : remoteHost - remote host variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Remote_initHost(RemoteHost *remoteHost);
+
+/***********************************************************************\
+* Name   : Remote_doneHost
+* Purpose: done remote host info
+* Input  : remoteHost - remote host
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 void Remote_doneHost(RemoteHost *remoteHost);
 
+/***********************************************************************\
+* Name   : Remote_copyHost
+* Purpose: copy remote host info
+* Input  : toRemoteHost   - remote host variable
+*          fromRemoteHost - from remote host
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Remote_copyHost(RemoteHost *toRemoteHost, const RemoteHost *fromRemoteHost);
 
+/***********************************************************************\
+* Name   : Remote_duplicateHost
+* Purpose: duplicate remote host info
+* Input  : toRemoteHost   - remote host variable
+*          fromRemoteHost - from remote host
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Remote_duplicateHost(RemoteHost *toRemoteHost, const RemoteHost *fromRemoteHost);
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  :
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 Errors Remote_serverConnect(SocketHandle *socketHandle,
                             ConstString  hostName,
@@ -60,13 +110,64 @@ Errors Remote_serverConnect(SocketHandle *socketHandle,
                             bool         hostForceSSL
                            );
 
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : remoteHost - remote host
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Remote_serverDisconnect(SocketHandle *socketHandle);
+
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : remoteHost - remote host
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Remote_connect(const RemoteHost *remoteHost);
+
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : remoteHost - remote host
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool Remote_isConnected(const RemoteHost *remoteHost);
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : Remote_executeCommand
+* Purpose: execute command on remote host
+* Input  : remoteHost - remote host
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 Errors Remote_executeCommand(const RemoteHost *remoteHost,
                              StringMap        resultMap,
                              const char       *format,
                              ...
                             );
+
+/***********************************************************************\
+* Name   : Remote_jobStart
+* Purpose: start job on remote host
+* Input  : remoteHost - remote host
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 Errors Remote_jobStart(const RemoteHost                *remoteHost,
                        ConstString                     jobUUID,
@@ -87,6 +188,15 @@ Errors Remote_jobStart(const RemoteHost                *remoteHost,
                        StorageRequestVolumeFunction    storageRequestVolumeFunction,
                        void                            *storageRequestVolumeUserData
                       );
+
+/***********************************************************************\
+* Name   : Remote_jobAbort
+* Purpose: abort job on remote host
+* Input  : remoteHost - remote host
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 Errors Remote_jobAbort(const RemoteHost *remoteHost,
                        ConstString      jobUUID

@@ -26,16 +26,16 @@
 #include "autofree.h"
 #include "lists.h"
 #include "strings.h"
-#include "stringmaps.h"
-#include "arrays.h"
-#include "configvalues.h"
-#include "threads.h"
+//#include "stringmaps.h"
+//#include "arrays.h"
+//#include "configvalues.h"
+//#include "threads.h"
 #include "semaphores.h"
-#include "msgqueues.h"
-#include "stringlists.h"
+//#include "msgqueues.h"
+//#include "stringlists.h"
 
 #include "network.h"
-#include "patterns.h"
+//#include "patterns.h"
 #include "entrylists.h"
 #include "patternlists.h"
 #include "misc.h"
@@ -53,6 +53,7 @@
 /***************************** Constants *******************************/
 
 /***************************** Datatypes *******************************/
+
 typedef struct RemoteServerNode
 {
   LIST_NODE_HEADER(struct RemoteServerNode);
@@ -91,7 +92,7 @@ LOCAL RemoteServerList remoteServerList;
 #endif
 
 /***********************************************************************\
-* Name   : Remote_findServer
+* Name   : findRemoteServer
 * Purpose: find remote server connection
 * Input  : remoteHost - remote host
 * Output : -
@@ -99,7 +100,7 @@ LOCAL RemoteServerList remoteServerList;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL RemoteServerNode *Remote_findServer(const RemoteHost *remoteHost)
+LOCAL RemoteServerNode *findRemoteServer(const RemoteHost *remoteHost)
 {
   RemoteServerNode *remoteServerNode;
 
@@ -357,6 +358,91 @@ void Remote_serverDisconnect(SocketHandle *socketHandle)
   Network_disconnect(socketHandle);
 }
 
+Errors Remote_connect(const RemoteHost *remoteHost)
+{
+  String           line;
+  SocketHandle     socketHandle;
+  Errors           error;
+  bool             sslFlag;
+  RemoteServerNode *remoteServerNode;
+
+  assert(remoteHost != NULL);
+
+  // init variables
+  line = String_new();
+
+  // connect to remote host
+  error = Network_connect(&socketHandle,
+                          remoteHost->forceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
+                          remoteHost->name,
+                          remoteHost->port,
+                          NULL,  // loginName
+                          NULL,  // password
+                          NULL,  // sshPublicKey
+                          0,
+                          NULL,  // sshPrivateKey
+                          0,
+                          SOCKET_FLAG_NONE
+                         );
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+//TODO
+sslFlag = TRUE;
+
+  // authorize
+  error = Network_readLine(&socketHandle,line,30LL*1000);
+  if (error != ERROR_NONE)
+  {
+    Network_disconnect(&socketHandle);
+    String_delete(line);
+    return error;
+  }
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
+
+  // add remote server
+  remoteServerNode = LIST_NEW_NODE(RemoteServerNode);
+  if (remoteServerNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  remoteServerNode->hostName     = String_duplicate(remoteHost->name);
+  remoteServerNode->hostPort     = remoteHost->port;
+  remoteServerNode->sslFlag      = sslFlag;
+  remoteServerNode->commandId    = 0;
+  remoteServerNode->socketHandle = socketHandle;
+  List_append(&remoteServerList,remoteServerNode);
+
+  // free resources
+  String_delete(line);
+
+  printInfo(2,"Connected remote host '%s'",String_cString(remoteServerNode->hostName));
+
+  return ERROR_NONE;
+}
+
+void Remote_disconnect(const RemoteHost *remoteHost)
+{
+}
+
+bool Remote_isConnected(const RemoteHost *remoteHost)
+{
+  SemaphoreLock    semaphoreLock;
+  RemoteServerNode *remoteServerNode;
+  bool             isConnected;
+
+  assert(remoteHost != NULL);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&remoteServerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    isConnected = (findRemoteServer(remoteHost) != NULL);
+  }
+
+  return isConnected;
+}
+
 //TODO
 LOCAL Errors Remote_vexecuteCommand(const RemoteHost *remoteHost,
                               StringMap  resultMap,
@@ -384,7 +470,7 @@ LOCAL Errors Remote_vexecuteCommand(const RemoteHost *remoteHost,
   SEMAPHORE_LOCKED_DO(semaphoreLock,&remoteServerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find remote server
-    remoteServerNode = Remote_findServer(remoteHost);
+    remoteServerNode = findRemoteServer(remoteHost);
 
     if (remoteServerNode == NULL)
     {
