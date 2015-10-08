@@ -3091,7 +3091,7 @@ remoteBarFlag=FALSE;
     printArchiveListFooter(List_count(&archiveContentList));
   }
 
-  return ERROR_NONE;
+  return error;
 }
 
 /***********************************************************************\
