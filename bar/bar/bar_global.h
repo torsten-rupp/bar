@@ -48,8 +48,9 @@ typedef enum
 {
   ARCHIVE_TYPE_NORMAL,                  // normal archives; no incremental list file
   ARCHIVE_TYPE_FULL,                    // full archives, create incremental list file
-  ARCHIVE_TYPE_INCREMENTAL,             // incremental achives
-  ARCHIVE_TYPE_DIFFERENTIAL,            // differential achives
+  ARCHIVE_TYPE_INCREMENTAL,             // incremental achives, use and update incremental list file
+  ARCHIVE_TYPE_DIFFERENTIAL,            // differential achives, use incremental list file
+  ARCHIVE_TYPE_CONTINUOUS,              // continuous archives, use continuous collected file list
   ARCHIVE_TYPE_UNKNOWN,
 } ArchiveTypes;
 
