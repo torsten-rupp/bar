@@ -710,6 +710,38 @@ String File_getRootFileNameCString(String rootName, const char *fileName)
   return rootName;
 }
 
+String File_getAbsoluteFileName(String absoluteFileName, ConstString fileName)
+{
+  assert(absoluteFileName != NULL);
+  assert(fileName != NULL);
+
+  return File_getAbsoluteFileNameCString(absoluteFileName,String_cString(fileName));
+}
+
+String File_getAbsoluteFileNameCString(String absoluteFileName, const char *fileName)
+{
+  #if   defined(PLATFORM_LINUX)
+    char *buffer;
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
+
+  assert(absoluteFileName != NULL);
+  assert(fileName != NULL);
+
+  String_clear(absoluteFileName);
+  #if   defined(PLATFORM_LINUX)
+    buffer = realpath(fileName,NULL);
+    String_setCString(absoluteFileName,buffer);
+    free(buffer);
+  #elif defined(PLATFORM_WINDOWS)
+    buffer = _fullpath(NULL,fileName,0);
+    String_setCString(absoluteFileName,buffer);
+    free(buffer);
+  #endif /* PLATFORM_... */
+
+  return absoluteFileName;
+}
+
 void File_splitFileName(ConstString fileName, String *pathName, String *baseName)
 {
   assert(fileName != NULL);
@@ -2332,7 +2364,7 @@ Errors File_openRootList(RootListHandle *rootListHandle)
       StringList_appendCString(&rootListHandle->fileSystemNames,s);
     }
   }
-  close(handle);
+  (void)fclose(handle);
 
   // open mount list
   rootListHandle->mounts = fopen(MOUNTS_FILENAME,"r");

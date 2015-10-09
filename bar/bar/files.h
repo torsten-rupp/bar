@@ -423,6 +423,19 @@ String File_getRootFileName(String rootName, ConstString fileName);
 String File_getRootFileNameCString(String rootName, const char *fileName);
 
 /***********************************************************************\
+* Name   : File_getAbsoluteFileName, File_getAbsoluteFileNameCString
+* Purpose: get absolute name of file
+* Input  : absoluteFileName - absolute file name variable
+*          fileName         - file name
+* Output : -
+* Return : absoluteFileName variable
+* Notes  : -
+\***********************************************************************/
+
+String File_getAbsoluteFileName(String absoluteFileName, ConstString fileName);
+String File_getAbsoluteFileNameCString(String absoluteFileName, const char *fileName);
+
+/***********************************************************************\
 * Name   : File_splitFileName
 * Purpose: split file name into path name and base name
 * Input  : fileName - file name
