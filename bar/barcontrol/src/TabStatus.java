@@ -61,7 +61,7 @@ class JobData
 {
   String uuid;
   String name;
-  String hostName;
+  String remoteHostName;
   String state;
   String archiveType;
   long   archivePartSize;
@@ -79,7 +79,7 @@ class JobData
   /** create job data
    * @param uuid job UUID
    * @param name name
-   * @param hostName host name
+   * @param remoteHostName remote host name
    * @param state job state
    * @param archiveType archive type
    * @param archivePartSize archive part size
@@ -91,10 +91,10 @@ class JobData
    * @param lastExecutedDateTime last executed date/time [s]
    * @param estimatedRestTime estimated rest time [s]
    */
-  JobData(String uuid, String name, String hostName, String state, String archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
+  JobData(String uuid, String name, String remoteHostName, String state, String archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
   {
     this.uuid                   = uuid;
-    this.hostName               = hostName;
+    this.remoteHostName         = remoteHostName;
     this.name                   = name;
     this.state                  = state;
     this.archiveType            = archiveType;
@@ -184,7 +184,7 @@ class JobData
    */
   public String toString()
   {
-    return "Job {"+uuid+", "+name+", "+hostName+", "+state+", "+archiveType+"}";
+    return "Job {"+uuid+", "+name+", "+remoteHostName+", "+state+", "+archiveType+"}";
   }
 };
 
@@ -534,6 +534,7 @@ public class TabStatus
     widgetJobTableHeaderMenu = Widgets.newPopupMenu(shell);
     {
       menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Name"));
+//TODO: true: read column width
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -1398,7 +1399,7 @@ public class TabStatus
           // get data
           String jobUUID                = resultMap.getString("jobUUID"               );
           String name                   = resultMap.getString("name"                  );
-          String hostName               = resultMap.getString("hostName",""           );
+          String remoteHostName         = resultMap.getString("remoteHostName",""     );
           String state                  = resultMap.getString("state"                 );
           String archiveType            = resultMap.getString("archiveType"           );
           long   archivePartSize        = resultMap.getLong  ("archivePartSize"       );
@@ -1414,7 +1415,7 @@ public class TabStatus
           if (jobData != null)
           {
             jobData.name                   = name;
-            jobData.hostName               = hostName;
+            jobData.remoteHostName         = remoteHostName;
             jobData.state                  = state;
             jobData.archiveType            = archiveType;
             jobData.archivePartSize        = archivePartSize;
@@ -1430,7 +1431,7 @@ public class TabStatus
           {
             jobData = new JobData(jobUUID,
                                   name,
-                                  hostName,
+                                  remoteHostName,
                                   state,
                                   archiveType,
                                   archivePartSize,
@@ -1472,7 +1473,7 @@ public class TabStatus
                   Widgets.updateTableItem(tableItem,
                                           jobData,
                                           jobData.name,
-                                          jobData.hostName,
+                                          jobData.remoteHostName,
                                           (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
                                           jobData.archiveType,
                                           (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
@@ -1492,7 +1493,7 @@ public class TabStatus
                                                       findJobTableItemIndex(jobData),
                                                       jobData,
                                                       jobData.name,
-                                                      jobData.hostName,
+                                                      jobData.remoteHostName,
                                                       (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
                                                       jobData.archiveType,
                                                       (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
