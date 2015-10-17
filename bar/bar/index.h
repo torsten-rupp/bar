@@ -75,8 +75,7 @@ typedef struct
 {
   const char     *databaseFileName;
   DatabaseHandle databaseHandle;
-  Errors         initError;
-  bool           initDoneFlag;
+  Errors         upgradeError;
   bool           quitFlag;
 } IndexHandle;
 
@@ -214,25 +213,6 @@ void __Index_done(const char  *__fileName__,
                   IndexHandle *indexHandle
                  );
 #endif /* NDEBUG */
-
-/***********************************************************************\
-* Name   : Index_isInitDone
-* Purpose: check if index is ready to use
-* Input  : indexHandle - index handle
-* Output : -
-* Return : TRUE iff ready
-* Notes  : -
-\***********************************************************************/
-
-INLINE bool Index_isInitDone(IndexHandle *indexHandle);
-#if defined(NDEBUG) || defined(__INDEX_IMPLEMENATION__)
-INLINE bool Index_isInitDone(IndexHandle *indexHandle)
-{
-  assert(indexHandle != NULL);
-
-  return indexHandle->initDoneFlag;
-}
-#endif /* NDEBUG || __STRINGS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Index_findById
@@ -580,12 +560,12 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_newStorage(IndexHandle  *indexHandle,
-                        DatabaseId   entityId,
+Errors Index_newStorage(IndexHandle *indexHandle,
+                        DatabaseId  entityId,
                         ConstString storageName,
-                        IndexStates  indexState,
-                        IndexModes   indexMode,
-                        DatabaseId   *storageId
+                        IndexStates indexState,
+                        IndexModes  indexMode,
+                        DatabaseId  *storageId
                        );
 
 /***********************************************************************\
