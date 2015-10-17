@@ -1622,7 +1622,8 @@ public class TabRestore
       if (triggeredFlag) return;
 
       // update UUID list
-      command = BARServer.runCommand(StringParser.format("INDEX_UUID_LIST pattern=%'S",
+      command = BARServer.runCommand(StringParser.format("INDEX_UUID_LIST maxCount=%d pattern=%'S",
+                                                         storageMaxCount,
                                                          (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
                                                         ),
                                      0
@@ -1880,8 +1881,8 @@ public class TabRestore
       // update storage list
       command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexState=%s indexMode=%s pattern=%'S",
                                                          entityIndexData[0].entityId,
-                                                         -1,
-                                                         "*",
+                                                         storageMaxCount,
+                                                         storageIndexStateSet.nameList("|"),
                                                          "*",
                                                          (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
                                                         ),
