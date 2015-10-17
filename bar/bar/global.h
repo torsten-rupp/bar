@@ -269,32 +269,58 @@ typedef struct
 #endif
 
 /***********************************************************************\
+* Name   : LAMBDA
+* Purpose: define a lambda-function
+* Input  : functionReturnType - call-back function return type
+*          functionBody       - call-back function body
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define LAMBDA(functionReturnType,functionBody) \
+  ({ \
+    functionReturnType __closure__ functionBody \
+    __closure__; \
+  })
+
+/***********************************************************************\
 * Name   : CALLBACK_INLINE
-* Purpose: define an inline call-back function
-* Input  : functionSignature - call-back function signature
-*          functionBody      - call-back function body
+* Purpose: define an inline call-back function (lambda-function)
+* Input  : functionReturnType - call-back function signature
+*          functionBody       - call-back function body
+*          functionUserData   - call-back function user data
 * Output : -
 * Return : -
 * Notes  : example
 *          List_removeAndFree(list,
 *                             node,
-*                             CALLBACK_INLINE(ListNodeFreeFunction,{ ... })
+*                             CALLBACK_INLINE(ListNodeFreeFunction,{ ... },NULL)
 *                            );
 \***********************************************************************/
 
-#define CALLBACK_INLINE(functionSignature,functionBody) \
-  (functionSignature)({ \
-                      auto void __closure__(void); \
-                      void __closure__(void)functionBody __closure__; \
-                     }), \
-  NULL
+#define CALLBACK_INLINE(functionReturnType,functionBody,functionUserData) \
+  ({ \
+    functionReturnType __closure__ functionBody \
+    __closure__; \
+  }), \
+  functionUserData
+
+/***********************************************************************\
+* Name   : printf/fprintf
+* Purpose: printf/fprintf-work-around for Windows
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : Windows does not support %ll format token, instead it tries
+*          - as usual according to the MS principle: ignore any standard
+*          whenever possible - its own way (and of course fail...).
+*          Thus use the MinGW implementation of printf/fprintf.
+\***********************************************************************/
 
 #if   defined(PLATFORM_LINUX)
 #elif defined(PLATFORM_WINDOWS)
-  /* Work-around for Windows: Windows does not support %ll format token,
-     instead it tries - as usual according to the MS principle: ignore
-     any standard whenever possible - its own way (and of course fail...).
-     Thus use the MinGW implementation of printf/fprintf.
+  /* Work-around for Windows:
   */
   #ifndef printf
     #define printf __mingw_printf
