@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS files(
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
+CREATE INDEX IF NOT EXISTS filesIndex ON files (storageId,name);
 
 CREATE TABLE IF NOT EXISTS images(
   id              INTEGER PRIMARY KEY,
@@ -69,6 +70,7 @@ CREATE TABLE IF NOT EXISTS images(
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
+CREATE INDEX IF NOT EXISTS imagesIndex ON images (storageId,name);
 
 CREATE TABLE IF NOT EXISTS directories(
   id              INTEGER PRIMARY KEY,
@@ -83,6 +85,7 @@ CREATE TABLE IF NOT EXISTS directories(
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
+CREATE INDEX IF NOT EXISTS directoriesIndex ON directories (storageId,name);
 
 CREATE TABLE IF NOT EXISTS links(
   id              INTEGER PRIMARY KEY,
@@ -98,6 +101,7 @@ CREATE TABLE IF NOT EXISTS links(
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
+CREATE INDEX IF NOT EXISTS linksIndex ON links (storageId,name);
 
 CREATE TABLE IF NOT EXISTS hardlinks(
   id              INTEGER PRIMARY KEY,
@@ -115,6 +119,7 @@ CREATE TABLE IF NOT EXISTS hardlinks(
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
+CREATE INDEX IF NOT EXISTS hardlinksIndex ON hardlinks (storageId,name);
 
 CREATE TABLE IF NOT EXISTS special(
   id              INTEGER PRIMARY KEY,
@@ -132,3 +137,304 @@ CREATE TABLE IF NOT EXISTS special(
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
+CREATE INDEX IF NOT EXISTS specialIndex ON special (storageId,name);
+
+/*
+
+// ---------------------------------------------------------------------
+
+VERSION = 3;
+
+CREATE TABLE meta(
+  name  TEXT,
+  value TEXT
+);
+INSERT INTO meta (name,value) VALUES ('version',3);
+INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
+
+CREATE TABLE storage(
+  id              INTEGER PRIMARY KEY,
+  name            TEXT,
+  uuid            TEXT,
+  created         INTEGER,
+  size            INTEGER,
+  state           INTEGER,
+  mode            INTEGER,
+  lastChecked     INTEGER,
+  errorMessage    TEXT
+);
+
+CREATE TABLE files(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER
+);
+
+CREATE TABLE images(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  fileSystemType  INTEGER,
+  size            INTEGER,
+  blockSize       INTEGER,
+  blockOffset     INTEGER,
+  blockCount      INTEGER
+);
+
+CREATE TABLE directories(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
+);
+
+CREATE TABLE links(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  destinationName TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
+);
+
+CREATE TABLE hardlinks(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER
+);
+
+CREATE TABLE special(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  specialType     INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  major           INTEGER,
+  minor           INTEGER
+);
+
+// ---------------------------------------------------------------------
+
+VERSION = 2;
+
+CREATE TABLE meta(
+  name  TEXT,
+  value TEXT
+);
+INSERT INTO meta (name,value) VALUES ('version',2);
+INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
+
+CREATE TABLE storage(
+  id              INTEGER PRIMARY KEY,
+  name            TEXT,
+  created         INTEGER,
+  size            INTEGER,
+  state           INTEGER,
+  mode            INTEGER,
+  lastChecked     INTEGER,
+  errorMessage    TEXT
+);
+
+CREATE TABLE files(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER
+);
+
+CREATE TABLE images(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  fileSystemType  INTEGER,
+  size            INTEGER,
+  blockSize       INTEGER,
+  blockOffset     INTEGER,
+  blockCount      INTEGER
+);
+
+CREATE TABLE directories(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
+);
+
+CREATE TABLE links(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  destinationName TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
+);
+
+CREATE TABLE hardlinks(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER
+);
+
+CREATE TABLE special(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  specialType     INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  major           INTEGER,
+  minor           INTEGER
+);
+
+
+// ---------------------------------------------------------------------
+
+VERSION = 1;
+
+CREATE TABLE meta(
+  name  TEXT,
+  value TEXT
+);
+INSERT INTO meta (name,value) VALUES ('version',1);
+INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
+
+CREATE TABLE storage(
+  id              INTEGER PRIMARY KEY,
+  name            TEXT,
+  size            INTEGER,
+  created         INTEGER,
+  state           INTEGER,
+  mode            INTEGER,
+  lastChecked     INTEGER,
+  errorMessage    TEXT
+);
+
+CREATE TABLE files(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER
+);
+
+CREATE TABLE images(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  fileSystemType  INTEGER,
+  size            INTEGER,
+  blockSize       INTEGER,
+  blockOffset     INTEGER,
+  blockCount      INTEGER
+);
+
+CREATE TABLE directories(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
+);
+
+CREATE TABLE links(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  destinationName TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
+);
+
+CREATE TABLE special(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  specialType     INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  major           INTEGER,
+  minor           INTEGER
+);
+
+*/
