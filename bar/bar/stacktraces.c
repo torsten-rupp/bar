@@ -19,9 +19,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include <bfd.h>
-#include <demangle.h>
-#include <link.h>
+#ifdef HAVE_BFD_H
+  #include <bfd.h>
+  #include <demangle.h>
+  #include <link.h>
+#endif
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
@@ -43,6 +45,7 @@
 
 /**************************** Functions ********************************/
 
+#ifdef HAVE_BFD_H
 /***********************************************************************\
 * Name   : readSymbolTable
 * Purpose: read symbol table from BFD
@@ -507,6 +510,7 @@ LOCAL int findMatchingFile(struct dl_phdr_info *info,
 
   return 0; // return value not used
 }
+#endif // HAVE_BFD_H
 
 /***********************************************************************\
 * Name   : Stacktrace_getSymbolInfo
@@ -528,6 +532,7 @@ void Stacktrace_getSymbolInfo(const char     *executableFileName,
                               void           *symbolUserData
                              )
 {
+#ifdef HAVE_BFD_H
   uint          i;
   FileMatchInfo fileMatchInfo;
   bool          symbolInfoFromFile;
@@ -595,6 +600,7 @@ void Stacktrace_getSymbolInfo(const char     *executableFileName,
       symbolFunction(addresses[i],fileName,symbolName,0,symbolUserData);
     }
   }
+#endif // HAVE_BFD_H
 }
 
 /* end of file */
