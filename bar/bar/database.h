@@ -40,8 +40,11 @@ typedef enum
 // database types
 typedef enum
 {
+  DATABASE_TYPE_NONE,
+
   DATABASE_TYPE_PRIMARY_KEY,
   DATABASE_TYPE_FOREIGN_KEY,
+
   DATABASE_TYPE_INT64,
   DATABASE_TYPE_DOUBLE,
   DATABASE_TYPE_DATETIME,
@@ -61,6 +64,14 @@ typedef enum
   DATABASE_ORDERING_ASCENDING,
   DATABASE_ORDERING_DESCENDING
 } DatabaseOrdering;
+
+// transfer operations
+typedef enum
+{
+  DATABASE_TRANSFER_OPERATION_NONE,
+  DATABASE_TRANSFER_OPERATION_COPY,
+  DATABASE_TRANSFER_OPERATION_SET
+} DatabaseTransferOperations;
 
 /***************************** Datatypes *******************************/
 
@@ -83,14 +94,48 @@ typedef struct
   #endif /* not NDEBUG */
 } DatabaseQueryHandle;
 
-// execute callback function
-typedef bool(*DatabaseFunction)(void *userData, uint count, const char* names[], const char* vales[]);
+// execute row callback function
+typedef bool(*DatabaseRowFunction)(void *userData, uint count, const char* names[], const char* vales[]);
 
 typedef int64 DatabaseId;
+
+// table column definition list
+typedef struct DatabaseColumnNode
+{
+  LIST_NODE_HEADER(struct DatabaseColumnNode);
+
+  char          *name;
+  DatabaseTypes type;
+  union
+  {
+    int64      i;
+    double     d;
+    uint64     dateTime;
+    const char *text;
+    struct
+    {
+      void     *data;
+      ulong    length;
+    }          blob;
+  } value;
+} DatabaseColumnNode;
+
+typedef struct
+{
+  LIST_HEADER(DatabaseColumnNode);
+} DatabaseColumnList;
+
+// execute copy table row callback function
+typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData);
 
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+#define DATABASE_TRANSFER_OPERATION_COPY(fromName,toName,type) DATABASE_TRANSFER_OPERATION_COPY,fromName,toName,type
+#define DATABASE_TRANSFER_OPERATION_SET(toName,type,value)     DATABASE_TRANSFER_OPERATION_SET, toName,  value, type
+#define DATABASE_TRANSFER_OPERATION_END()                      DATABASE_TRANSFER_OPERATION_NONE,NULL,    0,     0
+
 
 #ifndef NDEBUG
   #define Database_open(...)     __Database_open(__FILE__,__LINE__,__VA_ARGS__)
@@ -188,10 +233,28 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_copyTable(DatabaseHandle *fromDatabaseHandle,
-                          DatabaseHandle *toDatabaseHandle,
-                          const char     *tableName
+Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
+                          DatabaseHandle            *toDatabaseHandle,
+                          const char                *tableName,
+                          DatabaseCopyTableFunction preCopyTableFunction,
+                          void                      *preCopyTableUserData,
+                          DatabaseCopyTableFunction postCopyTableFunction,
+                          void                      *postCopyTableUserData,
+                          const char                *fromAdditional,
+                          ...
                          );
+
+int64 Database_getTableColumnListInt64(const DatabaseColumnList *columnList, const char *columnName, int64 defaultValue);
+double Database_getTableColumnListDouble(const DatabaseColumnList *columnList, const char *columnName, double defaultValue);
+uint64 Database_getTableColumnListDateTime(const DatabaseColumnList *columnList, const char *columnName, uint64 defaultValue);
+const char *Database_getTableColumnListText(const DatabaseColumnList *columnList, const char *columnName, const char *defaultValue);
+void Database_getTableColumnListBlob(const DatabaseColumnList *columnList, const char *columnName, void *data, uint length);
+
+bool Database_setTableColumnListInt64(const DatabaseColumnList *columnList, const char *columnName, int64 value);
+bool Database_setTableColumnListDouble(const DatabaseColumnList *columnList, const char *columnName, double value);
+bool Database_setTableColumnListDateTime(const DatabaseColumnList *columnList, const char *columnName, uint64 value);
+bool Database_setTableColumnListText(const DatabaseColumnList *columnList, const char *columnName, const char *value);
+bool Database_setTableColumnListBlob(const DatabaseColumnList *columnList, const char *columnName, const void *data, uint length);
 
 /***********************************************************************\
 * Name   : Database_addColumn
@@ -231,22 +294,23 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 * Name   : Database_execute
 * Purpose: execute SQL statement
 * Input  : databaseHandle - database handle
-*          databaseFunction - callback function for row data
-*          databaseUserData - user data for callback function
-*          command          - SQL command string with %[l]d, %[']S,
-*                             %[']s
-*          ...              - optional arguments for SQL command string
-*                             special functions:
-*                               REGEXP(pattern,case-flag,text)
+*          databaseRowFunction - callback function for row data
+*          databaseRowUserData - user data for callback function
+*          command             - SQL command string with %[l]d, %[']S,
+*                                %[']s
+*          ...                 - optional arguments for SQL command
+*                                string
+*                                special functions:
+*                                  REGEXP(pattern,case-flag,text)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_execute(DatabaseHandle   *databaseHandle,
-                        DatabaseFunction databaseFunction,
-                        void             *databaseUserData,
-                        const char       *command,
+Errors Database_execute(DatabaseHandle      *databaseHandle,
+                        DatabaseRowFunction databaseRowFunction,
+                        void                *databaseRowUserData,
+                        const char          *command,
                         ...
                        );
 
