@@ -429,6 +429,7 @@ Errors Network_connect(SocketHandle *socketHandle,
   Errors             error;
 
   assert(socketHandle != NULL);
+  assert(hostName != NULL);
 
   // initialize variables
   socketHandle->type  = socketType;
@@ -446,15 +447,14 @@ Errors Network_connect(SocketHandle *socketHandle,
 
         // get host IP address
         #if   defined(HAVE_GETHOSTBYNAME_R)
-          if (   (gethostbyname_r(String_cString(hostName),
-                                  &bufferAddressEntry,
-                                  buffer,
-                                  sizeof(buffer),
-                                  &hostAddressEntry,
-                                  &getHostByNameError
-                                 ) != 0)
-              && (hostAddressEntry != NULL)
-             )
+          if (gethostbyname_r(String_cString(hostName),
+                              &bufferAddressEntry,
+                              buffer,
+                              sizeof(buffer),
+                              &hostAddressEntry,
+                              &getHostByNameError
+                             ) != 0)
+
           {
             hostAddressEntry = NULL;
           }
