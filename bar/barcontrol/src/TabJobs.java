@@ -919,7 +919,9 @@ public class TabJobs
     int     year,month,day;
     int     weekDays;
     int     hour,minute;
+//TODO: enum?
     String  archiveType;
+    int     interval;
     String  customText;
     int     minKeep,maxKeep;
     int     maxAge;
@@ -937,6 +939,7 @@ public class TabJobs
      * @param hour hour
      * @param minute minute
      * @param archiveType archive type string
+     * @param interval continuous interval [min]
      * @param customText custom text
      * @param minKeep min. number of archives to keep
      * @param maxKeep max. number of archives to keep
@@ -956,6 +959,7 @@ public class TabJobs
                  int     hour,
                  int     minute,
                  String  archiveType,
+                 int     interval,
                  String  customText,
                  int     minKeep,
                  int     maxKeep,
@@ -975,7 +979,8 @@ public class TabJobs
       this.weekDays             = weekDays;
       this.hour                 = hour;
       this.minute               = minute;
-      this.archiveType          = archiveType;
+      this.archiveType          = getValidString(archiveType,new String[]{"normal","full","incremental","differential","continuous"},"normal");
+      this.interval             = interval;
       this.customText           = customText;
       this.minKeep              = minKeep;
       this.maxKeep              = maxKeep;
@@ -992,7 +997,7 @@ public class TabJobs
      */
     ScheduleData()
     {
-      this(null,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,"normal","",0,0,0,false,true,0,0,0,0);
+      this(null,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,"normal",0,"",0,0,0,false,true,0,0,0,0);
     }
 
     /** create schedule data
@@ -1000,6 +1005,7 @@ public class TabJobs
      * @param weekDays week days string; values separated by ','
      * @param time time string (<hour>:<minute>)
      * @param archiveType archive type string
+     * @param interval continuous interval [min]
      * @param customText custom text
      * @param noStorage true to skip storage
      * @param enabled true iff enabled
@@ -1013,6 +1019,7 @@ public class TabJobs
                  String  weekDays,
                  String  time,
                  String  archiveType,
+                 int     interval,
                  String  customText,
                  int     minKeep,
                  int     maxKeep,
@@ -1029,7 +1036,8 @@ public class TabJobs
       setDate(date);
       setWeekDays(weekDays);
       setTime(time);
-      this.archiveType          = getValidString(archiveType,new String[]{"normal","full","incremental","differential"},"normal");
+      this.archiveType          = getValidString(archiveType,new String[]{"normal","full","incremental","differential","continuous"},"normal");
+      this.interval             = interval;
       this.customText           = customText;
       this.minKeep              = minKeep;
       this.maxKeep              = maxKeep;
@@ -1055,6 +1063,7 @@ public class TabJobs
                               hour,
                               minute,
                               archiveType,
+                              interval,
                               customText,
                               minKeep,
                               maxKeep,
@@ -10826,21 +10835,22 @@ throw new Error("NYI");
         for (ValueMap resultMap : resultMapList)
         {
           // get data
-          String  scheduleUUID         = resultMap.getString ("scheduleUUID"        );
-          String  date                 = resultMap.getString ("date"                );
-          String  weekDays             = resultMap.getString ("weekDays"            );
-          String  time                 = resultMap.getString ("time"                );
-          String  archiveType          = resultMap.getString ("archiveType"         );
-          String  customText           = resultMap.getString ("customText"          );
-          int     minKeep              = resultMap.getInt    ("minKeep"             );
-          int     maxKeep              = resultMap.getInt    ("maxKeep"             );
-          int     maxAge               = resultMap.getInt    ("maxAge"              );
-          boolean noStorage            = resultMap.getBoolean("noStorage"           );
-          boolean enabled              = resultMap.getBoolean("enabled"             );
-          long    lastExecutedDateTime = resultMap.getLong   ("lastExecutedDateTime");
-          long    totalEntities        = resultMap.getLong   ("totalEntities"       );
-          long    totalEntries         = resultMap.getLong   ("totalEntries"        );
-          long    totalSize            = resultMap.getLong   ("totalSize"           );
+          String  scheduleUUID         = resultMap.getString ("scheduleUUID"         );
+          String  date                 = resultMap.getString ("date"                 );
+          String  weekDays             = resultMap.getString ("weekDays"             );
+          String  time                 = resultMap.getString ("time"                 );
+          String  archiveType          = resultMap.getString ("archiveType"          );
+          int     interval             = resultMap.getInt    ("interval",           0);
+          String  customText           = resultMap.getString ("customText"           );
+          int     minKeep              = resultMap.getInt    ("minKeep"              );
+          int     maxKeep              = resultMap.getInt    ("maxKeep"              );
+          int     maxAge               = resultMap.getInt    ("maxAge"               );
+          boolean noStorage            = resultMap.getBoolean("noStorage"            );
+          boolean enabled              = resultMap.getBoolean("enabled"              );
+          long    lastExecutedDateTime = resultMap.getLong   ("lastExecutedDateTime" );
+          long    totalEntities        = resultMap.getLong   ("totalEntities"        );
+          long    totalEntries         = resultMap.getLong   ("totalEntries"         );
+          long    totalSize            = resultMap.getLong   ("totalSize"            );
 
           ScheduleData scheduleData = scheduleDataMap.get(scheduleUUID);
           if (scheduleData != null)
@@ -10849,6 +10859,7 @@ throw new Error("NYI");
             scheduleData.setWeekDays(weekDays);
             scheduleData.setTime(time);
             scheduleData.archiveType          = archiveType;
+            scheduleData.interval             = interval;
             scheduleData.customText           = customText;
             scheduleData.minKeep              = minKeep;
             scheduleData.maxKeep              = maxKeep;
@@ -10867,6 +10878,7 @@ throw new Error("NYI");
                                             weekDays,
                                             time,
                                             archiveType,
+                                            interval,
                                             customText,
                                             minKeep,
                                             maxKeep,
@@ -10974,7 +10986,8 @@ throw new Error("NYI");
     final Combo    widgetYear,widgetMonth,widgetDay;
     final Button[] widgetWeekDays = new Button[7];
     final Combo    widgetHour,widgetMinute;
-    final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential;
+    final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential,widgetTypeContinuous;
+    final Combo    widgetInterval;
     final Text     widgetCustomText;
     final Combo    widgetMinKeep,widgetMaxKeep;
     final Combo    widgetMaxAge;
@@ -11114,21 +11127,55 @@ throw new Error("NYI");
         widgetTypeDifferential.setToolTipText(BARControl.tr("Execute job as differential backup."));
         Widgets.layout(widgetTypeDifferential,0,3,TableLayoutData.W);
         widgetTypeDifferential.setSelection(scheduleData.archiveType.equals("differential"));
+
+        widgetTypeContinuous = Widgets.newRadio(subComposite,BARControl.tr("continuous"));
+        widgetTypeContinuous.setToolTipText(BARControl.tr("Execute job as continuous backup."));
+        Widgets.layout(widgetTypeContinuous,0,4,TableLayoutData.W);
+        widgetTypeContinuous.setSelection(scheduleData.archiveType.equals("continuous"));
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("Custom text")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Interval")+":");
       Widgets.layout(label,4,0,TableLayoutData.W);
+
+      widgetInterval = Widgets.newOptionMenu(composite);
+      widgetInterval.setEnabled(scheduleData.archiveType.equals("continuous"));
+      widgetInterval.setToolTipText(BARControl.tr("Interval time for continuous storage."));
+      Widgets.setOptionMenuItems(widgetInterval,new Object[]{"",        0,
+                                                             "10min",  10,
+                                                             "30min",  30,
+                                                             "1h",   1*60,
+                                                             "2h",   3*60,
+                                                             "4h",   4*60,
+                                                             "8h",   8*60
+                                                            }
+                                );
+      Widgets.setSelectedOptionMenuItem(widgetInterval,scheduleData.interval);
+      widgetTypeContinuous.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          widgetInterval.setEnabled(widget.getSelection());
+        }
+      });
+      Widgets.layout(widgetInterval,4,1,TableLayoutData.W);
+
+      label = Widgets.newLabel(composite,BARControl.tr("Custom text")+":");
+      Widgets.layout(label,5,0,TableLayoutData.W);
 
       widgetCustomText = Widgets.newText(composite);
       widgetCustomText.setToolTipText(BARControl.tr("Custom text."));
       widgetCustomText.setText(scheduleData.customText);
-      Widgets.layout(widgetCustomText,4,1,TableLayoutData.WE);
+      Widgets.layout(widgetCustomText,5,1,TableLayoutData.WE);
 
       label = Widgets.newLabel(composite,BARControl.tr("Keep")+":");
-      Widgets.layout(label,5,0,TableLayoutData.W);
+      Widgets.layout(label,6,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
-      Widgets.layout(subComposite,5,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,6,1,TableLayoutData.WE);
       {
         label = Widgets.newLabel(subComposite,BARControl.tr("min.")+":");
         Widgets.layout(label,0,0,TableLayoutData.W);
@@ -11187,7 +11234,10 @@ throw new Error("NYI");
                                                              "1 week",7,
                                                              "2 weeks",14,
                                                              "3 weeks",21,
-                                                             "4 weeks",28
+                                                             "4 weeks",28,
+                                                             "2 monthss",60,
+                                                             "3 months",90,
+                                                             "6 months",180
                                                             }
                                   );
         Widgets.setSelectedOptionMenuItem(widgetMaxAge,scheduleData.maxAge);
@@ -11269,7 +11319,9 @@ throw new Error("NYI");
         else if (widgetTypeFull.getSelection())         scheduleData.archiveType = "full";
         else if (widgetTypeIncremental.getSelection())  scheduleData.archiveType = "incremental";
         else if (widgetTypeDifferential.getSelection()) scheduleData.archiveType = "differential";
+        else if (widgetTypeContinuous.getSelection())   scheduleData.archiveType = "continuous";
         else                                            scheduleData.archiveType = "normal";
+        scheduleData.interval   = (Integer)Widgets.getSelectedOptionMenuItem(widgetInterval,0);
         scheduleData.customText = widgetCustomText.getText();
         scheduleData.minKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep,0);
         scheduleData.maxKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep,0);
@@ -11295,12 +11347,13 @@ throw new Error("NYI");
     {
       String[] resultErrorMessage = new String[1];
       ValueMap resultMap          = new ValueMap();
-      int error = BARServer.executeCommand(StringParser.format("SCHEDULE_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
+      int error = BARServer.executeCommand(StringParser.format("SCHEDULE_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
                                                                selectedJobData.uuid,
                                                                scheduleData.getDate(),
                                                                scheduleData.getWeekDays(),
                                                                scheduleData.getTime(),
                                                                scheduleData.archiveType,
+                                                               scheduleData.interval,
                                                                scheduleData.customText,
                                                                scheduleData.minKeep,
                                                                scheduleData.maxKeep,
@@ -11366,6 +11419,10 @@ throw new Error("NYI");
         if (error == Errors.NONE)
         {
           error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"archive-type",scheduleData.archiveType,errorMessage);
+        }
+        if (error == Errors.NONE)
+        {
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"interval",scheduleData.interval,errorMessage);
         }
         if (error == Errors.NONE)
         {
