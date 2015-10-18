@@ -257,6 +257,7 @@ typedef struct
 
 // only for better reading
 #define CALLBACK(code,argument) code,argument
+#define CALLBACK_NULL NULL,NULL
 
 // mask and shift value
 #define MASKSHIFT(n,maskShift) (((n) & maskShift.mask) >> maskShift.shift)
