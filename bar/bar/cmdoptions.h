@@ -733,6 +733,11 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     description\
   }
 
+#ifndef NDEBUG
+  #define CmdOption_init(...) __CmdOption_init(__FILE__,__LINE__,__VA_ARGS__)
+  #define CmdOption_done(...) __CmdOption_done(__FILE__,__LINE__,__VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Functions ******************************/
 
 #ifdef __GNUG__
@@ -751,9 +756,17 @@ extern "C" {
 * Notes  :
 ***********************************************************************/
 
-bool CmdOption_init(CommandLineOption commandLineOptions[],
-                    uint              commandLineOptionCount
-                   );
+#ifdef NDEBUG
+  bool CmdOption_init(CommandLineOption commandLineOptions[],
+                      uint              commandLineOptionCount
+                     );
+#else /* not NDEBUG */
+  bool __CmdOption_init(const char        *__fileName__,
+                        uint              __lineNb__,
+                        CommandLineOption commandLineOptions[],
+                        uint              commandLineOptionCount
+                       );
+#endif /* NDEBUG */
 
 /***********************************************************************
 * Name   : CmdOption_done
@@ -765,9 +778,18 @@ bool CmdOption_init(CommandLineOption commandLineOptions[],
 * Return : -
 * Notes  :
 ***********************************************************************/
-void CmdOption_done(CommandLineOption commandLineOptions[],
-                    uint              commandLineOptionCount
-                   );
+
+#ifdef NDEBUG
+  void CmdOption_done(CommandLineOption commandLineOptions[],
+                      uint              commandLineOptionCount
+                     );
+#else /* not NDEBUG */
+  void __CmdOption_done(const char        *__fileName__,
+                        uint              __lineNb__,
+                        CommandLineOption commandLineOptions[],
+                        uint              commandLineOptionCount
+                       );
+#endif /* NDEBUG */
 
 /***********************************************************************
 * Name   : CmdOption_parse

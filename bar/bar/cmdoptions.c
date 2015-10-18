@@ -924,9 +924,17 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
 
 /*---------------------------------------------------------------------*/
 
-bool CmdOption_init(CommandLineOption commandLineOptions[],
-                    uint              commandLineOptionCount
-                   )
+#ifdef NDEBUG
+  bool CmdOption_init(CommandLineOption commandLineOptions[],
+                      uint              commandLineOptionCount
+                     )
+#else /* not NDEBUG */
+  bool __CmdOption_init(const char        *__fileName__,
+                        uint              __lineNb__,
+                        CommandLineOption commandLineOptions[],
+                        uint              commandLineOptionCount
+                       )
+#endif /* NDEBUG */
 {
   uint i;
   #ifndef NDEBUG
@@ -936,6 +944,7 @@ bool CmdOption_init(CommandLineOption commandLineOptions[],
   assert(commandLineOptions != NULL);
 
   #ifndef NDEBUG
+    // check for duplicate names
     for (i = 0; i < commandLineOptionCount; i++)
     {
       for (j = 0; j < commandLineOptionCount; j++)
@@ -955,6 +964,9 @@ bool CmdOption_init(CommandLineOption commandLineOptions[],
     }
   #endif /* NDEBUG */
 
+  /* get default values from initial settings of variables
+     Note: strings are always new allocated and reallocated in CmdOption_parse() resp. freed in CmdOption_init()
+  */
   for (i = 0; i < commandLineOptionCount; i++)
   {
     switch (commandLineOptions[i].type)
@@ -1009,7 +1021,7 @@ bool CmdOption_init(CommandLineOption commandLineOptions[],
         }
         break;
       case CMD_OPTION_TYPE_STRING:
-        assert(commandLineOptions[i].variable.cString != NULL);
+        assert(commandLineOptions[i].variable.string != NULL);
         if ((*commandLineOptions[i].variable.string) != NULL)
         {
           commandLineOptions[i].defaultValue.string = (*commandLineOptions[i].variable.string);
@@ -1031,17 +1043,38 @@ bool CmdOption_init(CommandLineOption commandLineOptions[],
     }
   }
 
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE("commandLineOptions",commandLineOptions);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"commandLineOptions",commandLineOptions);
+  #endif /* NDEBUG */
+
   return TRUE;
 }
 
-void CmdOption_done(CommandLineOption commandLineOptions[],
-                    uint              commandLineOptionCount
-                   )
+#ifdef NDEBUG
+  void CmdOption_done(CommandLineOption commandLineOptions[],
+                      uint              commandLineOptionCount
+                     )
+#else /* not NDEBUG */
+  void __CmdOption_done(const char        *__fileName__,
+                        uint              __lineNb__,
+                        CommandLineOption commandLineOptions[],
+                        uint              commandLineOptionCount
+                       )
+#endif /* NDEBUG */
 {
   uint i;
 
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(commandLineOptions);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,commandLineOptions);
+  #endif /* NDEBUG */
+
   assert(commandLineOptions != NULL);
 
+  // free values and restore from default values
   for (i = 0; i < commandLineOptionCount; i++)
   {
     switch (commandLineOptions[i].type)
