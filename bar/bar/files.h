@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -36,6 +37,10 @@
 
 /***************************** Constants *******************************/
 
+// max. length of a path
+#define FILE_MAX_PATH_MAX_LENGTH PATH_MAX
+
+// temporary directory
 #define FILE_TMP_DIRECTORY File_getSystemTmpDirectory()
 
 #if defined(FILE_SEPARATOR_CHAR) && defined(FILE_SEPARATOR_STRING)
