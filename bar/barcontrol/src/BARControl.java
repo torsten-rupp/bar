@@ -2147,7 +2147,7 @@ public class BARControl
           String type = resultMap.getString("type");
           if      (type.equals("running"))
           {
-            serverState = "running";
+            serverState = null;
           }
           else if (type.equals("pause"))
           {
@@ -2176,22 +2176,37 @@ public class BARControl
             BARServer.disconnect();
             System.exit(1);
           }
+          System.out.println(String.format("%-40s %-20s %-10s %-11s %-12s %-25s %-12s %-10s %-8s %-19s %-12s",
+                                           "Name",
+                                           "Host name",
+                                           "State",
+                                           "Type",
+                                           "Part size",
+                                           "Compress",
+                                           "Crypt",
+                                           "Crypt type",
+                                           "Mode",
+                                           "Last executed",
+                                           "Estimated"
+                                          )
+                            );
+          System.out.println(StringUtils.repeat("-",40+1+20+1+10+1+11+1+12+1+25+1+12+1+10+1+8+1+19+1+12));
           for (ValueMap resultMap_ : resultMapList)
           {
             // get data
-            String jobUUID                = resultMap_.getString("jobUUID"               );
-            String name                   = resultMap_.getString("name"                  );
-            String hostName               = resultMap_.getString("hostName"              );
-            String state                  = resultMap_.getString("state"                 );
-            String archiveType            = resultMap_.getString("archiveType"           );
-            long   archivePartSize        = resultMap_.getLong  ("archivePartSize"       );
-            String deltaCompressAlgorithm = resultMap_.getString("deltaCompressAlgorithm");
-            String byteCompressAlgorithm  = resultMap_.getString("byteCompressAlgorithm" );
-            String cryptAlgorithm         = resultMap_.getString("cryptAlgorithm"        );
-            String cryptType              = resultMap_.getString("cryptType"             );
-            String cryptPasswordMode      = resultMap_.getString("cryptPasswordMode"     );
-            long   lastExecutedDateTime   = resultMap_.getLong  ("lastExecutedDateTime"  );
-            long   estimatedRestTime      = resultMap_.getLong  ("estimatedRestTime"     );
+            String jobUUID                = resultMap_.getString("jobUUID"                 );
+            String name                   = resultMap_.getString("name"                    );
+            String hostName               = resultMap_.getString("hostName",             "");
+            String state                  = resultMap_.getString("state"                   );
+            String archiveType            = resultMap_.getString("archiveType"             );
+            long   archivePartSize        = resultMap_.getLong  ("archivePartSize"         );
+            String deltaCompressAlgorithm = resultMap_.getString("deltaCompressAlgorithm"  );
+            String byteCompressAlgorithm  = resultMap_.getString("byteCompressAlgorithm"   );
+            String cryptAlgorithm         = resultMap_.getString("cryptAlgorithm"          );
+            String cryptType              = resultMap_.getString("cryptType"               );
+            String cryptPasswordMode      = resultMap_.getString("cryptPasswordMode"       );
+            long   lastExecutedDateTime   = resultMap_.getLong  ("lastExecutedDateTime"    );
+            long   estimatedRestTime      = resultMap_.getLong  ("estimatedRestTime"       );
 
             String compressAlgorithms;
             if      (!deltaCompressAlgorithm.equalsIgnoreCase("none") && !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = deltaCompressAlgorithm+"+"+byteCompressAlgorithm;
@@ -2205,11 +2220,11 @@ public class BARControl
               cryptPasswordMode = "-";
             }
 
-            System.out.println(String.format("%-40s %-40s %-10s %-11s %12d %-25s %-12s %-10s %-8s %s %8d",
+            System.out.println(String.format("%-40s %-20s %-10s %-11s %12d %-25s %-12s %-10s %-8s %-19s %12d",
                                              name,
                                              hostName,
                                              (serverState == null) ? state : serverState,
-                                             type,
+                                             archiveType,
                                              archivePartSize,
                                              compressAlgorithms,
                                              cryptAlgorithm,
