@@ -170,10 +170,11 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
       )
 
 /***********************************************************************\
-* Name   : LIST_ITERATE
+* Name   : LIST_ITERATEX
 * Purpose: iterated over list and execute block
-* Input  : list     - list
-*          variable - iteration variable
+* Input  : list      - list
+*          variable  - iteration variable
+*          condition - additional condition
 * Output : -
 * Return : -
 * Notes  : variable will contain all entries in list
