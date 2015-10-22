@@ -128,7 +128,7 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 
 /***********************************************************************\
 * Name   : LIST_DONE
-* Purpose: iterated over list and execute block, delete node
+* Purpose: iterated over list and execute block then delete node
 * Input  : list     - list
 *          variable - iterator variable
 * Output : -
@@ -166,6 +166,27 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 #define LIST_ITERATE(list,variable) \
   for ((variable) = (list)->head; \
        (variable) != NULL; \
+       (variable) = (variable)->next \
+      )
+
+/***********************************************************************\
+* Name   : LIST_ITERATE
+* Purpose: iterated over list and execute block
+* Input  : list     - list
+*          variable - iteration variable
+* Output : -
+* Return : -
+* Notes  : variable will contain all entries in list
+*          usage:
+*            LIST_ITERATE(list,variable)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define LIST_ITERATEX(list,variable,condition) \
+  for ((variable) = (list)->head; \
+       (variable) != NULL && (condition); \
        (variable) = (variable)->next \
       )
 
