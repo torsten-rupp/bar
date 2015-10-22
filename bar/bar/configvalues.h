@@ -747,7 +747,7 @@ typedef struct
 * Return : -
 * Notes  : variable will contain all entries in list
 *          usage:
-*            CONFIG_VALUE_ITERATE(configValues,variable)
+*            CONFIG_VALUE_ITERATE(configValues,index)
 *            {
 *              ... = variable->...
 *            }
@@ -760,7 +760,29 @@ typedef struct
       )
 
 /***********************************************************************\
-* Name   : CONFIG_VALUE_ITERATE
+* Name   : CONFIG_VALUE_ITERATEX
+* Purpose: iterated over config value array
+* Input  : configValues - config values array
+*          index        - iteration variable
+*          condition    - additional condition
+* Output : -
+* Return : -
+* Notes  : variable will contain all entries in list
+*          usage:
+*            CONFIG_VALUE_ITERATEX(configValues,index,TRUE)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define CONFIG_VALUE_ITERATEX(configValues,index,condition) \
+  for ((index) = ConfigValue_firstValue(configValues,SIZE_OF_ARRAY(configValues)); \
+       ((index) < ConfigValue_endValue(configValues,SIZE_OF_ARRAY(configValues),index)) && (condition); \
+       (index) = ConfigValue_nextValue(configValues,SIZE_OF_ARRAY(configValues),index) \
+      )
+
+/***********************************************************************\
+* Name   : CONFIG_VALUE_ITERATE_SECTION
 * Purpose: iterated over config section value array
 * Input  : configValues - config values array
 *          sectionName  - section name
@@ -769,7 +791,7 @@ typedef struct
 * Return : -
 * Notes  : variable will contain all entries in list
 *          usage:
-*            CONFIG_VALUE_ITERATE(configValues,variable)
+*            CONFIG_VALUE_ITERATE_SECTION(configValues,sectionName,index)
 *            {
 *              ... = variable->...
 *            }
@@ -778,6 +800,29 @@ typedef struct
 #define CONFIG_VALUE_ITERATE_SECTION(configValues,sectionName,index) \
   for ((index) = ConfigValue_firstSectionValue(configValues,SIZE_OF_ARRAY(configValues),sectionName); \
        (index) < ConfigValue_endSectionValue(configValues,SIZE_OF_ARRAY(configValues),index); \
+       (index) = ConfigValue_nextSectionValue(configValues,SIZE_OF_ARRAY(configValues),index) \
+      )
+
+/***********************************************************************\
+* Name   : CONFIG_VALUE_ITERATE_SECTIONX
+* Purpose: iterated over config section value array
+* Input  : configValues - config values array
+*          sectionName  - section name
+*          index        - iteration variable
+*          condition    - additional condition
+* Output : -
+* Return : -
+* Notes  : variable will contain all entries in list
+*          usage:
+*            CONFIG_VALUE_ITERATE_SECTION(configValues,sectionName,index,TRUE)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define CONFIG_VALUE_ITERATE_SECTIONX(configValues,sectionName,index,condition) \
+  for ((index) = ConfigValue_firstSectionValue(configValues,SIZE_OF_ARRAY(configValues),sectionName); \
+       ((index) < ConfigValue_endSectionValue(configValues,SIZE_OF_ARRAY(configValues),index)) && (condition); \
        (index) = ConfigValue_nextSectionValue(configValues,SIZE_OF_ARRAY(configValues),index) \
       )
 

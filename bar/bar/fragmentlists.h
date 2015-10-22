@@ -71,7 +71,7 @@ typedef struct
 * Output : -
 * Return : -
 * Notes  : variable will contain all entries in list
-*            LIST_ITERATE(list,variable)
+*            FRAGMENTLIST_ITERATE(list,variable)
 *            {
 *              ... = variable->...
 *            }
@@ -80,6 +80,27 @@ typedef struct
 #define FRAGMENTLIST_ITERATE(fragmentList,variable) \
   for ((variable) = (fragmentList)->head; \
        (variable) != NULL; \
+       (variable) = (variable)->next \
+      )
+
+/***********************************************************************\
+* Name   : FRAGMENTLIST_ITERATEX
+* Purpose: iterated over fragment list and execute block
+* Input  : fragmentList - fragment list
+*          variable     - iterator variable (type FragmentNode)
+*          condition    - additional condition
+* Output : -
+* Return : -
+* Notes  : variable will contain all entries in list
+*            FRAGMENTLIST_ITERATEX(list,variable,TRUE)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define FRAGMENTLIST_ITERATEX(fragmentList,variable,condition) \
+  for ((variable) = (fragmentList)->head; \
+       ((variable) != NULL) && (condition); \
        (variable) = (variable)->next \
       )
 

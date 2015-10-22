@@ -85,6 +85,32 @@ typedef struct
        (iteratorVariable) = (iteratorVariable)->next, variable = ((iteratorVariable) != NULL) ? (iteratorVariable)->string : NULL \
       )
 
+/***********************************************************************\
+* Name   : STRINGLIST_ITERATEX
+* Purpose: iterate over string list
+* Input  : stringList       - string list
+*          iteratorVariable - iterator variable (type StringNode)
+*          variable         - iteration variable (must not be initalised!)
+*          condition        - additional condition
+* Output : -
+* Return : -
+* Notes  : variable will contain all strings in list
+*          usage:
+*            StringNode *iteratorVariable;
+*            String     variable;
+*
+*            STRINGLIST_ITERATEX(list,iteratorVariable,variable,TRUE)
+*            {
+*              ... = variable
+*            }
+\***********************************************************************/
+
+#define STRINGLIST_ITERATEX(stringList,iteratorVariable,variable,condition) \
+  for ((iteratorVariable) = (stringList)->head, variable = ((iteratorVariable) != NULL) ? (stringList)->head->string : NULL; \
+       ((iteratorVariable) != NULL) && (condition); \
+       (iteratorVariable) = (iteratorVariable)->next, variable = ((iteratorVariable) != NULL) ? (iteratorVariable)->string : NULL \
+      )
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/

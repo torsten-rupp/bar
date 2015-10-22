@@ -78,6 +78,27 @@ typedef struct
        (variable) = (variable)->next \
       )
 
+/***********************************************************************\
+* Name   : PATTERNLIST_ITERATEX
+* Purpose: iterated over pattern list and execute block
+* Input  : list      - list
+*          variable  - iterator variable (type PatternNode)
+*          condition - additional condition
+* Output : -
+* Return : -
+* Notes  : usage:
+*            PATTERNLIST_ITERATEX(list,variable,TRUE)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define PATTERNLIST_ITERATEX(list,variable,condition) \
+  for ((variable) = (list)->head; \
+       ((variable) != NULL) && (condition); \
+       (variable) = (variable)->next \
+      )
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/

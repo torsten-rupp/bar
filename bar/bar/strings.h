@@ -231,6 +231,29 @@ typedef struct
        iteratorVariable++, variable = String_index(string,iteratorVariable) \
       )
 
+/***********************************************************************\
+* Name   : STRING_CHAR_ITERATEX
+* Purpose: iterated over characters of string and execute block
+* Input  : string           - string
+*          iteratorVariable - iterator variable (type long)
+*          variable         - iteration variable
+*          condition        - additional condition
+* Output : -
+* Return : -
+* Notes  : variable will contain all characters in string
+*          usage:
+*            STRING_CHAR_ITERATEX(list,iteratorVariable,variable,TRUE)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define STRING_CHAR_ITERATEX(string,iteratorVariable,variable,condition) \
+  for (iteratorVariable = 0, variable = String_index(string,0L); \
+       ((iteratorVariable) < String_length(string)) && (condition); \
+       iteratorVariable++, variable = String_index(string,iteratorVariable) \
+      )
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/

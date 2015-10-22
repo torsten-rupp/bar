@@ -179,7 +179,7 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 * Return : -
 * Notes  : variable will contain all entries in list
 *          usage:
-*            LIST_ITERATE(list,variable)
+*            LIST_ITERATEX(list,variable,TRUE)
 *            {
 *              ... = variable->...
 *            }
@@ -187,7 +187,7 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 
 #define LIST_ITERATEX(list,variable,condition) \
   for ((variable) = (list)->head; \
-       (variable) != NULL && (condition); \
+       ((variable) != NULL) && (condition); \
        (variable) = (variable)->next \
       )
 
