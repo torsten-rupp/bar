@@ -254,19 +254,19 @@ endif
 %.c: %.y
 
 # compile C source
-release/%.o: $(SOURCE_DIR)/%.c
+release/%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
 
-debug/%.o: $(SOURCE_DIR)/%.c
+debug/%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
 
-valgrind/%.o: $(SOURCE_DIR)/%.c
+valgrind/%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
 
-%.o: $(SOURCE_DIR)/%.c
+%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h index_definition.h
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
 
 # compile C++ source
@@ -310,6 +310,7 @@ BAR_SOURCES          = bar.c \
                        misc.c \
                        storage.c \
                        index.c \
+                       continuous.c \
                        network.c \
                        server.c \
                        remote.c \
