@@ -114,9 +114,9 @@ typedef struct DatabaseColumnNode
     const char *text;
     struct
     {
-      void     *data;
-      ulong    length;
-    }          blob;
+      const void *data;
+      ulong      length;
+    }            blob;
   } value;
 } DatabaseColumnNode;
 
@@ -135,7 +135,6 @@ typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnL
 #define DATABASE_TRANSFER_OPERATION_COPY(fromName,toName,type) DATABASE_TRANSFER_OPERATION_COPY,fromName,toName,type
 #define DATABASE_TRANSFER_OPERATION_SET(toName,type,value)     DATABASE_TRANSFER_OPERATION_SET, toName,  value, type
 #define DATABASE_TRANSFER_OPERATION_END()                      DATABASE_TRANSFER_OPERATION_NONE,NULL,    0,     0
-
 
 #ifndef NDEBUG
   #define Database_open(...)     __Database_open(__FILE__,__LINE__,__VA_ARGS__)
@@ -156,7 +155,7 @@ typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnL
 * Name   : Database_open
 * Purpose: open database
 * Input  : databaseHandle - database handle variable
-*          fileName       - file name
+*          fileName       - file name or NULL for "in memory"
 * Output : databaseHandle - database handle
 * Return : ERROR_NONE or error code
 * Notes  : -
