@@ -62,6 +62,9 @@ typedef enum
 #define MISC_US_PER_HOUR   (60LL*MISC_US_PER_MINUTE)
 #define MISC_US_PER_DAY    (24LL*MISC_US_PER_HOUR)
 
+// length of UUID string (xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx)
+#define MISC_UUID_STRING_LENGTH 36
+
 /***************************** Datatypes *******************************/
 // text macro definitions
 typedef enum
@@ -316,7 +319,7 @@ void Misc_udelay(uint64 time);
 
 /***********************************************************************\
 * Name   : Misc_getUUID, Misc_getUUIDCString
-* Purpose: get universally unique identifier
+* Purpose: get universally unique identifier (DCE 1.1)
 * Input  : string     - string variable
 *          buffer     - buffer
 *          bufferSize - buffer size

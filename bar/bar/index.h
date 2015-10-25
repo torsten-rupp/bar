@@ -31,7 +31,6 @@
 
 /***************************** Constants *******************************/
 #define INDEX_STORAGE_ID_NONE -1LL
-#define INDEX_UUID_LENGTH     64
 
 // index states
 typedef enum
@@ -94,7 +93,6 @@ typedef struct
     Pattern      *fileNamePattern;
   } storage;
 } IndexQueryHandle;
-
 
 /***************************** Variables *******************************/
 
