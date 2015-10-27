@@ -525,6 +525,8 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
 
 #ifdef NDEBUG
   bool Dictionary_init(Dictionary                *dictionary,
+                       DictionaryFreeFunction    dictionaryFreeFunction,
+                       void                      *dictionaryFreeUserData,
                        DictionaryCompareFunction dictionaryCompareFunction,
                        void                      *dictionaryCompareUserData
                       )
@@ -532,6 +534,8 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   bool __Dictionary_init(const char                *__fileName__,
                          ulong                     __lineNb__,
                          Dictionary                *dictionary,
+                         DictionaryFreeFunction    dictionaryFreeFunction,
+                         void                      *dictionaryFreeUserData,
                          DictionaryCompareFunction dictionaryCompareFunction,
                          void                      *dictionaryCompareUserData
                         )
@@ -561,6 +565,8 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   dictionary->entryTables[0].entryCount = 0;
 //fprintf(stderr,"%s,%d: init entries %p\n",__FILE__,__LINE__,dictionary->entryTables[0].entries);
 
+  dictionary->dictionaryFreeFunction    = dictionaryFreeFunction;
+  dictionary->dictionaryFreeUserData    = dictionaryFreeUserData;
   dictionary->dictionaryCompareFunction = dictionaryCompareFunction;
   dictionary->dictionaryCompareUserData = dictionaryCompareUserData;
 
@@ -574,16 +580,11 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
 }
 
 #ifdef NDEBUG
-  void Dictionary_done(Dictionary             *dictionary,
-                       DictionaryFreeFunction dictionaryFreeFunction,
-                       void                   *dictionaryFreeUserData
-                      )
+  void Dictionary_done(Dictionary *dictionary)
 #else /* not NDEBUG */
-  void __Dictionary_done(const char                *__fileName__,
-                         ulong                     __lineNb__,
-                         Dictionary             *dictionary,
-                         DictionaryFreeFunction dictionaryFreeFunction,
-                         void                   *dictionaryFreeUserData
+  void __Dictionary_done(const char *__fileName__,
+                         ulong      __lineNb__,
+                         Dictionary *dictionary
                         )
 #endif /* NDEBUG */
 {
@@ -608,14 +609,14 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
     {
       if (dictionary->entryTables[z].entries[index].data != NULL)
       {
-        if (dictionaryFreeFunction != NULL)
+        if (dictionary->dictionaryFreeFunction != NULL)
         {
-          dictionaryFreeFunction(dictionary->entryTables[z].entries[index].data,
-                                 dictionary->entryTables[z].entries[index].length,
-                                 dictionaryFreeUserData
-                                );
+          dictionary->dictionaryFreeFunction(dictionary->entryTables[z].entries[index].data,
+                                             dictionary->entryTables[z].entries[index].length,
+                                             dictionary->dictionaryFreeUserData
+                                            );
+          free(dictionary->entryTables[z].entries[index].data);
         }
-        free(dictionary->entryTables[z].entries[index].data);
         free(dictionary->entryTables[z].entries[index].keyData);
       }
     }
@@ -625,10 +626,7 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   Semaphore_done(&dictionary->lock);
 }
 
-void Dictionary_clear(Dictionary             *dictionary,
-                      DictionaryFreeFunction dictionaryFreeFunction,
-                      void                   *dictionaryFreeUserData
-                     )
+void Dictionary_clear(Dictionary *dictionary)
 {
   SemaphoreLock semaphoreLock;
   uint          z;
@@ -647,14 +645,14 @@ void Dictionary_clear(Dictionary             *dictionary,
       {
         if (dictionary->entryTables[z].entries[index].data != NULL)
         {
-          if (dictionaryFreeFunction != NULL)
+          if (dictionary->dictionaryFreeFunction != NULL)
           {
-            dictionaryFreeFunction(dictionary->entryTables[z].entries[index].data,
-                                   dictionary->entryTables[z].entries[index].length,
-                                   dictionaryFreeUserData
-                                  );
+            dictionary->dictionaryFreeFunction(dictionary->entryTables[z].entries[index].data,
+                                               dictionary->entryTables[z].entries[index].length,
+                                               dictionary->dictionaryFreeUserData
+                                              );
+            free(dictionary->entryTables[z].entries[index].data);
           }
-          free(dictionary->entryTables[z].entries[index].data);
           free(dictionary->entryTables[z].entries[index].keyData);
 
           dictionary->entryTables[z].entries[index].data = NULL;
@@ -685,11 +683,35 @@ ulong Dictionary_count(Dictionary *dictionary)
   return count;
 }
 
-bool Dictionary_add(Dictionary *dictionary,
-                    const void *keyData,
-                    ulong      keyLength,
-                    const void *data,
-                    ulong      length
+bool Dictionary_byteCopy(const void *fromData, void *toData, ulong length, void *userData)
+{
+  assert(fromData != NULL);
+  assert(toData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  memcpy(toData,fromData,length);
+
+  return TRUE;
+}
+
+void Dictionary_byteFree(void *data, ulong length, void *userData)
+{
+  assert(data != NULL);
+
+  UNUSED_VARIABLE(length);
+  UNUSED_VARIABLE(userData);
+
+  free(data);
+}
+
+bool Dictionary_add(Dictionary             *dictionary,
+                    const void             *keyData,
+                    ulong                  keyLength,
+                    const void             *data,
+                    ulong                  length,
+                    DictionaryCopyFunction dictionaryCopyFunction,
+                    void                   *dictionaryCopyUserData
                    )
 {
   ulong                hash;
@@ -717,18 +739,32 @@ bool Dictionary_add(Dictionary *dictionary,
       // allocate/resize data memory
       if (dictionaryEntryTable->entries[entryIndex].length != length)
       {
-        newData = realloc(dictionaryEntryTable->entries[entryIndex].data,length);
-        if (newData == NULL)
+        if (dictionaryCopyFunction != NULL)
+        {
+          // re-allocate data memory
+          newData = realloc(dictionaryEntryTable->entries[entryIndex].data,length);
+          if (newData == NULL)
+          {
+            Semaphore_unlock(&dictionary->lock);
+            return FALSE;
+          }
+
+          dictionaryEntryTable->entries[entryIndex].data   = newData;
+          dictionaryEntryTable->entries[entryIndex].length = length;
+        }
+
+        // copy data
+        if (!dictionaryCopyFunction(data,
+                                    dictionaryEntryTable->entries[entryIndex].data,
+                                    length,
+                                    dictionaryCopyUserData
+                                   )
+           )
         {
           Semaphore_unlock(&dictionary->lock);
           return FALSE;
         }
-        dictionaryEntryTable->entries[entryIndex].data   = newData;
-        dictionaryEntryTable->entries[entryIndex].length = length;
       }
-
-      // copy data
-      memcpy(dictionaryEntryTable->entries[entryIndex].data,data,length);
 
       Semaphore_unlock(&dictionary->lock);
       return TRUE;
@@ -747,22 +783,42 @@ bool Dictionary_add(Dictionary *dictionary,
         return FALSE;
       }
 
-      // allocate data memory
-      dictionaryEntryTable->entries[entryIndex].data = malloc(length);
-      if (dictionaryEntryTable->entries[entryIndex].data == NULL)
-      {
-        free(dictionaryEntryTable->entries[entryIndex].keyData);
-        Semaphore_unlock(&dictionary->lock);
-        return FALSE;
-      }
-
       // copy key data
       dictionaryEntryTable->entries[entryIndex].hash = hash;
       memcpy(dictionaryEntryTable->entries[entryIndex].keyData,keyData,keyLength);
       dictionaryEntryTable->entries[entryIndex].keyLength = keyLength;
 
-      // copy data
-      memcpy(dictionaryEntryTable->entries[entryIndex].data,data,length);
+      if (dictionaryCopyFunction != NULL)
+      {
+        // allocate data memory
+        newData = malloc(length);
+        if (newData == NULL)
+        {
+          free(dictionaryEntryTable->entries[entryIndex].keyData);
+          Semaphore_unlock(&dictionary->lock);
+          return FALSE;
+        }
+
+        // copy data
+        if (!dictionaryCopyFunction(data,
+                                    newData,
+                                    length,
+                                    dictionaryCopyUserData
+                                   )
+           )
+        {
+          free(newData);
+          free(dictionaryEntryTable->entries[entryIndex].keyData);
+          Semaphore_unlock(&dictionary->lock);
+          return FALSE;
+        }
+        dictionaryEntryTable->entries[entryIndex].data = newData;
+      }
+      else
+      {
+        // use orginal data
+        dictionaryEntryTable->entries[entryIndex].data = (void*)data;
+      }
       dictionaryEntryTable->entries[entryIndex].length = length;
 
       dictionaryEntryTable->entryCount++;
@@ -849,22 +905,42 @@ bool Dictionary_add(Dictionary *dictionary,
         return FALSE;
       }
 
-      // allocate data memory
-      dictionaryEntryTable->entries[entryIndex].data = malloc(length);
-      if (dictionaryEntryTable->entries[entryIndex].data == NULL)
-      {
-        free(dictionaryEntryTable->entries[entryIndex].keyData);
-        Semaphore_unlock(&dictionary->lock);
-        return FALSE;
-      }
-
-      // clopy key data
+      // copy key data
       dictionaryEntryTable->entries[entryIndex].hash = hash;
       memcpy(dictionaryEntryTable->entries[entryIndex].keyData,keyData,keyLength);
       dictionaryEntryTable->entries[entryIndex].keyLength = keyLength;
 
-      // copy data
-      memcpy(dictionaryEntryTable->entries[entryIndex].data,data,length);
+      if (dictionaryCopyFunction != NULL)
+      {
+        // allocate data memory
+        newData = malloc(length);
+        if (newData == NULL)
+        {
+          free(dictionaryEntryTable->entries[entryIndex].keyData);
+          Semaphore_unlock(&dictionary->lock);
+          return FALSE;
+        }
+
+        // copy data
+        if (!dictionaryCopyFunction(data,
+                                    newData,
+                                    length,
+                                    dictionaryCopyUserData
+                                   )
+           )
+        {
+          free(newData);
+          free(dictionaryEntryTable->entries[entryIndex].keyData);
+          Semaphore_unlock(&dictionary->lock);
+          return FALSE;
+        }
+        dictionaryEntryTable->entries[entryIndex].data = newData;
+      }
+      else
+      {
+        // use orginal data
+        dictionaryEntryTable->entries[entryIndex].data = (void*)data;
+      }
       dictionaryEntryTable->entries[entryIndex].length = length;
 
       dictionaryEntryTable->entryCount++;
@@ -901,6 +977,7 @@ bool Dictionary_add(Dictionary *dictionary,
       Semaphore_unlock(&dictionary->lock);
       return FALSE;
     }
+
     dictionaryEntryTable->entries[entryIndex].data = malloc(length);
     if (dictionaryEntryTable->entries[entryIndex].data == NULL)
     {
@@ -908,22 +985,49 @@ bool Dictionary_add(Dictionary *dictionary,
       Semaphore_unlock(&dictionary->lock);
       return FALSE;
     }
+
     dictionaryEntryTable->entries[entryIndex].hash = hash;
+
     memcpy(dictionaryEntryTable->entries[entryIndex].keyData,keyData,keyLength);
     dictionaryEntryTable->entries[entryIndex].keyLength = keyLength;
-    memcpy(dictionaryEntryTable->entries[entryIndex].data,data,length);
+
+    if (dictionaryCopyFunction != NULL)
+    {
+      // allocate data memory
+      newData = malloc(length);
+      if (newData == NULL)
+      {
+        free(dictionaryEntryTable->entries[entryIndex].keyData);
+        Semaphore_unlock(&dictionary->lock);
+        return FALSE;
+      }
+
+      // copy key data
+      if (!dictionaryCopyFunction(data,
+                                  newData,
+                                  length,
+                                  dictionaryCopyUserData
+                                 )
+         )
+      {
+        free(newData);
+        free(dictionaryEntryTable->entries[entryIndex].keyData);
+        Semaphore_unlock(&dictionary->lock);
+        return FALSE;
+      }
+      dictionaryEntryTable->entries[entryIndex].data = newData;
+    }
     dictionaryEntryTable->entries[entryIndex].length = length;
+
     dictionaryEntryTable->entryCount++;
   }
 
   return TRUE;
 }
 
-void Dictionary_remove(Dictionary             *dictionary,
-                       const void             *keyData,
-                       ulong                  keyLength,
-                       DictionaryFreeFunction dictionaryFreeFunction,
-                       void                   *dictionaryFreeUserData
+void Dictionary_remove(Dictionary *dictionary,
+                       const void *keyData,
+                       ulong      keyLength
                       )
 {
   ulong                hash;
@@ -943,14 +1047,14 @@ void Dictionary_remove(Dictionary             *dictionary,
       assert(dictionaryEntryTable->entries != NULL);
       assert(dictionaryEntryTable->entryCount > 0);
 
-      if (dictionaryFreeFunction != NULL)
+      if (dictionary->dictionaryFreeFunction != NULL)
       {
-        dictionaryFreeFunction(dictionaryEntryTable->entries[index].data,
-                               dictionaryEntryTable->entries[index].length,
-                               dictionaryFreeUserData
-                              );
+        dictionary->dictionaryFreeFunction(dictionaryEntryTable->entries[index].data,
+                                           dictionaryEntryTable->entries[index].length,
+                                           dictionary->dictionaryFreeUserData
+                                          );
+        free((void*)dictionaryEntryTable->entries[index].data);
       }
-      free(dictionaryEntryTable->entries[index].data);
       free(dictionaryEntryTable->entries[index].keyData);
 
       dictionaryEntryTable->entries[index].data      = NULL;
@@ -987,7 +1091,7 @@ bool Dictionary_find(Dictionary *dictionary,
     {
       assert(dictionaryEntryTable->entries != NULL);
 
-      if (data   != NULL) (*data)   = dictionaryEntryTable->entries[index].data;
+      if (data   != NULL) (*data)   = (void*)dictionaryEntryTable->entries[index].data;
       if (length != NULL) (*length) = dictionaryEntryTable->entries[index].length;
       foundFlag = TRUE;
     }
@@ -1055,7 +1159,7 @@ bool Dictionary_getNext(DictionaryIterator *dictionaryIterator,
       {
         if (keyData   != NULL) (*keyData)   = dictionaryEntry->keyData;
         if (keyLength != NULL) (*keyLength) = dictionaryEntry->keyLength;
-        if (data      != NULL) (*data)      = dictionaryEntry->data;
+        if (data      != NULL) (*data)      = (void*)dictionaryEntry->data;
         if (length    != NULL) (*length)    = dictionaryEntry->length;
         foundFlag = TRUE;
       }

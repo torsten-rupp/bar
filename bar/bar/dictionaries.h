@@ -26,6 +26,33 @@
 /***************************** Datatypes *******************************/
 
 /***********************************************************************\
+* Name   : DictionaryCopyFunction
+* Purpose: copy dictionary entry
+* Input  : fromData - source data entry
+*          toData   - memory for destination data entry
+*          length   - length of data entries
+*          userData - user data or NULL
+* Output : -
+* Return : TRUE if copied, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*DictionaryCopyFunction)(const void *fromData, void *toData, ulong length, void *userData);
+
+/***********************************************************************\
+* Name   : DictionaryFreeFunction
+* Purpose: delete dictionary entry
+* Input  : data     - data entry
+*          length   - length of data entries
+*          userData - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*DictionaryFreeFunction)(const void *data, ulong length, void *userData);
+
+/***********************************************************************\
 * Name   : DictionaryCompareFunction
 * Purpose: compare dictionary entries
 * Input  : userData    - user data
@@ -62,7 +89,9 @@ typedef struct
   Semaphore                 lock;
   DictionaryEntryTable      *entryTables;                // tables array
   uint                      entryTableCount;             // number of tables
-  DictionaryCompareFunction dictionaryCompareFunction;
+  DictionaryFreeFunction    dictionaryFreeFunction;      // free entry function or NULL
+  void                      *dictionaryFreeUserData;
+  DictionaryCompareFunction dictionaryCompareFunction;   // compare key data function or NULL
   void                      *dictionaryCompareUserData;
 } Dictionary;
 
@@ -71,19 +100,6 @@ typedef struct
   Dictionary *dictionary;
   uint       i,j;
 } DictionaryIterator;
-
-/***********************************************************************\
-* Name   : DictionaryFreeFunction
-* Purpose: delete dictionary entry
-* Input  : data     - data entry
-*          length   - length of data entries
-*          userData - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-typedef void(*DictionaryFreeFunction)(const void *data, ulong length, void *userData);
 
 /***********************************************************************\
 * Name   : DictionaryIterateFunction
@@ -109,6 +125,9 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 
 /****************************** Macros *********************************/
 
+#define DICTIONARY_BYTE_COPY CALLBACK((DictionaryCopyFunction)Dictionary_byteCopy,NULL)
+#define DICTIONARY_BYTE_FREE CALLBACK((DictionaryFreeFunction)Dictionary_byteFree,NULL)
+
 #ifndef NDEBUG
   #define Dictionary_init(...) __Dictionary_init(__FILE__,__LINE__,__VA_ARGS__)
   #define Dictionary_done(...) __Dictionary_done(__FILE__,__LINE__,__VA_ARGS__)
@@ -126,6 +145,8 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 * Name   : Dictionary_init
 * Purpose: initialize dictionary
 * Input  : dictionary                - dictionary variable
+*          dictionaryFreeFunction    - free function or NULL
+*          dictionaryFreeUserData    - free function user data
 *          dictionaryCompareFunction - compare function or NULL
 *          dictionaryCompareUserData - compare function user data
 * Output : -
@@ -135,6 +156,8 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 
 #ifdef NDEBUG
   bool Dictionary_init(Dictionary                *dictionary,
+                       DictionaryFreeFunction    dictionaryFreeFunction,
+                       void                      *dictionaryFreeUserData,
                        DictionaryCompareFunction dictionaryCompareFunction,
                        void                      *dictionaryCompareUserData
                       );
@@ -142,6 +165,8 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
   bool __Dictionary_init(const char                *__fileName__,
                          ulong                     __lineNb__,
                          Dictionary                *dictionary,
+                         DictionaryFreeFunction    dictionaryFreeFunction,
+                         void                      *dictionaryFreeUserData,
                          DictionaryCompareFunction dictionaryCompareFunction,
                          void                      *dictionaryCompareUserData
                         );
@@ -150,47 +175,31 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 /***********************************************************************\
 * Name   : Dictionary_done
 * Purpose: deinitialize dictionary
-* Input  : dictionary             - dictionary
-*          dictionaryFreeFunction - dictionary entry free function or
-*                                   NULL
-*          dictionaryFreeUserData - dictionary entry free function user
-*                                   data
+* Input  : dictionary - dictionary
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  void Dictionary_done(Dictionary             *dictionary,
-                       DictionaryFreeFunction dictionaryFreeFunction,
-                       void                   *dictionaryFreeUserData
-                      );
+  void Dictionary_done(Dictionary *dictionary);
 #else /* not NDEBUG */
-  void __Dictionary_done(const char                *__fileName__,
-                         ulong                     __lineNb__,
-                         Dictionary             *dictionary,
-                         DictionaryFreeFunction dictionaryFreeFunction,
-                         void                   *dictionaryFreeUserData
+  void __Dictionary_done(const char *__fileName__,
+                         ulong      __lineNb__,
+                         Dictionary *dictionary
                         );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Dictionary_clear
 * Purpose: clear dictionary
-* Input  : dictionary             - dictionary
-*          dictionaryFreeFunction - dictionary entry free function or
-*                                   NULL
-*          dictionaryFreeUserData - dictionary entry free function user
-*                                   data
+* Input  : dictionary - dictionary
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Dictionary_clear(Dictionary             *dictionary,
-                      DictionaryFreeFunction dictionaryFreeFunction,
-                      void                   *dictionaryFreeUserData
-                     );
+void Dictionary_clear(Dictionary *dictionary);
 
 /***********************************************************************\
 * Name   : Dictionary_count
@@ -204,45 +213,71 @@ void Dictionary_clear(Dictionary             *dictionary,
 ulong Dictionary_count(Dictionary *dictionary);
 
 /***********************************************************************\
-* Name   : Dictionary_add
-* Purpose: add entry to dictionary
-* Input  : dictionary - dictionary
-*          keyData    - key data
-*          keyLength  - length of key data
-*          data       - entry data
-*          length     - length of entry data
+* Name   : Dictionary_byteCopy
+* Purpose: byte copy data
+* Input  : fromData - source data entry
+*          toData   - memory for destination data entry
+*          length   - length of data entries
+*          userData - user data or NULL
 * Output : -
-* Return : TRUE if entry added, FALSE otherwise
-* Notes  : key data and data will be copied!
+* Return : TRUE
+* Return : -
+* Notes  : -
 \***********************************************************************/
 
-bool Dictionary_add(Dictionary *dictionary,
-                    const void *keyData,
-                    ulong      keyLength,
-                    const void *data,
-                    ulong      length
-                   );
+bool Dictionary_byteCopy(const void *fromData, void *toData, ulong length, void *userData);
 
 /***********************************************************************\
-* Name   : Dictionary_remove
-* Purpose: remove entry from dictionary
-* Input  : dictionary             - dictionary
-*          keyData                - key data
-*          keyLength              - length of key data
-*          dictionaryFreeFunction - dictionary entry free function or
-*                                   NULL
-*          dictionaryFreeUserData - dictionary entry free function user
-*                                   data
+* Name   : Dictionary_byteFree
+* Purpose: free bytes
+* Input  : data     - data entry
+*          length   - length of data entries
+*          userData - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Dictionary_remove(Dictionary             *dictionary,
-                       const void             *keyData,
-                       ulong                  keyLength,
-                       DictionaryFreeFunction dictionaryFreeFunction,
-                       void                   *dictionaryFreeUserData
+void Dictionary_byteFree(void *data, ulong length, void *userData);
+
+/***********************************************************************\
+* Name   : Dictionary_add
+* Purpose: add entry to dictionary
+* Input  : dictionary             - dictionary
+*          keyData                - key data
+*          keyLength              - length of key data
+*          data                   - entry data
+*          length                 - length of entry data
+*          dictionaryCopyFunction - copy function or NULL
+*          dictionaryCopyUserData - copy function user data
+* Output : -
+* Return : TRUE if entry added, FALSE otherwise
+* Notes  : key data and data will be copied!
+\***********************************************************************/
+
+bool Dictionary_add(Dictionary             *dictionary,
+                    const void             *keyData,
+                    ulong                  keyLength,
+                    const void             *data,
+                    ulong                  length,
+                    DictionaryCopyFunction dictionaryCopyFunction,
+                    void                   *dictionaryCopyUserData
+                   );
+
+/***********************************************************************\
+* Name   : Dictionary_remove
+* Purpose: remove entry from dictionary
+* Input  : dictionary - dictionary
+*          keyData    - key data
+*          keyLength  - length of key data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Dictionary_remove(Dictionary *dictionary,
+                       const void *keyData,
+                       ulong      keyLength
                       );
 
 /***********************************************************************\
