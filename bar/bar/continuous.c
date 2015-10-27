@@ -16,6 +16,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#ifdef HAVE_SYS_INOTIFY_H
+  #include <sys/inotify.h>
+#endif
+#include <errno.h>
 #include <assert.h>
 
 #include "global.h"
@@ -23,7 +27,16 @@
 #include "strings.h"
 #include "files.h"
 #include "database.h"
+#include "arrays.h"
+#include "dictionaries.h"
+#include "msgqueues.h"
+#include "misc.h"
 #include "errors.h"
+
+#include "entrylists.h"
+#include "patternlists.h"
+#include "bar_global.h"
+#include "bar.h"
 
 #include "continuous.h"
 
@@ -31,8 +44,11 @@
 
 /***************************** Constants *******************************/
 
+//#define NOTIFY_EVENTS IN_ALL_EVENTS
+#define NOTIFY_EVENTS (IN_CLOSE_WRITE|IN_DELETE|IN_DELETE_SELF|IN_MODIFY|IN_MOVE_SELF|IN_MOVED_FROM|IN_MOVED_TO)
+
 // sleep time [s]
-#define SLEEP_TIME_CONTINUOUS_CLEANUP_THREAD (4*60*60)
+//#define SLEEP_TIME_CONTINUOUS_CLEANUP_THREAD (4*60*60)
 
 #define CONTINOUS_VERSION 1
 
@@ -54,10 +70,33 @@
 
 /***************************** Datatypes *******************************/
 
+typedef struct
+{
+  int    watchHandle;
+  char   jobUUID[MISC_UUID_STRING_LENGTH+1];
+  String path;
+} FileNotifyInfo;
+
+// init notify message
+typedef struct
+{
+  String      jobUUID;
+  EntryList   includeEntryList;
+  PatternList excludePatternList;
+  JobOptions  jobOptions;
+} InitNotifyMsg;
+
 /***************************** Variables *******************************/
+LOCAL Semaphore      fileNotifyLock;
+LOCAL Array          fileNotifyHandles;
+LOCAL Dictionary     fileNotifyDictionary;
 LOCAL DatabaseHandle continuousDatabaseHandle;
-LOCAL Thread         cleanupContinuousThread;    // clean-up thread
-LOCAL bool quitFlag;
+LOCAL int            inotifyHandle;
+LOCAL MsgQueue       initNotifyMsgQueue;
+LOCAL Thread         continuousInitThread;
+LOCAL Thread         continuousThread;
+LOCAL Thread         continuousCleanupThread;
+LOCAL bool           quitFlag;
 
 /****************************** Macros *********************************/
 
@@ -257,6 +296,7 @@ LOCAL Errors getContinuousVersion(const char *databaseFileName, int64 *continuou
 
 LOCAL Errors cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
 {
+UNUSED_VARIABLE(databaseHandle);
 #if 0
   Errors           error;
   String           storageName;
@@ -472,6 +512,7 @@ LOCAL Errors cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
 
 LOCAL Errors cleanUpDuplicateIndizes(DatabaseHandle *databaseHandle)
 {
+UNUSED_VARIABLE(databaseHandle);
 #if 0
   Errors           error;
   StorageSpecifier storageSpecifier;
@@ -618,6 +659,25 @@ LOCAL Errors cleanUpDuplicateIndizes(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
+* Name   : freeFileNotifyInfo
+* Purpose: free file notify info
+* Input  : fileNotifyInfo - file notify info
+*          userData       - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeFileNotifyInfo(FileNotifyInfo *fileNotifyInfo, void *userData)
+{
+  assert(fileNotifyInfo != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(fileNotifyInfo->path);
+}
+
+/***********************************************************************\
 * Name   : cleanupContinuousThreadCode
 * Purpose: cleanup index thread
 * Input  : databaseHandle - database handle
@@ -628,6 +688,8 @@ LOCAL Errors cleanUpDuplicateIndizes(DatabaseHandle *databaseHandle)
 
 LOCAL void cleanupContinuousThreadCode(DatabaseHandle *databaseHandle)
 {
+UNUSED_VARIABLE(databaseHandle);
+#if 0
   String              absoluteFileName;
   String              pathName;
   Errors              error;
@@ -636,7 +698,6 @@ LOCAL void cleanupContinuousThreadCode(DatabaseHandle *databaseHandle)
   String              oldDatabaseFileName;
   uint                sleepTime;
 
-#if 0
   // single clean-ups
   plogMessage(LOG_TYPE_INDEX,"INDEX","Clean-up index database\n");
   (void)cleanUpDuplicateMeta(databaseHandle);
@@ -664,23 +725,330 @@ LOCAL void cleanupContinuousThreadCode(DatabaseHandle *databaseHandle)
 #endif
 }
 
+/***********************************************************************\
+* Name   : freeInitNotifyMsg
+* Purpose: free init notify msg
+* Input  : initNotifyMsg - init notify message
+*          userData      - user data (ignored)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeInitNotifyMsg(InitNotifyMsg *initNotifyMsg, void *userData)
+{
+  assert(initNotifyMsg != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  PatternList_done(&initNotifyMsg->excludePatternList);
+  EntryList_done(&initNotifyMsg->includeEntryList);
+  String_delete(initNotifyMsg->jobUUID);
+}
+
+/***********************************************************************\
+* Name   : continuousInitThreadCode
+* Purpose: continuous file thread code
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void continuousInitThreadCode(void)
+{
+  InitNotifyMsg       initNotifyMsg;
+  StringList          nameList;
+  String              basePath;
+  String              name;
+
+  EntryNode           *includeEntryNode;
+  StringTokenizer     fileNameTokenizer;
+  ConstString         token;
+  Errors              error;
+  FileInfo            fileInfo;
+  SemaphoreLock       semaphoreLock;
+  DirectoryListHandle directoryListHandle;
+  int                 watchHandle;
+  FileNotifyInfo      *fileNotifyInfo;
+
+  // init variables
+  StringList_init(&nameList);
+  basePath = String_new();
+  name     = String_new();
+
+  while (   !quitFlag
+         && MsgQueue_get(&initNotifyMsgQueue,&initNotifyMsg,NULL,sizeof(initNotifyMsg),WAIT_FOREVER)
+        )
+  {
+fprintf(stderr,"%s, %d: i %d\n",__FILE__,__LINE__,List_count(&initNotifyMsg.includeEntryList));
+    LIST_ITERATEX(&initNotifyMsg.includeEntryList,includeEntryNode,!quitFlag)
+    {
+      // find base path
+      File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
+      if (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
+      {
+        if (!String_isEmpty(token))
+        {
+          File_setFileName(basePath,token);
+        }
+        else
+        {
+          File_setFileNameChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
+        }
+      }
+      while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
+      {
+        File_appendFileName(basePath,token);
+      }
+      File_doneSplitFileName(&fileNameTokenizer);
+
+      // find directories and create notify entries
+      StringList_append(&nameList,basePath);
+      while (   !StringList_isEmpty(&nameList)
+             && !quitFlag
+            )
+      {
+        // get next entry to process
+        name = StringList_getLast(&nameList,name);
+
+        // read file info
+        error = File_getFileInfo(name,&fileInfo);
+        if (error != ERROR_NONE)
+        {
+          continue;
+        }
+
+        if (!isNoDumpAttribute(&fileInfo,&initNotifyMsg.jobOptions) && !isNoBackup(name))
+        {
+#if 1
+          // create notify
+          watchHandle = inotify_add_watch(inotifyHandle,String_cString(name),NOTIFY_EVENTS);
+          if (watchHandle == -1)
+          {
+            printWarning(_("Cannot create file notify for '%s' (error: %s)\n"),String_cString(name),strerror(errno));
+            continue;
+          }
+
+          // init file notify info
+          fileNotifyInfo = (FileNotifyInfo*)malloc(sizeof(FileNotifyInfo));
+          if (fileNotifyInfo == NULL)
+          {
+            continue;
+          }
+          fileNotifyInfo->watchHandle = watchHandle;
+          strncpy(fileNotifyInfo->jobUUID,String_cString(initNotifyMsg.jobUUID),sizeof(fileNotifyInfo->jobUUID));
+          fileNotifyInfo->path = String_duplicate(name);
+
+          // add to file notify dictionary
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&fileNotifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+          {
+            Array_put(&fileNotifyHandles,(ulong)watchHandle,fileNotifyInfo);//,CALLBACK(NULL,NULL));
+
+            Dictionary_add(&fileNotifyDictionary,
+                           &fileNotifyInfo->watchHandle,sizeof(fileNotifyInfo->watchHandle),
+                           fileNotifyInfo,sizeof(FileNotifyInfo),
+                           CALLBACK(NULL,NULL)
+                          );
+          }
+fprintf(stderr,"%s, %d: create notify %s: wd=%d\n",__FILE__,__LINE__,String_cString(name),watchHandle);
+#endif
+
+          // scan sub-directories
+          if (fileInfo.type == FILE_TYPE_DIRECTORY)
+          {
+            // open directory contents
+            error = File_openDirectoryList(&directoryListHandle,name);
+            if (error == ERROR_NONE)
+            {
+              // read directory content
+              while (   !File_endOfDirectoryList(&directoryListHandle)
+                     && !quitFlag
+                    )
+              {
+                // read next directory entry
+                error = File_readDirectoryList(&directoryListHandle,name);
+                if (error != ERROR_NONE)
+                {
+                  continue;
+                }
+//fprintf(stderr,"%s, %d: %s included=%d excluded=%d dictionary=%d\n",__FILE__,__LINE__,String_cString(fileName),isIncluded(includeEntryNode,fileName),isExcluded(createInfo->excludePatternList,fileName),Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)));
+
+                if (   isIncluded(includeEntryNode,name)
+                    && !isExcluded(&initNotifyMsg.excludePatternList,name)
+                    )
+                {
+                  // read file info
+                  error = File_getFileInfo(name,&fileInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    continue;
+                  }
+
+                  // add to name list
+                  if (!isNoDumpAttribute(&fileInfo,&initNotifyMsg.jobOptions) && !isNoBackup(name))
+                  {
+                    if (fileInfo.type == FILE_TYPE_DIRECTORY)
+                    {
+                      StringList_append(&nameList,name);
+                    }
+                  }
+                }
+              }
+
+              // close directory
+              File_closeDirectoryList(&directoryListHandle);
+            }
+          }
+        }
+      }
+    }
+
+    // free init notify message
+    freeInitNotifyMsg(&initNotifyMsg,NULL);
+  }
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : continuousThreadCode
+* Purpose: continuous file thread code
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void continuousThreadCode(void)
+{
+  #define MAX_ENTRIES 128
+  #define BUFFER_SIZE (MAX_ENTRIES*(sizeof(struct inotify_event)+NAME_MAX+1))
+
+  void                       *buffer;
+  StaticString               (jobUUID,MISC_UUID_STRING_LENGTH);
+  String                     name;
+  ssize_t                    n;
+  const struct inotify_event *inotifyEvent;
+  SemaphoreLock              semaphoreLock;
+  FileNotifyInfo             *fileNotifyInfo;
+
+  // init variables
+  buffer = malloc(BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  name = String_new();
+
+  while (!quitFlag)
+  {
+    // read inotify events
+    do
+    {
+      n = read(inotifyHandle,buffer,BUFFER_SIZE);
+//fprintf(stderr,"%s, %d: xxxxxx inotifyHandle=%d n=%d: %d %s\n",__FILE__,__LINE__,inotifyHandle,n,errno,strerror(errno));
+    }
+    while ((n == -1) && ((errno == EAGAIN) || (errno == EINTR)));
+
+    // process inotify events
+    inotifyEvent = (const struct inotify_event*)buffer;
+    while (n > 0)
+    {
+//fprintf(stderr,"%s, %d: n=%d\n",__FILE__,__LINE__,n);
+      if (inotifyEvent->len > 0)
+      {
+fprintf(stderr,"%s, %d: inotify event wd=%d mask=%08x: name=%s\n",__FILE__,__LINE__,inotifyEvent->wd,inotifyEvent->mask,inotifyEvent->name);
+   if (inotifyEvent->mask & IN_ACCESS)        fprintf(stderr," IN_ACCESS"       );
+   if (inotifyEvent->mask & IN_ATTRIB)        fprintf(stderr," IN_ATTRIB"       );
+   if (inotifyEvent->mask & IN_CLOSE_NOWRITE) fprintf(stderr," IN_CLOSE_NOWRITE");
+   if (inotifyEvent->mask & IN_CLOSE_WRITE)   fprintf(stderr," IN_CLOSE_WRITE"  );
+   if (inotifyEvent->mask & IN_CREATE)        fprintf(stderr," IN_CREATE"       );
+   if (inotifyEvent->mask & IN_DELETE)        fprintf(stderr," IN_DELETE"       );
+   if (inotifyEvent->mask & IN_DELETE_SELF)   fprintf(stderr," IN_DELETE_SELF"  );
+   if (inotifyEvent->mask & IN_IGNORED)       fprintf(stderr," IN_IGNORED"      );
+   if (inotifyEvent->mask & IN_ISDIR)         fprintf(stderr," IN_ISDIR"        );
+   if (inotifyEvent->mask & IN_MODIFY)        fprintf(stderr," IN_MODIFY"       );
+   if (inotifyEvent->mask & IN_MOVE_SELF)     fprintf(stderr," IN_MOVE_SELF"    );
+   if (inotifyEvent->mask & IN_MOVED_FROM)    fprintf(stderr," IN_MOVED_FROM"   );
+   if (inotifyEvent->mask & IN_MOVED_TO)      fprintf(stderr," IN_MOVED_TO"     );
+   if (inotifyEvent->mask & IN_OPEN)          fprintf(stderr," IN_OPEN"         );
+   if (inotifyEvent->mask & IN_Q_OVERFLOW)    fprintf(stderr," IN_Q_OVERFLOW"   );
+   if (inotifyEvent->mask & IN_UNMOUNT)       fprintf(stderr," IN_UNMOUNT"      );
+fprintf(stderr,"\n");
+
+
+        // get job UUID, file name
+        String_clear(jobUUID);
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&fileNotifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        {
+          if (Dictionary_find(&fileNotifyDictionary,
+                              &inotifyEvent->wd,
+                              sizeof(inotifyEvent->wd),
+                              (void**)&fileNotifyInfo,
+                              NULL
+                             )
+             )
+          {
+            String_setCString(jobUUID,fileNotifyInfo->jobUUID);
+            File_appendFileNameCString(String_set(name,fileNotifyInfo->path),inotifyEvent->name);
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(name));
+          }
+        }
+
+        // store into notify database
+        if (!String_isEmpty(jobUUID))
+        {
+          Continuous_add(jobUUID,name);
+        }
+      }
+
+      // next event
+      inotifyEvent = (const struct inotify_event*)((byte*)inotifyEvent+sizeof(struct inotify_event)+inotifyEvent->len);
+      n -= sizeof(struct inotify_event)+inotifyEvent->len;
+    }
+    assert(n == 0);
+  }
+
+  // free resources
+  String_delete(name);
+  free(buffer);
+}
+
 /*---------------------------------------------------------------------*/
 
 Errors Continuous_initAll(void)
 {
+  Semaphore_init(&fileNotifyLock);
+  Array_init(&fileNotifyHandles,sizeof(FileNotifyInfo),0,CALLBACK((ArrayElementFreeFunction)freeFileNotifyInfo,NULL),CALLBACK_NULL);
+  Dictionary_init(&fileNotifyDictionary,CALLBACK((DictionaryFreeFunction)freeFileNotifyInfo,NULL),CALLBACK_NULL);
+
+  inotifyHandle = inotify_init();
+  if (inotifyHandle == -1)
+  {
+    return ERRORX_(OPEN_FILE,errno,"inotify");
+  }
+
+  if (!MsgQueue_init(&initNotifyMsgQueue,0))
+  {
+    HALT_FATAL_ERROR("Cannot initialize init notify message queue!");
+  }
+
   return ERROR_NONE;
 }
 
 void Continuous_doneAll(void)
 {
+  MsgQueue_done(&initNotifyMsgQueue,CALLBACK((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
+  close(inotifyHandle);
+  Dictionary_done(&fileNotifyDictionary);
+  Semaphore_done(&fileNotifyLock);
 }
 
 Errors Continuous_init(const char *databaseFileName)
 {
   Errors error;
   int64  continuousVersion;
-  String oldDatabaseFileName;
-  uint   n;
 
   assert(databaseFileName != NULL);
 
@@ -726,6 +1094,15 @@ Errors Continuous_init(const char *databaseFileName)
     }
   }
 
+  // start threads
+  if (!Thread_init(&continuousInitThread,"BAR continuous init",globalOptions.niceLevel,continuousInitThreadCode,NULL))
+  {
+    HALT_FATAL_ERROR("Cannot initialize continuous init thread!");
+  }
+  if (!Thread_init(&continuousThread,"BAR continuous",globalOptions.niceLevel,continuousThreadCode,NULL))
+  {
+    HALT_FATAL_ERROR("Cannot initialize continuous thread!");
+  }
 
   // start clean-up thread
 #if 0
@@ -738,12 +1115,46 @@ Errors Continuous_init(const char *databaseFileName)
   return ERROR_NONE;
 }
 
-void Continuous_done()
+void Continuous_done(void)
 {
   quitFlag = TRUE;
+  MsgQueue_setEndOfMsg(&initNotifyMsgQueue);
 //  Thread_join(&cleanupContinuousThread);
+  Thread_join(&continuousThread);
+  Thread_join(&continuousInitThread);
+
+  Thread_done(&continuousThread);
+  Thread_done(&continuousInitThread);
 
   (void)closeContinuous(&continuousDatabaseHandle);
+}
+
+Errors Continuous_initNotify(ConstString       jobUUID,
+                             const EntryList   *includeEntryList,
+                             const PatternList *excludePatternList,
+                             const JobOptions  *jobOptions
+                            )
+{
+  InitNotifyMsg initNotifyMsg;
+
+  initNotifyMsg.jobUUID = String_duplicate(jobUUID);
+  EntryList_init(&initNotifyMsg.includeEntryList); EntryList_copy(includeEntryList,&initNotifyMsg.includeEntryList,NULL,NULL);
+  PatternList_init(&initNotifyMsg.excludePatternList); PatternList_copy(excludePatternList,&initNotifyMsg.excludePatternList,NULL,NULL);
+  copyJobOptions(jobOptions,&initNotifyMsg.jobOptions);
+
+  (void)MsgQueue_put(&initNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
+
+  return ERROR_NONE;
+}
+
+Errors Continuous_doneNotify(ConstString jobUUID)
+{
+  SemaphoreLock semaphoreLock;
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&fileNotifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+
+  }
 }
 
 Errors Continuous_add(ConstString jobUUID,
@@ -775,6 +1186,31 @@ Errors Continuous_remove(DatabaseId databaseId)
                           "DELETE FROM names WHERE id=%ld;",
                           databaseId
                          );
+}
+
+bool Continuous_isAvailable(ConstString jobUUID)
+{
+  bool                isAvailable;
+  DatabaseQueryHandle databaseQueryHandle;
+
+  if (Database_prepare(&databaseQueryHandle,
+                       &continuousDatabaseHandle,
+                       "SELECT id FROM names WHERE jobUUID=%'S LIMIT 0,1",
+                       jobUUID
+                      ) != ERROR_NONE
+     )
+  {
+    return FALSE;
+  }
+
+  isAvailable = Database_getNextRow(&databaseQueryHandle,
+                                    "%lld",
+                                    NULL
+                                   );
+
+  Database_finalize(&databaseQueryHandle);
+
+  return isAvailable;
 }
 
 Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,

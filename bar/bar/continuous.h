@@ -23,6 +23,9 @@
 #include "database.h"
 #include "errors.h"
 
+#include "entrylists.h"
+#include "patternlists.h"
+
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
@@ -67,6 +70,54 @@ Errors Continuous_initAll(void);
 void Continuous_doneAll(void);
 
 /***********************************************************************\
+* Name   : Continuous_init
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Continuous_init(const char *databaseFileName);
+
+/***********************************************************************\
+* Name   : Continuous_done
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Continuous_done(void);
+
+/***********************************************************************\
+* Name   : Continuous_initNotify
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Continuous_initNotify(ConstString       jobUUID,
+                             const EntryList   *includeEntryList,
+                             const PatternList *excludePatternList,
+                             const JobOptions  *jobOptions
+                            );
+
+/***********************************************************************\
+* Name   : Continuous_doneNotify
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Continuous_doneNotify(ConstString jobUUID);
+
+/***********************************************************************\
 * Name   : Continuous_add
 * Purpose: add continuous entry
 * Input  : indexHandle - index handle
@@ -91,6 +142,17 @@ Errors Continuous_add(ConstString jobUUID,
 \***********************************************************************/
 
 Errors Continuous_remove(DatabaseId databaseId);
+
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool Continuous_isAvailable(ConstString jobUUID);
 
 /***********************************************************************\
 * Name   : Continuous_initList
