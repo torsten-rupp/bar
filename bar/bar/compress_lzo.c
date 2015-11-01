@@ -77,21 +77,27 @@ LOCAL const char *getLZOErrorText(int errorCode)
 
   switch (errorCode)
   {
-    case LZO_E_OK                 : errorText = "none";                  break;
-    case LZO_E_ERROR              : errorText = "error";                 break;
-    case LZO_E_OUT_OF_MEMORY      : errorText = "out of memory";         break;
-    case LZO_E_NOT_COMPRESSIBLE   : errorText = "not compressible";      break;
-    case LZO_E_INPUT_OVERRUN      : errorText = "input overrun";         break;
-    case LZO_E_OUTPUT_OVERRUN     : errorText = "output overrun";        break;
-    case LZO_E_LOOKBEHIND_OVERRUN : errorText = "look behind overrun";   break;
-    case LZO_E_EOF_NOT_FOUND      : errorText = "end of data not found"; break;
-    case LZO_E_INPUT_NOT_CONSUMED : errorText = "input not consumed";    break;
-    case LZO_E_NOT_YET_IMPLEMENTED: errorText = "not yet implemented";   break;
-    case LZO_E_INVALID_ARGUMENT   : errorText = "invalid argument";      break;
-    case LZO_E_INVALID_ALIGNMENT  : errorText = "invalid alignment";     break;
-    case LZO_E_OUTPUT_NOT_CONSUMED: errorText = "output not consumed";   break;
-    case LZO_E_INTERNAL_ERROR     : errorText = "internal error";        break;
-    default:                        errorText = "unknown";               break;
+    case LZO_E_OK                   : errorText = "none";                  break;
+    case LZO_E_ERROR                : errorText = "error";                 break;
+    case LZO_E_OUT_OF_MEMORY        : errorText = "out of memory";         break;
+    case LZO_E_NOT_COMPRESSIBLE     : errorText = "not compressible";      break;
+    case LZO_E_INPUT_OVERRUN        : errorText = "input overrun";         break;
+    case LZO_E_OUTPUT_OVERRUN       : errorText = "output overrun";        break;
+    case LZO_E_LOOKBEHIND_OVERRUN   : errorText = "look behind overrun";   break;
+    case LZO_E_EOF_NOT_FOUND        : errorText = "end of data not found"; break;
+    case LZO_E_INPUT_NOT_CONSUMED   : errorText = "input not consumed";    break;
+    case LZO_E_NOT_YET_IMPLEMENTED  : errorText = "not yet implemented";   break;
+    case LZO_E_INVALID_ARGUMENT     : errorText = "invalid argument";      break;
+    #ifdef LZO_E_INVALID_ALIGNMENT
+      case LZO_E_INVALID_ALIGNMENT  : errorText = "invalid alignment";     break;
+    #endif
+    #ifdef LZO_E_OUTPUT_NOT_CONSUMED
+      case LZO_E_OUTPUT_NOT_CONSUMED: errorText = "output not consumed";   break;
+    #endif
+    #ifdef LZO_E_INTERNAL_ERROR
+      case LZO_E_INTERNAL_ERROR     : errorText = "internal error";        break;
+    #endif
+    default:                          errorText = "unknown";               break;
   }
 
   return errorText;
