@@ -666,6 +666,7 @@ bool Thread_init(Thread     *thread,
 {
   ThreadStartInfo startInfo;
   pthread_attr_t  threadAttributes;
+  int             result;
 
   assert(thread != NULL);
   assert(name != NULL);
@@ -676,7 +677,8 @@ bool Thread_init(Thread     *thread,
   #endif /* NDEBUG */
 
   // init thread info
-  sem_init(&startInfo.lock,0,0);
+  result = sem_init(&startInfo.lock,0,0);
+  assert(result == 0);
   startInfo.name          = name;
   startInfo.niceLevel     = niceLevel;
   startInfo.entryFunction = entryFunction;
@@ -707,7 +709,12 @@ bool Thread_init(Thread     *thread,
   pthread_attr_destroy(&threadAttributes);
 
   // wait until thread started
-  sem_wait(&startInfo.lock);
+  do
+  {
+    result = sem_wait(&startInfo.lock);
+  }
+  while ((result != 0) && (errno == EINTR));
+  assert(result == 0);
 
   // free resources
   sem_destroy(&startInfo.lock);
