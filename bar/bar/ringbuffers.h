@@ -120,7 +120,7 @@ typedef char(*RingBufferElementIterateFunction)(void *userData, void *data);
 * Return : -
 * Notes  : variable point to all entries in ring buffer
 *          usage:
-*            ringBuffer(ringBuffer,variable)
+*            RINGBUFFER_ITERATE(ringBuffer,variable)
 *            {
 *              ... = variable->...
 *            }
@@ -129,6 +129,28 @@ typedef char(*RingBufferElementIterateFunction)(void *userData, void *data);
 #define RINGBUFFER_ITERATE(ringBuffer,variable) \
   for ((variable) =  (typeof(variable))((ringBuffer)->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize); \
        (variable) != (typeof(variable))((ringBuffer)->data+(ulong)ringBuffer->nextIn *(ulong)ringBuffer->elementSize); \
+       (variable) =  (typeof(variable))((ringBuffer)->data+(((((byte*)variable)-(ringBuffer)->data)+(ulong)ringBuffer->elementSize)%((ulong)ringBuffer->elementSize*(ulong)ringBuffer->size))) \
+      )
+
+/***********************************************************************\
+* Name   : RINGBUFFER_ITERATEX
+* Purpose: iterated over ring buffer elements and execute block
+* Input  : ringBuffer - ring buffer
+*          variable   - iteration variable
+*          condition  - additional condition
+* Output : -
+* Return : -
+* Notes  : variable point to all entries in ring buffer
+*          usage:
+*            RINGBUFFER_ITERATEX(ringBuffer,variable,TRUE)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define RINGBUFFER_ITERATEX(ringBuffer,variable,condition) \
+  for ((variable) =  (typeof(variable))((ringBuffer)->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize); \
+       ((variable) != (typeof(variable))((ringBuffer)->data+(ulong)ringBuffer->nextIn *(ulong)ringBuffer->elementSize)) && (condition); \
        (variable) =  (typeof(variable))((ringBuffer)->data+(((((byte*)variable)-(ringBuffer)->data)+(ulong)ringBuffer->elementSize)%((ulong)ringBuffer->elementSize*(ulong)ringBuffer->size))) \
       )
 
