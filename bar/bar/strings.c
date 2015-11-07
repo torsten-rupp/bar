@@ -5127,7 +5127,7 @@ void String_debugDumpInfo(FILE *handle)
               debugStringNode->allocLineNb
              );
       #ifdef HAVE_BACKTRACE
-        fprintf(stderr,"  allocated at\n");
+        fprintf(handle,"  allocated at\n");
         debugDumpStackTrace(handle,4,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
       #endif /* HAVE_BACKTRACE */
     }
