@@ -45,7 +45,7 @@
 /***************************** Constants *******************************/
 
 //#define NOTIFY_EVENTS IN_ALL_EVENTS
-#define NOTIFY_EVENTS (IN_CLOSE_WRITE|IN_DELETE|IN_DELETE_SELF|IN_MODIFY|IN_MOVE_SELF|IN_MOVED_FROM|IN_MOVED_TO)
+#define NOTIFY_EVENTS (IN_CREATE|IN_MODIFY|IN_ATTRIB|IN_CLOSE_WRITE|IN_DELETE|IN_DELETE_SELF|IN_MODIFY|IN_MOVE_SELF|IN_MOVED_FROM|IN_MOVED_TO)
 
 // sleep time [s]
 //#define SLEEP_TIME_CONTINUOUS_CLEANUP_THREAD (4*60*60)
@@ -61,35 +61,56 @@
   "INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));" \
   "" \
   "CREATE TABLE IF NOT EXISTS names(" \
-  "  id      INTEGER PRIMARY KEY," \
-  "  jobUUID TEXT NOT NULL," \
-  "  name    TEXT NOT NULL," \
+  "  id           INTEGER PRIMARY KEY," \
+  "  jobUUID      TEXT NOT NULL," \
+  "  scheduleUUID TEXT NOT NULL," \
+  "  name         TEXT NOT NULL," \
   "  UNIQUE (jobUUID,name) " \
   ");" \
-  "CREATE INDEX IF NOT EXISTS namesIndex ON names (jobUUID);"
+  "CREATE INDEX IF NOT EXISTS namesIndex ON names (jobUUID,scheduleUUID);"
 
 /***************************** Datatypes *******************************/
 
+// job/schedule UUID list
+typedef struct UUIDNode
+{
+  LIST_NODE_HEADER(struct UUIDNode);
+
+  char   jobUUID[MISC_UUID_STRING_LENGTH+1];
+  char   scheduleUUID[MISC_UUID_STRING_LENGTH+1];
+  bool   cleanFlag;
+} UUIDNode;
+
 typedef struct
 {
-  int    watchHandle;
-  char   jobUUID[MISC_UUID_STRING_LENGTH+1];
-  String path;
-} FileNotifyInfo;
+  LIST_HEADER(UUIDNode);
+} UUIDList;
+
+// notify info
+typedef struct
+{
+  UUIDList uuidList;
+  int      watchHandle;
+  String   directory;
+} NotifyInfo;
 
 // init notify message
 typedef struct
 {
-  String      jobUUID;
-  EntryList   includeEntryList;
-  PatternList excludePatternList;
-  JobOptions  jobOptions;
+  enum
+  {
+    INIT,
+    DONE
+  } type;
+  char   jobUUID[MISC_UUID_STRING_LENGTH+1];
+  char   scheduleUUID[MISC_UUID_STRING_LENGTH+1];
+  EntryList entryList;
 } InitNotifyMsg;
 
 /***************************** Variables *******************************/
-LOCAL Semaphore      fileNotifyLock;
-LOCAL Array          fileNotifyHandles;
-LOCAL Dictionary     fileNotifyDictionary;
+LOCAL Semaphore      notifyLock;
+LOCAL Dictionary     notifyHandles;
+LOCAL Dictionary     notifyDirectories;
 LOCAL DatabaseHandle continuousDatabaseHandle;
 LOCAL int            inotifyHandle;
 LOCAL MsgQueue       initNotifyMsgQueue;
@@ -114,6 +135,49 @@ LOCAL bool           quitFlag;
   extern "C" {
 #endif
 
+#ifndef NDEBUG
+LOCAL void printNotifies(void)
+{
+  SemaphoreLock      semaphoreLock;
+  DictionaryIterator dictionaryIterator;
+  void               *data;
+  ulong              length;
+  NotifyInfo         *notifyInfo;
+  UUIDNode           *uuidNode;
+
+  printf("Notifies:\n");
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+    while (Dictionary_getNext(&dictionaryIterator,
+                              NULL,  // keyData,
+                              NULL,  // keyLength,
+                              &data,
+                              &length
+                             )
+          )
+    {
+      assert(data != NULL);
+      assert(length == sizeof(NotifyInfo*));
+
+      notifyInfo = (NotifyInfo*)data;
+      printf("%3d: %s\n",
+             notifyInfo->watchHandle,
+             String_cString(notifyInfo->directory)
+            );
+      LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+      {
+        printf("     %s %s\n",
+               uuidNode->jobUUID,
+               uuidNode->scheduleUUID
+              );
+      }
+    }
+    Dictionary_doneIterator(&dictionaryIterator);
+  }
+}
+#endif // NDEBUG
+
 /***********************************************************************\
 * Name   : openContinuous
 * Purpose: open continuous database
@@ -123,6 +187,7 @@ LOCAL bool           quitFlag;
 * Notes  : -
 \***********************************************************************/
 
+//TODO: always create new
 #ifdef NDEBUG
   LOCAL Errors openContinuous(DatabaseHandle *databaseHandle,
                               const char     *databaseFileName
@@ -659,22 +724,154 @@ UNUSED_VARIABLE(databaseHandle);
 }
 
 /***********************************************************************\
-* Name   : freeFileNotifyInfo
+* Name   : freeNotifyInfo
 * Purpose: free file notify info
-* Input  : fileNotifyInfo - file notify info
-*          userData       - not used
+* Input  : notifyInfo - file notify info
+*          userData   - not used
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeFileNotifyInfo(FileNotifyInfo *fileNotifyInfo, void *userData)
+LOCAL void freeNotifyInfo(NotifyInfo *notifyInfo, void *userData)
 {
-  assert(fileNotifyInfo != NULL);
+  assert(notifyInfo != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  String_delete(fileNotifyInfo->path);
+  List_done(&notifyInfo->uuidList,CALLBACK_NULL);
+  String_delete(notifyInfo->directory);
+}
+
+/***********************************************************************\
+* Name   : getNotifyInfo
+* Purpose: get file notify by watch handle
+* Input  : watchHandle - watch handle
+* Output : -
+* Return : file notify info or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL NotifyInfo *getNotifyInfo(int watchHandle)
+{
+  NotifyInfo *notifyInfo;
+
+  if (!Dictionary_find(&notifyHandles,
+                       &watchHandle,
+                       sizeof(watchHandle),
+                       (void**)&notifyInfo,
+                       NULL
+                      )
+     )
+  {
+    notifyInfo = NULL;
+  }
+
+  return notifyInfo;
+}
+
+/***********************************************************************\
+* Name   : getNotifyInfoByDirectory
+* Purpose: get file notify by job/schedule UUID
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID
+* Output : -
+* Return : file notify info or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
+{
+  DictionaryIterator dictionaryIterator;
+  NotifyInfo         *notifyInfo;
+  void               *data;
+  ulong              length;
+
+#if 0
+  notifyInfo = NULL;
+
+  Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+  while (Dictionary_getNext(&dictionaryIterator,
+                            NULL,  // keyData,
+                            NULL,  // keyLength,
+                            &data,
+                            &length
+                           )
+        )
+  {
+    assert(data != NULL);
+    assert(length == sizeof(NotifyInfo*));
+
+    if (   (String_length(((NotifyInfo*)data)->directory) == String_length(directory))
+        && String_equals(((NotifyInfo*)data)->directory,directory)
+       )
+    {
+      notifyInfo = (NotifyInfo*)data;
+      break;
+    }
+  }
+  Dictionary_doneIterator(&dictionaryIterator);
+#else
+  if (!Dictionary_find(&notifyDirectories,
+                       String_cString(directory),
+                       String_length(directory),
+                       (void**)&notifyInfo,
+                       NULL
+                      )
+     )
+  {
+    notifyInfo = NULL;
+  }
+#endif
+
+  return notifyInfo;
+}
+
+/***********************************************************************\
+* Name   : getNotifyInfoByUUID
+* Purpose: get file notify by job/schedule UUID
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID
+* Output : -
+* Return : file notify info or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL NotifyInfo *XgetNotifyInfoByUUID(const char *jobUUID, const char *scheduleUUID, ConstString directory)
+{
+  DictionaryIterator dictionaryIterator;
+  NotifyInfo         *notifyInfo;
+  void               *data;
+  ulong              length;
+
+  notifyInfo = NULL;
+
+  Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+  while (Dictionary_getNext(&dictionaryIterator,
+                            NULL,  // keyData,
+                            NULL,  // keyLength,
+                            &data,
+                            &length
+                           )
+        )
+  {
+    assert(data != NULL);
+    assert(length == sizeof(NotifyInfo));
+
+    if (   (String_length(((NotifyInfo*)data)->directory) == String_length(directory))
+//TODO
+//        && stringEquals(((NotifyInfo*)data)->jobUUID,jobUUID)
+//        && stringEquals(((NotifyInfo*)data)->scheduleUUID,scheduleUUID)
+        && String_equals(((NotifyInfo*)data)->directory,directory)
+       )
+    {
+      notifyInfo = (NotifyInfo*)data;
+      break;
+    }
+  }
+  Dictionary_doneIterator(&dictionaryIterator);
+
+  return notifyInfo;
 }
 
 /***********************************************************************\
@@ -726,6 +923,517 @@ UNUSED_VARIABLE(databaseHandle);
 }
 
 /***********************************************************************\
+* Name   : addNotify
+* Purpose: add notify for directory
+* Input  : directory - directory
+* Output : -
+* Return : file notify or NULL on error
+* Notes  : -
+\***********************************************************************/
+
+LOCAL NotifyInfo *addNotify(ConstString directory)
+{
+  int            watchHandle;
+  SemaphoreLock  semaphoreLock;
+  NotifyInfo     *notifyInfo;
+  UUIDNode       *uuidNode;
+
+  assert(directory != NULL);
+  assert(Semaphore_isLocked(&notifyLock));
+
+  notifyInfo = getNotifyInfoByDirectory(directory);
+  if (notifyInfo == NULL)
+  {
+    // create notify
+    watchHandle = inotify_add_watch(inotifyHandle,String_cString(directory),NOTIFY_EVENTS|IN_EXCL_UNLINK|IN_ISDIR);
+    if (watchHandle == -1)
+    {
+      logMessage(LOG_TYPE_CONTINUOUS,"Add notify watch for '%s' fail (error: %s)\n",String_cString(directory),strerror(errno));
+      return NULL;
+    }
+
+    // add notify
+    notifyInfo = (NotifyInfo*)malloc(sizeof(NotifyInfo));
+    if (notifyInfo == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    notifyInfo->watchHandle = watchHandle;
+    notifyInfo->directory   = String_duplicate(directory);
+    List_init(&notifyInfo->uuidList);
+    Dictionary_add(&notifyHandles,
+                   &notifyInfo->watchHandle,sizeof(notifyInfo->watchHandle),
+                   notifyInfo,sizeof(NotifyInfo*),
+                   CALLBACK(NULL,NULL)
+                  );
+    Dictionary_add(&notifyDirectories,
+                   String_cString(notifyInfo->directory),String_length(notifyInfo->directory),
+                   notifyInfo,sizeof(NotifyInfo*),
+                   CALLBACK(NULL,NULL)
+                  );
+  }
+//fprintf(stderr,"%s, %d: add notify %d: %s\n",__FILE__,__LINE__,notifyInfo->watchHandle,String_cString(notifyInfo->directory));
+
+  return notifyInfo;
+}
+
+/***********************************************************************\
+* Name   : removeNotify
+* Purpose: remove notify for directory
+* Input  : notifyInfo - file notify
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void removeNotify(NotifyInfo *notifyInfo)
+{
+  SemaphoreLock semaphoreLock;
+
+  assert(notifyInfo != NULL);
+
+//fprintf(stderr,"%s, %d: rem %d: %s\n",__FILE__,__LINE__,notifyInfo->watchHandle,String_cString(notifyInfo->directory));
+
+  assert(Semaphore_isLocked(&notifyLock));
+
+  // remove from notify dictionary
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    Dictionary_remove(&notifyDirectories,
+                      String_cString(notifyInfo->directory),
+                      String_length(notifyInfo->directory)
+                     );
+    Dictionary_remove(&notifyHandles,
+                      &notifyInfo->watchHandle,
+                      sizeof(notifyInfo->watchHandle)
+                     );
+  }
+
+  // delete notify
+  (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
+
+  // free resources
+  freeNotifyInfo(notifyInfo,NULL);
+  free(notifyInfo);
+}
+
+/***********************************************************************\
+* Name   : addNotifySubDirectories
+* Purpose: add notify for directorty and all sub-directories
+* Input  : jobUUID   - job UUID
+*          directory - directory to add
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID, String directory)
+{
+  StringList          directoryList;
+  String              name;
+  Errors              error;
+  FileInfo            fileInfo;
+  int                 watchHandle;
+  SemaphoreLock       semaphoreLock;
+  DirectoryListHandle directoryListHandle;
+  NotifyInfo          *notifyInfo;
+  UUIDNode            *uuidNode;
+
+fprintf(stderr,"%s, %d: start %s: %d\n",__FILE__,__LINE__,String_cString(directory),Dictionary_count(&notifyHandles));
+
+  // init variables
+  StringList_init(&directoryList);
+  name = String_new();
+
+  StringList_append(&directoryList,directory);
+  while (   !StringList_isEmpty(&directoryList)
+         && !quitFlag
+        )
+  {
+    // get next entry to process
+    StringList_getLast(&directoryList,name);
+
+    if (!isNoBackup(name))
+    {
+//fprintf(stderr,"%s, %d: name=%s %d\n",__FILE__,__LINE__,String_cString(name),StringList_count(&directoryList));
+      // read file info
+      error = File_getFileInfo(name,&fileInfo);
+      if (error != ERROR_NONE)
+      {
+//TODO: log?
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+        continue;
+      }
+
+#if 1
+      // update/add notify
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      {
+        // get/add notify
+        notifyInfo = addNotify(name);
+        if (notifyInfo == NULL)
+        {
+       //      logMessage(LOG_TYPE_CONTINUOUS,"Add notify watch for '%s' fail (error: %s)\n",String_cString(name),strerror(errno));
+       fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+          Semaphore_unlock(&notifyLock);
+          continue;
+        }
+
+        // update/add uuid
+        uuidNode = notifyInfo->uuidList.head;
+        while (   (uuidNode != NULL)
+               && (   !stringEquals(uuidNode->jobUUID,jobUUID)
+                   || !stringEquals(uuidNode->scheduleUUID,scheduleUUID)
+                  )
+              )
+        {
+          uuidNode = uuidNode->next;
+        }
+        if (uuidNode == NULL)
+        {
+          uuidNode = LIST_NEW_NODE(UUIDNode);
+          if (uuidNode == NULL)
+          {
+            HALT_INSUFFICIENT_MEMORY();
+          }
+          strncpy(uuidNode->jobUUID,jobUUID,sizeof(uuidNode->jobUUID));
+          strncpy(uuidNode->scheduleUUID,scheduleUUID,sizeof(uuidNode->scheduleUUID));
+          List_append(&notifyInfo->uuidList,uuidNode);
+        }
+        uuidNode->cleanFlag = FALSE;
+      }
+#endif
+
+      // scan sub-directories
+      if (fileInfo.type == FILE_TYPE_DIRECTORY)
+      {
+        // open directory contents
+        error = File_openDirectoryList(&directoryListHandle,name);
+        if (error == ERROR_NONE)
+        {
+          // read directory content
+          while (   !File_endOfDirectoryList(&directoryListHandle)
+                 && !quitFlag
+                )
+          {
+            // read next directory entry
+            error = File_readDirectoryList(&directoryListHandle,name);
+            if (error != ERROR_NONE)
+            {
+  //TODO: log?
+  fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+              continue;
+            }
+      //fprintf(stderr,"%s, %d: %s included=%d excluded=%d dictionary=%d\n",__FILE__,__LINE__,String_cString(fileName),isIncluded(includeEntryNode,fileName),isExcluded(createInfo->excludePatternList,fileName),Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)));
+
+            if (!isNoBackup(name))
+            {
+              // read file info
+              error = File_getFileInfo(name,&fileInfo);
+              if (error != ERROR_NONE)
+              {
+    //TODO: log?
+    fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+                continue;
+              }
+
+              // add sub-directory to name list
+              if (fileInfo.type == FILE_TYPE_DIRECTORY)
+              {
+                StringList_append(&directoryList,name);
+              }
+            }
+          }
+
+          // close directory
+          File_closeDirectoryList(&directoryListHandle);
+        }
+        else
+        {
+  //TODO: log?
+fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(name),strerror(errno));
+        }
+      }
+    }
+  }
+
+  // free resources
+  String_delete(name);
+  StringList_done(&directoryList);
+//printNotifies();
+fprintf(stderr,"%s, %d: done %s: %d\n",__FILE__,__LINE__,String_cString(directory),Dictionary_count(&notifyHandles));
+}
+
+/***********************************************************************\
+* Name   : removeNotifySubDirectories
+* Purpose: remove notify for directorty and all sub-directories
+* Input  : jobUUID   - job UUID
+*          directory - directory to add
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void removeNotifySubDirectories(ConstString directory)
+{
+  DictionaryIterator dictionaryIterator;
+  NotifyInfo         *notifyInfo;
+  void               *data;
+  ulong              length;
+
+  assert(notifyInfo != NULL);
+
+  do
+  {
+    notifyInfo = NULL;
+
+    // find notify
+    Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+    while (Dictionary_getNext(&dictionaryIterator,
+                              NULL,  // keyData,
+                              NULL,  // keyLength,
+                              &data,
+                              &length
+                             )
+          )
+    {
+      assert(data != NULL);
+      assert(length == sizeof(NotifyInfo*));
+
+      if (   String_length(((NotifyInfo*)data)->directory) >= String_length(directory)
+          && String_startsWith(((NotifyInfo*)data)->directory,directory)
+         )
+      {
+        notifyInfo = (NotifyInfo*)data;
+        break;
+      }
+    }
+    Dictionary_doneIterator(&dictionaryIterator);
+
+    // remove notify
+    if (notifyInfo != NULL)
+    {
+      removeNotify(notifyInfo);
+    }
+  }
+  while (notifyInfo != NULL);
+//printNotifies();
+}
+
+/***********************************************************************\
+* Name   : markNotifies
+* Purpose: mark notifies for clean
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void markNotifies(const char *jobUUID, const char *scheduleUUID)
+{
+  SemaphoreLock      semaphoreLock;
+  DictionaryIterator dictionaryIterator;
+  void               *data;
+  ulong              length;
+  NotifyInfo         *notifyInfo;
+  UUIDNode           *uuidNode;
+
+  assert(jobUUID != NULL);
+  assert(scheduleUUID != NULL);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // mark notifies
+    Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+    while (Dictionary_getNext(&dictionaryIterator,
+                              NULL,  // keyData,
+                              NULL,  // keyLength,
+                              &data,
+                              &length
+                             )
+          )
+    {
+      assert(data != NULL);
+      assert(length == sizeof(NotifyInfo*));
+
+      notifyInfo = (NotifyInfo*)data;
+
+      LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+      {
+        if (   stringEquals(uuidNode->jobUUID,jobUUID)
+            && stringEquals(uuidNode->scheduleUUID,scheduleUUID)
+           )
+        {
+//fprintf(stderr,"%s, %d: mark %s %s: %s\n",__FILE__,__LINE__,uuidNode->jobUUID,uuidNode->scheduleUUID,String_cString(((NotifyInfo*)data)->directory));
+          uuidNode->cleanFlag = TRUE;
+        }
+      }
+    }
+    Dictionary_doneIterator(&dictionaryIterator);
+  }
+}
+
+/***********************************************************************\
+* Name   : cleanNotifies
+* Purpose: clean obsolete notifies for job and schedule
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
+{
+  SemaphoreLock      semaphoreLock;
+  DictionaryIterator dictionaryIterator;
+  NotifyInfo         *notifyInfo;
+  void               *data;
+  ulong              length;
+  UUIDNode           *uuidNode;
+
+  assert(jobUUID != NULL);
+  assert(scheduleUUID != NULL);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    do
+    {
+      // find notify
+      notifyInfo = NULL;
+      Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+      while (Dictionary_getNext(&dictionaryIterator,
+                                NULL,  // keyData,
+                                NULL,  // keyLength,
+                                &data,
+                                &length
+                               )
+            )
+      {
+        assert(data != NULL);
+        assert(length == sizeof(NotifyInfo*));
+
+        notifyInfo = (NotifyInfo*)data;
+
+        // remove uuids
+        uuidNode = notifyInfo->uuidList.head;
+        while (uuidNode != NULL)
+        {
+          if (   uuidNode->cleanFlag
+              && stringEquals(uuidNode->jobUUID,jobUUID)
+              && stringEquals(uuidNode->scheduleUUID,scheduleUUID)
+             )
+          {
+            uuidNode = List_remove(&notifyInfo->uuidList,uuidNode);
+          }
+          else
+          {
+            uuidNode = uuidNode->next;
+          }
+        }
+
+        if (!List_isEmpty(&notifyInfo->uuidList))
+        {
+          notifyInfo = NULL;
+        }
+        else
+        {
+          break;
+        }
+      }
+      Dictionary_doneIterator(&dictionaryIterator);
+
+      // remove notify
+      if (notifyInfo != NULL)
+      {
+        removeNotify(notifyInfo);
+      }
+    }
+    while (notifyInfo != NULL);
+  }
+}
+
+/***********************************************************************\
+* Name   : removeNotifies
+* Purpose: remove notifies for job and schedule
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
+{
+  SemaphoreLock      semaphoreLock;
+  DictionaryIterator dictionaryIterator;
+  NotifyInfo         *notifyInfo;
+  void               *data;
+  ulong              length;
+  UUIDNode           *uuidNode;
+
+  assert(jobUUID != NULL);
+  assert(scheduleUUID != NULL);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    do
+    {
+
+      // find notify
+      notifyInfo = NULL;
+      Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+      while (Dictionary_getNext(&dictionaryIterator,
+                                NULL,  // keyData,
+                                NULL,  // keyLength,
+                                &data,
+                                &length
+                               )
+            )
+      {
+        assert(data != NULL);
+        assert(length == sizeof(NotifyInfo*));
+
+        notifyInfo = (NotifyInfo*)data;
+
+        uuidNode = notifyInfo->uuidList.head;
+        while (uuidNode != NULL)
+        {
+          if (   stringEquals(uuidNode->jobUUID,jobUUID)
+              && stringEquals(uuidNode->scheduleUUID,scheduleUUID)
+             )
+          {
+            uuidNode = List_remove(&notifyInfo->uuidList,uuidNode);
+          }
+          else
+          {
+            uuidNode = uuidNode->next;
+          }
+        }
+
+        if (!List_isEmpty(&notifyInfo->uuidList))
+        {
+          notifyInfo = NULL;
+        }
+        else
+        {
+          break;
+        }
+      }
+      Dictionary_doneIterator(&dictionaryIterator);
+
+      // remove notify if no more UUIDs
+      if (notifyInfo != NULL)
+      {
+        removeNotify(notifyInfo);
+      }
+    }
+    while (notifyInfo != NULL);
+  }
+}
+
+/***********************************************************************\
 * Name   : freeInitNotifyMsg
 * Purpose: free init notify msg
 * Input  : initNotifyMsg - init notify message
@@ -741,9 +1449,14 @@ LOCAL void freeInitNotifyMsg(InitNotifyMsg *initNotifyMsg, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  PatternList_done(&initNotifyMsg->excludePatternList);
-  EntryList_done(&initNotifyMsg->includeEntryList);
-  String_delete(initNotifyMsg->jobUUID);
+  switch (initNotifyMsg->type)
+  {
+    case INIT:
+      EntryList_done(&initNotifyMsg->entryList);
+      break;
+    case DONE:
+      break;
+  }
 }
 
 /***********************************************************************\
@@ -757,158 +1470,127 @@ LOCAL void freeInitNotifyMsg(InitNotifyMsg *initNotifyMsg, void *userData)
 
 LOCAL void continuousInitThreadCode(void)
 {
-  InitNotifyMsg       initNotifyMsg;
-  StringList          nameList;
-  String              basePath;
-  String              name;
+  InitNotifyMsg   initNotifyMsg;
+  StringList      nameList;
+  String          basePath;
 
-  EntryNode           *includeEntryNode;
-  StringTokenizer     fileNameTokenizer;
-  ConstString         token;
-  Errors              error;
-  FileInfo            fileInfo;
-  SemaphoreLock       semaphoreLock;
-  DirectoryListHandle directoryListHandle;
-  int                 watchHandle;
-  FileNotifyInfo      *fileNotifyInfo;
+  EntryNode       *includeEntryNode;
+  StringTokenizer fileNameTokenizer;
+  ConstString     token;
 
   // init variables
   StringList_init(&nameList);
   basePath = String_new();
-  name     = String_new();
 
   while (   !quitFlag
          && MsgQueue_get(&initNotifyMsgQueue,&initNotifyMsg,NULL,sizeof(initNotifyMsg),WAIT_FOREVER)
         )
   {
-fprintf(stderr,"%s, %d: i %d\n",__FILE__,__LINE__,List_count(&initNotifyMsg.includeEntryList));
-    LIST_ITERATEX(&initNotifyMsg.includeEntryList,includeEntryNode,!quitFlag)
+    switch (initNotifyMsg.type)
     {
-      // find base path
-      File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
-      if (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
-      {
-        if (!String_isEmpty(token))
+      case INIT:
+fprintf(stderr,"%s, %d: INIT job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+        // mark notifies for update or clean
+        markNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+
+        // add notify for include directories
+        LIST_ITERATEX(&initNotifyMsg.entryList,includeEntryNode,!quitFlag)
         {
-          File_setFileName(basePath,token);
-        }
-        else
-        {
-          File_setFileNameChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
-        }
-      }
-      while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
-      {
-        File_appendFileName(basePath,token);
-      }
-      File_doneSplitFileName(&fileNameTokenizer);
-
-      // find directories and create notify entries
-      StringList_append(&nameList,basePath);
-      while (   !StringList_isEmpty(&nameList)
-             && !quitFlag
-            )
-      {
-        // get next entry to process
-        name = StringList_getLast(&nameList,name);
-
-        // read file info
-        error = File_getFileInfo(name,&fileInfo);
-        if (error != ERROR_NONE)
-        {
-          continue;
-        }
-
-        if (!isNoDumpAttribute(&fileInfo,&initNotifyMsg.jobOptions) && !isNoBackup(name))
-        {
-#if 1
-          // create notify
-          watchHandle = inotify_add_watch(inotifyHandle,String_cString(name),NOTIFY_EVENTS);
-          if (watchHandle == -1)
+          // find base path
+          File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
+          if (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
           {
-            printWarning(_("Cannot create file notify for '%s' (error: %s)\n"),String_cString(name),strerror(errno));
-            continue;
-          }
-
-          // init file notify info
-          fileNotifyInfo = (FileNotifyInfo*)malloc(sizeof(FileNotifyInfo));
-          if (fileNotifyInfo == NULL)
-          {
-            continue;
-          }
-          fileNotifyInfo->watchHandle = watchHandle;
-          strncpy(fileNotifyInfo->jobUUID,String_cString(initNotifyMsg.jobUUID),sizeof(fileNotifyInfo->jobUUID));
-          fileNotifyInfo->path = String_duplicate(name);
-
-          // add to file notify dictionary
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&fileNotifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-          {
-            Array_put(&fileNotifyHandles,(ulong)watchHandle,fileNotifyInfo);//,CALLBACK(NULL,NULL));
-
-            Dictionary_add(&fileNotifyDictionary,
-                           &fileNotifyInfo->watchHandle,sizeof(fileNotifyInfo->watchHandle),
-                           fileNotifyInfo,sizeof(FileNotifyInfo),
-                           CALLBACK(NULL,NULL)
-                          );
-          }
-fprintf(stderr,"%s, %d: create notify %s: wd=%d\n",__FILE__,__LINE__,String_cString(name),watchHandle);
-#endif
-
-          // scan sub-directories
-          if (fileInfo.type == FILE_TYPE_DIRECTORY)
-          {
-            // open directory contents
-            error = File_openDirectoryList(&directoryListHandle,name);
-            if (error == ERROR_NONE)
+            if (!String_isEmpty(token))
             {
-              // read directory content
-              while (   !File_endOfDirectoryList(&directoryListHandle)
-                     && !quitFlag
-                    )
-              {
-                // read next directory entry
-                error = File_readDirectoryList(&directoryListHandle,name);
-                if (error != ERROR_NONE)
-                {
-                  continue;
-                }
-//fprintf(stderr,"%s, %d: %s included=%d excluded=%d dictionary=%d\n",__FILE__,__LINE__,String_cString(fileName),isIncluded(includeEntryNode,fileName),isExcluded(createInfo->excludePatternList,fileName),Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)));
-
-                if (   isIncluded(includeEntryNode,name)
-                    && !isExcluded(&initNotifyMsg.excludePatternList,name)
-                    )
-                {
-                  // read file info
-                  error = File_getFileInfo(name,&fileInfo);
-                  if (error != ERROR_NONE)
-                  {
-                    continue;
-                  }
-
-                  // add to name list
-                  if (!isNoDumpAttribute(&fileInfo,&initNotifyMsg.jobOptions) && !isNoBackup(name))
-                  {
-                    if (fileInfo.type == FILE_TYPE_DIRECTORY)
-                    {
-                      StringList_append(&nameList,name);
-                    }
-                  }
-                }
-              }
-
-              // close directory
-              File_closeDirectoryList(&directoryListHandle);
+              File_setFileName(basePath,token);
+            }
+            else
+            {
+              File_setFileNameChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
             }
           }
+          while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
+          {
+            File_appendFileName(basePath,token);
+          }
+          File_doneSplitFileName(&fileNameTokenizer);
+
+          // add directory and sub-directories to notify
+          addNotifySubDirectories(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID,basePath);
         }
-      }
+
+        // clean not existing notifies for job
+        cleanNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+        break;
+      case DONE:
+fprintf(stderr,"%s, %d: DONE job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+        removeNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+        break;
     }
+//printNotifies();
 
     // free init notify message
     freeInitNotifyMsg(&initNotifyMsg,NULL);
   }
 
   // free resources
+}
+
+/***********************************************************************\
+* Name   : addContinuousEntry
+* Purpose: add continuous entry to database
+* Input  : jobUUID - job UUID
+*          name    - entry name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors addContinuousEntry(const char  *jobUUID,
+                                const char  *scheduleUUID,
+                                ConstString name
+                               )
+{
+  assert(jobUUID != NULL);
+  assert(scheduleUUID != NULL);
+
+  return Database_execute(&continuousDatabaseHandle,
+                          CALLBACK(NULL,NULL),
+                          "INSERT OR IGNORE INTO names \
+                             (\
+                              jobUUID,\
+                              scheduleUUID,\
+                              name\
+                             ) \
+                           VALUES \
+                             (\
+                              %'s,\
+                              %'s,\
+                              %'S\
+                             ); \
+                          ",
+                          jobUUID,
+                          scheduleUUID,
+                          name
+                         );
+}
+
+/***********************************************************************\
+* Name   : removeContinuousEntry
+* Purpose: remove continuous entry from database
+* Input  : databaseId - database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors removeContinuousEntry(DatabaseId databaseId)
+{
+  return Database_execute(&continuousDatabaseHandle,
+                          CALLBACK(NULL,NULL),
+                          "DELETE FROM names WHERE id=%ld;",
+                          databaseId
+                         );
 }
 
 /***********************************************************************\
@@ -926,12 +1608,13 @@ LOCAL void continuousThreadCode(void)
   #define BUFFER_SIZE (MAX_ENTRIES*(sizeof(struct inotify_event)+NAME_MAX+1))
 
   void                       *buffer;
-  StaticString               (jobUUID,MISC_UUID_STRING_LENGTH);
   String                     name;
   ssize_t                    n;
   const struct inotify_event *inotifyEvent;
   SemaphoreLock              semaphoreLock;
-  FileNotifyInfo             *fileNotifyInfo;
+  NotifyInfo                 *notifyInfo;
+  UUIDNode                   *uuidNode;
+  Errors                     error;
 
   // init variables
   buffer = malloc(BUFFER_SIZE);
@@ -958,7 +1641,8 @@ LOCAL void continuousThreadCode(void)
 //fprintf(stderr,"%s, %d: n=%d\n",__FILE__,__LINE__,n);
       if (inotifyEvent->len > 0)
       {
-fprintf(stderr,"%s, %d: inotify event wd=%d mask=%08x: name=%s\n",__FILE__,__LINE__,inotifyEvent->wd,inotifyEvent->mask,inotifyEvent->name);
+#if 0
+fprintf(stderr,"%s, %d: inotify event wd=%d mask=%08x: name=%s ->",__FILE__,__LINE__,inotifyEvent->wd,inotifyEvent->mask,inotifyEvent->name);
    if (inotifyEvent->mask & IN_ACCESS)        fprintf(stderr," IN_ACCESS"       );
    if (inotifyEvent->mask & IN_ATTRIB)        fprintf(stderr," IN_ATTRIB"       );
    if (inotifyEvent->mask & IN_CLOSE_NOWRITE) fprintf(stderr," IN_CLOSE_NOWRITE");
@@ -976,36 +1660,96 @@ fprintf(stderr,"%s, %d: inotify event wd=%d mask=%08x: name=%s\n",__FILE__,__LIN
    if (inotifyEvent->mask & IN_Q_OVERFLOW)    fprintf(stderr," IN_Q_OVERFLOW"   );
    if (inotifyEvent->mask & IN_UNMOUNT)       fprintf(stderr," IN_UNMOUNT"      );
 fprintf(stderr,"\n");
+#endif
 
-
-        // get job UUID, file name
-        String_clear(jobUUID);
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&fileNotifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
-          if (Dictionary_find(&fileNotifyDictionary,
-                              &inotifyEvent->wd,
-                              sizeof(inotifyEvent->wd),
-                              (void**)&fileNotifyInfo,
-                              NULL
-                             )
-             )
+          notifyInfo = getNotifyInfo(inotifyEvent->wd);
+          if (notifyInfo != NULL)
           {
-            String_setCString(jobUUID,fileNotifyInfo->jobUUID);
-            File_appendFileNameCString(String_set(name,fileNotifyInfo->path),inotifyEvent->name);
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(name));
-          }
-        }
+            File_appendFileNameCString(String_set(name,notifyInfo->directory),inotifyEvent->name);
 
-        // store into notify database
-        if (!String_isEmpty(jobUUID))
-        {
-          Continuous_add(jobUUID,name);
+            if ((inotifyEvent->mask & IN_ISDIR) == IN_ISDIR)
+            {
+              if      ((inotifyEvent->mask & IN_CREATE) == IN_CREATE)
+              {
+                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+                {
+                  // store into notify database
+                  error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
+                  if (error != ERROR_NONE)
+                  {
+                    logMessage(LOG_TYPE_CONTINUOUS,"Store continuous entry fail (error: %s)\n",Error_getText(error));
+                  }
+
+                  // add directory and sub-directories to notify
+                  addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
+                }
+              }
+              else if ((inotifyEvent->mask & IN_DELETE) == IN_DELETE)
+              {
+                // remove directory and sub-directories from notify
+                removeNotifySubDirectories(name);
+              }
+              else if ((inotifyEvent->mask & IN_MOVED_FROM) == IN_MOVED_FROM)
+              {
+                // remove directory and sub-directories from notify
+                removeNotifySubDirectories(name);
+              }
+              else if ((inotifyEvent->mask & IN_MOVED_TO) == IN_MOVED_TO)
+              {
+//fprintf(stderr,"%s, %d: del\n",__FILE__,__LINE__);
+                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+                {
+                  // store into notify database
+                  error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
+                  if (error != ERROR_NONE)
+                  {
+                    logMessage(LOG_TYPE_CONTINUOUS,"Store continuous entry fail (error: %s)\n",Error_getText(error));
+                  }
+
+                  // add directory and sub-directories to notify
+                  addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
+                }
+              }
+              else
+              {
+                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+                {
+                  // store into notify database
+                  error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
+                  if (error != ERROR_NONE)
+                  {
+                    logMessage(LOG_TYPE_CONTINUOUS,"Store continuous entry fail (error: %s)\n",Error_getText(error));
+                  }
+                }
+              }
+            }
+            else
+            {
+              if (   ((inotifyEvent->mask & IN_DELETE) != IN_DELETE)
+                  && ((inotifyEvent->mask & IN_MOVED_FROM) != IN_MOVED_FROM)
+                 )
+              {
+                // store into notify database
+                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+                {
+                  error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
+                  if (error != ERROR_NONE)
+                  {
+                    logMessage(LOG_TYPE_CONTINUOUS,"Store continuous entry fail (error: %s)\n",Error_getText(error));
+                  }
+                }
+              }
+            }
+          }
+else fprintf(stderr,"%s, %d: not found %d!\n",__FILE__,__LINE__,inotifyEvent->wd);
         }
       }
 
       // next event
-      inotifyEvent = (const struct inotify_event*)((byte*)inotifyEvent+sizeof(struct inotify_event)+inotifyEvent->len);
       n -= sizeof(struct inotify_event)+inotifyEvent->len;
+      inotifyEvent = (const struct inotify_event*)((byte*)inotifyEvent+sizeof(struct inotify_event)+inotifyEvent->len);
     }
     assert(n == 0);
   }
@@ -1019,9 +1763,9 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(name));
 
 Errors Continuous_initAll(void)
 {
-  Semaphore_init(&fileNotifyLock);
-  Array_init(&fileNotifyHandles,sizeof(FileNotifyInfo),0,CALLBACK((ArrayElementFreeFunction)freeFileNotifyInfo,NULL),CALLBACK_NULL);
-  Dictionary_init(&fileNotifyDictionary,CALLBACK((DictionaryFreeFunction)freeFileNotifyInfo,NULL),CALLBACK_NULL);
+  Semaphore_init(&notifyLock);
+  Dictionary_init(&notifyHandles,CALLBACK_NULL,CALLBACK_NULL);
+  Dictionary_init(&notifyDirectories,CALLBACK_NULL,CALLBACK_NULL);
 
   inotifyHandle = inotify_init();
   if (inotifyHandle == -1)
@@ -1041,8 +1785,9 @@ void Continuous_doneAll(void)
 {
   MsgQueue_done(&initNotifyMsgQueue,CALLBACK((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
   close(inotifyHandle);
-  Dictionary_done(&fileNotifyDictionary);
-  Semaphore_done(&fileNotifyLock);
+  Dictionary_done(&notifyDirectories);
+  Dictionary_done(&notifyHandles);
+  Semaphore_done(&notifyLock);
 }
 
 Errors Continuous_init(const char *databaseFileName)
@@ -1129,74 +1874,77 @@ void Continuous_done(void)
   (void)closeContinuous(&continuousDatabaseHandle);
 }
 
-Errors Continuous_initNotify(ConstString       jobUUID,
-                             const EntryList   *includeEntryList,
-                             const PatternList *excludePatternList,
-                             const JobOptions  *jobOptions
+Errors Continuous_initNotify(ConstString     jobUUID,
+                             ConstString     scheduleUUID,
+                             const EntryList *entryList
                             )
 {
   InitNotifyMsg initNotifyMsg;
 
-  initNotifyMsg.jobUUID = String_duplicate(jobUUID);
-  EntryList_init(&initNotifyMsg.includeEntryList); EntryList_copy(includeEntryList,&initNotifyMsg.includeEntryList,NULL,NULL);
-  PatternList_init(&initNotifyMsg.excludePatternList); PatternList_copy(excludePatternList,&initNotifyMsg.excludePatternList,NULL,NULL);
-  copyJobOptions(jobOptions,&initNotifyMsg.jobOptions);
+  assert(!String_isEmpty(jobUUID));
+  assert(!String_isEmpty(scheduleUUID));
+  assert(entryList != NULL);
+
+//fprintf(stderr,"%s, %d: Continuous_initNotify job=%s scheudle=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
+  initNotifyMsg.type = INIT;
+  strncpy(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
+  strncpy(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));
+  EntryList_init(&initNotifyMsg.entryList); EntryList_copy(entryList,&initNotifyMsg.entryList,NULL,NULL);
 
   (void)MsgQueue_put(&initNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
 
   return ERROR_NONE;
 }
 
-Errors Continuous_doneNotify(ConstString jobUUID)
+Errors Continuous_doneNotify(ConstString jobUUID,
+                             ConstString scheduleUUID
+                            )
 {
-  SemaphoreLock semaphoreLock;
+  InitNotifyMsg initNotifyMsg;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&fileNotifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
+  assert(!String_isEmpty(jobUUID));
+  assert(!String_isEmpty(scheduleUUID));
 
-  }
+//fprintf(stderr,"%s, %d: Continuous_doneNotify job=%s scheudle=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
+  initNotifyMsg.type = DONE;
+  strncpy(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
+  strncpy(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));
+
+  (void)MsgQueue_put(&initNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
+
+  return ERROR_NONE;
 }
 
 Errors Continuous_add(ConstString jobUUID,
+                      ConstString scheduleUUID,
                       ConstString name
                      )
 {
-  return Database_execute(&continuousDatabaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "INSERT OR IGNORE INTO names \
-                             (\
-                              jobUUID,\
-                              name\
-                             ) \
-                           VALUES \
-                             (\
-                              %'S,\
-                              %'S\
-                             ); \
-                          ",
-                          jobUUID,
-                          name
-                         );
+  assert(!String_isEmpty(jobUUID));
+  assert(!String_isEmpty(scheduleUUID));
+  assert(!String_isEmpty(name));
+
+  return addContinuousEntry(String_cString(jobUUID),String_cString(scheduleUUID),name);
 }
 
 Errors Continuous_remove(DatabaseId databaseId)
 {
-  return Database_execute(&continuousDatabaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "DELETE FROM names WHERE id=%ld;",
-                          databaseId
-                         );
+  return removeContinuousEntry(databaseId);
 }
 
-bool Continuous_isAvailable(ConstString jobUUID)
+bool Continuous_isAvailable(ConstString jobUUID, ConstString scheduleUUID)
 {
   bool                isAvailable;
   DatabaseQueryHandle databaseQueryHandle;
 
+  assert(!String_isEmpty(jobUUID));
+  assert(!String_isEmpty(scheduleUUID));
+
   if (Database_prepare(&databaseQueryHandle,
                        &continuousDatabaseHandle,
-                       "SELECT id FROM names WHERE jobUUID=%'S LIMIT 0,1",
-                       jobUUID
+                       "SELECT id FROM names WHERE jobUUID=%'S AND scheduleUUID=%'S LIMIT 0,1",
+                       jobUUID,
+                       scheduleUUID
                       ) != ERROR_NONE
      )
   {
@@ -1214,18 +1962,21 @@ bool Continuous_isAvailable(ConstString jobUUID)
 }
 
 Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
-                           ConstString         jobUUID
+                           ConstString         jobUUID,
+                           ConstString         scheduleUUID
                           )
 {
   Errors error;
 
   assert(databaseQueryHandle != NULL);
   assert(!String_isEmpty(jobUUID));
+  assert(!String_isEmpty(scheduleUUID));
 
   error = Database_prepare(databaseQueryHandle,
                            &continuousDatabaseHandle,
-                           "SELECT id,name FROM names WHERE jobUUID=%'S",
-                           jobUUID
+                           "SELECT id,name FROM names WHERE jobUUID=%'S AND scheduleUUID=%'S",
+                           jobUUID,
+                           scheduleUUID
                           );
   if (error != ERROR_NONE)
   {

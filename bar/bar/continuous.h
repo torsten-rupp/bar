@@ -100,10 +100,9 @@ void Continuous_done(void);
 * Notes  : -
 \***********************************************************************/
 
-Errors Continuous_initNotify(ConstString       jobUUID,
-                             const EntryList   *includeEntryList,
-                             const PatternList *excludePatternList,
-                             const JobOptions  *jobOptions
+Errors Continuous_initNotify(ConstString     jobUUID,
+                             ConstString     scheduleUUID,
+                             const EntryList *entryList
                             );
 
 /***********************************************************************\
@@ -115,20 +114,24 @@ Errors Continuous_initNotify(ConstString       jobUUID,
 * Notes  : -
 \***********************************************************************/
 
-Errors Continuous_doneNotify(ConstString jobUUID);
+Errors Continuous_doneNotify(ConstString jobUUID,
+                             ConstString scheduleUUID
+                            );
 
 /***********************************************************************\
 * Name   : Continuous_add
 * Purpose: add continuous entry
-* Input  : indexHandle - index handle
-*          jobUUID     - job UUID
-*          name        - name
+* Input  : indexHandle  - index handle
+*          jobUUID      - job UUID
+*          scheduleUUID - schedule UUID
+*          name         - name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Continuous_add(ConstString jobUUID,
+                      ConstString scheduleUUID,
                       ConstString name
                      );
 
@@ -152,19 +155,23 @@ Errors Continuous_remove(DatabaseId databaseId);
 * Notes  : -
 \***********************************************************************/
 
-bool Continuous_isAvailable(ConstString jobUUID);
+bool Continuous_isAvailable(ConstString jobUUID,
+                            ConstString scheduleUUID
+                           );
 
 /***********************************************************************\
 * Name   : Continuous_initList
 * Purpose: list continous entries
-* Input  : jobUUID - job UUID
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID
 * Output : databaseQueryHandle - database query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
-                           ConstString         jobUUID
+                           ConstString         jobUUID,
+                           ConstString         scheduleUUID
                           );
 
 /***********************************************************************\
