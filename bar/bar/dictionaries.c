@@ -736,10 +736,10 @@ bool Dictionary_add(Dictionary             *dictionary,
     {
       assert(dictionaryEntryTable->entries != NULL);
 
-      // allocate/resize data memory
-      if (dictionaryEntryTable->entries[entryIndex].length != length)
+      if (dictionaryCopyFunction != NULL)
       {
-        if (dictionaryCopyFunction != NULL)
+        // allocate/resize data memory
+        if (dictionaryEntryTable->entries[entryIndex].length != length)
         {
           // re-allocate data memory
           newData = realloc(dictionaryEntryTable->entries[entryIndex].data,length);
@@ -764,6 +764,20 @@ bool Dictionary_add(Dictionary             *dictionary,
           Semaphore_unlock(&dictionary->lock);
           return FALSE;
         }
+      }
+      else
+      {
+        // free old entry
+        if ((dictionaryEntryTable->entries[entryIndex].data != data) && (dictionary->dictionaryFreeFunction != NULL))
+        {
+          dictionary->dictionaryFreeFunction(dictionaryEntryTable->entries[entryIndex].data,
+                                             dictionaryEntryTable->entries[entryIndex].length,
+                                             dictionary->dictionaryFreeUserData
+                                            );
+        }
+
+        // use orginal data
+        dictionaryEntryTable->entries[entryIndex].data = (void*)data;
       }
 
       Semaphore_unlock(&dictionary->lock);
@@ -1017,6 +1031,11 @@ bool Dictionary_add(Dictionary             *dictionary,
       }
       dictionaryEntryTable->entries[entryIndex].data = newData;
     }
+    else
+    {
+      // use orginal data
+      dictionaryEntryTable->entries[entryIndex].data = (void*)data;
+    }
     dictionaryEntryTable->entries[entryIndex].length = length;
 
     dictionaryEntryTable->entryCount++;
@@ -1033,7 +1052,7 @@ void Dictionary_remove(Dictionary *dictionary,
   ulong                hash;
   SemaphoreLock        semaphoreLock;
   DictionaryEntryTable *dictionaryEntryTable;
-  uint                 index;
+  uint                 entryIndex;
 
   assert(dictionary != NULL);
 
@@ -1042,25 +1061,25 @@ void Dictionary_remove(Dictionary *dictionary,
   SEMAPHORE_LOCKED_DO(semaphoreLock,&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // remove entry
-    if (findEntry(dictionary,hash,keyData,keyLength,&dictionaryEntryTable,&index))
+    if (findEntry(dictionary,hash,keyData,keyLength,&dictionaryEntryTable,&entryIndex))
     {
       assert(dictionaryEntryTable->entries != NULL);
       assert(dictionaryEntryTable->entryCount > 0);
 
       if (dictionary->dictionaryFreeFunction != NULL)
       {
-        dictionary->dictionaryFreeFunction(dictionaryEntryTable->entries[index].data,
-                                           dictionaryEntryTable->entries[index].length,
+        dictionary->dictionaryFreeFunction(dictionaryEntryTable->entries[entryIndex].data,
+                                           dictionaryEntryTable->entries[entryIndex].length,
                                            dictionary->dictionaryFreeUserData
                                           );
-        free((void*)dictionaryEntryTable->entries[index].data);
+        free((void*)dictionaryEntryTable->entries[entryIndex].data);
       }
-      free(dictionaryEntryTable->entries[index].keyData);
+      free(dictionaryEntryTable->entries[entryIndex].keyData);
 
-      dictionaryEntryTable->entries[index].data      = NULL;
-      dictionaryEntryTable->entries[index].length    = 0;
-      dictionaryEntryTable->entries[index].keyData   = NULL;
-      dictionaryEntryTable->entries[index].keyLength = 0;
+      dictionaryEntryTable->entries[entryIndex].data      = NULL;
+      dictionaryEntryTable->entries[entryIndex].length    = 0;
+      dictionaryEntryTable->entries[entryIndex].keyData   = NULL;
+      dictionaryEntryTable->entries[entryIndex].keyLength = 0;
 
       dictionaryEntryTable->entryCount--;
     }

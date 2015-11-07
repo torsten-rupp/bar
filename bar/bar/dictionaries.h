@@ -341,7 +341,7 @@ void Dictionary_initIterator(DictionaryIterator *dictionaryIterator,
                             );
 
 /***********************************************************************\
-* Name   : Dictionary_getNext
+* Name   : Dictionary_doneIterator
 * Purpose: deinit dictionary iterator
 * Input  : dictionaryIterator - dictionary iterator
 * Output : -
