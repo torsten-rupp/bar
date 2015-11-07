@@ -284,7 +284,11 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
   UNUSED_VARIABLE(archiveSize);
 
   // check if archive file exists
-  if ((storageHandle->jobOptions != NULL) && !storageHandle->jobOptions->overwriteArchiveFilesFlag && File_exists(archiveName))
+  if (   (storageHandle->jobOptions != NULL)
+      && (storageHandle->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
+      && (storageHandle->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
+      && !storageHandle->jobOptions->archiveFileModeOverwriteFlag
+      && File_exists(archiveName))
   {
     return ERRORX_(FILE_EXISTS_,0,String_cString(archiveName));
   }
@@ -311,7 +315,9 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
     // open file
     error = File_open(&storageHandle->fileSystem.fileHandle,
                       archiveName,
-                      FILE_OPEN_CREATE
+                      (storageHandle->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND) || storageHandle->jobOptions->archiveFileModeOverwriteFlag
+                        ? FILE_OPEN_APPEND
+                        : FILE_OPEN_CREATE
                      );
     if (error != ERROR_NONE)
     {

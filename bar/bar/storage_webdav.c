@@ -954,7 +954,11 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
       }
 
       // first delete file if overwrite requested
-      if ((storageHandle->jobOptions != NULL) && storageHandle->jobOptions->overwriteArchiveFilesFlag)
+      if (   (storageHandle->jobOptions != NULL)
+          && (   (storageHandle->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_OVERWRITE)
+              || storageHandle->jobOptions->archiveFileModeOverwriteFlag
+             )
+         )
       {
         // get URL
         url = String_format(String_duplicate(baseURL),"/");
