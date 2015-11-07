@@ -1463,7 +1463,7 @@ Errors __File_openCString(const char *__fileName__,
 // TODO: use fd?
 //      fd = open(fileName,O_RDWR|O_APPEND|O_LARGEFILE,0);
 //      fileHandle->file = fdopen(fd,"ab");
-      fileHandle->file = FOPEN(fileName,"ab");
+      fileHandle->file = FOPEN(fileName,"a+b");
       if (fileHandle->file == NULL)
       {
         return ERRORX_(OPEN_FILE,errno,fileName);
