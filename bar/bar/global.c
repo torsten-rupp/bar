@@ -744,12 +744,14 @@ void debugDumpStackTrace(FILE       *handle,
                          uint       skipFrameCount
                         )
 {
-  uint i;
   #ifdef HAVE_BFD_INIT
+    char                 executableName[PATH_MAX];
+    int                  n;
     StackTraceOutputInfo stackTraceOutputInfo;
   #elif HAVE_BACKTRACE_SYMBOLS
     const char **functionNames;
     uint       z;
+    uint       i;
   #else /* not HAVE_... */
   #endif /* HAVE_... */
 
@@ -757,27 +759,41 @@ void debugDumpStackTrace(FILE       *handle,
   assert(stackTrace != NULL);
 
   #ifdef HAVE_BFD_INIT
+    // get executable name
+    n = readlink("/proc/self/exe",executableName,sizeof(executableName)-1);
+    if (n == -1)
+    {
+      return;
+    }
+    assert(n < sizeof(executableName));
+    executableName[n] = '\0';
+
+    // output stack trace
     stackTraceOutputInfo.handle         = handle;
     stackTraceOutputInfo.indent         = indent;
     stackTraceOutputInfo.skipFrameCount = skipFrameCount;
     stackTraceOutputInfo.count          = 0;
-    Stacktrace_getSymbolInfo("/proc/self/exe",
+    Stacktrace_getSymbolInfo(executableName,
                              stackTrace,
                              stackTraceSize,
                              debugDumpStackTraceOutputSymbol,
                              &stackTraceOutputInfo
                             );
   #elif HAVE_BACKTRACE_SYMBOLS
+    // get function names
     functionNames = (const char **)backtrace_symbols((void *const*)stackTrace,stackTraceSize);
-    if (functionNames != NULL)
+    if (functionNames == NULL)
     {
-      for (z = 1+skipFrameCount; z < stackTraceSize; z++)
-      {
-        for (i = 0; i < indent; i++) fputc(' ',handle);
-        fprintf(handle,"  %2d %p: %s\n",z,stackTrace[z],functionNames[z]);
-      }
-      free(functionNames);
+      return;
     }
+
+    // output stack trace
+    for (z = 1+skipFrameCount; z < stackTraceSize; z++)
+    {
+      for (i = 0; i < indent; i++) fputc(' ',handle);
+      fprintf(handle,"  %2d %p: %s\n",z,stackTrace[z],functionNames[z]);
+    }
+    free(functionNames);
   #else /* not HAVE_... */
     fprintf(handle,"  not available\n");
   #endif /* HAVE_... */
