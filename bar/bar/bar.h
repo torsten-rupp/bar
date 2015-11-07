@@ -25,6 +25,8 @@
 #include "configvalues.h"
 
 #include "patterns.h"
+#include "patternlists.h"
+#include "entrylists.h"
 #include "compress.h"
 #include "passwords.h"
 #include "crypt.h"
@@ -69,8 +71,9 @@ typedef enum
   LOG_TYPE_ENTRY_MISSING       = (1 <<  5),
   LOG_TYPE_ENTRY_INCOMPLETE    = (1 <<  6),
   LOG_TYPE_ENTRY_EXCLUDED      = (1 <<  7),
-  LOG_TYPE_STORAGE             = (1 <<  8),
-  LOG_TYPE_INDEX               = (1 <<  9),
+  LOG_TYPE_CONTINUOUS          = (1 <<  8),
+  LOG_TYPE_STORAGE             = (1 <<  9),
+  LOG_TYPE_INDEX               = (1 << 10),
 } LogTypes;
 
 #define LOG_TYPE_NONE 0x00000000
@@ -90,6 +93,7 @@ extern const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[];
 extern const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[];
 extern const ConfigValueUnit   CONFIG_VALUE_TIME_UNITS[];
 extern const ConfigValueSet    CONFIG_VALUE_LOG_TYPES[];
+extern const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[];
 
 /***************************** Datatypes *******************************/
 
@@ -1159,6 +1163,22 @@ bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, 
 bool configValueReadKeyFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
+* Name   : configValueParseOverwriteArchiveFiles
+* Purpose: config value option call back for parsing overwrite archive
+*          files flag
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+/***********************************************************************\
 * Name   : initFilePattern
 * Purpose: init file pattern
 * Input  : pattern     - pattern variable
@@ -1171,6 +1191,81 @@ bool configValueReadKeyFile(void *userData, void *variable, const char *name, co
 
 Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType);
 
+/***********************************************************************\
+* Name   : isIncluded
+* Purpose: check if name is included
+* Input  : includeEntryNode - include entry node
+*          name             - name
+* Output : -
+* Return : TRUE if excluded, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool isIncluded(const EntryNode *includeEntryNode,
+                ConstString     name
+               );
+
+/***********************************************************************\
+* Name   : isInIncludedList
+* Purpose: check if name is in included list
+* Input  : includeEntryList - include entry list
+*          name             - name
+* Output : -
+* Return : TRUE if excluded, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool isInIncludedList(const EntryList *includeEntryList,
+                      ConstString     name
+                     );
+
+/***********************************************************************\
+* Name   : isInExcludedList
+* Purpose: check if name is in excluded list
+* Input  : excludePatternList - exclude pattern list
+*          name               - name
+* Output : -
+* Return : TRUE if excluded, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool isInExcludedList(const PatternList *excludePatternList,
+                      ConstString       name
+                     );
+
+/***********************************************************************\
+* Name   : isNoBackup
+* Purpose: check if file .nobackup/.NOBACKUP exists in sub-directory
+* Input  : pathName - path name
+* Output : -
+* Return : TRUE if .nobackup/.NOBACKUP exists and option
+*          ignoreNoBackupFile is not set, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool isNoBackup(ConstString pathName);
+
+/***********************************************************************\
+* Name   : isNoDumpAttribute
+* Purpose: check if file attribute 'no dump' is set
+* Input  : fileInfo   - file info
+*          jobOptions - job options
+* Output : -
+* Return : TRUE if 'no dump' attribute is set and option ignoreNoDump is
+*          not set, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool isNoDumpAttribute(const FileInfo *fileInfo, const JobOptions *jobOptions);
+#if defined(NDEBUG) || defined(__BAR_IMPLEMENATION__)
+INLINE bool isNoDumpAttribute(const FileInfo *fileInfo, const JobOptions *jobOptions)
+{
+  assert(fileInfo != NULL);
+  assert(jobOptions != NULL);
+
+  return !jobOptions->ignoreNoDumpAttributeFlag && File_haveAttributeNoDump(fileInfo);
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENATION__ */
 
 #ifdef __cplusplus
   }

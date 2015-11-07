@@ -102,16 +102,24 @@ typedef enum
   SERVER_CONNECTION_PRIORITY_HIGH,
 } ServerConnectionPriorities;
 
+// archive file modes
+typedef enum
+{
+  ARCHIVE_FILE_MODE_STOP,
+  ARCHIVE_FILE_MODE_APPEND,
+  ARCHIVE_FILE_MODE_OVERWRITE
+} ArchiveFileModes;
+
 /***************************** Datatypes *******************************/
 
 // week day sets
-typedef long WeekDaySet;                                 // week days set or WEEKDAY_SET_ANY
+typedef long WeekDaySet;                                      // week days set or WEEKDAY_SET_ANY
 
 // key data
 typedef struct
 {
-  void *data;                                            // key data
-  uint length;                                           // length of key data
+  void *data;                                                 // key data
+  uint length;                                                // length of key data
 } Key;
 
 // band width usage
@@ -119,14 +127,14 @@ typedef struct BandWidthNode
 {
   LIST_NODE_HEADER(struct BandWidthNode);
 
-  int        year;                                       // valid year or DATE_ANY
-  int        month;                                      // valid month or DATE_ANY
-  int        day;                                        // valid day or DATE_ANY
-  int        hour;                                       // valid hour or TIME_ANY
-  int        minute;                                     // valid minute or TIME_ANY
-  WeekDaySet weekDaySet;                                 // valid weekday set or WEEKDAY_SET_ANY
-  ulong      n;                                          // band with limit [bits/s]
-  String     fileName;                                   // file to read band width from
+  int        year;                                            // valid year or DATE_ANY
+  int        month;                                           // valid month or DATE_ANY
+  int        day;                                             // valid day or DATE_ANY
+  int        hour;                                            // valid hour or TIME_ANY
+  int        minute;                                          // valid minute or TIME_ANY
+  WeekDaySet weekDaySet;                                      // valid weekday set or WEEKDAY_SET_ANY
+  ulong      n;                                               // band with limit [bits/s]
+  String     fileName;                                        // file to read band width from
 } BandWidthNode;
 
 typedef struct
@@ -144,27 +152,27 @@ typedef struct
 // FTP server settings
 typedef struct
 {
-  String           loginName;                            // login name
-  Password         *password;                            // login password
+  String           loginName;                                 // login name
+  Password         *password;                                 // login password
 } FTPServer;
 
 // SSH server settings
 typedef struct
 {
-  uint             port;                                 // server port (ssh,scp,sftp)
-  String           loginName;                            // login name
-  Password         *password;                            // login password
-  Key              publicKey;                            // public key data (ssh,scp,sftp)
-  Key              privateKey;                           // private key data (ssh,scp,sftp)
+  uint             port;                                      // server port (ssh,scp,sftp)
+  String           loginName;                                 // login name
+  Password         *password;                                 // login password
+  Key              publicKey;                                 // public key data (ssh,scp,sftp)
+  Key              privateKey;                                // private key data (ssh,scp,sftp)
 } SSHServer;
 
 // WebDAV server settings
 typedef struct
 {
-  String           loginName;                            // login name
-  Password         *password;                            // login password
-  Key              publicKey;                            // public key data
-  Key              privateKey;                           // private key data
+  String           loginName;                                 // login name
+  Password         *password;                                 // login password
+  Key              publicKey;                                 // public key data
+  Key              privateKey;                                // private key data
 } WebDAVServer;
 
 // server types
@@ -179,21 +187,21 @@ typedef enum
 typedef struct
 {
   Semaphore   lock;
-  String      name;                                      // server name
-  ServerTypes type;                                      // server type
+  String      name;                                           // server name
+  ServerTypes type;                                           // server type
   union
   {
     FTPServer    ftpServer;
     SSHServer    sshServer;
     WebDAVServer webDAVServer;
   };
-  uint        maxConnectionCount;                        // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
-  uint64      maxStorageSize;                            // max. number of bytes to store on server
+  uint        maxConnectionCount;                             // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
+  uint64      maxStorageSize;                                 // max. number of bytes to store on server
   struct
   {
-    uint      lowPriorityRequestCount;                   // number of waiting low priority connection requests
-    uint      highPriorityRequestCount;                  // number of waiting high priority connection requests
-    uint      count;                                     // number of current connections
+    uint      lowPriorityRequestCount;                        // number of waiting low priority connection requests
+    uint      highPriorityRequestCount;                       // number of waiting high priority connection requests
+    uint      count;                                          // number of current connections
   }           connection;
 } Server;
 
@@ -214,84 +222,84 @@ typedef struct
 // file settings
 typedef struct
 {
-  String writePreProcessCommand;                         // command to execute before writing
-  String writePostProcessCommand;                        // command to execute after writing
+  String writePreProcessCommand;                              // command to execute before writing
+  String writePostProcessCommand;                             // command to execute after writing
 } File;
 
 // FTP settings
 typedef struct
 {
-  String writePreProcessCommand;                         // command to execute before writing
-  String writePostProcessCommand;                        // command to execute after writing
+  String writePreProcessCommand;                              // command to execute before writing
+  String writePostProcessCommand;                             // command to execute after writing
 } FTP;
 
 // SCP settings
 typedef struct
 {
-  String writePreProcessCommand;                         // command to execute before writing
-  String writePostProcessCommand;                        // command to execute after writing
+  String writePreProcessCommand;                              // command to execute before writing
+  String writePostProcessCommand;                             // command to execute after writing
 } SCP;
 
 // SFTP settings
 typedef struct
 {
-  String writePreProcessCommand;                         // command to execute before writing
-  String writePostProcessCommand;                        // command to execute after writing
+  String writePreProcessCommand;                              // command to execute before writing
+  String writePostProcessCommand;                             // command to execute after writing
 } SFTP;
 
 // WebDAV settings
 typedef struct
 {
-  String writePreProcessCommand;                         // command to execute before writing
-  String writePostProcessCommand;                        // command to execute after writing
+  String writePreProcessCommand;                              // command to execute before writing
+  String writePostProcessCommand;                             // command to execute after writing
 } WebDAV;
 
 // optical disk settings
 typedef struct
 {
-  String defaultDeviceName;                              // default device name
-  String requestVolumeCommand;                           // command to request new medium
-  String unloadVolumeCommand;                            // command to unload medium
-  String loadVolumeCommand;                              // command to load medium
-  uint64 volumeSize;                                     // size of medium [bytes] (0 for default)
+  String defaultDeviceName;                                   // default device name
+  String requestVolumeCommand;                                // command to request new medium
+  String unloadVolumeCommand;                                 // command to unload medium
+  String loadVolumeCommand;                                   // command to load medium
+  uint64 volumeSize;                                          // size of medium [bytes] (0 for default)
 
-  String imagePreProcessCommand;                         // command to execute before creating image
-  String imagePostProcessCommand;                        // command to execute after created image
-  String imageCommand;                                   // command to create medium image
-  String eccPreProcessCommand;                           // command to execute before ECC calculation
-  String eccPostProcessCommand;                          // command to execute after ECC calculation
-  String eccCommand;                                     // command for ECC calculation
-  String writePreProcessCommand;                         // command to execute before writing medium
-  String writePostProcessCommand;                        // command to execute after writing medium
-  String writeCommand;                                   // command to write medium
-  String writeImageCommand;                              // command to write image on medium
+  String imagePreProcessCommand;                              // command to execute before creating image
+  String imagePostProcessCommand;                             // command to execute after created image
+  String imageCommand;                                        // command to create medium image
+  String eccPreProcessCommand;                                // command to execute before ECC calculation
+  String eccPostProcessCommand;                               // command to execute after ECC calculation
+  String eccCommand;                                          // command for ECC calculation
+  String writePreProcessCommand;                              // command to execute before writing medium
+  String writePostProcessCommand;                             // command to execute after writing medium
+  String writeCommand;                                        // command to write medium
+  String writeImageCommand;                                   // command to write image on medium
 } OpticalDisk;
 
 // device settings
 typedef struct
 {
-  String defaultDeviceName;                              // default device name
-  String requestVolumeCommand;                           // command to request new volume
-  String unloadVolumeCommand;                            // command to unload volume
-  String loadVolumeCommand;                              // command to load volume
-  uint64 volumeSize;                                     // size of volume [bytes]
+  String defaultDeviceName;                                   // default device name
+  String requestVolumeCommand;                                // command to request new volume
+  String unloadVolumeCommand;                                 // command to unload volume
+  String loadVolumeCommand;                                   // command to load volume
+  uint64 volumeSize;                                          // size of volume [bytes]
 
-  String imagePreProcessCommand;                         // command to execute before creating image
-  String imagePostProcessCommand;                        // command to execute after created image
-  String imageCommand;                                   // command to create volume image
-  String eccPreProcessCommand;                           // command to execute before ECC calculation
-  String eccPostProcessCommand;                          // command to execute after ECC calculation
-  String eccCommand;                                     // command for ECC calculation
-  String writePreProcessCommand;                         // command to execute before writing volume
-  String writePostProcessCommand;                        // command to execute after writing volume
-  String writeCommand;                                   // command to write volume
+  String imagePreProcessCommand;                              // command to execute before creating image
+  String imagePostProcessCommand;                             // command to execute after created image
+  String imageCommand;                                        // command to create volume image
+  String eccPreProcessCommand;                                // command to execute before ECC calculation
+  String eccPostProcessCommand;                               // command to execute after ECC calculation
+  String eccCommand;                                          // command for ECC calculation
+  String writePreProcessCommand;                              // command to execute before writing volume
+  String writePostProcessCommand;                             // command to execute after writing volume
+  String writeCommand;                                        // command to write volume
 } Device;
 
 typedef struct DeviceNode
 {
   LIST_NODE_HEADER(struct DeviceNode);
 
-  String name;                                           // device name
+  String name;                                                // device name
   Device device;
 } DeviceNode;
 
@@ -305,140 +313,143 @@ typedef struct
 {
   RunModes               runMode;
 
-  const char             *barExecutable;                 // name of BAR executable
+  const char             *barExecutable;                      // name of BAR executable
 
-  uint                   niceLevel;                      // nice level 0..19
-  uint                   maxThreads;                     // max. number of concurrent compress/encryption threads or 0
+  uint                   niceLevel;                           // nice level 0..19
+  uint                   maxThreads;                          // max. number of concurrent compress/encryption threads or 0
 
-  String                 tmpDirectory;                   // directory for temporary files
-  uint64                 maxTmpSize;                     // max. size of temporary files
+  String                 tmpDirectory;                        // directory for temporary files
+  uint64                 maxTmpSize;                          // max. size of temporary files
 
-  BandWidthList          maxBandWidthList;               // list of max. send/receive bandwidth to use [bits/s]
+  BandWidthList          maxBandWidthList;                    // list of max. send/receive bandwidth to use [bits/s]
 
-  ulong                  compressMinFileSize;            // min. size of file for using compression
+  ulong                  compressMinFileSize;                 // min. size of file for using compression
 
-  Password               *cryptPassword;                 // default password for encryption/decryption
+  Password               *cryptPassword;                      // default password for encryption/decryption
 
-  Server                 *ftpServer;                     // current selected FTP server
-  Server                 *defaultFTPServer;              // default FTP server
+  Server                 *ftpServer;                          // current selected FTP server
+  Server                 *defaultFTPServer;                   // default FTP server
 
-  Server                 *sshServer;                     // current selected SSH server
-  Server                 *defaultSSHServer;              // default SSH server
+  Server                 *sshServer;                          // current selected SSH server
+  Server                 *defaultSSHServer;                   // default SSH server
 
-  Server                 *webDAVServer;                  // current selected WebDAV server
-  Server                 *defaultWebDAVServer;           // default WebDAV server
+  Server                 *webDAVServer;                       // current selected WebDAV server
+  Server                 *defaultWebDAVServer;                // default WebDAV server
 
-  const ServerList       *serverList;                    // list with FTP/SSH/WebDAV servers
+  const ServerList       *serverList;                         // list with FTP/SSH/WebDAV servers
 
   String                 remoteBARExecutable;
 
-  File                   file;                           // file settings
-  FTP                    ftp;                            // ftp settings
-  SCP                    scp;                            // scp settings
-  SFTP                   sftp;                           // sftp settings
-  WebDAV                 webdav;                         // WebDAV settings
-  OpticalDisk            cd;                             // CD settings
-  OpticalDisk            dvd;                            // DVD settings
-  OpticalDisk            bd;                             // BD settings
+  File                   file;                                // file settings
+  FTP                    ftp;                                 // ftp settings
+  SCP                    scp;                                 // scp settings
+  SFTP                   sftp;                                // sftp settings
+  WebDAV                 webdav;                              // WebDAV settings
+  OpticalDisk            cd;                                  // CD settings
+  OpticalDisk            dvd;                                 // DVD settings
+  OpticalDisk            bd;                                  // BD settings
 
-  Device                 *device;                        // current selected device
-  const DeviceList       *deviceList;                    // list with devices
-  Device                 *defaultDevice;                 // default device
+  Device                 *device;                             // current selected device
+  const DeviceList       *deviceList;                         // list with devices
+  Device                 *defaultDevice;                      // default device
 
-  bool                   indexDatabaseAutoUpdateFlag;    // TRUE for automatic update of index datbase
-  BandWidthList          indexDatabaseMaxBandWidthList;  // list of max. band width to use for index updates [bits/s]
-  uint                   indexDatabaseKeepTime;          // number of seconds to keep index data of not existing storage
+  bool                   indexDatabaseAutoUpdateFlag;         // TRUE for automatic update of index datbase
+  BandWidthList          indexDatabaseMaxBandWidthList;       // list of max. band width to use for index updates [bits/s]
+  uint                   indexDatabaseKeepTime;               // number of seconds to keep index data of not existing storage
 
-  bool                   groupFlag;                      // TRUE iff entries in list should be grouped
-  bool                   allFlag;                        // TRUE iff all entries should be listed/restored
-  bool                   longFormatFlag;                 // TRUE iff long format list
-  bool                   humanFormatFlag;                // TRUE iff human format list
-  bool                   noHeaderFooterFlag;             // TRUE iff no header/footer should be printed in list
-  bool                   deleteOldArchiveFilesFlag;      // TRUE iff old archive files should be deleted after creating new files
-  bool                   ignoreNoBackupFileFlag;         // TRUE iff .nobackup/.NOBACKUP file should be ignored
+  bool                   groupFlag;                           // TRUE iff entries in list should be grouped
+  bool                   allFlag;                             // TRUE iff all entries should be listed/restored
+  bool                   longFormatFlag;                      // TRUE iff long format list
+  bool                   humanFormatFlag;                     // TRUE iff human format list
+  bool                   noHeaderFooterFlag;                  // TRUE iff no header/footer should be printed in list
+  bool                   deleteOldArchiveFilesFlag;           // TRUE iff old archive files should be deleted after creating new files
+  bool                   ignoreNoBackupFileFlag;              // TRUE iff .nobackup/.NOBACKUP file should be ignored
 
-  bool                   noDefaultConfigFlag;            // TRUE iff default config should not be read
-  bool                   quietFlag;                      // TRUE iff suppress any output
-  long                   verboseLevel;                   /* verbosity level
-                                                              0 - none
-                                                              1 - fatal errors
-                                                              2 - processing information
-                                                              3 - external programs
-                                                              4 - stdout+stderr of external programs
-                                                              5 - some SSH debug debug
-                                                              6 - all SSH/FTP/WebDAV debug
-                                                         */
+  bool                   noDefaultConfigFlag;                 // TRUE iff default config should not be read
+  bool                   quietFlag;                           // TRUE iff suppress any output
+  long                   verboseLevel;                        /* verbosity level
+                                                                   0 - none
+                                                                   1 - fatal errors
+                                                                   2 - processing information
+                                                                   3 - external programs
+                                                                   4 - stdout+stderr of external programs
+                                                                   5 - some SSH debug debug
+                                                                   6 - all SSH/FTP/WebDAV debug
+                                                              */
 
-  bool                   serverDebugFlag;                // TRUE iff server debug enabled (for debug only)
+  bool                   serverDebugFlag;                     // TRUE iff server debug enabled (for debug only)
 } GlobalOptions;
 
 // job options
 typedef struct
 {
-  uint32 userId;                                         // restore user id
-  uint32 groupId;                                        // restore group id
+  uint32 userId;                                              // restore user id
+  uint32 groupId;                                             // restore group id
 } JobOptionsOwner;
 
 // job compress algorithms
 typedef struct
 {
-  CompressAlgorithms delta;                              // delta compress algorithm to use
-  CompressAlgorithms byte;                               // byte compress algorithm to use
+  CompressAlgorithms delta;                                   // delta compress algorithm to use
+  CompressAlgorithms byte;                                    // byte compress algorithm to use
 } JobOptionsCompressAlgorithms;
 
 // see forward declaration in forward.h
 struct JobOptions
 {
-  ArchiveTypes                 archiveType;               // archive type (normal, full, incremental, differential)
+  ArchiveTypes                 archiveType;                   // archive type (normal, full, incremental, differential)
 
-  uint64                       archivePartSize;           // archive part size [bytes]
+  uint64                       archivePartSize;               // archive part size [bytes]
 
-  String                       incrementalListFileName;   // name of incremental list file
+  String                       incrementalListFileName;       // name of incremental list file
 
-  int                          directoryStripCount;       // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
-  String                       destination;               // destination for restore
-  JobOptionsOwner              owner;                     // restore owner
+  int                          directoryStripCount;           // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
+  String                       destination;                   // destination for restore
+  JobOptionsOwner              owner;                         // restore owner
 
-  PatternTypes                 patternType;               // pattern type
+  PatternTypes                 patternType;                   // pattern type
 
-  JobOptionsCompressAlgorithms compressAlgorithms;        // compress algorithms
+  JobOptionsCompressAlgorithms compressAlgorithms;            // compress algorithms
 
-  CryptTypes                   cryptType;                 // crypt type (symmetric, asymmetric)
-  CryptAlgorithms              cryptAlgorithm;            // crypt algorithm to use
-  PasswordModes                cryptPasswordMode;         // crypt password mode
-  Password                     *cryptPassword;            // crypt password
+  CryptTypes                   cryptType;                     // crypt type (symmetric, asymmetric)
+  CryptAlgorithms              cryptAlgorithm;                // crypt algorithm to use
+  PasswordModes                cryptPasswordMode;             // crypt password mode
+  Password                     *cryptPassword;                // crypt password
 //TODO: key data instead of file anme
   String                       cryptPublicKeyFileName;
   String                       cryptPrivateKeyFileName;
 
-  String                       preProcessCommand;         // command to execute before start of job
-  String                       postProcessCommand;        // command to execute after after termination of job
+  String                       preProcessCommand;             // command to execute before start of job
+  String                       postProcessCommand;            // command to execute after after termination of job
 
-  String                       mountDeviceName;           // device to mount/unmount
-  FTPServer                    ftpServer;                 // job specific FTP server settings
-  SSHServer                    sshServer;                 // job specific SSH server settings
-  WebDAVServer                 webDAVServer;              // job specific WebDAV server settings
-  OpticalDisk                  opticalDisk;               // job specific optical disk settings
-  String                       deviceName;                // device name to use
-  Device                       device;                    // job specific device settings
+  String                       mountDeviceName;               // device to mount/unmount
+  FTPServer                    ftpServer;                     // job specific FTP server settings
+  SSHServer                    sshServer;                     // job specific SSH server settings
+  WebDAVServer                 webDAVServer;                  // job specific WebDAV server settings
+  OpticalDisk                  opticalDisk;                   // job specific optical disk settings
+  String                       deviceName;                    // device name to use
+  Device                       device;                        // job specific device settings
 
-  uint64                       volumeSize;                // volume size or 0LL for default [bytes]
+  uint64                       volumeSize;                    // volume size or 0LL for default [bytes]
 
-  bool                         skipUnreadableFlag;        // TRUE for skipping unreadable files
-  bool                         forceDeltaCompressionFlag; // TRUE to force delta compression of files
-  bool                         ignoreNoDumpAttributeFlag; // TRUE for ignoring no-dump attribute
-  bool                         overwriteArchiveFilesFlag; // TRUE for overwrite existing archive files
-  bool                         overwriteFilesFlag;        // TURE for overwrite existing files on restore
-  bool                         errorCorrectionCodesFlag;  // TRUE iff error correction codes should be added
-  bool                         alwaysCreateImageFlag;     // TRUE iff always create image for CD/DVD/BD/device
-  bool                         waitFirstVolumeFlag;       // TRUE for wait for first volume
-  bool                         rawImagesFlag;             // TRUE for storing raw images
-  bool                         noFragmentsCheckFlag;      // TRUE to skip checking file fragments for completeness
-  bool                         noIndexDatabaseFlag;       // TRUE for do not store index database for archives
-  bool                         dryRunFlag;                // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
-  bool                         noStorageFlag;             // TRUE to skip storage, only create incremental data file
-  bool                         noBAROnMediumFlag;         // TRUE for not storing BAR on medium
+  bool                         skipUnreadableFlag;            // TRUE for skipping unreadable files
+  bool                         forceDeltaCompressionFlag;     // TRUE to force delta compression of files
+  bool                         ignoreNoDumpAttributeFlag;     // TRUE for ignoring no-dump attribute
+  ArchiveFileModes             archiveFileMode;               // archive files write mode
+  bool                         overwriteFilesFlag;            // TRUE for overwrite existing files on restore
+  bool                         errorCorrectionCodesFlag;      // TRUE iff error correction codes should be added
+  bool                         alwaysCreateImageFlag;         // TRUE iff always create image for CD/DVD/BD/device
+  bool                         waitFirstVolumeFlag;           // TRUE for wait for first volume
+  bool                         rawImagesFlag;                 // TRUE for storing raw images
+  bool                         noFragmentsCheckFlag;          // TRUE to skip checking file fragments for completeness
+  bool                         noIndexDatabaseFlag;           // TRUE for do not store index database for archives
+  bool                         dryRunFlag;                    // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
+  bool                         noStorageFlag;                 // TRUE to skip storage, only create incremental data file
+  bool                         noBAROnMediumFlag;             // TRUE for not storing BAR on medium
   bool                         stopOnErrorFlag;
+
+  // short cutsTRUE
+  bool                         archiveFileModeOverwriteFlag;  // TRUE for overwrite existing archive files
 };
 
 /***************************** Variables *******************************/

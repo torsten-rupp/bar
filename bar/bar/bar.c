@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __BAR_IMPLEMENATION__
+
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -53,6 +55,7 @@
 #include "deltasources.h"
 #include "database.h"
 #include "index.h"
+#include "continuous.h"
 #include "misc.h"
 #if HAVE_BREAKPAD
   #include "minidump.h"
@@ -259,6 +262,7 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] = CMD_VALUE_UNIT_ARRAY
 (
@@ -421,6 +425,13 @@ LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] = CMD_VALUE_SE
   {"index",     LOG_TYPE_INDEX,              "index database"           },
 
   {"all",       LOG_TYPE_ALL,                "log everything"           },
+);
+
+LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES[] = CMD_VALUE_SELECT_ARRAY
+(
+  {"stop",      ARCHIVE_FILE_MODE_STOP,      "stop if archive file exists"      },
+  {"append",    ARCHIVE_FILE_MODE_APPEND,    "append to existing archive files" },
+  {"overwrite", ARCHIVE_FILE_MODE_OVERWRITE, "overwrite existing archive files" },
 );
 
 LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
@@ -648,7 +659,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,2,jobOptions.rawImagesFlag,                                                                               "store raw images (store all image blocks)"                                ),
   CMD_OPTION_BOOLEAN      ("no-fragments-check",           0,  1,2,jobOptions.noFragmentsCheckFlag,                                                                        "do not check completeness of file fragments"                              ),
   CMD_OPTION_BOOLEAN      ("no-index-database",            0,  1,1,jobOptions.noIndexDatabaseFlag,                                                                         "do not store index database for archives"                                 ),
-  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,2,jobOptions.overwriteArchiveFilesFlag,                                                                   "overwrite existing archive files"                                         ),
+  CMD_OPTION_SELECT       ("archive-file-mode",            0,  1,2,jobOptions.archiveFileMode,                      COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES,               "select archive files write mode"                                          ),
+  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,2,jobOptions.archiveFileModeOverwriteFlag,                                                                "overwrite existing archive files"                                         ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,2,jobOptions.overwriteFilesFlag,                                                                          "overwrite existing files"                                                 ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                                                                         "wait for first volume"                                                    ),
   CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,2,jobOptions.dryRunFlag,                                                                                  "do dry-run (skip storage/restore, incremental data, index database)"      ),
@@ -689,6 +701,7 @@ const ConfigValueSelect CONFIG_VALUE_ARCHIVE_TYPES[] = CONFIG_VALUE_SELECT_ARRAY
   {"full",        ARCHIVE_TYPE_FULL,       },
   {"incremental", ARCHIVE_TYPE_INCREMENTAL },
   {"differential",ARCHIVE_TYPE_DIFFERENTIAL},
+  {"continuous",  ARCHIVE_TYPE_CONTINUOUS  },
 );
 
 const ConfigValueSelect CONFIG_VALUE_PATTERN_TYPES[] = CONFIG_VALUE_SELECT_ARRAY
@@ -816,6 +829,13 @@ const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] = CONFIG_VALUE_SET_ARRAY
   {"all",       LOG_TYPE_ALL                },
 );
 
+const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[] = CONFIG_VALUE_SET_ARRAY
+(
+  {"stop",      ARCHIVE_FILE_MODE_STOP      },
+  {"append",    ARCHIVE_FILE_MODE_APPEND    },
+  {"overwrite", ARCHIVE_FILE_MODE_OVERWRITE },
+);
+
 LOCAL const ConfigValue CONFIG_VALUES[] =
 {
   // general settings
@@ -898,7 +918,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_BOOLEAN  ("skip-unreadable",              &jobOptions.skipUnreadableFlag,-1                              ),
   CONFIG_VALUE_BOOLEAN  ("raw-images",                   &jobOptions.rawImagesFlag,-1                                   ),
   CONFIG_VALUE_BOOLEAN  ("no-fragments-check",           &jobOptions.noFragmentsCheckFlag,-1                            ),
-  CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",      &jobOptions.overwriteArchiveFilesFlag,-1                       ),
+  CONFIG_VALUE_SELECT   ("archive-file-mode",            &jobOptions.archiveFileMode,-1,                                CONFIG_VALUE_ARCHIVE_FILE_MODES),
   CONFIG_VALUE_BOOLEAN  ("overwrite-files",              &jobOptions.overwriteFilesFlag,-1                              ),
   CONFIG_VALUE_BOOLEAN  ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                             ),
   CONFIG_VALUE_BOOLEAN  ("no-bar-on-medium",             &jobOptions.noBAROnMediumFlag,-1                               ),
@@ -913,6 +933,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_IGNORE   ("weekdays"),
   CONFIG_VALUE_IGNORE   ("time"),
   CONFIG_VALUE_IGNORE   ("archive-type"),
+  CONFIG_VALUE_IGNORE   ("interval"),
   CONFIG_VALUE_IGNORE   ("text"),
   CONFIG_VALUE_IGNORE   ("min-keep"),
   CONFIG_VALUE_IGNORE   ("max-keep"),
@@ -1021,8 +1042,9 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_CSTRING  ("pid-file",                     &pidFileName,-1                                                ),
 
-  // old/obsolete
+  // deprecated
   CONFIG_VALUE_IGNORE   ("schedule"),
+  CONFIG_VALUE_IGNORE   ("overwrite-archive-files"),
 };
 
 /*---------------------------------------------------------------------*/
@@ -2160,6 +2182,31 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
 }
 
 /***********************************************************************\
+* Name   : cmdOptionParseOverwriteArchiveFiles
+* Purpose: command line option call back for archive files overwrite mode
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  (*(ArchiveFileModes*)variable) = ARCHIVE_FILE_MODE_OVERWRITE;
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : configValueParseConfigFile
 * Purpose: command line option call back for parsing configuration file
 * Input  : -
@@ -2454,6 +2501,10 @@ LOCAL Errors initAll(void)
   // initialize variables
   AutoFree_init(&autoFreeList);
 
+  Semaphore_init(&consoleLock);
+  DEBUG_TESTCODE("initAll1") { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
+
   // initialize i18n
   #if defined(HAVE_SETLOCALE) && defined(HAVE_BINDTEXTDOMAIN) && defined(HAVE_TEXTDOMAIN)
     setlocale(LC_ALL,"");
@@ -2471,6 +2522,7 @@ LOCAL Errors initAll(void)
   error = Password_initAll();
   if (error != ERROR_NONE)
   {
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
   DEBUG_TESTCODE("initAll1") { Password_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
@@ -2557,13 +2609,22 @@ LOCAL Errors initAll(void)
   DEBUG_TESTCODE("initAll10") { Index_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Index_initAll,{ Index_doneAll(); });
 
+  error = Continuous_initAll();
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE("initAll11") { Continuous_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,Continuous_initAll,{ Continuous_doneAll(); });
+
   error = Network_initAll();
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll11") { Network_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE("initAll12") { Network_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Network_initAll,{ Network_doneAll(); });
 
   error = Server_initAll();
@@ -2572,7 +2633,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll12") { Server_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE("initAll13") { Server_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Server_initAll,{ Server_doneAll(); });
 
   // initialize variables
@@ -2645,7 +2706,6 @@ LOCAL Errors initAll(void)
   Semaphore_init(&logLock);
   logFile                                = NULL;
   tmpLogFile                             = NULL;
-  Semaphore_init(&consoleLock);
   POSIXLocale                            = newlocale(LC_ALL,"POSIX",0);
 
   Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
@@ -2696,7 +2756,6 @@ LOCAL void doneAll(void)
 
   // deinitialize variables
   freelocale(POSIXLocale);
-  Semaphore_done(&consoleLock);
   Semaphore_done(&logLock);
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
@@ -2737,6 +2796,7 @@ LOCAL void doneAll(void)
   // deinitialize modules
   Server_doneAll();
   Network_doneAll();
+  Continuous_doneAll();
   Index_doneAll();
   Storage_doneAll();
   Archive_doneAll();
@@ -2747,6 +2807,8 @@ LOCAL void doneAll(void)
   Crypt_doneAll();
   Compress_doneAll();
   Password_doneAll();
+
+  Semaphore_done(&consoleLock);
 
   // deinitialize crash dump handler
   #if HAVE_BREAKPAD
@@ -3263,7 +3325,7 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->skipUnreadableFlag              = TRUE;
   jobOptions->forceDeltaCompressionFlag       = FALSE;
   jobOptions->ignoreNoDumpAttributeFlag       = FALSE;
-  jobOptions->overwriteArchiveFilesFlag       = FALSE;
+  jobOptions->archiveFileMode                 = ARCHIVE_FILE_MODE_STOP;
   jobOptions->overwriteFilesFlag              = FALSE;
   jobOptions->errorCorrectionCodesFlag        = FALSE;
   jobOptions->alwaysCreateImageFlag           = FALSE;
@@ -4948,6 +5010,17 @@ bool configValueReadKeyFile(void *userData, void *variable, const char *name, co
   return TRUE;
 }
 
+bool configValueParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(value);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  (*(ArchiveFileModes*)variable) = ARCHIVE_FILE_MODE_OVERWRITE;
+}
+
 Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType)
 {
   #if   defined(PLATFORM_LINUX)
@@ -4983,6 +5056,67 @@ Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patt
 
   return error;
 }
+
+bool isIncluded(const EntryNode *includeEntryNode,
+                ConstString     name
+               )
+{
+  assert(includeEntryNode != NULL);
+  assert(name != NULL);
+
+  return Pattern_match(&includeEntryNode->pattern,name,PATTERN_MATCH_MODE_BEGIN);
+}
+
+bool isInIncludedList(const EntryList *includeEntryList,
+                      ConstString     name
+                     )
+{
+  const EntryNode *entryNode;
+
+  assert(includeEntryList != NULL);
+  assert(name != NULL);
+
+  LIST_ITERATE(includeEntryList,entryNode)
+  {
+    if (Pattern_match(&entryNode->pattern,name,PATTERN_MATCH_MODE_BEGIN))
+    {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+bool isInExcludedList(const PatternList *excludePatternList,
+                      ConstString     name
+                     )
+{
+  assert(excludePatternList != NULL);
+  assert(name != NULL);
+
+  return PatternList_match(excludePatternList,name,PATTERN_MATCH_MODE_EXACT);
+}
+
+bool isNoBackup(ConstString pathName)
+{
+  String fileName;
+  bool   haveNoBackupFlag;
+
+  assert(pathName != NULL);
+
+  haveNoBackupFlag = FALSE;
+  if (!globalOptions.ignoreNoBackupFileFlag)
+  {
+    fileName = String_new();
+    haveNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".nobackup"));
+    haveNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".NOBACKUP"));
+    String_delete(fileName);
+  }
+
+  return haveNoBackupFlag;
+}
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : readFromJob
@@ -5409,7 +5543,6 @@ exit(1);
         // close log files
         closeSessionLog();
         closeLog();
-        CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
         doneAll();
         #ifndef NDEBUG
           debugResourceDone();
@@ -5777,7 +5910,7 @@ int main(int argc, const char *argv[])
   {
     // run as daemon
     #if   defined(PLATFORM_LINUX)
-      if (daemon(1,1) == 0)
+      if (daemon(1,0) == 0)
       {
         error = bar(argc,argv);
       }
