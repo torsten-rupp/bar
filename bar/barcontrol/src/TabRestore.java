@@ -3961,17 +3961,6 @@ Dprintf.dprintf("");
 
       widgetStorageTabFolder = Widgets.newTabFolder(group);
       Widgets.layout(widgetStorageTabFolder,1,0,TableLayoutData.NSWE);
-      widgetStorageTabFolder.addSelectionListener(new SelectionListener()
-      {
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          updateCheckedStorageList();
-          updateEntryListThread.triggerUpdate();
-        }
-      });
 
       // tree
       tab = Widgets.addTab(widgetStorageTabFolder,BARControl.tr("Jobs"));
@@ -4009,6 +3998,17 @@ Dprintf.dprintf("");
       treeColumn.setToolTipText(BARControl.tr("Click to sort for state."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
 
+      widgetStorageTabFolder.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          updateCheckedStorageList();
+          updateEntryListThread.triggerUpdate();
+        }
+      });
       widgetStorageTree.addListener(SWT.Expand,new Listener()
       {
         public void handleEvent(final Event event)
