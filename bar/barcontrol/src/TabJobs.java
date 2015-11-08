@@ -1657,7 +1657,7 @@ public class TabJobs
   private WidgetVariable  storageDeviceName       = new WidgetVariable("");
   private WidgetVariable  storageFileName         = new WidgetVariable("");
   private WidgetVariable  mountDeviceName         = new WidgetVariable("");
-  private WidgetVariable  overwriteArchiveFiles   = new WidgetVariable(false);
+  private WidgetVariable  archiveFileMode         = new WidgetVariable("stop");
   private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable("");
   private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable("");
   private WidgetVariable  maxBandWidthFlag        = new WidgetVariable(false);
@@ -5099,23 +5099,42 @@ Dprintf.dprintf("");
               });
             }
 
-            button = Widgets.newCheckbox(composite,BARControl.tr("overwrite archive files"));
-            button.setToolTipText(BARControl.tr("If enabled then overwrite existing archive files. If disabled do not overwrite existing files and stop with an error."));
-            Widgets.layout(button,1,0,TableLayoutData.W);
-            button.addSelectionListener(new SelectionListener()
+            subComposite = Widgets.newComposite(composite,SWT.NONE);
+            subComposite.setLayout(new TableLayout(1.0,0.0));
+            Widgets.layout(subComposite,1,0,TableLayoutData.WE);
             {
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              label = Widgets.newLabel(subComposite,BARControl.tr("Archive file mode:"));
+              Widgets.layout(label,0,0,TableLayoutData.W);
+
+              combo = Widgets.newOptionMenu(subComposite);
+              combo.setToolTipText(BARControl.tr("If set to 'append' then append data to existing archive files.\nIf set to 'overwrite' then overwrite existing files.\nOtherwise stop with an error if archive file exists."));
+              Widgets.setComboItems(combo,new Object[]{"stop on error","stop",
+                                                       "append",       "append",
+                                                       "overwrite",    "overwrite",
+                                                      }
+                                   );
+              Widgets.layout(combo,0,1,TableLayoutData.W);
+              combo.addSelectionListener(new SelectionListener()
               {
-              }
-              public void widgetSelected(SelectionEvent selectionEvent)
+                public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                {
+                }
+                public void widgetSelected(SelectionEvent selectionEvent)
+                {
+                  Combo  widget = (Combo)selectionEvent.widget;
+                  String string = Widgets.getSelectedComboItem(widget,"stop");
+                  archiveFileMode.set(string);
+                  BARServer.setJobOption(selectedJobData.uuid,"archive-file-mode",archiveFileMode.toString());
+                }
+              });
+              Widgets.addModifyListener(new WidgetModifyListener(combo,archiveFileMode)
               {
-                Button  widget      = (Button)selectionEvent.widget;
-                boolean checkedFlag = widget.getSelection();
-                overwriteArchiveFiles.set(checkedFlag);
-                BARServer.setJobOption(selectedJobData.uuid,"overwrite-archive-files",checkedFlag);
-              }
-            });
-            Widgets.addModifyListener(new WidgetModifyListener(button,overwriteArchiveFiles));
+                public void modified(Widget widget, WidgetVariable variable)
+                {
+                  Widgets.setSelectedComboItem((Combo)widget,variable.getString());
+                }
+              });
+            }
           }
         }
 
@@ -7765,7 +7784,7 @@ throw new Error("NYI");
       cryptPasswordMode.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-password-mode"));
       cryptPassword.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-password"));
       incrementalListFileName.set(BARServer.getStringJobOption(selectedJobData.uuid,"incremental-list-file"));
-      overwriteArchiveFiles.set(BARServer.getBooleanJobOption(selectedJobData.uuid,"overwrite-archive-files"));
+      archiveFileMode.set(BARServer.getStringJobOption(selectedJobData.uuid,"archive-file-mode"));
       sshPublicKeyFileName.set(BARServer.getStringJobOption(selectedJobData.uuid,"ssh-public-key"));
       sshPrivateKeyFileName.set(BARServer.getStringJobOption(selectedJobData.uuid,"ssh-private-key"));
 /* NYI ???
