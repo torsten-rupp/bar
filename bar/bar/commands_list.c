@@ -1764,6 +1764,7 @@ remoteBarFlag=FALSE;
 
   printedInfoFlag = FALSE;
   fileCount       = 0L;
+  error           = ERROR_NONE;
   switch (storageSpecifier->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
@@ -1790,7 +1791,7 @@ remoteBarFlag=FALSE;
                             );
         if (error != ERROR_NONE)
         {
-          return error;
+          break;
         }
 
         // open archive
@@ -1806,7 +1807,7 @@ remoteBarFlag=FALSE;
         if (error != ERROR_NONE)
         {
           (void)Storage_done(&storageHandle);
-          return error;
+          break;
         }
 
         // list contents
