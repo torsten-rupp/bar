@@ -7,6 +7,7 @@
 * Systems: all
 *
 \***********************************************************************/
+#define __ARRAYS_IMPLEMENATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
@@ -33,22 +34,14 @@
 
 /***************************** Datatypes *******************************/
 
-struct __Array
-{
-  ulong elementSize;                 // size of element
-  ulong length;                      // current length of array
-  ulong maxLength;                   // current maximal length of array
-  byte  *data;                       // array data
-};
-
 #ifndef NDEBUG
   typedef struct DebugArrayNode
   {
     LIST_NODE_HEADER(struct DebugArrayNode);
 
-    const char           *fileName;
-    ulong                lineNb;
-    const struct __Array *array;
+    const char  *fileName;
+    ulong       lineNb;
+    const Array *array;
   } DebugArrayNode;
 
   typedef struct
@@ -95,27 +88,34 @@ LOCAL void debugArrayInit(void)
 // ----------------------------------------------------------------------
 
 #ifdef NDEBUG
-Array Array_new(ulong elementSize, ulong length)
+void Array_init(Array                       *array,
+                ulong                       elementSize,
+                ulong                       length,
+                ArrayElementFreeFunction    arrayElementFreeFunction,
+                void                        *arrayElementFreeUserData,
+                ArrayElementCompareFunction arrayElementCompareFunction,
+                void                        *arrayElementCompareUserData
+               )
 #else /* not NDEBUG */
-Array __Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong length)
+void __Array_init(const char                  *__fileName__,
+                  ulong                       __lineNb__,
+                  Array                       *array,
+                  ulong                       elementSize,
+                  ulong                       length,
+                  ArrayElementFreeFunction    arrayElementFreeFunction,
+                  void                        *arrayElementFreeUserData,
+                  ArrayElementCompareFunction arrayElementCompareFunction,
+                  void                        *arrayElementCompareUserData
+                 )
 #endif /* NDEBUG */
 {
-  struct __Array *array;
   #ifndef NDEBUG
     DebugArrayNode *debugArrayNode;
   #endif /* not NDEBUG */
 
+  assert(array != NULL);
   assert(elementSize > 0);
 
-  array = (struct __Array*)malloc(sizeof(struct __Array));
-  if (array == NULL)
-  {
-    #ifdef HALT_ON_INSUFFICIENT_MEMORY
-      HALT_INSUFFICIENT_MEMORY();
-    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
-      return NULL;
-    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
-  }
   if (length == 0) length = DEFAULT_LENGTH;
   array->data = (byte*)malloc(length*elementSize);
   if (array->data == NULL)
@@ -128,9 +128,13 @@ Array __Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong l
     #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
 
-  array->elementSize = elementSize;
-  array->length      = 0;
-  array->maxLength   = length;
+  array->elementSize                 = elementSize;
+  array->length                      = 0;
+  array->maxLength                   = length;
+  array->arrayElementFreeFunction    = arrayElementFreeFunction;
+  array->arrayElementFreeUserData    = arrayElementFreeUserData;
+  array->arrayElementCompareFunction = arrayElementCompareFunction;
+  array->arrayElementCompareUserData = arrayElementCompareUserData;
 
   #ifndef NDEBUG
     pthread_once(&debugArrayInitFlag,debugArrayInit);
@@ -142,74 +146,121 @@ Array __Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong l
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      debugArrayNode->fileName = fileName;
-      debugArrayNode->lineNb   = lineNb;
+      debugArrayNode->fileName = __fileName__;
+      debugArrayNode->lineNb   = __lineNb__;
       debugArrayNode->array    = array;
       List_append(&debugArrayList,debugArrayNode);
-      debugArrayList.allocatedMemory += sizeof(DebugArrayNode)+sizeof(struct __Array)+array->maxLength*array->elementSize;
+      debugArrayList.allocatedMemory += sizeof(DebugArrayNode)+array->maxLength*array->elementSize;
     }
     pthread_mutex_unlock(&debugArrayLock);
   #endif /* not NDEBUG */
-
-  return array;
 }
 
-void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction, void *arrayElementFreeUserData)
+void Array_done(Array *array)
 {
   ulong z;
   #ifndef NDEBUG
     DebugArrayNode *debugArrayNode;
   #endif /* not NDEBUG */
 
-  if (array != NULL)
-  {
-    assert(array->data != NULL);
+  assert(array != NULL);
+  assert(array->data != NULL);
 
-    if (arrayElementFreeFunction != NULL)
+  if (array->arrayElementFreeFunction != NULL)
+  {
+    for (z = 0; z < array->length; z++)
     {
-      for (z = 0; z < array->length; z++)
+      array->arrayElementFreeFunction(array->data+z*array->elementSize,array->arrayElementFreeUserData);
+    }
+  }
+
+  #ifndef NDEBUG
+    pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+    pthread_mutex_lock(&debugArrayLock);
+    {
+      debugArrayNode = debugArrayList.head;
+      while ((debugArrayNode != NULL) && (debugArrayNode->array != array))
       {
-        arrayElementFreeFunction(array->data+z*array->elementSize,arrayElementFreeUserData);
+        debugArrayNode = debugArrayNode->next;
+      }
+      if (debugArrayNode != NULL)
+      {
+        List_remove(&debugArrayList,debugArrayNode);
+        assert(debugArrayList.allocatedMemory >= sizeof(DebugArrayNode)+array->maxLength*array->elementSize);
+        debugArrayList.allocatedMemory -= sizeof(DebugArrayNode)+array->maxLength*array->elementSize;
+        LIST_DELETE_NODE(debugArrayNode);
+      }
+      else
+      {
+        fprintf(stderr,"DEBUG WARNING: array %p not found in debug list!\n",
+                array
+               );
+        #ifdef HAVE_BACKTRACE
+          debugDumpCurrentStackTrace(stderr,0,0);
+        #endif /* HAVE_BACKTRACE */
+        HALT_INTERNAL_ERROR("array not found");
       }
     }
+    pthread_mutex_unlock(&debugArrayLock);
+  #endif /* not NDEBUG */
 
-    #ifndef NDEBUG
-      pthread_once(&debugArrayInitFlag,debugArrayInit);
+  free(array->data);
+}
 
-      pthread_mutex_lock(&debugArrayLock);
-      {
-        debugArrayNode = debugArrayList.head;
-        while ((debugArrayNode != NULL) && (debugArrayNode->array != array))
-        {
-          debugArrayNode = debugArrayNode->next;
-        }
-        if (debugArrayNode != NULL)
-        {
-          List_remove(&debugArrayList,debugArrayNode);
-          assert(debugArrayList.allocatedMemory >= sizeof(DebugArrayNode)+sizeof(struct __Array)+array->maxLength*array->elementSize);
-          debugArrayList.allocatedMemory -= sizeof(DebugArrayNode)+sizeof(struct __Array)+array->maxLength*array->elementSize;
-          LIST_DELETE_NODE(debugArrayNode);
-        }
-        else
-        {
-          fprintf(stderr,"DEBUG WARNING: array %p not found in debug list!\n",
-                  array
-                 );
-          #ifdef HAVE_BACKTRACE
-            debugDumpCurrentStackTrace(stderr,0,0);
-          #endif /* HAVE_BACKTRACE */
-          HALT_INTERNAL_ERROR("array not found");
-        }
-      }
-      pthread_mutex_unlock(&debugArrayLock);
-    #endif /* not NDEBUG */
+#ifdef NDEBUG
+Array *Array_new(ulong                       elementSize,
+                 ulong                       length,
+                 ArrayElementFreeFunction    arrayElementFreeFunction,
+                 void                        *arrayElementFreeUserData,
+                 ArrayElementCompareFunction arrayElementCompareFunction,
+                 void                        *arrayElementCompareUserData
+                )
+#else /* not NDEBUG */
+Array *__Array_new(const char                  *__fileName__,
+                   ulong                       __lineNb__,
+                   ulong                       elementSize,
+                   ulong                       length,
+                   ArrayElementFreeFunction    arrayElementFreeFunction,
+                   void                        *arrayElementFreeUserData,
+                   ArrayElementCompareFunction arrayElementCompareFunction,
+                   void                        *arrayElementCompareUserData
+                  )
+#endif /* NDEBUG */
+{
+  Array *array;
 
-    free(array->data);
+  assert(elementSize > 0);
+
+  array = (Array*)malloc(sizeof(Array));
+  if (array == NULL)
+  {
+    #ifdef HALT_ON_INSUFFICIENT_MEMORY
+      HALT_INSUFFICIENT_MEMORY();
+    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
+      return NULL;
+    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
+  }
+
+  #ifdef NDEBUG
+    Array_init(array,elementSize,length,arrayElementFreeFunction,arrayElementFreeUserData,arrayElementCompareFunction,arrayElementCompareUserData);
+  #else /* not NDEBUG */
+    __Array_init(__fileName__,__lineNb__,array,elementSize,length,arrayElementFreeFunction,arrayElementFreeUserData,arrayElementCompareFunction,arrayElementCompareUserData);
+  #endif /* NDEBUG */
+
+  return array;
+}
+
+void Array_delete(Array *array)
+{
+  if (array != NULL)
+  {
+    Array_done(array);
     free(array);
   }
 }
 
-void Array_clear(Array array, ArrayElementFreeFunction arrayElementFreeFunction, void *arrayElementFreeUserData)
+void Array_clear(Array *array)
 {
   ulong z;
 
@@ -217,23 +268,18 @@ void Array_clear(Array array, ArrayElementFreeFunction arrayElementFreeFunction,
   {
     assert(array->data != NULL);
 
-    if (arrayElementFreeFunction != NULL)
+    if (array->arrayElementFreeFunction != NULL)
     {
       for (z = 0; z < array->length; z++)
       {
-        arrayElementFreeFunction(array->data+z*array->elementSize,arrayElementFreeUserData);
+        array->arrayElementFreeFunction(array->data+z*array->elementSize,array->arrayElementFreeUserData);
       }
     }
     array->length = 0;
   }
 }
 
-ulong Array_length(const Array array)
-{
-  return (array != NULL) ? array->length : 0;
-}
-
-bool Array_put(Array array, ulong index, const void *data)
+bool Array_put(Array *array, ulong index, const void *data)
 {
   void  *newData;
   ulong newMaxLength;
@@ -279,7 +325,7 @@ bool Array_put(Array array, ulong index, const void *data)
   }
 }
 
-void *Array_get(const Array array, ulong index, void *data)
+void *Array_get(const Array *array, ulong index, void *data)
 {
   void *element;
 
@@ -306,7 +352,7 @@ void *Array_get(const Array array, ulong index, void *data)
   return element;
 }
 
-bool Array_insert(Array array, long nextIndex, const void *data)
+bool Array_insert(Array *array, long nextIndex, const void *data)
 {
   ulong newMaxLength;
   byte  *newData;
@@ -395,7 +441,7 @@ bool Array_insert(Array array, long nextIndex, const void *data)
   }
 }
 
-bool Array_append(Array array, const void *data)
+bool Array_append(Array *array, const void *data)
 {
   ulong newMaxLength;
   byte  *newData;
@@ -441,7 +487,7 @@ bool Array_append(Array array, const void *data)
   }
 }
 
-void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElementFreeFunction, void *arrayElementFreeUserData)
+void Array_remove(Array *array, ulong index)
 {
   if (array != NULL)
   {
@@ -449,10 +495,10 @@ void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElemen
 
     if (index < array->length)
     {
-      // fre element
-      if (arrayElementFreeFunction != NULL)
+      // free element
+      if (array->arrayElementFreeFunction != NULL)
       {
-        arrayElementFreeFunction(array->data+index*array->elementSize,arrayElementFreeUserData);
+        array->arrayElementFreeFunction(array->data+index*array->elementSize,array->arrayElementFreeUserData);
       }
 
       // remove element
@@ -466,11 +512,6 @@ void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElemen
       array->length--;
     }
   }
-}
-
-const void *Array_cArray(const Array array)
-{
-  return (array != NULL) ? array->data : NULL;
 }
 
 #ifndef NDEBUG

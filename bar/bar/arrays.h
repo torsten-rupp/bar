@@ -27,21 +27,33 @@
 
 /***************************** Datatypes *******************************/
 
-typedef struct __Array* Array;
-
 // delete array element function
 typedef void(*ArrayElementFreeFunction)(void *data, void *userData);
 
-// comparison, iteration functions
+// element comparison, iteration functions
 typedef int(*ArrayElementCompareFunction)(void *userData, void *data1, void *data2);
 typedef char(*ArrayElementIterateFunction)(void *userData, void *data);
+
+// array handle
+typedef struct
+{
+  ulong                       elementSize;  // size of element
+  ulong                       length;       // current length of array
+  ulong                       maxLength;    // current maximal length of array
+  ArrayElementFreeFunction    arrayElementFreeFunction;
+  void                        *arrayElementFreeUserData;
+  ArrayElementCompareFunction arrayElementCompareFunction;
+  void                        *arrayElementCompareUserData;
+  byte                        *data;        // array data
+} Array;
 
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Array_new(elementSize,length) __Array_new(__FILE__,__LINE__,elementSize,length)
+  #define Array_init(...) __Array_init(__FILE__,__LINE__,__VA_ARGS__)
+  #define Array_new(...)  __Array_new(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***********************************************************************\
@@ -65,6 +77,28 @@ typedef char(*ArrayElementIterateFunction)(void *userData, void *data);
        (variable)++, Array_get(array,0,variable) \
       )
 
+/***********************************************************************\
+* Name   : ARRAY_ITERATEX
+* Purpose: iterated over array and execute block
+* Input  : array     - array
+*          variable  - iteration variable
+*          condition - additional condition
+* Output : -
+* Return : -
+* Notes  : variable will contain all elements in array
+*          usage:
+*            ARRAY_ITERATEX(array,variable,TRUE)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define ARRAY_ITERATEX(array,variable,condition) \
+  for ((variable) = 0, Array_get(array,0,variable); \
+       ((variable) < Array_length(array)) && (condition); \
+       (variable)++, Array_get(array,0,variable) \
+      )
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -74,46 +108,110 @@ typedef char(*ArrayElementIterateFunction)(void *userData, void *data);
 #endif
 
 /***********************************************************************\
+* Name   : Array_init
+* Purpose: init array
+* Input  : array                       - array variable
+*          elementSize                 - element size (in bytes)
+*          length                      - start length of array
+*          arrayElementFreeFunction    - free element function or NULL
+*          arrayElementFreeUserData    - free function user data
+*          arrayElementCompareFunction - compare element function or
+*                                        NULL
+*          arrayElementCompareUserData - compare function user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+void Array_init(Array                       *array,
+                ulong                       elementSize,
+                ulong                       length,
+                ArrayElementFreeFunction    arrayElementFreeFunction,
+                void                        *arrayElementFreeUserData,
+                ArrayElementCompareFunction arrayElementCompareFunction,
+                void                        *arrayElementCompareUserData
+               );
+#else /* not NDEBUG */
+void __Array_init(const char                  *__fileName__,
+                  ulong                       __lineNb__,
+                  Array                       *array,
+                  ulong                       elementSize,
+                  ulong                       length,
+                  ArrayElementFreeFunction    arrayElementFreeFunction,
+                  void                        *arrayElementFreeUserData,
+                  ArrayElementCompareFunction arrayElementCompareFunction,
+                  void                        *arrayElementCompareUserData
+                 );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Array_done
+* Purpose: done array
+* Input  : array - array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Array_done(Array *array);
+
+/***********************************************************************\
 * Name   : Array_new
 * Purpose: create new array
-* Input  : elementSize - element size (in bytes)
-*          length      - start length of array
+* Input  : elementSize                 - element size (in bytes)
+*          length                      - start length of array
+*          arrayElementFreeFunction    - free element function or NULL
+*          arrayElementFreeUserData    - free function user data
+*          arrayElementCompareFunction - compare element function or
+*                                        NULL
+*          arrayElementCompareUserData - compare function user data
 * Output : -
 * Return : array or NULL
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-Array Array_new(ulong elementSize, ulong length);
+Array *Array_new(ulong                       elementSize,
+                 ulong                       length,
+                 ArrayElementFreeFunction    arrayElementFreeFunction,
+                 void                        *arrayElementFreeUserData,
+                 ArrayElementCompareFunction arrayElementCompareFunction,
+                 void                        *arrayElementCompareUserData
+                );
 #else /* not NDEBUG */
-Array __Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong length);
+Array *__Array_new(const char                  *__fileName__,
+                   ulong                       __lineNb__,
+                   ulong                       elementSize,
+                   ulong                       length,
+                   ArrayElementFreeFunction    arrayElementFreeFunction,
+                   void                        *arrayElementFreeUserData,
+                   ArrayElementCompareFunction arrayElementCompareFunction,
+                   void                        *arrayElementCompareUserData
+                  );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Array_delete
 * Purpose: delete array
-* Input  : array                    - array to delete
-*          arrayElementFreeFunction - array element free function or NULL
-*          arrayElementFreeUserData - free function user data or NULL
+* Input  : array - array to delete
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction, void *arrayElementFreeUserData);
+void Array_delete(Array *array);
 
 /***********************************************************************\
 * Name   : Array_clear
 * Purpose: clear array
-* Input  : array                    - array to clear
-*          arrayElementFreeFunction - array element free function or NULL
-*          arrayElementFreeUserData - free function user data or NULL
+* Input  : array - array to clear
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Array_clear(Array array, ArrayElementFreeFunction arrayElementFreeFunction, void *arrayElementFreeUserData);
+void Array_clear(Array *array);
 
 /***********************************************************************\
 * Name   : Array_length
@@ -124,7 +222,13 @@ void Array_clear(Array array, ArrayElementFreeFunction arrayElementFreeFunction,
 * Notes  : -
 \***********************************************************************/
 
-ulong Array_length(const Array array);
+INLINE ulong Array_length(const Array *array);
+#if defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
+INLINE ulong Array_length(const Array *array)
+{
+  return (array != NULL) ? array->length : 0;
+}
+#endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
 
 /***********************************************************************\
 * Name   : Array_put
@@ -137,7 +241,7 @@ ulong Array_length(const Array array);
 * Notes  : -
 \***********************************************************************/
 
-bool Array_put(Array array, ulong index, const void *data);
+bool Array_put(Array *array, ulong index, const void *data);
 
 /***********************************************************************\
 * Name   : Array_get
@@ -151,7 +255,7 @@ bool Array_put(Array array, ulong index, const void *data);
 *          data element in the array is returned
 \***********************************************************************/
 
-void *Array_get(const Array array, ulong index, void *data);
+void *Array_get(const Array *array, ulong index, void *data);
 
 /***********************************************************************\
 * Name   : Array_insert
@@ -164,7 +268,7 @@ void *Array_get(const Array array, ulong index, void *data);
 * Notes  : -
 \***********************************************************************/
 
-bool Array_insert(Array array, long nextIndex, const void *data);
+bool Array_insert(Array *array, long nextIndex, const void *data);
 
 /***********************************************************************\
 * Name   : Array_append
@@ -176,21 +280,19 @@ bool Array_insert(Array array, long nextIndex, const void *data);
 * Notes  : -
 \***********************************************************************/
 
-bool Array_append(Array array, const void *data);
+bool Array_append(Array *array, const void *data);
 
 /***********************************************************************\
 * Name   : Array_remove
 * Purpose: remove element from array
-* Input  : array                    - array
-*          index                    - index of element to remove
-*          arrayElementFreeFunction - array element free function or NULL
-*          arrayElementFreeUserData - free function user data or NULL
+* Input  : array - array
+*          index - index of element to remove
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElementFreeFunction, void *arrayElementFreeUserData);
+void Array_remove(Array *array, ulong index);
 
 /***********************************************************************\
 * Name   : Array_toCArray
@@ -201,7 +303,13 @@ void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElemen
 * Notes  : -
 \***********************************************************************/
 
-const void *Array_cArray(const Array array);
+INLINE const void *Array_cArray(const Array *array);
+#if defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
+INLINE const void *Array_cArray(const Array *array)
+{
+  return (array != NULL) ? array->data : NULL;
+}
+#endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
 
 #ifndef NDEBUG
 /***********************************************************************\
