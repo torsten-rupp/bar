@@ -14681,6 +14681,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               break;
             case AUTHORIZATION_STATE_OK:
               // remove from authorization fail list
+#warning ERRRORRRRRR: two clients from same host, then disconnect: node is deleted twice
               authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
               if (authorizationFailNode != NULL)
               {
