@@ -28,16 +28,17 @@ import java.io.PrintWriter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
-import java.util.EnumSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.StringTokenizer;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashSet;
 import java.util.regex.Pattern;
+import java.util.StringTokenizer;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Point;
@@ -99,6 +100,41 @@ abstract class SettingValueAdapter<String,Value>
  */
 public class Settings
 {
+  /** config value adapter String <-> linked string hash set
+   */
+  class SettingValueAdapterStringSet extends SettingValueAdapter<String,LinkedHashSet<String> >
+  {
+    /** convert to value
+     * @param string string
+     * @return value
+     */
+    public LinkedHashSet<String> toValue(String string) throws Exception
+    {
+      StringTokenizer tokenizer = new StringTokenizer(string,",");
+      ArrayList<String> stringList = new ArrayList<String>();
+      while (tokenizer.hasMoreTokens())
+      {
+        stringList.add(tokenizer.nextToken());
+      }
+      return new LinkedHashSet(stringList);
+    }
+
+    /** convert to string
+     * @param value value
+     * @return string
+     */
+    public String toString(LinkedHashSet<String> stringSet) throws Exception
+    {
+      StringBuilder buffer = new StringBuilder();
+      for (String string : stringSet)
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(string);
+      }
+      return buffer.toString();
+    }
+  }
+
   /** column sizes
    */
   static class SimpleStringArray
@@ -346,57 +382,57 @@ public class Settings
 
   // program settings
   @SettingValue(type=SettingValueAdapterSimpleStringArray.class)
-  public static SimpleStringArray jobListColumnOrder              = null;
+  public static SimpleStringArray     jobListColumnOrder              = null;
   @SettingValue(type=SettingValueAdapterWidthArray.class)
-  public static ColumnSizes       jobListColumns                  = new ColumnSizes(110,130,90,90,80,80,100,150,120);
+  public static ColumnSizes           jobListColumns                  = new ColumnSizes(110,130,90,90,80,80,100,150,120);
 
   @SettingComment(text={"","Pause default settings"})
   @SettingValue
-  public static boolean           pauseCreateFlag                 = true;
+  public static boolean               pauseCreateFlag                 = true;
   @SettingValue
-  public static boolean           pauseStorageFlag                = false;
+  public static boolean               pauseStorageFlag                = false;
   @SettingValue
-  public static boolean           pauseRestoreFlag                = true;
+  public static boolean               pauseRestoreFlag                = true;
   @SettingValue
-  public static boolean           pauseIndexUpdateFlag            = false;
+  public static boolean               pauseIndexUpdateFlag            = false;
 
   // server settings
   @SettingComment(text={"","Server settings"})
+  @SettingValue(name="serverName",type=String.class)
+  public static LinkedHashSet<String> serverNames                     = new LinkedHashSet<String>();
   @SettingValue
-  public static String            serverName                      = DEFAULT_SERVER_NAME;
+  public static String                serverPassword                  = null;
   @SettingValue
-  public static String            serverPassword                  = null;
+  public static int                   serverPort                      = DEFAULT_SERVER_PORT;
   @SettingValue
-  public static int               serverPort                      = DEFAULT_SERVER_PORT;
+  public static int                   serverTLSPort                   = DEFAULT_SERVER_TLS_PORT;
   @SettingValue
-  public static int               serverTLSPort                   = DEFAULT_SERVER_TLS_PORT;
-  @SettingValue
-  public static String            serverKeyFileName               = null;
+  public static String                serverKeyFileName               = null;
 
-  public static String            selectedJobName                 = null;
-  public static boolean           loginDialogFlag                 = false;
+  public static String                selectedJobName                 = null;
+  public static boolean               loginDialogFlag                 = false;
 
   // commands and data
-  public static String            runJobName                      = null;
-  public static ArchiveTypes      archiveType                     = ArchiveTypes.NORMAL;
-  public static String            abortJobName                    = null;
-  public static String            indexDatabaseAddStorageName     = null;
-  public static String            indexDatabaseRemoveStorageName  = null;
-  public static String            indexDatabaseStorageListPattern = null;
-  public static String            indexDatabaseEntriesListPattern = null;
-  public static int               pauseTime                       = 0;
-  public static boolean           pingFlag                        = false;
-  public static boolean           suspendFlag                     = false;
-  public static boolean           continueFlag                    = false;
-  public static boolean           listFlag                        = false;
+  public static String                runJobName                      = null;
+  public static ArchiveTypes          archiveType                     = ArchiveTypes.NORMAL;
+  public static String                abortJobName                    = null;
+  public static String                indexDatabaseAddStorageName     = null;
+  public static String                indexDatabaseRemoveStorageName  = null;
+  public static String                indexDatabaseStorageListPattern = null;
+  public static String                indexDatabaseEntriesListPattern = null;
+  public static int                   pauseTime                       = 0;
+  public static boolean               pingFlag                        = false;
+  public static boolean               suspendFlag                     = false;
+  public static boolean               continueFlag                    = false;
+  public static boolean               listFlag                        = false;
 
   // debug
-  public static int               debugLevel                      = 0;
-  public static boolean           debugQuitServerFlag             = false;
+  public static int                   debugLevel                      = 0;
+  public static boolean               debugQuitServerFlag             = false;
 
   // version, help
-  public static boolean           versionFlag                     = false;
-  public static boolean           helpFlag                        = false;
+  public static boolean               versionFlag                     = false;
+  public static boolean               helpFlag                        = false;
 
   // ------------------------ native functions ----------------------------
 
@@ -523,7 +559,7 @@ public class Settings
 Dprintf.dprintf("field.getType()=%s",type);
                           }
                         }
-                        else if (type == HashSet.class)
+                        else if ((type == HashSet.class) || (type == LinkedHashSet.class))
                         {
                           if (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
                           {
@@ -542,11 +578,54 @@ Dprintf.dprintf("field.getType()=%s",type);
 
                             // convert to value
                             Object value = settingValueAdapter.toValue(string);
+Dprintf.dprintf("value=%s",value);
                             ((HashSet)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == int.class)
+                          {
+                            int value = Integer.parseInt(string);
+                            ((HashSet)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == Integer.class)
+                          {
+                            int value = Integer.parseInt(string);
+                            ((HashSet)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == long.class)
+                          {
+                            long value = Long.parseLong(string);
+                            ((HashSet)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == Long.class)
+                          {
+                            long value = Long.parseLong(string);
+                            ((HashSet)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == boolean.class)
+                          {
+                            boolean value = StringUtils.parseBoolean(string);
+                            ((HashSet)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == Boolean.class)
+                          {
+                            boolean value = StringUtils.parseBoolean(string);
+                            ((HashSet)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == String.class)
+                          {
+                            ((HashSet)field.get(null)).add(StringUtils.unescape(string));
+                          }
+                          else if (settingValue.type().isEnum())
+                          {
+                            ((HashSet)field.get(null)).add(StringUtils.parseEnum(type,string));
+                          }
+                          else if (settingValue.type() == EnumSet.class)
+                          {
+                            ((HashSet)field.get(null)).add(StringUtils.parseEnumSet(type,string));
                           }
                           else
                           {
-Dprintf.dprintf("hashSet without value adapter");
+Dprintf.dprintf("hashSet without value adapter %s",settingValue.type());
                           }
                         }
                         else
@@ -817,9 +896,9 @@ exception.printStackTrace();
 Dprintf.dprintf("field.getType()=%s",type);
                   }
                 }
-                else if (type == HashSet.class)
+                else if ((type == HashSet.class) || (type == LinkedHashSet.class))
                 {
-                  if (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
+                  if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
                   {
                     // instantiate config adapter class
                     SettingValueAdapter settingValueAdapter;
@@ -841,9 +920,72 @@ Dprintf.dprintf("field.getType()=%s",type);
                       output.printf("%s = %s\n",name,value);
                     }
                   }
+                  else if (settingValue.type() == int.class)
+                  {
+                    for (Object object : (HashSet)field.get(null))
+                    {
+                      output.printf("%s = %d\n",name,(Integer)object);
+                    }
+                  }
+                  else if (settingValue.type() == Integer.class)
+                  {
+                    for (Object object : (HashSet)field.get(null))
+                    {
+                      output.printf("%s = %d\n",name,(Integer)object);
+                    }
+                  }
+                  else if (settingValue.type() == long.class)
+                  {
+                    for (Object object : (HashSet)field.get(null))
+                    {
+                      output.printf("%s = %ld\n",name,(Long)object);
+                    }
+                  }
+                  else if (settingValue.type() == Long.class)
+                  {
+                    for (Object object : (HashSet)field.get(null))
+                    {
+                      output.printf("%s = %ld\n",name,(Long)object);
+                    }
+                  }
+                  else if (settingValue.type() == boolean.class)
+                  {
+                    for (Object object : (HashSet)field.get(null))
+                    {
+                      output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
+                    }
+                  }
+                  else if (settingValue.type() == Boolean.class)
+                  {
+                    for (Object object : (HashSet)field.get(null))
+                    {
+                      output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
+                    }
+                  }
+                  else if (settingValue.type() == String.class)
+                  {
+                    for (Object object : (HashSet)field.get(null))
+                    {
+                      output.printf("%s = %s\n",name,StringUtils.escape((String)object));
+                    }
+                  }
+                  else if (settingValue.type().isEnum())
+                  {
+                    for (Object object : (HashSet)field.get(null))
+                    {
+                      output.printf("%s = %s\n",name,((Enum)object).toString());
+                    }
+                  }
+                  else if (settingValue.type() == EnumSet.class)
+                  {
+                    for (Object object : (HashSet)field.get(null))
+                    {
+                      output.printf("%s = %s\n",name,StringUtils.join((EnumSet)object,","));
+                    }
+                  }
                   else
                   {
-Dprintf.dprintf("hashSet without value adapter");
+Dprintf.dprintf("hashSet without value adapter %s",settingValue.type());
                   }
                 }
                 else

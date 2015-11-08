@@ -915,10 +915,25 @@ public class BARControl
      */
     LoginData(String serverName, int port, int tlsPort)
     {
-      this.serverName = !serverName.equals("")?serverName:Settings.serverName;
+      this.serverName = serverName;
       this.password   = Settings.serverPassword;
       this.port       = (port != 0) ? port    : Settings.serverPort;
       this.tlsPort    = (port != 0) ? tlsPort : Settings.serverTLSPort;
+
+      // get last used server if no name given
+      if (this.serverName.isEmpty() && (Settings.serverNames.size() > 0))
+      {
+        this.serverName = Settings.serverNames.toArray(new String[Settings.serverNames.size()])[Settings.serverNames.size()-1];
+      }
+    }
+
+    /** create login data
+     * @param port server port
+     * @param tlsPort server TLS port
+     */
+    LoginData(int port, int tlsPort)
+    {
+      this("",port,tlsPort);
     }
   }
 
@@ -1201,7 +1216,8 @@ public class BARControl
       }
       else
       {
-        Settings.serverName = args[z];
+        Settings.serverNames.remove(args[z]);
+        Settings.serverNames.add(args[z]);
         z++;
       }
     }
@@ -1306,7 +1322,8 @@ public class BARControl
     final Shell dialog = Dialogs.openModal(new Shell(),BARControl.tr("Login BAR server"),250,SWT.DEFAULT);
 
     // password
-    final Text   widgetServerName;
+//    final Text   widgetServerName;
+    final Combo  widgetServerName;
     final Text   widgetPassword;
     final Button widgetLoginButton;
     composite = new Composite(dialog,SWT.NONE);
@@ -1318,7 +1335,10 @@ public class BARControl
       label.setText(BARControl.tr("Server")+":");
       label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
 
-      widgetServerName = new Text(composite,SWT.LEFT|SWT.BORDER);
+      widgetServerName = new Combo(composite,SWT.LEFT|SWT.BORDER);
+      String serverNames[] = Settings.serverNames.toArray(new String[Settings.serverNames.size()]);
+      Arrays.sort(serverNames);
+      widgetServerName.setItems(serverNames);
       if (loginData.serverName != null) widgetServerName.setText(loginData.serverName);
       widgetServerName.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
 
@@ -1345,7 +1365,6 @@ public class BARControl
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           loginData.serverName = widgetServerName.getText();
           loginData.password   = widgetPassword.getText();
           Dialogs.close(dialog,true);
@@ -1373,7 +1392,6 @@ public class BARControl
     {
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
-        Text widget = (Text)selectionEvent.widget;
         widgetPassword.forceFocus();
       }
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -1384,7 +1402,6 @@ public class BARControl
     {
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
-        Text widget = (Text)selectionEvent.widget;
         widgetLoginButton.forceFocus();
       }
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -1396,7 +1413,16 @@ public class BARControl
 
     Boolean result = (Boolean)Dialogs.run(dialog);
 
-    return (result != null)?result:false;
+    // store new name, shorten list
+    Settings.serverNames.remove(loginData.serverName);
+    Settings.serverNames.add(loginData.serverName);
+    while (Settings.serverNames.size() > 10)
+    {
+      String serverName = Settings.serverNames.iterator().next();
+      Settings.serverNames.remove(serverName);
+    }
+
+    return (result != null) ? result : false;
   }
 
   /** create main window
@@ -1775,7 +1801,10 @@ public class BARControl
         // connect to server
         try
         {
-          BARServer.connect(Settings.serverName,
+          String serverName = (Settings.serverNames.size() > 0)
+                                ? Settings.serverNames.toArray(new String[Settings.serverNames.size()])[Settings.serverNames.size()-1]
+                                : "";
+          BARServer.connect(serverName,
                             Settings.serverPort,
                             Settings.serverTLSPort,
                             Settings.serverPassword,
@@ -2259,7 +2288,7 @@ public class BARControl
         display = new Display();
 
         // connect to server
-        LoginData loginData = new LoginData(Settings.serverName,Settings.serverPort,Settings.serverTLSPort);
+        LoginData loginData = new LoginData(Settings.serverPort,Settings.serverTLSPort);
         boolean connectOkFlag = false;
         if (   (loginData.serverName != null)
             && !loginData.serverName.equals("")
