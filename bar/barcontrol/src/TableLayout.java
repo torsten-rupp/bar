@@ -20,6 +20,8 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Layout;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.Tree;
+import org.eclipse.swt.widgets.TreeColumn;
 
 /****************************** Classes ********************************/
 
@@ -392,7 +394,7 @@ if (debug) debugRecursion--;
   }
 
   /** layout widgets in composite
-   * @param composite composite widget
+   * @param composite composite widget to layout
    * @param flushCache true iff internal cached data should be dicarded
    */
   protected void layout(Composite composite, boolean flushCache)
@@ -546,34 +548,68 @@ if (debug) System.err.println(indent()+String.format("  %-30s: size=(%4d,%4d) ro
       if (!tableLayoutData.hidden) children[i].setBounds(childX,childY,childWidth,childHeight);
     }
 
-    // layout table columns (if table with layout information)
-    if (composite instanceof Table)
+    if (columnWeights != null)
     {
-      Table       table       = (Table)composite;
-      TableLayout tableLayout = (TableLayout)table.getLayout();
-
-      if (tableLayout != null)
+      // layout table/tree columns (if table/tray has layout information)
+      if (composite instanceof Table)
       {
-        TableColumn[] tableColumns = table.getColumns();
+        Table       table       = (Table)composite;
+        TableLayout tableLayout = (TableLayout)table.getLayout();
 
-        // calculate sum of fixed column width
-        int fixedColumnWidth = 0;
-        for (int i = 0; i < tableColumns.length; i++)
+        if (tableLayout != null)
         {
-          TableLayoutData columnTableLayoutData = (TableLayoutData)tableColumns[i].getData();
+          TableColumn[] tableColumns = table.getColumns();
+
+          // calculate sum of fixed column width
+          int fixedColumnWidth = 0;
+          for (int i = 0; i < Math.min(tableColumns.length,columnWeights.length); i++)
+          {
+            TableLayoutData columnTableLayoutData = (TableLayoutData)tableColumns[i].getData();
 if (debug) System.err.println(indent()+String.format("  column=%s layout data=%s",tableColumns[i],columnTableLayoutData));
-          if (!tableColumns[i].getResizable() || (columnWeights[i] == 0.0)) fixedColumnWidth += columnTableLayoutData.width;
-        }
+            if (!tableColumns[i].getResizable() || (columnWeights[i] == 0.0)) fixedColumnWidth += columnTableLayoutData.width;
+          }
 if (debug) System.err.println(indent()+String.format("Fixed column width: %d",fixedColumnWidth));
 
-        for (int i = 0; i < tableColumns.length; i++)
-        {
-          if (tableColumns[i].getResizable() && (columnWeights[i] > 0.0))
+          for (int i = 0; i < Math.min(tableColumns.length,columnWeights.length); i++)
           {
-            width = (int)((rectangle.width-fixedColumnWidth)*columnWeights[i]);
+            if (tableColumns[i].getResizable() && (columnWeights[i] > 0.0))
+            {
+              width = (int)((rectangle.width-fixedColumnWidth)*columnWeights[i]);
 if (debug) System.err.println(indent()+String.format("  i=%d width=%d",i,width));
 
-            tableColumns[i].setWidth(width);
+              tableColumns[i].setWidth(width);
+            }
+          }
+        }
+      }
+      else if (composite instanceof Tree)
+      {
+        Tree        tree        = (Tree)composite;
+        TableLayout tableLayout = (TableLayout)tree.getLayout();
+
+        if (tableLayout != null)
+        {
+          TreeColumn[] treeColumns = tree.getColumns();
+
+          // calculate sum of fixed column width
+          int fixedColumnWidth = 0;
+          for (int i = 0; i < Math.min(treeColumns.length,columnWeights.length); i++)
+          {
+            TableLayoutData columnTableLayoutData = (TableLayoutData)treeColumns[i].getData();
+if (debug) System.err.println(indent()+String.format("  column=%s layout data=%s",treeColumns[i],columnTableLayoutData));
+            if (!treeColumns[i].getResizable() || (columnWeights[i] == 0.0)) fixedColumnWidth += columnTableLayoutData.width;
+          }
+if (debug) System.err.println(indent()+String.format("Fixed column width: %d",fixedColumnWidth));
+
+          for (int i = 0; i < Math.min(treeColumns.length,columnWeights.length); i++)
+          {
+            if (treeColumns[i].getResizable() && (columnWeights[i] > 0.0))
+            {
+              width = (int)((rectangle.width-fixedColumnWidth)*columnWeights[i]);
+if (debug) System.err.println(indent()+String.format("  i=%d width=%d",i,width));
+
+              treeColumns[i].setWidth(width);
+            }
           }
         }
       }
