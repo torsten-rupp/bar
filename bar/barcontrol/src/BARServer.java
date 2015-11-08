@@ -1305,12 +1305,20 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     return true;
   }
 
-  /** Get server name
-   * @return server name
+  /** Get server info
+   * @return server info
    */
-  public static String getName()
+  public static String getInfo()
   {
-    return serverName;
+    StringBuilder buffer = new StringBuilder();
+
+    buffer.append(serverName);
+    if (socket instanceof SSLSocket)
+    {
+      buffer.append(" (TLS)");
+    }
+
+    return buffer.toString();
   }
 
   /** start running command
@@ -1960,7 +1968,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   private static String encodeHex(byte data[])
   {
-    StringBuffer stringBuffer = new StringBuffer(data.length*2);
+    StringBuilder stringBuffer = new StringBuilder(data.length*2);
     for (int z = 0; z < data.length; z++)
     {
       stringBuffer.append(String.format("%02x",(int)data[z] & 0xFF));

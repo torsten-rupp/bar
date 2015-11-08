@@ -1431,9 +1431,9 @@ public class BARControl
   {
     // create shell window
     shell = new Shell(display);
-    if (BARServer.getName() != null)
+    if (BARServer.getInfo() != null)
     {
-      shell.setText("BAR control: "+BARServer.getName());
+      shell.setText("BAR control: "+BARServer.getInfo());
     }
     else
     {
@@ -1523,7 +1523,7 @@ public class BARControl
                               loginData.password,
                               Settings.serverKeyFileName
                              );
-            shell.setText("BAR control: "+BARServer.getName());
+            shell.setText("BAR control: "+BARServer.getInfo());
             updateServerMenu();
           }
           catch (ConnectionError error)
@@ -1569,7 +1569,7 @@ public class BARControl
                                   loginData.password,
                                   Settings.serverKeyFileName
                                  );
-                shell.setText("BAR control: "+BARServer.getName());
+                shell.setText("BAR control: "+BARServer.getInfo());
                 updateServerMenu();
               }
               catch (ConnectionError error)
@@ -1899,7 +1899,7 @@ public class BARControl
                             Settings.serverPassword,
                             Settings.serverKeyFileName
                            );
-          shell.setText("BAR control: "+BARServer.getName());
+          shell.setText("BAR control: "+BARServer.getInfo());
         }
         catch (ConnectionError error)
         {
