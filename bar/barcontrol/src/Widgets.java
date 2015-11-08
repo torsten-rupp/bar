@@ -796,7 +796,7 @@ class WidgetModifyListener
   }
 
   /** notify modify variable
-   * @param widget widget to notify
+   * @param widget widget modified
    */
   void modified(Widget widget)
   {
@@ -805,7 +805,7 @@ class WidgetModifyListener
 
   /** notify modify variable
    * Note: required because it can be overwritten by specific handler
-   * @param control control to notify
+   * @param control control modified
    */
   void modified(Control control)
   {
@@ -814,7 +814,7 @@ class WidgetModifyListener
 
   /** notify modify variable
    * Note: required because it can be overwritten by specific handler
-   * @param button button to notify
+   * @param button button modified
    */
   void modified(Button button)
   {
@@ -824,7 +824,7 @@ class WidgetModifyListener
 
   /** notify modify variable
    * Note: required because it can be overwritten by specific handler
-   * @param button button to notify
+   * @param combo combo modified
    */
   void modified(Combo combo)
   {
@@ -833,7 +833,7 @@ class WidgetModifyListener
 
   /** notify modify variable
    * Note: required because it can be overwritten by specific handler
-   * @param text text to notify
+   * @param text text modified
    */
   void modified(Text text)
   {
@@ -842,7 +842,7 @@ class WidgetModifyListener
 
   /** notify modify variable
    * Note: required because it can be overwritten by specific handler
-   * @param menuItem menu item to notify
+   * @param menuItem menu item modified
    */
   void modified(MenuItem menuItem)
   {
@@ -4796,8 +4796,17 @@ e composite widget
     {
       TableLayoutData tableLayoutData = (TableLayoutData)tableColumn.getData();
 
-      tableColumn.setWidth(tableLayoutData.minWidth);
-      tableColumn.setResizable((tableLayoutData.minWidth != SWT.DEFAULT) || (tableLayoutData.maxWidth != SWT.DEFAULT));
+      if (tableLayoutData != null)
+      {
+        int width = Math.max(tableLayoutData.minWidth,16);
+        tableColumn.setWidth(width);
+        tableColumn.setResizable((width != SWT.DEFAULT) || (tableLayoutData.maxWidth != SWT.DEFAULT));
+      }
+      else
+      {
+        tableColumn.setWidth(60);
+        tableColumn.setResizable(true);
+      }
     }
     else
     {
@@ -4817,21 +4826,26 @@ e composite widget
     TableLayoutData tableLayoutData = (TableLayoutData)tableColumn.getData();
     if (showFlag)
     {
-      tableColumn.setWidth(tableLayoutData.minWidth);
-      tableColumn.setResizable((tableLayoutData.minWidth != SWT.DEFAULT) || (tableLayoutData.maxWidth != SWT.DEFAULT));
+      if (tableLayoutData != null)
+      {
+        tableColumn.setWidth(tableLayoutData.minWidth);
+        tableColumn.setResizable((tableLayoutData.minWidth != SWT.DEFAULT) || (tableLayoutData.maxWidth != SWT.DEFAULT));
+      }
+      else
+      {
+        tableColumn.setWidth(60);
+      }
     }
     else
     {
-      tableLayoutData.minWidth = tableColumn.getWidth();
+      if (tableLayoutData != null) tableLayoutData.minWidth = tableColumn.getWidth();
       tableColumn.setWidth(0);
       tableColumn.setResizable(false);
     }
   }
 
-
   /** show table column
    * @param tableColumn table column to show
-   * @param width table column width
    */
   public static void showTableColumn(TableColumn tableColumn)
   {
@@ -4871,7 +4885,10 @@ e composite widget
     TableColumn[] tableColumns = table.getColumns();
     for (int i = 0; i < Math.min(tableColumns.length,width.length); i++)
     {
-      tableColumns[i].setWidth(width[i]);
+      if (tableColumns[i].getResizable())
+      {
+        tableColumns[i].setWidth(width[i]);
+      }
     }
   }
 
@@ -5981,11 +5998,88 @@ e composite widget
   {
     TreeColumn treeColumn = new TreeColumn(tree,style);
     treeColumn.setText(title);
+    treeColumn.setData(new TableLayoutData(0,0,0,0,0,0,0,width,0,((width == SWT.DEFAULT) || resizable) ? SWT.DEFAULT : width,((width == SWT.DEFAULT) || resizable) ? SWT.DEFAULT : width));
     treeColumn.setWidth(width);
     treeColumn.setResizable(resizable);
     if (width <= 0) treeColumn.pack();
 
     return treeColumn;
+  }
+
+  /** show tree column
+   * @param treeColumn tree column to show
+   * @param width tree column width
+   * @param showFlag true to show column, false for hide
+   */
+  public static void showTreeColumn(TreeColumn treeColumn, boolean showFlag)
+  {
+    if (showFlag)
+    {
+      TableLayoutData tableLayoutData = (TableLayoutData)treeColumn.getData();
+
+      if (tableLayoutData != null)
+      {
+        treeColumn.setWidth(tableLayoutData.minWidth);
+        treeColumn.setResizable((tableLayoutData.minWidth != SWT.DEFAULT) || (tableLayoutData.maxWidth != SWT.DEFAULT));
+      }
+      else
+      {
+        treeColumn.setWidth(60);
+      }
+    }
+    else
+    {
+      treeColumn.setWidth(0);
+      treeColumn.setResizable(false);
+    }
+  }
+
+  /** show tree column
+   * @param tree tree
+   * @param columnNb column number
+   * @param showFlag true to show column, false for hide
+   */
+  public static void showTreeColumn(Tree tree, int columnNb, boolean showFlag)
+  {
+    TreeColumn      treeColumn      = tree.getColumn(columnNb);
+    TableLayoutData tableLayoutData = (TableLayoutData)treeColumn.getData();
+    if (showFlag)
+    {
+      if (tableLayoutData != null)
+      {
+        int width = Math.max(tableLayoutData.minWidth,16);
+        treeColumn.setWidth(width);
+        treeColumn.setResizable((width != SWT.DEFAULT) || (tableLayoutData.maxWidth != SWT.DEFAULT));
+      }
+      else
+      {
+        treeColumn.setWidth(60);
+        treeColumn.setResizable(true);
+      }
+    }
+    else
+    {
+      if (tableLayoutData != null) tableLayoutData.minWidth = treeColumn.getWidth();
+      tableLayoutData.minWidth = treeColumn.getWidth();
+      treeColumn.setWidth(0);
+      treeColumn.setResizable(false);
+    }
+  }
+
+  /** show tree column
+   * @param treeColumn tree column to show
+   */
+  public static void showTreeColumn(TreeColumn treeColumn)
+  {
+    showTreeColumn(treeColumn,true);
+  }
+
+  /** hide tree column
+   * @param treeColumn tree column to hide
+   */
+  public static void hideTreeColumn(TreeColumn treeColumn)
+  {
+    showTreeColumn(treeColumn,false);
   }
 
   /** insert tree item
@@ -6856,9 +6950,9 @@ private static void printTree(Tree tree)
   {
     TreeColumn[] treeColumns = tree.getColumns();
     int[] width = new int[treeColumns.length];
-    for (int z = 0; z < treeColumns.length; z++)
+    for (int i = 0; i < treeColumns.length; i++)
     {
-      width[z] = treeColumns[z].getWidth();
+      width[i] = treeColumns[i].getWidth();
     }
 
     return width;
@@ -6871,10 +6965,24 @@ private static void printTree(Tree tree)
   public static void setTreeColumnWidth(Tree tree, int[] width)
   {
     TreeColumn[] treeColumns = tree.getColumns();
-    for (int z = 0; z < Math.min(treeColumns.length,width.length); z++)
+    for (int i = 0; i < Math.min(treeColumns.length,width.length); i++)
     {
-      treeColumns[z].setWidth(width[z]);
+      if (treeColumns[i].getResizable())
+      {
+        treeColumns[i].setWidth(width[i]);
+      }
     }
+  }
+
+  /** set width of tree columns
+   * @param tree tree
+   * @param index column index (0..n-1)
+   * @param width column width array
+   */
+  public static void setTreeColumnWidth(Tree tree, int index, int width)
+  {
+    TreeColumn[] treeColumns = tree.getColumns();
+    treeColumns[index].setWidth(width);
   }
 
   /** get selected tree item
@@ -7242,9 +7350,9 @@ private static void printTree(Tree tree)
   {
     TabItem[] tabItems = tabFolder.getItems();
     Composite[] tabList = new Composite[tabItems.length];
-    for (int z = 0; z < tabItems.length; z++)
+    for (int i = 0; i < tabItems.length; i++)
     {
-      tabList[z] = (Composite)tabItems[z].getControl();
+      tabList[i] = (Composite)tabItems[i].getControl();
     }
     return tabList;
   }
@@ -7473,9 +7581,9 @@ private static void printTree(Tree tree)
   {
     CTabItem[] cTabItems = cTabFolder.getItems();
     Composite[] tabList = new Composite[cTabItems.length];
-    for (int z = 0; z < cTabItems.length; z++)
+    for (int i = 0; i < cTabItems.length; i++)
     {
-      tabList[z] = (Composite)cTabItems[z].getControl();
+      tabList[i] = (Composite)cTabItems[i].getControl();
     }
     return tabList;
   }
