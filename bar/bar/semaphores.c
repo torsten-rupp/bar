@@ -66,7 +66,6 @@ typedef struct
   LOCAL pthread_mutex_t    debugSemaphoreLock     = PTHREAD_MUTEX_INITIALIZER;
   LOCAL pthread_t          debugSemaphoreThreadId;
   LOCAL DebugSemaphoreList debugSemaphoreList;
-  LOCAL void(*debugSemaphorePrevSignalHandler)(int);
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
