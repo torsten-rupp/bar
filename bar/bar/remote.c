@@ -26,23 +26,13 @@
 #include "autofree.h"
 #include "lists.h"
 #include "strings.h"
-//#include "stringmaps.h"
-//#include "arrays.h"
-//#include "configvalues.h"
-//#include "threads.h"
 #include "semaphores.h"
-//#include "msgqueues.h"
-//#include "stringlists.h"
 
 #include "network.h"
-//#include "patterns.h"
 #include "entrylists.h"
 #include "patternlists.h"
 #include "misc.h"
 #include "bar.h"
-
-//#include "commands_create.h"
-//#include "commands_restore.h"
 
 #include "server.h"
 
@@ -275,11 +265,15 @@ void Remote_initHost(RemoteHost *remoteHost)
   remoteHost->name     = String_new();
   remoteHost->port     = 0;
   remoteHost->forceSSL = FALSE;
+
+  DEBUG_ADD_RESOURCE_TRACE("remote host",remoteHost);
 }
 
 void Remote_doneHost(RemoteHost *remoteHost)
 {
   assert(remoteHost != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(remoteHost);
 
   String_delete(remoteHost->name);
 }
@@ -367,6 +361,7 @@ Errors Remote_connect(const RemoteHost *remoteHost)
   RemoteServerNode *remoteServerNode;
 
   assert(remoteHost != NULL);
+  assert(remoteHost->name != NULL);
 
   // init variables
   line = String_new();
@@ -450,17 +445,17 @@ LOCAL Errors Remote_vexecuteCommand(const RemoteHost *remoteHost,
                               va_list    arguments
                              )
 {
-  String        line;
-  SemaphoreLock semaphoreLock;
+  String           line;
+  SemaphoreLock    semaphoreLock;
   RemoteServerNode *remoteServerNode;
-  SocketHandle  socketHandle;
-  bool          sslFlag;
-  locale_t locale;
-  Errors   error;
-  uint     commandId;
-  bool     completedFlag;
-  uint     errorCode;
-  long     index;
+  SocketHandle     socketHandle;
+  bool             sslFlag;
+  locale_t         locale;
+  Errors           error;
+  uint             commandId;
+  bool             completedFlag;
+  uint             errorCode;
+  long             index;
 
   assert(remoteHost != NULL);
 
@@ -676,7 +671,10 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   if (error == ERROR_NONE) error = Remote_setJobOptionBoolean  (remoteHost,jobUUID,"ecc",                    jobOptions->errorCorrectionCodesFlag    );
   if (error == ERROR_NONE) error = Remote_setJobOptionBoolean  (remoteHost,jobUUID,"skip-unreadable",        jobOptions->skipUnreadableFlag          );
   if (error == ERROR_NONE) error = Remote_setJobOptionBoolean  (remoteHost,jobUUID,"raw-images",             jobOptions->rawImagesFlag               );
-  if (error == ERROR_NONE) error = Remote_setJobOptionBoolean  (remoteHost,jobUUID,"overwrite-archive-files",jobOptions->overwriteArchiveFilesFlag   );
+  if (error == ERROR_NONE) error = Remote_setJobOptionCString  (remoteHost,jobUUID,
+                                                                "archive-file-mode",
+                                                                ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_FILE_MODES,jobOptions->archiveFileMode,NULL)
+                                                               );
   if (error == ERROR_NONE) error = Remote_setJobOptionBoolean  (remoteHost,jobUUID,"overwrite-files",        jobOptions->overwriteFilesFlag          );
   if (error == ERROR_NONE) error = Remote_setJobOptionBoolean  (remoteHost,jobUUID,"wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
 fprintf(stderr,"%s, %d: %d: Remote_jobStart %s\n",__FILE__,__LINE__,error,Error_getText(error));
