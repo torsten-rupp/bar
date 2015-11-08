@@ -1323,7 +1323,6 @@ public class BARControl
     final Shell dialog = Dialogs.openModal(new Shell(),BARControl.tr("Login BAR server"),250,SWT.DEFAULT);
 
     // password
-//    final Text   widgetServerName;
     final Combo  widgetServerName;
     final Text   widgetPassword;
     final Button widgetLoginButton;
@@ -1432,7 +1431,14 @@ public class BARControl
   {
     // create shell window
     shell = new Shell(display);
-    shell.setText("BAR control");
+    if (BARServer.getName() != null)
+    {
+      shell.setText("BAR control: "+BARServer.getName());
+    }
+    else
+    {
+      shell.setText("BAR control");
+    }
     shell.setLayout(new TableLayout(1.0,1.0));
 
     // get cursors
@@ -1517,6 +1523,7 @@ public class BARControl
                               loginData.password,
                               Settings.serverKeyFileName
                              );
+            shell.setText("BAR control: "+BARServer.getName());
             updateServerMenu();
           }
           catch (ConnectionError error)
@@ -1562,6 +1569,7 @@ public class BARControl
                                   loginData.password,
                                   Settings.serverKeyFileName
                                  );
+                shell.setText("BAR control: "+BARServer.getName());
                 updateServerMenu();
               }
               catch (ConnectionError error)
@@ -1891,6 +1899,7 @@ public class BARControl
                             Settings.serverPassword,
                             Settings.serverKeyFileName
                            );
+          shell.setText("BAR control: "+BARServer.getName());
         }
         catch (ConnectionError error)
         {

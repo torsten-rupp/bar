@@ -858,6 +858,8 @@ class BARServer
   private static byte[]      RANDOM_DATA = new byte[64];
 
   // --------------------------- variables --------------------------------
+  private static String         serverName;
+
   private static byte[]         sessionId;
   private static String         passwordEncryptType;
   private static Cipher         passwordCipher;
@@ -890,9 +892,10 @@ class BARServer
   {
     final int TIMEOUT = 20;
 
-    Socket         socket = null;
-    BufferedWriter output = null;
-    BufferedReader input  = null;
+    String         serverName = null;
+    Socket         socket     = null;
+    BufferedWriter output     = null;
+    BufferedReader input      = null;
 
     assert hostname != null;
     assert (port != 0) || (tlsPort != 0);
@@ -1231,9 +1234,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
 
     // setup new connection
-    BARServer.socket = socket;
-    BARServer.input  = input;
-    BARServer.output = output;
+    BARServer.serverName = hostname;
+    BARServer.socket     = socket;
+    BARServer.input      = input;
+    BARServer.output     = output;
 
     // start read thread
     readThread = new ReadThread(input);
@@ -1299,6 +1303,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
 
     return true;
+  }
+
+  /** Get server name
+   * @return server name
+   */
+  public static String getName()
+  {
+    return serverName;
   }
 
   /** start running command
