@@ -24,6 +24,7 @@
 #include "database.h"
 #include "files.h"
 #include "filesystems.h"
+#include "misc.h"
 #include "errors.h"
 
 #include "storage.h"
@@ -153,7 +154,7 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
   assert(indexHandle != NULL);
   assert(databaseFileName != NULL);
 
-  // open index database
+  // create index database
   (void)File_deleteCString(databaseFileName,FALSE);
   #ifdef NDEBUG
     error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE);
@@ -166,14 +167,7 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
   }
 
   // disable synchronous mode and journal to increase transaction speed
-  (void)Database_execute(&indexHandle->databaseHandle,
-                         CALLBACK(NULL,NULL),
-                         "PRAGMA synchronous=OFF;"
-                        );
-  (void)Database_execute(&indexHandle->databaseHandle,
-                         CALLBACK(NULL,NULL),
-                         "PRAGMA journal_mode=OFF;"
-                        );
+  Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
 
   // create tables
   error = Database_execute(&indexHandle->databaseHandle,
@@ -325,7 +319,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData)
                              {
                                Errors       error;
-                               StaticString (jobUUID,INDEX_UUID_LENGTH);
+                               StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
                                DatabaseId   entityId;
 
                                UNUSED_VARIABLE(fromColumnList);
@@ -338,7 +332,6 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                        &entityId
                                                       );
                                (void)Database_setTableColumnListInt64(toColumnList,"entityId",entityId);
-fprintf(stderr,"%s, %d: entityId=%llu: %s\n",__FILE__,__LINE__,entityId,String_cString(jobUUID));
 
                                return error;
                              },NULL),
@@ -353,7 +346,6 @@ fprintf(stderr,"%s, %d: entityId=%llu: %s\n",__FILE__,__LINE__,entityId,String_c
                                fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
                                toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
 
-fprintf(stderr,"%s, %d: copy file enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -373,7 +365,6 @@ fprintf(stderr,"%s, %d: copy file enties fromStorageId=%lld -> toStorageId=%lld 
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy images enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -393,7 +384,6 @@ fprintf(stderr,"%s, %d: copy images enties fromStorageId=%lld -> toStorageId=%ll
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy directories enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -413,7 +403,6 @@ fprintf(stderr,"%s, %d: copy directories enties fromStorageId=%lld -> toStorageI
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy links enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -433,7 +422,6 @@ fprintf(stderr,"%s, %d: copy links enties fromStorageId=%lld -> toStorageId=%lld
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy special enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -460,7 +448,6 @@ fprintf(stderr,"%s, %d: copy special enties fromStorageId=%lld -> toStorageId=%l
 
   return ERROR_NONE;
 }
-
 
 /***********************************************************************\
 * Name   : upgradeFromVersion2
@@ -494,7 +481,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData)
                              {
                                Errors       error;
-                               StaticString (jobUUID,INDEX_UUID_LENGTH);
+                               StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
                                DatabaseId   entityId;
 
                                UNUSED_VARIABLE(fromColumnList);
@@ -507,7 +494,6 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                        &entityId
                                                       );
                                (void)Database_setTableColumnListInt64(toColumnList,"entityId",entityId);
-fprintf(stderr,"%s, %d: entityId=%llu: %s\n",__FILE__,__LINE__,entityId,String_cString(jobUUID));
 
                                return error;
                              },NULL),
@@ -522,7 +508,6 @@ fprintf(stderr,"%s, %d: entityId=%llu: %s\n",__FILE__,__LINE__,entityId,String_c
                                fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
                                toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
 
-fprintf(stderr,"%s, %d: copy file enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -542,7 +527,6 @@ fprintf(stderr,"%s, %d: copy file enties fromStorageId=%lld -> toStorageId=%lld 
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy images enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -562,7 +546,6 @@ fprintf(stderr,"%s, %d: copy images enties fromStorageId=%lld -> toStorageId=%ll
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy directories enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -582,7 +565,6 @@ fprintf(stderr,"%s, %d: copy directories enties fromStorageId=%lld -> toStorageI
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy links enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -602,7 +584,6 @@ fprintf(stderr,"%s, %d: copy links enties fromStorageId=%lld -> toStorageId=%lld
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy hardlinks enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -622,7 +603,6 @@ fprintf(stderr,"%s, %d: copy hardlinks enties fromStorageId=%lld -> toStorageId=
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy special enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -665,12 +645,11 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
   String              name1,name2;
   DatabaseQueryHandle databaseQueryHandle1,databaseQueryHandle2;
   DatabaseId          storageId;
-  StaticString        (uuid,INDEX_UUID_LENGTH);
+  StaticString        (uuid,MISC_UUID_STRING_LENGTH);
   uint64              createdDateTime;
   DatabaseId          entityId;
   bool                equalsFlag;
   ulong               i;
-//  String              oldDatabaseFileName;
 
   // fix possible broken ids
   fixBrokenIds(oldIndexHandle,"storage");
@@ -691,7 +670,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData)
                              {
                                Errors       error;
-                               StaticString (jobUUID,INDEX_UUID_LENGTH);
+                               StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
                                DatabaseId   entityId;
 
                                UNUSED_VARIABLE(fromColumnList);
@@ -704,7 +683,6 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                        &entityId
                                                       );
                                (void)Database_setTableColumnListInt64(toColumnList,"entityId",entityId);
-fprintf(stderr,"%s, %d: entityId=%llu: %s\n",__FILE__,__LINE__,entityId,String_cString(jobUUID));
 
                                return error;
                              },NULL),
@@ -719,7 +697,6 @@ fprintf(stderr,"%s, %d: entityId=%llu: %s\n",__FILE__,__LINE__,entityId,String_c
                                fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
                                toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
 
-fprintf(stderr,"%s, %d: copy file enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -739,7 +716,6 @@ fprintf(stderr,"%s, %d: copy file enties fromStorageId=%lld -> toStorageId=%lld 
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy images enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -759,7 +735,6 @@ fprintf(stderr,"%s, %d: copy images enties fromStorageId=%lld -> toStorageId=%ll
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy directories enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -779,7 +754,6 @@ fprintf(stderr,"%s, %d: copy directories enties fromStorageId=%lld -> toStorageI
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy links enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -799,7 +773,6 @@ fprintf(stderr,"%s, %d: copy links enties fromStorageId=%lld -> toStorageId=%lld
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy hardlinks enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -819,7 +792,6 @@ fprintf(stderr,"%s, %d: copy hardlinks enties fromStorageId=%lld -> toStorageId=
                                                            );
                                }
 
-fprintf(stderr,"%s, %d: copy special enties fromStorageId=%lld -> toStorageId=%lld \n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -955,6 +927,197 @@ fprintf(stderr,"%s, %d: copy special enties fromStorageId=%lld -> toStorageId=%l
 }
 
 /***********************************************************************\
+* Name   : upgradeFromVersion4
+* Purpose: upgrade index from version 1 to current version
+* Input  : oldIndexHandle,newIndexHandle - index handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIndexHandle)
+{
+  Errors              error;
+//  DatabaseQueryHandle databaseQueryHandle1;//,databaseQueryHandle2;
+//  DatabaseId          storageId;
+//  String              name;
+//  uint64              size;
+//  uint64              created;
+//  IndexStates         indexState;
+//  IndexModes          indexMode;
+//  uint64              lastChecked;
+//  String              errorMessage;
+//  uint64              entityId;
+//  DatabaseId          oldStorageId,newStorageId;
+
+  error = ERROR_NONE;
+
+  // fix possible broken ids
+  fixBrokenIds(oldIndexHandle,"storage");
+  fixBrokenIds(oldIndexHandle,"files");
+  fixBrokenIds(oldIndexHandle,"images");
+  fixBrokenIds(oldIndexHandle,"directories");
+  fixBrokenIds(oldIndexHandle,"links");
+  fixBrokenIds(oldIndexHandle,"special");
+
+  // transfer index data to new index
+  error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                             &newIndexHandle->databaseHandle,
+                             "storage",
+                             // create entity
+                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData)
+                             {
+                               Errors       error;
+                               StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+                               DatabaseId   entityId;
+
+                               UNUSED_VARIABLE(fromColumnList);
+                               UNUSED_VARIABLE(userData);
+
+                               error = Index_newEntity(newIndexHandle,
+                                                       Misc_getUUID(jobUUID),
+                                                       NULL,
+                                                       ARCHIVE_TYPE_FULL,
+                                                       &entityId
+                                                      );
+                               (void)Database_setTableColumnListInt64(toColumnList,"entityId",entityId);
+
+                               return error;
+                             },NULL),
+                             // copy files, images, directories, links, special entries
+                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData)
+                             {
+                               DatabaseId fromStorageId;
+                               DatabaseId toStorageId;
+
+                               UNUSED_VARIABLE(userData);
+
+                               fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                               toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+
+                               if (error == ERROR_NONE)
+                               {
+                                 error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                            &newIndexHandle->databaseHandle,
+                                                            "files",
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData)
+                                                            {
+                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(userData);
+
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              return ERROR_NONE;
+                                                            },NULL),
+                                                            CALLBACK(NULL,NULL),
+                                                            "WHERE storageId=%lld",
+                                                            fromStorageId
+                                                           );
+                               }
+
+                               if (error == ERROR_NONE)
+                               {
+                                 error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                            &newIndexHandle->databaseHandle,
+                                                            "images",
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData)
+                                                            {
+                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(userData);
+
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              return ERROR_NONE;
+                                                            },NULL),
+                                                            CALLBACK(NULL,NULL),
+                                                            "WHERE storageId=%lld",
+                                                            fromStorageId
+                                                           );
+                               }
+
+                               if (error == ERROR_NONE)
+                               {
+                                 error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                            &newIndexHandle->databaseHandle,
+                                                            "directories",
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData)
+                                                            {
+                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(userData);
+
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              return ERROR_NONE;
+                                                            },NULL),
+                                                            CALLBACK(NULL,NULL),
+                                                            "WHERE storageId=%lld",
+                                                            fromStorageId
+                                                           );
+                               }
+
+                               if (error == ERROR_NONE)
+                               {
+                                 error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                            &newIndexHandle->databaseHandle,
+                                                            "links",
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData)
+                                                            {
+                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(userData);
+
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              return ERROR_NONE;
+                                                            },NULL),
+                                                            CALLBACK(NULL,NULL),
+                                                            "WHERE storageId=%lld",
+                                                            fromStorageId
+                                                           );
+                               }
+
+                               if (error == ERROR_NONE)
+                               {
+                                 error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                            &newIndexHandle->databaseHandle,
+                                                            "hardlinks",
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData)
+                                                            {
+                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(userData);
+
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              return ERROR_NONE;
+                                                            },NULL),
+                                                            CALLBACK(NULL,NULL),
+                                                            "WHERE storageId=%lld",
+                                                            fromStorageId
+                                                           );
+                               }
+
+                               if (error == ERROR_NONE)
+                               {
+                                 error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                            &newIndexHandle->databaseHandle,
+                                                            "special",
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData)
+                                                            {
+                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(userData);
+
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              return ERROR_NONE;
+                                                            },NULL),
+                                                            CALLBACK(NULL,NULL),
+                                                            "WHERE storageId=%lld",
+                                                            fromStorageId
+                                                           );
+                               }
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL  // filter
+                            );
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : upgradeIndex
 * Purpose: upgrade index
 * Input  : indexHandle - index handle
@@ -1004,6 +1167,9 @@ LOCAL Errors upgradeIndex(ConstString oldDatabaseFileName, IndexHandle *indexHan
         error = upgradeFromVersion3(&oldIndexHandle,indexHandle);
         break;
       case 4:
+        error = upgradeFromVersion4(&oldIndexHandle,indexHandle);
+        break;
+      case 5:
         // nothing to do
         break;
       default:
@@ -1551,7 +1717,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   String              name1,name2;
   DatabaseQueryHandle databaseQueryHandle1,databaseQueryHandle2;
   DatabaseId          storageId;
-  StaticString        (uuid,INDEX_UUID_LENGTH);
+  StaticString        (uuid,MISC_UUID_STRING_LENGTH);
   uint64              createdDateTime;
   DatabaseId          entityId;
   bool                equalsFlag;
@@ -2014,7 +2180,6 @@ LOCAL void doneIndexQueryHandle(IndexQueryHandle *indexQueryHandle)
   if (indexQueryHandle->storage.storageNamePattern != NULL) Pattern_delete(indexQueryHandle->storage.storageNamePattern);
 }
 
-
 /***********************************************************************\
 * Name   : getIndexStateSetString
 * Purpose: get index state filter string
@@ -2274,8 +2439,55 @@ Errors Index_init(IndexHandle *indexHandle,
   indexHandle->upgradeError     = ERROR_NONE;
   indexHandle->quitFlag         = FALSE;
 
-  // check if index, create index
-  if (!File_existsCString(indexHandle->databaseFileName))
+  // check if index exists
+  if (File_existsCString(indexHandle->databaseFileName))
+  {
+    // get index version
+    error = getIndexVersion(indexHandle->databaseFileName,&indexVersion);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    if (indexVersion < INDEX_VERSION)
+    {
+      // rename existing index for upgrade
+      oldDatabaseFileName = String_new();
+      n = 0;
+      do
+      {
+        oldDatabaseFileName = String_newCString(indexHandle->databaseFileName);
+        String_appendCString(oldDatabaseFileName,".old");
+        String_format(oldDatabaseFileName,"%03d",n);
+        n++;
+      }
+      while (File_exists(oldDatabaseFileName));
+      (void)File_renameCString(indexHandle->databaseFileName,
+                               String_cString(oldDatabaseFileName),
+                               NULL
+                              );
+      String_delete(oldDatabaseFileName);
+
+      // create new index
+      error = createIndex(indexHandle,indexHandle->databaseFileName);
+      if (error != ERROR_NONE)
+      {
+        plogMessage(LOG_TYPE_ERROR,"INDEX","Create new index database '$s' fail: %s\n",indexHandle->databaseFileName,Error_getText(error));
+        return error;
+      }
+    }
+    else
+    {
+      // open index
+      error = openIndex(indexHandle,indexHandle->databaseFileName);
+      if (error != ERROR_NONE)
+      {
+        plogMessage(LOG_TYPE_ERROR,"INDEX","Cannot open index database '$s' fail: %s\n",indexHandle->databaseFileName,Error_getText(error));
+        return error;
+      }
+    }
+  }
+  else
   {
     error = createIndex(indexHandle,indexHandle->databaseFileName);
     if (error != ERROR_NONE)
@@ -2284,50 +2496,6 @@ Errors Index_init(IndexHandle *indexHandle,
       return error;
     }
   }
-
-  // get index version
-  error = getIndexVersion(indexHandle->databaseFileName,&indexVersion);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  if (indexVersion < INDEX_VERSION)
-  {
-    // rename existing index for upgrade
-    oldDatabaseFileName = String_new();
-    n = 0;
-    do
-    {
-      oldDatabaseFileName = String_newCString(indexHandle->databaseFileName);
-      String_appendCString(oldDatabaseFileName,".old");
-      String_format(oldDatabaseFileName,"%03d",n);
-      n++;
-    }
-    while (File_exists(oldDatabaseFileName));
-    (void)File_renameCString(indexHandle->databaseFileName,
-                             String_cString(oldDatabaseFileName),
-                             NULL
-                            );
-    String_delete(oldDatabaseFileName);
-
-    // create new index
-    error = createIndex(indexHandle,indexHandle->databaseFileName);
-    if (error != ERROR_NONE)
-    {
-      plogMessage(LOG_TYPE_ERROR,"INDEX","Create new index database '$s' fail: %s\n",indexHandle->databaseFileName,Error_getText(error));
-      return error;
-    }
-  }
-
-  // open index
-  error = openIndex(indexHandle,indexHandle->databaseFileName);
-  if (error != ERROR_NONE)
-  {
-    plogMessage(LOG_TYPE_ERROR,"INDEX","Cannot open index database '$s' fail: %s\n",indexHandle->databaseFileName,Error_getText(error));
-    return error;
-  }
-
 
   // start clean-up thread
   if (!Thread_init(&cleanupIndexThread,"Index clean-up",0,cleanupIndexThreadCode,indexHandle))
