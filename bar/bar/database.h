@@ -65,14 +65,6 @@ typedef enum
   DATABASE_ORDERING_DESCENDING
 } DatabaseOrdering;
 
-// transfer operations
-typedef enum
-{
-  DATABASE_TRANSFER_OPERATION_NONE,
-  DATABASE_TRANSFER_OPERATION_COPY,
-  DATABASE_TRANSFER_OPERATION_SET
-} DatabaseTransferOperations;
-
 /***************************** Datatypes *******************************/
 
 // database handle
