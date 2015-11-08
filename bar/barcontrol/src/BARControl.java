@@ -1016,6 +1016,7 @@ public class BARControl
   private static Cursor  waitCursor;
   private static int     waitCursorCount = 0;
 
+  private Menu       serverMenu;
   private TabFolder  tabFolder;
   private TabStatus  tabStatus;
   private TabJobs    tabJobs;
@@ -1486,6 +1487,47 @@ public class BARControl
     });
   }
 
+  /** upser server menu entries
+   */
+  private void updateServerMenu()
+  {
+    MenuItem menuItem;
+
+    while (serverMenu.getItemCount() > 2)
+    {
+      serverMenu.getItem(2).dispose();
+    }
+
+    for (final String serverName : Settings.serverNames)
+    {
+      menuItem = Widgets.addMenuItem(serverMenu,serverName);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          LoginData loginData = new LoginData(serverName,Settings.serverPort,Settings.serverTLSPort);
+          try
+          {
+            BARServer.connect(loginData.serverName,
+                              loginData.port,
+                              loginData.tlsPort,
+                              loginData.password,
+                              Settings.serverKeyFileName
+                             );
+            updateServerMenu();
+          }
+          catch (ConnectionError error)
+          {
+            Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+          }
+        }
+      });
+    }
+  }
+
   /** create menu
    */
   private void createMenu()
@@ -1499,6 +1541,44 @@ public class BARControl
 
     menu = Widgets.addMenu(menuBar,BARControl.tr("Program"));
     {
+      serverMenu = Widgets.addMenu(menu,BARControl.tr("Connect"));
+      {
+        menuItem = Widgets.addMenuItem(serverMenu,"\u2026",SWT.CTRL+'O');
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            LoginData loginData = new LoginData(Settings.serverPort,Settings.serverTLSPort);
+            if (getLoginData(loginData))
+            {
+              try
+              {
+                BARServer.connect(loginData.serverName,
+                                  loginData.port,
+                                  loginData.tlsPort,
+                                  loginData.password,
+                                  Settings.serverKeyFileName
+                                 );
+                updateServerMenu();
+              }
+              catch (ConnectionError error)
+              {
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+              }
+            }
+          }
+        });
+
+        Widgets.addMenuSeparator(serverMenu);
+
+        updateServerMenu();
+      }
+
+      Widgets.addMenuSeparator(menu);
+
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Start")+"\u2026",SWT.CTRL+'S');
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -1566,7 +1646,7 @@ public class BARControl
           }
         });
 
-        menuItem = Widgets.addMenuSeparator(subMenu);
+        Widgets.addMenuSeparator(subMenu);
 
         menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.tr("Create operation"),Settings.pauseCreateFlag);
         menuItem.addSelectionListener(new SelectionListener()
@@ -1654,6 +1734,7 @@ public class BARControl
       });
 
       Widgets.addMenuSeparator(menu);
+
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Quit"),SWT.CTRL+'Q');
 
       menuItem.addSelectionListener(new SelectionListener()

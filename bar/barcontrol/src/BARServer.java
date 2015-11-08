@@ -863,7 +863,7 @@ class BARServer
   private static Cipher         passwordCipher;
   private static Key            passwordKey;
 
-  private static long           commandId;
+  private static long           commandId = 0;
   private static Socket         socket;
   private static BufferedWriter output;
   private static BufferedReader input;
@@ -890,10 +890,12 @@ class BARServer
   {
     final int TIMEOUT = 20;
 
+    Socket         socket = null;
+    BufferedWriter output = null;
+    BufferedReader input  = null;
+
     assert hostname != null;
     assert (port != 0) || (tlsPort != 0);
-
-    commandId = 0;
 
     // get all possible bar.jks file names
     String[] javaSSLKeyFileNames = null;
@@ -916,7 +918,6 @@ class BARServer
     }
 
     // connect to server: first try TLS, then plain
-    socket = null;
     String connectErrorMessage = null;
     if ((socket == null) && (port != 0))
     {
@@ -946,7 +947,9 @@ class BARServer
 
             // send startSSL, wait for response
             String[] errorMessage = new String[1];
-            if (syncExecuteCommand(StringParser.format("START_SSL"),
+            if (syncExecuteCommand(input,
+                                   output,
+                                   StringParser.format("START_SSL"),
                                    errorMessage
                                   ) != Errors.NONE
                )
@@ -1165,7 +1168,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       ValueMap valueMap     = new ValueMap();
 
       // authorize
-      if (syncExecuteCommand(StringParser.format("AUTHORIZE encryptType=%s encryptedPassword=%s",
+      if (syncExecuteCommand(input,
+                             output,
+                             StringParser.format("AUTHORIZE encryptType=%s encryptedPassword=%s",
                                                  passwordEncryptType,
                                                  encryptPassword(serverPassword)
                                                 ),
@@ -1178,7 +1183,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 //System.exit(1);
 
       // get version
-      if (syncExecuteCommand("VERSION",
+      if (syncExecuteCommand(input,
+                             output,
+                             "VERSION",
                              new TypeMap("major",int.class,
                                          "minor",int.class
                                         ),
@@ -1199,7 +1206,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
 
       // get file separator character
-      if (syncExecuteCommand("GET name=FILE_SEPARATOR",
+      if (syncExecuteCommand(input,
+                             output,
+                             "GET name=FILE_SEPARATOR",
                              new TypeMap("value",String.class),
                              errorMessage,
                              valueMap
@@ -1214,6 +1223,17 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       throw new CommunicationError("Network error on "+socket.getInetAddress()+":"+socket.getPort()+": "+exception.getMessage());
     }
+
+    // disconnect (if connected)
+    if (BARServer.socket != null)
+    {
+      disconnect();
+    }
+
+    // setup new connection
+    BARServer.socket = socket;
+    BARServer.input  = input;
+    BARServer.output = output;
 
     // start read thread
     readThread = new ReadThread(input);
@@ -1231,12 +1251,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
       // close connection, stop read thread
       readThread.quit();
-      socket.close();
-      try { readThread.join(); } catch (InterruptedException exception) { /* ignored */ }
+      socket.close(); socket = null;
+      try { readThread.join(); } catch (InterruptedException exception) { /* ignored */ }; readThread = null;
 
       // free resources
-      input.close();
-      output.close();
+      input.close(); input = null;
+      output.close(); output = null;
     }
     catch (IOException exception)
     {
@@ -2029,13 +2049,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** execute command syncronous
+   * @param input,output input/output streams
    * @param commandString command string
    * @param typeMap types or null
    * @param errorMessage error message or ""
    * @param valueMap values or null
    * @return Errors.NONE or error code
    */
-  public static int syncExecuteCommand(String commandString, TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
+  public static int syncExecuteCommand(BufferedReader input, BufferedWriter output, String commandString, TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
     throws IOException
   {
     int errorCode;
@@ -2098,6 +2119,31 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
 
     return errorCode;
+  }
+
+  /** execute command syncronous
+   * @param commandString command string
+   * @param typeMap types or null
+   * @param errorMessage error message or ""
+   * @param valueMap values or null
+   * @return Errors.NONE or error code
+   */
+  public static int syncExecuteCommand(String commandString, TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
+    throws IOException
+  {
+    return syncExecuteCommand(input,output,commandString,typeMap,errorMessage,valueMap);
+  }
+
+  /** execute command syncronous
+   * @param input,output input/output streams
+   * @param commandString command string
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int syncExecuteCommand(BufferedReader input, BufferedWriter output, String commandString, String[] errorMessage)
+    throws IOException
+  {
+    return syncExecuteCommand(input,output,commandString,(TypeMap)null,errorMessage,(ValueMap)null);
   }
 
   /** execute command syncronous
