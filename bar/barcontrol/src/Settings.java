@@ -142,6 +142,13 @@ public class Settings
     public final String[] stringArray;
 
     /** create simple string array
+     */
+    SimpleStringArray()
+    {
+      this.stringArray = new String[0];
+    }
+
+    /** create simple string array
      * @param width width array
      */
     SimpleStringArray(String[] stringArray)
@@ -382,7 +389,7 @@ public class Settings
 
   // program settings
   @SettingValue(type=SettingValueAdapterSimpleStringArray.class)
-  public static SimpleStringArray     jobListColumnOrder              = null;
+  public static SimpleStringArray     jobListColumnOrder              = new SimpleStringArray();
   @SettingValue(type=SettingValueAdapterWidthArray.class)
   public static ColumnSizes           jobListColumns                  = new ColumnSizes(110,130,90,90,80,80,100,150,120);
 
