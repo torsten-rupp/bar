@@ -266,9 +266,10 @@ LOCAL bool cmdOptionParseOverwriteArchiveFiles(void *userData, void *variable, c
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] = CMD_VALUE_UNIT_ARRAY
 (
-  {"G",1024LL*1024LL*1024LL},
-  {"M",1024LL*1024LL},
   {"K",1024LL},
+  {"M",1024LL*1024LL},
+  {"G",1024LL*1024LL*1024LL},
+  {"T",1024LL*1024LL*1024LL*1024LL},
 );
 
 LOCAL const CommandLineUnit COMMAND_LINE_BITS_UNITS[] = CMD_VALUE_UNIT_ARRAY
@@ -630,6 +631,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("device-write-post-command",    0,  1,1,defaultDevice.writePostProcessCommand,                                                                  "write device post-process command","command"                              ),
   CMD_OPTION_STRING       ("device-write-command",         0,  1,1,defaultDevice.writeCommand,                                                                             "write device command","command"                                           ),
 
+  CMD_OPTION_INTEGER64    ("max-storage-size",             0,  1,2,jobOptions.maxStorageSize,                       0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "max. storage size","unlimited"                                            ),
   CMD_OPTION_INTEGER64    ("volume-size",                  0,  1,2,jobOptions.volumeSize,                           0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "volume size","unlimited"                                                  ),
   CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,2,jobOptions.errorCorrectionCodesFlag,                                                                    "add error-correction codes with 'dvdisaster' tool"                        ),
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,2,jobOptions.alwaysCreateImageFlag,                                                                       "always create image for CD/DVD/BD/device"                                 ),
@@ -911,6 +913,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_SPECIAL  ("delta-source",                 &deltaSourceList,-1,                                           configValueParseDeltaSource,NULL,NULL,NULL,&jobOptions.patternType),
 
+  CONFIG_VALUE_INTEGER64("max-storage-size",             &jobOptions.maxStorageSize,-1,                                 0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_INTEGER64("volume-size",                  &jobOptions.volumeSize,-1,                                     0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_BOOLEAN  ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                        ),
   CONFIG_VALUE_BOOLEAN  ("always-create-image",          &jobOptions.alwaysCreateImageFlag,-1                           ),
@@ -3321,6 +3324,7 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->mountDeviceName                 = NULL;
   jobOptions->preProcessCommand               = NULL;
   jobOptions->postProcessCommand              = NULL;
+  jobOptions->maxStorageSize                  = 0LL;
   jobOptions->volumeSize                      = 0LL;
   jobOptions->skipUnreadableFlag              = TRUE;
   jobOptions->forceDeltaCompressionFlag       = FALSE;
