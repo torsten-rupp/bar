@@ -172,6 +172,9 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* IN_EXCL_UNLINK available */
+#undef HAVE_IN_EXCL_UNLINK
+
 /* ioctl() available */
 #undef HAVE_IOCTL
 

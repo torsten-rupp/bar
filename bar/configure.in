@@ -2935,7 +2935,7 @@ AC_CHECK_HEADERS(\
                  pwd.h \
                  regex.h \
                  stdbool.h \
-                 sys/xattr.h \
+                 sys/inotify.h \
                  sys/ioctl.h \
                  sys/mount.h \
                  sys/resource.h \
@@ -2943,6 +2943,7 @@ AC_CHECK_HEADERS(\
                  sys/socket.h \
                  sys/statvfs.h \
                  sys/wait.h \
+                 sys/xattr.h \
                  termios.h \
                  uuid/uuid.h
                 )
@@ -3022,6 +3023,8 @@ AC_CHECK_CONSTANT(_SC_NPROCESSORS_CONF,AC_DEFINE(HAVE__SC_NPROCESSORS_CONF,1,[_S
 if test $HAVE_SSH2; then
   AC_CHECK_CONSTANT(CRYPTO_LOCK,,AC_ERROR([constant CRYPTO_LOCK is not available]),openssl/crypto.h)
 fi
+
+AC_CHECK_CONSTANT(IN_EXCL_UNLINK,AC_DEFINE(HAVE_IN_EXCL_UNLINK,1,[IN_EXCL_UNLINK available]),,sys/inotify.h)
 
 # check types
 AC_CHECK_TYPE(struct stat64,  AC_DEFINE(HAVE_STAT64,  1,[defined if struct stat64 is available]),  ,[#include <sys/stat.h>])
