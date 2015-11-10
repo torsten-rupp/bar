@@ -1887,6 +1887,7 @@ Errors File_read(FileHandle *fileHandle,
       return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
     }
     fileHandle->index += (uint64)n;
+    assert(fileHandle->index == FTELL(fileHandle->file));
     (*bytesRead) = n;
   }
   else
@@ -1910,6 +1911,7 @@ Errors File_read(FileHandle *fileHandle,
       buffer = (byte*)buffer+n;
       bufferLength -= (ulong)n;
       fileHandle->index += (uint64)n;
+      assert(fileHandle->index == FTELL(fileHandle->file));
     }
   }
 
@@ -1934,7 +1936,11 @@ Errors File_write(FileHandle *fileHandle,
   FILE_CHECK_VALID(fileHandle);
 
   n = fwrite(buffer,1,bufferLength,fileHandle->file);
-  if (n > 0) fileHandle->index += n;
+  if (n > 0)
+  {
+    fileHandle->index += n;
+    assert(fileHandle->index == FTELL(fileHandle->file));
+  }
   if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   if (n != (ssize_t)bufferLength)
   {
@@ -1969,6 +1975,7 @@ Errors File_readLine(FileHandle *fileHandle,
       if (ch != EOF)
       {
         fileHandle->index += 1;
+        assert(fileHandle->index == FTELL(fileHandle->file));
         if (((char)ch != '\n') && ((char)ch != '\r'))
         {
           String_appendChar(line,ch);
@@ -1989,9 +1996,11 @@ Errors File_readLine(FileHandle *fileHandle,
       if (ch != EOF)
       {
         fileHandle->index += 1;
+        assert(fileHandle->index == FTELL(fileHandle->file));
         if (ch != '\n')
         {
           fileHandle->index -= 1;
+          assert(fileHandle->index == FTELL(fileHandle->file));
           ungetc(ch,fileHandle->file);
         }
       }
@@ -2241,6 +2250,7 @@ Errors File_seek(FileHandle *fileHandle,
     return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
   }
   fileHandle->index = offset;
+  assert(fileHandle->index == FTELL(fileHandle->file));
 
   return ERROR_NONE;
 }
@@ -2267,6 +2277,7 @@ Errors File_truncate(FileHandle *fileHandle,
         return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
       }
       fileHandle->index = size;
+      assert(fileHandle->index == FTELL(fileHandle->file));
     }
     fileHandle->size = size;
   }
