@@ -26,12 +26,27 @@ SOURCE_DIR         = @srcdir@
 
 ETC_DIR            = /etc
 
+ifeq ($(DESTDIR),)
 INSTALL_DIR        = $(if $(prefix),$(prefix),@INSTALL_DIR@)
 INSTALL_BIN_DIR    = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
+INSTALL_LIB_DIR    = $(if $(libdir),$(libdir),/usr/lib)
 INSTALL_LOCALE_DIR = $(if $(datadir),$(datadir)/locale,@LOCALE_DIR@)
-INSTALL_ETC_DIR    = $(if $(sysconfdir),$(sysconfdir),/etc)
+INSTALL_ETC_DIR    = $(if $(sysconfdir),$(sysconfdir),$(ETC_DIR))
+#INSTALL_INITD_DIR  = $(INSTALL_ETC_DIR)/$(if $(wildcard $(ETC_DIR)/rc.d),rc.d/init.d,init.d)
+INSTALL_INITD_DIR  = $(INSTALL_ETC_DIR)/init.d
 INSTALL_CONFIG_DIR = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
 INSTALL_MAN_DIR    = $(if $(mandir),$(mandir),@MAN_DIR@)
+else
+INSTALL_DIR        = @INSTALL_DIR@
+INSTALL_BIN_DIR    = @INSTALL_BIN_DIR@
+INSTALL_LIB_DIR    = /usr/lib
+INSTALL_LOCALE_DIR = @LOCALE_DIR@
+INSTALL_ETC_DIR    = $(ETC_DIR)
+#INSTALL_INITD_DIR  = $(INSTALL_ETC_DIR)/$(if $(wildcard $(ETC_DIR)/rc.d),rc.d/init.d,init.d)
+INSTALL_INITD_DIR  = $(INSTALL_ETC_DIR)/init.d
+INSTALL_CONFIG_DIR = @CONFIG_DIR@
+INSTALL_MAN_DIR    = @MAN_DIR@
+endif
 INSTALL_TLS_DIR    = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
@@ -113,6 +128,7 @@ SCRIPTS              = scripts/barserver-SuSE \
                        scripts/barserver-Mandrake \
                        scripts/barserver-debian \
                        scripts/barserver-CentOS \
+                       scripts/barserver.service \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -336,6 +352,7 @@ install_bar:
 	echo $(MAKE) -C bar install \
           prefix=$(prefix) \
           bindir=$(bindir) \
+          libdir=$(libdir) \
           datadir=$(datadir) \
           sysconfdir=$(sysconfdir) \
           mandir=$(mandir) \
@@ -352,6 +369,7 @@ install_barcontrol:
 	echo $(MAKE) -C barcontrol install \
           prefix=$(prefix) \
           bindir=$(bindir) \
+          libdir=$(libdir) \
           datadir=$(datadir) \
           sysconfdir=$(sysconfdir) \
           mandir=$(mandir) \
@@ -359,6 +377,7 @@ install_barcontrol:
 	$(MAKE) -C barcontrol install \
           prefix=$(prefix) \
           bindir=$(bindir) \
+          libdir=$(libdir) \
           datadir=$(datadir) \
           sysconfdir=$(sysconfdir) \
           mandir=$(mandir) \
@@ -367,27 +386,33 @@ install_barcontrol:
 # install script files
 install_scripts: \
   $(SCRIPTS)
-	if test ! -f $(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver; then \
-          $(INSTALL) -d "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d"; \
+	if test ! -f "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; then \
+          $(INSTALL) -d "$(DESTDIR)$(INSTALL_INITD_DIR)"; \
           if   test "$(SYSTEM)" = "SuSE"   -o -f $(ETC_DIR)/SuSE-release -o -d $(INSTALL_ETC_DIR)/SuSEconfig; then \
-            $(INSTALL) -m 755 scripts/barserver-SuSE "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
+            $(INSTALL) -m 755 scripts/barserver-SuSE "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
           elif test "$(SYSTEM)" = "Fedora" -o -f $(ETC_DIR)/fedora-release; then \
-            $(INSTALL) -m 755 scripts/barserver-Fedora "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
+            $(INSTALL) -m 755 scripts/barserver-Fedora "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
           elif test "$(SYSTEM)" = "RedHat" -o -f $(ETC_DIR)/redhat-release; then \
-            $(INSTALL) -m 755 scripts/barserver-RedHat "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
+            $(INSTALL) -m 755 scripts/barserver-RedHat "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
           elif test "$(SYSTEM)" = "CentOS" -o -f $(ETC_DIR)/redhat-release; then \
-            $(INSTALL) -m 755 scripts/barserver-CentOS "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
+            $(INSTALL) -m 755 scripts/barserver-CentOS "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
           elif test "$(SYSTEM)" = "Mandrake" -o -f $(ETC_DIR)/mandrake-release; then \
-            $(INSTALL) -m 755 scripts/barserver-Mandrake "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
+            $(INSTALL) -m 755 scripts/barserver-Mandrake "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
           elif test "$(SYSTEM)" = "Ubuntu" -o -f $(ETC_DIR)/lsb-release; then \
-            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
+            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
           elif test "$(SYSTEM)" = "Debian" -o -f $(ETC_DIR)/debian_release; then \
-            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
+            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
           else \
-            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
+            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_ETC_DIR)/barserver"; \
           fi; \
         else \
-          echo "$(INSTALL_ETC_DIR)/init.d/barserver NOT installed - file already exists!"; \
+          echo "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver NOT installed - file already exists!"; \
+        fi
+	if test ! -f "$(DESTDIR)/usr/lib/systemd/system/barserver.service"; then \
+          $(INSTALL) -d "$(DESTDIR)/usr/lib/systemd/system"; \
+          $(INSTALL) -m 644 scripts/barserver.service "$(DESTDIR)/usr/lib/systemd/system/barserver.service"; \
+        else \
+          echo "$(DESTDIR)/usr/lib/systemd/system/barserver.service NOT installed - file already exists!"; \
         fi
 
 # install man-page
@@ -426,7 +451,7 @@ uninstall:
           $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/private/bar-server-key.pem"; \
           $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.jks"; \
           ) \
-          $(RMF) "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
           $(RMF) "$(DESTDIR)$(INSTALL_MAN_DIR)/man7/bar.7"; \
         fi
 
@@ -765,8 +790,8 @@ debian_package_install: \
 	$(INSTALL) -d "$(prefix)/$(INSTALL_CONFIG_DIR)"
 	$(INSTALL) -m 600 bar/bar.cfg "$(prefix)/$(INSTALL_CONFIG_DIR)"
 	$(INSTALL) -d "$(prefix)/$(INSTALL_CONFIG_DIR)/jobs"
-	$(INSTALL) -d "$(prefix)/$(INSTALL_ETC_DIR)/init.d"
-	$(INSTALL) -m 600 scripts/barserver-debian "$(prefix)/$(INSTALL_ETC_DIR)/init.d/barserver"
+	$(INSTALL) -d "$(prefix)/$(INSTALL_INITD_DIR)"
+	$(INSTALL) -m 600 scripts/barserver-debian "$(prefix)/$(INSTALL_INITD_DIR)/barserver"
 
 # temporary debian install for GUI tools
 .PHONY: debian_install_gui
