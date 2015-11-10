@@ -90,9 +90,9 @@ typedef enum
 // password mode
 typedef enum
 {
-  PASSWORD_MODE_DEFAULT,                                 // use global password
-  PASSWORD_MODE_ASK,                                     // ask for password
-  PASSWORD_MODE_CONFIG                                   // use password from config
+  PASSWORD_MODE_DEFAULT,                // use global password
+  PASSWORD_MODE_ASK,                    // ask for password
+  PASSWORD_MODE_CONFIG                  // use password from config
 } PasswordModes;
 
 // server connection priority
@@ -430,6 +430,7 @@ struct JobOptions
   String                       deviceName;                    // device name to use
   Device                       device;                        // job specific device settings
 
+  uint64                       maxStorageSize;                // max. number of storage bytes for jobs
   uint64                       volumeSize;                    // volume size or 0LL for default [bytes]
 
   bool                         skipUnreadableFlag;            // TRUE for skipping unreadable files
