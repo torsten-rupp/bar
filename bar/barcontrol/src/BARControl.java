@@ -1899,6 +1899,8 @@ public class BARControl
           || (Settings.debugQuitServerFlag)
          )
       {
+        // non-interactive mode
+
         // connect to server
         try
         {
@@ -1911,7 +1913,6 @@ public class BARControl
                             Settings.serverPassword,
                             Settings.serverKeyFileName
                            );
-          shell.setText("BAR control: "+BARServer.getInfo());
         }
         catch (ConnectionError error)
         {
