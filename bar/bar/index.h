@@ -482,14 +482,14 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
 *          uuid             - unique job id or NULL
-*          entityId         - entity id or DATABASE_ID_NONE
+*          entityId         - entity id or DATABASE_ID_ANY
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
 *          storageName      - storage name pattern (glob) or NULL
 *          hostName         - host name pattern (glob) or NULL
 *          loginName        - login name pattern (glob) or NULL
 *          deviceName       - device name pattern (glob) or NULL
 *          fileName         - file name pattern (glob) or NULL
-*          indexState       - index state
+*          indexStateSet    - index state set
 * Output : IndexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
