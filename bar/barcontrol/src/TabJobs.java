@@ -2113,7 +2113,7 @@ Dprintf.dprintf("");
           Text   widget = (Text)selectionEvent.widget;
           String string = widget.getText();
           hostName.set(string);
-          BARServer.setJobOption(selectedJobData.uuid,"host-name",string);
+          BARServer.setJobOption(selectedJobData.uuid,"remote-host-name",string);
           widget.setBackground(null);
         }
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -2129,9 +2129,8 @@ Dprintf.dprintf("");
         {
           Text   widget = (Text)focusEvent.widget;
           String string = widget.getText();
-
           hostName.set(string);
-          BARServer.setJobOption(selectedJobData.uuid,"host-name",string);
+          BARServer.setJobOption(selectedJobData.uuid,"remote-host-name",string);
           widget.setBackground(null);
         }
       });
@@ -2175,7 +2174,7 @@ Dprintf.dprintf("");
           int     n      = widget.getSelection();
 
           hostPort.set(n);
-          BARServer.setJobOption(selectedJobData.uuid,"host-port",n);
+          BARServer.setJobOption(selectedJobData.uuid,"remote-host-port",n);
           widget.setBackground(null);
         }
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -2184,7 +2183,7 @@ Dprintf.dprintf("");
           int     n      = widget.getSelection();
 
           hostPort.set(n);
-          BARServer.setJobOption(selectedJobData.uuid,"host-port",n);
+          BARServer.setJobOption(selectedJobData.uuid,"remote-host-port",n);
           widget.setBackground(null);
         }
       });
@@ -2201,7 +2200,7 @@ Dprintf.dprintf("");
           int     n      = widget.getSelection();
 
           hostPort.set(n);
-          BARServer.setJobOption(selectedJobData.uuid,"host-port",n);
+          BARServer.setJobOption(selectedJobData.uuid,"remote-host-port",n);
           widget.setBackground(null);
         }
       });
@@ -2226,7 +2225,7 @@ Dprintf.dprintf("");
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-          BARServer.setJobOption(selectedJobData.uuid,"host-force-ssl",widget.getSelection());
+          BARServer.setJobOption(selectedJobData.uuid,"remote-host-force-ssl",widget.getSelection());
         }
       });
       Widgets.addModifyListener(new WidgetModifyListener(button,hostForceSSL));
@@ -7758,18 +7757,15 @@ throw new Error("NYI");
    */
   private void updateJobData()
   {
-    ArrayList<String> result = new ArrayList<String>();
-    Object[]          data;
-
     // clear
     clearJobData();
 
     if (selectedJobData != null)
     {
       // get job data
-      hostName.set(BARServer.getStringJobOption(selectedJobData.uuid,"host-name"));
-      hostPort.set(BARServer.getLongJobOption(selectedJobData.uuid,"host-port"));
-      hostForceSSL.set(BARServer.getBooleanJobOption(selectedJobData.uuid,"host-force-ssl"));
+      hostName.set(BARServer.getStringJobOption(selectedJobData.uuid,"remote-host-name"));
+      hostPort.set(BARServer.getLongJobOption(selectedJobData.uuid,"remote-host-port"));
+      hostForceSSL.set(BARServer.getBooleanJobOption(selectedJobData.uuid,"remote-host-force-ssl"));
       parseArchiveName(BARServer.getStringJobOption(selectedJobData.uuid,"archive-name"));
       archiveType.set(BARServer.getStringJobOption(selectedJobData.uuid,"archive-type"));
       archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"archive-part-size"),0));
