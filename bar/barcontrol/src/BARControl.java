@@ -790,10 +790,11 @@ class Units
    */
   public static String getByteSize(double n)
   {
-    if      (n >= 1024*1024*1024) return String.format("%.1f",n/(1024*1024*1024));
-    else if (n >=      1024*1024) return String.format("%.1f",n/(     1024*1024));
-    else if (n >=           1024) return String.format("%.1f",n/(          1024));
-    else                          return String.format("%d"  ,(long)n           );
+    if      (n >= 1024L*1024L*1024L*1024L) return String.format("%.1f",n/(1024L*1024L*1024L*1024L));
+    else if (n >=       1024L*1024L*1024L) return String.format("%.1f",n/(      1024L*1024L*1024L));
+    else if (n >=             1024L*1024L) return String.format("%.1f",n/(            1024L*1024L));
+    else if (n >=                   1024L) return String.format("%.1f",n/(                  1024L));
+    else                                   return String.format("%d"  ,(long)n                    );
   }
 
   /** get byte size unit
@@ -802,10 +803,11 @@ class Units
    */
   public static String getByteUnit(double n)
   {
-    if      (n >= 1024*1024*1024) return BARControl.tr("GBytes");
-    else if (n >=      1024*1024) return BARControl.tr("MBytes");
-    else if (n >=           1024) return BARControl.tr("KBytes");
-    else                          return BARControl.tr("bytes");
+    if      (n >= 1024L*1024L*1024L*1024L) return BARControl.tr("TBytes");
+    else if (n >=       1024L*1024L*1024L) return BARControl.tr("GBytes");
+    else if (n >=             1024L*1024L) return BARControl.tr("MBytes");
+    else if (n >=                   1024L) return BARControl.tr("KBytes");
+    else                                   return BARControl.tr("bytes");
   }
 
   /** get byte size short unit
@@ -814,14 +816,16 @@ class Units
    */
   public static String getByteShortUnit(double n)
   {
-    if      (n >= 1024*1024*1024) return "G";
-    else if (n >=      1024*1024) return "M";
-    else if (n >=           1024) return "K";
-    else                          return "";
+    if      (n >= 1024L*1024L*1024L*1024L*1024L) return "T";
+    if      (n >=       1024L*1024L*1024L*1024L) return "G";
+    else if (n >=             1024L*1024L*1024L) return "G";
+    else if (n >=                   1024L*1024L) return "M";
+    else if (n >=                         1024L) return "K";
+    else                                         return "";
   }
 
   /** parse byte size string
-   * @param string string to parse (<n>.<n>(%|B|M|MB|G|GB)
+   * @param string string to parse (<n>.<n>(%|B|M|MB|G|GB|TB)
    * @return byte value
    */
   public static long parseByteSize(String string)
@@ -830,29 +834,37 @@ class Units
     string = string.toUpperCase();
 
     // try to parse with default locale
-    if      (string.endsWith("GB"))
+    if      (string.endsWith("TB"))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-2))*1024*1024*1024);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-2))*1024L*1024L*1024L*1024L);
+    }
+    else if (string.endsWith("T"))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-1))*1024L*1024L*1024L*1024L);
+    }
+    else if (string.endsWith("GB"))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-2))*1024L*1024L*1024L);
     }
     else if (string.endsWith("G"))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-1))*1024*1024*1024);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-1))*1024L*1024L*1024L);
     }
     else if (string.endsWith("MB"))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-2))*1024*1024);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-2))*1024L*1024L);
     }
     else if (string.endsWith("M"))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-1))*1024*1024);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-1))*1024L*1024L);
     }
     else if (string.endsWith("KB"))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-2))*1024);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-2))*1024L);
     }
     else if (string.endsWith("K"))
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-1))*1024);
+      return (long)(Double.parseDouble(string.substring(0,string.length()-1))*1024L);
     }
     else if (string.endsWith("B"))
     {
@@ -865,7 +877,7 @@ class Units
   }
 
   /** parse byte size string
-   * @param string string to parse (<n>(%|B|M|MB|G|GB)
+   * @param string string to parse (<n>(%|B|M|MB|G|GB|TB)
    * @param defaultValue default value if number cannot be parsed
    * @return byte value
    */
