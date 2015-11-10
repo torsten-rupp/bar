@@ -5,9 +5,9 @@
 # $Source: sh.template $
 # $Revision: 1.1 $
 # $Author: $
-# Contents: 
+# Contents:
 # Systems: Unix
-#			   
+#
 # ----------------------------------------------------------------------------
 
 # --------------------------------- constants --------------------------------
@@ -270,29 +270,33 @@ download()
   downloadPackage "$OSC_URL/$OSC_PATH/CentOS_CentOS-5/x86_64" 'bar-.*\.rpm'     bar-$version-centos5_x86_64.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/CentOS_CentOS-6/i686"   'bar-.*\.rpm'     bar-$version-centos6_i686.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/CentOS_CentOS-6/x86_64" 'bar-.*\.rpm'     bar-$version-centos6_x86_64.rpm
+#  downloadPackage "$OSC_URL/$OSC_PATH/CentOS_CentOS-7/x86_64" 'bar-.*\.rpm'     bar-$version-centos7_x86_64.rpm
 
   downloadPackage "$OSC_URL/$OSC_PATH/Fedora_20/i686"         'bar-.*\.rpm'     bar-$version-fedora20_i686.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/Fedora_20/x86_64"       'bar-.*\.rpm'     bar-$version-fedora20_x86_64.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/Fedora_21/i686"         'bar-.*\.rpm'     bar-$version-fedora21_i686.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/Fedora_21/x86_64"       'bar-.*\.rpm'     bar-$version-fedora21_x86_64.rpm
+#  downloadPackage "$OSC_URL/$OSC_PATH/Fedora_22/i686"         'bar-.*\.rpm'     bar-$version-fedora22_i686.rpm
+#  downloadPackage "$OSC_URL/$OSC_PATH/Fedora_22/x86_64"       'bar-.*\.rpm'     bar-$version-fedora22_x86_64.rpm
 
   downloadPackage "$OSC_URL/$OSC_PATH/RedHat_RHEL-6/i686"     'bar-.*\.rpm'     bar-$version-redhat6_i686.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/RedHat_RHEL-6/x86_64"   'bar-.*\.rpm'     bar-$version-redhat6_x86_64.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/RHEL_7/x86_64"   'bar-.*\.rpm'     bar-$version-redhat7_x86_64.rpm
 
-  downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP3/i586"        'bar-.*\.rpm'     bar-$version-sle11_i586.rpm
-  downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP3/x86_64"      'bar-.*\.rpm'     bar-$version-sle11_x86_64.rpm
-  downloadPackage "$OSC_URL/$OSC_PATH/SLE_12/i586"            'bar-.*\.rpm'     bar-$version-sle12_i586.rpm
-  downloadPackage "$OSC_URL/$OSC_PATH/SLE_12/x86_64"          'bar-.*\.rpm'     bar-$version-sle12_x86_64.rpm
+#  downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP4/i586"        'bar-.*\.rpm'     bar-$version-sle11_i586.rpm
+#  downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP4/x86_64"      'bar-.*\.rpm'     bar-$version-sle11_x86_64.rpm
+#  downloadPackage "$OSC_URL/$OSC_PATH/SLE_12/i586"            'bar-.*\.rpm'     bar-$version-sle12_i586.rpm
+#  downloadPackage "$OSC_URL/$OSC_PATH/SLE_12/x86_64"          'bar-.*\.rpm'     bar-$version-sle12_x86_64.rpm
 
   downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_13.1/i586"     'bar-.*\.rpm'     bar-$version-opensuse13.1_i586.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_13.1/x86_64"   'bar-.*\.rpm'     bar-$version-opensuse13.1_x86_64.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_13.2/i586"     'bar-.*\.rpm'     bar-$version-opensuse13.2_i586.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_13.2/x86_64"   'bar-.*\.rpm'     bar-$version-opensuse13.2_x86_64.rpm
 
-  downloadPackage "$OSC_URL/$OSC_PATH/Debian_6.0/i386"        'bar_.*\.deb'     bar-$version-debian6_i386.deb
-  downloadPackage "$OSC_URL/$OSC_PATH/Debian_6.0/i386"        'bar-gui_.*\.deb' bar-gui-$version-debian6_i386.deb
-  downloadPackage "$OSC_URL/$OSC_PATH/Debian_6.0/amd64"       'bar_.*\.deb'     bar-$version-debian6_amd64.deb
-  downloadPackage "$OSC_URL/$OSC_PATH/Debian_6.0/amd64"       'bar-gui_.*\.deb' bar-gui-$version-debian6_amd64.deb
+#  downloadPackage "$OSC_URL/$OSC_PATH/Debian_6.0/i386"        'bar_.*\.deb'     bar-$version-debian6_i386.deb
+#  downloadPackage "$OSC_URL/$OSC_PATH/Debian_6.0/i386"        'bar-gui_.*\.deb' bar-gui-$version-debian6_i386.deb
+#  downloadPackage "$OSC_URL/$OSC_PATH/Debian_6.0/amd64"       'bar_.*\.deb'     bar-$version-debian6_amd64.deb
+#  downloadPackage "$OSC_URL/$OSC_PATH/Debian_6.0/amd64"       'bar-gui_.*\.deb' bar-gui-$version-debian6_amd64.deb
   downloadPackage "$OSC_URL/$OSC_PATH/Debian_7.0/i386"        'bar_.*\.deb'     bar-$version-debian7_i386.deb
   downloadPackage "$OSC_URL/$OSC_PATH/Debian_7.0/i386"        'bar-gui_.*\.deb' bar-gui-$version-debian7_i386.deb
   downloadPackage "$OSC_URL/$OSC_PATH/Debian_7.0/amd64"       'bar_.*\.deb'     bar-$version-debian7_amd64.deb
@@ -306,14 +310,14 @@ download()
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_12.04/i386"     'bar-gui_.*\.deb' bar-gui-$version-ubuntu12.04_i386.deb
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_12.04/amd64"    'bar_.*\.deb'     bar-$version-ubuntu12.04_amd64.deb
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_12.04/amd64"    'bar-gui_.*\.deb' bar-gui-$version-ubuntu12.04_amd64.deb
-  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.04/i386"     'bar_.*\.deb'     bar-$version-ubuntu13.04_i386.deb
-  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.04/i386"     'bar-gui_.*\.deb' bar-gui-$version-ubuntu13.04_i386.deb
-  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.04/amd64"    'bar_.*\.deb'     bar-$version-ubuntu13.04_amd64.deb
-  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.04/amd64"    'bar-gui_.*\.deb' bar-gui-$version-ubuntu13.04_amd64.deb
-  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.10/i386"     'bar_.*\.deb'     bar-$version-ubuntu13.10_i386.deb
-  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.10/i386"     'bar-gui_.*\.deb' bar-gui-$version-ubuntu13.10_i386.deb
-  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.10/amd64"    'bar_.*\.deb'     bar-$version-ubuntu13.10_amd64.deb
-  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.10/amd64"    'bar-gui_.*\.deb' bar-gui-$version-ubuntu13.10_amd64.deb
+#  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.04/i386"     'bar_.*\.deb'     bar-$version-ubuntu13.04_i386.deb
+#  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.04/i386"     'bar-gui_.*\.deb' bar-gui-$version-ubuntu13.04_i386.deb
+#  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.04/amd64"    'bar_.*\.deb'     bar-$version-ubuntu13.04_amd64.deb
+#  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.04/amd64"    'bar-gui_.*\.deb' bar-gui-$version-ubuntu13.04_amd64.deb
+#  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.10/i386"     'bar_.*\.deb'     bar-$version-ubuntu13.10_i386.deb
+#  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.10/i386"     'bar-gui_.*\.deb' bar-gui-$version-ubuntu13.10_i386.deb
+#  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.10/amd64"    'bar_.*\.deb'     bar-$version-ubuntu13.10_amd64.deb
+#  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_13.10/amd64"    'bar-gui_.*\.deb' bar-gui-$version-ubuntu13.10_amd64.deb
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.04/i386"     'bar_.*\.deb'     bar-$version-ubuntu14.04_i386.deb
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.04/i386"     'bar-gui_.*\.deb' bar-gui-$version-ubuntu14.04_i386.deb
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.04/amd64"    'bar_.*\.deb'     bar-$version-ubuntu14.04_amd64.deb
@@ -322,6 +326,10 @@ download()
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.10/i386"     'bar-gui_.*\.deb' bar-gui-$version-ubuntu14.10_i386.deb
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.10/amd64"    'bar_.*\.deb'     bar-$version-ubuntu14.10_amd64.deb
   downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_14.10/amd64"    'bar-gui_.*\.deb' bar-gui-$version-ubuntu14.10_amd64.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_15.04/i386"     'bar_.*\.deb'     bar-$version-ubuntu15.04_i386.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_15.04/i386"     'bar-gui_.*\.deb' bar-gui-$version-ubuntu15.04_i386.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_15.04/amd64"    'bar_.*\.deb'     bar-$version-ubuntu15.04_amd64.deb
+  downloadPackage "$OSC_URL/$OSC_PATH/xUbuntu_15.04/amd64"    'bar-gui_.*\.deb' bar-gui-$version-ubuntu15.04_amd64.deb
 }
 
 list()
@@ -338,12 +346,12 @@ htmlCodeEntry()
   local fileName="$1"; shift
 
   local s="";
-  case "$type" in 
-    CMD) s=" (command line tools)"; ;; 
-    GUI) s=" (GUI)"; ;; 
+  case "$type" in
+    CMD) s=" (command line tools)"; ;;
+    GUI) s=" (GUI)"; ;;
   esac
 
-  $CAT <<EOT  
+  $CAT <<EOT
         </TR>
           <TD>$title</TD>
           <TD>$version$s</TD>
@@ -357,7 +365,7 @@ htmlCode()
 {
   local version="$1"; shift
 
-  $CAT <<EOT  
+  $CAT <<EOT
       <TABLE BORDER=1>
         <TR>
           <TH>System</TH>
@@ -410,7 +418,7 @@ EOT
   htmlCodeEntry "Ubuntu 13.10, 64bit x86_64" CMD bar-$version-ubuntu13.10_amd64.deb
   htmlCodeEntry "Ubuntu 13.10, 64bit x86_64" GUI bar-gui-$version-ubuntu13.10_amd64.deb
 
-  $CAT <<EOT  
+  $CAT <<EOT
       </TABLE>
 EOT
 }
