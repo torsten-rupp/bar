@@ -26,7 +26,9 @@ WGET_OPTIONS="--timeout=30 --tries=3"
 UNZIP="unzip"
 XZ="xz"
 
-LIBGPG_ERROR_VERSION=1.19
+LZO_VERSION=2.09
+LIBGPG_ERROR_VERSION=1.20
+LIBGCRYPT_VERSION=1.6.4
 GMP_VERSION=6.0.0a
 LIBSSH2_VERSION=1.6.0
 PCRE_VERSION=8.36
@@ -444,25 +446,25 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $lzoFlag -eq 1; then
-    # lzo 2.06
+    # lzo
     (
      if test -n "$destination"; then
        cd $destination
      else
        cd $tmpDirectory
      fi
-     if test ! -f lzo-2.06.tar.gz; then
-       $WGET $WGET_OPTIONS 'http://www.oberhumer.com/opensource/lzo/download/lzo-2.06.tar.gz'
+     if test ! -f lzo-$LZO_VERSION.tar.gz; then
+       $WGET $WGET_OPTIONS "http://www.oberhumer.com/opensource/lzo/download/lzo-$LZO_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf lzo-2.06.tar.gz
+       $TAR xzf lzo-$LZO_VERSION.tar.gz
      fi
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/lzo-2.06 lzo
+        $LN -f -s $destination/lzo-$LZO_VERSION lzo
       else
-        $LN -f -s $tmpDirectory/lzo-2.06 lzo
+        $LN -f -s $tmpDirectory/lzo-$LZO_VERSION lzo
       fi
     fi
   fi
@@ -528,7 +530,7 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $gcryptFlag -eq 1; then
-    # gpg-error 1.10, gcrypt 1.5.0
+    # gpg-error, gcrypt
     (
      if test -n "$destination"; then
        cd $destination
@@ -541,24 +543,24 @@ if test $cleanFlag -eq 0; then
      if test $noDecompressFlag -eq 0; then
        $TAR xjf libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2
      fi
-     if test ! -f libgcrypt-1.5.0.tar.bz2; then
-       $WGET $WGET_OPTIONS 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.5.0.tar.bz2'
+     if test ! -f libgcrypt-$LIBGCRYPT_VERSION.tar.bz2; then
+       $WGET $WGET_OPTIONS "ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-$LIBGCRYPT_VERSION.tar.bz2"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xjf libgcrypt-1.5.0.tar.bz2
+       $TAR xjf libgcrypt-$LIBGCRYPT_VERSION.tar.bz2
 
        # patch to disable wrong deprecated warnings:
        #   diff -u libgcrypt-1.5.0.org/src/gcrypt.h libgcrypt-1.5.0/src/gcrypt.h > libgcrypt-warning.patch
-       (cd libgcrypt-1.5.0; $PATCH --batch -N -p1 < ../../misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
+       (cd libgcrypt-$LIBGCRYPT_VERSION; $PATCH --batch -N -p1 < ../../misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
         $LN -f -s $destination/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error
-        $LN -f -s $destination/libgcrypt-1.5.0 libgcrypt
+        $LN -f -s $destination/libgcrypt-$LIBGCRYPT_VERSION libgcrypt
       else
         $LN -f -s $tmpDirectory/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error
-        $LN -f -s $tmpDirectory/libgcrypt-1.5.0 libgcrypt
+        $LN -f -s $tmpDirectory/libgcrypt-$LIBGCRYPT_VERSION libgcrypt
       fi
     fi
   fi
