@@ -615,7 +615,6 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
                                              dictionary->entryTables[z].entries[index].length,
                                              dictionary->dictionaryFreeUserData
                                             );
-          free(dictionary->entryTables[z].entries[index].data);
         }
         free(dictionary->entryTables[z].entries[index].keyData);
       }
@@ -651,7 +650,6 @@ void Dictionary_clear(Dictionary *dictionary)
                                                dictionary->entryTables[z].entries[index].length,
                                                dictionary->dictionaryFreeUserData
                                               );
-            free(dictionary->entryTables[z].entries[index].data);
           }
           free(dictionary->entryTables[z].entries[index].keyData);
 
@@ -1072,7 +1070,6 @@ void Dictionary_remove(Dictionary *dictionary,
                                            dictionaryEntryTable->entries[entryIndex].length,
                                            dictionary->dictionaryFreeUserData
                                           );
-        free((void*)dictionaryEntryTable->entries[entryIndex].data);
       }
       free(dictionaryEntryTable->entries[entryIndex].keyData);
 
