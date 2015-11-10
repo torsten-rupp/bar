@@ -853,7 +853,8 @@ public class TabStatus
       Widgets.layout(label,1,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
                                                                                                 BARControl.tr("KBytes"),
                                                                                                 BARControl.tr("MBytes"),
-                                                                                                BARControl.tr("GBytes")
+                                                                                                BARControl.tr("GBytes"),
+                                                                                                BARControl.tr("TBytes")
                                                                                                }
                                                                             )
                     );
@@ -899,7 +900,8 @@ public class TabStatus
         Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes/s"),
                                                                                                   BARControl.tr("KBytes/s"),
                                                                                                   BARControl.tr("MBytes/s"),
-                                                                                                  BARControl.tr("GBytes/s")
+                                                                                                  BARControl.tr("GBytes/s"),
+                                                                                                  BARControl.tr("TBytes/s")
                                                                                                  }
                                                                               )
                       );
@@ -935,7 +937,8 @@ public class TabStatus
       Widgets.layout(label,2,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
                                                                                                 BARControl.tr("KBytes"),
                                                                                                 BARControl.tr("MBytes"),
-                                                                                                BARControl.tr("GBytes")
+                                                                                                BARControl.tr("GBytes"),
+                                                                                                BARControl.tr("TBytes")
                                                                                                }
                                                                             )
                     );
@@ -983,7 +986,8 @@ public class TabStatus
         Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes/s"),
                                                                                                   BARControl.tr("KBytes/s"),
                                                                                                   BARControl.tr("MBytes/s"),
-                                                                                                  BARControl.tr("GBytes/s")
+                                                                                                  BARControl.tr("GBytes/s"),
+                                                                                                  BARControl.tr("TBytes/s")
                                                                                                  }
                                                                               )
                       );
@@ -1024,7 +1028,8 @@ public class TabStatus
       Widgets.layout(label,3,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
                                                                                                 BARControl.tr("KBytes"),
                                                                                                 BARControl.tr("MBytes"),
-                                                                                                BARControl.tr("GBytes")
+                                                                                                BARControl.tr("GBytes"),
+                                                                                                BARControl.tr("TBytes")
                                                                                                }
                                                                             )
                     );
@@ -1064,7 +1069,8 @@ public class TabStatus
       Widgets.layout(label,4,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
                                                                                                 BARControl.tr("KBytes"),
                                                                                                 BARControl.tr("MBytes"),
-                                                                                                BARControl.tr("GBytes")
+                                                                                                BARControl.tr("GBytes"),
+                                                                                                BARControl.tr("TBytes")
                                                                                                }
                                                                             )
                     );
@@ -1128,7 +1134,8 @@ public class TabStatus
       Widgets.layout(label,5,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
                                                                                                 BARControl.tr("KBytes"),
                                                                                                 BARControl.tr("MBytes"),
-                                                                                                BARControl.tr("GBytes")
+                                                                                                BARControl.tr("GBytes"),
+                                                                                                BARControl.tr("TBytes")
                                                                                                }
                                                                             )
                     );
