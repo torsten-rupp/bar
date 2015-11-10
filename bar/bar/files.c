@@ -1965,26 +1965,35 @@ Errors File_readLine(FileHandle *fileHandle,
   {
     do
     {
-      ch = getc(fileHandle->file);
-      if (ch >= 0) fileHandle->index += 1;
-      if (ch < 0)
+      ch = fgetc(fileHandle->file);
+      if (ch != EOF)
       {
-        return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
+        fileHandle->index += 1;
+        if (((char)ch != '\n') && ((char)ch != '\r'))
+        {
+          String_appendChar(line,ch);
+        }
       }
-      if (((char)ch != '\n') && ((char)ch != '\r'))
+      else
       {
-        String_appendChar(line,ch);
+        if (!feof(fileHandle->file))
+        {
+          return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
+        }
       }
     }
-    while (((char)ch != '\r') && ((char)ch != '\n'));
+    while ((ch != EOF) && ((char)ch != '\r') && ((char)ch != '\n'));
     if      ((char)ch == '\r')
     {
-      ch = getc(fileHandle->file);
-      if (ch >= 0) fileHandle->index += 1;
-      if (ch != '\n')
+      ch = fgetc(fileHandle->file);
+      if (ch != EOF)
       {
-        fileHandle->index -= 1;
-        ungetc(ch,fileHandle->file);
+        fileHandle->index += 1;
+        if (ch != '\n')
+        {
+          fileHandle->index -= 1;
+          ungetc(ch,fileHandle->file);
+        }
       }
     }
   }
