@@ -1839,12 +1839,12 @@ LOCAL Errors StorageWebDAV_seek(StorageHandle *storageHandle,
 }
 
 LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
-                                  ConstString   storageFileName
+                                  ConstString   archiveName
                                  )
 {
-  ConstString deleteFileName;
   Errors      error;
   #ifdef HAVE_CURL
+    ConstString     storageFileName;
     CURL            *curlHandle;
     String          baseURL;
     CURLcode        curlCode;
@@ -1855,12 +1855,14 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
   #endif /* HAVE_CURL */
 
   assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
-
-  deleteFileName = (storageFileName != NULL) ? storageFileName : storageHandle->storageSpecifier.archiveName;
+  assert(archiveName != NULL);
 
   error = ERROR_UNKNOWN;
   #ifdef HAVE_CURL
+    storageFileName = (archiveName != NULL) ? archiveName : storageHandle->storageSpecifier.archiveName;
+
     // initialize variables
     curlHandle = curl_easy_init();
     if (curlHandle != NULL)
@@ -1870,8 +1872,8 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
       if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
 
       // get pathname, basename
-      pathName = File_getFilePathName(String_new(),deleteFileName);
-      baseName = File_getFileBaseName(String_new(),deleteFileName);
+      pathName = File_getFilePathName(String_new(),storageFileName);
+      baseName = File_getFileBaseName(String_new(),storageFileName);
 
       // get URL
       url = String_format(String_duplicate(baseURL),"/");
@@ -1963,7 +1965,7 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
     }
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
-    UNUSED_VARIABLE(storageFileName);
+    UNUSED_VARIABLE(archiveName);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL */

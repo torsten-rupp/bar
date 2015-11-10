@@ -511,21 +511,23 @@ LOCAL Errors StorageFile_seek(StorageHandle *storageHandle,
 }
 
 LOCAL Errors StorageFile_delete(StorageHandle *storageHandle,
-                                ConstString   storageFileName
+                                ConstString   archiveName
                                )
 {
-  ConstString deleteFileName;
+  ConstString storageFileName;
   Errors      error;
 
   assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(archiveName != NULL);
 
-  deleteFileName = (storageFileName != NULL) ? storageFileName : storageHandle->storageSpecifier.archiveName;
+  storageFileName = (archiveName != NULL) ? archiveName : storageHandle->storageSpecifier.archiveName;
 
   error = ERROR_NONE;
   if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
   {
-    error = File_delete(deleteFileName,FALSE);
+    error = File_delete(storageFileName,FALSE);
   }
 
   return error;

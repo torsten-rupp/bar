@@ -911,14 +911,16 @@ LOCAL Errors StorageDevice_seek(StorageHandle *storageHandle,
 }
 
 LOCAL Errors StorageDevice_delete(StorageHandle *storageHandle,
-                                  ConstString   storageFileName
+                                  ConstString   archiveName
                                  )
 {
   assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
+  assert(archiveName != NULL);
 
   UNUSED_VARIABLE(storageHandle);
-  UNUSED_VARIABLE(storageFileName);
+  UNUSED_VARIABLE(archiveName);
 
   return ERROR_FUNCTION_NOT_SUPPORTED;
 }

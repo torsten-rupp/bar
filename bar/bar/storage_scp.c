@@ -1234,18 +1234,20 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
 }
 
 LOCAL Errors StorageSCP_delete(StorageHandle *storageHandle,
-                               ConstString   storageFileName
+                               ConstString   archiveName
                               )
 {
 //  ConstString deleteFileName;
   Errors      error;
 
   assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(archiveName != NULL);
 
 //  deleteFileName = (storageFileName != NULL) ? storageFileName : storageHandle->storageSpecifier.archiveName;
 UNUSED_VARIABLE(storageHandle);
-UNUSED_VARIABLE(storageFileName);
+UNUSED_VARIABLE(archiveName);
 
   error = ERROR_UNKNOWN;
   #ifdef HAVE_SSH2

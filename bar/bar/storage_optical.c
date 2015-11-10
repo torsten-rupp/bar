@@ -1458,14 +1458,16 @@ LOCAL Errors StorageOptical_seek(StorageHandle *storageHandle,
 }
 
 LOCAL Errors StorageOptical_delete(StorageHandle *storageHandle,
-                                   ConstString   storageFileName
+                                   ConstString   archiveName
                                   )
 {
   assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(archiveName != NULL);
 
   UNUSED_VARIABLE(storageHandle);
-  UNUSED_VARIABLE(storageFileName);
+  UNUSED_VARIABLE(archiveName);
 
   return ERROR_FUNCTION_NOT_SUPPORTED;
 }

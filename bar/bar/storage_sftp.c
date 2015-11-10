@@ -1192,20 +1192,22 @@ LOCAL Errors StorageSFTP_seek(StorageHandle *storageHandle,
 }
 
 LOCAL Errors StorageSFTP_delete(StorageHandle *storageHandle,
-                                ConstString   storageFileName
+                                ConstString   archiveName
                                )
 {
   Errors error;
   #ifdef HAVE_SSH2
-    ConstString deleteFileName;
+    ConstString storageFileName;
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
+  assert(archiveName != NULL);
 
   error = ERROR_UNKNOWN;
   #ifdef HAVE_SSH2
-    deleteFileName = (storageFileName != NULL) ? storageFileName : storageHandle->storageSpecifier.archiveName;
+    storageFileName = (archiveName != NULL) ? archiveName : storageHandle->storageSpecifier.archiveName;
 
     error = Network_connect(&storageHandle->sftp.socketHandle,
                             SOCKET_TYPE_SSH,
@@ -1231,7 +1233,7 @@ LOCAL Errors StorageSFTP_delete(StorageHandle *storageHandle,
         {
           // delete file
           if (libssh2_sftp_unlink(storageHandle->sftp.sftp,
-                                  String_cString(deleteFileName)
+                                  String_cString(storageFileName)
                                  ) == 0
              )
           {
@@ -1269,6 +1271,9 @@ LOCAL Errors StorageSFTP_delete(StorageHandle *storageHandle,
       Network_disconnect(&storageHandle->sftp.socketHandle);
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(archiveName);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
   assert(error != ERROR_UNKNOWN);
