@@ -78,12 +78,16 @@ while ($line=<STDIN>)
       }
       elsif ($type eq "spec")
       {
-        print "  - $1\n";
+        $s = $1;
+        $s =~ s/%/%%/g;
+        print "  - $s\n";
       }
     }
     elsif ($line =~ /\s*(\S.*)/)
     {
-      print "    $1\n";
+      $s = $1;
+      $s =~ s/%/%%/g;
+      print "    $s\n";
     }
     else
     {
