@@ -484,7 +484,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_STRUCT_VALUE_STRING   ("incremental-list-file",   JobNode,jobOptions.incrementalListFileName      ),
 
-  CONFIG_STRUCT_VALUE_INTEGER64("archive-part-size",       JobNode,jobOptions.archivePartSize,             0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_INTEGER64("archive-part-size",       JobNode,jobOptions.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
 
   CONFIG_STRUCT_VALUE_INTEGER  ("directory-strip",         JobNode,jobOptions.directoryStripCount,         -1,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("destination",             JobNode,jobOptions.destination                  ),
@@ -522,7 +522,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
 
-  CONFIG_STRUCT_VALUE_INTEGER64("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_INTEGER64("max-storage-size",        JobNode,jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_INTEGER64("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
 
   CONFIG_STRUCT_VALUE_BOOLEAN  ("skip-unreadable",         JobNode,jobOptions.skipUnreadableFlag           ),
@@ -688,6 +689,7 @@ LOCAL ScheduleNode *newScheduleNode(void)
   scheduleNode->time.hour   = TIME_ANY;
   scheduleNode->time.minute = TIME_ANY;
   scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
+  scheduleNode->interval    = 0;
   scheduleNode->customText  = String_new();
   scheduleNode->minKeep     = 0;
   scheduleNode->maxKeep     = 0;
@@ -731,6 +733,7 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
   scheduleNode->time.hour   = fromScheduleNode->time.hour;
   scheduleNode->time.minute = fromScheduleNode->time.minute;
   scheduleNode->archiveType = fromScheduleNode->archiveType;
+  scheduleNode->interval    = fromScheduleNode->interval;
   scheduleNode->customText  = String_duplicate(fromScheduleNode->customText);
   scheduleNode->minKeep     = fromScheduleNode->minKeep;
   scheduleNode->maxKeep     = fromScheduleNode->maxKeep;
@@ -2568,6 +2571,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
       ConfigValue_formatDone(&configValueFormat);
     }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // delete old schedule sections, get position for insert new schedule sections
     nextStringNode = deleteJobSections(&jobLinesList,"schedule");
     if (!List_isEmpty(&jobNode->scheduleList))
@@ -2598,6 +2602,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
       }
     }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // write file
     error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
@@ -2629,6 +2634,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
                 );
     }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // save time modified
     jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
 
@@ -2656,6 +2662,7 @@ LOCAL void updateAllJobs(void)
 {
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
+  Errors        error;
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -2663,7 +2670,11 @@ LOCAL void updateAllJobs(void)
     {
       if (jobNode->modifiedFlag)
       {
-        updateJob(jobNode);
+        error = updateJob(jobNode);
+        if (error != ERROR_NONE)
+        {
+          printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
+        }
       }
     }
   }
@@ -2881,7 +2892,11 @@ LOCAL bool readJob(JobNode *jobNode)
   // save job if modified
   if (jobNode->modifiedFlag)
   {
-    updateJob(jobNode);
+    error = updateJob(jobNode);
+    if (error != ERROR_NONE)
+    {
+      printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
+    }
   }
 
   // save time modified
@@ -7756,7 +7771,11 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
       String_delete(fileName);
 
       // write job to file
-      updateJob(jobNode);
+      error = updateJob(jobNode);
+      if (error != ERROR_NONE)
+      {
+        printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
+      }
 
       // add new job to list
       List_append(&jobList,jobNode);
@@ -7871,7 +7890,11 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringM
     String_delete(fileName);
 
     // write job to file
-    updateJob(jobNode);
+    error = updateJob(jobNode);
+    if (error != ERROR_NONE)
+    {
+      printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
+    }
 
     // add new job to list
     List_append(&jobList,newJobNode);
