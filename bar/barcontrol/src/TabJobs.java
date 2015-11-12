@@ -7332,10 +7332,10 @@ Dprintf.dprintf("");
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
       widgetAdd = Widgets.newButton(composite,BARControl.tr("Add"));
-      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -7445,10 +7445,10 @@ throw new Error("NYI");
     {
       widgetClone = Widgets.newButton(composite,BARControl.tr("Clone"));
       widgetClone.setEnabled(false);
-      Widgets.layout(widgetClone,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetClone,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -8785,7 +8785,7 @@ throw new Error("NYI");
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
       widgetAdd = Widgets.newButton(composite,buttonText);
-      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
       widgetAdd.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -8799,7 +8799,7 @@ throw new Error("NYI");
       });
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -8954,7 +8954,7 @@ throw new Error("NYI");
       EntryData oldEntryData = (EntryData)tableItems[0].getData();
       EntryData newEntryData = oldEntryData.clone();
 
-      if (includeEdit(newEntryData,"Edit include pattern","Save"))
+      if (includeEdit(newEntryData,BARControl.tr("Edit include pattern"),BARControl.tr("Save")))
       {
         // update include list
         includeListRemove(new String[]{oldEntryData.pattern,newEntryData.pattern});
@@ -9089,7 +9089,7 @@ throw new Error("NYI");
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
       widgetAdd = Widgets.newButton(composite,buttonText);
-      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
       widgetAdd.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -9103,7 +9103,7 @@ throw new Error("NYI");
       });
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -9254,7 +9254,7 @@ throw new Error("NYI");
     {
       String   oldPattern = patterns[0];
       String[] newPattern = new String[]{new String(oldPattern)};
-      if (excludeEdit(newPattern,"Edit exclude pattern","Save"))
+      if (excludeEdit(newPattern,BARControl.tr("Edit exclude pattern"),BARControl.tr("Save")))
       {
         // update exclude list
         excludeListRemove(new String[]{oldPattern,newPattern[0]});
@@ -9537,10 +9537,10 @@ throw new Error("NYI");
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
       widgetAdd = Widgets.newButton(composite,buttonText);
-      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -9684,7 +9684,7 @@ throw new Error("NYI");
       String   oldPattern = patterns[0];
       String[] newPattern = new String[]{new String(oldPattern)};
 
-      if (compressExcludeEdit(newPattern,"Edit compress exclude pattern","Save"))
+      if (compressExcludeEdit(newPattern,BARControl.tr("Edit compress exclude pattern"),BARControl.tr("Save")))
       {
         // update include list
         compressExcludeListRemove(new String[]{oldPattern,newPattern[0]});
@@ -10742,10 +10742,10 @@ throw new Error("NYI");
     Widgets.layout(composite,2,0,TableLayoutData.WE);
     {
       widgetSave = Widgets.newButton(composite,BARControl.tr("Save"));
-      Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -11281,10 +11281,10 @@ throw new Error("NYI");
     Widgets.layout(composite,1,0,TableLayoutData.WE);
     {
       widgetAdd = Widgets.newButton(composite,buttonText);
-      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
