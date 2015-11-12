@@ -1720,6 +1720,7 @@ public class TabJobs
       /** get file size
        * @return size [bytes]
        */
+      @Override
       public long length()
       {
         return size;
@@ -1728,6 +1729,7 @@ public class TabJobs
       /** get last modified
        * @return last modified date/time
        */
+      @Override
       public long lastModified()
       {
         return dateTime*1000;
@@ -1736,6 +1738,7 @@ public class TabJobs
       /** check if file is file
        * @return true iff file
        */
+      @Override
       public boolean isFile()
       {
         return fileType == FileTypes.FILE;
@@ -1744,6 +1747,7 @@ public class TabJobs
       /** check if file is directory
        * @return true iff directory
        */
+      @Override
       public boolean isDirectory()
       {
         return fileType == FileTypes.DIRECTORY;
@@ -1752,6 +1756,7 @@ public class TabJobs
       /** check if file is hidden
        * @return always false
        */
+      @Override
       public boolean isHidden()
       {
         return getName().startsWith(".");
@@ -1760,15 +1765,27 @@ public class TabJobs
       /** check if file exists
        * @return always true
        */
+      @Override
       public boolean exists()
       {
+Dprintf.dprintf("%s: ",this);
         return true;
+      }
+
+      /** convert data to string
+       * @return string
+       */
+      @Override
+      public String toString()
+      {
+        return "RemoteFile {"+getName()+"}";
       }
     };
 
     private ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
     Iterator<ValueMap>          iterator;
 
+    @Override
     public String[] getShortcuts()
     {
       ArrayList<String> shortcutList = new ArrayList<String>();
@@ -1790,11 +1807,13 @@ public class TabJobs
       return shortcutList.toArray(new String[shortcutList.size()]);
     }
 
+    @Override
     public void setShortcuts(String shortcuts[])
     {
 Dprintf.dprintf("");
     }
 
+    @Override
     public boolean open(String pathName)
     {
       String[] resultErrorMessage = new String[1];
@@ -1815,10 +1834,14 @@ Dprintf.dprintf("");
         return false;
       }
     }
+
+    @Override
     public void close()
     {
       iterator = null;
     }
+
+    @Override
     public File getNext()
     {
       File file = null;
@@ -1893,6 +1916,15 @@ Dprintf.dprintf("");
       }
 
       return file;
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    @Override
+    public String toString()
+    {
+      return "remoteListDirectory {}";
     }
   };
 
