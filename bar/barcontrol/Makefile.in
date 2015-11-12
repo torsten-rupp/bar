@@ -21,12 +21,22 @@ SOURCE_DIR         = @srcdir@
 SWT_DIR            = @SWT_DIR@
 LAUNCH4J_DIR       = @LAUNCH4J_DIR@
 
+ifeq ($(DESTDIR),)
 INSTALL_DIR        = $(if $(prefix),$(prefix),@INSTALL_DIR@)
 INSTALL_BIN_DIR    = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
 INSTALL_LOCALE_DIR = $(if $(datadir),$(datadir)/locale,@LOCALE_DIR@)
 INSTALL_ETC_DIR    = $(if $(sysconfdir),$(sysconfdir),/etc)
 INSTALL_CONFIG_DIR = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
 INSTALL_MAN_DIR    = $(if $(mandir),$(mandir),@MAN_DIR@)
+INSTALL_TLS_DIR    = @TLS_DIR@
+else
+INSTALL_DIR        = @INSTALL_DIR@
+INSTALL_BIN_DIR    = @INSTALL_BIN_DIR@
+INSTALL_LOCALE_DIR = @LOCALE_DIR@
+INSTALL_ETC_DIR    = /etc
+INSTALL_CONFIG_DIR = @CONFIG_DIR@
+INSTALL_MAN_DIR    = @MAN_DIR@
+endif
 INSTALL_TLS_DIR    = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
@@ -100,6 +110,7 @@ DIFF       = diff
 ECHO       = echo
 ECHO_NO_LF = echo -n
 GREP       = grep
+FIND       = find
 INSTALL    = @INSTALL@
 MKDIR      = mkdir
 PERL       = @PERL@
@@ -110,6 +121,7 @@ SED        = sed
 TAR        = tar
 TOUCH      = touch
 UNZIP      = unzip
+XARGS      = xargs
 
 #------------------------ specific variables/settings ------------------------
 
@@ -192,7 +204,7 @@ clean: \
   clean_jars
 	$(RMF) $(OBJECTS)
 	$(RMF) $(INTERMEDIATE)
-	$(RMF) classes/*.class
+	$(RMRF) classes
 	$(RMF) $(TARGETS)
 	$(RMRF) tmp
 
@@ -311,7 +323,7 @@ barcontrol.jar: \
   $(OBJECTS) $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
-	$(CP) classes/*.class tmp/$@
+	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
 	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
@@ -330,7 +342,7 @@ ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_LINUX) 1>/dev/null; $(RMRF) META-INF)
 	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/$@
+	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
 	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
@@ -349,7 +361,7 @@ ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_LINUX_64) 1>/dev/null; $(RMRF) META-INF)
 	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/$@
+	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
 	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
@@ -368,7 +380,7 @@ ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_SOLARIS) 1>/dev/null; $(RMRF) META-INF)
 	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/$@
+	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
 	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
@@ -387,7 +399,7 @@ ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_MACOSX) 1>/dev/null; $(RMRF) META-INF)
 	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/$@
+	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
 	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
@@ -406,7 +418,7 @@ ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_MACOSX_64) 1>/dev/null; $(RMRF) META-INF)
 	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/$@
+	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
 	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
@@ -425,7 +437,7 @@ ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_WINDOWS) 1>/dev/null; $(RMRF) META-INF)
 	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/$@
+	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
 	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
@@ -444,7 +456,7 @@ ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_WINDOWS_64) 1>/dev/null; $(RMRF) META-INF)
 	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
-	$(CP) classes/*.class tmp/$@
+	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
 	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
