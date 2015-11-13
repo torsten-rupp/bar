@@ -3639,6 +3639,7 @@ Errors Index_storageAssignTo(IndexHandle *indexHandle,
 
   if (storageId != DATABASE_ID_NONE)
   {
+    // assign storage to entity
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
@@ -3656,7 +3657,7 @@ Errors Index_storageAssignTo(IndexHandle *indexHandle,
 
   if (entityId != DATABASE_ID_NONE)
   {
-    // assign to other entity
+    // assign all storage of entity to other entity
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
@@ -3673,7 +3674,7 @@ Errors Index_storageAssignTo(IndexHandle *indexHandle,
 
     if (entityId != toEntityId)
     {
-      // delete entity
+      // delete old entity (now empty)
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
                                "DELETE FROM entities WHERE id=%lld;",
@@ -3688,6 +3689,7 @@ Errors Index_storageAssignTo(IndexHandle *indexHandle,
 
   if (!String_isEmpty(jobUUID))
   {
+    // assign all storage of all entities of job to other entity
     error = Index_initListEntities(&indexQueryHandle,
                                    indexHandle,
                                    jobUUID,
@@ -3712,7 +3714,7 @@ Errors Index_storageAssignTo(IndexHandle *indexHandle,
                               )
           )
     {
-      // assign to other entity
+      // assign all storage of entity to other entity
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
                                "UPDATE storage \
@@ -3729,7 +3731,7 @@ Errors Index_storageAssignTo(IndexHandle *indexHandle,
 
       if (entityId != toEntityId)
       {
-        // delete entity
+        // delete entity (now empty)
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "DELETE FROM entities WHERE id=%lld;",
