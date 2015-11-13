@@ -518,18 +518,18 @@ class BooleanFieldUpdater
  */
 abstract class ListDirectory
 {
-  /** get short cut names
-   * @return short cut names
+  /** get shortcut files
+   * @return shortcut files
    */
-  public String[] getShortcuts()
+  public File[] getShortcuts()
   {
     return null;
   }
 
-  /** set short cut names
-   * @param shortcuts short cut names
+  /** set shortcut files
+   * @param shortcuts shortcut files
    */
-  public void setShortcuts(String shortcuts[])
+  public void setShortcuts(File shortcuts[])
   {
   }
 
@@ -2838,31 +2838,25 @@ class Dialogs
       }
 
       /** update shortcut list
-       * @param list list widget
+       * @param shortcutFileList shortcut file list
+       * @param widgetShortcutList shortcut list widget
+       * @param shortcutSet shortcut set
        */
-      public void shortcutList(List list, HashSet<String> shortcutSet)
+      public void updateShortcutList(ArrayList<File> shortcutFileList, List widgetShortcutList, HashSet<File> shortcutSet)
       {
         HashSet<String> nameSet = new HashSet<String>();
 
-        if (shortcutSet != null)
+        shortcutFileList.clear();
+        for (File file : shortcutSet)
         {
-          for (String shortcut : shortcutSet)
-          {
-            nameSet.add(shortcut);
-          }
+          shortcutFileList.add(file);
         }
+        Collections.sort(shortcutFileList,fileComparator);
 
-        ArrayList<File> pathList = new ArrayList<File>();
-        for (String name : nameSet)
+        widgetShortcutList.removeAll();
+        for (File file : shortcutFileList)
         {
-          pathList.add(new File(name));
-        }
-        Collections.sort(pathList,fileComparator);
-
-        list.removeAll();
-        for (File path : pathList)
-        {
-          list.add(path.getAbsolutePath());
+          widgetShortcutList.add(file.getAbsolutePath());
         }
       }
 
@@ -2870,7 +2864,7 @@ class Dialogs
        * @param table table widget
        * @param path path
        */
-      public void fileList(Table table, String path)
+      public void updateFileList(Table table, String path)
       {
         if (!table.isDisposed())
         {
@@ -3086,9 +3080,10 @@ class Dialogs
     {
       final String[] result = new String[1];
 
-      final FileComparator  fileComparator = new FileComparator(FileComparator.SORTMODE_NAME);;
-      final Updater         updater        = new Updater(fileComparator,listDirectory,(type != FileDialogTypes.DIRECTORY));
-      final HashSet<String> shortcutSet    = new HashSet<String>();
+      final FileComparator  fileComparator   = new FileComparator(FileComparator.SORTMODE_NAME);;
+      final Updater         updater          = new Updater(fileComparator,listDirectory,(type != FileDialogTypes.DIRECTORY));
+      final ArrayList<File> shortcutFileList = new ArrayList<File>();
+      final HashSet<File> shortcutSet        = new HashSet<File>();
 
       // load images
       final Image IMAGE_FOLDER_UP;
@@ -3167,27 +3162,27 @@ class Dialogs
         };
 
         tableColumn = new TableColumn(widgetFileList,SWT.LEFT);
-        tableColumn.setText(Dialogs.tr("Name"));
+        tableColumn.setText("Name");
         tableColumn.setData(new TableLayoutData(0,0,TableLayoutData.WE,0,0,0,0,600,SWT.DEFAULT));
         tableColumn.setResizable(true);
         tableColumn.addSelectionListener(selectionListener);
 
         tableColumn = new TableColumn(widgetFileList,SWT.LEFT);
-        tableColumn.setText(Dialogs.tr("Type"));
+        tableColumn.setText("Type");
         tableColumn.setData(new TableLayoutData(0,1,TableLayoutData.NONE));
         tableColumn.setWidth(50);
         tableColumn.setResizable(false);
         tableColumn.addSelectionListener(selectionListener);
 
         tableColumn = new TableColumn(widgetFileList,SWT.LEFT);
-        tableColumn.setText(Dialogs.tr("Modified"));
+        tableColumn.setText("Modified");
         tableColumn.setData(new TableLayoutData(0,2,TableLayoutData.NONE));
         tableColumn.setWidth(160);
         tableColumn.setResizable(false);
         tableColumn.addSelectionListener(selectionListener);
 
         tableColumn = new TableColumn(widgetFileList,SWT.RIGHT);
-        tableColumn.setText(Dialogs.tr("Size"));
+        tableColumn.setText("Size");
         tableColumn.setData(new TableLayoutData(0,3,TableLayoutData.NONE));
         tableColumn.setWidth(80);
         tableColumn.setResizable(false);
@@ -3273,7 +3268,7 @@ class Dialogs
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
-          updater.fileList(widgetFileList,widgetPath.getText());
+          updater.updateFileList(widgetFileList,widgetPath.getText());
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
@@ -3286,14 +3281,14 @@ class Dialogs
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          File path = (File)widgetPath.getData();
+          File file = (File)widgetPath.getData();
 
-          File parentPath = path.getParentFile();
-          if (parentPath != null)
+          File parentFile = file.getParentFile();
+          if (parentFile != null)
           {
-            widgetPath.setData(parentPath);
-            widgetPath.setText(parentPath.getAbsolutePath());
-            updater.fileList(widgetFileList,widgetPath.getText());
+            widgetPath.setData(parentFile);
+            widgetPath.setText(parentFile.getAbsolutePath());
+            updater.updateFileList(widgetFileList,widgetPath.getText());
           }
         }
       });
@@ -3304,23 +3299,22 @@ class Dialogs
           int index = widgetShortcutList.getSelectionIndex();
           if (index >= 0)
           {
-            String root = widgetShortcutList.getItem(index);
+            File file = shortcutFileList.get(index);
 
-            File newPath = new File(root);
-            if      (listDirectory.isDirectory(newPath))
+            if      (listDirectory.isDirectory(file))
             {
-              widgetPath.setData(newPath);
-              widgetPath.setText(newPath.getAbsolutePath());
+              widgetPath.setData(file);
+              widgetPath.setText(file.getAbsolutePath());
 
-              updater.fileList(widgetFileList,widgetPath.getText());
+              updater.updateFileList(widgetFileList,widgetPath.getText());
             }
-            else if (listDirectory.exists(newPath))
+            else if (listDirectory.exists(file))
             {
-              error(dialog,Dialogs.tr("''{0}'' is not a directory!",newPath.getAbsolutePath()));
+              error(dialog,Dialogs.tr("''{0}'' is not a directory!",file.getAbsolutePath()));
             }
             else
             {
-              error(dialog,Dialogs.tr("''{0}'' does not exists!",newPath.getAbsolutePath()));
+              error(dialog,Dialogs.tr("''{0}'' does not exists",file.getAbsolutePath()));
             }
           }
         }
@@ -3344,7 +3338,7 @@ class Dialogs
               widgetPath.setData(newPath);
               widgetPath.setText(newPath.getAbsolutePath());
 
-              updater.fileList(widgetFileList,widgetPath.getText());
+              updater.updateFileList(widgetFileList,widgetPath.getText());
             }
           }
         }
@@ -3373,7 +3367,7 @@ class Dialogs
             File file = (File)tableItems[0].getData();
             if (file.isDirectory())
             {
-              updater.fileList(widgetFileList,file.getAbsolutePath());
+              updater.updateFileList(widgetFileList,file.getAbsolutePath());
             }
             else
             {
@@ -3408,7 +3402,7 @@ class Dialogs
               widgetFilter.setText(fileExtensions[index*2+1]);
 
               updater.setFileFilter(widgetFilter.getText());
-              updater.fileList(widgetFileList,widgetPath.getText());
+              updater.updateFileList(widgetFileList,widgetPath.getText());
             }
           }
         });
@@ -3421,7 +3415,7 @@ class Dialogs
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           updater.setShowHidden(widgetShowHidden.getSelection());
-          updater.fileList(widgetFileList,widgetPath.getText());
+          updater.updateFileList(widgetFileList,widgetPath.getText());
         }
       });
       widgetDone.addSelectionListener(new SelectionListener()
@@ -3486,12 +3480,12 @@ class Dialogs
         {
           if (dropTargetEvent.data != null)
           {
-            if (dropTargetEvent.data instanceof String)
+            if (dropTargetEvent.data instanceof File)
             {
-              shortcutSet.add((String)dropTargetEvent.data);
-              listDirectory.setShortcuts(shortcutSet.toArray(new String[shortcutSet.size()]));
+              shortcutSet.add((File)dropTargetEvent.data);
+              listDirectory.setShortcuts(shortcutSet.toArray(new File[shortcutSet.size()]));
 
-              updater.shortcutList(widgetShortcutList,shortcutSet);
+              updater.updateShortcutList(shortcutFileList,widgetShortcutList,shortcutSet);
             }
           }
           else
@@ -3505,15 +3499,15 @@ class Dialogs
       show(dialog,fileGeometry);
 
       // update shortcuts
-      String shortcuts[] = listDirectory.getShortcuts();
+      File shortcuts[] = listDirectory.getShortcuts();
       if (shortcuts != null)
       {
-        for (String shortcut : shortcuts)
+        for (File shortcut : shortcuts)
         {
           shortcutSet.add(shortcut);
         }
       }
-      updater.shortcutList(widgetShortcutList,shortcutSet);
+      updater.updateShortcutList(shortcutFileList,widgetShortcutList,shortcutSet);
 
       // update path, name
       File file = new File(oldFileName);
@@ -3537,7 +3531,7 @@ class Dialogs
        }
 
       // update file list
-      updater.fileList(widgetFileList,widgetPath.getText());
+      updater.updateFileList(widgetFileList,widgetPath.getText());
 
       if (widgetName != null)
       {
