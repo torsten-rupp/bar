@@ -1717,10 +1717,18 @@ public class TabJobs
         this(name,fileType,0,dateTime);
       }
 
+      /** create remote file
+       * @param name name
+       * @param size size [bytes]
+       */
+      public RemoteFile(String name, long size)
+      {
+        this(name,FileTypes.DIRECTORY,size,0);
+      }
+
       /** get file size
        * @return size [bytes]
        */
-      @Override
       public long length()
       {
         return size;
@@ -1729,7 +1737,6 @@ public class TabJobs
       /** get last modified
        * @return last modified date/time
        */
-      @Override
       public long lastModified()
       {
         return dateTime*1000;
@@ -1738,7 +1745,6 @@ public class TabJobs
       /** check if file is file
        * @return true iff file
        */
-      @Override
       public boolean isFile()
       {
         return fileType == FileTypes.FILE;
@@ -1747,7 +1753,6 @@ public class TabJobs
       /** check if file is directory
        * @return true iff directory
        */
-      @Override
       public boolean isDirectory()
       {
         return fileType == FileTypes.DIRECTORY;
@@ -1756,7 +1761,6 @@ public class TabJobs
       /** check if file is hidden
        * @return always false
        */
-      @Override
       public boolean isHidden()
       {
         return getName().startsWith(".");
@@ -1765,30 +1769,21 @@ public class TabJobs
       /** check if file exists
        * @return always true
        */
-      @Override
       public boolean exists()
       {
-Dprintf.dprintf("%s: ",this);
         return true;
-      }
-
-      /** convert data to string
-       * @return string
-       */
-      @Override
-      public String toString()
-      {
-        return "RemoteFile {"+getName()+"}";
       }
     };
 
     private ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
-    Iterator<ValueMap>          iterator;
+    private Iterator<ValueMap>  iterator;
 
-    @Override
-    public String[] getShortcuts()
+    /** get shortcut files
+     * @return shortcut files
+     */
+    public File[] getShortcuts()
     {
-      ArrayList<String> shortcutList = new ArrayList<String>();
+      ArrayList<File> shortcutList = new ArrayList<File>();
 
       String[] resultErrorMessage = new String[1];
       int error = BARServer.executeCommand(StringParser.format("ROOT_LIST"),
@@ -1800,20 +1795,28 @@ Dprintf.dprintf("%s: ",this);
       {
         for (ValueMap resultMap : resultMapList)
         {
-          shortcutList.add(resultMap.getString("name"));
+          shortcutList.add(new RemoteFile(resultMap.getString("name"),
+                                          Long.parseLong(resultMap.getString("size"))
+                                         )
+                          );
         }
       }
 
-      return shortcutList.toArray(new String[shortcutList.size()]);
+      return shortcutList.toArray(new File[shortcutList.size()]);
     }
 
-    @Override
-    public void setShortcuts(String shortcuts[])
+    /** set shortcut files
+     * @param shortchuts shortcut files
+     */
+    public void setShortcuts(File shortcuts[])
     {
 Dprintf.dprintf("");
     }
 
-    @Override
+    /** open list files in directory
+     * @param pathName path name
+     * @return true iff open
+     */
     public boolean open(String pathName)
     {
       String[] resultErrorMessage = new String[1];
@@ -1835,13 +1838,16 @@ Dprintf.dprintf("");
       }
     }
 
-    @Override
+    /** close list files in directory
+     */
     public void close()
     {
       iterator = null;
     }
 
-    @Override
+    /** get next entry in directory
+     * @return entry
+     */
     public File getNext()
     {
       File file = null;
@@ -1916,15 +1922,6 @@ Dprintf.dprintf("");
       }
 
       return file;
-    }
-
-    /** convert data to string
-     * @return string
-     */
-    @Override
-    public String toString()
-    {
-      return "remoteListDirectory {}";
     }
   };
 
@@ -3078,7 +3075,7 @@ Dprintf.dprintf("");
         {
           widgetIncludeTableInsert = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
           widgetIncludeTableInsert.setToolTipText(BARControl.tr("Add entry to included list."));
-          Widgets.layout(widgetIncludeTableInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          Widgets.layout(widgetIncludeTableInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetIncludeTableInsert.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3096,7 +3093,7 @@ Dprintf.dprintf("");
 
           widgetIncludeTableEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
           widgetIncludeTableEdit.setToolTipText(BARControl.tr("Edit entry in included list."));
-          Widgets.layout(widgetIncludeTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          Widgets.layout(widgetIncludeTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetIncludeTableEdit.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3114,7 +3111,7 @@ Dprintf.dprintf("");
 
           button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
           button.setToolTipText(BARControl.tr("Clone entry in included list."));
-          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3132,7 +3129,7 @@ Dprintf.dprintf("");
 
           widgetIncludeTableRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
           widgetIncludeTableRemove.setToolTipText(BARControl.tr("Remove entry from included list."));
-          Widgets.layout(widgetIncludeTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          Widgets.layout(widgetIncludeTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetIncludeTableRemove.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3263,7 +3260,7 @@ Dprintf.dprintf("");
         {
           widgetExcludeListInsert = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
           widgetExcludeListInsert.setToolTipText(BARControl.tr("Add entry to excluded list."));
-          Widgets.layout(widgetExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          Widgets.layout(widgetExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetExcludeListInsert.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3281,7 +3278,7 @@ Dprintf.dprintf("");
 
           widgetExcludeListEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
           widgetExcludeListEdit.setToolTipText(BARControl.tr("Edit entry in excluded list."));
-          Widgets.layout(widgetExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          Widgets.layout(widgetExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetExcludeListEdit.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3299,7 +3296,7 @@ Dprintf.dprintf("");
 
           button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
           button.setToolTipText(BARControl.tr("Clone entry in excluded list."));
-          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3317,7 +3314,7 @@ Dprintf.dprintf("");
 
           widgetExcludeListRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
           widgetExcludeListRemove.setToolTipText(BARControl.tr("Remove entry from excluded list."));
-          Widgets.layout(widgetExcludeListRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          Widgets.layout(widgetExcludeListRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetExcludeListRemove.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3904,7 +3901,7 @@ Dprintf.dprintf("");
           {
             widgetCompressExcludeListInsert = Widgets.newButton(subComposite,BARControl.tr("Add\u2026"));
             widgetCompressExcludeListInsert.setToolTipText(BARControl.tr("Add entry to compress exclude list."));
-            Widgets.layout(widgetCompressExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+            Widgets.layout(widgetCompressExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListInsert,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
               public void modified(Control control, WidgetVariable byteCompressAlgorithm)
@@ -3929,7 +3926,7 @@ Dprintf.dprintf("");
 
             widgetCompressExcludeListEdit = Widgets.newButton(subComposite,BARControl.tr("Edit\u2026"));
             widgetCompressExcludeListEdit.setToolTipText(BARControl.tr("Edit entry in compress exclude list."));
-            Widgets.layout(widgetCompressExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+            Widgets.layout(widgetCompressExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListEdit,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
               public void modified(Control control, WidgetVariable byteCompressAlgorithm)
@@ -3954,7 +3951,7 @@ Dprintf.dprintf("");
 
             widgetCompressExcludeListRemove = Widgets.newButton(subComposite,BARControl.tr("Remove\u2026"));
             widgetCompressExcludeListRemove.setToolTipText(BARControl.tr("Remove entry from compress exclude list."));
-            Widgets.layout(widgetCompressExcludeListRemove,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+            Widgets.layout(widgetCompressExcludeListRemove,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListRemove,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
               public void modified(Control control, WidgetVariable byteCompressAlgorithm)
@@ -7186,7 +7183,7 @@ Dprintf.dprintf("");
         {
           widgetScheduleTableAdd = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
           widgetScheduleTableAdd.setToolTipText(BARControl.tr("Add new schedule entry."));
-          Widgets.layout(widgetScheduleTableAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          Widgets.layout(widgetScheduleTableAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetScheduleTableAdd.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -7200,7 +7197,7 @@ Dprintf.dprintf("");
 
           widgetScheduleTableEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
           widgetScheduleTableEdit.setToolTipText(BARControl.tr("Edit schedule entry."));
-          Widgets.layout(widgetScheduleTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          Widgets.layout(widgetScheduleTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetScheduleTableEdit.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -7214,7 +7211,7 @@ Dprintf.dprintf("");
 
           button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
           button.setToolTipText(BARControl.tr("Clone schedule entry."));
-          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -7228,7 +7225,7 @@ Dprintf.dprintf("");
 
           widgetScheduleTableRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
           widgetScheduleTableRemove.setToolTipText(BARControl.tr("Remove schedule entry."));
-          Widgets.layout(widgetScheduleTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          Widgets.layout(widgetScheduleTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetScheduleTableRemove.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -10176,9 +10173,9 @@ throw new Error("NYI");
       Widgets.layout(composite,1,0,TableLayoutData.NSWE);
       {
         // column 1
-        addDragAndDrop(composite,"-","text '-'",                                       0, 0);
+        addDragAndDrop(composite,"-","'-'",                                            0, 0);
         addDragAndDrop(composite,BARServer.fileSeparator,BARServer.fileSeparator,      1, 0);
-        addDragAndDrop(composite,".bar","text '.bar'",                                 2, 0);
+        addDragAndDrop(composite,".bar","'.bar'",                                      2, 0);
         widgetText = Widgets.newText(composite);
         addDragAndDrop(composite,"Text",widgetText,                                    3, 0);
 
@@ -10758,7 +10755,7 @@ throw new Error("NYI");
     assert selectedJobData != null;
 
     // create dialog
-    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Edit storage file name"),700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Edit storage file name"),900,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final StorageFileNameEditor storageFileNameEditor;

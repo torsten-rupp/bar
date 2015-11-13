@@ -2290,7 +2290,7 @@ public class TabRestore
             UUIDIndexData uuidIndexData = (UUIDIndexData)menu.getData();
 //Dprintf.dprintf("remove uuidIndexData=%s",entityIndexData);
             Widgets.removeMenu(widgetStorageTreeAssignToMenu,menu);
-            Widgets.removeMenu(widgetStorageTableAssignToMenu,menu);
+//            Widgets.removeMenu(widgetStorageTableAssignToMenu,menu);
             uuidIndexData.clearSubMenu();
           }
         }
@@ -3302,6 +3302,7 @@ public class TabRestore
   private Menu                widgetStorageTreeAssignToMenu;
   private Table               widgetStorageTable;
   private Shell               widgetStorageTableToolTip = null;
+//TODO: NYI
   private Menu                widgetStorageTableAssignToMenu;
   private Text                widgetStoragePattern;
   private Combo               widgetStorageState;
@@ -3358,6 +3359,15 @@ public class TabRestore
         this(name,fileType,0,dateTime);
       }
 
+      /** create remote file
+       * @param name name
+       * @param size size [bytes]
+       */
+      public RemoteFile(String name, long size)
+      {
+        this(name,FileTypes.DIRECTORY,size,0);
+      }
+
       /** get file size
        * @return size [bytes]
        */
@@ -3408,11 +3418,14 @@ public class TabRestore
     };
 
     private ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
-    Iterator<ValueMap>          iterator;
+    private Iterator<ValueMap>  iterator;
 
-    public String[] getShortcuts()
+    /** get shortcut files
+     * @return shortcut files
+     */
+    public File[] getShortcuts()
     {
-      ArrayList<String> shortcutList = new ArrayList<String>();
+      ArrayList<File> shortcutFileList = new ArrayList<File>();
 
       String[] resultErrorMessage = new String[1];
       int error = BARServer.executeCommand(StringParser.format("ROOT_LIST"),
@@ -3424,18 +3437,28 @@ public class TabRestore
       {
         for (ValueMap resultMap : resultMapList)
         {
-          shortcutList.add(resultMap.getString("name"));
+          shortcutFileList.add(new RemoteFile(resultMap.getString("name"),
+                                              Long.parseLong(resultMap.getString("size"))
+                                             )
+                              );
         }
       }
 
-      return shortcutList.toArray(new String[shortcutList.size()]);
+      return shortcutFileList.toArray(new File[shortcutFileList.size()]);
     }
 
-    public void setShortcuts(String shortcuts[])
+    /** set shortcut files
+     * @param shortchuts shortcut files
+     */
+    public void setShortcuts(File shortcuts[])
     {
 Dprintf.dprintf("");
     }
 
+    /** open list files in directory
+     * @param pathName path name
+     * @return true iff open
+     */
     public boolean open(String pathName)
     {
       String[] resultErrorMessage = new String[1];
@@ -3456,10 +3479,17 @@ Dprintf.dprintf("");
         return false;
       }
     }
+
+    /** close list files in directory
+     */
     public void close()
     {
       iterator = null;
     }
+
+  /** get next entry in directory
+   * @return entry
+   */
     public File getNext()
     {
       File file = null;
