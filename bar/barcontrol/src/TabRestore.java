@@ -5813,7 +5813,7 @@ Dprintf.dprintf("");
     }
   }
 
-  /** assing storage to entity
+  /** create entity for job and assing selected/checked job/entity/storage to job
    * @param toUUIDIndexData UUID index data
    * @param archiveType archive type
    */
@@ -5835,7 +5835,7 @@ Dprintf.dprintf("");
           String[] errorMessage = new String[1];
           if      (indexData instanceof UUIDIndexData)
           {
-            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s jobUUID=%'S",
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s jobUUID=%'S",
                                                                  toUUIDIndexData.jobUUID,
                                                                  archiveType.toString(),
                                                                  ((UUIDIndexData)indexData).jobUUID
@@ -5846,7 +5846,7 @@ Dprintf.dprintf("");
           }
           else if (indexData instanceof EntityIndexData)
           {
-            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s entityId=%lld",
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s entityId=%lld",
                                                                  toUUIDIndexData.jobUUID,
                                                                  archiveType.toString(),
                                                                  ((EntityIndexData)indexData).entityId
@@ -5857,7 +5857,7 @@ Dprintf.dprintf("");
           }
           else if (indexData instanceof StorageIndexData)
           {
-            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s storageId=%lld",
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s storageId=%lld",
                                                                  toUUIDIndexData.jobUUID,
                                                                  archiveType.toString(),
                                                                  ((StorageIndexData)indexData).storageId
@@ -5880,7 +5880,7 @@ Dprintf.dprintf("");
     }
   }
 
-  /** assing storage to entity
+  /** assing selected/checked job/entity/storage to entity
    * @param toEntityIndexData entity index data
    */
   private void assignStorage(EntityIndexData toEntityIndexData)
@@ -5901,7 +5901,7 @@ Dprintf.dprintf("");
           String[] errorMessage = new String[1];
           if      (indexData instanceof UUIDIndexData)
           {
-            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld jobUUID=%'S",
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID='' toEntityId=%lld jobUUID=%'S",
                                                                  toEntityIndexData.entityId,
                                                                  ((UUIDIndexData)indexData).jobUUID
                                                                 ),
@@ -5911,7 +5911,7 @@ Dprintf.dprintf("");
           }
           else if (indexData instanceof EntityIndexData)
           {
-            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld entityId=%lld",
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID='' toEntityId=%lld entityId=%lld",
                                                                  toEntityIndexData.entityId,
                                                                  ((EntityIndexData)indexData).entityId
                                                                 ),
@@ -5921,7 +5921,7 @@ Dprintf.dprintf("");
           }
           else if (indexData instanceof StorageIndexData)
           {
-            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld storageId=%lld",
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID='' toEntityId=%lld storageId=%lld",
                                                                  toEntityIndexData.entityId,
                                                                  ((StorageIndexData)indexData).storageId
                                                                 ),
@@ -5969,7 +5969,7 @@ Dprintf.dprintf("");
             String[] errorMessage = new String[1];
             if      (indexData instanceof UUIDIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s jobUUID=%'S",
+              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s jobUUID=%'S",
                                                                    "*",
                                                                    ((UUIDIndexData)indexData).jobUUID
                                                                   ),
@@ -5979,7 +5979,7 @@ Dprintf.dprintf("");
             }
             else if (indexData instanceof EntityIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s entityId=%d",
+              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s entityId=%d",
                                                                    "*",
                                                                    ((EntityIndexData)indexData).entityId
                                                                   ),
@@ -5989,7 +5989,7 @@ Dprintf.dprintf("");
             }
             else if (indexData instanceof StorageIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
+              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s storageId=%d",
                                                                    "*",
                                                                    ((StorageIndexData)indexData).storageId
                                                                   ),
@@ -6024,7 +6024,7 @@ Dprintf.dprintf("");
       if (Dialogs.confirm(shell,BARControl.tr("Refresh all indizes with error state?")))
       {
         String[] errorMessage = new String[1];
-        int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s storageId=%d",
+        int error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s storageId=%d",
                                                                  "ERROR",
                                                                  0
                                                                 ),
@@ -6193,7 +6193,7 @@ Dprintf.dprintf("");
                 final String[] errorMessage = new String[1];
                 if      (indexData instanceof UUIDIndexData)
                 {
-                  error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* jobUUID=%'S",
+                  error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* jobUUID=%'S",
                                                                        ((UUIDIndexData)indexData).jobUUID
                                                                       ),
                                                    0,
@@ -6202,7 +6202,7 @@ Dprintf.dprintf("");
                 }
                 else if (indexData instanceof EntityIndexData)
                 {
-                  error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* entityId=%d",
+                  error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* entityId=%d",
                                                                         ((EntityIndexData)indexData).entityId
                                                                        ),
                                                     0,
@@ -6211,7 +6211,7 @@ Dprintf.dprintf("");
                 }
                 else if (indexData instanceof StorageIndexData)
                 {
-                  error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* storageId=%d",
+                  error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* storageId=%d",
                                                                        ((StorageIndexData)indexData).storageId
                                                                       ),
                                                    0,
@@ -6324,7 +6324,7 @@ Dprintf.dprintf("");
                 ValueMap       resultMap    = new ValueMap();
 
                 // remove indizes with error state
-                Command command = BARServer.runCommand("INDEX_STORAGE_REMOVE state=ERROR storageId=0",0);
+                Command command = BARServer.runCommand("INDEX_REMOVE state=ERROR storageId=0",0);
 
                 long n = 0;
                 while (!command.endOfData() && !busyDialog.isAborted())
