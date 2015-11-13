@@ -363,7 +363,8 @@ public class Settings
     NORMAL,
     FULL,
     INCREMENTAL,
-    DIFFERENTIAL;
+    DIFFERENTIAL,
+    CONTINUOUS;
 
     /** convert to string
      * @return string
@@ -376,6 +377,7 @@ public class Settings
         case FULL:         return "full";
         case INCREMENTAL:  return "incremental";
         case DIFFERENTIAL: return "differential";
+        case CONTINUOUS:   return "continuous";
         default:           return "normal";
       }
     }
