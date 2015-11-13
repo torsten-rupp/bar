@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-11-13 09:08+0100\n"
+"POT-Creation-Date: 2015-11-13 10:07+0100\n"
 "PO-Revision-Date: 2015-04-06 13:24+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -233,6 +233,11 @@ msgstr ""
 #: src/Dialogs.java:3200 src/TabRestore.java:4586 src/TabRestore.java:4976
 msgid "Filter"
 msgstr "Filter"
+
+#: src/Dialogs.java:3212
+#, fuzzy
+msgid "show hidden"
+msgstr "wieder anzeigen"
 
 #: src/Dialogs.java:3240
 msgid "Open"
@@ -2623,10 +2628,6 @@ msgstr "Schublade öffnen"
 #, java-format
 msgid "Cannot change volume (error: {0})"
 msgstr "Name des Auftrags kann nicht geändert werden (Fehler: {0})"
-
-#, fuzzy
-#~ msgid "show hidden"
-#~ msgstr "wieder anzeigen"
 
 #~ msgid "overwrite archive files"
 #~ msgstr "Archivedateien überschreiben"

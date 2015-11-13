@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-11-13 09:08+0100\n"
+"POT-Creation-Date: 2015-11-13 10:07+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -228,6 +228,11 @@ msgstr ""
 #: src/Dialogs.java:3200 src/TabRestore.java:4586 src/TabRestore.java:4976
 msgid "Filter"
 msgstr "フィルター"
+
+#: src/Dialogs.java:3212
+#, fuzzy
+msgid "show hidden"
+msgstr "再表示"
 
 #: src/Dialogs.java:3240
 msgid "Open"
@@ -2595,10 +2600,6 @@ msgstr "トレーを開く"
 #, java-format
 msgid "Cannot change volume (error: {0})"
 msgstr "ボリュームを交換できません（エラー: {0}）"
-
-#, fuzzy
-#~ msgid "show hidden"
-#~ msgstr "再表示"
 
 #~ msgid "overwrite archive files"
 #~ msgstr "アーカイブファイル上書き"
