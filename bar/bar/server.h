@@ -30,8 +30,8 @@
 
 /***************************** Constants *******************************/
 
-#define SERVER_PROTOCOL_VERSION_MAJOR 3
-#define SERVER_PROTOCOL_VERSION_MINOR 1
+#define SERVER_PROTOCOL_VERSION_MAJOR 4
+#define SERVER_PROTOCOL_VERSION_MINOR 0
 
 #define SESSION_ID_LENGTH 64      // max. length of session id
 
