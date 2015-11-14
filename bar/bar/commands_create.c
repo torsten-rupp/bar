@@ -1530,6 +1530,12 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         // pause
         pauseCreate(createInfo);
 
+        // check if file still exists
+        if (!File_exists(name))
+        {
+          continue;
+        }
+
         // read file info
         error = File_getFileInfo(name,&fileInfo);
         if (error != ERROR_NONE)
@@ -2186,6 +2192,12 @@ fprintf(stderr,"%s, %d: jobUUID=%s name='%s'\n",__FILE__,__LINE__,String_cString
 
         // remove continuous entry
         Continuous_remove(databaseId);
+
+        // check if file still exists
+        if (!File_exists(name))
+        {
+          continue;
+        }
 
         // read file info
         error = File_getFileInfo(name,&fileInfo);
@@ -3430,6 +3442,121 @@ LOCAL Errors storeArchiveFile(void        *userData,
   return ERROR_NONE;
 }
 
+LOCAL void cleanStorage(ConstString jobUUID, uint64 maxStorageSize)
+{
+  String           storageName;
+  Errors           error;
+  uint64           storageSize;
+  DatabaseId       oldestStorageId;
+  uint64           oldestCreatedDateTime;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       storageId;
+  uint64           createdDateTime;
+  uint64           size;
+  StorageSpecifier storageSpecifier;
+  StorageHandle    storageHandle;
+
+fprintf(stderr,"%s, %d: cleanStorage\n",__FILE__,__LINE__);
+  // init variables
+  storageName = String_new();
+
+  do
+  {
+    // get storage size, oldest entry
+    storageSize           = 0LL;
+    oldestStorageId       = DATABASE_ID_NONE;
+    oldestCreatedDateTime = MAX_UINT64;
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexHandle,
+                                  jobUUID,
+                                  DATABASE_ID_ANY,  // entityId,
+                                  STORAGE_TYPE_ANY,  // storageType,
+                                  NULL,  // storageName,
+                                  NULL,  // hostName,
+                                  NULL,  // loginName,
+                                  NULL,  // deviceName,
+                                  NULL,  // fileName,
+                                  INDEX_STATE_SET(INDEX_STATE_OK)
+                                 );
+    if (error != ERROR_NONE)
+    {
+      break;
+    }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL,  //DatabaseId       *entityId,
+                                NULL,  //String           jobUUID,
+                                NULL,  //String           scheduleUUID,
+                                NULL,  //ArchiveTypes     *archiveType,
+                                storageName,
+                                &createdDateTime,
+                                NULL,  //uint64           *entries,
+                                &size,
+                                NULL,  //IndexStates      *indexState,
+                                NULL,  //IndexModes       *indexMode,
+                                NULL,  //uint64           *lastCheckedDateTime,
+                                NULL   //String           errorMessage
+                               )
+          )
+    {
+      if (createdDateTime < oldestCreatedDateTime)
+      {
+        oldestStorageId       = storageId;
+        oldestCreatedDateTime = createdDateTime;
+      }
+      storageSize += size;
+    }
+    Index_doneList(&indexQueryHandle);
+
+    if ((storageSize > maxStorageSize) && (oldestStorageId != DATABASE_ID_NONE))
+    {
+fprintf(stderr,"%s, %d: purge sotrage %ld\n",__FILE__,__LINE__,oldestStorageId);
+      // delete oldest storage
+      Storage_initSpecifier(&storageSpecifier);
+      error = Storage_parseName(&storageSpecifier,storageName);
+      if (error != ERROR_NONE)
+      {
+        Storage_doneSpecifier(&storageSpecifier);
+        break;
+      }
+      error = Storage_init(&storageHandle,
+                           &storageSpecifier,
+                           NULL,  // jobOptions
+                           &globalOptions.indexDatabaseMaxBandWidthList,
+                           SERVER_CONNECTION_PRIORITY_HIGH,
+                           CALLBACK(NULL,NULL),
+                           CALLBACK(NULL,NULL)
+                          );
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      error = Storage_delete(&storageHandle,storageName);
+      if (error != ERROR_NONE)
+      {
+        Storage_done(&storageHandle);
+        Storage_doneSpecifier(&storageSpecifier);
+        break;
+      }
+      Storage_done(&storageHandle);
+      Storage_doneSpecifier(&storageSpecifier);
+
+      // delete database entry
+      error = Index_deleteStorage(indexHandle,oldestStorageId);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+    }
+  }
+  while (   (storageSize > maxStorageSize)
+         && (oldestStorageId != DATABASE_ID_NONE)
+        );
+
+  // free resources
+  String_delete(storageName);
+}
+
 /***********************************************************************\
 * Name   : storageThreadCode
 * Purpose: archive storage thread
@@ -3463,6 +3590,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   String                     fileName;
 
   assert(createInfo != NULL);
+  assert(createInfo->jobOptions != NULL);
   assert(createInfo->storageSpecifier != NULL);
 
   // init variables
@@ -3546,6 +3674,17 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       continue;
     }
     DEBUG_TESTCODE("storageThreadCode2") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
+
+    // check storage size, purge old archives
+    if (createInfo->jobOptions->maxStorageSize > 0LL)
+    {
+      // clean by job storage size
+      cleanStorage(createInfo->jobUUID,
+                   (createInfo->jobOptions->maxStorageSize > fileInfo.size) ? createInfo->jobOptions->maxStorageSize-fileInfo.size : 0LL
+                  );
+    }
+//TODO
+      // clean by server storage size
 
     // open file to store
     #ifndef NDEBUG
@@ -3752,7 +3891,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         continue;
       }
 
-      // set database storage size
+      // set database storage entries and size
       error = Index_storageUpdate(indexHandle,
                                   storageMsg.storageId,
                                   NULL,              // storageName
@@ -3884,7 +4023,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                           &storageDirectorySpecifier,
                                           createInfo->jobOptions,
-                                          SERVER_CONNECTION_PRIORITY_HIGH
+                                          SERVER_CONNECTION_PRIORITY_HIGH,
+                                          NULL  // archiveName
                                          );
         if (error == ERROR_NONE)
         {

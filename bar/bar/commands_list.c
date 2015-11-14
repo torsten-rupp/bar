@@ -3341,6 +3341,7 @@ Errors Command_list(StringList                      *storageNameList,
                                    archiveGetCryptPasswordFunction,
                                    archiveGetCryptPasswordUserData
                                   );
+        if (failError == ERROR_NONE) failError = error;
       }
     }
     if (error != ERROR_NONE)
@@ -3349,7 +3350,8 @@ Errors Command_list(StringList                      *storageNameList,
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
                                         jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_HIGH
+                                        SERVER_CONNECTION_PRIORITY_HIGH,
+                                        NULL  // archiveName
                                        );
       if (error == ERROR_NONE)
       {
@@ -3402,16 +3404,17 @@ Errors Command_list(StringList                      *storageNameList,
           }
         }
         Storage_closeDirectoryList(&storageDirectoryListHandle);
+
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot open storage '%s' (error: %s)!\n",
+                     String_cString(storageName),
+                     Error_getText(error)
+                    );
+          if (failError == ERROR_NONE) failError = error;
+          continue;
+        }
       }
-    }
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot open storage '%s' (error: %s)!\n",
-                 String_cString(storageName),
-                 Error_getText(error)
-                );
-      if (failError == ERROR_NONE) failError = error;
-      continue;
     }
   }
 
