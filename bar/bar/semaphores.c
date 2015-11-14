@@ -1103,14 +1103,16 @@ bool __Semaphore_init(const char *fileName,
 
 void Semaphore_done(Semaphore *semaphore)
 {
+  bool lockedFlag;
   #ifndef NDEBUG
     uint z;
   #endif /* not NDEBUG */
 
   assert(semaphore != NULL);
 
-  // lock to avoid further usage
-  __SEMAPHORE_LOCK(DEBUG_FLAG_READ_WRITE,DEBUG_LOCK_TYPE_DELETE,"D",semaphore);
+  // try to lock to avoid further usage
+  __SEMAPHORE_LOCK_TIMEOUT(DEBUG_FLAG_READ_WRITE,DEBUG_LOCK_TYPE_DELETE,"D",semaphore,0,lockedFlag);
+  UNUSED_VARIABLE(lockedFlag);
 
   #ifndef NDEBUG
     pthread_once(&debugSemaphoreInitFlag,debugInit);
