@@ -3,7 +3,7 @@ NAME
 
 SYNOPSIS
   bar [<options>] [--] <archive name> [<file>|<device>...]
-  bar [<options>] [--] <key file name>
+  bar [<options>] --generate-keys [--] <key file name>
 
   Archive name:  file://<file name>
                  ftp:// [<login name>[:<password>]@]<host name>]/<file name>
