@@ -1216,7 +1216,8 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
 *          storageName                - storage name
 *                                       (prefix+specifier+path only)
 *          jobOptions                 - job options
-*          serverConnectionPriority        - server connection priority
+*          serverConnectionPriority   - server connection priority
+*          archiveName                - archive name or NULL
 * Output : storageDirectoryListHandle - initialized storage directory
 *                                       list handle
 * Return : ERROR_NONE or errorcode
@@ -1226,7 +1227,8 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
 Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                  const StorageSpecifier     *storageSpecifier,
                                  const JobOptions           *jobOptions,
-                                 ServerConnectionPriorities serverConnectionPriority
+                                 ServerConnectionPriorities serverConnectionPriority,
+                                 ConstString                archiveName
                                 );
 
 /***********************************************************************\

@@ -1897,8 +1897,10 @@ Errors Storage_create(StorageHandle *storageHandle,
                      )
 {
   Errors error;
+  IndexQueryHandle indexQueryHandle;
 
   assert(storageHandle != NULL);
+  assert(storageHandle->jobOptions != NULL);
   assert(archiveName != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
@@ -2374,13 +2376,14 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 }
 
 Errors Storage_delete(StorageHandle *storageHandle,
-                      ConstString   storageFileName
+                      ConstString   archiveName
                      )
 {
   Errors error;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+  assert(archiveName != NULL);
 
   error = ERROR_UNKNOWN;
   switch (storageHandle->storageSpecifier.type)
@@ -2388,10 +2391,10 @@ Errors Storage_delete(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = StorageFile_delete(storageHandle,storageFileName);
+      error = StorageFile_delete(storageHandle,archiveName);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_delete(storageHandle,storageFileName);
+      error = StorageFTP_delete(storageHandle,archiveName);
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -2400,21 +2403,21 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_delete(storageHandle,storageFileName);
+      error = StorageSCP_delete(storageHandle,archiveName);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_delete(storageHandle,storageFileName);
+      error = StorageSFTP_delete(storageHandle,archiveName);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_delete(storageHandle,storageFileName);
+      error = StorageWebDAV_delete(storageHandle,archiveName);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_delete(storageHandle,storageFileName);
+      error = StorageOptical_delete(storageHandle,archiveName);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_delete(storageHandle,storageFileName);
+      error = StorageDevice_delete(storageHandle,archiveName);
       break;
     default:
       #ifndef NDEBUG
@@ -2495,7 +2498,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                  const StorageSpecifier     *storageSpecifier,
                                  const JobOptions           *jobOptions,
-                                 ServerConnectionPriorities serverConnectionPriority
+                                 ServerConnectionPriorities serverConnectionPriority,
+                                 ConstString                archiveName
                                 )
 {
   Errors error;
@@ -2511,6 +2515,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   // initialize variables
   Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
 
+  // get archive name
+  if (archiveName == NULL) archiveName = storageDirectoryListHandle->storageSpecifier.archiveName;
+
   // open directory listing
   error = ERROR_UNKNOWN;
   switch (storageSpecifier->type)
@@ -2518,10 +2525,10 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = StorageFile_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions);
+      error = StorageFile_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority);
+      error = StorageFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -2533,21 +2540,21 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority);
+      error = StorageSCP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority);
+      error = StorageSFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority);
+      error = StorageWebDAV_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions);
+      error = StorageOptical_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions);
+      error = StorageDevice_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
       break;
     default:
       #ifndef NDEBUG
