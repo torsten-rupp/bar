@@ -1247,6 +1247,7 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
+  assert(archiveEntryInfo->file.byteCompressInfo.blockLength != 0);
 
   do
   {
@@ -1361,6 +1362,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
+  assert(archiveEntryInfo->file.byteCompressInfo.blockLength != 0);
 
   do
   {
@@ -1662,6 +1664,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   ulong  n;
 
   assert(archiveEntryInfo != NULL);
+  assert(archiveEntryInfo->file.byteCompressInfo.blockLength != 0);
 
   if      (!Chunk_eofSub(&archiveEntryInfo->file.chunkFileData.info))
   {
@@ -1687,7 +1690,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return ERROR_READ_FILE;
     }
-    if ((bytesRead % archiveEntryInfo->file.byteCompressInfo.blockLength) != 0)
+    if ((bytesRead%archiveEntryInfo->file.byteCompressInfo.blockLength) != 0)
     {
       return ERROR_DECRYPT_FAIL;
     }
@@ -1818,6 +1821,7 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
+  assert(archiveEntryInfo->image.byteCompressInfo.blockLength != 0);
 
   do
   {
@@ -1910,6 +1914,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
+  assert(archiveEntryInfo->image.byteCompressInfo.blockLength != 0);
 
   do
   {
@@ -2203,6 +2208,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   ulong  n;
 
   assert(archiveEntryInfo != NULL);
+  assert(archiveEntryInfo->image.byteCompressInfo.blockLength != 0);
 
   if (!Chunk_eofSub(&archiveEntryInfo->image.chunkImageData.info))
   {
@@ -2228,7 +2234,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return ERROR_READ_FILE;
     }
-    if ((bytesRead % archiveEntryInfo->image.byteCompressInfo.blockLength) != 0)
+    if ((bytesRead%archiveEntryInfo->image.byteCompressInfo.blockLength) != 0)
     {
       return ERROR_DECRYPT_FAIL;
     }
@@ -2398,6 +2404,7 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
+  assert(archiveEntryInfo->hardLink.byteCompressInfo.blockLength != 0);
 
   // flush data
   do
@@ -2491,6 +2498,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
+  assert(archiveEntryInfo->hardLink.byteCompressInfo.blockLength != 0);
 
   do
   {
@@ -2783,6 +2791,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   ulong  n;
 
   assert(archiveEntryInfo != NULL);
+  assert(archiveEntryInfo->hardLink.byteCompressInfo.blockLength != 0);
 
   if (!Chunk_eofSub(&archiveEntryInfo->hardLink.chunkHardLinkData.info))
   {
@@ -2808,7 +2817,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return ERROR_READ_FILE;
     }
-    if ((bytesRead % archiveEntryInfo->hardLink.byteCompressInfo.blockLength) != 0)
+    if ((bytesRead%archiveEntryInfo->hardLink.byteCompressInfo.blockLength) != 0)
     {
       return ERROR_DECRYPT_FAIL;
     }
@@ -3648,6 +3657,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
+  assert(archiveInfo->blockLength > 0);
   assert(fileInfo != NULL);
 
   // init variables
@@ -4020,6 +4030,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
+  assert(archiveInfo->blockLength > 0);
   assert(deviceInfo != NULL);
   assert(deviceInfo->blockSize > 0);
 
@@ -4349,6 +4360,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
+  assert(archiveInfo->blockLength > 0);
   assert(fileInfo != NULL);
 
   // init variables
@@ -4568,6 +4580,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
+  assert(archiveInfo->blockLength > 0);
   assert(fileInfo != NULL);
 
   // init variables
@@ -4791,6 +4804,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
+  assert(archiveInfo->blockLength > 0);
   assert(fileInfo != NULL);
 
   // init variables
@@ -5189,6 +5203,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
+  assert(archiveInfo->blockLength > 0);
   assert(fileInfo != NULL);
 
   // init variables
