@@ -15,6 +15,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdarg.h>
 #include <sys/types.h>
@@ -45,6 +46,7 @@
 #define _FILL_MEMORY
 
 #ifndef NDEBUG
+  #define DEBUG_LIST_HASH_SIZE   4093
   // max. string check: print warning and delay if to many strings allocated
   #define MAX_STRINGS_CHECK
   #define WARN_MAX_STRINGS       2000
@@ -142,7 +144,13 @@ typedef struct
   typedef struct
   {
     LIST_HEADER(DebugStringNode);
-    ulong allocatedMemory;
+    ulong memorySize;
+
+    struct
+    {
+      DebugStringNode *first;
+      ulong           count;
+    } hash[DEBUG_LIST_HASH_SIZE];
   } DebugStringList;
 #endif /* not NDEBUG */
 
@@ -182,56 +190,125 @@ LOCAL void debugStringInit(void)
 {
   pthread_mutex_init(&debugStringLock,NULL);
   List_init(&debugStringAllocList);
-  debugStringAllocList.allocatedMemory = 0L;
+  debugStringAllocList.memorySize = 0L;
+  memset(debugStringAllocList.hash,0,sizeof(debugStringAllocList.hash));
   List_init(&debugStringFreeList);
-  debugStringFreeList.allocatedMemory = 0L;
+  debugStringFreeList.memorySize = 0L;
+  memset(debugStringFreeList.hash,0,sizeof(debugStringFreeList.hash));
   #ifdef MAX_STRINGS_CHECK
     debugMaxStringNextWarningCount = WARN_MAX_STRINGS;
   #endif /* MAX_STRINGS_CHECK */
 }
 
 /***********************************************************************\
-* Name   : debugFindAllocatedString
-* Purpose: find string in allocated-list
+* Name   : debugStringHashIndex
+* Purpose: get string hash index
 * Input  : string - string
 * Output : -
-* Return : string node or NULL if not found
+* Return : hash index
 * Notes  : -
 \***********************************************************************/
 
-LOCAL DebugStringNode *debugFindAllocatedString(ConstString string)
+LOCAL_INLINE uint debugStringHashIndex(ConstString string)
 {
-  DebugStringNode *debugStringNode;
+  assert(string != NULL);
 
-  debugStringNode = debugStringAllocList.head;
-  while ((debugStringNode != NULL) && (debugStringNode->string != string))
-  {
-    debugStringNode = debugStringNode->next;
-  }
-
-  return debugStringNode;
+  return ((uintptr_t)string >> 2) % DEBUG_LIST_HASH_SIZE;
 }
 
 /***********************************************************************\
-* Name   : debugFindFreedString
-* Purpose: find string in free-list
-* Input  : string - string
+* Name   : debugFindString
+* Purpose: find string in list
+* Input  : debugStringList - string list
+*          string          - string
 * Output : -
 * Return : string node or NULL if not found
 * Notes  : -
 \***********************************************************************/
 
-LOCAL DebugStringNode *debugFindFreedString(ConstString string)
+LOCAL DebugStringNode *debugFindString(const DebugStringList *debugStringList, ConstString string)
 {
+  uint            index;
   DebugStringNode *debugStringNode;
+  ulong           n;
 
-  debugStringNode = debugStringFreeList.head;
-  while ((debugStringNode != NULL) && (debugStringNode->string != string))
+  assert(debugStringList != NULL);
+  assert(string != NULL);
+
+  index = debugStringHashIndex(string);
+
+  debugStringNode = debugStringList->hash[index].first;
+  n               = debugStringList->hash[index].count;
+  while ((debugStringNode != NULL) && (n > 0) && (debugStringNode->string != string))
   {
     debugStringNode = debugStringNode->next;
+    n--;
   }
 
-  return debugStringNode;
+  return (n > 0) ? debugStringNode : NULL;
+}
+
+/***********************************************************************\
+* Name   : debugAddString
+* Purpose: add string node to list
+* Input  : debugStringList - string list
+*          debugStringNode - string node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugAddString(DebugStringList *debugStringList, DebugStringNode *debugStringNode)
+{
+  uint index;
+
+  assert(debugStringList != NULL);
+  assert(debugStringNode != NULL);
+
+  index = debugStringHashIndex(debugStringNode->string);
+
+  if (debugStringList->hash[index].first != NULL)
+  {
+    List_insert(debugStringList,debugStringNode,debugStringList->hash[index].first);
+  }
+  else
+  {
+    List_append(debugStringList,debugStringNode);
+  }
+  debugStringList->hash[index].first = debugStringNode;
+  debugStringList->hash[index].count++;
+}
+
+/***********************************************************************\
+* Name   : debugRemoveString
+* Purpose: remove string node from list
+* Input  : debugStringList - string list
+*          debugStringNode - string node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugRemoveString(DebugStringList *debugStringList, DebugStringNode *debugStringNode)
+{
+  uint index;
+
+  assert(debugStringList != NULL);
+  assert(debugStringNode != NULL);
+
+  index = debugStringHashIndex(debugStringNode->string);
+  assert(debugStringList->hash[index].count > 0);
+
+  List_remove(debugStringList,debugStringNode);
+  debugStringList->hash[index].count--;
+  if      (debugStringList->hash[index].count == 0)
+  {
+    debugStringList->hash[index].first = NULL;
+  }
+  else if (debugStringList->hash[index].first == debugStringNode)
+  {
+    debugStringList->hash[index].first = debugStringNode->next;
+  }
 }
 
 #endif /* not NDEBUG */
@@ -254,7 +331,7 @@ LOCAL void printErrorConstString(const struct __String *string)
 
     pthread_mutex_lock(&debugStringLock);
     {
-      debugStringNode = debugFindAllocatedString(string);
+      debugStringNode = debugFindString(&debugStringAllocList,string);
       if (debugStringNode != NULL)
       {
         fprintf(stderr,
@@ -357,7 +434,7 @@ LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __l
     pthread_mutex_lock(&debugStringLock);
     {
       // update allocation info
-      debugStringAllocList.allocatedMemory += sizeof(struct __String)+tmpString->maxLength;
+      debugStringAllocList.memorySize += sizeof(struct __String)+tmpString->maxLength;
 
       // allocate new debug node
       debugStringNode = (DebugStringNode*)__List_newNode(__fileName__,__lineNb__,sizeof(DebugStringNode));
@@ -365,7 +442,7 @@ LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __l
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      debugStringAllocList.allocatedMemory += sizeof(DebugStringNode);
+      debugStringAllocList.memorySize += sizeof(DebugStringNode);
 
       // init string node
       debugStringNode->allocFileName  = __fileName__;
@@ -381,7 +458,7 @@ LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __l
       debugStringNode->string         = tmpString;
 
       // add string to allocated-list
-      List_append(&debugStringAllocList,debugStringNode);
+      debugAddString(&debugStringAllocList,debugStringNode);
     }
     pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
@@ -428,14 +505,14 @@ LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpS
     pthread_mutex_lock(&debugStringLock);
     {
       // remove string from allocated list
-      debugStringNode = debugFindAllocatedString(tmpString);
+      debugStringNode = debugFindString(&debugStringAllocList,tmpString);
       if (debugStringNode == NULL)
       {
         HALT_INTERNAL_ERROR("Temporary string not found in allocated string list!");
       }
-      List_remove(&debugStringAllocList,debugStringNode);
-      assert(debugStringAllocList.allocatedMemory >= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength);
-      debugStringAllocList.allocatedMemory -= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength;
+      debugRemoveString(&debugStringAllocList,debugStringNode);
+      assert(debugStringAllocList.memorySize >= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength);
+      debugStringAllocList.memorySize -= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength;
       LIST_DELETE_NODE(debugStringNode);
     }
     pthread_mutex_unlock(&debugStringLock);
@@ -481,7 +558,7 @@ LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
 
           pthread_mutex_lock(&debugStringLock);
           {
-            debugStringAllocList.allocatedMemory += (newMaxLength-string->maxLength);
+            debugStringAllocList.memorySize += (newMaxLength-string->maxLength);
           }
           pthread_mutex_unlock(&debugStringLock);
           #ifdef FILL_MEMORY
@@ -2082,15 +2159,15 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
     pthread_mutex_lock(&debugStringLock);
     {
       // update allocation info
-      debugStringAllocList.allocatedMemory += sizeof(struct __String)+string->maxLength;
+      debugStringAllocList.memorySize += sizeof(struct __String)+string->maxLength;
 
       // find string in free-list; reuse or allocate new debug node
-      debugStringNode = debugFindFreedString(string);
+      debugStringNode = debugFindString(&debugStringFreeList,string);
       if (debugStringNode != NULL)
       {
-        List_remove(&debugStringFreeList,debugStringNode);
-        assert(debugStringFreeList.allocatedMemory >= sizeof(DebugStringNode));
-        debugStringFreeList.allocatedMemory -= sizeof(DebugStringNode);
+        debugRemoveString(&debugStringFreeList,debugStringNode);
+        assert(debugStringFreeList.memorySize >= sizeof(DebugStringNode));
+        debugStringFreeList.memorySize -= sizeof(DebugStringNode);
       }
       else
       {
@@ -2100,7 +2177,7 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
           HALT_INSUFFICIENT_MEMORY();
         }
       }
-      debugStringAllocList.allocatedMemory += sizeof(DebugStringNode);
+      debugStringAllocList.memorySize += sizeof(DebugStringNode);
 
       // init string node
       debugStringNode->allocFileName  = __fileName__;
@@ -2116,7 +2193,7 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
       debugStringNode->string         = string;
 
       // add string to allocated-list
-      List_append(&debugStringAllocList,debugStringNode);
+      debugAddString(&debugStringAllocList,debugStringNode);
       #ifdef MAX_STRINGS_CHECK
         debugStringCount = List_count(&debugStringAllocList);
         if (debugStringCount > debugMaxStringNextWarningCount)
@@ -2322,7 +2399,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
       pthread_mutex_lock(&debugStringLock);
       {
         // find string in free-list to check for duplicate free
-        debugStringNode = debugFindFreedString(string);
+        debugStringNode = debugFindString(&debugStringFreeList,string);
         if (debugStringNode != NULL)
         {
           fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
@@ -2344,13 +2421,13 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
         }
 
         // remove string from allocated list, add string to free-list, shorten list
-        debugStringNode = debugFindAllocatedString(string);
+        debugStringNode = debugFindString(&debugStringAllocList,string);
         if (debugStringNode != NULL)
         {
           // remove from allocated list
-          List_remove(&debugStringAllocList,debugStringNode);
-          assert(debugStringAllocList.allocatedMemory >= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength);
-          debugStringAllocList.allocatedMemory -= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength;
+          debugRemoveString(&debugStringAllocList,debugStringNode);
+          assert(debugStringAllocList.memorySize >= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength);
+          debugStringAllocList.memorySize -= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength;
 
           // add to free list
           debugStringNode->deleteFileName = __fileName__;
@@ -2358,14 +2435,15 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
           #ifdef HAVE_BACKTRACE
             debugStringNode->deleteStackTraceSize = backtrace((void*)debugStringNode->deleteStackTrace,SIZE_OF_ARRAY(debugStringNode->deleteStackTrace));
           #endif /* HAVE_BACKTRACE */
-          List_append(&debugStringFreeList,debugStringNode);
-          debugStringFreeList.allocatedMemory += sizeof(DebugStringNode);
+          debugAddString(&debugStringFreeList,debugStringNode);
+          debugStringFreeList.memorySize += sizeof(DebugStringNode);
 
           // shorten free list
           while (debugStringFreeList.count > DEBUG_MAX_FREE_LIST)
           {
-            debugStringNode = (DebugStringNode*)List_getFirst(&debugStringFreeList);
-            debugStringFreeList.allocatedMemory -= sizeof(DebugStringNode);
+            debugStringNode = debugStringFreeList.head;
+            debugRemoveString(&debugStringFreeList,debugStringNode);
+            debugStringFreeList.memorySize -= sizeof(DebugStringNode);
             LIST_DELETE_NODE(debugStringNode);
           }
         }
@@ -4984,7 +5062,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
 
         pthread_mutex_lock(&debugStringLock);
         {
-          debugStringNode = debugFindAllocatedString(string);
+          debugStringNode = debugFindString(&debugStringAllocList,string);
           if (debugStringNode != NULL)
           {
             #ifdef HAVE_BACKTRACE
@@ -5004,7 +5082,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
           }
           else
           {
-            debugStringNode = debugFindFreedString(string);
+            debugStringNode = debugFindString(&debugStringFreeList,string);
             if (debugStringNode != NULL)
             {
               fprintf(stderr,"DEBUG WARNING: string %p is not allocated at %s, %lu!\n",
@@ -5060,10 +5138,10 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
 
       pthread_mutex_lock(&debugStringLock);
       {
-        debugStringNode = debugFindAllocatedString(string);
+        debugStringNode = debugFindString(&debugStringAllocList,string);
         if (debugStringNode == NULL)
         {
-          debugStringNode = debugFindFreedString(string);
+          debugStringNode = debugFindString(&debugStringFreeList,string);
 
           #ifdef HAVE_BACKTRACE
             debugDumpCurrentStackTrace(stderr,0,0);
@@ -5148,11 +5226,11 @@ void String_debugPrintStatistics(void)
   {
     fprintf(stderr,"DEBUG: %lu string(s) allocated, total %lu bytes\n",
             List_count(&debugStringAllocList),
-            debugStringAllocList.allocatedMemory
+            debugStringAllocList.memorySize
            );
     fprintf(stderr,"DEBUG: %lu string(s) in free list, total %lu bytes\n",
             List_count(&debugStringFreeList),
-            debugStringFreeList.allocatedMemory
+            debugStringFreeList.memorySize
            );
   }
   pthread_mutex_unlock(&debugStringLock);
