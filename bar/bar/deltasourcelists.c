@@ -219,7 +219,8 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                       &storageSpecifier,
                                       &jobOptions,
-                                      SERVER_CONNECTION_PRIORITY_LOW
+                                      SERVER_CONNECTION_PRIORITY_LOW,
+                                      NULL  // archiveName
                                      );
     if (error == ERROR_NONE)
     {
