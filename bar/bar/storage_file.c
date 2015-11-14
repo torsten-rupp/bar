@@ -557,7 +557,9 @@ LOCAL Errors StorageFile_getFileInfo(StorageHandle *storageHandle,
 
 LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                            const StorageSpecifier     *storageSpecifier,
-                                           const JobOptions           *jobOptions
+                                           const JobOptions           *jobOptions,
+                                           ServerConnectionPriorities serverConnectionPriority,
+                                           ConstString                archiveName
                                           )
 {
   Errors error;
@@ -566,6 +568,7 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FILESYSTEM);
   assert(jobOptions != NULL);
+  assert(archiveName != NULL);
 
   UNUSED_VARIABLE(jobOptions);
 
@@ -576,7 +579,7 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
 
   // open directory
   error = File_openDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,
-                                 storageSpecifier->archiveName
+                                 archiveName
                                 );
   if (error != ERROR_NONE)
   {

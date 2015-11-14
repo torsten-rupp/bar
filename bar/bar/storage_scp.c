@@ -1316,7 +1316,8 @@ LOCAL Errors StorageSCP_getFileInfo(StorageHandle *storageHandle,
 LOCAL Errors StorageSCP_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                           const StorageSpecifier     *storageSpecifier,
                                           const JobOptions           *jobOptions,
-                                          ServerConnectionPriorities serverConnectionPriority
+                                          ServerConnectionPriorities serverConnectionPriority,
+                                          ConstString                archiveName
                                          )
 {
   assert(storageDirectoryListHandle != NULL);

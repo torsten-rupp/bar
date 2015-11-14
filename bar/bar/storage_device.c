@@ -950,16 +950,20 @@ LOCAL Errors StorageDevice_getFileInfo(StorageHandle *storageHandle,
 
 LOCAL Errors StorageDevice_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                              const StorageSpecifier     *storageSpecifier,
-                                             const JobOptions           *jobOptions
+                                             const JobOptions           *jobOptions,
+                                             ServerConnectionPriorities serverConnectionPriority,
+                                             ConstString                archiveName
                                             )
 {
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(jobOptions != NULL);
+  assert(archiveName != NULL);
 
   UNUSED_VARIABLE(storageDirectoryListHandle);
   UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(jobOptions);
+  UNUSED_VARIABLE(archiveName);
 
   return ERROR_FUNCTION_NOT_SUPPORTED;
 }

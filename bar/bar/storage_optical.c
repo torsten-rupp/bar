@@ -1500,7 +1500,9 @@ LOCAL Errors StorageOptical_getFileInfo(StorageHandle *storageHandle,
 
 LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                               const StorageSpecifier     *storageSpecifier,
-                                              const JobOptions           *jobOptions
+                                              const JobOptions           *jobOptions,
+                                              ServerConnectionPriorities serverConnectionPriority,
+                                              ConstString                archiveName
                                              )
 {
   AutoFreeList autoFreeList;

@@ -3055,7 +3055,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                           const StorageSpecifier     *storageSpecifier,
                                           const JobOptions           *jobOptions,
-                                          ServerConnectionPriorities serverConnectionPriority
+                                          ServerConnectionPriorities serverConnectionPriority,
+                                          ConstString                archiveName
                                          )
 {
   Errors error;
@@ -3079,6 +3080,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
   assert(jobOptions != NULL);
+  assert(archiveName != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
 
@@ -3187,7 +3189,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     // get URL
     url = String_format(String_new(),"ftp://%S",storageDirectoryListHandle->storageSpecifier.hostName);
     if (storageDirectoryListHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageDirectoryListHandle->storageSpecifier.hostPort);
-    File_initSplitFileName(&nameTokenizer,storageDirectoryListHandle->storageSpecifier.archiveName);
+    File_initSplitFileName(&nameTokenizer,archiveName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');
@@ -3347,12 +3349,12 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
 
     // read directory: first try non-passive, then passive mode
     FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,control);
-    if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(storageDirectoryListHandle->storageSpecifier.archiveName),control) != 1)
+    if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(archiveName),control) != 1)
     {
       FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,control);
-      if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(storageDirectoryListHandle->storageSpecifier.archiveName),control) != 1)
+      if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(archiveName),control) != 1)
       {
-        error = ERRORX_(OPEN_DIRECTORY,0,String_cString(storageDirectoryListHandle->storageSpecifier.archiveName));
+        error = ERRORX_(OPEN_DIRECTORY,0,String_cString(archiveName));
         FtpClose(control);
         AutoFree_cleanup(&autoFreeList);
         return error;
