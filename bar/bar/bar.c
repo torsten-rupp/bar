@@ -24,6 +24,7 @@
 #ifdef HAVE_LIBINTL_H
   #include <libintl.h>
 #endif
+#include <signal.h>
 #include <errno.h>
 #include <locale.h>
 #include <assert.h>
@@ -245,6 +246,8 @@ LOCAL String             lastOutputLine;
 /****************************** Macros *********************************/
 
 /***************************** Forwards ********************************/
+
+LOCAL void doneAll(void);
 
 /***************************** Functions *******************************/
 
@@ -1051,6 +1054,41 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 };
 
 /*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : signalHandler
+* Purpose: general signal handler
+* Input  : signalNumber - signal number
+*          siginfo      - signal info
+*          context      - context
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
+{
+  UNUSED_VARIABLE(siginfo);
+  UNUSED_VARIABLE(context);
+
+  // delete temporary directory (Note: do a simple validity check in case something serious went wrong...)
+  if (!String_isEmpty(tmpDirectory) && !String_equalsCString(tmpDirectory,"/"))
+  {
+    File_delete(tmpDirectory,TRUE);
+  }
+
+  // free resources
+  doneAll();
+  #ifndef NDEBUG
+    debugResourceDone();
+    File_debugDone();
+    Array_debugDone();
+    String_debugDone();
+    List_debugDone();
+  #endif /* not NDEBUG */
+
+  exit(128+signalNumber);
+}
 
 /***********************************************************************\
 * Name   : outputLineInit
@@ -2488,10 +2526,11 @@ LOCAL void doneGlobalOptions(void)
 
 LOCAL Errors initAll(void)
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
-  const char   *localePath;
-  String       fileName;
+  struct sigaction signalAction;
+  AutoFreeList     autoFreeList;
+  Errors           error;
+  const char       *localePath;
+  String           fileName;
 
   // initialize crash dump handler
   #if HAVE_BREAKPAD
@@ -2500,6 +2539,18 @@ LOCAL Errors initAll(void)
       (void)fprintf(stderr,"Warning: Cannot initialize crash dump handler. No crash dumps will be created.\n");
     }
   #endif /* HAVE_BREAKPAD */
+
+  // install signal handlers
+  sigfillset(&signalAction.sa_mask);
+  signalAction.sa_flags     = SA_SIGINFO;
+  signalAction.sa_sigaction = signalHandler;
+  sigaction(SIGSEGV,&signalAction,NULL);
+  sigaction(SIGFPE,&signalAction,NULL);
+  sigaction(SIGILL,&signalAction,NULL);
+  sigaction(SIGBUS,&signalAction,NULL);
+  sigaction(SIGTERM,&signalAction,NULL);
+  sigaction(SIGQUIT,&signalAction,NULL);
+  sigaction(SIGINT,&signalAction,NULL);
 
   // initialize variables
   AutoFree_init(&autoFreeList);
@@ -2753,6 +2804,8 @@ LOCAL Errors initAll(void)
 
 LOCAL void doneAll(void)
 {
+  struct sigaction signalAction;
+
   // deinitialize command line options and config values
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
   ConfigValue_done(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
@@ -2812,6 +2865,18 @@ LOCAL void doneAll(void)
   Password_doneAll();
 
   Semaphore_done(&consoleLock);
+
+  // deinstall signal handlers
+  sigfillset(&signalAction.sa_mask);
+  signalAction.sa_flags   = 0;
+  signalAction.sa_handler = SIG_DFL;
+  sigaction(SIGINT,&signalAction,NULL);
+  sigaction(SIGQUIT,&signalAction,NULL);
+  sigaction(SIGTERM,&signalAction,NULL);
+  sigaction(SIGBUS,&signalAction,NULL);
+  sigaction(SIGILL,&signalAction,NULL);
+  sigaction(SIGFPE,&signalAction,NULL);
+  sigaction(SIGSEGV,&signalAction,NULL);
 
   // deinitialize crash dump handler
   #if HAVE_BREAKPAD
