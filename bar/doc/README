@@ -55,6 +55,8 @@ automated backups in the background.
 * c-areas from http://c-ares.haxx.se (optional)
 * mmxml from http://www.minixml.org (optional)
 * cdio library from www.gnu.org/software/libcdio/libcdio.html (optional)
+* mtx library from http://sourceforge.net/projects/mtx (optional)
+* bfd library from http://ftp.gnu.org/gnu/binutils (optional)
 * long long datatype (because of large files)
 * perl (only for compiling)
 * external tools for DVD: mkisofs, dvdisaster, growisofs,
@@ -96,6 +98,8 @@ The following additional packages are optional:
 * http://www.gnu.org/software/libiconv
 * www.gnu.org/software/libcdio/libcdio.html
 * http://www.pcre.org
+* http://sourceforge.net/projects/mtx
+* http://ftp.gnu.org/gnu/binutils
 * http://www.epmhome.org/index.php
 
 1)
