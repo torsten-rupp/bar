@@ -44,8 +44,17 @@
 
 /***************************** Constants *******************************/
 
+#ifdef HAVE_IN_EXCL_UNLINK
+  #define NOTIFY_FLAGS (IN_EXCL_UNLINK|IN_ISDIR)
+#else
+  #define NOTIFY_FLAGS (IN_ISDIR)
+#endif
 //#define NOTIFY_EVENTS IN_ALL_EVENTS
 #define NOTIFY_EVENTS (IN_CREATE|IN_MODIFY|IN_ATTRIB|IN_CLOSE_WRITE|IN_DELETE|IN_DELETE_SELF|IN_MODIFY|IN_MOVE_SELF|IN_MOVED_FROM|IN_MOVED_TO)
+
+#define PROC_MAX_NOTIFIES_FILENAME "/proc/sys/fs/inotify/max_user_watches"
+#define MIN_NOTIFIES_WARNING       (64*1024)
+
 
 // sleep time [s]
 //#define SLEEP_TIME_CONTINUOUS_CLEANUP_THREAD (4*60*60)
@@ -945,7 +954,7 @@ LOCAL NotifyInfo *addNotify(ConstString directory)
   if (notifyInfo == NULL)
   {
     // create notify
-    watchHandle = inotify_add_watch(inotifyHandle,String_cString(directory),NOTIFY_EVENTS|IN_EXCL_UNLINK|IN_ISDIR);
+    watchHandle = inotify_add_watch(inotifyHandle,String_cString(directory),NOTIFY_FLAGS|NOTIFY_EVENTS);
     if (watchHandle == -1)
     {
       logMessage(LOG_TYPE_CONTINUOUS,"Add notify watch for '%s' fail (error: %s)\n",String_cString(directory),strerror(errno));
@@ -1074,7 +1083,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         if (notifyInfo == NULL)
         {
        //      logMessage(LOG_TYPE_CONTINUOUS,"Add notify watch for '%s' fail (error: %s)\n",String_cString(name),strerror(errno));
-       fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: addNotify fail! \n",__FILE__,__LINE__);
           Semaphore_unlock(&notifyLock);
           continue;
         }
@@ -1763,16 +1772,35 @@ else fprintf(stderr,"%s, %d: not found %d!\n",__FILE__,__LINE__,inotifyEvent->wd
 
 Errors Continuous_initAll(void)
 {
+  FILE  *handle;
+  char  line[256];
+  ulong n;
+
+  // init variables
   Semaphore_init(&notifyLock);
   Dictionary_init(&notifyHandles,CALLBACK_NULL,CALLBACK_NULL);
   Dictionary_init(&notifyDirectories,CALLBACK_NULL,CALLBACK_NULL);
 
+  // check number of possible notifies
+  handle = fopen(PROC_MAX_NOTIFIES_FILENAME,"r");
+  if (handle != NULL)
+  {
+    if (fgets(line,sizeof(line),handle) != NULL)
+    {
+      n = (ulong)atol(line);
+      if (n < MIN_NOTIFIES_WARNING) printWarning("Low number of notifies %lu. Please check settings in '%s'!\n",n,PROC_MAX_NOTIFIES_FILENAME);
+    }
+    fclose(handle);
+  }
+
+  // init inotify
   inotifyHandle = inotify_init();
   if (inotifyHandle == -1)
   {
     return ERRORX_(OPEN_FILE,errno,"inotify");
   }
 
+  // init command queue
   if (!MsgQueue_init(&initNotifyMsgQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialize init notify message queue!");
@@ -1885,7 +1913,7 @@ Errors Continuous_initNotify(ConstString     jobUUID,
   assert(!String_isEmpty(scheduleUUID));
   assert(entryList != NULL);
 
-//fprintf(stderr,"%s, %d: Continuous_initNotify job=%s scheudle=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
+fprintf(stderr,"%s, %d: Continuous_initNotify job=%s scheudle=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
   initNotifyMsg.type = INIT;
   strncpy(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
   strncpy(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));
