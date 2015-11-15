@@ -386,33 +386,36 @@ install_barcontrol:
 # install script files
 install_scripts: \
   $(SCRIPTS)
-	if test ! -f "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; then \
-          $(INSTALL) -d "$(DESTDIR)$(INSTALL_INITD_DIR)"; \
-          if   test "$(SYSTEM)" = "SuSE"   -o -f $(ETC_DIR)/SuSE-release -o -d $(INSTALL_ETC_DIR)/SuSEconfig; then \
-            $(INSTALL) -m 755 scripts/barserver-SuSE "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-          elif test "$(SYSTEM)" = "Fedora" -o -f $(ETC_DIR)/fedora-release; then \
-            $(INSTALL) -m 755 scripts/barserver-Fedora "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-          elif test "$(SYSTEM)" = "RedHat" -o -f $(ETC_DIR)/redhat-release; then \
-            $(INSTALL) -m 755 scripts/barserver-RedHat "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-          elif test "$(SYSTEM)" = "CentOS" -o -f $(ETC_DIR)/redhat-release; then \
-            $(INSTALL) -m 755 scripts/barserver-CentOS "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-          elif test "$(SYSTEM)" = "Mandrake" -o -f $(ETC_DIR)/mandrake-release; then \
-            $(INSTALL) -m 755 scripts/barserver-Mandrake "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-          elif test "$(SYSTEM)" = "Ubuntu" -o -f $(ETC_DIR)/lsb-release; then \
-            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-          elif test "$(SYSTEM)" = "Debian" -o -f $(ETC_DIR)/debian_release; then \
-            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+	if test "$(SYSTEM_INIT)" = "systemd" -o -d /usr/lib/systemd; then \
+          if test ! -f "$(DESTDIR)/usr/lib/systemd/system/barserver.service"; then \
+            $(INSTALL) -d "$(DESTDIR)/usr/lib/systemd/system"; \
+            $(INSTALL) -m 644 scripts/barserver.service "$(DESTDIR)/usr/lib/systemd/system/barserver.service"; \
           else \
-            $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_ETC_DIR)/barserver"; \
+            echo "$(DESTDIR)/usr/lib/systemd/system/barserver.service NOT installed - file already exists!"; \
           fi; \
         else \
-          echo "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver NOT installed - file already exists!"; \
-        fi
-	if test ! -f "$(DESTDIR)/usr/lib/systemd/system/barserver.service"; then \
-          $(INSTALL) -d "$(DESTDIR)/usr/lib/systemd/system"; \
-          $(INSTALL) -m 644 scripts/barserver.service "$(DESTDIR)/usr/lib/systemd/system/barserver.service"; \
-        else \
-          echo "$(DESTDIR)/usr/lib/systemd/system/barserver.service NOT installed - file already exists!"; \
+	  if test ! -f "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; then \
+            $(INSTALL) -d "$(DESTDIR)$(INSTALL_INITD_DIR)"; \
+            if   test "$(SYSTEM)" = "SuSE"   -o -f $(ETC_DIR)/SuSE-release -o -d $(INSTALL_ETC_DIR)/SuSEconfig; then \
+              $(INSTALL) -m 755 scripts/barserver-SuSE "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+            elif test "$(SYSTEM)" = "Fedora" -o -f $(ETC_DIR)/fedora-release; then \
+              $(INSTALL) -m 755 scripts/barserver-Fedora "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+            elif test "$(SYSTEM)" = "RedHat" -o -f $(ETC_DIR)/redhat-release; then \
+              $(INSTALL) -m 755 scripts/barserver-RedHat "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+            elif test "$(SYSTEM)" = "CentOS" -o -f $(ETC_DIR)/redhat-release; then \
+              $(INSTALL) -m 755 scripts/barserver-CentOS "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+            elif test "$(SYSTEM)" = "Mandrake" -o -f $(ETC_DIR)/mandrake-release; then \
+              $(INSTALL) -m 755 scripts/barserver-Mandrake "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+            elif test "$(SYSTEM)" = "Ubuntu" -o -f $(ETC_DIR)/lsb-release; then \
+              $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+            elif test "$(SYSTEM)" = "Debian" -o -f $(ETC_DIR)/debian_release; then \
+              $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+            else \
+              $(INSTALL) -m 755 scripts/barserver-debian "$(DESTDIR)$(INSTALL_ETC_DIR)/barserver"; \
+            fi; \
+          else \
+            echo "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver NOT installed - file already exists!"; \
+          fi; \
         fi
 
 # install man-page
