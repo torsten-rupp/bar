@@ -846,7 +846,7 @@ class ReadThread extends Thread
 class BARServer
 {
   // --------------------------- constants --------------------------------
-  private final static int   PROTOCOL_VERSION_MAJOR = 3;
+  private final static int   PROTOCOL_VERSION_MAJOR = 4;
   private final static int   PROTOCOL_VERSION_MINOR = 0;
 
   public final static String JAVA_SSL_KEY_FILE_NAME = "bar.jks";  // default name Java TLS/SSL key
