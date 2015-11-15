@@ -191,6 +191,24 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
        (variable) = (variable)->next \
       )
 
+#define LIST_REMOVE(list,variable,condition) \
+  do \
+  { \
+    variable = list->head; \
+    while (variable != NULL) \
+    { \
+      if (condition) \
+      { \
+        variable = List_remove(list,variable); \
+      } \
+      else \
+      { \
+        variable = variable->next; \
+      } \
+    } \
+  } \
+  while (0)
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/

@@ -30,7 +30,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define DEBUG_MAX_FREE_LIST 4000
+#define DEBUG_LIST_HASH_SIZE 4093
+#define DEBUG_MAX_FREE_LIST  4000
 
 /***************************** Datatypes *******************************/
 #ifndef NDEBUG
@@ -53,12 +54,19 @@
       int        deleteStackTraceSize;
     #endif /* HAVE_BACKTRACE */
 
+    const List *list;
     const Node *node;
   } DebugListNode;
 
   typedef struct
   {
     LIST_HEADER(DebugListNode);
+
+    struct
+    {
+      DebugListNode *first;
+      ulong          count;
+    } hash[DEBUG_LIST_HASH_SIZE];
   } DebugListNodeList;
 #endif /* not NDEBUG */
 
@@ -75,11 +83,175 @@
 
 /***************************** Forwards ********************************/
 
+LOCAL_INLINE void listInsert(void *list,
+                             void *node,
+                             void *nextNode
+                            );
+
+LOCAL_INLINE void listRemove(void *list,
+                             void *node
+                            );
+
 /***************************** Functions *******************************/
 
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : debugNodeHashIndex
+* Purpose: get string hash index
+* Input  : string - string
+* Output : -
+* Return : hash index
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE uint debugNodeHashIndex(const Node *node)
+{
+  assert(node != NULL);
+
+  return ((uintptr_t)node >> 2) % DEBUG_LIST_HASH_SIZE;
+}
+
+/***********************************************************************\
+* Name   : debugFindNode
+* Purpose: find string in list
+* Input  : debugListNodeList - node list
+*          string            - string
+* Output : -
+* Return : string node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL DebugListNode *debugFindNode(const DebugListNodeList *debugListNodeList, const Node *node)
+{
+  uint          index;
+  DebugListNode *debugListNode;
+  ulong         n;
+
+  assert(debugListNodeList != NULL);
+  assert(node != NULL);
+
+  index = debugNodeHashIndex(node);
+
+  debugListNode = debugListNodeList->hash[index].first;
+  n             = debugListNodeList->hash[index].count;
+  while ((debugListNode != NULL) && (n > 0) && (debugListNode->node != node))
+  {
+    debugListNode = debugListNode->next;
+    n--;
+  }
+
+  return (n > 0) ? debugListNode : NULL;
+}
+
+/***********************************************************************\
+* Name   : debugAddNode
+* Purpose: add node to list
+* Input  : debugListNodeList - list
+*          debugListNode     - node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugAddNode(DebugListNodeList *debugListNodeList, DebugListNode *debugListNode)
+{
+  uint index;
+
+  assert(debugListNodeList != NULL);
+  assert(debugListNode != NULL);
+
+  index = debugNodeHashIndex(debugListNode->node);
+
+  listInsert(debugListNodeList,debugListNode,debugListNodeList->hash[index].first);
+  debugListNodeList->hash[index].first = debugListNode;
+  debugListNodeList->hash[index].count++;
+}
+
+/***********************************************************************\
+* Name   : debugRemoveNode
+* Purpose: remove node from list
+* Input  : debugListNodeList - list
+*          debugListNode     - node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugRemoveNode(DebugListNodeList *debugListNodeList, DebugListNode *debugListNode)
+{
+  uint index;
+
+  assert(debugListNodeList != NULL);
+  assert(debugListNode != NULL);
+
+  index = debugNodeHashIndex(debugListNode->node);
+  assert(debugListNodeList->hash[index].count > 0);
+
+  listRemove(debugListNodeList,debugListNode);
+  debugListNodeList->hash[index].count--;
+  if      (debugListNodeList->hash[index].count == 0)
+  {
+    debugListNodeList->hash[index].first = NULL;
+  }
+  else if (debugListNodeList->hash[index].first == debugListNode)
+  {
+    debugListNodeList->hash[index].first = debugListNode->next;
+  }
+}
+
+/***********************************************************************\
+* Name   : debugCheckDuplicateNode
+* Purpose: check if node is already in list
+* Input  : fileName - code file name
+*          lineNb   - code line number
+*          list     - list where node should be inserted
+*          newNode  - new node to insert
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugCheckDuplicateNode(const char *fileName,
+                                   ulong      lineNb,
+                                   const List *list,
+                                   const Node *node
+                                  )
+{
+#if 1
+  uint          index;
+  DebugListNode *debugListNode;
+  ulong         n;
+
+  assert(list != NULL);
+
+  index = debugNodeHashIndex(node);
+
+  debugListNode = debugListAllocNodeList.hash[index].first;
+  n             = debugListAllocNodeList.hash[index].count;
+
+  while ((debugListNode != NULL) && (n > 0))
+  {
+    if (debugListNode->node == node)
+    {
+      if      (debugListNode->list == list)
+      {
+         HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is already in list %p!",node,list);
+      }
+      else if (debugListNode->list != NULL)
+      {
+         HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is still in other list %p!",node,debugListNode->list);
+      }
+    }
+    debugListNode = debugListNode->next;
+    n--;
+  }
+#endif
+}
+#endif /* not NDEBUG */
 
 /***********************************************************************\
 * Name   : listInsert
@@ -97,6 +269,10 @@ LOCAL_INLINE void listInsert(void *list,
                              void *nextNode
                             )
 {
+  #ifndef NDEBUG
+    DebugListNode *debugListNode;
+  #endif // NDEBUG
+
   assert(list != NULL);
   assert(node != NULL);
 
@@ -140,24 +316,17 @@ LOCAL_INLINE void listInsert(void *list,
   assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
          ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
         );
+
+  #ifndef NDEBUG
+    // Node: may be NULL in case debug node is inserted
+    debugListNode = debugFindNode(&debugListAllocNodeList,node);
+    if (debugListNode != NULL)
+    {
+      debugListNode->list = list;
+    }
+  #endif
 }
 
-/***********************************************************************\
-* Name   : listAppend
-* Purpose: append node to list
-* Input  : list - list
-*          node - node to insert
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE void listAppend(void *list,
-                             void *node
-                            )
-{
-  listInsert(list,node,NULL);
-}
 /***********************************************************************\
 * Name   : listRemove
 * Purpose: remove node from list
@@ -172,6 +341,10 @@ LOCAL_INLINE void listRemove(void *list,
                              void *node
                             )
 {
+  #ifndef NDEBUG
+    DebugListNode *debugListNode;
+  #endif // NDEBUG
+
   assert(list != NULL);
   assert(((List*)list)->head != NULL);
   assert(((List*)list)->tail != NULL);
@@ -187,6 +360,15 @@ LOCAL_INLINE void listRemove(void *list,
   assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
          ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
         );
+
+  #ifndef NDEBUG
+    // Node: may be NULL in case debug node is inserted
+    debugListNode = debugFindNode(&debugListAllocNodeList,node);
+    if (debugListNode != NULL)
+    {
+      debugListNode->list = NULL;
+    }
+  #endif
 }
 
 #if 0
@@ -236,46 +418,14 @@ LOCAL void debugListInit(void)
   pthread_mutexattr_settype(&debugListLockAttributes,PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init(&debugListLock,&debugListLockAttributes);
   List_init(&debugListAllocNodeList);
+  memset(debugListAllocNodeList.hash,0,sizeof(debugListAllocNodeList.hash));
   List_init(&debugListFreeNodeList);
+  memset(debugListFreeNodeList.hash,0,sizeof(debugListFreeNodeList.hash));
 }
 #endif /* not NDEBUG */
 
 // ----------------------------------------------------------------------
 
-#ifndef NDEBUG
-/***********************************************************************\
-* Name   : checkDuplicateNode
-* Purpose: check if node is already in list
-* Input  : fileName - code file name
-*          lineNb   - code line number
-*          list     - list where node should be inserted
-*          newNode  - new node to insert
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void checkDuplicateNode(const char *fileName,
-                              ulong      lineNb,
-                              const List *list,
-                              const Node *newNode
-                             )
-{
-  Node *node;
-
-  assert(list != NULL);
-
-  node = list->head;
-  while (node != NULL)
-  {
-    if (node == newNode)
-    {
-      HALT_INTERNAL_ERROR_AT(fileName,lineNb,"Node %p is already in list %p!",node,list);
-    }
-    node = node->next;
-  }
-}
-#endif /* not NDEBUG */
 
 #ifdef NDEBUG
 Node * List_newNode(ulong size)
@@ -309,7 +459,7 @@ Node * __List_newNode(const char *__fileName__, ulong __lineNb__, ulong size)
       }
       if (debugListNode != NULL)
       {
-        listRemove(&debugListFreeNodeList,debugListNode);
+        debugRemoveNode(&debugListFreeNodeList,debugListNode);
       }
       else
       {
@@ -323,12 +473,13 @@ Node * __List_newNode(const char *__fileName__, ulong __lineNb__, ulong size)
       // init list node
       debugListNode->fileName = __fileName__;
       debugListNode->lineNb   = __lineNb__;
+      debugListNode->list     = NULL;
       debugListNode->node     = node;
       #ifdef HAVE_BACKTRACE
         debugListNode->stackTraceSize       = backtrace((void*)debugListNode->stackTrace,SIZE_OF_ARRAY(debugListNode->stackTrace));
         debugListNode->deleteStackTraceSize = 0;
       #endif /* HAVE_BACKTRACE */
-      listAppend(&debugListAllocNodeList,debugListNode);
+      debugAddNode(&debugListAllocNodeList,debugListNode);
     }
     pthread_mutex_unlock(&debugListLock);
   #endif /* not NDEBUG */
@@ -356,11 +507,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
     pthread_mutex_lock(&debugListLock);
     {
       // find node in free-list to check for duplicate free
-      debugListNode = debugListFreeNodeList.head;
-      while ((debugListNode != NULL) && (debugListNode->node != node))
-      {
-        debugListNode = debugListNode->next;
-      }
+      debugListNode = debugFindNode(&debugListFreeNodeList,node);
       if (debugListNode != NULL)
       {
         fprintf(stderr,"DEBUG WARNING: multiple free of node %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
@@ -382,15 +529,30 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
       }
 
       // remove node from allocated list, add node to free-list, shorten list
-      debugListNode = debugListAllocNodeList.head;
-      while ((debugListNode != NULL) && (debugListNode->node != node))
-      {
-        debugListNode = debugListNode->next;
-      }
+      debugListNode = debugFindNode(&debugListAllocNodeList,node);
       if (debugListNode != NULL)
       {
+        // check if node still in some list
+        if (debugListNode->list != NULL)
+        {
+          fprintf(stderr,"DEBUG WARNING: node %p allocated at %s, %lu is still in list %p at %s, %lu!\n",
+                  node,
+                  debugListNode->fileName,
+                  debugListNode->lineNb,
+                  debugListNode->list,
+                  __fileName__,
+                  __lineNb__
+                 );
+          #ifdef HAVE_BACKTRACE
+            fprintf(stderr,"  allocated at\n");
+            debugDumpStackTrace(stderr,4,debugListNode->stackTrace,debugListNode->stackTraceSize,0);
+            fprintf(stderr,"  deleted at\n");
+            debugDumpStackTrace(stderr,4,debugListNode->deleteStackTrace,debugListNode->deleteStackTraceSize,0);
+          #endif /* HAVE_BACKTRACE */
+          HALT_INTERNAL_ERROR("delete node");
+        }
         // remove from allocated list
-        listRemove(&debugListAllocNodeList,debugListNode);
+        debugRemoveNode(&debugListAllocNodeList,debugListNode);
 
         // add to free list
         debugListNode->deleteFileName = __fileName__;
@@ -398,12 +560,13 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
         #ifdef HAVE_BACKTRACE
           debugListNode->deleteStackTraceSize = backtrace((void*)debugListNode->deleteStackTrace,SIZE_OF_ARRAY(debugListNode->deleteStackTrace));
         #endif /* HAVE_BACKTRACE */
-        listAppend(&debugListFreeNodeList,debugListNode);
+        debugAddNode(&debugListFreeNodeList,debugListNode);
 
         // shorten free list
         while (debugListFreeNodeList.count > DEBUG_MAX_FREE_LIST)
         {
-          debugListNode = (DebugListNode*)List_getFirst(&debugListFreeNodeList);
+          debugListNode = debugListFreeNodeList.head;
+          debugRemoveNode(&debugListFreeNodeList,debugListNode);
           free(debugListNode);
         }
       }
@@ -531,25 +694,25 @@ void *List_clear(void                 *list,
 
   if (listNodeFreeFunction != NULL)
   {
-    while (((List*)list)->tail != NULL)
+    while (!List_isEmpty(list))
     {
       node = ((List*)list)->tail;
-      ((List*)list)->tail = ((List*)list)->tail->prev;
+      listRemove(list,node);
       listNodeFreeFunction(node,listNodeFreeUserData);
       LIST_DELETE_NODE(node);
     }
   }
   else
   {
-    while (((List*)list)->tail != NULL)
+    while (!List_isEmpty(list))
     {
       node = ((List*)list)->tail;
-      ((List*)list)->tail = ((List*)list)->tail->prev;
+      listRemove(list,node);
       LIST_DELETE_NODE(node);
     }
   }
-  ((List*)list)->head  = NULL;
-  ((List*)list)->count = 0;
+//  ((List*)list)->head  = NULL;
+//  ((List*)list)->count = 0;
 
   return list;
 }
@@ -649,7 +812,7 @@ void __List_insert(const char *fileName,
   assert(node != NULL);
 
   #ifndef NDEBUG
-    checkDuplicateNode(fileName,lineNb,(List*)list,(Node*)node);
+    debugCheckDuplicateNode(fileName,lineNb,(List*)list,(Node*)node);
   #endif /* not NDEBUG */
 
   listInsert(list,node,nextNode);
