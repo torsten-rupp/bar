@@ -382,6 +382,8 @@ ERROR NOT_A_DIRECTORY
 
 ERROR END_OF_DIRECTORY               "end of directory list"
 
+ERROR INSUFFICIENT_FILE_NOTIFY       "insufficient file notify entries"
+
 // --- optical disk i/o -------------------------------------------------
 ERROR OPTICAL_DISK_NOT_FOUND
   strncpy(errorText,"CD/DVD/BD device",sizeof(errorText)-1);
