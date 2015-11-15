@@ -36,7 +36,7 @@ OSC_PATH = home:torsten20:BAR/BAR
 default: \
   help
 
-.PHONY: all rebuild changelog
+.PHONY: all
 all:
 
 .PHONY: clean
@@ -46,21 +46,36 @@ clean:
 help:
 	@$(ECHO) "Help:"
 	@$(ECHO) ""
-	@$(ECHO) "  changelog             - create debian.changelog "
+	@$(ECHO) "  changelogs            - create changelogs "
+	@$(ECHO) "  checkout              - checkout"
 	@$(ECHO) "  commit                - commit changes to osc; MSG=<commit message>"
 	@$(ECHO) "  rebuild               - start rebuild"
 	@$(ECHO) "  download VERSION=<n>  - download built packages"
 
-changelog:
-	./changelog.pl < ../ChangeLog > $(OSC_PATH)/debian.changelog
+.PHONY: changelog changelogs
+changelog changelogs:
+	(./changelog.pl --type debian < ../ChangeLog) > $(OSC_PATH)/debian.changelog
+	for fileName in $(wildcard $(OSC_PATH)/*.spec); do \
+          sed -i '/^%changelog/q1' $$fileName; \
+          if test $$? -eq 1; then \
+             ./changelog.pl --type spec < ../ChangeLog >> $$fileName; \
+          fi; \
+        done
 
+.PHONY: checkout
+checkout:
+	($(OSC) checkout $(OSC_PATH))
+
+.PHONY: commit
 commit:
 	($(CD) $(OSC_PATH); $(OSC) up)
 	($(CD) $(OSC_PATH); $(OSC) commit -m "$(MSG)")
 	($(CD) $(OSC_PATH); $(OSC) rebuildpac home\:torsten20\:BAR/BAR)
 
+.PHONY: rebuild
 rebuild:
 	($(CD) $(OSC_PATH); $(OSC) rebuildpac home\:torsten20\:BAR/BAR)
 
+.PHONY: download
 download:
 	./download-packages.sh $(VERSION)
