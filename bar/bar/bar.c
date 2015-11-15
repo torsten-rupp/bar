@@ -247,6 +247,7 @@ LOCAL String             lastOutputLine;
 
 /***************************** Forwards ********************************/
 
+LOCAL void deletePIDFile(void);
 LOCAL void doneAll(void);
 
 /***************************** Functions *******************************/
@@ -1070,6 +1071,9 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
 {
   UNUSED_VARIABLE(siginfo);
   UNUSED_VARIABLE(context);
+
+  // delete pid file
+  deletePIDFile();
 
   // delete temporary directory (Note: do a simple validity check in case something serious went wrong...)
   if (!String_isEmpty(tmpDirectory) && !String_equalsCString(tmpDirectory,"/"))
@@ -2554,6 +2558,9 @@ LOCAL Errors initAll(void)
 
   // initialize variables
   AutoFree_init(&autoFreeList);
+  tmpDirectory = String_new();
+  pidFileName  = NULL;
+  AUTOFREE_ADD(&autoFreeList,&consoleLock,{ String_delete(tmpDirectory); });
 
   Semaphore_init(&consoleLock);
   DEBUG_TESTCODE("initAll1") { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
@@ -2748,14 +2755,11 @@ LOCAL Errors initAll(void)
   xhelpFlag                              = FALSE;
   helpInternalFlag                       = FALSE;
 
-  pidFileName                            = NULL;
-
   keyFileName                            = NULL;
   keyBits                                = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
 
   StringList_init(&configFileNameList);
 
-  tmpDirectory                           = String_new();
   tmpLogFileName                         = String_new();
   Semaphore_init(&logLock);
   logFile                                = NULL;
@@ -5333,13 +5337,9 @@ LOCAL Errors createPIDFile(void)
 
 LOCAL void deletePIDFile(void)
 {
-  String fileName;
-
   if (pidFileName != NULL)
   {
-    fileName = String_newCString(pidFileName);
-    File_delete(fileName,FALSE);
-    String_delete(fileName);
+    File_deleteCString(pidFileName,FALSE);
   }
 }
 
