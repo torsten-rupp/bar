@@ -617,6 +617,35 @@ Errors Index_storageAssignTo(IndexHandle *indexHandle,
                             );
 
 /***********************************************************************\
+* Name   : Index_getStorage
+* Purpose: get storage index name/entries/size
+* Input  : indexHandle - index handle
+*          storageId   - database id of storage index
+* Output:  storageName         - storage name (can be NULL)
+*          createdDateTime     - created date/time (can be NULL)
+*          entries             - number of entries (can be NULL)
+*          size                - size [bytes] (can be NULL)
+*          indexState          - index state (can be NULL)
+*          indexMode           - index mode (can be NULL)
+*          lastCheckedDateTime - last checked date/time (can be NULL)
+*          errorMessage        - last error message (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_getStorage(IndexHandle *indexHandle,
+                        DatabaseId  storageId,
+                        String      storageName,
+                        uint64      *createdDateTime,
+                        uint64      *entries,
+                        uint64      *size,
+                        IndexStates *indexState,
+                        IndexModes  *indexMode,
+                        uint64      *lastCheckedDateTime,
+                        String      errorMessage
+                       );
+
+/***********************************************************************\
 * Name   : Index_storageUpdate
 * Purpose: update storage index name/entries/size
 * Input  : indexHandle - index handle
@@ -628,7 +657,6 @@ Errors Index_storageAssignTo(IndexHandle *indexHandle,
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
-
 Errors Index_storageUpdate(IndexHandle *indexHandle,
                            DatabaseId  storageId,
                            ConstString storageName,

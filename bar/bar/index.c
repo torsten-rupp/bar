@@ -3748,6 +3748,69 @@ Errors Index_storageAssignTo(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
+Errors Index_getStorage(IndexHandle *indexHandle,
+                        DatabaseId  storageId,
+                        String      storageName,
+                        uint64      *createdDateTime,
+                        uint64      *entries,
+                        uint64      *size,
+                        IndexStates *indexState,
+                        IndexModes  *indexMode,
+                        uint64      *lastCheckedDateTime,
+                        String      errorMessage
+                       )
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+
+  assert(indexHandle != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT storage.name, \
+                                   STRFTIME('%%s',storage.created), \
+                                   storage.entries, \
+                                   storage.size, \
+                                   storage.state, \
+                                   storage.mode, \
+                                   STRFTIME('%%s',storage.lastChecked), \
+                                   storage.errorMessage \
+                            FROM storage \
+                            WHERE id=%d \
+                           ",
+                           storageId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%S %lld %lld %lld %d %d %lld %S",
+                           storageName,
+                           createdDateTime,
+                           entries,
+                           size,
+                           indexState,
+                           indexMode,
+                           lastCheckedDateTime,
+                           errorMessage
+                          )
+     )
+  {
+    Database_finalize(&databaseQueryHandle);
+    return ERROR_DATABASE_INDEX_NOT_FOUND;
+  }
+  Database_finalize(&databaseQueryHandle);
+
+  return ERROR_NONE;
+}
+
 Errors Index_storageUpdate(IndexHandle *indexHandle,
                            DatabaseId  storageId,
                            ConstString storageName,
