@@ -186,6 +186,8 @@ LOCAL void fileCheckValid(const char       *fileName,
   DebugFileNode *debugFileNode;
 
   assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
+  assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
 
   pthread_once(&debugFileInitFlag,debugFileInit);
 
@@ -1469,6 +1471,14 @@ Errors __File_openCString(const char *__fileName__,
         return ERRORX_(OPEN_FILE,errno,fileName);
       }
 
+      // seek to end of file
+      if (FSEEK(fileHandle->file,(off_t)0,SEEK_END) == -1)
+      {
+        error = ERRORX_(IO_ERROR,errno,fileName);
+        fclose(fileHandle->file);
+        return error;
+      }
+
       // get file size
       n = FTELL(fileHandle->file);
       if (n == (off_t)(-1))
@@ -1493,6 +1503,7 @@ Errors __File_openCString(const char *__fileName__,
   }
   fileHandle->mode = fileMode;
   StringList_init(&fileHandle->lineBufferList);
+  assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
 
   #ifndef NDEBUG
     pthread_once(&debugFileInitFlag,debugFileInit);
@@ -1642,6 +1653,14 @@ Errors __File_openDescriptor(const char *__fileName__,
         return ERROR_(OPEN_FILE,errno);
       }
 
+      // seek to end of file
+      if (FSEEK(fileHandle->file,(off_t)0,SEEK_END) == -1)
+      {
+        error = ERROR_(IO_ERROR,errno);
+        fclose(fileHandle->file);
+        return error;
+      }
+
       // get file size
       n = FTELL(fileHandle->file);
       if (n == (off_t)(-1))
@@ -1663,6 +1682,7 @@ Errors __File_openDescriptor(const char *__fileName__,
   }
   fileHandle->mode = fileMode;
   StringList_init(&fileHandle->lineBufferList);
+  assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
 
   #ifndef NDEBUG
     pthread_once(&debugFileInitFlag,debugFileInit);
@@ -1887,7 +1907,7 @@ Errors File_read(FileHandle *fileHandle,
       return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
     }
     fileHandle->index += (uint64)n;
-    assert(fileHandle->index == FTELL(fileHandle->file));
+    assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
     (*bytesRead) = n;
   }
   else
@@ -1911,7 +1931,7 @@ Errors File_read(FileHandle *fileHandle,
       buffer = (byte*)buffer+n;
       bufferLength -= (ulong)n;
       fileHandle->index += (uint64)n;
-      assert(fileHandle->index == FTELL(fileHandle->file));
+      assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
     }
   }
 
@@ -1938,8 +1958,8 @@ Errors File_write(FileHandle *fileHandle,
   n = fwrite(buffer,1,bufferLength,fileHandle->file);
   if (n > 0)
   {
-    fileHandle->index += n;
-    assert(fileHandle->index == FTELL(fileHandle->file));
+    fileHandle->index += (uint64)n;
+    assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
   }
   if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   if (n != (ssize_t)bufferLength)
@@ -1974,8 +1994,8 @@ Errors File_readLine(FileHandle *fileHandle,
       ch = fgetc(fileHandle->file);
       if (ch != EOF)
       {
-        fileHandle->index += 1;
-        assert(fileHandle->index == FTELL(fileHandle->file));
+        fileHandle->index += 1LL;
+        assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
         if (((char)ch != '\n') && ((char)ch != '\r'))
         {
           String_appendChar(line,ch);
@@ -1995,12 +2015,12 @@ Errors File_readLine(FileHandle *fileHandle,
       ch = fgetc(fileHandle->file);
       if (ch != EOF)
       {
-        fileHandle->index += 1;
-        assert(fileHandle->index == FTELL(fileHandle->file));
+        fileHandle->index += 1LL;
+        assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
         if (ch != '\n')
         {
-          fileHandle->index -= 1;
-          assert(fileHandle->index == FTELL(fileHandle->file));
+          fileHandle->index -= 1LL;
+          assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
           ungetc(ch,fileHandle->file);
         }
       }
@@ -2230,7 +2250,7 @@ Errors File_tell(const FileHandle *fileHandle, uint64 *offset)
   {
     return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
   }
-  assert((uint64)n == fileHandle->index);
+  assert(fileHandle->index == (uint64)n);
 
   (*offset) = fileHandle->index;
 
@@ -2250,7 +2270,7 @@ Errors File_seek(FileHandle *fileHandle,
     return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
   }
   fileHandle->index = offset;
-  assert(fileHandle->index == FTELL(fileHandle->file));
+  assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
 
   return ERROR_NONE;
 }
@@ -2277,7 +2297,7 @@ Errors File_truncate(FileHandle *fileHandle,
         return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
       }
       fileHandle->index = size;
-      assert(fileHandle->index == FTELL(fileHandle->file));
+      assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
     }
     fileHandle->size = size;
   }
