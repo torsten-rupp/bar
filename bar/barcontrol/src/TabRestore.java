@@ -1603,7 +1603,7 @@ public class TabRestore
       final HashSet<TreeItem> removeUUIDTreeItemSet = new HashSet<TreeItem>();
       Command                 command;
       String[]                errorMessage          = new String[1];
-      ValueMap                resultMap             = new ValueMap();
+      ValueMap                valueMap              = new ValueMap();
 
       uuidTreeItems.clear();
 
@@ -1631,19 +1631,19 @@ public class TabRestore
       while (!command.endOfData() && !triggeredFlag)
       {
         if (command.getNextResult(errorMessage,
-                                  resultMap,
+                                  valueMap,
                                   Command.TIMEOUT
                                  ) == Errors.NONE
            )
         {
           try
           {
-            String jobUUID          = resultMap.getString("jobUUID"         );
-            String name             = resultMap.getString("name"            );
-            long   lastDateTime     = resultMap.getLong  ("lastDateTime"    );
-            long   totalEntries     = resultMap.getLong  ("totalEntries"    );
-            long   totalSize        = resultMap.getLong  ("totalSize"       );
-            String lastErrorMessage = resultMap.getString("lastErrorMessage");
+            String jobUUID          = valueMap.getString("jobUUID"         );
+            String name             = valueMap.getString("name"            );
+            long   lastDateTime     = valueMap.getLong  ("lastDateTime"    );
+            long   totalEntries     = valueMap.getLong  ("totalEntries"    );
+            long   totalSize        = valueMap.getLong  ("totalSize"       );
+            String lastErrorMessage = valueMap.getString("lastErrorMessage");
 
             // add/update index map
             final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
@@ -1723,7 +1723,7 @@ public class TabRestore
       final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
       Command                 command;
       String[]                errorMessage            = new String[1];
-      ValueMap                resultMap               = new ValueMap();
+      ValueMap                valueMap                = new ValueMap();
 
       // get job items, UUID index data
       final UUIDIndexData uuidIndexData[] = new UUIDIndexData[1];
@@ -1754,21 +1754,21 @@ public class TabRestore
       while (!command.endOfData())
       {
         if (command.getNextResult(errorMessage,
-                                  resultMap,
+                                  valueMap,
                                   Command.TIMEOUT
                                  ) == Errors.NONE
            )
         {
           try
           {
-            long                  entityId         = resultMap.getLong  ("entityId"                               );
-            String                jobUUID          = resultMap.getString("jobUUID"                                );
-            String                scheduleUUID     = resultMap.getString("scheduleUUID"                           );
-            Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-            long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                           );
-            long                  totalEntries     = resultMap.getLong  ("totalEntries"                           );
-            long                  totalSize        = resultMap.getLong  ("totalSize"                              );
-            String                lastErrorMessage = resultMap.getString("lastErrorMessage"                       );
+            long                  entityId         = valueMap.getLong  ("entityId"                               );
+            String                jobUUID          = valueMap.getString("jobUUID"                                );
+            String                scheduleUUID     = valueMap.getString("scheduleUUID"                           );
+            Settings.ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+            long                  lastDateTime     = valueMap.getLong  ("lastDateTime"                           );
+            long                  totalEntries     = valueMap.getLong  ("totalEntries"                           );
+            long                  totalSize        = valueMap.getLong  ("totalSize"                              );
+            String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
 
             // add/update job data index
             final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
@@ -1859,7 +1859,7 @@ public class TabRestore
       final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
       Command                 command;
       String[]                errorMessage             = new String[1];
-      ValueMap                resultMap                = new ValueMap();
+      ValueMap                valueMap                 = new ValueMap();
 
       // get storage items, job index data
       final EntityIndexData entityIndexData[] = new EntityIndexData[1];
@@ -1891,26 +1891,26 @@ public class TabRestore
       while (!command.endOfData())
       {
         if (command.getNextResult(errorMessage,
-                                  resultMap,
+                                  valueMap,
                                   Command.TIMEOUT
                                  ) == Errors.NONE
            )
         {
           try
           {
-            long                  storageId           = resultMap.getLong  ("storageId"                              );
-            String                jobUUID             = resultMap.getString("jobUUID"                                );
-            String                scheduleUUID        = resultMap.getString("scheduleUUID"                           );
-            String                jobName             = resultMap.getString("jobName"                                );
-            Settings.ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-            String                name                = resultMap.getString("name"                                   );
-            long                  dateTime            = resultMap.getLong  ("dateTime"                               );
-            long                  entries             = resultMap.getLong  ("entries"                                );
-            long                  size                = resultMap.getLong  ("size"                                   );
-            IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
-            IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
-            long                  lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"                    );
-            String                errorMessage_       = resultMap.getString("errorMessage"                           );
+            long                  storageId           = valueMap.getLong  ("storageId"                              );
+            String                jobUUID             = valueMap.getString("jobUUID"                                );
+            String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
+            String                jobName             = valueMap.getString("jobName"                                );
+            Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+            String                name                = valueMap.getString("name"                                   );
+            long                  dateTime            = valueMap.getLong  ("dateTime"                               );
+            long                  entries             = valueMap.getLong  ("entries"                                );
+            long                  size                = valueMap.getLong  ("size"                                   );
+            IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
+            IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
+            long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
+            String                errorMessage_       = valueMap.getString("errorMessage"                           );
 
             // add/update storage data
             final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
@@ -2010,7 +2010,7 @@ public class TabRestore
     {
       Command  command;
       String[] errorMessage = new String[1];
-      ValueMap resultMap    = new ValueMap();
+      ValueMap valueMap     = new ValueMap();
 
       // get current storage index data
       final HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
@@ -2039,26 +2039,26 @@ public class TabRestore
       while (!command.endOfData() && !triggeredFlag)
       {
         if (command.getNextResult(errorMessage,
-                                  resultMap,
+                                  valueMap,
                                   Command.TIMEOUT
                                  ) == Errors.NONE
            )
         {
           try
           {
-            long                  storageId           = resultMap.getLong  ("storageId"                              );
-            String                jobUUID             = resultMap.getString("jobUUID"                                );
-            String                scheduleUUID        = resultMap.getString("scheduleUUID"                           );
-            String                jobName             = resultMap.getString("jobName"                                );
-            Settings.ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-            String                name                = resultMap.getString("name"                                   );
-            long                  dateTime            = resultMap.getLong  ("dateTime"                               );
-            long                  entries             = resultMap.getLong  ("entries"                                );
-            long                  size                = resultMap.getLong  ("size"                                   );
-            IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
-            IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
-            long                  lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"                    );
-            String                errorMessage_       = resultMap.getString("errorMessage"                           );
+            long                  storageId           = valueMap.getLong  ("storageId"                              );
+            String                jobUUID             = valueMap.getString("jobUUID"                                );
+            String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
+            String                jobName             = valueMap.getString("jobName"                                );
+            Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+            String                name                = valueMap.getString("name"                                   );
+            long                  dateTime            = valueMap.getLong  ("dateTime"                               );
+            long                  entries             = valueMap.getLong  ("entries"                                );
+            long                  size                = valueMap.getLong  ("size"                                   );
+            IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
+            IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
+            long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
+            String                errorMessage_       = valueMap.getString("errorMessage"                           );
 
             // add/update to index map
             final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
@@ -2135,7 +2135,7 @@ public class TabRestore
       final HashSet<MenuItem>      removeEntityMenuItemSet = new HashSet<MenuItem>();
       Command                      command;
       String[]                     errorMessage            = new String[1];
-      ValueMap                     resultMap               = new ValueMap();
+      ValueMap                     valueMap                = new ValueMap();
 
       // get UUID menus
       display.syncExec(new Runnable()
@@ -2162,19 +2162,19 @@ public class TabRestore
       while (!command.endOfData() && !triggeredFlag)
       {
         if (command.getNextResult(errorMessage,
-                                  resultMap,
+                                  valueMap,
                                   Command.TIMEOUT
                                  ) == Errors.NONE
            )
         {
           try
           {
-            String jobUUID          = resultMap.getString("jobUUID"         );
-            String name             = resultMap.getString("name"            );
-            long   lastDateTime     = resultMap.getLong  ("lastDateTime"    );
-            long   totalEntries     = resultMap.getLong  ("totalEntries"    );
-            long   totalSize        = resultMap.getLong  ("totalSize"       );
-            String lastErrorMessage = resultMap.getString("lastErrorMessage");
+            String jobUUID          = valueMap.getString("jobUUID"         );
+            String name             = valueMap.getString("name"            );
+            long   lastDateTime     = valueMap.getLong  ("lastDateTime"    );
+            long   totalEntries     = valueMap.getLong  ("totalEntries"    );
+            long   totalSize        = valueMap.getLong  ("totalSize"       );
+            String lastErrorMessage = valueMap.getString("lastErrorMessage");
 
             // add/update index map
             final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
@@ -2330,21 +2330,21 @@ public class TabRestore
         while (!command.endOfData() && !triggeredFlag)
         {
           if (command.getNextResult(errorMessage,
-                                    resultMap,
+                                    valueMap,
                                     Command.TIMEOUT
                                    ) == Errors.NONE
              )
           {
             try
             {
-              long                  entityId         = resultMap.getLong  ("entityId"                               );
-              String                jobUUID          = resultMap.getString("jobUUID"                                );
-              String                scheduleUUID     = resultMap.getString("scheduleUUID"                           );
-              Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-              long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                           );
-              long                  totalEntries     = resultMap.getLong  ("totalEntries"                           );
-              long                  totalSize        = resultMap.getLong  ("totalSize"                              );
-              String                lastErrorMessage = resultMap.getString("lastErrorMessage"                       );
+              long                  entityId         = valueMap.getLong  ("entityId"                               );
+              String                jobUUID          = valueMap.getString("jobUUID"                                );
+              String                scheduleUUID     = valueMap.getString("scheduleUUID"                           );
+              Settings.ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+              long                  lastDateTime     = valueMap.getLong  ("lastDateTime"                           );
+              long                  totalEntries     = valueMap.getLong  ("totalEntries"                           );
+              long                  totalSize        = valueMap.getLong  ("totalSize"                              );
+              String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
 
               // add/update job data index
               final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
@@ -2923,28 +2923,28 @@ public class TabRestore
                                              0
                                             );
       String[] errorMessage = new String[1];
-      ValueMap resultMap    = new ValueMap();
+      ValueMap valueMap     = new ValueMap();
       while (!command.endOfData() && !triggeredFlag)
       {
         if (command.getNextResult(errorMessage,
-                                  resultMap,
+                                  valueMap,
                                   Command.TIMEOUT
                                  ) == Errors.NONE
            )
         {
           try
           {
-            switch (resultMap.getEnum("entryType",EntryTypes.class))
+            switch (valueMap.getEnum("entryType",EntryTypes.class))
             {
               case FILE:
                 {
-                  String storageName     = resultMap.getString("storageName"    );
-                  long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                  String fileName        = resultMap.getString("name"           );
-                  long   dateTime        = resultMap.getLong  ("dateTime"       );
-                  long   size            = resultMap.getLong  ("size"           );
-                  long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
-                  long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
+                  String storageName     = valueMap.getString("storageName"    );
+                  long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                  String fileName        = valueMap.getString("name"           );
+                  long   dateTime        = valueMap.getLong  ("dateTime"       );
+                  long   size            = valueMap.getLong  ("size"           );
+                  long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
+                  long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
 
                   // add/update entry data map
                   final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.FILE,fileName,dateTime,size);
@@ -2986,12 +2986,12 @@ public class TabRestore
                 break;
               case IMAGE:
                 {
-                  String storageName     = resultMap.getString("storageName"    );
-                  long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                  String imageName       = resultMap.getString("name"           );
-                  long   size            = resultMap.getLong  ("size"           );
-                  long   blockOffset     = resultMap.getLong  ("blockOffset"    );
-                  long   blockCount      = resultMap.getLong  ("blockCount"     );
+                  String storageName     = valueMap.getString("storageName"    );
+                  long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                  String imageName       = valueMap.getString("name"           );
+                  long   size            = valueMap.getLong  ("size"           );
+                  long   blockOffset     = valueMap.getLong  ("blockOffset"    );
+                  long   blockCount      = valueMap.getLong  ("blockCount"     );
 
                   // add/update entry data map
                   final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.IMAGE,imageName,0L,size);
@@ -3033,10 +3033,10 @@ public class TabRestore
                 break;
               case DIRECTORY:
                 {
-                  String storageName     = resultMap.getString("storageName"    );
-                  long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                  String directoryName   = resultMap.getString("name"           );
-                  long   dateTime        = resultMap.getLong  ("dateTime"       );
+                  String storageName     = valueMap.getString("storageName"    );
+                  long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                  String directoryName   = valueMap.getString("name"           );
+                  long   dateTime        = valueMap.getLong  ("dateTime"       );
 
                   // add/update entry data map
                   final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.DIRECTORY,directoryName,dateTime);
@@ -3078,11 +3078,11 @@ public class TabRestore
                 break;
               case LINK:
                 {
-                  String storageName     = resultMap.getString("storageName"    );
-                  long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                  String linkName        = resultMap.getString("name"           );
-                  String destinationName = resultMap.getString("destinationName");
-                  long   dateTime        = resultMap.getLong  ("dateTime"       );
+                  String storageName     = valueMap.getString("storageName"    );
+                  long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                  String linkName        = valueMap.getString("name"           );
+                  String destinationName = valueMap.getString("destinationName");
+                  long   dateTime        = valueMap.getLong  ("dateTime"       );
 
                   // add/update entry data map
                   final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.LINK,linkName,dateTime);
@@ -3124,13 +3124,13 @@ public class TabRestore
                 break;
               case HARDLINK:
                 {
-                  String storageName     = resultMap.getString("storageName"    );
-                  long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                  String fileName        = resultMap.getString("name"           );
-                  long   dateTime        = resultMap.getLong  ("dateTime"       );
-                  long   size            = resultMap.getLong  ("size"           );
-                  long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
-                  long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
+                  String storageName     = valueMap.getString("storageName"    );
+                  long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                  String fileName        = valueMap.getString("name"           );
+                  long   dateTime        = valueMap.getLong  ("dateTime"       );
+                  long   size            = valueMap.getLong  ("size"           );
+                  long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
+                  long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
 
                   // add/update entry data map
                   final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.HARDLINK,fileName,dateTime,size);
@@ -3172,10 +3172,10 @@ public class TabRestore
                 break;
               case SPECIAL:
                 {
-                  String storageName     = resultMap.getString("storageName"    );
-                  long   storageDateTime = resultMap.getLong  ("storageDateTime");
-                  String name            = resultMap.getString("name"           );
-                  long   dateTime        = resultMap.getLong  ("dateTime"       );
+                  String storageName     = valueMap.getString("storageName"    );
+                  long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                  String name            = valueMap.getString("name"           );
+                  long   dateTime        = valueMap.getLong  ("dateTime"       );
 
                   // add/update entry data map
                   final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.SPECIAL,name,dateTime);
@@ -3417,7 +3417,7 @@ public class TabRestore
       }
     };
 
-    private ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+    private ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
     private Iterator<ValueMap>  iterator;
 
     /** get shortcut files
@@ -3427,18 +3427,18 @@ public class TabRestore
     {
       ArrayList<File> shortcutFileList = new ArrayList<File>();
 
-      String[] resultErrorMessage = new String[1];
+      String[] errorMessage = new String[1];
       int error = BARServer.executeCommand(StringParser.format("ROOT_LIST"),
                                            0,
-                                           resultErrorMessage,
-                                           resultMapList
+                                           errorMessage,
+                                           valueMapList
                                           );
       if (error == Errors.NONE)
       {
-        for (ValueMap resultMap : resultMapList)
+        for (ValueMap valueMap : valueMapList)
         {
-          shortcutFileList.add(new RemoteFile(resultMap.getString("name"),
-                                              Long.parseLong(resultMap.getString("size"))
+          shortcutFileList.add(new RemoteFile(valueMap.getString("name"),
+                                              Long.parseLong(valueMap.getString("size"))
                                              )
                               );
         }
@@ -3461,17 +3461,17 @@ Dprintf.dprintf("");
      */
     public boolean open(String pathName)
     {
-      String[] resultErrorMessage = new String[1];
+      String[] errorMessage = new String[1];
       int error = BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
                                                                pathName
                                                               ),
                                            0,
-                                           resultErrorMessage,
-                                           resultMapList
+                                           errorMessage,
+                                           valueMapList
                                           );
       if (error == Errors.NONE)
       {
-        iterator = resultMapList.listIterator();
+        iterator = valueMapList.listIterator();
         return true;
       }
       else
@@ -5551,7 +5551,7 @@ Dprintf.dprintf("");
       try
       {
         String[] errorMessage = new String[1];
-        ValueMap resultMap    = new ValueMap();
+        ValueMap valueMap     = new ValueMap();
 
         if      (treeItem.getData() instanceof UUIDIndexData)
         {
@@ -5580,21 +5580,21 @@ Dprintf.dprintf("");
           while (!command.endOfData())
           {
             if (command.getNextResult(errorMessage,
-                                      resultMap,
+                                      valueMap,
                                       Command.TIMEOUT
                                      ) == Errors.NONE
                )
             {
               try
               {
-                long                  entityId         = resultMap.getLong  ("entityId"                               );
-                String                jobUUID          = resultMap.getString("jobUUID"                                );
-                String                scheuduleUUID    = resultMap.getString("scheduleUUID"                           );
-                Settings.ArchiveTypes archiveType      = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-                long                  lastDateTime     = resultMap.getLong  ("lastDateTime"                           );
-                long                  totalEntries     = resultMap.getLong  ("totalEntries"                           );
-                long                  totalSize        = resultMap.getLong  ("totalSize"                              );
-                String                lastErrorMessage = resultMap.getString("lastErrorMessage"                       );
+                long                  entityId         = valueMap.getLong  ("entityId"                               );
+                String                jobUUID          = valueMap.getString("jobUUID"                                );
+                String                scheuduleUUID    = valueMap.getString("scheduleUUID"                           );
+                Settings.ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+                long                  lastDateTime     = valueMap.getLong  ("lastDateTime"                           );
+                long                  totalEntries     = valueMap.getLong  ("totalEntries"                           );
+                long                  totalSize        = valueMap.getLong  ("totalSize"                              );
+                String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
 
                 // add/update job data index
                 final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
@@ -5689,26 +5689,26 @@ Dprintf.dprintf("");
           while (!command.endOfData())
           {
             if (command.getNextResult(errorMessage,
-                                      resultMap,
+                                      valueMap,
                                       Command.TIMEOUT
                                      ) == Errors.NONE
                )
             {
               try
               {
-                long                  storageId           = resultMap.getLong  ("storageId"                              );
-                String                jobUUID             = resultMap.getString("jobUUID"                                );
-                String                scheduleUUID        = resultMap.getString("scheduleUUID"                           );
-                String                jobName             = resultMap.getString("jobName"                                );
-                Settings.ArchiveTypes archiveType         = resultMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-                String                name                = resultMap.getString("name"                                   );
-                long                  dateTime            = resultMap.getLong  ("dateTime"                               );
-                long                  entries             = resultMap.getLong  ("entries"                                );
-                long                  size                = resultMap.getLong  ("size"                                   );
-                IndexStates           indexState          = resultMap.getEnum  ("indexState",IndexStates.class           );
-                IndexModes            indexMode           = resultMap.getEnum  ("indexMode",IndexModes.class             );
-                long                  lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime"                    );
-                String                errorMessage_       = resultMap.getString("errorMessage"                           );
+                long                  storageId           = valueMap.getLong  ("storageId"                              );
+                String                jobUUID             = valueMap.getString("jobUUID"                                );
+                String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
+                String                jobName             = valueMap.getString("jobName"                                );
+                Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+                String                name                = valueMap.getString("name"                                   );
+                long                  dateTime            = valueMap.getLong  ("dateTime"                               );
+                long                  entries             = valueMap.getLong  ("entries"                                );
+                long                  size                = valueMap.getLong  ("size"                                   );
+                IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
+                IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
+                long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
+                String                errorMessage_       = valueMap.getString("errorMessage"                           );
 
                 // add/update storage data
                 final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
@@ -5827,49 +5827,65 @@ Dprintf.dprintf("");
     {
       try
       {
-        for (IndexData indexData : indexDataHashSet)
-        {
-          final String info = indexData.getInfo();
+        int      error        = Errors.UNKNOWN;
+        String[] errorMessage = new String[1];
+        ValueMap valueMap     = new ValueMap();
 
-          int      error        = Errors.UNKNOWN;
-          String[] errorMessage = new String[1];
-          if      (indexData instanceof UUIDIndexData)
+        error = BARServer.executeCommand(StringParser.format("INDEX_ENTITY_ADD jobUUID=%'S archiveType=%s",
+                                                             toUUIDIndexData.jobUUID,
+                                                             archiveType.toString()
+                                                            ),
+                                         0,
+                                         errorMessage,
+                                         valueMap
+                                        );
+        if (error == Errors.NONE)
+        {
+          long entityId = valueMap.getLong("entityId");
+
+          for (IndexData indexData : indexDataHashSet)
           {
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s jobUUID=%'S",
-                                                                 toUUIDIndexData.jobUUID,
-                                                                 archiveType.toString(),
-                                                                 ((UUIDIndexData)indexData).jobUUID
-                                                                ),
-                                             0,
-                                             errorMessage
-                                            );
+            final String info = indexData.getInfo();
+
+            if      (indexData instanceof UUIDIndexData)
+            {
+              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld jobUUID=%'S",
+                                                                   entityId,
+                                                                   ((UUIDIndexData)indexData).jobUUID
+                                                                  ),
+                                               0,
+                                               errorMessage
+                                              );
+            }
+            else if (indexData instanceof EntityIndexData)
+            {
+              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld entityId=%lld",
+                                                                   entityId,
+                                                                   ((EntityIndexData)indexData).entityId
+                                                                  ),
+                                               0,
+                                               errorMessage
+                                              );
+            }
+            else if (indexData instanceof StorageIndexData)
+            {
+              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld storageId=%lld",
+                                                                   entityId,
+                                                                   ((StorageIndexData)indexData).storageId
+                                                                  ),
+                                               0,
+                                               errorMessage
+                                              );
+            }
+            if (error != Errors.NONE)
+            {
+              Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
+            }
           }
-          else if (indexData instanceof EntityIndexData)
-          {
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s entityId=%lld",
-                                                                 toUUIDIndexData.jobUUID,
-                                                                 archiveType.toString(),
-                                                                 ((EntityIndexData)indexData).entityId
-                                                                ),
-                                             0,
-                                             errorMessage
-                                            );
-          }
-          else if (indexData instanceof StorageIndexData)
-          {
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s storageId=%lld",
-                                                                 toUUIDIndexData.jobUUID,
-                                                                 archiveType.toString(),
-                                                                 ((StorageIndexData)indexData).storageId
-                                                                ),
-                                             0,
-                                             errorMessage
-                                            );
-          }
-          if (error != Errors.NONE)
-          {
-            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
-          }
+        }
+        else
+        {
+          Dialogs.error(shell,BARControl.tr("Cannot create entity for\n\n''{0}''\n\n(error: {1})",toUUIDIndexData.jobUUID,errorMessage[0]));
         }
       }
       catch (CommunicationError error)
@@ -5901,7 +5917,7 @@ Dprintf.dprintf("");
           String[] errorMessage = new String[1];
           if      (indexData instanceof UUIDIndexData)
           {
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID='' toEntityId=%lld jobUUID=%'S",
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld jobUUID=%'S",
                                                                  toEntityIndexData.entityId,
                                                                  ((UUIDIndexData)indexData).jobUUID
                                                                 ),
@@ -5911,7 +5927,7 @@ Dprintf.dprintf("");
           }
           else if (indexData instanceof EntityIndexData)
           {
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID='' toEntityId=%lld entityId=%lld",
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld entityId=%lld",
                                                                  toEntityIndexData.entityId,
                                                                  ((EntityIndexData)indexData).entityId
                                                                 ),
@@ -5921,7 +5937,7 @@ Dprintf.dprintf("");
           }
           else if (indexData instanceof StorageIndexData)
           {
-            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID='' toEntityId=%lld storageId=%lld",
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld storageId=%lld",
                                                                  toEntityIndexData.entityId,
                                                                  ((StorageIndexData)indexData).storageId
                                                                 ),
@@ -6287,11 +6303,11 @@ Dprintf.dprintf("");
     {
       // get number of indizes with error state
       final String[] errorMessage = new String[1];
-      ValueMap       resultMap    = new ValueMap();
+      ValueMap       valueMap     = new ValueMap();
       if (BARServer.executeCommand("INDEX_STORAGE_INFO",
                                    0,
                                    errorMessage,
-                                   resultMap
+                                   valueMap
                                   ) != Errors.NONE
          )
       {
@@ -6304,7 +6320,7 @@ Dprintf.dprintf("");
         });
         return;
       }
-      long errorCount = resultMap.getLong("errorCount");
+      long errorCount = valueMap.getLong("errorCount");
 
       if (errorCount > 0)
       {
@@ -6321,7 +6337,7 @@ Dprintf.dprintf("");
               try
               {
                 final String[] errorMessage = new String[1];
-                ValueMap       resultMap    = new ValueMap();
+                ValueMap       valueMap     = new ValueMap();
 
                 // remove indizes with error state
                 Command command = BARServer.runCommand("INDEX_REMOVE state=ERROR storageId=0",0);
@@ -6330,15 +6346,15 @@ Dprintf.dprintf("");
                 while (!command.endOfData() && !busyDialog.isAborted())
                 {
                   if (command.getNextResult(errorMessage,
-                                            resultMap,
+                                            valueMap,
                                             Command.TIMEOUT
                                            ) == Errors.NONE
                      )
                   {
                     try
                     {
-                      long        storageId = resultMap.getLong  ("storageId");
-                      String      name      = resultMap.getString("name"     );
+                      long        storageId = valueMap.getLong  ("storageId");
+                      String      name      = valueMap.getString("name"     );
 
                       busyDialog.updateText(String.format("%d: %s",storageId,name));
 
@@ -6654,24 +6670,24 @@ Dprintf.dprintf("");
 
               // read results, update/add data
               String[] errorMessage = new String[1];
-              ValueMap resultMap    = new ValueMap();
+              ValueMap valueMap     = new ValueMap();
               while (   !command.endOfData()
                      && !busyDialog.isAborted()
                     )
               {
                 if (command.getNextResult(errorMessage,
-                                          resultMap,
+                                          valueMap,
                                           60*1000
                                          ) == Errors.NONE
                    )
                 {
                   try
                   {
-                    String name              = resultMap.getString("name"            );
-                    long   entryDoneBytes    = resultMap.getLong  ("entryDoneBytes"  );
-                    long   entryTotalBytes   = resultMap.getLong  ("entryTotalBytes" );
-  //                  long   storageDoneBytes  = resultMap.getLong("storageDoneBytes" );
-  //                  long   storageTotalBytes = resultMap.getLong("storageTotalBytes");
+                    String name              = valueMap.getString("name"            );
+                    long   entryDoneBytes    = valueMap.getLong  ("entryDoneBytes"  );
+                    long   entryTotalBytes   = valueMap.getLong  ("entryTotalBytes" );
+  //                  long   storageDoneBytes  = valueMap.getLong("storageDoneBytes" );
+  //                  long   storageTotalBytes = valueMap.getLong("storageTotalBytes");
 
                     busyDialog.updateText(1,name);
                     busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
@@ -7034,24 +7050,24 @@ Dprintf.dprintf("");
 
               // read results, update/add data
               String[] errorMessage = new String[1];
-              ValueMap resultMap    = new ValueMap();
+              ValueMap valueMap     = new ValueMap();
               while (   !command.endOfData()
                      && !busyDialog.isAborted()
                     )
               {
                 if (command.getNextResult(errorMessage,
-                                          resultMap,
+                                          valueMap,
                                           60*1000
                                          ) == Errors.NONE
                    )
                 {
                   try
                   {
-                    String name              = resultMap.getString("name"            );
-                    long   entryDoneBytes    = resultMap.getLong("entryDoneBytes"    );
-                    long   entryTotalBytes   = resultMap.getLong("entryTotalBytes"   );
-  //                  long   storageDoneBytes  = resultMap.getLong("storageDoneBytes" );
-  //                  long   storageTotalBytes = resultMap.getLong("storageTotalBytes");
+                    String name              = valueMap.getString("name"            );
+                    long   entryDoneBytes    = valueMap.getLong("entryDoneBytes"    );
+                    long   entryTotalBytes   = valueMap.getLong("entryTotalBytes"   );
+  //                  long   storageDoneBytes  = valueMap.getLong("storageDoneBytes" );
+  //                  long   storageTotalBytes = valueMap.getLong("storageTotalBytes");
 
                     busyDialog.updateText(1,name);
                     busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
