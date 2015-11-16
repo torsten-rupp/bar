@@ -449,7 +449,7 @@ struct JobOptions
   bool                         noBAROnMediumFlag;             // TRUE for not storing BAR on medium
   bool                         stopOnErrorFlag;
 
-  // short cutsTRUE
+  // shortcuts
   bool                         archiveFileModeOverwriteFlag;  // TRUE for overwrite existing archive files
 };
 
