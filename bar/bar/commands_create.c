@@ -1147,60 +1147,32 @@ LOCAL Errors formatArchiveFileName(String       fileName,
   weekNumberW = (uint)atoi(buffer);
 
   // expand named macros
-  switch (archiveType)
-  {
-    case ARCHIVE_TYPE_NORMAL:
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","normal");
-      TEXT_MACRO_N_CSTRING(textMacros[1],"%T","N");
-      break;
-    case ARCHIVE_TYPE_FULL:
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","full");
-      TEXT_MACRO_N_CSTRING(textMacros[1],"%T","F");
-      break;
-    case ARCHIVE_TYPE_INCREMENTAL:
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","incremental");
-      TEXT_MACRO_N_CSTRING(textMacros[1],"%T","I");
-      break;
-    case ARCHIVE_TYPE_DIFFERENTIAL:
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","differential");
-      TEXT_MACRO_N_CSTRING(textMacros[1],"%T","D");
-      break;
-    case ARCHIVE_TYPE_CONTINUOUS:
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","continuous");
-      TEXT_MACRO_N_CSTRING(textMacros[1],"%T","C");
-      break;
-    case ARCHIVE_TYPE_UNKNOWN:
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%type","unknown");
-      TEXT_MACRO_N_CSTRING(textMacros[1],"%T","U");
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
-  }
   switch (formatMode)
   {
     case FORMAT_MODE_ARCHIVE_FILE_NAME:
+      TEXT_MACRO_N_CSTRING(textMacros[0],"%type", getArchiveTypeName(archiveType)     );
+      TEXT_MACRO_N_CSTRING(textMacros[1],"%T",    getArchiveTypeShortName(archiveType));
       TEXT_MACRO_N_CSTRING(textMacros[2],"%last", lastPartFlag ? "-last" : "");
       TEXT_MACRO_N_CSTRING(textMacros[3],"%uuid", String_cString(uuid));
       TEXT_MACRO_N_CSTRING(textMacros[4],"%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "");
       TEXT_MACRO_N_CSTRING(textMacros[5],"%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "");
-      TEXT_MACRO_N_INTEGER(textMacros[6],"%U2",(weekNumberU%2)+1);
-      TEXT_MACRO_N_INTEGER(textMacros[7],"%U4",(weekNumberU%4)+1);
-      TEXT_MACRO_N_INTEGER(textMacros[8],"%W2",(weekNumberW%2)+1);
-      TEXT_MACRO_N_INTEGER(textMacros[9],"%W4",(weekNumberW%4)+1);
+      TEXT_MACRO_N_INTEGER(textMacros[6],"%U2",   (weekNumberU%2)+1);
+      TEXT_MACRO_N_INTEGER(textMacros[7],"%U4",   (weekNumberU%4)+1);
+      TEXT_MACRO_N_INTEGER(textMacros[8],"%W2",   (weekNumberW%2)+1);
+      TEXT_MACRO_N_INTEGER(textMacros[9],"%W4",   (weekNumberW%4)+1);
       Misc_expandMacros(fileName,String_cString(templateFileName),textMacros,SIZE_OF_ARRAY(textMacros));
       break;
     case FORMAT_MODE_PATTERN:
+      TEXT_MACRO_N_CSTRING(textMacros[0],"%type", "\\S+");
+      TEXT_MACRO_N_CSTRING(textMacros[1],"%T",    ".");
       TEXT_MACRO_N_CSTRING(textMacros[2],"%last", "(-last){0,1}");
       TEXT_MACRO_N_CSTRING(textMacros[3],"%uuid", "[-0-9a-fA-F]+");
       TEXT_MACRO_N_CSTRING(textMacros[4],"%title","\\S+");
       TEXT_MACRO_N_CSTRING(textMacros[5],"%text", "\\S+");
-      TEXT_MACRO_N_CSTRING(textMacros[6],"%U2","[12]");
-      TEXT_MACRO_N_CSTRING(textMacros[7],"%U4","[1234]");
-      TEXT_MACRO_N_CSTRING(textMacros[8],"%W2","[12]");
-      TEXT_MACRO_N_CSTRING(textMacros[9],"%W4","[1234]");
+      TEXT_MACRO_N_CSTRING(textMacros[6],"%U2",   "[12]");
+      TEXT_MACRO_N_CSTRING(textMacros[7],"%U4",   "[1234]");
+      TEXT_MACRO_N_CSTRING(textMacros[8],"%W2",   "[12]");
+      TEXT_MACRO_N_CSTRING(textMacros[9],"%W4",   "[1234]");
       break;
     #ifndef NDEBUG
       default:
