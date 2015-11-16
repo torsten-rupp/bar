@@ -3514,7 +3514,7 @@ NULL,//                                                        scheduleTitle,
         }
       #endif /* SIMULATOR */
 
-      logPostProcess();
+      logPostProcess(jobNode->name,&jobNode->jobOptions,archiveType,scheduleCustomText);
     }
 
     // post-process command
