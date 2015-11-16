@@ -1,0 +1,13 @@
+[Unit]
+Description=BAR server
+After=network.target remote-fs.target ypbind.service
+
+[Service]
+Type=forking
+PIDFile=/var/run/barserver.pid
+ExecStart=/usr/bin/bar --daemon --verbose=4 --pid-file /var/run/barserver.pid
+ExecReload=/usr/bin/kill -HUP $MAINPID
+TimeoutSec=180
+
+[Install]
+WantedBy=multi-user.target
