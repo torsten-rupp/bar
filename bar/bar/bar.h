@@ -140,15 +140,26 @@ extern locale_t      POSIXLocale;            // POSIX locale
 #endif
 
 /***********************************************************************\
-* Name   : getErrorText
-* Purpose: get errror text of error code
-* Input  : error - error
+* Name   : getArchiveTypeName
+* Purpose: get archive type name
+* Input  : archiveType - archive type
 * Output : -
-* Return : error text (read only!)
+* Return : name
 * Notes  : -
 \***********************************************************************/
 
-const char *getErrorText(Errors error);
+const char *getArchiveTypeName(ArchiveTypes archiveType);
+
+/***********************************************************************\
+* Name   : getArchiveTypeShortName
+* Purpose: get archive type short name
+* Input  : archiveType - archive type
+* Output : -
+* Return : short name
+* Notes  : -
+\***********************************************************************/
+
+const char *getArchiveTypeShortName(ArchiveTypes archiveType);
 
 /***********************************************************************\
 * Name   : isPrintInfo
@@ -281,13 +292,20 @@ void printError(const char *text, ...);
 /***********************************************************************\
 * Name   : logPostProcess
 * Purpose: log post processing
-* Input  : -
+* Input  : jobName            - job name
+*          jobOptions         - job options
+*          archiveType        - archive type
+*          scheduleCustomText - schedule custom text
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void logPostProcess(void);
+void logPostProcess(ConstString      jobName,
+                    const JobOptions *jobOptions,
+                    ArchiveTypes     archiveType,
+                    ConstString      scheduleCustomText
+                   );
 
 /***********************************************************************\
 * Name   : executeIOOutput

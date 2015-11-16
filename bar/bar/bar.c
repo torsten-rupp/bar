@@ -1266,7 +1266,7 @@ LOCAL void initServer(Server *server, ConstString name, ServerTypes serverType)
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
+        break; // not reached
     #endif /* NDEBUG */
   }
   server->maxConnectionCount                  = MAX_CONNECTION_COUNT_UNLIMITED;
@@ -1310,7 +1310,7 @@ LOCAL void doneServer(Server *server)
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
+        break; // not reached
     #endif /* NDEBUG */
   }
   String_delete(server->name);
@@ -1710,7 +1710,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
       break;
     default:
       HALT_INTERNAL_ERROR("no valid command set");
-      break;
+      break; // not reached
   }
 
   // detect pattern type, get pattern
@@ -3002,6 +3002,52 @@ LOCAL void closeSessionLog(void)
 
 /*---------------------------------------------------------------------*/
 
+const char *getArchiveTypeName(ArchiveTypes archiveType)
+{
+  const char *text;
+
+  text = NULL;
+  switch (archiveType)
+  {
+    case ARCHIVE_TYPE_NORMAL:       text = "normal";       break;
+    case ARCHIVE_TYPE_FULL:         text = "full";         break;
+    case ARCHIVE_TYPE_INCREMENTAL:  text = "incremental";  break;
+    case ARCHIVE_TYPE_DIFFERENTIAL: text = "differential"; break;
+    case ARCHIVE_TYPE_CONTINUOUS:   text = "continuous";   break;
+    case ARCHIVE_TYPE_UNKNOWN:      text = "unknown";      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+
+  return text;
+}
+
+const char *getArchiveTypeShortName(ArchiveTypes archiveType)
+{
+  const char *text;
+
+  text = NULL;
+  switch (archiveType)
+  {
+    case ARCHIVE_TYPE_NORMAL:       text = "N"; break;
+    case ARCHIVE_TYPE_FULL:         text = "F"; break;
+    case ARCHIVE_TYPE_INCREMENTAL:  text = "I"; break;
+    case ARCHIVE_TYPE_DIFFERENTIAL: text = "D"; break;
+    case ARCHIVE_TYPE_CONTINUOUS:   text = "C"; break;
+    case ARCHIVE_TYPE_UNKNOWN:      text = "U"; break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+
+  return text;
+}
+
 bool isPrintInfo(uint verboseLevel)
 {
   return !globalOptions.quietFlag && ((uint)globalOptions.verboseLevel >= verboseLevel);
@@ -3322,14 +3368,20 @@ LOCAL void executeIOlogPostProcess(void        *userData,
   }
 }
 
-void logPostProcess(void)
+void logPostProcess(ConstString      name,
+                    const JobOptions *jobOptions,
+                    ArchiveTypes     archiveType,
+                    ConstString      scheduleCustomText
+                   )
 {
   SemaphoreLock semaphoreLock;
-  TextMacro     textMacros[1];
+  TextMacro     textMacros[5];
   StringList    stderrList;
   Errors        error;
   StringNode    *stringNode;
   String        string;
+
+//TODO jobOptions
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -3344,7 +3396,11 @@ void logPostProcess(void)
     {
       printInfo(2,"Log post process '%s'...",logPostCommand);
 
-      TEXT_MACRO_N_STRING(textMacros[0],"%file",tmpLogFileName);
+      TEXT_MACRO_N_STRING (textMacros[0],"%file",tmpLogFileName                      );
+      TEXT_MACRO_N_STRING (textMacros[1],"%name",name                                );
+      TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeName(archiveType)     );
+      TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortName(archiveType));
+      TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText                  );
 
       StringList_init(&stderrList);
       error = Misc_executeCommand(logPostCommand,
