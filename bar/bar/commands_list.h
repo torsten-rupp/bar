@@ -63,7 +63,8 @@ Errors Command_list(StringList                      *storageNameList,
                     const PatternList               *excludePatternList,
                     JobOptions                      *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                    void                            *archiveGetCryptPasswordUserData
+                    void                            *archiveGetCryptPasswordUserData,
+                    LogHandle                       *logHandle
                    );
 
 #ifdef __cplusplus

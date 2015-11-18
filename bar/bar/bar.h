@@ -22,7 +22,6 @@
 #include "global.h"
 #include "lists.h"
 #include "strings.h"
-#include "files.h"
 #include "configvalues.h"
 
 #include "patterns.h"
@@ -60,35 +59,6 @@ typedef enum
   EXITCODE_UNKNOWN                = 128
 } ExitCodes;
 
-// log types
-typedef enum
-{
-  LOG_TYPE_ALWAYS              = 0,
-  LOG_TYPE_ERROR               = (1 <<  0),
-  LOG_TYPE_WARNING             = (1 <<  1),
-  LOG_TYPE_ENTRY_OK            = (1 <<  2),
-  LOG_TYPE_ENTRY_TYPE_UNKNOWN  = (1 <<  3),
-  LOG_TYPE_ENTRY_ACCESS_DENIED = (1 <<  4),
-  LOG_TYPE_ENTRY_MISSING       = (1 <<  5),
-  LOG_TYPE_ENTRY_INCOMPLETE    = (1 <<  6),
-  LOG_TYPE_ENTRY_EXCLUDED      = (1 <<  7),
-  LOG_TYPE_CONTINUOUS          = (1 <<  8),
-  LOG_TYPE_STORAGE             = (1 <<  9),
-  LOG_TYPE_INDEX               = (1 << 10),
-} LogTypes;
-
-#define LOG_TYPE_NONE 0x00000000
-#define LOG_TYPE_ALL  0xFFFFffff
-
-#define MAX_CONNECTION_COUNT_UNLIMITED MAX_INT
-#define MAX_STORAGE_SIZE_UNLIMITED     MAX_INT64
-
-// log handle
-typedef struct
-{
-  FileHandle handle;
-} LogHandle;
-
 // config values
 extern const ConfigValueUnit   CONFIG_VALUE_BYTES_UNITS[];
 extern const ConfigValueUnit   CONFIG_VALUE_BITS_UNITS[];
@@ -119,24 +89,37 @@ extern locale_t      POSIXLocale;            // POSIX locale
 
 /****************************** Macros *********************************/
 
-// return short number of bytes
-#define BYTES_SHORT(n) (((n)>(1024LL*1024LL*1024LL))?(double)(n)/(double)(1024LL*1024LL*1024LL): \
-                        ((n)>       (1024LL*1024LL))?(double)(n)/(double)(1024LL*1024LL*1024LL): \
-                        ((n)>                1024LL)?(double)(n)/(double)(1024LL*1024LL*1024LL): \
+/***********************************************************************\
+* Name   : BYTES_SHORT
+* Purpose: return short number of bytes
+* Input  : n - number
+* Output : -
+* Return : short number
+* Notes  : -
+\***********************************************************************/
+
+#define BYTES_SHORT(n) (((n)>(1024LL*1024LL*1024LL*1024LL))?(double)(n)/(double)(1024LL*1024LL*1024LL*1024LL): \
+                        ((n)>(       1024LL*1024LL*1024LL))?(double)(n)/(double)(       1024LL*1024LL*1024LL): \
+                        ((n)>(              1024LL*1024LL))?(double)(n)/(double)(              1024LL*1024LL): \
+                        ((n)>                      1024LL )?(double)(n)/(double)(                     1024LL): \
                         (double)(n) \
                        )
-// return unit for short number of bytes
-#define BYTES_UNIT(n) (((n)>(1024LL*1024LL*1024LL))?"GB": \
-                       ((n)>       (1024LL*1024LL))?"MB": \
-                       ((n)>                1024LL)?"KB": \
+
+/***********************************************************************\
+* Name   : BYTES_UNIT
+* Purpose: return unit for short number of bytes
+* Input  : n - number
+* Output : -
+* Return : unit string
+* Notes  : -
+\***********************************************************************/
+
+#define BYTES_UNIT(n) (((n)>(1024LL*1024LL*1024LL*1024LL))?"TB": \
+                       ((n)>(       1024LL*1024LL*1024LL))?"GB": \
+                       ((n)>(              1024LL*1024LL))?"MB": \
+                       ((n)>                      1024LL )?"KB": \
                        "bytes" \
                       )
-
-#define CONSOLE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType) \
-  for (semaphoreLock = lockConsole(); \
-       semaphoreLock; \
-       unlockConsole(semaphore), semaphoreLock = FALSE \
-      )
 
 /***************************** Forwards ********************************/
 
@@ -178,40 +161,6 @@ const char *getArchiveTypeShortName(ArchiveTypes archiveType);
 \***********************************************************************/
 
 bool isPrintInfo(uint verboseLevel);
-
-/***********************************************************************\
-* Name   : vprintInfo, pprintInfo, printInfo
-* Purpose: output info to console
-* Input  : verboseLevel - verbosity level
-*          prefix       - prefix text
-*          format       - format string (like printf)
-*          arguments    - arguments
-*          ...          - optional arguments (like printf)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments);
-void pprintInfo(uint verboseLevel, const char *prefix, const char *format, ...);
-void printInfo(uint verboseLevel, const char *format, ...);
-
-/***********************************************************************\
-* Name   : vlogMessage, plogMessage, logMessage
-* Purpose: log message
-*          logType   - log type; see LOG_TYPES_*
-*          prefix    - prefix text
-*          text      - format string (like printf)
-*          arguments - arguments
-*          ...       - optional arguments (like printf)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void vlogMessage(ulong logType, const char *prefix, const char *text, va_list arguments);
-void plogMessage(ulong logType, const char *prefix, const char *text, ...);
-void logMessage(ulong logType, const char *text, ...);
 
 /***********************************************************************\
 * Name   : lockConsole
@@ -296,13 +245,68 @@ void printWarning(const char *text, ...);
 
 void printError(const char *text, ...);
 
+/***********************************************************************\
+* Name   : vprintInfo, pprintInfo, printInfo
+* Purpose: output info to console
+* Input  : verboseLevel - verbosity level
+*          prefix       - prefix text
+*          format       - format string (like printf)
+*          arguments    - arguments
+*          ...          - optional arguments (like printf)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments);
+void pprintInfo(uint verboseLevel, const char *prefix, const char *format, ...);
+void printInfo(uint verboseLevel, const char *format, ...);
+
+/***********************************************************************\
+* Name   : initLog
+* Purpose: init log
+* Input  : logHandle - log handle variable
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 Errors initLog(LogHandle *logHandle);
+
+/***********************************************************************\
+* Name   : doneLog
+* Purpose: done log
+* Input  : logHandle - log handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void doneLog(LogHandle *logHandle);
+
+/***********************************************************************\
+* Name   : vlogMessage, plogMessage, logMessage
+* Purpose: log message
+* Input  : logHandle - log handle
+*          logType   - log type; see LOG_TYPES_*
+*          prefix    - prefix text
+*          text      - format string (like printf)
+*          arguments - arguments
+*          ...       - optional arguments (like printf)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, va_list arguments);
+void plogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, ...);
+void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 
 /***********************************************************************\
 * Name   : logPostProcess
 * Purpose: log post processing
-* Input  : jobName            - job name
+* Input  : logHandle          - log handle
+*          jobName            - job name
 *          jobOptions         - job options
 *          archiveType        - archive type
 *          scheduleCustomText - schedule custom text
@@ -311,7 +315,8 @@ void doneLog(LogHandle *logHandle);
 * Notes  : -
 \***********************************************************************/
 
-void logPostProcess(ConstString      jobName,
+void logPostProcess(LogHandle        *logHandle,
+                    ConstString      jobName,
                     const JobOptions *jobOptions,
                     ArchiveTypes     archiveType,
                     ConstString      scheduleCustomText

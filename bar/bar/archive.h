@@ -145,6 +145,7 @@ typedef struct
   void                            *archiveCreatedUserData;             // user data for call back for created archive file
   ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;     // call back to get crypt password
   void                            *archiveGetCryptPasswordUserData;    // user data for call back to get crypt password
+  LogHandle                       *logHandle;                          // log handle
 
   Semaphore                       passwordLock;                        // input password lock
   CryptTypes                      cryptType;                           // crypt type (symmetric/asymmetric; see CryptTypes)
@@ -200,7 +201,7 @@ typedef struct
 typedef struct ArchiveEntryInfo
 {
   LIST_NODE_HEADER(struct ArchiveEntryInfo);
-\
+
   ArchiveInfo                         *archiveInfo;                    // archive info
 
   enum
@@ -460,6 +461,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 *                                            be NULL)
 *          archiveGetCryptPasswordData     - user data for get password
 *                                            call back
+*          logHandle                       - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -478,7 +480,8 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                         ArchiveCreatedFunction          archiveCreatedFunction,
                         void                            *archiveCreatedUserData,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                        void                            *archiveGetCryptPasswordUserData
+                        void                            *archiveGetCryptPasswordUserData,
+                        LogHandle                       *logHandle
                        );
 #else /* not NDEBUG */
   Errors __Archive_create(const char                      *__fileName__,
@@ -495,7 +498,8 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                           ArchiveCreatedFunction          archiveCreatedFunction,
                           void                            *archiveCreatedUserData,
                           ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                          void                            *archiveGetCryptPasswordUserData
+                          void                            *archiveGetCryptPasswordUserData,
+                          LogHandle                       *logHandle
                          );
 #endif /* NDEBUG */
 
@@ -511,6 +515,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 *                                            be NULL)
 *          archiveGetCryptPasswordUserData - user data for get password
 *                                            call back
+*          logHandle                       - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -524,7 +529,8 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                       DeltaSourceList                 *deltaSourceList,
                       const JobOptions                *jobOptions,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                      void                            *archiveGetCryptPasswordUserData
+                      void                            *archiveGetCryptPasswordUserData,
+                      LogHandle                       *logHandle
                      );
 #else /* not NDEBUG */
   Errors __Archive_open(const char                      *__fileName__,
@@ -536,7 +542,8 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                         DeltaSourceList                 *deltaSourceList,
                         const JobOptions                *jobOptions,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                        void                            *archiveGetCryptPasswordUserData
+                        void                            *archiveGetCryptPasswordUserData,
+                        LogHandle                       *logHandle
                        );
 #endif /* NDEBUG */
 
@@ -1264,6 +1271,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 *          storageName   - storage name
 *          indexMode     - index mode
 *          jobOptions    - job options
+*          logHandle     - log handle (can be NULL)
 * Output : totalEntries - total entries (can be NULL)
 *          totalSize    - total size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
@@ -1276,21 +1284,23 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
                           IndexModes       indexMode,
                           const JobOptions *jobOptions,
                           uint64           *totalEntries,
-                          uint64           *totalSize
+                          uint64           *totalSize,
+                          LogHandle        *logHandle
                          );
 
 /***********************************************************************\
 * Name   : Archive_updateIndex
 * Purpose: update storage index
-* Input  : indexHandle             - index handle
-*          storageId               - database id of storage
-*          storageHandle           - storage handle
-*          storageName             - storage name
-*          jobOptions              - job options
-*          pauseCallback           - pause check callback (can be NULL)
-*          pauseUserData           - pause user data
-*          abortCallback           - abort check callback (can be NULL)
-*          abortUserData           - abort user data
+* Input  : indexHandle   - index handle
+*          storageId     - database id of storage
+*          storageHandle - storage handle
+*          storageName   - storage name
+*          jobOptions    - job options
+*          pauseCallback - pause check callback (can be NULL)
+*          pauseUserData - pause user data
+*          abortCallback - abort check callback (can be NULL)
+*          abortUserData - abort user data
+*          logHandle     - log handle (can be NULL)
 * Output : totalEntries - total entries (can be NULL)
 *          totalSize    - total size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
@@ -1307,7 +1317,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            ArchivePauseCallbackFunction pauseCallback,
                            void                         *pauseUserData,
                            ArchiveAbortCallbackFunction abortCallback,
-                           void                         *abortUserData
+                           void                         *abortUserData,
+                           LogHandle                    *logHandle
                           );
 
 /***********************************************************************\

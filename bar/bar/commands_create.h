@@ -104,7 +104,8 @@ Errors Command_create(ConstString                     jobUUID,
                       void                            *storageRequestVolumeUserData,
                       bool                            *pauseCreateFlag,
                       bool                            *pauseStorageFlag,
-                      bool                            *requestedAbortFlag
+                      bool                            *requestedAbortFlag,
+                      LogHandle                       *logHandle
                      );
 
 /***********************************************************************\
@@ -144,6 +145,7 @@ Errors Command_create(ConstString                     jobUUID,
 *                                             be NULL)
 *          requestedAbortFlag               - request abort flag (can be
 *                                             NULL)
+*          logHandle                        - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -169,7 +171,8 @@ Errors Command_createRemote(ServerInfo                      *serverInfo,
                             void                            *storageRequestVolumeUserData,
                             bool                            *pauseCreateFlag,
                             bool                            *pauseStorageFlag,
-                            bool                            *requestedAbortFlag
+                            bool                            *requestedAbortFlag,
+                            LogHandle                       *logHandle
                            );
 
 #ifdef __cplusplus

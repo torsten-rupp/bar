@@ -149,6 +149,7 @@ LOCAL void deleteLocalStorageArchive(String localStorageName)
 *          pauseFlag                        - pause flag (can be NULL)
 *          requestedAbortFlag               - request abort flag (can be
 *                                             NULL)
+*          logHandle                        - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE if file restored, otherwise error code
 * Notes  : -
@@ -163,7 +164,8 @@ LOCAL Errors restoreFile(StorageSpecifier                *storageSpecifier,
                          ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                          void                            *archiveGetCryptPasswordUserData,
                          bool                            *pauseFlag,
-                         bool                            *requestedAbortFlag
+                         bool                            *requestedAbortFlag,
+                         LogHandle                       *logHandle
                         )
 {
   bool              restoredFlag;
@@ -216,7 +218,8 @@ LOCAL Errors restoreFile(StorageSpecifier                *storageSpecifier,
                        NULL,  // archive name
                        deltaSourceList,
                        jobOptions,
-                       CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData)
+                       CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData),
+                       logHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -824,7 +827,8 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                                       inputCryptPassword,
                                       NULL,  // archiveGetCryptPasswordUserData
                                       NULL,  // pauseFlag
-                                      NULL   // requestedAbortFlag
+                                      NULL,  // requestedAbortFlag,
+                                      NULL   // logHandle
                                      );
                   if (error == ERROR_NONE)
                   {
@@ -919,7 +923,8 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                                         inputCryptPassword,
                                         NULL,  // archiveGetCryptPasswordUserData
                                         NULL,  // pauseFlag
-                                        NULL   // requestedAbortFlag
+                                        NULL,  // requestedAbortFlag
+                                        NULL   // logHandle
                                        );
                     if (error == ERROR_NONE)
                     {
@@ -998,7 +1003,8 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                               inputCryptPassword,
                               NULL,  // archiveGetCryptPasswordUserData
                               NULL,  // pauseFlag
-                              NULL   // requestedAbortFlag
+                              NULL,  // requestedAbortFlag
+                              NULL   // logHandle
                              );
           if (error == ERROR_NONE)
           {
@@ -1066,7 +1072,8 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                               inputCryptPassword,
                               NULL,  // archiveGetCryptPasswordUserData
                               NULL,  // pauseFlag
-                              NULL   // requestedAbortFlag
+                              NULL,  // requestedAbortFlag
+                              NULL   // logHandle
                              );
           if (error == ERROR_NONE)
           {

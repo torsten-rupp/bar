@@ -66,7 +66,8 @@ Errors Command_test(const StringList                *archiveFileNameList,
                     DeltaSourceList                 *deltaSourceList,
                     JobOptions                      *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                    void                            *archiveGetCryptPasswordUserData
+                    void                            *archiveGetCryptPasswordUserData,
+                    LogHandle                       *logHandle
                    );
 
 #ifdef __cplusplus

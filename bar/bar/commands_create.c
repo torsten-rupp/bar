@@ -101,6 +101,7 @@ typedef struct
   bool                        *pauseCreateFlag;                   // TRUE for pause creation
   bool                        *pauseStorageFlag;                  // TRUE for pause storage
   bool                        *requestedAbortFlag;                // TRUE to abort create
+  LogHandle                   *logHandle;                         // log handle
 
   bool                        partialFlag;                        // TRUE for create incremental/differential archive
   Dictionary                  namesDictionary;                    // dictionary with files (used for incremental/differental backup)
@@ -285,6 +286,7 @@ LOCAL void initStatusInfo(CreateStatusInfo *statusInfo)
 *                                       NULL)
 *          pauseStorageFlag           - pause storage flag (can be NULL)
 *          requestedAbortFlag         - request abort flag (can be NULL)
+*          logHandle                  - log handle (can be NULL)
 * Output : createInfo - initialized create info variable
 * Return : -
 * Notes  : -
@@ -306,7 +308,8 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
                           void                     *createStatusInfoUserData,
                           bool                     *pauseCreateFlag,
                           bool                     *pauseStorageFlag,
-                          bool                     *requestedAbortFlag
+                          bool                     *requestedAbortFlag,
+                          LogHandle                *logHandle
                          )
 {
   assert(createInfo != NULL);
@@ -325,6 +328,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   createInfo->pauseCreateFlag                = pauseCreateFlag;
   createInfo->pauseStorageFlag               = pauseStorageFlag;
   createInfo->requestedAbortFlag             = requestedAbortFlag;
+  createInfo->logHandle                      = logHandle;
   createInfo->storeIncrementalFileInfoFlag   = FALSE;
   createInfo->startTime                      = time(NULL);
   createInfo->collectorSumThreadExitedFlag   = FALSE;
@@ -2176,7 +2180,7 @@ fprintf(stderr,"%s, %d: jobUUID=%s name='%s'\n",__FILE__,__LINE__,String_cString
         if (error != ERROR_NONE)
         {
           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-          logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
 
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
@@ -2191,7 +2195,6 @@ fprintf(stderr,"%s, %d: jobUUID=%s name='%s'\n",__FILE__,__LINE__,String_cString
           switch (fileInfo.type)
           {
             case FILE_TYPE_FILE:
-fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),List_count(createInfo->includeEntryList),isInIncludedList(createInfo->includeEntryList,name),isInExcludedList(createInfo->excludePatternList,name));
               if (   isInIncludedList(createInfo->includeEntryList,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
                  )
@@ -2214,7 +2217,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
               }
               else
               {
-                logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
@@ -2264,7 +2267,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
               }
               else
               {
-                logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
@@ -2344,7 +2347,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
               }
               else
               {
-                logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
@@ -2377,7 +2380,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
               }
               else
               {
-                logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
@@ -2389,7 +2392,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
               break;
             default:
               printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
-              logMessage(LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(fileName));
+              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(fileName));
 
               SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
@@ -2470,7 +2473,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
         if (error != ERROR_NONE)
         {
           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-          logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
 
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
@@ -2524,7 +2527,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
               }
               else
               {
-                logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
@@ -2575,7 +2578,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
                   }
                   else
                   {
-                    logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                    logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                     {
@@ -2603,7 +2606,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
                       if (error != ERROR_NONE)
                       {
                         printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+                        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
 
                         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                         {
@@ -2624,7 +2627,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
                         if (error != ERROR_NONE)
                         {
                           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
-                          logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+                          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
 
                           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                           {
@@ -2837,7 +2840,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
                               break;
                             default:
                               printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
-                              logMessage(LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(fileName));
+                              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(fileName));
 
                               SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                               {
@@ -2850,7 +2853,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
                         }
                         else
                         {
-                          logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)\n",String_cString(fileName));
+                          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)\n",String_cString(fileName));
 
                           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                           {
@@ -2862,7 +2865,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
                       }
                       else
                       {
-                        logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(fileName));
+                        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(fileName));
 
                         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                         {
@@ -2879,7 +2882,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
                   else
                   {
                     printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                    logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+                    logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
 
                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                     {
@@ -2890,7 +2893,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
                 }
                 else
                 {
-                  logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (.nobackup file)\n",String_cString(name));
+                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (.nobackup file)\n",String_cString(name));
                 }
               }
               break;
@@ -2934,7 +2937,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
               }
               else
               {
-                logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
@@ -3036,7 +3039,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
               }
               else
               {
-                logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
@@ -3082,7 +3085,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
                         if (error != ERROR_NONE)
                         {
                           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                          logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+                          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
 
                           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                           {
@@ -3110,7 +3113,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
               }
               else
               {
-                logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
@@ -3122,7 +3125,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
               break;
             default:
               printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
-              logMessage(LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(name));
+              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(name));
 
               SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
@@ -3135,7 +3138,7 @@ fprintf(stderr,"%s, %d: %s: %d: %d %d\n",__FILE__,__LINE__,String_cString(name),
         }
         else
         {
-          logMessage(LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)\n",String_cString(name));
+          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)\n",String_cString(name));
 
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
@@ -3799,7 +3802,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     if (!isAborted(createInfo))
     {
       printInfo(1,"ok\n");
-      logMessage(LOG_TYPE_STORAGE,"Stored '%s'\n",String_cString(storageName));
+      logMessage(createInfo->logHandle,LOG_TYPE_STORAGE,"Stored '%s'\n",String_cString(storageName));
     }
     else
     {
@@ -4134,7 +4137,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
@@ -4160,7 +4163,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
@@ -4192,7 +4195,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s'\n",String_cString(fileName));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s'\n",String_cString(fileName));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
@@ -4365,7 +4368,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     if (!createInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,compressionRatio);
-      logMessage(LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
     }
     else
     {
@@ -4457,7 +4460,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(deviceName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(deviceName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
@@ -4508,7 +4511,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Open device failed '%s'\n",String_cString(deviceName));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open device failed '%s'\n",String_cString(deviceName));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
@@ -4722,7 +4725,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                 deviceInfo.size,
                 compressionRatio
                );
-      logMessage(LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(deviceName));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(deviceName));
     }
     else
     {
@@ -4794,7 +4797,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
@@ -4820,7 +4823,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
@@ -4858,7 +4861,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
                  String_cString(directoryName),
                  Error_getText(error)
                 );
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'\n",String_cString(directoryName));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'\n",String_cString(directoryName));
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return error;
@@ -4880,7 +4883,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     if (!createInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"ok\n");
-      logMessage(LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(directoryName));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(directoryName));
     }
     else
     {
@@ -4951,7 +4954,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Alccess denied '%s' (error: %s)\n",String_cString(linkName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Alccess denied '%s' (error: %s)\n",String_cString(linkName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
@@ -4977,7 +4980,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(linkName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(linkName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
@@ -5009,7 +5012,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       if (createInfo->jobOptions->skipUnreadableFlag)
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'\n",String_cString(linkName));
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'\n",String_cString(linkName));
         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
           createInfo->statusInfo.errorEntries++;
@@ -5072,7 +5075,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     if (!createInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"ok\n");
-      logMessage(LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(linkName));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(linkName));
     }
     else
     {
@@ -5162,7 +5165,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(nameList,NULL)),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(nameList,NULL)),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries += StringList_count(nameList);
@@ -5188,7 +5191,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(nameList,NULL)),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(nameList,NULL)),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
@@ -5217,7 +5220,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s'\n",String_cString(StringList_first(nameList,NULL)));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s'\n",String_cString(StringList_first(nameList,NULL)));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries += StringList_count(nameList);
@@ -5393,7 +5396,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                 fileInfo.size,
                 compressionRatio
                );
-      logMessage(LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(StringList_first(nameList,NULL)));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(StringList_first(nameList,NULL)));
     }
     else
     {
@@ -5470,7 +5473,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
@@ -5496,7 +5499,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
@@ -5554,7 +5557,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     if (!createInfo->jobOptions->dryRunFlag)
     {
       printInfo(1,"ok\n");
-      logMessage(LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
     }
     else
     {
@@ -5805,7 +5808,8 @@ Errors Command_create(ConstString                     jobUUID,
                       void                            *storageRequestVolumeUserData,
                       bool                            *pauseCreateFlag,
                       bool                            *pauseStorageFlag,
-                      bool                            *requestedAbortFlag
+                      bool                            *requestedAbortFlag,
+                      LogHandle                       *logHandle
                      )
 {
   AutoFreeList     autoFreeList;
@@ -5872,7 +5876,8 @@ Errors Command_create(ConstString                     jobUUID,
                  CALLBACK(createStatusInfoFunction,createStatusInfoUserData),
                  pauseCreateFlag,
                  pauseStorageFlag,
-                 requestedAbortFlag
+                 requestedAbortFlag,
+                 logHandle
                 );
 
   // init threads
@@ -6003,7 +6008,8 @@ Errors Command_create(ConstString                     jobUUID,
                          archiveType,
                          CALLBACK(newArchiveFile,&createInfo),
                          CALLBACK(storeArchiveFile,&createInfo),
-                         CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData)
+                         CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData),
+                         logHandle
                         );
   if (error != ERROR_NONE)
   {
@@ -6126,7 +6132,7 @@ createThreadCode(&createInfo);
     DEBUG_TESTCODE("command_create3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
     printInfo(1,"ok\n");
-    logMessage(LOG_TYPE_ALWAYS,"Updated incremental file '%s'\n",String_cString(incrementalListFileName));
+    logMessage(logHandle,LOG_TYPE_ALWAYS,"Updated incremental file '%s'\n",String_cString(incrementalListFileName));
   }
 
   // output statics
@@ -6135,7 +6141,8 @@ createThreadCode(&createInfo);
     printInfo(1,"%lu entries/%llu bytes(s) included\n",createInfo.statusInfo.doneEntries,createInfo.statusInfo.doneBytes);
     printInfo(2,"%lu entries skipped\n",createInfo.statusInfo.skippedEntries);
     printInfo(2,"%lu entries with errors\n",createInfo.statusInfo.errorEntries);
-    logMessage(LOG_TYPE_ALWAYS,
+    logMessage(logHandle,
+               LOG_TYPE_ALWAYS,
                "%lu entries/%llu bytes(s) included, %lu entries skipped, %lu entries with errors\n",
                createInfo.statusInfo.doneEntries,
                createInfo.statusInfo.doneBytes,

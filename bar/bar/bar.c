@@ -3104,80 +3104,6 @@ void printInfo(uint verboseLevel, const char *format, ...)
   va_end(arguments);
 }
 
-void vlogMessage(ulong logType, const char *prefix, const char *text, va_list arguments)
-{
-  SemaphoreLock semaphoreLock;
-  String        dateTime;
-  va_list       tmpArguments;
-
-  assert(text != NULL);
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
-    if ((tmpLogFile != NULL) || (logFile != NULL))
-    {
-      if ((logType == LOG_TYPE_ALWAYS) || ((logTypes & logType) != 0))
-      {
-        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),NULL);
-
-        if (tmpLogFile != NULL)
-        {
-          // append to temporary log file
-          (void)fprintf(tmpLogFile,"%s> ",String_cString(dateTime));
-          if (prefix != NULL)
-          {
-            (void)fputs(prefix,tmpLogFile);
-            (void)fprintf(tmpLogFile,": ");
-          }
-          va_copy(tmpArguments,arguments);
-          (void)vfprintf(tmpLogFile,text,tmpArguments);
-          va_end(tmpArguments);
-          fflush(tmpLogFile);
-        }
-
-        if (logFile != NULL)
-        {
-          // append to log file
-          (void)fprintf(logFile,"%s> ",String_cString(dateTime));
-          if (prefix != NULL)
-          {
-            (void)fputs(prefix,logFile);
-            (void)fprintf(logFile,": ");
-          }
-          va_copy(tmpArguments,arguments);
-          (void)vfprintf(logFile,text,tmpArguments);
-          va_end(tmpArguments);
-          fflush(logFile);
-        }
-
-        String_delete(dateTime);
-      }
-    }
-  }
-}
-
-void plogMessage(ulong logType, const char *prefix, const char *text, ...)
-{
-  va_list arguments;
-
-  assert(text != NULL);
-
-  va_start(arguments,text);
-  vlogMessage(logType,prefix,text,arguments);
-  va_end(arguments);
-}
-
-void logMessage(ulong logType, const char *text, ...)
-{
-  va_list arguments;
-
-  assert(text != NULL);
-
-  va_start(arguments,text);
-  vlogMessage(logType,NULL,text,arguments);
-  va_end(arguments);
-}
-
 bool lockConsole(void)
 {
   return Semaphore_lock(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER);
@@ -3276,7 +3202,7 @@ void printWarning(const char *text, ...)
 
   // output log line
   va_start(arguments,text);
-  vlogMessage(LOG_TYPE_WARNING,"Warning",text,arguments);
+  vlogMessage(NULL,LOG_TYPE_WARNING,"Warning",text,arguments);
   va_end(arguments);
 
   // output line
@@ -3306,7 +3232,7 @@ void printError(const char *text, ...)
 
   // output log line
   va_start(arguments,text);
-  vlogMessage(LOG_TYPE_ERROR,"ERROR",text,arguments);
+  vlogMessage(NULL,LOG_TYPE_ERROR,"ERROR",text,arguments);
   va_end(arguments);
 
   // output line
@@ -3346,6 +3272,93 @@ void executeIOOutput(void        *userData,
   if (stringList != NULL) StringList_append(stringList,line);
 }
 
+Errors initLog(LogHandle *logHandle)
+{
+  assert(logHandle != NULL);
+}
+
+void doneLog(LogHandle *logHandle)
+{
+  assert(logHandle != NULL);
+}
+
+void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, va_list arguments)
+{
+  SemaphoreLock semaphoreLock;
+  String        dateTime;
+  va_list       tmpArguments;
+
+  assert(logHandle != NULL);
+  assert(text != NULL);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    if ((tmpLogFile != NULL) || (logFile != NULL))
+    {
+      if ((logType == LOG_TYPE_ALWAYS) || ((logTypes & logType) != 0))
+      {
+        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),NULL);
+
+        if (tmpLogFile != NULL)
+        {
+          // append to temporary log file
+          (void)fprintf(tmpLogFile,"%s> ",String_cString(dateTime));
+          if (prefix != NULL)
+          {
+            (void)fputs(prefix,tmpLogFile);
+            (void)fprintf(tmpLogFile,": ");
+          }
+          va_copy(tmpArguments,arguments);
+          (void)vfprintf(tmpLogFile,text,tmpArguments);
+          va_end(tmpArguments);
+          fflush(tmpLogFile);
+        }
+
+        if (logFile != NULL)
+        {
+          // append to log file
+          (void)fprintf(logFile,"%s> ",String_cString(dateTime));
+          if (prefix != NULL)
+          {
+            (void)fputs(prefix,logFile);
+            (void)fprintf(logFile,": ");
+          }
+          va_copy(tmpArguments,arguments);
+          (void)vfprintf(logFile,text,tmpArguments);
+          va_end(tmpArguments);
+          fflush(logFile);
+        }
+
+        String_delete(dateTime);
+      }
+    }
+  }
+}
+
+void plogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, ...)
+{
+  va_list arguments;
+
+  assert(logHandle != NULL);
+  assert(text != NULL);
+
+  va_start(arguments,text);
+  vlogMessage(logHandle,logType,prefix,text,arguments);
+  va_end(arguments);
+}
+
+void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...)
+{
+  va_list arguments;
+
+  assert(logHandle != NULL);
+  assert(text != NULL);
+
+  va_start(arguments,text);
+  vlogMessage(logHandle,logType,NULL,text,arguments);
+  va_end(arguments);
+}
+
 /***********************************************************************\
 * Name   : executeIOlogPostProcess
 * Purpose: process log-post command stderr output
@@ -3372,7 +3385,8 @@ LOCAL void executeIOlogPostProcess(void        *userData,
   }
 }
 
-void logPostProcess(ConstString      name,
+void logPostProcess(LogHandle        *logHandle,
+                    ConstString      jobName,
                     const JobOptions *jobOptions,
                     ArchiveTypes     archiveType,
                     ConstString      scheduleCustomText
@@ -3386,6 +3400,10 @@ void logPostProcess(ConstString      name,
   String        string;
 
 //TODO jobOptions
+
+  assert(logHandle != NULL);
+  assert(jobName != NULL);
+  assert(jobOptions != NULL);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -3401,7 +3419,7 @@ void logPostProcess(ConstString      name,
       printInfo(2,"Log post process '%s'...",logPostCommand);
 
       TEXT_MACRO_N_STRING (textMacros[0],"%file",tmpLogFileName                      );
-      TEXT_MACRO_N_STRING (textMacros[1],"%name",name                                );
+      TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName                             );
       TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeName(archiveType)     );
       TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortName(archiveType));
       TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText                  );
@@ -5746,7 +5764,8 @@ exit(1);
                            CALLBACK(NULL,NULL), // storageRequestVolumeFunction
                            NULL, // pauseCreateFlag
                            NULL, // pauseStorageFlag
-                           NULL  // requestedAbortFlag
+                           NULL,  // requestedAbortFlag,
+                           NULL  // logHandle
                           );
   }
   else
@@ -5813,7 +5832,8 @@ exit(1);
                                   CALLBACK(NULL,NULL), // storageRequestVolumeFunction
                                   NULL, // pauseCreateFlag
                                   NULL, // pauseStorageFlag
-                                  NULL  // requestedAbortFlag
+                                  NULL,  // requestedAbortFlag,
+                                  NULL  // logHandle
                                   );
           }
 
@@ -5843,7 +5863,8 @@ exit(1);
                                    &includeEntryList,
                                    &excludePatternList,
                                    &jobOptions,
-                                   CALLBACK(inputCryptPassword,NULL)
+                                   CALLBACK(inputCryptPassword,NULL),
+                                   NULL  // logHandle
                                   );
               break;
             case COMMAND_TEST:
@@ -5852,7 +5873,8 @@ exit(1);
                                    &excludePatternList,
                                    &deltaSourceList,
                                    &jobOptions,
-                                   CALLBACK(inputCryptPassword,NULL)
+                                   CALLBACK(inputCryptPassword,NULL),
+                                   NULL  // logHandle
                                   );
               break;
             case COMMAND_COMPARE:
@@ -5861,7 +5883,8 @@ exit(1);
                                       &excludePatternList,
                                       &deltaSourceList,
                                       &jobOptions,
-                                      CALLBACK(inputCryptPassword,NULL)
+                                      CALLBACK(inputCryptPassword,NULL),
+                                      NULL  // logHandle
                                      );
               break;
             case COMMAND_RESTORE:
@@ -5873,7 +5896,8 @@ exit(1);
                                       CALLBACK(inputCryptPassword,NULL),
                                       CALLBACK(NULL,NULL),  // restoreStatusInfoUserData callback
                                       NULL,  // pauseRestoreFlag
-                                      NULL  // requestedAbortFlag
+                                      NULL,  // requestedAbortFlag,
+                                      NULL  // logHandle
                                      );
               break;
             default:

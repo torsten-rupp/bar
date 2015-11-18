@@ -94,6 +94,7 @@ typedef void(*RestoreStatusInfoFunction)(void                    *userData,
 *          pauseRestoreFlag                 - pause restore flag (can be NULL)
 *          requestedAbortFlag               - request abort flag (can be
 *                                             NULL)
+*          logHandle                        - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE if all files restored, otherwise error code
 * Notes  : -
@@ -109,7 +110,8 @@ Errors Command_restore(const StringList                *storageNameList,
                        RestoreStatusInfoFunction       restoreStatusInfoFunction,
                        void                            *restoreStatusInfoUserData,
                        bool                            *pauseRestoreFlag,
-                       bool                            *requestedAbortFlag
+                       bool                            *requestedAbortFlag,
+                       LogHandle                       *logHandle
                       );
 
 #ifdef __cplusplus

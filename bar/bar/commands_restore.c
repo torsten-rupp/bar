@@ -211,11 +211,13 @@ LOCAL void updateStatusInfo(RestoreInfo *restoreInfo)
 *          jobOptions                       - job options
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
-*          pauseRestoreFlag                 - pause restore flag (can be NULL)
+*          pauseRestoreFlag                 - pause restore flag (can be
+*                                             NULL)
 *          requestedAbortFlag               - request abort flag (can be
 *                                             NULL)
 *          fragmentList                     - fragment list
 *          restoreInfo                      - restore info
+*          logHandle                        - log handle (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
@@ -232,7 +234,8 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
                                    bool                            *pauseRestoreFlag,
                                    bool                            *requestedAbortFlag,
                                    FragmentList                    *fragmentList,
-                                   RestoreInfo                     *restoreInfo
+                                   RestoreInfo                     *restoreInfo,
+                                   LogHandle                       *logHandle
                                   )
 {
   AutoFreeList      autoFreeList;
@@ -286,7 +289,8 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
                        deltaSourceList,
                        jobOptions,
                        archiveGetCryptPasswordFunction,
-                       archiveGetCryptPasswordUserData
+                       archiveGetCryptPasswordUserData,
+                       logHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -2197,7 +2201,8 @@ Errors Command_restore(const StringList                *storageNameList,
                        RestoreStatusInfoFunction       restoreStatusInfoFunction,
                        void                            *restoreStatusInfoUserData,
                        bool                            *pauseRestoreFlag,
-                       bool                            *requestedAbortFlag
+                       bool                            *requestedAbortFlag,
+                       LogHandle                       *logHandle
                       )
 {
   RestoreInfo                restoreInfo;
@@ -2271,7 +2276,8 @@ Errors Command_restore(const StringList                *storageNameList,
                                     pauseRestoreFlag,
                                     requestedAbortFlag,
                                     &fragmentList,
-                                    &restoreInfo
+                                    &restoreInfo,
+                                    logHandle
                                    );
       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
     }
@@ -2319,7 +2325,8 @@ Errors Command_restore(const StringList                *storageNameList,
                                           pauseRestoreFlag,
                                           requestedAbortFlag,
                                           &fragmentList,
-                                          &restoreInfo
+                                          &restoreInfo,
+                                          logHandle
                                          );
             if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
           }

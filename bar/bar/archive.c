@@ -2968,7 +2968,8 @@ const Password *Archive_appendDecryptPassword(const Password *password)
                         ArchiveCreatedFunction          archiveCreatedFunction,
                         void                            *archiveCreatedUserData,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                        void                            *archiveGetCryptPasswordUserData
+                        void                            *archiveGetCryptPasswordUserData,
+                        LogHandle                       *logHandle
                        )
 #else /* not NDEBUG */
   Errors __Archive_create(const char                      *__fileName__,
@@ -2985,7 +2986,8 @@ const Password *Archive_appendDecryptPassword(const Password *password)
                           ArchiveCreatedFunction          archiveCreatedFunction,
                           void                            *archiveCreatedUserData,
                           ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                          void                            *archiveGetCryptPasswordUserData
+                          void                            *archiveGetCryptPasswordUserData,
+                          LogHandle                       *logHandle
                          )
 #endif /* NDEBUG */
 {
@@ -3024,6 +3026,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->archiveCreatedUserData          = archiveCreatedUserData;
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
+  archiveInfo->logHandle                       = logHandle;
 
   Semaphore_init(&archiveInfo->passwordLock);
   archiveInfo->cryptType                       = Crypt_isEncrypted(jobOptions->cryptAlgorithm) ? jobOptions->cryptType : CRYPT_TYPE_NONE;
@@ -3179,7 +3182,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                       DeltaSourceList                 *deltaSourceList,
                       const JobOptions                *jobOptions,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                      void                            *archiveGetCryptPasswordUserData
+                      void                            *archiveGetCryptPasswordUserData,
+                      LogHandle                       *logHandle
                      )
 #else /* not NDEBUG */
   Errors __Archive_open(const char                      *__fileName__,
@@ -3191,7 +3195,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                         DeltaSourceList                 *deltaSourceList,
                         const JobOptions                *jobOptions,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                        void                            *archiveGetCryptPasswordUserData
+                        void                            *archiveGetCryptPasswordUserData,
+                        LogHandle                       *logHandle
                        )
 #endif /* NDEBUG */
 {
@@ -3213,6 +3218,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->archiveCreatedUserData          = NULL;
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
+  archiveInfo->logHandle                       = logHandle;
 
   Semaphore_init(&archiveInfo->passwordLock);
   archiveInfo->cryptPassword                   = NULL;
@@ -3745,7 +3751,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     else
     {
       printWarning("File '%s' not delta compressed (no source file found)\n",String_cString(fileName));
-      logMessage(LOG_TYPE_WARNING,
+      logMessage(archiveEntryInfo->archiveInfo->logHandle,
+                 LOG_TYPE_WARNING,
                  "File '%s' not delta compressed (no source file found)\n",
                  String_cString(fileName)
                 );
@@ -4120,7 +4127,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       }
       else
       {
-        logMessage(LOG_TYPE_WARNING,
+        logMessage(archiveEntryInfo->archiveInfo->logHandle,
+                   LOG_TYPE_WARNING,
                    "Image of device '%s' not delta compressed (no source file found)\n",
                    String_cString(deviceName)
                   );
@@ -4896,7 +4904,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     }
     else
     {
-      logMessage(LOG_TYPE_WARNING,
+      logMessage(archiveEntryInfo->archiveInfo->logHandle,
+                 LOG_TYPE_WARNING,
                  "File '%s' not delta compressed (no source file found)\n",
                  String_cString(StringList_first(fileNameList,NULL))
                 );
@@ -10220,7 +10229,8 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
                           IndexModes       indexMode,
                           const JobOptions *jobOptions,
                           uint64           *totalEntries,
-                          uint64           *totalSize
+                          uint64           *totalSize,
+                          LogHandle        *logHandle
                          )
 {
   Errors     error;
@@ -10251,7 +10261,8 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
                               totalEntries,
                               totalSize,
                               CALLBACK(NULL,NULL),
-                              CALLBACK(NULL,NULL)
+                              CALLBACK(NULL,NULL),
+                              logHandle
                              );
   if (error != ERROR_NONE)
   {
@@ -10272,7 +10283,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            ArchivePauseCallbackFunction pauseCallback,
                            void                         *pauseUserData,
                            ArchiveAbortCallbackFunction abortCallback,
-                           void                         *abortUserData
+                           void                         *abortUserData,
+                           LogHandle                    *logHandle
                           )
 {
   StorageSpecifier  storageSpecifier;
@@ -10311,7 +10323,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
                          jobOptions,
-                         CALLBACK(NULL,NULL)
+                         CALLBACK(NULL,NULL),
+                         logHandle
                         );
 
     if (error != ERROR_NONE)
@@ -10324,7 +10337,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            NULL,  // archive name
                            NULL,  // deltaSourceList
                            jobOptions,
-                           CALLBACK(NULL,NULL)
+                           CALLBACK(NULL,NULL),
+                           logHandle
                           );
     }
   }
@@ -10337,7 +10351,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
                          jobOptions,
-                         CALLBACK(NULL,NULL)
+                         CALLBACK(NULL,NULL),
+                         logHandle
                         );
   }
   if (error != ERROR_NONE)

@@ -2627,7 +2627,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = File_setPermission(jobNode->fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
     if (error != ERROR_NONE)
     {
-      logMessage(LOG_TYPE_WARNING,
+      logMessage(NULL,  // logHandle
+                 LOG_TYPE_WARNING,
                  "cannot set file permissions of job '%s' (error: %s)\n",
                  String_cString(jobNode->fileName),
                  Error_getText(error)
@@ -3248,6 +3249,7 @@ LOCAL void jobThreadCode(void)
   StorageSpecifier storageSpecifier;
   String           storageName;
   JobNode          *jobNode;
+  LogHandle        logHandle;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   RemoteHost       remoteHost;
   EntryList        includeEntryList;
@@ -3327,7 +3329,10 @@ fprintf(stderr,"%s, %d: start %s: %s\n",__FILE__,__LINE__,String_cString(jobNode
     // unlock (Note: job is now protected by running state)
     Semaphore_unlock(&jobList.lock);
 
-    logMessage(LOG_TYPE_ALWAYS,"------------------------------------------------------------\n");
+    // init log
+    initLog(&logHandle);
+
+    logMessage(&logHandle,LOG_TYPE_ALWAYS,"------------------------------------------------------------\n");
 
     // parse storage name
     if (jobNode->runningInfo.error == ERROR_NONE)
@@ -3335,7 +3340,8 @@ fprintf(stderr,"%s, %d: start %s: %s\n",__FILE__,__LINE__,String_cString(jobNode
       jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
       if (jobNode->runningInfo.error != ERROR_NONE)
       {
-        logMessage(LOG_TYPE_ALWAYS,
+        logMessage(&logHandle,
+                   LOG_TYPE_ALWAYS,
                    "Aborted job '%s': invalid storage '%s' (error: %s)\n",
                    String_cString(jobNode->name),
                    Storage_getPrintableNameCString(&storageSpecifier,NULL),
@@ -3357,7 +3363,8 @@ fprintf(stderr,"%s, %d: start %s: %s\n",__FILE__,__LINE__,String_cString(jobNode
                                                        );
         if (jobNode->runningInfo.error != ERROR_NONE)
         {
-          logMessage(LOG_TYPE_ALWAYS,
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
                      "Aborted job '%s': pre-command fail (error: %s)\n",
                      String_cString(jobNode->name),
                      Error_getText(jobNode->runningInfo.error)
@@ -3422,7 +3429,8 @@ fprintf(stderr,"%s, %d: start %s: %s\n",__FILE__,__LINE__,String_cString(jobNode
               }
               String_appendCString(s,")");
             }
-            logMessage(LOG_TYPE_ALWAYS,
+            logMessage(&logHandle,
+                       LOG_TYPE_ALWAYS,
                        "Start job '%s'%s\n",
                        String_cString(jobNode->name),
                        !String_isEmpty(s) ? String_cString(s) : ""
@@ -3446,18 +3454,21 @@ NULL,//                                                        scheduleTitle,
                                                         &pauseFlags.create,
                                                         &pauseFlags.storage,
 //TODO access jobNode?
-                                                        &jobNode->requestedAbortFlag
+                                                        &jobNode->requestedAbortFlag,
+                                                        &logHandle
                                                        );
             if (jobNode->requestedAbortFlag)
             {
-              logMessage(LOG_TYPE_ALWAYS,
+              logMessage(&logHandle,
+                         LOG_TYPE_ALWAYS,
                          "Aborted job '%s'\n",
                          String_cString(jobNode->name)
                         );
             }
             else if (jobNode->runningInfo.error != ERROR_NONE)
             {
-              logMessage(LOG_TYPE_ALWAYS,
+              logMessage(&logHandle,
+                         LOG_TYPE_ALWAYS,
                          "Done job '%s' (error: %s)\n",
                          String_cString(jobNode->name),
                          Error_getText(jobNode->runningInfo.error)
@@ -3465,7 +3476,8 @@ NULL,//                                                        scheduleTitle,
             }
             else
             {
-              logMessage(LOG_TYPE_ALWAYS,
+              logMessage(&logHandle,
+                         LOG_TYPE_ALWAYS,
                          "Done job '%s'\n",
                          String_cString(jobNode->name),
                          Error_getText(jobNode->runningInfo.error)
@@ -3473,7 +3485,8 @@ NULL,//                                                        scheduleTitle,
             }
             break;
           case JOB_TYPE_RESTORE:
-            logMessage(LOG_TYPE_ALWAYS,
+            logMessage(&logHandle,
+                       LOG_TYPE_ALWAYS,
                        "Start restore archive\n"
                       );
 
@@ -3488,20 +3501,23 @@ NULL,//                                                        scheduleTitle,
                                                          CALLBACK(getCryptPassword,jobNode),
                                                          CALLBACK((RestoreStatusInfoFunction)updateRestoreJobStatus,jobNode),
                                                          &pauseFlags.restore,
-                                                         &jobNode->requestedAbortFlag
+                                                         &jobNode->requestedAbortFlag,
+                                                         &logHandle
                                                         );
             StringList_done(&archiveFileNameList);
 
             if (jobNode->runningInfo.error != ERROR_NONE)
             {
-              logMessage(LOG_TYPE_ALWAYS,
+              logMessage(&logHandle,
+                         LOG_TYPE_ALWAYS,
                          "Done restore archive (error: %s)\n",
                          Error_getText(jobNode->runningInfo.error)
                         );
             }
             else
             {
-              logMessage(LOG_TYPE_ALWAYS,
+              logMessage(&logHandle,
+                         LOG_TYPE_ALWAYS,
                          "Done restore archive\n"
                         );
             }
@@ -3514,7 +3530,7 @@ NULL,//                                                        scheduleTitle,
         }
       #endif /* SIMULATOR */
 
-      logPostProcess(jobNode->name,&jobNode->jobOptions,archiveType,scheduleCustomText);
+      logPostProcess(&logHandle,jobNode->name,&jobNode->jobOptions,archiveType,scheduleCustomText);
     }
 
     // post-process command
@@ -3530,7 +3546,8 @@ NULL,//                                                        scheduleTitle,
                                                        );
         if (jobNode->runningInfo.error != ERROR_NONE)
         {
-          logMessage(LOG_TYPE_ALWAYS,
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
                      "Aborted job '%s': post-command fail (error: %s)\n",
                      String_cString(jobNode->name),
                      Error_getText(jobNode->runningInfo.error)
@@ -3545,15 +3562,18 @@ NULL,//                                                        scheduleTitle,
       String_setCString(jobNode->runningInfo.message,Error_getText(jobNode->runningInfo.error));
     }
 
+    // done log
+    doneLog(&logHandle);
+
+    // lock
+    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER);
+
     // free resources
     doneJobOptions(&jobOptions);
     DeltaSourceList_clear(&deltaSourceList);
     PatternList_clear(&compressExcludePatternList);
     PatternList_clear(&excludePatternList);
     EntryList_clear(&includeEntryList);
-
-    // lock
-    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER);
 
     // done job
     doneJob(jobNode);
@@ -4361,7 +4381,8 @@ LOCAL void cleanExpiredEntities(void)
                   if (error == ERROR_NONE)
                   {
                     Misc_formatDateTime(dateTime,createdDateTime,NULL);
-                    plogMessage(LOG_TYPE_INDEX,
+                    plogMessage(NULL,  // logHandle,
+                                LOG_TYPE_INDEX,
                                 "INDEX",
                                 "Deleted expired entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
                                 String_cString(jobName),
@@ -4406,7 +4427,8 @@ LOCAL void cleanExpiredEntities(void)
                 if (error == ERROR_NONE)
                 {
                   Misc_formatDateTime(dateTime,createdDateTime,NULL);
-                  plogMessage(LOG_TYPE_INDEX,
+                  plogMessage(NULL,  // logHandle,
+                              LOG_TYPE_INDEX,
                               "INDEX",
                               "Deleted surplus entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
                               String_cString(jobName),
@@ -4864,7 +4886,8 @@ LOCAL void indexThreadCode(void)
                                       &totalEntries,
                                       &totalSize,
                                       CALLBACK(indexPauseCallback,NULL),
-                                      CALLBACK(indexAbortCallback,NULL)
+                                      CALLBACK(indexAbortCallback,NULL),
+                                      NULL  // logHandle
                                      );
 
           // stop if done or quit or interrupted
@@ -4896,7 +4919,8 @@ LOCAL void indexThreadCode(void)
       {
         if (error == ERROR_NONE)
         {
-          plogMessage(LOG_TYPE_INDEX,
+          plogMessage(NULL,  // logHandle,
+                      LOG_TYPE_INDEX,
                       "INDEX",
                       "Created index for '%s', %llu entries/%llu bytes\n",
                       String_cString(printableStorageName),
@@ -4910,7 +4934,8 @@ LOCAL void indexThreadCode(void)
 #warning needed?
 #endif
 #if 0
-          plogMessage(LOG_TYPE_INDEX,
+          plogMessage(NULL,  // logHandle,
+                      LOG_TYPE_INDEX,
                       "INDEX",
                       "Interrupted create index for '%s' - postpone\n",
                       String_cString(printableStorageName),
@@ -4920,7 +4945,8 @@ LOCAL void indexThreadCode(void)
         }
         else
         {
-          plogMessage(LOG_TYPE_INDEX,
+          plogMessage(NULL,  // logHandle,
+                      LOG_TYPE_INDEX,
                       "INDEX",
                       "Cannot create index for '%s' (error: %s)\n",
                       String_cString(printableStorageName),
@@ -5236,7 +5262,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
           Index_deleteStorage(indexHandle,storageId);
 
           Misc_formatDateTime(dateTime,lastCheckedDateTime,NULL);
-          plogMessage(LOG_TYPE_INDEX,
+          plogMessage(NULL,  // logHandle,
+                      LOG_TYPE_INDEX,
                       "INDEX",
                       "Deleted index for '%s', last checked %s\n",
                       String_cString(printableStorageName),
@@ -6384,7 +6411,8 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const StringMap 
     if (pauseFlags.storage    ) String_joinCString(modeMask,"storage",',');
     if (pauseFlags.restore    ) String_joinCString(modeMask,"restore",',');
     if (pauseFlags.indexUpdate) String_joinCString(modeMask,"indexUpdate",',');
-    logMessage(LOG_TYPE_ALWAYS,
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
                "Pause server for %dmin: %s\n",
                pauseTime/60,
                String_cString(modeMask)
@@ -6466,7 +6494,10 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const StringMa
       }
       String_doneTokenizer(&stringTokenizer);
     }
-    logMessage(LOG_TYPE_ALWAYS,"suspend server\n");
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "suspend server\n"
+              );
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -6505,7 +6536,10 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const StringM
     pauseFlags.storage     = FALSE;
     pauseFlags.restore     = FALSE;
     pauseFlags.indexUpdate = FALSE;
-    logMessage(LOG_TYPE_ALWAYS,"continue server\n");
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "continue server\n"
+              );
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -10439,7 +10473,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                        NULL,  // archive name
                        NULL,  // deltaSourceList
                        &clientInfo->jobOptions,
-                       CALLBACK(NULL,NULL)
+                       CALLBACK(NULL,NULL),
+                       NULL  // logHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -11184,7 +11219,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                           CALLBACK(NULL,NULL),  // archiveGetCryptPasswordFunction
                           CALLBACK((RestoreStatusInfoFunction)updateRestoreCommandStatus,&restoreCommandInfo),
                           NULL,  // pauseFlag
-                          NULL  // requestAbortFlag
+                          NULL,  // requestAbortFlag
+                          NULL  // logHandle
                          );
   sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
   EntryList_done(&restoreEntryList);

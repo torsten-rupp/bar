@@ -24,6 +24,7 @@
 #include "global.h"
 #include "lists.h"
 #include "strings.h"
+#include "files.h"
 #include "configvalues.h"
 #include "semaphores.h"
 
@@ -111,6 +112,35 @@ typedef enum
 } ArchiveFileModes;
 
 /***************************** Datatypes *******************************/
+
+// log types
+typedef enum
+{
+  LOG_TYPE_ALWAYS              = 0,
+  LOG_TYPE_ERROR               = (1 <<  0),
+  LOG_TYPE_WARNING             = (1 <<  1),
+  LOG_TYPE_ENTRY_OK            = (1 <<  2),
+  LOG_TYPE_ENTRY_TYPE_UNKNOWN  = (1 <<  3),
+  LOG_TYPE_ENTRY_ACCESS_DENIED = (1 <<  4),
+  LOG_TYPE_ENTRY_MISSING       = (1 <<  5),
+  LOG_TYPE_ENTRY_INCOMPLETE    = (1 <<  6),
+  LOG_TYPE_ENTRY_EXCLUDED      = (1 <<  7),
+  LOG_TYPE_CONTINUOUS          = (1 <<  8),
+  LOG_TYPE_STORAGE             = (1 <<  9),
+  LOG_TYPE_INDEX               = (1 << 10),
+} LogTypes;
+
+#define LOG_TYPE_NONE 0x00000000
+#define LOG_TYPE_ALL  0xFFFFffff
+
+#define MAX_CONNECTION_COUNT_UNLIMITED MAX_INT
+#define MAX_STORAGE_SIZE_UNLIMITED     MAX_INT64
+
+// log handle
+typedef struct
+{
+  FileHandle handle;
+} LogHandle;
 
 // week day sets
 typedef long WeekDaySet;                                      // week days set or WEEKDAY_SET_ANY

@@ -71,6 +71,7 @@
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
 *          fragmentList                     - fragment list
+*          logHandle                        - log handle (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
@@ -84,7 +85,8 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
                                 JobOptions                      *jobOptions,
                                 ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                                 void                            *archiveGetCryptPasswordUserData,
-                                FragmentList                    *fragmentList
+                                FragmentList                    *fragmentList,
+                                LogHandle                       *logHandle
                                )
 {
   byte              *buffer;
@@ -135,7 +137,8 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
                        deltaSourceList,
                        jobOptions,
                        archiveGetCryptPasswordFunction,
-                       archiveGetCryptPasswordUserData
+                       archiveGetCryptPasswordUserData,
+                       logHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -883,7 +886,8 @@ Errors Command_test(const StringList                *storageNameList,
                     DeltaSourceList                 *deltaSourceList,
                     JobOptions                      *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                    void                            *archiveGetCryptPasswordUserData
+                    void                            *archiveGetCryptPasswordUserData,
+                    LogHandle                       *logHandle
                    )
 {
   FragmentList               fragmentList;
@@ -936,7 +940,8 @@ Errors Command_test(const StringList                *storageNameList,
                                    jobOptions,
                                    archiveGetCryptPasswordFunction,
                                    archiveGetCryptPasswordUserData,
-                                   &fragmentList
+                                   &fragmentList,
+                                   logHandle
                                   );
       }
     }
@@ -981,7 +986,8 @@ Errors Command_test(const StringList                *storageNameList,
                                        jobOptions,
                                        archiveGetCryptPasswordFunction,
                                        archiveGetCryptPasswordUserData,
-                                       &fragmentList
+                                       &fragmentList,
+                                       logHandle
                                       );
           }
           String_delete(fileName);

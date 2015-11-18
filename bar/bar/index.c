@@ -1179,11 +1179,24 @@ LOCAL Errors upgradeIndex(ConstString oldDatabaseFileName, IndexHandle *indexHan
     }
     if (error == ERROR_NONE)
     {
-      plogMessage(LOG_TYPE_INDEX,"INDEX","Upgraded from version %d to %d\n",indexVersion,INDEX_VERSION);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Upgraded from version %d to %d\n",
+                  indexVersion,
+                  INDEX_VERSION
+                 );
     }
     else
     {
-      plogMessage(LOG_TYPE_INDEX,"INDEX","Upgrade version from %d to %d fail: %s\n",indexVersion,INDEX_VERSION,Error_getText(error));
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Upgrade version from %d to %d fail: %s\n",
+                  indexVersion,
+                  INDEX_VERSION,
+                  Error_getText(error)
+                 );
       return error;
     }
   }
@@ -1310,7 +1323,8 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                           );
     if (error == ERROR_NONE)
     {
-      plogMessage(LOG_TYPE_INDEX,
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
                   "INDEX",
                   "Requested update index #%lld: %s\n",
                   storageId,
@@ -1382,7 +1396,8 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
     error = Index_deleteStorage(indexHandle,storageId);
     if (error == ERROR_NONE)
     {
-      plogMessage(LOG_TYPE_INDEX,
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
                   "INDEX",
                   "Deleted incomplete index #%lld: %s\n",
                   storageId,
@@ -1610,7 +1625,12 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
     }
     Index_doneList(&indexQueryHandle);
   }
-  if (n > 0L) plogMessage(LOG_TYPE_INDEX,"INDEX","Cleaned %lu orphaned entries\n",n);
+  if (n > 0L) plogMessage(NULL,  // logHandle
+                          LOG_TYPE_INDEX,
+                          "INDEX",
+                          "Cleaned %lu orphaned entries\n",
+                          n
+                         );
 
   // free resources
   String_delete(storageName);
@@ -1691,7 +1711,12 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
     }
     Index_doneList(&indexQueryHandle);
   }
-  if (n > 0L) plogMessage(LOG_TYPE_INDEX,"INDEX","Cleaned %lu indizes without name\n",n);
+  if (n > 0L) plogMessage(NULL,  // logHandle
+                          LOG_TYPE_INDEX,
+                          "INDEX",
+                          "Cleaned %lu indizes without name\n",
+                          n
+                         );
 
   // free resource
   String_delete(printableStorageName);
@@ -2013,7 +2038,8 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
           error = Index_deleteStorage(indexHandle,duplicateStorageId);
           if (error == ERROR_NONE)
           {
-            plogMessage(LOG_TYPE_INDEX,
+            plogMessage(NULL,  // logHandle
+                        LOG_TYPE_INDEX,
                         "INDEX",
                         "Deleted duplicate index #%lld: '%s'\n",
                         duplicateStorageId,
@@ -2031,7 +2057,12 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
     Index_doneList(&indexQueryHandle1);
   }
   while (!indexHandle->quitFlag &&  deletedIndex);
-  if (n > 0L) plogMessage(LOG_TYPE_INDEX,"INDEX","Cleaned %lu duplicate indizes\n",n);
+  if (n > 0L) plogMessage(NULL,  // logHandle
+                          LOG_TYPE_INDEX,
+                          "INDEX",
+                          "Cleaned %lu duplicate indizes\n",
+                          n
+                         );
 
   // free resources
   String_delete(printableStorageName);
@@ -2061,7 +2092,11 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   String              oldDatabaseFileName;
   uint                sleepTime;
 
-  plogMessage(LOG_TYPE_INDEX,"INDEX","Start upgrade index database\n");
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Start upgrade index database\n"
+             );
 
   // get absolute file name
   absoluteFileName = File_getAbsoluteFileNameCString(String_new(),indexHandle->databaseFileName);
@@ -2073,7 +2108,13 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   {
     String_delete(pathName);
     String_delete(absoluteFileName);
-    plogMessage(LOG_TYPE_ERROR,"INDEX","Upgrade index database '%s' fail: %s\n",indexHandle->databaseFileName,Error_getText(error));
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_ERROR,
+                "INDEX",
+                "Upgrade index database '%s' fail: %s\n",
+                indexHandle->databaseFileName,
+                Error_getText(error)
+               );
     return;
   }
   String_delete(pathName);
@@ -2089,12 +2130,23 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
       if (indexHandle->upgradeError == ERROR_NONE) indexHandle->upgradeError = error;
       if (error == ERROR_NONE)
       {
-        plogMessage(LOG_TYPE_ERROR,"INDEX","Upgraded index database '%s': %s\n",oldDatabaseFileName,Error_getText(error));
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_ERROR,
+                    "INDEX",
+                    "Upgraded index database '%s': %s\n",
+                    oldDatabaseFileName,Error_getText(error)
+                   );
         (void)File_delete(oldDatabaseFileName,FALSE);
       }
       else
       {
-        plogMessage(LOG_TYPE_ERROR,"INDEX","Upgrade index database '%s' fail: %s\n",oldDatabaseFileName,Error_getText(error));
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_ERROR,
+                    "INDEX",
+                    "Upgrade index database '%s' fail: %s\n",
+                    oldDatabaseFileName,
+                    Error_getText(error)
+                   );
       }
     }
   }
@@ -2107,16 +2159,28 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   // free resources
   String_delete(absoluteFileName);
 
-  plogMessage(LOG_TYPE_INDEX,"INDEX","Done upgrade index database\n");
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Done upgrade index database\n"
+             );
 
   // single clean-ups
-  plogMessage(LOG_TYPE_INDEX,"INDEX","Clean-up index database\n");
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Clean-up index database\n"
+             );
   (void)cleanUpDuplicateMeta(indexHandle);
   (void)cleanUpIncompleteUpdate(indexHandle);
   (void)cleanUpIncompleteCreate(indexHandle);
   (void)cleanUpStorageNoName(indexHandle);
   (void)cleanUpStorageNoEntity(indexHandle);
-  plogMessage(LOG_TYPE_INDEX,"INDEX","Done clean-up index database\n");
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Done clean-up index database\n"
+             );
 
   // regular clean-ups
   while (!indexHandle->quitFlag)
@@ -2472,7 +2536,13 @@ Errors Index_init(IndexHandle *indexHandle,
       error = createIndex(indexHandle,indexHandle->databaseFileName);
       if (error != ERROR_NONE)
       {
-        plogMessage(LOG_TYPE_ERROR,"INDEX","Create new index database '$s' fail: %s\n",indexHandle->databaseFileName,Error_getText(error));
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_ERROR,
+                    "INDEX",
+                    "Create new index database '$s' fail: %s\n",
+                    indexHandle->databaseFileName,
+                    Error_getText(error)
+                   );
         return error;
       }
     }
@@ -2482,7 +2552,13 @@ Errors Index_init(IndexHandle *indexHandle,
       error = openIndex(indexHandle,indexHandle->databaseFileName);
       if (error != ERROR_NONE)
       {
-        plogMessage(LOG_TYPE_ERROR,"INDEX","Cannot open index database '$s' fail: %s\n",indexHandle->databaseFileName,Error_getText(error));
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_ERROR,
+                    "INDEX",
+                    "Cannot open index database '$s' fail: %s\n",
+                    indexHandle->databaseFileName,
+                    Error_getText(error)
+                   );
         return error;
       }
     }
@@ -2492,7 +2568,13 @@ Errors Index_init(IndexHandle *indexHandle,
     error = createIndex(indexHandle,indexHandle->databaseFileName);
     if (error != ERROR_NONE)
     {
-      plogMessage(LOG_TYPE_ERROR,"INDEX","Create index database '$s' fail: %s\n",indexHandle->databaseFileName,Error_getText(indexHandle->upgradeError));
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_ERROR,
+                  "INDEX",
+                  "Create index database '$s' fail: %s\n",
+                  indexHandle->databaseFileName,
+                  Error_getText(indexHandle->upgradeError)
+                 );
       return error;
     }
   }

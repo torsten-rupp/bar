@@ -1731,6 +1731,7 @@ LOCAL void printArchiveList(void)
 *          printableStorageName             - printable storage name
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
+*          logHandle                        - log handle (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
@@ -1742,7 +1743,8 @@ LOCAL Errors listArchiveContent(StorageSpecifier                *storageSpecifie
                                 const PatternList               *excludePatternList,
                                 JobOptions                      *jobOptions,
                                 ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                                void                            *archiveGetCryptPasswordUserData
+                                void                            *archiveGetCryptPasswordUserData,
+                                LogHandle                       *logHandle
                                )
 {
   bool         printedInfoFlag;
@@ -1801,7 +1803,8 @@ remoteBarFlag=FALSE;
                              NULL,  // deltaSourceList
                              jobOptions,
                              archiveGetCryptPasswordFunction,
-                             archiveGetCryptPasswordUserData
+                             archiveGetCryptPasswordUserData,
+                             logHandle
                             );
         if (error != ERROR_NONE)
         {
@@ -3287,7 +3290,8 @@ Errors Command_list(StringList                      *storageNameList,
                     const PatternList               *excludePatternList,
                     JobOptions                      *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                    void                            *archiveGetCryptPasswordUserData
+                    void                            *archiveGetCryptPasswordUserData,
+                    LogHandle                       *logHandle
                    )
 {
   String                     storageName;
@@ -3334,12 +3338,13 @@ Errors Command_list(StringList                      *storageNameList,
       {
         // list archive content
         error = listArchiveContent(&storageSpecifier,
-                                   NULL,
+                                   NULL,  // archiveName
                                    includeEntryList,
                                    excludePatternList,
                                    jobOptions,
                                    archiveGetCryptPasswordFunction,
-                                   archiveGetCryptPasswordUserData
+                                   archiveGetCryptPasswordUserData,
+                                   logHandle
                                   );
         if (failError == ERROR_NONE) failError = error;
       }
@@ -3396,7 +3401,8 @@ Errors Command_list(StringList                      *storageNameList,
                                          excludePatternList,
                                          jobOptions,
                                          archiveGetCryptPasswordFunction,
-                                         archiveGetCryptPasswordUserData
+                                         archiveGetCryptPasswordUserData,
+                                         logHandle
                                         );
             }
             String_delete(fileName);

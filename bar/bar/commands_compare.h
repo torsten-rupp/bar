@@ -55,6 +55,7 @@
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
 *                                             call back
+*          logHandle                        - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE if archive ok, otherwise error code
 * Notes  : -
@@ -66,7 +67,8 @@ Errors Command_compare(const StringList                *archiveFileNameList,
                        DeltaSourceList                 *deltaSourceList,
                        JobOptions                      *jobOptions,
                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                       void                            *archiveGetCryptPasswordUserData
+                       void                            *archiveGetCryptPasswordUserData,
+                       LogHandle                       *logHandle
                       );
 
 #ifdef __cplusplus
