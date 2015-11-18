@@ -115,6 +115,12 @@
 /* FTP installed */
 #undef HAVE_FTP
 
+/* ftruncate() available */
+#undef HAVE_FTRUNCATE
+
+/* ftruncate64() available */
+#undef HAVE_FTRUNCATE64
+
 /* futimens() available */
 #undef HAVE_FUTIMENSK
 
@@ -219,6 +225,12 @@
 
 /* defined if ulong is available */
 #undef HAVE_LONG_LONG
+
+/* lseek() available */
+#undef HAVE_LSEEK
+
+/* lseek64() available */
+#undef HAVE_LSEEK64
 
 /* lstat() available */
 #undef HAVE_LSTAT
