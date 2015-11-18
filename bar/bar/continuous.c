@@ -733,6 +733,36 @@ UNUSED_VARIABLE(databaseHandle);
 }
 
 /***********************************************************************\
+* Name   : getMaxNotifies
+* Purpose: get max. number of notifies
+* Input  : -
+* Output : -
+* Return : max. number of notifies or 0
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ulong getMaxNotifies(void)
+{
+  ulong maxNotifies;
+  FILE  *handle;
+  char  line[256];
+
+  maxNotifies = 0;
+
+  handle = fopen(PROC_MAX_NOTIFIES_FILENAME,"r");
+  if (handle != NULL)
+  {
+    if (fgets(line,sizeof(line),handle) != NULL)
+    {
+      maxNotifies = (ulong)atol(line);
+    }
+    fclose(handle);
+  }
+
+  return maxNotifies;
+}
+
+/***********************************************************************\
 * Name   : freeNotifyInfo
 * Purpose: free file notify info
 * Input  : notifyInfo - file notify info
@@ -1048,8 +1078,6 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
   NotifyInfo          *notifyInfo;
   UUIDNode            *uuidNode;
 
-fprintf(stderr,"%s, %d: start %s: %d\n",__FILE__,__LINE__,String_cString(directory),Dictionary_count(&notifyHandles));
-
   // init variables
   StringList_init(&directoryList);
   name = String_new();
@@ -1169,8 +1197,6 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(name),strerror
   // free resources
   String_delete(name);
   StringList_done(&directoryList);
-//printNotifies();
-fprintf(stderr,"%s, %d: done %s: %d\n",__FILE__,__LINE__,String_cString(directory),Dictionary_count(&notifyHandles));
 }
 
 /***********************************************************************\
@@ -1226,7 +1252,6 @@ LOCAL void removeNotifySubDirectories(ConstString directory)
     }
   }
   while (notifyInfo != NULL);
-//printNotifies();
 }
 
 /***********************************************************************\
@@ -1531,7 +1556,7 @@ fprintf(stderr,"%s, %d: INIT job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyM
         // clean not existing notifies for job
         cleanNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
 
-        logMessage(LOG_TYPE_CONTINUOUS,"CONTINOUS: %d watches (max. %d)",Dictionary_count(&notifyHandles),123);
+        logMessage(LOG_TYPE_CONTINUOUS,"CONTINOUS: %lu watches (max. %lu)\n",Dictionary_count(&notifyHandles),getMaxNotifies());
         break;
       case DONE:
 fprintf(stderr,"%s, %d: DONE job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
@@ -1774,8 +1799,6 @@ else fprintf(stderr,"%s, %d: not found %d!\n",__FILE__,__LINE__,inotifyEvent->wd
 
 Errors Continuous_initAll(void)
 {
-  FILE  *handle;
-  char  line[256];
   ulong n;
 
   // init variables
@@ -1784,16 +1807,8 @@ Errors Continuous_initAll(void)
   Dictionary_init(&notifyDirectories,CALLBACK_NULL,CALLBACK_NULL);
 
   // check number of possible notifies
-  handle = fopen(PROC_MAX_NOTIFIES_FILENAME,"r");
-  if (handle != NULL)
-  {
-    if (fgets(line,sizeof(line),handle) != NULL)
-    {
-      n = (ulong)atol(line);
-      if (n < MIN_NOTIFIES_WARNING) printWarning("Low number of notifies %lu. Please check settings in '%s'!\n",n,PROC_MAX_NOTIFIES_FILENAME);
-    }
-    fclose(handle);
-  }
+  n = getMaxNotifies();
+  if (n < MIN_NOTIFIES_WARNING) printWarning("Low number of notifies %lu. Please check settings in '%s'!\n",n,PROC_MAX_NOTIFIES_FILENAME);
 
   // init inotify
   inotifyHandle = inotify_init();
