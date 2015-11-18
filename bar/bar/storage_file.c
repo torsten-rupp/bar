@@ -315,7 +315,9 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
     // open file
     error = File_open(&storageHandle->fileSystem.fileHandle,
                       archiveName,
-                      (storageHandle->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND) || storageHandle->jobOptions->archiveFileModeOverwriteFlag
+                      (   (storageHandle->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND) 
+                       && !storageHandle->jobOptions->archiveFileModeOverwriteFlag
+                      )
                         ? FILE_OPEN_APPEND
                         : FILE_OPEN_CREATE
                      );
