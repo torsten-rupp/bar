@@ -14706,6 +14706,206 @@ fi
 
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for lseek64" >&5
+$as_echo_n "checking for lseek64... " >&6; }
+if ${ac_cv_func_lseek64+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_lseek64="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void lseek64();"; fi`
+                                         #ifdef lseek64
+                                         #else
+                                           return (int)lseek64;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_lseek64=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_lseek64" >&5
+$as_echo "$ac_cv_func_lseek64" >&6; }
+  if test "$ac_cv_func_lseek64" != no; then :
+
+$as_echo "#define HAVE_LSEEK64 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for lseek" >&5
+$as_echo_n "checking for lseek... " >&6; }
+if ${ac_cv_func_lseek+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_lseek="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void lseek();"; fi`
+                                         #ifdef lseek
+                                         #else
+                                           return (int)lseek;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_lseek=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_lseek" >&5
+$as_echo "$ac_cv_func_lseek" >&6; }
+  if test "$ac_cv_func_lseek" != no; then :
+
+$as_echo "#define HAVE_LSEEK 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ftruncate64" >&5
+$as_echo_n "checking for ftruncate64... " >&6; }
+if ${ac_cv_func_ftruncate64+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_ftruncate64="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void ftruncate64();"; fi`
+                                         #ifdef ftruncate64
+                                         #else
+                                           return (int)ftruncate64;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_ftruncate64=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_ftruncate64" >&5
+$as_echo "$ac_cv_func_ftruncate64" >&6; }
+  if test "$ac_cv_func_ftruncate64" != no; then :
+
+$as_echo "#define HAVE_FTRUNCATE64 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ftruncate" >&5
+$as_echo_n "checking for ftruncate... " >&6; }
+if ${ac_cv_func_ftruncate+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_ftruncate="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void ftruncate();"; fi`
+                                         #ifdef ftruncate
+                                         #else
+                                           return (int)ftruncate;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_ftruncate=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_ftruncate" >&5
+$as_echo "$ac_cv_func_ftruncate" >&6; }
+  if test "$ac_cv_func_ftruncate" != no; then :
+
+$as_echo "#define HAVE_FTRUNCATE 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fdatasync" >&5
 $as_echo_n "checking for fdatasync... " >&6; }
 if ${ac_cv_func_fdatasync+:} false; then :
