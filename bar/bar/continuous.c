@@ -757,7 +757,7 @@ LOCAL void freeNotifyInfo(NotifyInfo *notifyInfo, void *userData)
 * Purpose: get file notify by watch handle
 * Input  : watchHandle - watch handle
 * Output : -
-* Return : file notify info or NULL
+* Return : file notify info or NULL if not found
 * Notes  : -
 \***********************************************************************/
 
@@ -785,7 +785,7 @@ LOCAL NotifyInfo *getNotifyInfo(int watchHandle)
 * Input  : jobUUID      - job UUID
 *          scheduleUUID - schedule UUID
 * Output : -
-* Return : file notify info or NULL
+* Return : file notify info or NULL if not found
 * Notes  : -
 \***********************************************************************/
 
@@ -842,7 +842,7 @@ LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
 * Input  : jobUUID      - job UUID
 *          scheduleUUID - schedule UUID
 * Output : -
-* Return : file notify info or NULL
+* Return : file notify info or NULL if not found
 * Notes  : -
 \***********************************************************************/
 
@@ -1530,6 +1530,8 @@ fprintf(stderr,"%s, %d: INIT job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyM
 
         // clean not existing notifies for job
         cleanNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+
+        logMessage(LOG_TYPE_CONTINUOUS,"CONTINOUS: %d watches (max. %d)",Dictionary_count(&notifyHandles),123);
         break;
       case DONE:
 fprintf(stderr,"%s, %d: DONE job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
@@ -1913,7 +1915,7 @@ Errors Continuous_initNotify(ConstString     jobUUID,
   assert(!String_isEmpty(scheduleUUID));
   assert(entryList != NULL);
 
-fprintf(stderr,"%s, %d: Continuous_initNotify job=%s scheudle=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
+//fprintf(stderr,"%s, %d: Continuous_initNotify job=%s scheudle=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
   initNotifyMsg.type = INIT;
   strncpy(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
   strncpy(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));

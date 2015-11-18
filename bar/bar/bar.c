@@ -429,6 +429,8 @@ LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] = CMD_VALUE_SE
 
   {"index",     LOG_TYPE_INDEX,              "index database"           },
 
+  {"continuous",LOG_TYPE_CONTINUOUS,         "continuous backup"        },
+
   {"all",       LOG_TYPE_ALL,                "log everything"           },
 );
 
@@ -831,6 +833,8 @@ const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] = CONFIG_VALUE_SET_ARRAY
   {"storage",   LOG_TYPE_STORAGE            },
 
   {"index",     LOG_TYPE_INDEX,             },
+
+  {"continuous",LOG_TYPE_CONTINUOUS,        },
 
   {"all",       LOG_TYPE_ALL                },
 );
