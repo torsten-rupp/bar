@@ -566,7 +566,7 @@ UNUSED_VARIABLE(databaseHandle);
     }
     Index_doneList(&indexQueryHandle);
   }
-  if (n > 0L) plogMessage(LOG_TYPE_INDEX,"INDEX","Cleaned %lu orphaned entries\n",n);
+  if (n > 0L) plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Cleaned %lu orphaned entries\n",n);
 
   // free resources
   String_delete(storageName);
@@ -702,8 +702,8 @@ UNUSED_VARIABLE(databaseHandle);
           error = Index_deleteStorage(databaseHandle,duplicateStorageId);
           if (error == ERROR_NONE)
           {
-            plogMessage(LOG_TYPE_INDEX,
-                        "INDEX",
+            plogMessage(LOG_TYPE_CONTINUOUS,
+                        "CONTINUOUS",
                         "Deleted duplicate index #%lld: '%s'\n",
                         duplicateStorageId,
                         String_cString(printableStorageName)
@@ -720,7 +720,7 @@ UNUSED_VARIABLE(databaseHandle);
     Index_doneList(&indexQueryHandle1);
   }
   while (!quitFlag &&  deletedIndex);
-  if (n > 0L) plogMessage(LOG_TYPE_INDEX,"INDEX","Cleaned %lu duplicate indizes\n",n);
+  if (n > 0L) plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Cleaned %lu duplicate indizes\n",n);
 
   // free resources
   String_delete(printableStorageName);
@@ -935,13 +935,13 @@ UNUSED_VARIABLE(databaseHandle);
   uint                sleepTime;
 
   // single clean-ups
-  plogMessage(LOG_TYPE_INDEX,"INDEX","Clean-up index database\n");
+  plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Clean-up index database\n");
   (void)cleanUpDuplicateMeta(databaseHandle);
   (void)cleanUpIncompleteUpdate(databaseHandle);
   (void)cleanUpIncompleteCreate(databaseHandle);
   (void)cleanUpStorageNoName(databaseHandle);
   (void)cleanUpStorageNoEntity(databaseHandle);
-  plogMessage(LOG_TYPE_INDEX,"INDEX","Done clean-up index database\n");
+  plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Done clean-up index database\n");
 
   // regular clean-ups
   while (!quitFlag)
@@ -1556,7 +1556,7 @@ LOCAL void continuousInitThreadCode(void)
         // clean not existing notifies for job
         cleanNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
 
-        logMessage(LOG_TYPE_CONTINUOUS,"CONTINOUS: %lu watches (max. %lu)\n",Dictionary_count(&notifyHandles),getMaxNotifies());
+        plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","%lu watches (max. %lu)\n",Dictionary_count(&notifyHandles),getMaxNotifies());
         break;
       case DONE:
 //fprintf(stderr,"%s, %d: DONE job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
@@ -1714,7 +1714,7 @@ fprintf(stderr,"\n");
                   error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
                   if (error != ERROR_NONE)
                   {
-                    logMessage(LOG_TYPE_CONTINUOUS,"Store continuous entry fail (error: %s)\n",Error_getText(error));
+                    plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Store continuous entry fail (error: %s)\n",Error_getText(error));
                   }
 
                   // add directory and sub-directories to notify
@@ -1740,7 +1740,7 @@ fprintf(stderr,"\n");
                   error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
                   if (error != ERROR_NONE)
                   {
-                    logMessage(LOG_TYPE_CONTINUOUS,"Store continuous entry fail (error: %s)\n",Error_getText(error));
+                    plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Store continuous entry fail (error: %s)\n",Error_getText(error));
                   }
 
                   // add directory and sub-directories to notify
@@ -1755,7 +1755,7 @@ fprintf(stderr,"\n");
                   error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
                   if (error != ERROR_NONE)
                   {
-                    logMessage(LOG_TYPE_CONTINUOUS,"Store continuous entry fail (error: %s)\n",Error_getText(error));
+                    plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Store continuous entry fail (error: %s)\n",Error_getText(error));
                   }
                 }
               }
@@ -1772,7 +1772,7 @@ fprintf(stderr,"\n");
                   error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
                   if (error != ERROR_NONE)
                   {
-                    logMessage(LOG_TYPE_CONTINUOUS,"Store continuous entry fail (error: %s)\n",Error_getText(error));
+                    plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Store continuous entry fail (error: %s)\n",Error_getText(error));
                   }
                 }
               }
