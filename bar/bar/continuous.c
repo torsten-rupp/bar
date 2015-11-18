@@ -1523,7 +1523,7 @@ LOCAL void continuousInitThreadCode(void)
     switch (initNotifyMsg.type)
     {
       case INIT:
-fprintf(stderr,"%s, %d: INIT job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+//fprintf(stderr,"%s, %d: INIT job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
         // mark notifies for update or clean
         markNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
 
@@ -1559,11 +1559,10 @@ fprintf(stderr,"%s, %d: INIT job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyM
         logMessage(LOG_TYPE_CONTINUOUS,"CONTINOUS: %lu watches (max. %lu)\n",Dictionary_count(&notifyHandles),getMaxNotifies());
         break;
       case DONE:
-fprintf(stderr,"%s, %d: DONE job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+//fprintf(stderr,"%s, %d: DONE job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
         removeNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
         break;
     }
-//printNotifies();
 
     // free init notify message
     freeInitNotifyMsg(&initNotifyMsg,NULL);
