@@ -5976,7 +5976,7 @@ Errors Command_create(ConstString                     jobUUID,
                                               || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL);
   }
 
-  // start collector and storage threads
+  // start collectors and storage thread
   if (!Thread_init(&collectorSumThread,"BAR collector sum",globalOptions.niceLevel,collectorSumThreadCode,&createInfo))
   {
     HALT_FATAL_ERROR("Cannot initialize collector sum thread!");
