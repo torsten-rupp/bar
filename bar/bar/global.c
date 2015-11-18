@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <unistd.h>
 #ifdef HAVE_BACKTRACE
   #include <execinfo.h>
 #endif
