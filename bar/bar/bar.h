@@ -22,6 +22,7 @@
 #include "global.h"
 #include "lists.h"
 #include "strings.h"
+#include "files.h"
 #include "configvalues.h"
 
 #include "patterns.h"
@@ -81,6 +82,12 @@ typedef enum
 
 #define MAX_CONNECTION_COUNT_UNLIMITED MAX_INT
 #define MAX_STORAGE_SIZE_UNLIMITED     MAX_INT64
+
+// log handle
+typedef struct
+{
+  FileHandle handle;
+} LogHandle;
 
 // config values
 extern const ConfigValueUnit   CONFIG_VALUE_BYTES_UNITS[];
@@ -288,6 +295,9 @@ void printWarning(const char *text, ...);
 \***********************************************************************/
 
 void printError(const char *text, ...);
+
+Errors initLog(LogHandle *logHandle);
+void doneLog(LogHandle *logHandle);
 
 /***********************************************************************\
 * Name   : logPostProcess
