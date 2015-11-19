@@ -84,6 +84,7 @@
 
 #define DEFAULT_CONFIG_FILE_NAME              "bar.cfg"
 #define DEFAULT_TMP_DIRECTORY                 FILE_TMP_DIRECTORY
+#define DEFAULT_LOG_FORMAT                    "%Y-%m-%d %H:%M:%S"
 #define DEFAULT_COMPRESS_MIN_FILE_SIZE        32
 #define DEFAULT_SERVER_PORT                   38523
 #ifdef HAVE_GNU_TLS
@@ -218,6 +219,7 @@ LOCAL const char      *indexDatabaseFileName;
 
 LOCAL ulong           logTypes;
 LOCAL const char      *logFileName;
+LOCAL const char      *logFormat;
 LOCAL const char      *logPostCommand;
 
 LOCAL bool            batchFlag;
@@ -235,10 +237,8 @@ LOCAL IndexHandle     __indexHandle;
 
 LOCAL StringList         configFileNameList;  // list of configuration files to read
 
-LOCAL String             tmpLogFileName;      // file name of temporary log file
 LOCAL Semaphore          logLock;
 LOCAL FILE               *logFile = NULL;     // log file handle
-LOCAL FILE               *tmpLogFile = NULL;  // temporary log file handle
 
 LOCAL ThreadLocalStorage outputLineHandle;
 LOCAL String             lastOutputLine;
@@ -649,6 +649,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SET          ("log",                          0,  1,1,logTypes,                                        COMMAND_LINE_OPTIONS_LOG_TYPES,                        "log types"                                                                ),
   CMD_OPTION_CSTRING      ("log-file",                     0,  1,1,logFileName,                                                                                            "log file name","file name"                                                ),
+  CMD_OPTION_CSTRING      ("log-format",                   0,  1,1,logFormat,                                                                                              "log format","format"                                                      ),
   CMD_OPTION_CSTRING      ("log-post-command",             0,  1,1,logPostCommand,                                                                                         "log file post-process command","command"                                  ),
 
   CMD_OPTION_CSTRING      ("pid-file",                     0,  1,1,pidFileName,                                                                                            "process id file name","file name"                                         ),
@@ -1049,6 +1050,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_SET      ("log",                          &logTypes,-1,                                                  CONFIG_VALUE_LOG_TYPES),
   CONFIG_VALUE_CSTRING  ("log-file",                     &logFileName,-1                                                ),
+  CONFIG_VALUE_CSTRING  ("log-format",                   &logFormat,-1                                                  ),
   CONFIG_VALUE_CSTRING  ("log-post-command",             &logPostCommand,-1                                             ),
 
   CONFIG_VALUE_CSTRING  ("pid-file",                     &pidFileName,-1                                                ),
@@ -2751,6 +2753,7 @@ LOCAL Errors initAll(void)
 
   logTypes                               = 0;
   logFileName                            = NULL;
+  logFormat                              = DEFAULT_LOG_FORMAT;
   logPostCommand                         = NULL;
 
   batchFlag                              = FALSE;
@@ -2764,10 +2767,8 @@ LOCAL Errors initAll(void)
 
   StringList_init(&configFileNameList);
 
-  tmpLogFileName                         = String_new();
   Semaphore_init(&logLock);
   logFile                                = NULL;
-  tmpLogFile                             = NULL;
   POSIXLocale                            = newlocale(LC_ALL,"POSIX",0);
 
   Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
@@ -2852,7 +2853,6 @@ LOCAL void doneAll(void)
   String_delete(jobName);
   doneGlobalOptions();
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
-  String_delete(tmpLogFileName);
   String_delete(tmpDirectory);
   StringList_done(&configFileNameList);
   String_delete(keyFileName);
@@ -2953,54 +2953,6 @@ LOCAL void closeLog(void)
       fclose(logFile);
       logFile = NULL;
     }
-  }
-}
-
-/***********************************************************************\
-* Name   : openSessionLog
-* Purpose: open session log file
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void openSessionLog(void)
-{
-  SemaphoreLock semaphoreLock;
-
-  assert(tmpLogFileName != NULL);
-  assert(tmpDirectory != NULL);
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
-    File_setFileName(tmpLogFileName,tmpDirectory);
-    File_appendFileNameCString(tmpLogFileName,"log.txt");
-    tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
-  }
-}
-
-/***********************************************************************\
-* Name   : closeSessionLog
-* Purpose: close session log file
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void closeSessionLog(void)
-{
-  SemaphoreLock semaphoreLock;
-
-  assert(tmpLogFile != NULL);
-  assert(tmpLogFileName != NULL);
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
-    fclose(tmpLogFile);
-    tmpLogFile = NULL;
-    File_delete(tmpLogFileName,FALSE);
   }
 }
 
@@ -3274,12 +3226,39 @@ void executeIOOutput(void        *userData,
 
 Errors initLog(LogHandle *logHandle)
 {
+  Errors error;
+
   assert(logHandle != NULL);
+
+  logHandle->logFileName = String_new();
+  error = File_getTmpFileNameCString(logHandle->logFileName,"log-XXXXXX",tmpDirectory);
+  if (error != ERROR_NONE)
+  {
+    String_delete(logHandle->logFileName);
+    return error;
+  }
+fprintf(stderr,"%s, %d: n=%s\n",__FILE__,__LINE__,String_cString(logHandle->logFileName));
+  logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
+  if (logHandle->logFile == NULL)
+  {
+    error = ERRORX_(CREATE_FILE,errno,String_cString(logHandle->logFileName));
+    File_delete(logHandle->logFileName,FALSE);
+    String_delete(logHandle->logFileName);
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 void doneLog(LogHandle *logHandle)
 {
   assert(logHandle != NULL);
+  assert(logHandle->logFileName != NULL);
+  assert(logHandle->logFile != NULL);
+
+  fclose(logHandle->logFile);
+  File_delete(logHandle->logFileName,FALSE);
+  String_delete(logHandle->logFileName);
 }
 
 void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, va_list arguments)
@@ -3288,30 +3267,28 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
   String        dateTime;
   va_list       tmpArguments;
 
-  assert(logHandle != NULL);
   assert(text != NULL);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    if ((tmpLogFile != NULL) || (logFile != NULL))
+    if ((logHandle != NULL) || (logFile != NULL))
     {
       if ((logType == LOG_TYPE_ALWAYS) || ((logTypes & logType) != 0))
       {
-        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),NULL);
+        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),logFormat);
 
-        if (tmpLogFile != NULL)
+        if (logHandle != NULL)
         {
-          // append to temporary log file
-          (void)fprintf(tmpLogFile,"%s> ",String_cString(dateTime));
+          // append to job log file
+          (void)fprintf(logHandle->logFile,"%s> ",String_cString(dateTime));
           if (prefix != NULL)
           {
-            (void)fputs(prefix,tmpLogFile);
-            (void)fprintf(tmpLogFile,": ");
+            (void)fputs(prefix,logHandle->logFile);
+            (void)fprintf(logHandle->logFile,": ");
           }
           va_copy(tmpArguments,arguments);
-          (void)vfprintf(tmpLogFile,text,tmpArguments);
+          (void)vfprintf(logHandle->logFile,text,tmpArguments);
           va_end(tmpArguments);
-          fflush(tmpLogFile);
         }
 
         if (logFile != NULL)
@@ -3339,7 +3316,6 @@ void plogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
 {
   va_list arguments;
 
-  assert(logHandle != NULL);
   assert(text != NULL);
 
   va_start(arguments,text);
@@ -3401,24 +3377,20 @@ void logPostProcess(LogHandle        *logHandle,
 
 //TODO jobOptions
 
-  assert(logHandle != NULL);
   assert(jobName != NULL);
   assert(jobOptions != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  if (logPostCommand != NULL)
   {
-    // flush log
-    if (logFile != NULL) fflush(logFile);
-
-    // close temporary log file
-    if (tmpLogFile != NULL) fclose(tmpLogFile); tmpLogFile = NULL;
-
-    // log post command for temporary log file
-    if (logPostCommand != NULL)
+    if (logHandle != NULL)
     {
-      printInfo(2,"Log post process '%s'...",logPostCommand);
+      // close job log file
+      fclose(logHandle->logFile);
 
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",tmpLogFileName                      );
+      // log post command for job log file
+      printInfo(2,"Log post process '%s'...\n",logPostCommand);
+
+      TEXT_MACRO_N_STRING (textMacros[0],"%file",logHandle->logFileName              );
       TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName                             );
       TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeName(archiveType)     );
       TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortName(archiveType));
@@ -3439,10 +3411,10 @@ void logPostProcess(LogHandle        *logHandle,
         }
       }
       StringList_done(&stderrList);
-    }
 
-    // reset and reopen temporary log file
-    tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
+      // reset and reopen job log file
+      logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
+    }
   }
 }
 
@@ -5671,9 +5643,8 @@ exit(1);
   error = ERROR_NONE;
   if      (daemonFlag)
   {
-    // open log file, create session log file
+    // open log file
     openLog();
-    openSessionLog();
 
     if (!stringIsEmpty(indexDatabaseFileName))
     {
@@ -5687,8 +5658,7 @@ exit(1);
                    indexDatabaseFileName,
                    Error_getText(error)
                   );
-        // close log files
-        closeSessionLog();
+        // close log file
         closeLog();
         doneAll();
         #ifndef NDEBUG
@@ -5728,8 +5698,7 @@ exit(1);
     // close index database
     if (indexHandle != NULL) Index_done(indexHandle);
 
-    // close log files
-    closeSessionLog();
+    // close log file
     closeLog();
   }
   else if (batchFlag)

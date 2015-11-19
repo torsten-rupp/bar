@@ -139,7 +139,8 @@ typedef enum
 // log handle
 typedef struct
 {
-  FileHandle handle;
+  String logFileName;
+  FILE   *logFile;
 } LogHandle;
 
 // week day sets
