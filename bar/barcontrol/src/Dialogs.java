@@ -590,9 +590,17 @@ abstract class ListDirectory
 class Dialogs
 {
   // --------------------------- constants --------------------------------
+  public enum FileDialogTypes
+  {
+    OPEN,
+    SAVE,
+    DIRECTORY
+  };
 
   // --------------------------- variables --------------------------------
-  private static I18n i18n;
+  private static I18n  i18n;
+
+  private static Point fileGeometry = new Point(600,400);
 
   // ------------------------ native functions ----------------------------
 
@@ -2704,15 +2712,6 @@ class Dialogs
     return password(parentShell,title,null);
   }
 
-  private static Point fileGeometry = new Point(600,400);
-
-  public enum FileDialogTypes
-  {
-    OPEN,
-    SAVE,
-    DIRECTORY
-  };
-
   /** open a file dialog
    * @param parentShell parent shell
    * @param type file dialog type
@@ -2863,8 +2862,9 @@ class Dialogs
       /** update file list
        * @param table table widget
        * @param path path
+       * @param name name or null
        */
-      public void updateFileList(Table table, String path)
+      public void updateFileList(Table table, String path, String name)
       {
         if (!table.isDisposed())
         {
@@ -2872,6 +2872,7 @@ class Dialogs
 
           if (listDirectory.open(path))
           {
+            // update list
             File file;
             while ((file = listDirectory.getNext()) != null)
             {
@@ -2900,6 +2901,21 @@ class Dialogs
               }
             }
             listDirectory.close();
+
+            // select name
+            if (name != null)
+            {
+              int index = 0;
+              for (TableItem tableItem : table.getItems())
+              {
+                if (((File)tableItem.getData()).getName().equals(name))
+                {
+                  table.select(index);
+                  break;
+                }
+                index++;
+              }
+            }
           }
         }
       }
@@ -3212,7 +3228,7 @@ class Dialogs
         widgetShowHidden.setText(Dialogs.tr("show hidden"));
         widgetShowHidden.setLayoutData(new TableLayoutData(0,2,TableLayoutData.E));
 
-        if (type == FileDialogTypes.SAVE)
+        if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.SAVE))
         {
           label = new Label(composite,SWT.NONE);
           label.setText(Dialogs.tr("Name")+":");
@@ -3268,7 +3284,7 @@ class Dialogs
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
-          updater.updateFileList(widgetFileList,widgetPath.getText());
+          updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
@@ -3288,7 +3304,7 @@ class Dialogs
           {
             widgetPath.setData(parentFile);
             widgetPath.setText(parentFile.getAbsolutePath());
-            updater.updateFileList(widgetFileList,widgetPath.getText());
+            updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
           }
         }
       });
@@ -3306,7 +3322,7 @@ class Dialogs
               widgetPath.setData(file);
               widgetPath.setText(file.getAbsolutePath());
 
-              updater.updateFileList(widgetFileList,widgetPath.getText());
+              updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
             }
             else if (listDirectory.exists(file))
             {
@@ -3338,7 +3354,7 @@ class Dialogs
               widgetPath.setData(newPath);
               widgetPath.setText(newPath.getAbsolutePath());
 
-              updater.updateFileList(widgetFileList,widgetPath.getText());
+              updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
             }
           }
         }
@@ -3367,7 +3383,7 @@ class Dialogs
             File file = (File)tableItems[0].getData();
             if (file.isDirectory())
             {
-              updater.updateFileList(widgetFileList,file.getAbsolutePath());
+              updater.updateFileList(widgetFileList,file.getAbsolutePath(),(widgetName != null) ? widgetName.getText() : null);
             }
             else
             {
@@ -3402,7 +3418,7 @@ class Dialogs
               widgetFilter.setText(fileExtensions[index*2+1]);
 
               updater.setFileFilter(widgetFilter.getText());
-              updater.updateFileList(widgetFileList,widgetPath.getText());
+              updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
             }
           }
         });
@@ -3415,7 +3431,7 @@ class Dialogs
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           updater.setShowHidden(widgetShowHidden.getSelection());
-          updater.updateFileList(widgetFileList,widgetPath.getText());
+          updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
         }
       });
       widgetDone.addSelectionListener(new SelectionListener()
@@ -3517,7 +3533,10 @@ class Dialogs
       {
         widgetPath.setText(file.getParentFile().getAbsolutePath());
       }
-      if (widgetName != null) widgetName.setText(file.getName());
+      if (widgetName != null)
+      {
+        widgetName.setText(file.getName());
+      }
 
       if ((fileExtensions != null) && (widgetFilter != null))
       {
@@ -3531,7 +3550,7 @@ class Dialogs
        }
 
       // update file list
-      updater.updateFileList(widgetFileList,widgetPath.getText());
+      updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
 
       if (widgetName != null)
       {
