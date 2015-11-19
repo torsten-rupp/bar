@@ -3485,7 +3485,7 @@ fprintf(stderr,"%s, %d: cleanStorage\n",__FILE__,__LINE__);
 
     if ((storageSize > maxStorageSize) && (oldestStorageId != DATABASE_ID_NONE))
     {
-fprintf(stderr,"%s, %d: purge sotrage %ld\n",__FILE__,__LINE__,oldestStorageId);
+fprintf(stderr,"%s, %d: purge sotrage %lld\n",__FILE__,__LINE__,oldestStorageId);
       // delete oldest storage
       Storage_initSpecifier(&storageSpecifier);
       error = Storage_parseName(&storageSpecifier,storageName);
@@ -6138,13 +6138,33 @@ createThreadCode(&createInfo);
   // output statics
   if (createInfo.failError == ERROR_NONE)
   {
-    printInfo(1,"%lu entries/%llu bytes(s) included\n",createInfo.statusInfo.doneEntries,createInfo.statusInfo.doneBytes);
-    printInfo(2,"%lu entries skipped\n",createInfo.statusInfo.skippedEntries);
-    printInfo(2,"%lu entries with errors\n",createInfo.statusInfo.errorEntries);
+    printInfo(1,
+              "%lu entries/%.1lf%s (%llu bytes) included\n",
+              createInfo.statusInfo.doneEntries,
+              BYTES_SHORT(createInfo.statusInfo.doneBytes),
+              BYTES_UNIT(createInfo.statusInfo.doneBytes),
+              createInfo.statusInfo.doneBytes
+             );
+    printInfo(2,
+              "%lu entries/%.1lf%s (%llu bytes) skipped\n",
+              createInfo.statusInfo.skippedEntries,
+              BYTES_SHORT(createInfo.statusInfo.skippedBytes),
+              BYTES_UNIT(createInfo.statusInfo.skippedBytes),
+              createInfo.statusInfo.skippedBytes
+             );
+    printInfo(2,
+              "%lu entries/%.1lf%s (%llu bytes) with errors\n",
+              createInfo.statusInfo.errorEntries,
+              BYTES_SHORT(createInfo.statusInfo.errorBytes),
+              BYTES_UNIT(createInfo.statusInfo.errorBytes),
+              createInfo.statusInfo.errorBytes
+             );
     logMessage(logHandle,
                LOG_TYPE_ALWAYS,
-               "%lu entries/%llu bytes(s) included, %lu entries skipped, %lu entries with errors\n",
+               "%lu entries/%.1lf%s (%llu bytes) included, %lu entries skipped, %lu entries with errors\n",
                createInfo.statusInfo.doneEntries,
+               BYTES_SHORT(createInfo.statusInfo.doneBytes),
+               BYTES_UNIT(createInfo.statusInfo.doneBytes),
                createInfo.statusInfo.doneBytes,
                createInfo.statusInfo.skippedEntries,
                createInfo.statusInfo.errorEntries

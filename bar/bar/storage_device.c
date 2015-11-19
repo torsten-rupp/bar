@@ -389,7 +389,7 @@ LOCAL Errors StorageDevice_init(StorageHandle          *storageHandle,
   }
   if (fileSystemInfo.freeBytes < (device.volumeSize*2))
   {
-    printWarning("Insufficient space in temporary directory '%s' (%.1f%s free, %.1f%s recommended)!\n",
+    printWarning("Insufficient space in temporary directory '%s' (%.1lf%s free, %.1lf%s recommended)!\n",
                  String_cString(tmpDirectory),
                  BYTES_SHORT(fileSystemInfo.freeBytes),BYTES_UNIT(fileSystemInfo.freeBytes),
                  BYTES_SHORT(device.volumeSize*2),BYTES_UNIT(device.volumeSize*2)
