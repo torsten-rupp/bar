@@ -1082,6 +1082,7 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
   StringList_init(&directoryList);
   name = String_new();
 
+fprintf(stderr,"%s, %d: directory=%s\n",__FILE__,__LINE__,String_cString(directory));
   StringList_append(&directoryList,directory);
   while (   !StringList_isEmpty(&directoryList)
          && !quitFlag
@@ -1556,7 +1557,8 @@ LOCAL void continuousInitThreadCode(void)
         // clean not existing notifies for job
         cleanNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
 
-        plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","%lu watches (max. %lu)\n",Dictionary_count(&notifyHandles),getMaxNotifies());
+        plogMessage(NULL,
+                    LOG_TYPE_CONTINUOUS,"CONTINUOUS","%lu watches (max. %lu)\n",Dictionary_count(&notifyHandles),getMaxNotifies());
         break;
       case DONE:
 //fprintf(stderr,"%s, %d: DONE job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
