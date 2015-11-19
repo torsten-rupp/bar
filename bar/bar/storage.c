@@ -1320,6 +1320,7 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
 
   assert(storageSpecifier != NULL);
 
+#warning storageFileName not used?
   // get file to use
   if      (archiveName != NULL)
   {
@@ -1394,6 +1395,7 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
   assert(storageSpecifier != NULL);
 
   // get file to use
+#warning storageFileName not used?
   if      (!String_isEmpty(archiveName))
   {
     storageFileName = archiveName;
@@ -1900,15 +1902,14 @@ Errors Storage_create(StorageHandle *storageHandle,
   IndexQueryHandle indexQueryHandle;
 
   assert(storageHandle != NULL);
-  assert(storageHandle->jobOptions != NULL);
-  assert(archiveName != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   // init variables
   storageHandle->mode = STORAGE_MODE_WRITE;
 
-  // check if archive name given
-  if (String_isEmpty(storageHandle->storageSpecifier.archiveName))
+  // get archive name
+  if (archiveName == NULL) archiveName = storageHandle->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
@@ -1961,7 +1962,7 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName)
   // init variables
   storageHandle->mode = STORAGE_MODE_READ;
 
-  // get file name
+  // get archive name
   if (archiveName == NULL) archiveName = storageHandle->storageSpecifier.archiveName;
   if (String_isEmpty(archiveName))
   {
@@ -2112,7 +2113,6 @@ Errors Storage_read(StorageHandle *storageHandle,
   assert(buffer != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
-//fprintf(stderr,"%s,%d: size=%lu\n",__FILE__,__LINE__,size);
   if (bytesRead != NULL) (*bytesRead) = 0L;
   error = ERROR_NONE;
   switch (storageHandle->storageSpecifier.type)
@@ -2385,6 +2385,13 @@ Errors Storage_delete(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(archiveName != NULL);
 
+  // get archive name
+  if (archiveName == NULL) archiveName = storageHandle->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
+
   error = ERROR_UNKNOWN;
   switch (storageHandle->storageSpecifier.type)
   {
@@ -2426,6 +2433,74 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
   }
   assert(error != ERROR_UNKNOWN);
+
+  // delete empty directories
+  StorageDirectoryListHandle storageDirectoryListHandle;
+  bool isEmpty;
+  String name = File_getFilePathName(String_new(),archiveName);
+  do
+  {
+    // check if directory is empty
+    error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                      &storageHandle->storageSpecifier,
+                                      NULL,  // jobOptions
+                                      SERVER_CONNECTION_PRIORITY_LOW,
+                                      name
+                                     );
+    if (error == ERROR_NONE)
+    {
+      isEmpty = Storage_endOfDirectoryList(&storageDirectoryListHandle);
+      Storage_closeDirectoryList(&storageDirectoryListHandle);
+    }
+
+    // delete empty directory
+    if (isEmpty)
+    {
+      switch (storageHandle->storageSpecifier.type)
+      {
+        case STORAGE_TYPE_NONE:
+          break;
+        case STORAGE_TYPE_FILESYSTEM:
+          error = StorageFile_delete(storageHandle,name);
+          break;
+        case STORAGE_TYPE_FTP:
+          error = StorageFTP_delete(storageHandle,name);
+          break;
+        case STORAGE_TYPE_SSH:
+          #ifdef HAVE_SSH2
+    HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          #else /* not HAVE_SSH2 */
+          #endif /* HAVE_SSH2 */
+          break;
+        case STORAGE_TYPE_SCP:
+          error = StorageSCP_delete(storageHandle,name);
+          break;
+        case STORAGE_TYPE_SFTP:
+          error = StorageSFTP_delete(storageHandle,name);
+          break;
+        case STORAGE_TYPE_WEBDAV:
+          error = StorageWebDAV_delete(storageHandle,name);
+          break;
+        case STORAGE_TYPE_CD:
+        case STORAGE_TYPE_DVD:
+        case STORAGE_TYPE_BD:
+          error = StorageOptical_delete(storageHandle,name);
+          break;
+        case STORAGE_TYPE_DEVICE:
+          error = StorageDevice_delete(storageHandle,name);
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break;
+      }
+    }
+
+    // get parent directory
+    File_getFilePathName(name,name);
+  }
+  while (!String_isEmpty(name) && (error == NULL) && isEmpty);
 
   return error;
 }
