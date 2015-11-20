@@ -1513,6 +1513,8 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
   assert(jobOptions != NULL);
 
+  UNUSED_VARIABLE(serverConnectionPriority);
+
   // initialize variables
   AutoFree_init(&autoFreeList);
 
@@ -1535,7 +1537,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
     UNUSED_VARIABLE(jobOptions);
 
     // init variables
-    storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(storageDirectoryListHandle->storageSpecifier.archiveName);
+    storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(archiveName);
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.pathName,{ String_delete(storageDirectoryListHandle->opticalDisk.pathName); });
 
     // get device name
@@ -1595,11 +1597,11 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
 
     // open directory for reading
     storageDirectoryListHandle->opticalDisk.cdioList = iso9660_ifs_readdir(storageDirectoryListHandle->opticalDisk.iso9660Handle,
-                                                                           String_cString(storageDirectoryListHandle->storageSpecifier.archiveName)
+                                                                           String_cString(archiveName)
                                                                           );
     if (storageDirectoryListHandle->opticalDisk.cdioList == NULL)
     {
-      error = ERRORX_(FILE_NOT_FOUND_,errno,String_cString(storageDirectoryListHandle->storageSpecifier.archiveName));
+      error = ERRORX_(FILE_NOT_FOUND_,errno,String_cString(archiveName));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -1608,7 +1610,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   #else /* not HAVE_ISO9660 */
     // open directory
     error = File_openDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle,
-                                   storageDirectoryListHandle->storageSpecifier.archiveName
+                                   archiveName
                                   );
     if (error != NULL)
     {
