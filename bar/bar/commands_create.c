@@ -3442,12 +3442,14 @@ LOCAL void purgeStorage(ConstString jobUUID, uint64 maxStorageSize, LogHandle *l
   uint64           createdDateTime;
   uint64           size;
   StorageHandle    storageHandle;
+  String           dateTime;
 
 fprintf(stderr,"%s, %d: purgeStorage\n",__FILE__,__LINE__);
   // init variables
   storageName       = String_new();
   oldestStorageName = String_new();
   Storage_initSpecifier(&storageSpecifier);
+  dateTime          = String_new();
 
   do
   {
@@ -3542,10 +3544,12 @@ fprintf(stderr,"%s, %d: purge sotrage %lld\n",__FILE__,__LINE__,oldestStorageId)
         break;
       }
 
+      Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
       logMessage(logHandle,
+                 LOG_TYPE_STORAGE,
                  "Purged storage %s, created at %s, %llu bytes\n",
                  String_cString(oldestStorageName),
-                 String_cString(createdDateTime),
+                 String_cString(dateTime),
                  oldestSize
                 );
     }
@@ -3555,7 +3559,9 @@ fprintf(stderr,"%s, %d: purge sotrage %lld\n",__FILE__,__LINE__,oldestStorageId)
         );
 
   // free resources
+  String_delete(dateTime);
   Storage_doneSpecifier(&storageSpecifier);
+  String_delete(oldestStorageName);
   String_delete(storageName);
 }
 
