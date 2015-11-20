@@ -1327,8 +1327,8 @@ LOCAL Errors StorageSCP_openDirectoryList(StorageDirectoryListHandle *storageDir
 
   UNUSED_VARIABLE(storageDirectoryListHandle);
   UNUSED_VARIABLE(storageSpecifier);
-  UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);
+  UNUSED_VARIABLE(archiveName);
 
   return ERROR_FUNCTION_NOT_SUPPORTED;
 }
