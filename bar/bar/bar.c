@@ -3237,7 +3237,6 @@ Errors initLog(LogHandle *logHandle)
     String_delete(logHandle->logFileName);
     return error;
   }
-fprintf(stderr,"%s, %d: n=%s\n",__FILE__,__LINE__,String_cString(logHandle->logFileName));
   logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
   if (logHandle->logFile == NULL)
   {
