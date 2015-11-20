@@ -566,7 +566,15 @@ UNUSED_VARIABLE(databaseHandle);
     }
     Index_doneList(&indexQueryHandle);
   }
-  if (n > 0L) plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Cleaned %lu orphaned entries\n",n);
+  if (n > 0L)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_CONTINUOUS,
+                "CONTINUOUS",
+                "Cleaned %lu orphaned entries\n",
+                n
+               );
+  }
 
   // free resources
   String_delete(storageName);
@@ -702,7 +710,8 @@ UNUSED_VARIABLE(databaseHandle);
           error = Index_deleteStorage(databaseHandle,duplicateStorageId);
           if (error == ERROR_NONE)
           {
-            plogMessage(LOG_TYPE_CONTINUOUS,
+            plogMessage(NULL,  // logHandle,
+                        LOG_TYPE_CONTINUOUS,
                         "CONTINUOUS",
                         "Deleted duplicate index #%lld: '%s'\n",
                         duplicateStorageId,
@@ -720,7 +729,15 @@ UNUSED_VARIABLE(databaseHandle);
     Index_doneList(&indexQueryHandle1);
   }
   while (!quitFlag &&  deletedIndex);
-  if (n > 0L) plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Cleaned %lu duplicate indizes\n",n);
+  if (n > 0L)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_CONTINUOUS,
+                "CONTINUOUS",
+                "Cleaned %lu duplicate indizes\n",
+                n
+               );
+  }
 
   // free resources
   String_delete(printableStorageName);
@@ -821,36 +838,8 @@ LOCAL NotifyInfo *getNotifyInfo(int watchHandle)
 
 LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
 {
-  DictionaryIterator dictionaryIterator;
-  NotifyInfo         *notifyInfo;
-  void               *data;
-  ulong              length;
+  NotifyInfo *notifyInfo;
 
-#if 0
-  notifyInfo = NULL;
-
-  Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
-  while (Dictionary_getNext(&dictionaryIterator,
-                            NULL,  // keyData,
-                            NULL,  // keyLength,
-                            &data,
-                            &length
-                           )
-        )
-  {
-    assert(data != NULL);
-    assert(length == sizeof(NotifyInfo*));
-
-    if (   (String_length(((NotifyInfo*)data)->directory) == String_length(directory))
-        && String_equals(((NotifyInfo*)data)->directory,directory)
-       )
-    {
-      notifyInfo = (NotifyInfo*)data;
-      break;
-    }
-  }
-  Dictionary_doneIterator(&dictionaryIterator);
-#else
   if (!Dictionary_find(&notifyDirectories,
                        String_cString(directory),
                        String_length(directory),
@@ -861,54 +850,6 @@ LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
   {
     notifyInfo = NULL;
   }
-#endif
-
-  return notifyInfo;
-}
-
-/***********************************************************************\
-* Name   : getNotifyInfoByUUID
-* Purpose: get file notify by job/schedule UUID
-* Input  : jobUUID      - job UUID
-*          scheduleUUID - schedule UUID
-* Output : -
-* Return : file notify info or NULL if not found
-* Notes  : -
-\***********************************************************************/
-
-LOCAL NotifyInfo *XgetNotifyInfoByUUID(const char *jobUUID, const char *scheduleUUID, ConstString directory)
-{
-  DictionaryIterator dictionaryIterator;
-  NotifyInfo         *notifyInfo;
-  void               *data;
-  ulong              length;
-
-  notifyInfo = NULL;
-
-  Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
-  while (Dictionary_getNext(&dictionaryIterator,
-                            NULL,  // keyData,
-                            NULL,  // keyLength,
-                            &data,
-                            &length
-                           )
-        )
-  {
-    assert(data != NULL);
-    assert(length == sizeof(NotifyInfo));
-
-    if (   (String_length(((NotifyInfo*)data)->directory) == String_length(directory))
-//TODO
-//        && stringEquals(((NotifyInfo*)data)->jobUUID,jobUUID)
-//        && stringEquals(((NotifyInfo*)data)->scheduleUUID,scheduleUUID)
-        && String_equals(((NotifyInfo*)data)->directory,directory)
-       )
-    {
-      notifyInfo = (NotifyInfo*)data;
-      break;
-    }
-  }
-  Dictionary_doneIterator(&dictionaryIterator);
 
   return notifyInfo;
 }
@@ -935,13 +876,21 @@ UNUSED_VARIABLE(databaseHandle);
   uint                sleepTime;
 
   // single clean-ups
-  plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Clean-up index database\n");
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_CONTINUOUS,
+              "CONTINUOUS",
+              "Clean-up index database\n"
+             );
   (void)cleanUpDuplicateMeta(databaseHandle);
   (void)cleanUpIncompleteUpdate(databaseHandle);
   (void)cleanUpIncompleteCreate(databaseHandle);
   (void)cleanUpStorageNoName(databaseHandle);
   (void)cleanUpStorageNoEntity(databaseHandle);
-  plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Done clean-up index database\n");
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_CONTINUOUS,
+              "CONTINUOUS",
+              "Done clean-up index database\n"
+             );
 
   // regular clean-ups
   while (!quitFlag)
@@ -972,10 +921,8 @@ UNUSED_VARIABLE(databaseHandle);
 
 LOCAL NotifyInfo *addNotify(ConstString directory)
 {
-  int            watchHandle;
-  SemaphoreLock  semaphoreLock;
-  NotifyInfo     *notifyInfo;
-  UUIDNode       *uuidNode;
+  int        watchHandle;
+  NotifyInfo *notifyInfo;
 
   assert(directory != NULL);
   assert(Semaphore_isLocked(&notifyLock));
@@ -987,7 +934,11 @@ LOCAL NotifyInfo *addNotify(ConstString directory)
     watchHandle = inotify_add_watch(inotifyHandle,String_cString(directory),NOTIFY_FLAGS|NOTIFY_EVENTS);
     if (watchHandle == -1)
     {
-      logMessage(LOG_TYPE_CONTINUOUS,"Add notify watch for '%s' fail (error: %s)\n",String_cString(directory),strerror(errno));
+      logMessage(NULL,  // logHandle
+                 LOG_TYPE_CONTINUOUS,
+                 "Add notify watch for '%s' fail (error: %s)\n",
+                 String_cString(directory),strerror(errno)
+                );
       return NULL;
     }
 
@@ -1072,7 +1023,6 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
   String              name;
   Errors              error;
   FileInfo            fileInfo;
-  int                 watchHandle;
   SemaphoreLock       semaphoreLock;
   DirectoryListHandle directoryListHandle;
   NotifyInfo          *notifyInfo;
@@ -1111,7 +1061,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         notifyInfo = addNotify(name);
         if (notifyInfo == NULL)
         {
-       //      logMessage(LOG_TYPE_CONTINUOUS,"Add notify watch for '%s' fail (error: %s)\n",String_cString(name),strerror(errno));
+       //      logMessage(NULL,  // logHandleLOG_TYPE_CONTINUOUS,"Add notify watch for '%s' fail (error: %s)\n",String_cString(name),strerror(errno));
 fprintf(stderr,"%s, %d: addNotify fail! \n",__FILE__,__LINE__);
           Semaphore_unlock(&notifyLock);
           continue;
@@ -1217,7 +1167,7 @@ LOCAL void removeNotifySubDirectories(ConstString directory)
   void               *data;
   ulong              length;
 
-  assert(notifyInfo != NULL);
+  assert(directory != NULL);
 
   do
   {
@@ -1557,8 +1507,11 @@ LOCAL void continuousInitThreadCode(void)
         // clean not existing notifies for job
         cleanNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
 
-        plogMessage(NULL,
-                    LOG_TYPE_CONTINUOUS,"CONTINUOUS","%lu watches (max. %lu)\n",Dictionary_count(&notifyHandles),getMaxNotifies());
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_CONTINUOUS,
+                    "CONTINUOUS","%lu watches (max. %lu)\n",
+                    Dictionary_count(&notifyHandles),getMaxNotifies()
+                   );
         break;
       case DONE:
 //fprintf(stderr,"%s, %d: DONE job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
@@ -1716,7 +1669,12 @@ fprintf(stderr,"\n");
                   error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
                   if (error != ERROR_NONE)
                   {
-                    plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Store continuous entry fail (error: %s)\n",Error_getText(error));
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Store continuous entry fail (error: %s)\n",
+                                Error_getText(error)
+                               );
                   }
 
                   // add directory and sub-directories to notify
@@ -1742,7 +1700,12 @@ fprintf(stderr,"\n");
                   error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
                   if (error != ERROR_NONE)
                   {
-                    plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Store continuous entry fail (error: %s)\n",Error_getText(error));
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Store continuous entry fail (error: %s)\n",
+                                Error_getText(error)
+                               );
                   }
 
                   // add directory and sub-directories to notify
@@ -1757,7 +1720,12 @@ fprintf(stderr,"\n");
                   error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
                   if (error != ERROR_NONE)
                   {
-                    plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Store continuous entry fail (error: %s)\n",Error_getText(error));
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Store continuous entry fail (error: %s)\n",
+                                Error_getText(error)
+                               );
                   }
                 }
               }
@@ -1774,7 +1742,12 @@ fprintf(stderr,"\n");
                   error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
                   if (error != ERROR_NONE)
                   {
-                    plogMessage(LOG_TYPE_CONTINUOUS,"CONTINUOUS","Store continuous entry fail (error: %s)\n",Error_getText(error));
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Store continuous entry fail (error: %s)\n",
+                                Error_getText(error)
+                               );
                   }
                 }
               }
