@@ -3079,7 +3079,6 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
-  assert(jobOptions != NULL);
   assert(archiveName != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
