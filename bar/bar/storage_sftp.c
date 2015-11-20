@@ -1197,7 +1197,6 @@ LOCAL Errors StorageSFTP_delete(StorageHandle *storageHandle,
 {
   Errors error;
   #ifdef HAVE_SSH2
-    ConstString storageFileName;
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
@@ -1207,8 +1206,6 @@ LOCAL Errors StorageSFTP_delete(StorageHandle *storageHandle,
 
   error = ERROR_UNKNOWN;
   #ifdef HAVE_SSH2
-    storageFileName = (archiveName != NULL) ? archiveName : storageHandle->storageSpecifier.archiveName;
-
     error = Network_connect(&storageHandle->sftp.socketHandle,
                             SOCKET_TYPE_SSH,
                             storageHandle->storageSpecifier.hostName,
@@ -1233,7 +1230,7 @@ LOCAL Errors StorageSFTP_delete(StorageHandle *storageHandle,
         {
           // delete file
           if (libssh2_sftp_unlink(storageHandle->sftp.sftp,
-                                  String_cString(storageFileName)
+                                  String_cString(archiveName)
                                  ) == 0
              )
           {

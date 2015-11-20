@@ -524,12 +524,10 @@ LOCAL Errors StorageFile_delete(StorageHandle *storageHandle,
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
   assert(archiveName != NULL);
 
-  storageFileName = (archiveName != NULL) ? archiveName : storageHandle->storageSpecifier.archiveName;
-
   error = ERROR_NONE;
   if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
   {
-    error = File_delete(storageFileName,FALSE);
+    error = File_delete(archiveName,FALSE);
   }
 
   return error;

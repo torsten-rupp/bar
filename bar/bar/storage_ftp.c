@@ -2811,7 +2811,6 @@ LOCAL Errors StorageFTP_delete(StorageHandle *storageHandle,
 {
   Errors      error;
   #if   defined(HAVE_CURL)
-    ConstString       storageFileName;
     CURL              *curlHandle;
     String            pathName,baseName;
     String            url;
@@ -2831,15 +2830,13 @@ LOCAL Errors StorageFTP_delete(StorageHandle *storageHandle,
 
   error = ERROR_UNKNOWN;
   #if   defined(HAVE_CURL)
-    storageFileName = (archiveName != NULL) ? archiveName : storageHandle->storageSpecifier.archiveName;
-
     // open Curl handle
     curlHandle = curl_easy_init();
     if (curlHandle != NULL)
     {
       // get pathname, basename
-      pathName = File_getFilePathName(String_new(),storageFileName);
-      baseName = File_getFileBaseName(String_new(),storageFileName);
+      pathName = File_getFilePathName(String_new(),archiveName);
+      baseName = File_getFileBaseName(String_new(),archiveName);
 
       // get URL
       url = String_format(String_new(),"ftp://%S",storageHandle->storageSpecifier.hostName);
@@ -2864,7 +2861,7 @@ LOCAL Errors StorageFTP_delete(StorageHandle *storageHandle,
                                 );
         if (curlCode == CURLE_OK)
         {
-          ftpCommand = String_format(String_new(),"*DELE %S",storageFileName);
+          ftpCommand = String_format(String_new(),"*DELE %S",archiveName);
           curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
           curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
           if (curlCode == CURLE_OK)

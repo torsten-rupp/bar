@@ -2383,7 +2383,6 @@ Errors Storage_delete(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(archiveName != NULL);
 
   // get archive name
   if (archiveName == NULL) archiveName = storageHandle->storageSpecifier.archiveName;

@@ -1844,7 +1844,6 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
 {
   Errors      error;
   #ifdef HAVE_CURL
-    ConstString     storageFileName;
     CURL            *curlHandle;
     String          baseURL;
     CURLcode        curlCode;
@@ -1861,8 +1860,6 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
 
   error = ERROR_UNKNOWN;
   #ifdef HAVE_CURL
-    storageFileName = (archiveName != NULL) ? archiveName : storageHandle->storageSpecifier.archiveName;
-
     // initialize variables
     curlHandle = curl_easy_init();
     if (curlHandle != NULL)
@@ -1872,8 +1869,8 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
       if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
 
       // get pathname, basename
-      pathName = File_getFilePathName(String_new(),storageFileName);
-      baseName = File_getFileBaseName(String_new(),storageFileName);
+      pathName = File_getFilePathName(String_new(),archiveName);
+      baseName = File_getFileBaseName(String_new(),archiveName);
 
       // get URL
       url = String_format(String_duplicate(baseURL),"/");
