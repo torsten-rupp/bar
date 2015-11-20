@@ -1657,6 +1657,7 @@ public class TabJobs
   private WidgetVariable  storageDeviceName       = new WidgetVariable("");
   private WidgetVariable  storageFileName         = new WidgetVariable("");
   private WidgetVariable  mountDeviceName         = new WidgetVariable("");
+  private WidgetVariable  maxStorageSize          = new WidgetVariable(0);
   private WidgetVariable  archiveFileMode         = new WidgetVariable("stop");
   private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable("");
   private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable("");
@@ -5128,15 +5129,16 @@ Dprintf.dprintf("");
             }
 
             subComposite = Widgets.newComposite(composite,SWT.NONE);
-            subComposite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
+            subComposite.setLayout(new TableLayout(1.0,0.0));
             Widgets.layout(subComposite,1,0,TableLayoutData.WE);
             {
-              label = Widgets.newLabel(subComposite,BARControl.tr("Max. size")+":");
+              label = Widgets.newLabel(subComposite,BARControl.tr("Max. storage size")+":");
               Widgets.layout(label,0,0,TableLayoutData.W);
 
               spinner = Widgets.newSpinner(subComposite);
               spinner.setToolTipText(BARControl.tr("Total size limit for storage."));
-              Widgets.layout(spinner,0,1,TableLayoutData.W);
+              spinner.setMinimum(0);
+              Widgets.layout(spinner,0,1,TableLayoutData.W,0,0,0,0,70,SWT.DEFAULT);
               spinner.addModifyListener(new ModifyListener()
               {
                 public void modifyText(ModifyEvent modifyEvent)
@@ -5146,7 +5148,7 @@ Dprintf.dprintf("");
                   try
                   {
                     long n = Units.parseByteSize(widget.getText());
-                    if (archivePartSize.getLong() == n) color = null;
+                    if (maxStorageSize.getLong() == n) color = null;
                   }
                   catch (NumberFormatException exception)
                   {
@@ -5164,10 +5166,8 @@ Dprintf.dprintf("");
                   try
                   {
                     long n = Units.parseByteSize(string);
-//                    archivePartSize.set(n);
-//                    BARServer.setJobOption(selectedJobData.uuid,"archive-part-size",n);
-Dprintf.dprintf("");
-//                    widget.setText(Units.formatByteSize(n));
+                    maxStorageSize.set(n);
+                    BARServer.setJobOption(selectedJobData.uuid,"max-storage-size",n*1024L*1024L*1024L);
                     widget.setBackground(null);
                   }
                   catch (NumberFormatException exception)
@@ -5187,10 +5187,8 @@ Dprintf.dprintf("");
                   try
                   {
                     long  n = Units.parseByteSize(string);
-//                    archivePartSize.set(n);
-//                    BARServer.setJobOption(selectedJobData.uuid,"archive-part-size",n);
-Dprintf.dprintf("");
-//                    widget.setText(Units.formatByteSize(n));
+                    maxStorageSize.set(n);
+                    BARServer.setJobOption(selectedJobData.uuid,"max-storage-size",n*1024L*1024L*1024L);
                     widget.setBackground(null);
                   }
                   catch (NumberFormatException exception)
@@ -5218,10 +5216,8 @@ Dprintf.dprintf("");
                   try
                   {
                     long n = Units.parseByteSize(string);
-//                    archivePartSize.set(n);
-//                    BARServer.setJobOption(selectedJobData.uuid,"archive-part-size",n);
-Dprintf.dprintf("");
-//                    widget.setText(Units.formatByteSize(n));
+                    maxStorageSize.set(n);
+                    BARServer.setJobOption(selectedJobData.uuid,"max-storage-size",n*1024L*1024L*1024L);
                     widget.setBackground(null);
                   }
                   catch (NumberFormatException exception)
@@ -5235,14 +5231,16 @@ Dprintf.dprintf("");
                   }
                 }
               });
-Dprintf.dprintf("");
-              Widgets.addModifyListener(new WidgetModifyListener(spinner,archivePartSize)
+              Widgets.addModifyListener(new WidgetModifyListener(spinner,maxStorageSize)
               {
                 public String getString(WidgetVariable variable)
                 {
                   return Units.formatByteSize(variable.getLong());
                 }
               });
+
+              label = Widgets.newLabel(subComposite,"GB");
+              Widgets.layout(label,0,2,TableLayoutData.W);
             }
 
             subComposite = Widgets.newComposite(composite,SWT.NONE);
