@@ -315,7 +315,7 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
     // open file
     error = File_open(&storageHandle->fileSystem.fileHandle,
                       archiveName,
-                      (   (storageHandle->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND) 
+                      (   (storageHandle->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
                        && !storageHandle->jobOptions->archiveFileModeOverwriteFlag
                       )
                         ? FILE_OPEN_APPEND
@@ -569,7 +569,6 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FILESYSTEM);
-  assert(jobOptions != NULL);
   assert(archiveName != NULL);
 
   UNUSED_VARIABLE(jobOptions);
