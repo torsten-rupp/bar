@@ -2571,7 +2571,6 @@ LOCAL Errors updateJob(JobNode *jobNode)
       ConfigValue_formatDone(&configValueFormat);
     }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // delete old schedule sections, get position for insert new schedule sections
     nextStringNode = deleteJobSections(&jobLinesList,"schedule");
     if (!List_isEmpty(&jobNode->scheduleList))
@@ -2602,7 +2601,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
     }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // write file
     error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
@@ -2635,7 +2633,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 );
     }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // save time modified
     jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
 
@@ -4114,6 +4111,11 @@ LOCAL Errors deleteStorage(DatabaseId storageId)
           resultError = Storage_delete(&storageHandle,
                                        storageSpecifier.archiveName
                                       );
+
+          // prune empty directories
+          Storage_pruneDirectories(&storageHandle,
+                                   storageSpecifier.archiveName
+                                  );
 
           // close storage
           Storage_done(&storageHandle);
