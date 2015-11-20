@@ -1398,7 +1398,6 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SFTP);
-  assert(jobOptions != NULL);
   assert(archiveName != NULL);
 
   #ifdef HAVE_SSH2
