@@ -4259,15 +4259,15 @@ LOCAL Errors deleteUUID(const String jobUUID)
 }
 
 /***********************************************************************\
-* Name   : cleanExpiredStorage
-* Purpose: clean expired/surplus entities
+* Name   : purgeExpiredEntities
+* Purpose: purge expired/surplus entities
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void cleanExpiredEntities(void)
+LOCAL void purgeExpiredEntities(void)
 {
   const uint64 SECONDS_PER_DAY = 24*60*60;
 
@@ -4386,7 +4386,7 @@ LOCAL void cleanExpiredEntities(void)
                     plogMessage(NULL,  // logHandle,
                                 LOG_TYPE_INDEX,
                                 "INDEX",
-                                "Deleted expired entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
+                                "Purged expired entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
                                 String_cString(jobName),
                                 ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL),
                                 String_cString(dateTime),
@@ -4432,7 +4432,7 @@ LOCAL void cleanExpiredEntities(void)
                   plogMessage(NULL,  // logHandle,
                               LOG_TYPE_INDEX,
                               "INDEX",
-                              "Deleted surplus entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
+                              "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
                               String_cString(jobName),
                               ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL),
                               String_cString(dateTime),
@@ -4487,7 +4487,7 @@ LOCAL void schedulerThreadCode(void)
     if (indexHandle != NULL)
     {
       // clean-up expired/surplus entities
-      cleanExpiredEntities();
+      purgeExpiredEntities();
     }
 
     // check for jobs triggers
