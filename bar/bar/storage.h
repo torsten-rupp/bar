@@ -1187,6 +1187,10 @@ Errors Storage_delete(StorageHandle *storageHandle,
                       ConstString   archiveName
                      );
 
+Errors Storage_pruneDirectories(StorageHandle *storageHandle,
+                                ConstString   archiveName
+                               );
+
 #if 0
 still not complete
 /***********************************************************************\

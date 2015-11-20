@@ -2434,13 +2434,24 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   }
   assert(error != ERROR_UNKNOWN);
 
-  // delete empty directories
+  return error;
+}
+
+Errors Storage_pruneDirectories(StorageHandle *storageHandle,
+                                ConstString   archiveName
+                               )
+{
+  String                     name;
+  bool                       isEmpty;
+  Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
-  bool isEmpty;
-  String name = File_getFilePathName(String_new(),archiveName);
+
+  // delete empty directories
+  name = File_getFilePathName(String_new(),archiveName);
   do
   {
     // check if directory is empty
+    isEmpty = FALSE;
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                       &storageHandle->storageSpecifier,
                                       NULL,  // jobOptions
@@ -2451,56 +2462,59 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     {
       isEmpty = Storage_endOfDirectoryList(&storageDirectoryListHandle);
       Storage_closeDirectoryList(&storageDirectoryListHandle);
-    }
 
-    // delete empty directory
-    if (isEmpty)
-    {
-      switch (storageHandle->storageSpecifier.type)
+      // delete empty directory
+      if (isEmpty)
       {
-        case STORAGE_TYPE_NONE:
-          break;
-        case STORAGE_TYPE_FILESYSTEM:
-          error = StorageFile_delete(storageHandle,name);
-          break;
-        case STORAGE_TYPE_FTP:
-          error = StorageFTP_delete(storageHandle,name);
-          break;
-        case STORAGE_TYPE_SSH:
-          #ifdef HAVE_SSH2
-    HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-          #else /* not HAVE_SSH2 */
-          #endif /* HAVE_SSH2 */
-          break;
-        case STORAGE_TYPE_SCP:
-          error = StorageSCP_delete(storageHandle,name);
-          break;
-        case STORAGE_TYPE_SFTP:
-          error = StorageSFTP_delete(storageHandle,name);
-          break;
-        case STORAGE_TYPE_WEBDAV:
-          error = StorageWebDAV_delete(storageHandle,name);
-          break;
-        case STORAGE_TYPE_CD:
-        case STORAGE_TYPE_DVD:
-        case STORAGE_TYPE_BD:
-          error = StorageOptical_delete(storageHandle,name);
-          break;
-        case STORAGE_TYPE_DEVICE:
-          error = StorageDevice_delete(storageHandle,name);
-          break;
-        default:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          #endif /* NDEBUG */
-          break;
+        switch (storageHandle->storageSpecifier.type)
+        {
+          case STORAGE_TYPE_NONE:
+            break;
+          case STORAGE_TYPE_FILESYSTEM:
+            error = StorageFile_delete(storageHandle,name);
+            break;
+          case STORAGE_TYPE_FTP:
+            error = StorageFTP_delete(storageHandle,name);
+            break;
+          case STORAGE_TYPE_SSH:
+            #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+            #else /* not HAVE_SSH2 */
+            #endif /* HAVE_SSH2 */
+            break;
+          case STORAGE_TYPE_SCP:
+            error = StorageSCP_delete(storageHandle,name);
+            break;
+          case STORAGE_TYPE_SFTP:
+            error = StorageSFTP_delete(storageHandle,name);
+            break;
+          case STORAGE_TYPE_WEBDAV:
+            error = StorageWebDAV_delete(storageHandle,name);
+            break;
+          case STORAGE_TYPE_CD:
+          case STORAGE_TYPE_DVD:
+          case STORAGE_TYPE_BD:
+            error = StorageOptical_delete(storageHandle,name);
+            break;
+          case STORAGE_TYPE_DEVICE:
+            error = StorageDevice_delete(storageHandle,name);
+            break;
+          default:
+            #ifndef NDEBUG
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            #endif /* NDEBUG */
+            break;
+        }
       }
     }
 
     // get parent directory
     File_getFilePathName(name,name);
   }
-  while (!String_isEmpty(name) && (error == NULL) && isEmpty);
+  while (   (error == ERROR_NONE)
+         && isEmpty
+         && !String_isEmpty(name)
+        );
 
   return error;
 }
@@ -2581,7 +2595,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
-  assert(jobOptions != NULL);
 
   #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && (!defined(HAVE_CURL) || !defined(HAVE_MXML))
     UNUSED_VARIABLE(serverConnectionPriority);
@@ -2606,11 +2619,12 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       error = StorageFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
       break;
     case STORAGE_TYPE_SSH:
+      UNUSED_VARIABLE(jobOptions);
+      UNUSED_VARIABLE(serverConnectionPriority);
+
       #ifdef HAVE_SSH2
 error = ERROR_FUNCTION_NOT_SUPPORTED;
       #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(jobOptions);
-
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
