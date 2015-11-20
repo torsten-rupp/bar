@@ -7940,6 +7940,7 @@ throw new Error("NYI");
       preCommand.set(BARServer.getStringJobOption(selectedJobData.uuid,"pre-command"));
       postCommand.set(BARServer.getStringJobOption(selectedJobData.uuid,"post-command"));
       mountDeviceName.set(BARServer.getStringJobOption(selectedJobData.uuid,"mount-device"));
+      maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"max-storage-size"),0)/(1024L*1024L*1024L));
 
       updateFileTreeImages();
       updateDeviceImages();
