@@ -3491,7 +3491,7 @@ Dprintf.dprintf("");
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
+                  Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                   widget.forceFocus();
                 }
               }
@@ -3513,7 +3513,7 @@ Dprintf.dprintf("");
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
+                  Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                   widget.forceFocus();
                 }
               }
@@ -3543,7 +3543,7 @@ Dprintf.dprintf("");
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
+                  Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                   widget.forceFocus();
                 }
               }
@@ -5128,8 +5128,126 @@ Dprintf.dprintf("");
             }
 
             subComposite = Widgets.newComposite(composite,SWT.NONE);
-            subComposite.setLayout(new TableLayout(1.0,0.0));
+            subComposite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
             Widgets.layout(subComposite,1,0,TableLayoutData.WE);
+            {
+              label = Widgets.newLabel(subComposite,BARControl.tr("Max. size")+":");
+              Widgets.layout(label,0,0,TableLayoutData.W);
+
+              spinner = Widgets.newSpinner(subComposite);
+              spinner.setToolTipText(BARControl.tr("Total size limit for storage."));
+              Widgets.layout(spinner,0,1,TableLayoutData.W);
+              spinner.addModifyListener(new ModifyListener()
+              {
+                public void modifyText(ModifyEvent modifyEvent)
+                {
+                  Spinner widget = (Spinner)modifyEvent.widget;
+                  Color   color  = COLOR_MODIFIED;
+                  try
+                  {
+                    long n = Units.parseByteSize(widget.getText());
+                    if (archivePartSize.getLong() == n) color = null;
+                  }
+                  catch (NumberFormatException exception)
+                  {
+                  }
+                  widget.setBackground(color);
+                  widget.setData("showedErrorDialog",false);
+                }
+              });
+              spinner.addSelectionListener(new SelectionListener()
+              {
+                public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                {
+                  Spinner widget = (Spinner)selectionEvent.widget;
+                  String  string = widget.getText();
+                  try
+                  {
+                    long n = Units.parseByteSize(string);
+//                    archivePartSize.set(n);
+//                    BARServer.setJobOption(selectedJobData.uuid,"archive-part-size",n);
+Dprintf.dprintf("");
+//                    widget.setText(Units.formatByteSize(n));
+                    widget.setBackground(null);
+                  }
+                  catch (NumberFormatException exception)
+                  {
+                    if (!(Boolean)widget.getData("showedErrorDialog"))
+                    {
+                      widget.setData("showedErrorDialog",true);
+                      Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, GB, or TB.",string));
+                      widget.forceFocus();
+                    }
+                  }
+                }
+                public void widgetSelected(SelectionEvent selectionEvent)
+                {
+                  Spinner widget = (Spinner)selectionEvent.widget;
+                  String  string = widget.getText();
+                  try
+                  {
+                    long  n = Units.parseByteSize(string);
+//                    archivePartSize.set(n);
+//                    BARServer.setJobOption(selectedJobData.uuid,"archive-part-size",n);
+Dprintf.dprintf("");
+//                    widget.setText(Units.formatByteSize(n));
+                    widget.setBackground(null);
+                  }
+                  catch (NumberFormatException exception)
+                  {
+                    if (!(Boolean)widget.getData("showedErrorDialog"))
+                    {
+                      widget.setData("showedErrorDialog",true);
+                      Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, GB, or TB.",string));
+                      widget.forceFocus();
+                    }
+                  }
+                }
+              });
+              spinner.addFocusListener(new FocusListener()
+              {
+                public void focusGained(FocusEvent focusEvent)
+                {
+                  Spinner widget = (Spinner)focusEvent.widget;
+                  widget.setData("showedErrorDialog",false);
+                }
+                public void focusLost(FocusEvent focusEvent)
+                {
+                  Spinner widget = (Spinner)focusEvent.widget;
+                  String  string = widget.getText();
+                  try
+                  {
+                    long n = Units.parseByteSize(string);
+//                    archivePartSize.set(n);
+//                    BARServer.setJobOption(selectedJobData.uuid,"archive-part-size",n);
+Dprintf.dprintf("");
+//                    widget.setText(Units.formatByteSize(n));
+                    widget.setBackground(null);
+                  }
+                  catch (NumberFormatException exception)
+                  {
+                    if (!(Boolean)widget.getData("showedErrorDialog"))
+                    {
+                      widget.setData("showedErrorDialog",true);
+                      Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, GB, or TB.",string));
+                      widget.forceFocus();
+                    }
+                  }
+                }
+              });
+Dprintf.dprintf("");
+              Widgets.addModifyListener(new WidgetModifyListener(spinner,archivePartSize)
+              {
+                public String getString(WidgetVariable variable)
+                {
+                  return Units.formatByteSize(variable.getLong());
+                }
+              });
+            }
+
+            subComposite = Widgets.newComposite(composite,SWT.NONE);
+            subComposite.setLayout(new TableLayout(1.0,0.0));
+            Widgets.layout(subComposite,2,0,TableLayoutData.WE);
             {
               label = Widgets.newLabel(subComposite,BARControl.tr("Archive file mode:"));
               Widgets.layout(label,0,0,TableLayoutData.W);
@@ -6467,7 +6585,7 @@ Dprintf.dprintf("");
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -6498,7 +6616,7 @@ Dprintf.dprintf("");
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -6537,7 +6655,7 @@ Dprintf.dprintf("");
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -6757,7 +6875,7 @@ Dprintf.dprintf("");
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -6778,7 +6896,7 @@ Dprintf.dprintf("");
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -6807,7 +6925,7 @@ Dprintf.dprintf("");
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB or GB.",string));
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                     widget.forceFocus();
                   }
                 }
