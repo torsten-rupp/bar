@@ -3417,30 +3417,46 @@ LOCAL Errors storeArchiveFile(void        *userData,
   return ERROR_NONE;
 }
 
-LOCAL void cleanStorage(ConstString jobUUID, uint64 maxStorageSize)
+/***********************************************************************\
+* Name   : purgeStorage
+* Purpose: purge storage
+* Input  : jobUUID        - job UUID
+*          maxStorageSize - max. storage size [bytes]
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void purgeStorage(ConstString jobUUID, uint64 maxStorageSize, LogHandle *logHandle)
 {
   String           storageName;
+  StorageSpecifier storageSpecifier;
   Errors           error;
   uint64           storageSize;
   DatabaseId       oldestStorageId;
+  String           oldestStorageName;
   uint64           oldestCreatedDateTime;
+  uint64           oldestSize;
   IndexQueryHandle indexQueryHandle;
   DatabaseId       storageId;
   uint64           createdDateTime;
   uint64           size;
-  StorageSpecifier storageSpecifier;
   StorageHandle    storageHandle;
 
-fprintf(stderr,"%s, %d: cleanStorage\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: purgeStorage\n",__FILE__,__LINE__);
   // init variables
-  storageName = String_new();
+  storageName       = String_new();
+  oldestStorageName = String_new();
+  Storage_initSpecifier(&storageSpecifier);
 
   do
   {
-    // get storage size, oldest entry
+    // get storage size, find oldest entry
     storageSize           = 0LL;
     oldestStorageId       = DATABASE_ID_NONE;
+    String_clear(oldestStorageName);
     oldestCreatedDateTime = MAX_UINT64;
+    oldestSize            = 0LL;
     error = Index_initListStorage(&indexQueryHandle,
                                   indexHandle,
                                   jobUUID,
@@ -3477,7 +3493,9 @@ fprintf(stderr,"%s, %d: cleanStorage\n",__FILE__,__LINE__);
       if (createdDateTime < oldestCreatedDateTime)
       {
         oldestStorageId       = storageId;
+        String_set(oldestStorageName,storageName);
         oldestCreatedDateTime = createdDateTime;
+        oldestSize            = size;
       }
       storageSize += size;
     }
@@ -3487,11 +3505,9 @@ fprintf(stderr,"%s, %d: cleanStorage\n",__FILE__,__LINE__);
     {
 fprintf(stderr,"%s, %d: purge sotrage %lld\n",__FILE__,__LINE__,oldestStorageId);
       // delete oldest storage
-      Storage_initSpecifier(&storageSpecifier);
-      error = Storage_parseName(&storageSpecifier,storageName);
+      error = Storage_parseName(&storageSpecifier,oldestStorageName);
       if (error != ERROR_NONE)
       {
-        Storage_doneSpecifier(&storageSpecifier);
         break;
       }
       error = Storage_init(&storageHandle,
@@ -3506,15 +3522,18 @@ fprintf(stderr,"%s, %d: purge sotrage %lld\n",__FILE__,__LINE__,oldestStorageId)
       {
         break;
       }
-      error = Storage_delete(&storageHandle,storageName);
+      error = Storage_delete(&storageHandle,
+                             NULL  // archiveName
+                            );
       if (error != ERROR_NONE)
       {
         Storage_done(&storageHandle);
-        Storage_doneSpecifier(&storageSpecifier);
         break;
       }
+      (void)Storage_pruneDirectories(&storageHandle,
+                                     NULL  // archiveName
+                                    );
       Storage_done(&storageHandle);
-      Storage_doneSpecifier(&storageSpecifier);
 
       // delete database entry
       error = Index_deleteStorage(indexHandle,oldestStorageId);
@@ -3522,6 +3541,13 @@ fprintf(stderr,"%s, %d: purge sotrage %lld\n",__FILE__,__LINE__,oldestStorageId)
       {
         break;
       }
+
+      logMessage(logHandle,
+                 "Purged storage %s, created at %s, %llu bytes\n",
+                 String_cString(oldestStorageName),
+                 String_cString(createdDateTime),
+                 oldestSize
+                );
     }
   }
   while (   (storageSize > maxStorageSize)
@@ -3529,6 +3555,7 @@ fprintf(stderr,"%s, %d: purge sotrage %lld\n",__FILE__,__LINE__,oldestStorageId)
         );
 
   // free resources
+  Storage_doneSpecifier(&storageSpecifier);
   String_delete(storageName);
 }
 
@@ -3653,9 +3680,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // check storage size, purge old archives
     if (createInfo->jobOptions->maxStorageSize > 0LL)
     {
-      // clean by job storage size
-      cleanStorage(createInfo->jobUUID,
-                   (createInfo->jobOptions->maxStorageSize > fileInfo.size) ? createInfo->jobOptions->maxStorageSize-fileInfo.size : 0LL
+      // purge by job storage size
+      purgeStorage(createInfo->jobUUID,
+                   (createInfo->jobOptions->maxStorageSize > fileInfo.size) ? createInfo->jobOptions->maxStorageSize-fileInfo.size : 0LL,
+                   createInfo->logHandle
                   );
     }
 //TODO
