@@ -101,7 +101,7 @@ LOCAL const ConfigValueUnit *findIntegerUnitByValue(const ConfigValueUnit *units
   {
     unit = units;
     while (   (unit->name != NULL)
-           && ((value % units->factor) != 0)
+           && ((value % (int)unit->factor) != 0)
           )
     {
       unit++;
@@ -132,7 +132,7 @@ LOCAL const ConfigValueUnit *findInteger64UnitByValue(const ConfigValueUnit *uni
   {
     unit = units;
     while (   (unit->name != NULL)
-           && ((value % units->factor) != 0)
+           && ((value % (int64)unit->factor) != 0)
           )
     {
       unit++;
@@ -168,7 +168,7 @@ LOCAL const ConfigValueUnit *findDoubleUnitByValue(const ConfigValueUnit *units,
   {
     unit = units;
     while (   (unit->name != NULL)
-           && (fmod(value,units->factor) != 0.0)
+           && (fmod(value,unit->factor) != 0.0)
           )
     {
       unit++;
