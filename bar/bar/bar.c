@@ -270,10 +270,10 @@ LOCAL bool cmdOptionParseOverwriteArchiveFiles(void *userData, void *variable, c
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] = CMD_VALUE_UNIT_ARRAY
 (
-  {"K",1024LL},
-  {"M",1024LL*1024LL},
-  {"G",1024LL*1024LL*1024LL},
   {"T",1024LL*1024LL*1024LL*1024LL},
+  {"G",1024LL*1024LL*1024LL},
+  {"M",1024LL*1024LL},
+  {"K",1024LL},
 );
 
 LOCAL const CommandLineUnit COMMAND_LINE_BITS_UNITS[] = CMD_VALUE_UNIT_ARRAY
@@ -693,10 +693,10 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
 
 const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
 (
-  {"K",1024LL},
-  {"M",1024LL*1024LL},
-  {"G",1024LL*1024LL*1024LL},
   {"T",1024LL*1024LL*1024LL*1024LL},
+  {"G",1024LL*1024LL*1024LL},
+  {"M",1024LL*1024LL},
+  {"K",1024LL},
 );
 
 const ConfigValueUnit CONFIG_VALUE_BITS_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
@@ -922,6 +922,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_SPECIAL  ("delta-source",                 &deltaSourceList,-1,                                           configValueParseDeltaSource,NULL,NULL,NULL,&jobOptions.patternType),
 
+  CONFIG_VALUE_STRING   ("mount-device",                 &jobOptions.mountDeviceName,-1                                 ),
   CONFIG_VALUE_INTEGER64("max-storage-size",             &jobOptions.maxStorageSize,-1,                                 0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_INTEGER64("volume-size",                  &jobOptions.volumeSize,-1,                                     0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_BOOLEAN  ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                        ),
@@ -954,8 +955,6 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_END_SECTION(),
 
   // commands
-  CONFIG_VALUE_STRING   ("mount-device",                 &jobOptions.mountDeviceName,-1                                 ),
-
   CONFIG_VALUE_STRING   ("pre-command",                  &jobOptions.preProcessCommand,-1                               ),
   CONFIG_VALUE_STRING   ("post-command",                 &jobOptions.postProcessCommand,-1                              ),
 
