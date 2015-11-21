@@ -386,7 +386,7 @@ LOCAL bool getIntegerOption(int                   *value,
         }
         return FALSE;
       }
-      factor = units[i].factor;
+      factor = unit->factor;
     }
     else
     {
@@ -491,7 +491,7 @@ LOCAL bool getInteger64Option(int64                 *value,
         }
         return FALSE;
       }
-      factor = units[i].factor;
+      factor = unit->factor;
     }
     else
     {
