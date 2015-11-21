@@ -234,7 +234,7 @@ LOCAL void printNotifies(void)
 /***********************************************************************\
 * Name   : createContinuous
 * Purpose: create empty continuous database
-* Input  : databaseFileName - database file name
+* Input  : databaseFileName - database file name (can be NULL)
 * Output : databaseHandle - database handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -255,10 +255,9 @@ LOCAL void printNotifies(void)
   Errors error;
 
   assert(databaseHandle != NULL);
-  assert(databaseFileName != NULL);
 
   // create continuous database
-  (void)File_deleteCString(databaseFileName,FALSE);
+  if (databaseFileName != NULL) (void)File_deleteCString(databaseFileName,FALSE);
   #ifdef NDEBUG
     error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE);
   #else /* not NDEBUG */
@@ -1815,13 +1814,11 @@ Errors Continuous_init(const char *databaseFileName)
   Errors error;
   int64  continuousVersion;
 
-  assert(databaseFileName != NULL);
-
   // init variables
   quitFlag = FALSE;
 
   // check if continuous database exists, create database
-  if (File_existsCString(databaseFileName))
+  if ((databaseFileName != NULL) && File_existsCString(databaseFileName))
   {
     // get continuous version
     error = getContinuousVersion(databaseFileName,&continuousVersion);
