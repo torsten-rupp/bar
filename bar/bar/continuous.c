@@ -1365,7 +1365,6 @@ LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
   {
     do
     {
-
       // find notify
       notifyInfo = NULL;
       Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
@@ -1386,7 +1385,9 @@ LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
         while (uuidNode != NULL)
         {
           if (   stringEquals(uuidNode->jobUUID,jobUUID)
-              && stringEquals(uuidNode->scheduleUUID,scheduleUUID)
+              && (   (scheduleUUID == NULL)
+                  || stringEquals(uuidNode->scheduleUUID,scheduleUUID)
+                 )
              )
           {
             uuidNode = List_remove(&notifyInfo->uuidList,uuidNode);
@@ -1831,7 +1832,7 @@ Errors Continuous_init(const char *databaseFileName)
 
     if (continuousVersion < CONTINOUS_VERSION)
     {
-      // discard existing continuous, create new
+      // discard existing continuous database, create new database
       File_deleteCString(databaseFileName,FALSE);
       error = createContinuous(&continuousDatabaseHandle,databaseFileName);
       if (error != ERROR_NONE)
@@ -1841,7 +1842,7 @@ Errors Continuous_init(const char *databaseFileName)
     }
     else
     {
-      // open continuous
+      // open continuous database
       error = openContinuous(&continuousDatabaseHandle,databaseFileName);
       if (error != ERROR_NONE)
       {
@@ -1927,7 +1928,14 @@ Errors Continuous_doneNotify(ConstString jobUUID,
 //fprintf(stderr,"%s, %d: Continuous_doneNotify job=%s scheudle=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
   initNotifyMsg.type = DONE;
   strncpy(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
-  strncpy(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));
+  if (scheduleUUID != NULL)
+  {
+    strncpy(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));
+  }
+  else
+  {
+    initNotifyMsg.scheduleUUID[0] = '\0';
+  }
 
   (void)MsgQueue_put(&initNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
 

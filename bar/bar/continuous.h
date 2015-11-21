@@ -71,8 +71,8 @@ void Continuous_doneAll(void);
 
 /***********************************************************************\
 * Name   : Continuous_init
-* Purpose:
-* Input  : -
+* Purpose: init continuous
+* Input  : databaseFileName - database file name or NULL for in-memory
 * Output : -
 * Return : -
 * Notes  : -
@@ -82,7 +82,7 @@ Errors Continuous_init(const char *databaseFileName);
 
 /***********************************************************************\
 * Name   : Continuous_done
-* Purpose:
+* Purpose: done continuous
 * Input  : -
 * Output : -
 * Return : -
@@ -93,10 +93,11 @@ void Continuous_done(void);
 
 /***********************************************************************\
 * Name   : Continuous_initNotify
-* Purpose:
-* Input  : -
+* Purpose: init notift for job
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID (can be NULL)
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -107,10 +108,11 @@ Errors Continuous_initNotify(ConstString     jobUUID,
 
 /***********************************************************************\
 * Name   : Continuous_doneNotify
-* Purpose:
-* Input  : -
+* Purpose: done notify for job
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID (can be NULL)
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
