@@ -66,18 +66,6 @@ LOCAL void StorageFile_doneAll(void)
 {
 }
 
-LOCAL bool StorageFile_parseSpecifier(ConstString fileSpecifier,
-                                      String      fileName
-                                     )
-{
-  assert(fileSpecifier != NULL);
-  assert(fileName != NULL);
-
-  if (fileName != NULL) String_set(fileName,fileSpecifier);
-
-  return TRUE;
-}
-
 LOCAL bool StorageFile_equalNames(const StorageSpecifier *storageSpecifier1,
                                   const StorageSpecifier *storageSpecifier2
                                  )
@@ -516,8 +504,7 @@ LOCAL Errors StorageFile_delete(StorageHandle *storageHandle,
                                 ConstString   archiveName
                                )
 {
-  ConstString storageFileName;
-  Errors      error;
+  Errors error;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
@@ -570,8 +557,7 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(archiveName != NULL);
 
   UNUSED_VARIABLE(jobOptions);
-
-  // initialize variables
+  UNUSED_VARIABLE(serverConnectionPriority);
 
   // init variables
   storageDirectoryListHandle->type = STORAGE_TYPE_FILESYSTEM;

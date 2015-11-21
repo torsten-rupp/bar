@@ -374,7 +374,6 @@ LOCAL Errors StorageDevice_init(StorageHandle          *storageHandle,
   assert(storageSpecifier->type == STORAGE_TYPE_DEVICE);
   assert(storageSpecifier != NULL);
 
-#warning storageSpecifier required?
   UNUSED_VARIABLE(storageSpecifier);
 
   // get device settings

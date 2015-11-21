@@ -610,7 +610,6 @@ LOCAL Errors StorageOptical_init(StorageHandle          *storageHandle,
   assert(storageSpecifier != NULL);
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
 
-#warning TODO remove
   UNUSED_VARIABLE(storageSpecifier);
 
   // get device name

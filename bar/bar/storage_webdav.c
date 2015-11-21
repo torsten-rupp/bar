@@ -600,7 +600,6 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
     UNUSED_VARIABLE(serverConnectionPriority);
   #endif /* HAVE_CURL */
 
-#warning TODO remove
   UNUSED_VARIABLE(storageSpecifier);
 
   #ifdef HAVE_CURL
@@ -2123,8 +2122,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     UNUSED_VARIABLE(serverConnectionPriority);
   #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
 
-#warning TODO remove
-UNUSED_VARIABLE(storageSpecifier);
+  UNUSED_VARIABLE(storageSpecifier);
 
   // open directory listing
   error = ERROR_UNKNOWN;

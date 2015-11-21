@@ -476,9 +476,6 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
   Errors       error;
 
   printInfo(5,"SSH: host %s:%d\n",String_cString(hostName),hostPort);
-#warning remove
-//  printInfo(5,"SSH: public key '%s'\n",String_cString(publicKeyFileName));
-//  printInfo(5,"SSH: private key '%s'\n",String_cString(privateKeyFileName));
   error = Network_connect(&socketHandle,
                           SOCKET_TYPE_SSH,
                           hostName,
@@ -575,6 +572,10 @@ Errors Storage_initAll(void)
       }
     }
   #endif
+  if (error == ERROR_NONE)
+  {
+    error = StorageFile_initAll();
+  }
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
     if (error == ERROR_NONE)
     {
@@ -630,6 +631,7 @@ void Storage_doneAll(void)
   #if   defined(HAVE_CURL)
     curl_global_cleanup();
   #endif /* HAVE_CURL */
+  StorageFile_doneAll();
 
   #if defined(HAVE_SSH2)
     Password_delete(defaultSSHPassword);
@@ -1316,23 +1318,19 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
                        ConstString      archiveName
                       )
 {
-  ConstString storageFileName;
-
   assert(storageSpecifier != NULL);
 
-#warning storageFileName not used?
   // get file to use
-  if      (archiveName != NULL)
+  if (archiveName == NULL)
   {
-    storageFileName = archiveName;
-  }
-  else if (storageSpecifier->archivePatternString != NULL)
-  {
-    storageFileName = storageSpecifier->archivePatternString;
-  }
-  else
-  {
-    storageFileName = storageSpecifier->archiveName;
+    if (storageSpecifier->archivePatternString != NULL)
+    {
+      archiveName = storageSpecifier->archivePatternString;
+    }
+    else
+    {
+      archiveName = storageSpecifier->archiveName;
+    }
   }
 
   String_clear(storageSpecifier->storageName);
@@ -1347,9 +1345,9 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
       StorageFTP_getName(storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_SSH:
-      if (!String_isEmpty(storageFileName))
+      if (!String_isEmpty(archiveName))
       {
-        String_append(storageSpecifier->storageName,storageFileName);
+        String_append(storageSpecifier->storageName,archiveName);
       }
       break;
     case STORAGE_TYPE_SCP:
@@ -1390,23 +1388,19 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
                                      ConstString      archiveName
                                     )
 {
-  ConstString storageFileName;
-
   assert(storageSpecifier != NULL);
 
   // get file to use
-#warning storageFileName not used?
-  if      (!String_isEmpty(archiveName))
+  if (archiveName == NULL)
   {
-    storageFileName = archiveName;
-  }
-  else if (!String_isEmpty(storageSpecifier->archivePatternString))
-  {
-    storageFileName = storageSpecifier->archivePatternString;
-  }
-  else
-  {
-    storageFileName = storageSpecifier->archiveName;
+    if (!String_isEmpty(storageSpecifier->archivePatternString))
+    {
+      archiveName = storageSpecifier->archivePatternString;
+    }
+    else
+    {
+      archiveName = storageSpecifier->archiveName;
+    }
   }
 
   String_clear(storageSpecifier->storageName);
@@ -1421,9 +1415,9 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
       StorageFTP_getPrintableName(storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_SSH:
-      if (!String_isEmpty(storageFileName))
+      if (!String_isEmpty(archiveName))
       {
-        String_append(storageSpecifier->storageName,storageFileName);
+        String_append(storageSpecifier->storageName,archiveName);
       }
       break;
     case STORAGE_TYPE_SCP:
@@ -1690,6 +1684,7 @@ bool Storage_isServerAllocationPending(StorageHandle *storageHandle)
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
+      serverAllocationPending = StorageFile_isServerAllocationPending(storageHandle);
       break;
     case STORAGE_TYPE_FTP:
       serverAllocationPending = StorageFTP_isServerAllocationPending(storageHandle);
@@ -1899,7 +1894,6 @@ Errors Storage_create(StorageHandle *storageHandle,
                      )
 {
   Errors error;
-  IndexQueryHandle indexQueryHandle;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
