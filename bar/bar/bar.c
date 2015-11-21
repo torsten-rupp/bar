@@ -5363,6 +5363,7 @@ LOCAL Errors createPIDFile(void)
     error = File_open(&fileHandle,File_setFileNameCString(fileName,pidFileName),FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
+      String_delete(fileName);
       printError("Cannot create process id file '%s' (error: %s)\n",pidFileName,Error_getText(error));
       return error;
     }
@@ -5641,6 +5642,21 @@ exit(1);
   error = ERROR_NONE;
   if      (daemonFlag)
   {
+    // create pid file
+    error = createPIDFile();
+    if (error != ERROR_NONE)
+    {
+      doneAll();
+      #ifndef NDEBUG
+        debugResourceDone();
+        File_debugDone();
+        Array_debugDone();
+        String_debugDone();
+        List_debugDone();
+      #endif /* not NDEBUG */
+      return errorToExitcode(error);
+    }
+
     // open log file
     openLog();
 
@@ -5658,6 +5674,7 @@ exit(1);
                   );
         // close log file
         closeLog();
+        deletePIDFile();
         doneAll();
         #ifndef NDEBUG
           debugResourceDone();
@@ -5675,29 +5692,25 @@ exit(1);
     // daemon mode -> run server with network
     globalOptions.runMode = RUN_MODE_SERVER;
 
-    // create pid file
-    error = createPIDFile();
-    if (error == ERROR_NONE)
-    {
-      // run server (not detached)
-      error = Server_run(serverPort,
-                         serverTLSPort,
-                         serverCAFileName,
-                         serverCertFileName,
-                         serverKeyFileName,
-                         serverPassword,
-                         serverJobsDirectory,
-                         &jobOptions
-                        );
-      // delete pid file
-      deletePIDFile();
-    }
+    // run server (not detached)
+    error = Server_run(serverPort,
+                       serverTLSPort,
+                       serverCAFileName,
+                       serverCertFileName,
+                       serverKeyFileName,
+                       serverPassword,
+                       serverJobsDirectory,
+                       &jobOptions
+                      );
 
     // close index database
     if (indexHandle != NULL) Index_done(indexHandle);
 
     // close log file
     closeLog();
+
+    // delete pid file
+    deletePIDFile();
   }
   else if (batchFlag)
   {
