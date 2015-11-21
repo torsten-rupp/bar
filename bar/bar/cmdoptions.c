@@ -144,6 +144,8 @@ LOCAL const CommandLineUnit *findInteger64UnitByValue(const CommandLineUnit *uni
   }
 }
 
+#if 0
+// still not used
 /***********************************************************************\
 * Name   : findDoubleUnitByValue
 * Purpose: find unit by name
@@ -174,6 +176,7 @@ LOCAL const CommandLineUnit *findDoubleUnitByValue(const CommandLineUnit *units,
     return NULL;
   }
 }
+#endif
 
 /***********************************************************************\
 * Name   : findSelect
@@ -206,6 +209,8 @@ LOCAL const CommandLineOptionSelect *findSelect(const CommandLineOptionSelect *s
   }
 }
 
+#if 0
+// still not used
 /***********************************************************************\
 * Name   : findSelectByValue
 * Purpose: find select by value
@@ -236,6 +241,7 @@ LOCAL const CommandLineOptionSelect *findSelectByValue(const CommandLineOptionSe
     return NULL;
   }
 }
+#endif
 
 /***********************************************************************\
 * Name   : findSet
@@ -268,6 +274,8 @@ LOCAL const CommandLineOptionSet *findSet(const CommandLineOptionSet *sets, cons
   }
 }
 
+#if 0
+// still not used
 /***********************************************************************\
 * Name   : findSetByValue
 * Purpose: find set by value
@@ -298,6 +306,7 @@ LOCAL const CommandLineOptionSet *findSetByValue(const CommandLineOptionSet *set
     return NULL;
   }
 }
+#endif
 
 /***********************************************************************\
 * Name   : getIntegerOption
