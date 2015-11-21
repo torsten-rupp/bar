@@ -771,19 +771,19 @@ rundev: bar@EXEEXT@
 
 rundev1 rundevd: bar-debug@EXEEXT@
 	$(INSTALL) -d jobs
-	nice ./bar-debug@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
+	nice ./bar-debug@EXEEXT@ --daemon -D --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundevd2: bar-debug@EXEEXT@
 	$(INSTALL) -d jobs
-	nice ./bar-debug@EXEEXT@ --daemon -D --index-database=bar-index2.db --index-database-keep-time=365days --server-jobs-directory=jobs2 --server-port=39999 --server-tls-port=0 --log-file=/tmp/bar2.log --log=all --server-debug
+	nice ./bar-debug@EXEEXT@ --daemon -D --continuous-database=bar-continuous2.db --index-database=bar-index2.db --index-database-keep-time=365days --server-jobs-directory=jobs2 --server-port=39999 --server-tls-port=0 --log-file=/tmp/bar2.log --log=all --server-debug
 
 rundevddd: bar-debug@EXEEXT@
 	$(INSTALL) -d jobs
-	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
+	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundevvalgrind: bar-valgrind
 	$(INSTALL) -d jobs
-	$(VALGRIND) $(VALGRIND_FLAGS) ./bar-valgrind --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
+	$(VALGRIND) $(VALGRIND_FLAGS) ./bar-valgrind --daemon -D --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundev_en: bar@EXEEXT@
 	$(INSTALL) -d jobs
