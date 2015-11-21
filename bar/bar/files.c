@@ -304,7 +304,7 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
       {
         return ERROR_(CREATE_FILE,errno);
       }
- 
+
       // truncate and seek to start
       if (FTRUNCATE(fileDescriptor,0) != 0)
       {
@@ -1588,16 +1588,9 @@ Errors __File_openCString(const char *__fileName__,
                          )
 #endif /* NDEBUG */
 {
-  mode_t  mode;    
   int     fileDescriptor;
-  int64_t n;
   Errors  error;
   String  pathName;
-  #ifdef HAVE_O_NOATIME
-    int    handle;
-  #else /* not HAVE_O_NOATIME */
-    struct stat stat;
-  #endif /* HAVE_O_NOATIME */
 
   assert(fileHandle != NULL);
   assert(fileName != NULL);
@@ -1606,26 +1599,11 @@ Errors __File_openCString(const char *__fileName__,
   {
     case FILE_OPEN_CREATE:
       // create file
-#if 0
-      fileHandle->file = FOPEN(fileName,"w+b");
-      if (fileHandle->file == NULL)
-      {
-        return ERRORX_(CREATE_FILE,errno,fileName);
-      }
-
-      fileHandle->name  = String_newCString(fileName);
-      fileHandle->index = 0LL;
-      fileHandle->size  = 0LL;
-      #ifndef NDEBUG
-        fileHandle->deleteOnCloseFlag = FALSE;
-      #endif /* not NDEBUG */
-#else
-      // create file
       fileDescriptor = open(fileName,O_RDWR|O_CREAT|O_TRUNC|O_LARGEFILE,0666);
       if (fileDescriptor == -1)
       {
         return ERRORX_(CREATE_FILE,errno,fileName);
-      }   
+      }
 
       // init stream
       #ifdef NDEBUG
@@ -1648,126 +1626,8 @@ Errors __File_openCString(const char *__fileName__,
         close(fileDescriptor);
         return error;
       }
-#endif
       break;
     case FILE_OPEN_READ:
-#if 0
-      // open file for reading with support of NO_ATIME
-      #ifdef HAVE_O_NOATIME
-        // open file
-        if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
-        {
-          // first try with O_NOATIME
-          handle = open(fileName,O_RDONLY|O_LARGEFILE|O_NOATIME,0);
-          if (handle == -1)
-          {
-            handle = open(fileName,O_RDONLY|O_LARGEFILE,0);
-          }
-        }
-        else
-        {
-          handle = open(fileName,O_RDONLY|O_LARGEFILE,0);
-        }
-        if (handle == -1)
-        {
-          return ERRORX_(OPEN_FILE,errno,fileName);
-        }
-
-        // init stream
-        fileHandle->file = fdopen(handle,"rb");
-        if (fileHandle->file == NULL)
-        {
-          error = ERRORX_(OPEN_FILE,errno,fileName);
-          close(handle);
-          return error;
-        }
-      #else /* not HAVE_O_NOATIME */
-        // open file
-        fileHandle->handle = open(fileName,O_RDONLY|O_LARGEFILE,0);
-        if (fileHandle->handle == -1)
-        {
-          return ERRORX_(OPEN_FILE,errno,fileName);
-        }
-
-        // store atime
-        if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
-        {
-          if (fstat(fileHandle->handle,&stat) == 0)
-          {
-            fileHandle->atime.tv_sec  = stat.st_atime;
-            #ifdef HAVE_STAT_ATIM_TV_NSEC
-              fileHandle->atime.tv_nsec = stat.st_atim.tv_nsec;
-            #else
-              fileHandle->atime.tv_nsec = 0;
-            #endif
-          }
-          else
-          {
-            fileHandle->atime.tv_sec  = 0;
-            fileHandle->atime.tv_nsec = UTIME_OMIT;
-          }
-        }
-
-        // init stream
-        fileHandle->file = fdopen(fileHandle->handle,"rb");
-        if (fileHandle->file == NULL)
-        {
-          error = ERRORX_(OPEN_FILE,errno,fileName);
-          if ((fileHandle->mode & FILE_OPEN_NO_ATIME) != 0)
-          {
-            (void)setAccessTime(fileHandle->handle,&fileHandle->atime);
-          }
-          close(fileHandle->handle);
-          return error;
-        }
-      #endif /* HAVE_O_NOATIME */
-
-      // get file size
-      if (FSEEK(fileHandle->file,(off_t)0,SEEK_END) == -1)
-      {
-        error = ERRORX_(IO_ERROR,errno,fileName);
-        #ifndef HAVE_O_NOATIME
-          if ((fileHandle->mode & FILE_OPEN_NO_ATIME) != 0)
-          {
-            (void)setAccessTime(fileHandle->handle,&fileHandle->atime);
-          }
-        #endif /* not HAVE_O_NOATIME */
-        fclose(fileHandle->file);
-        return error;
-      }
-      n = FTELL(fileHandle->file);
-      if (n == (off_t)(-1))
-      {
-        error = ERRORX_(IO_ERROR,errno,fileName);
-        #ifndef HAVE_O_NOATIME
-          if ((fileHandle->mode & FILE_OPEN_NO_ATIME) != 0)
-          {
-            (void)setAccessTime(fileHandle->handle,&fileHandle->atime);
-          }
-        #endif /* not HAVE_O_NOATIME */
-        fclose(fileHandle->file);
-        return error;
-      }
-      if (FSEEK(fileHandle->file,(off_t)0,SEEK_SET) == -1)
-      {
-        error = ERRORX_(IO_ERROR,errno,fileName);
-        #ifndef HAVE_O_NOATIME
-          if ((fileHandle->mode & FILE_OPEN_NO_ATIME) != 0)
-          {
-            (void)setAccessTime(fileHandle->handle,&fileHandle->atime);
-          }
-        #endif /* not HAVE_O_NOATIME */
-        fclose(fileHandle->file);
-        return error;
-      }
-
-      fileHandle->name  = String_newCString(fileName);
-      fileHandle->index = 0LL;
-      fileHandle->size  = (uint64)n;
-      #ifndef NDEBUG
-        fileHandle->deleteOnCloseFlag = FALSE;
-      #endif /* not NDEBUG */
-#else
       // open file for reading with support of NO_ATIME
       #ifdef HAVE_O_NOATIME
         if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
@@ -1841,7 +1701,6 @@ Errors __File_openCString(const char *__fileName__,
         close(fileDescriptor);
         return error;
       }
-#endif
       break;
     case FILE_OPEN_WRITE:
       // create directory if needed
@@ -1861,32 +1720,6 @@ Errors __File_openCString(const char *__fileName__,
       }
       File_deleteFileName(pathName);
 
-#if 0
-      // open existing file for writing
-      fileHandle->file = FOPEN(fileName,"r+b");
-      if (fileHandle->file == NULL)
-      {
-        if (errno == ENOENT)
-        {
-          fileHandle->file = FOPEN(fileName,"wb");
-          if (fileHandle->file == NULL)
-          {
-            return ERRORX_(OPEN_FILE,errno,fileName);
-          }
-        }
-        else
-        {
-          return ERRORX_(OPEN_FILE,errno,fileName);
-        }
-      }
-
-      fileHandle->name  = String_newCString(fileName);
-      fileHandle->index = 0LL;
-      fileHandle->size  = 0LL;
-      #ifndef NDEBUG
-        fileHandle->deleteOnCloseFlag = FALSE;
-      #endif /* not NDEBUG */
-#else
       // open file for writing
       fileDescriptor = open(fileName,O_RDWR|O_CREAT|O_LARGEFILE,0666);
       if (fileDescriptor == -1)
@@ -1915,7 +1748,6 @@ Errors __File_openCString(const char *__fileName__,
         close(fileDescriptor);
         return error;
       }
-#endif
       break;
     case FILE_OPEN_APPEND:
       // create directory if needed
@@ -1935,38 +1767,6 @@ Errors __File_openCString(const char *__fileName__,
       }
       File_deleteFileName(pathName);
 
-#if 0
-      // open existing file for writing
-      fileHandle->file = FOPEN(fileName,"a+b");
-      if (fileHandle->file == NULL)
-      {
-        return ERRORX_(OPEN_FILE,errno,fileName);
-      }
-
-      // seek to end of file
-      if (FSEEK(fileHandle->file,(off_t)0,SEEK_END) == -1)
-      {
-        error = ERRORX_(IO_ERROR,errno,fileName);
-        fclose(fileHandle->file);
-        return error;
-      }
-
-      // get file size
-      n = FTELL(fileHandle->file);
-      if (n == (off_t)(-1))
-      {
-        error = ERRORX_(IO_ERROR,errno,fileName);
-        fclose(fileHandle->file);
-        return error;
-      }
-
-      fileHandle->name  = String_newCString(fileName);
-      fileHandle->index = (uint64)n;
-      fileHandle->size  = (uint64)n;
-      #ifndef NDEBUG
-        fileHandle->deleteOnCloseFlag = FALSE;
-      #endif /* not NDEBUG */
-#else
       // open file for append
       fileDescriptor = open(fileName,O_RDWR|O_APPEND|O_LARGEFILE,0);
       if (fileDescriptor == -1)
@@ -1995,7 +1795,6 @@ Errors __File_openCString(const char *__fileName__,
         close(fileDescriptor);
         return error;
       }
-#endif
       break;
     #ifndef NDEBUG
       default:
@@ -2003,84 +1802,6 @@ Errors __File_openCString(const char *__fileName__,
         break; /* not reached */
     #endif /* NDEBUG */
   }
-
-#if 0
-  #ifndef NDEBUG
-    pthread_once(&debugFileInitFlag,debugFileInit);
-
-    pthread_mutex_lock(&debugFileLock);
-    {
-      // check if file is already in open-list
-      debugFileNode = debugOpenFileList.head;
-      while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
-      {
-        debugFileNode = debugFileNode->next;
-      }
-      if (debugFileNode != NULL)
-      {
-        #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0);
-        #endif /* HAVE_BACKTRACE */
-        if (debugFileNode->fileHandle->name != NULL)
-        {
-          HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %u",
-                              String_cString(debugFileNode->fileHandle->name),
-                              debugFileNode->fileName,
-                              debugFileNode->lineNb,
-                              __fileName__,
-                              __lineNb__
-                             );
-        }
-        else
-        {
-          HALT_INTERNAL_ERROR("File %p at %s, line %lu opened again at %s, line %u",
-                              debugFileNode->fileHandle,
-                              debugFileNode->fileName,
-                              debugFileNode->lineNb,
-                              __fileName__,
-                              __lineNb__
-                             );
-        }
-      }
-
-      // find file in closed-list; reuse or allocate new debug node
-      debugFileNode = debugClosedFileList.head;
-      while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
-      {
-        debugFileNode = debugFileNode->next;
-      }
-      if (debugFileNode != NULL)
-      {
-        List_remove(&debugClosedFileList,debugFileNode);
-      }
-      else
-      {
-        debugFileNode = LIST_NEW_NODE(DebugFileNode);
-        if (debugFileNode == NULL)
-        {
-          HALT_INSUFFICIENT_MEMORY();
-        }
-      }
-
-      // init file node
-      debugFileNode->fileName              = __fileName__;
-      debugFileNode->lineNb                = __lineNb__;
-      #ifdef HAVE_BACKTRACE
-        debugFileNode->stackTraceSize      = backtrace((void*)debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
-      #endif /* HAVE_BACKTRACE */
-      debugFileNode->closeFileName         = NULL;
-      debugFileNode->closeLineNb           = 0;
-      #ifdef HAVE_BACKTRACE
-        debugFileNode->closeStackTraceSize = 0;
-      #endif /* HAVE_BACKTRACE */
-      debugFileNode->fileHandle            = fileHandle;
-
-      // add string to open-list
-      List_append(&debugOpenFileList,debugFileNode);
-    }
-    pthread_mutex_unlock(&debugFileLock);
-  #endif /* not NDEBUG */
-#endif
 
   return ERROR_NONE;
 }
@@ -2128,10 +1849,6 @@ Errors __File_close(const char *__fileName__,
                    )
 #endif /* NDEBUG */
 {
-  #ifndef NDEBUG
-    DebugFileNode *debugFileNode;
-  #endif /* not NDEBUG */
-
   FILE_CHECK_VALID(fileHandle);
 
   #ifndef NDEBUG
