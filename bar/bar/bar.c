@@ -215,6 +215,7 @@ LOCAL const char      *serverKeyFileName;
 LOCAL Password        *serverPassword;
 LOCAL const char      *serverJobsDirectory;
 
+LOCAL const char      *continuousDatabaseFileName;
 LOCAL const char      *indexDatabaseFileName;
 
 LOCAL ulong           logTypes;
@@ -642,6 +643,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,2,jobOptions.errorCorrectionCodesFlag,                                                                    "add error-correction codes with 'dvdisaster' tool"                        ),
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,2,jobOptions.alwaysCreateImageFlag,                                                                       "always create image for CD/DVD/BD/device"                                 ),
 
+  CMD_OPTION_CSTRING      ("continuous-database",          0,  2,1,continuousDatabaseFileName,                                                                             "continuous database file name (default: in memory)","file name"           ),
   CMD_OPTION_CSTRING      ("index-database",               0,  1,1,indexDatabaseFileName,                                                                                  "index database file name","file name"                                     ),
   CMD_OPTION_BOOLEAN      ("index-database-auto-update",   0,  1,1,globalOptions.indexDatabaseAutoUpdateFlag,                                                              "enabled automatic update index database"                                  ),
   CMD_OPTION_SPECIAL      ("index-database-max-band-width",0,  1,1,&globalOptions.indexDatabaseMaxBandWidthList,    cmdOptionParseBandWidth,NULL,                          "max. band width to use for index updates [bis/s]","number or file name"   ),
@@ -862,6 +864,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_INTEGER  ("compress-min-size",            &globalOptions.compressMinFileSize,-1,                         0,MAX_INT,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_SPECIAL  ("compress-exclude",             &compressExcludePatternList,-1,                                configValueParsePattern,NULL,NULL,NULL,NULL),
+
+  CONFIG_VALUE_CSTRING  ("continuous-database",          &continuousDatabaseFileName,-1                                 ),
 
   CONFIG_VALUE_CSTRING  ("index-database",               &indexDatabaseFileName,-1                                      ),
   CONFIG_VALUE_BOOLEAN  ("index-database-auto-update",   &globalOptions.indexDatabaseAutoUpdateFlag,-1                  ),
@@ -2748,6 +2752,7 @@ LOCAL Errors initAll(void)
   serverPassword                         = Password_new();
   serverJobsDirectory                    = DEFAULT_JOBS_DIRECTORY;
 
+  continuousDatabaseFileName             = NULL;
   indexDatabaseFileName                  = NULL;
 
   logTypes                               = 0;
@@ -3366,12 +3371,11 @@ void logPostProcess(LogHandle        *logHandle,
                     ConstString      scheduleCustomText
                    )
 {
-  SemaphoreLock semaphoreLock;
-  TextMacro     textMacros[5];
-  StringList    stderrList;
-  Errors        error;
-  StringNode    *stringNode;
-  String        string;
+  TextMacro  textMacros[5];
+  StringList stderrList;
+  Errors     error;
+  StringNode *stringNode;
+  String     string;
 
 //TODO jobOptions
 
@@ -5140,6 +5144,8 @@ bool configValueParseOverwriteArchiveFiles(void *userData, void *variable, const
   UNUSED_VARIABLE(errorMessageSize);
 
   (*(ArchiveFileModes*)variable) = ARCHIVE_FILE_MODE_OVERWRITE;
+
+  return TRUE;
 }
 
 Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType)
@@ -5657,6 +5663,24 @@ exit(1);
       return errorToExitcode(error);
     }
 
+    // init continuous
+    error = Continuous_init(continuousDatabaseFileName);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot initialise continuous (error: %s)!\n",
+                 Error_getText(error)
+                );
+      doneAll();
+      #ifndef NDEBUG
+        debugResourceDone();
+        File_debugDone();
+        Array_debugDone();
+        String_debugDone();
+        List_debugDone();
+      #endif /* not NDEBUG */
+      return errorToExitcode(error);
+    }
+
     // open log file
     openLog();
 
@@ -5674,6 +5698,7 @@ exit(1);
                   );
         // close log file
         closeLog();
+        Continuous_done();
         deletePIDFile();
         doneAll();
         #ifndef NDEBUG
@@ -5708,6 +5733,9 @@ exit(1);
 
     // close log file
     closeLog();
+
+    // done continouous
+    Continuous_done();
 
     // delete pid file
     deletePIDFile();

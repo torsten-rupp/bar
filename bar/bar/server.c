@@ -14636,14 +14636,6 @@ Errors Server_run(uint             port,
     printWarning("No server password set!\n");
   }
 
-//TODO
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  error = Continuous_init("continuous.db");
-  if (error != ERROR_NONE)
-  {
-    HALT_FATAL_ERROR("Init continuous fail %s!",Error_getText(error));
-  }
-
   // read job list
   rereadAllJobs(serverJobsDirectory);
 
@@ -15003,8 +14995,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
   Thread_join(&jobThread);
-
-  Continuous_done();
 
   // done server
   if (serverFlag   ) Network_doneServer(&serverSocketHandle);
