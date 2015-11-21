@@ -45,6 +45,7 @@
 #include "archive.h"
 #include "storage.h"
 #include "index.h"
+#include "continuous.h"
 #include "bar.h"
 
 #include "commands_create.h"
@@ -1986,8 +1987,7 @@ LOCAL void jobIncludeExcludeChanged(JobNode *jobNode)
       else
       {
         Continuous_doneNotify(jobNode->uuid,
-                              scheduleNode->uuid,
-                              &jobNode->includeEntryList
+                              scheduleNode->uuid
                              );
       }
     }
@@ -2003,7 +2003,7 @@ LOCAL void jobIncludeExcludeChanged(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void jobScheduleChanged(JobNode *jobNode)
+LOCAL void jobScheduleChanged(const JobNode *jobNode)
 {
   ScheduleNode *scheduleNode;
 
@@ -2024,8 +2024,7 @@ LOCAL void jobScheduleChanged(JobNode *jobNode)
       else
       {
         Continuous_doneNotify(jobNode->uuid,
-                              scheduleNode->uuid,
-                              &jobNode->includeEntryList
+                              scheduleNode->uuid
                              );
       }
     }
@@ -2043,11 +2042,11 @@ LOCAL void jobScheduleChanged(JobNode *jobNode)
 
 LOCAL void jobDeleted(JobNode *jobNode)
 {
-  ScheduleNode *scheduleNode;
-
   assert(Semaphore_isLocked(&jobList.lock));
 
-  Continuous_doneNotify(jobNode->uuid);
+  Continuous_doneNotify(jobNode->uuid,
+                        NULL  // scheduleUUID
+                       );
 }
 
 /***********************************************************************\
@@ -9342,7 +9341,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
       return;
     }
   }
-  StringMap_getInt(argumentMap,"interval",&interval,0);
+  StringMap_getUInt(argumentMap,"interval",&interval,0);
   customText = String_new();
   StringMap_getString(argumentMap,"customText",customText,NULL);
   if (!StringMap_getUInt(argumentMap,"minKeep",&minKeep,0))
@@ -14640,7 +14639,7 @@ Errors Server_run(uint             port,
 //TODO
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Continuous_init("continuous.db");
-  if (error != NULL)
+  if (error != ERROR_NONE)
   {
     HALT_FATAL_ERROR("Init continuous fail %s!",Error_getText(error));
   }
