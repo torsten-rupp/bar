@@ -212,7 +212,6 @@ LOCAL void fileCheckValid(const char       *fileName,
 
   assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
-  assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
 
   pthread_once(&debugFileInitFlag,debugFileInit);
 
@@ -227,7 +226,7 @@ LOCAL void fileCheckValid(const char       *fileName,
     if (debugFileNode != NULL)
     {
       #ifdef HAVE_BACKTRACE
-        debugDumpCurrentStackTrace(stderr,0,0);
+        debugDumpStackTrace(stderr,0,debugFileNode->closeStackTrace,debugFileNode->closeStackTraceSize,0);
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR_AT(fileName,
                              lineNb,
@@ -255,6 +254,8 @@ LOCAL void fileCheckValid(const char       *fileName,
     }
   }
   pthread_mutex_unlock(&debugFileLock);
+
+  assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
 }
 #endif /* NDEBUG */
 
@@ -423,7 +424,7 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
       if (debugFileNode != NULL)
       {
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0);
+          debugDumpStackTrace(stderr,0,debugFileNode->stackTrace,debugFileNode->stackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {
@@ -1323,7 +1324,7 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
       if (debugFileNode != NULL)
       {
         #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0);
+          debugDumpStackTrace(stderr,0,debugFileNode->stackTrace,debugFileNode->stackTraceSize,0);
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {
