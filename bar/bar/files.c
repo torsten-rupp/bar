@@ -1769,7 +1769,7 @@ Errors __File_openCString(const char *__fileName__,
       File_deleteFileName(pathName);
 
       // open file for append
-      fileDescriptor = open(fileName,O_RDWR|O_APPEND|O_LARGEFILE,0);
+      fileDescriptor = open(fileName,O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE,0666);
       if (fileDescriptor == -1)
       {
         return ERRORX_(IO_ERROR,errno,fileName);
