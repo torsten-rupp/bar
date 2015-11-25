@@ -5252,9 +5252,9 @@ Dprintf.dprintf("");
 
               combo = Widgets.newOptionMenu(subComposite);
               combo.setToolTipText(BARControl.tr("If set to 'append' then append data to existing archive files.\nIf set to 'overwrite' then overwrite existing files.\nOtherwise stop with an error if archive file exists."));
-              Widgets.setComboItems(combo,new Object[]{"stop on error","stop",
-                                                       "append",       "append",
-                                                       "overwrite",    "overwrite",
+              Widgets.setComboItems(combo,new Object[]{BARControl.tr("stop if exists"),"stop",
+                                                       BARControl.tr("append"        ),"append",
+                                                       BARControl.tr("overwrite"     ),"overwrite",
                                                       }
                                    );
               Widgets.layout(combo,0,1,TableLayoutData.W);
