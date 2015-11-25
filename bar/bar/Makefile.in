@@ -1453,6 +1453,7 @@ test_parameters: \
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --help 1>/dev/null $(if $(QUIET),1>/dev/null))
 	#
 	# different options
+	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar --verbose=2 $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -g $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l test/test*.bar -H $(if $(QUIET),1>/dev/null))
