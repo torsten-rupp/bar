@@ -3330,7 +3330,6 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...)
 {
   va_list arguments;
 
-  assert(logHandle != NULL);
   assert(text != NULL);
 
   va_start(arguments,text);
