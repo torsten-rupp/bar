@@ -155,10 +155,10 @@ typedef struct
 {
   DatabaseId  entityId;                                           // database entity id
   DatabaseId  storageId;                                          // database storage id
-  String      fileName;                                           // temporary archive name
+  String      fileName;                                           // intermediate archive filename
   uint64      entries;                                            // number of entries in archive
   uint64      size;                                               // archive size [bytes]
-  String      destinationFileName;                                // destination archive name
+  String      archiveName;                                        // destination archive name
 } StorageMsg;
 
 /***************************** Variables *******************************/
@@ -225,7 +225,7 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  String_delete(storageMsg->destinationFileName);
+  String_delete(storageMsg->archiveName);
   String_delete(storageMsg->fileName);
 }
 
@@ -386,7 +386,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
     HALT_FATAL_ERROR("Cannot initialize status info name semaphore!");
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("create info",createInfo);
+  DEBUG_ADD_RESOURCE_TRACE(createInfo,sizeof(CreateInfo));
 }
 
 /***********************************************************************\
@@ -402,7 +402,7 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
 {
   assert(createInfo != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(createInfo);
+  DEBUG_REMOVE_RESOURCE_TRACE(createInfo,sizeof(createInfo));
 
   Semaphore_done(&createInfo->statusInfoNameLock);
   Semaphore_done(&createInfo->statusInfoLock);
@@ -1102,7 +1102,6 @@ LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
 *          partNumber            - part number (>=0 for parts,
 *                                  ARCHIVE_PART_NUMBER_NONE for single
 *                                  part archive)
-*          lastPartFlag          - TRUE iff last part
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1115,30 +1114,29 @@ LOCAL Errors formatArchiveFileName(String       fileName,
                                    ConstString  scheduleTitle,
                                    ConstString  scheduleCustomText,
                                    time_t       time,
-                                   int          partNumber,
-                                   bool         lastPartFlag
+                                   int          partNumber
                                   )
 {
   TextMacro textMacros[10];
 
-  String    uuid;
-  bool      partNumberFlag;
+  StaticString (uuid,MISC_UUID_STRING_LENGTH);
+  bool         partNumberFlag;
   #ifdef HAVE_LOCALTIME_R
     struct tm tmBuffer;
   #endif /* HAVE_LOCALTIME_R */
-  struct tm *tm;
-  uint      weekNumberU,weekNumberW;
-  ulong     i,j;
-  char      format[4];
-  char      buffer[256];
-  size_t    length;
-  ulong     divisor;
-  ulong     n;
-  uint      z;
-  int       d;
+  struct tm    *tm;
+  uint         weekNumberU,weekNumberW;
+  ulong        i,j;
+  char         format[4];
+  char         buffer[256];
+  size_t       length;
+  ulong        divisor;
+  ulong        n;
+  uint         z;
+  int          d;
 
   // init variables
-  uuid = Misc_getUUID(String_new());
+  Misc_getUUID(uuid);
   #ifdef HAVE_LOCALTIME_R
     tm = localtime_r(&time,&tmBuffer);
   #else /* not HAVE_LOCALTIME_R */
@@ -1156,7 +1154,6 @@ LOCAL Errors formatArchiveFileName(String       fileName,
     case FORMAT_MODE_ARCHIVE_FILE_NAME:
       TEXT_MACRO_N_CSTRING(textMacros[0],"%type", getArchiveTypeName(archiveType)     );
       TEXT_MACRO_N_CSTRING(textMacros[1],"%T",    getArchiveTypeShortName(archiveType));
-      TEXT_MACRO_N_CSTRING(textMacros[2],"%last", lastPartFlag ? "-last" : "");
       TEXT_MACRO_N_CSTRING(textMacros[3],"%uuid", String_cString(uuid));
       TEXT_MACRO_N_CSTRING(textMacros[4],"%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "");
       TEXT_MACRO_N_CSTRING(textMacros[5],"%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "");
@@ -1169,7 +1166,6 @@ LOCAL Errors formatArchiveFileName(String       fileName,
     case FORMAT_MODE_PATTERN:
       TEXT_MACRO_N_CSTRING(textMacros[0],"%type", "\\S+");
       TEXT_MACRO_N_CSTRING(textMacros[1],"%T",    ".");
-      TEXT_MACRO_N_CSTRING(textMacros[2],"%last", "(-last){0,1}");
       TEXT_MACRO_N_CSTRING(textMacros[3],"%uuid", "[-0-9a-fA-F]+");
       TEXT_MACRO_N_CSTRING(textMacros[4],"%title","\\S+");
       TEXT_MACRO_N_CSTRING(textMacros[5],"%text", "\\S+");
@@ -1284,7 +1280,6 @@ LOCAL Errors formatArchiveFileName(String       fileName,
               }
               if ((ulong)partNumber >= (divisor*10L))
               {
-                free(uuid);
                 return ERROR_INSUFFICIENT_SPLIT_NUMBERS;
               }
 
@@ -1348,7 +1343,6 @@ LOCAL Errors formatArchiveFileName(String       fileName,
   }
 
   // free resources
-  String_delete(uuid);
 
   return ERROR_NONE;
 }
@@ -3240,57 +3234,85 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 }
 
 /***********************************************************************\
-* Name   : newArchiveFile
-* Purpose: call back for archive
+* Name   : getArchiveSize
+* Purpose: call back for init archive file
 * Input  : userData    - user data
 *          indexHandle - index handle or NULL if no index
 *          storageId   - database id of storage
+*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
+*                         single part
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : size or 0
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors newArchiveFile(void        *userData,
+LOCAL Errors getArchiveSize(void        *userData,
                             IndexHandle *indexHandle,
                             DatabaseId  entityId,
-                            DatabaseId  storageId
+                            DatabaseId  storageId,
+                            int         partNumber
                            )
 {
-  CreateInfo    *createInfo = (CreateInfo*)userData;
-  Errors        error;
+  CreateInfo *createInfo = (CreateInfo*)userData;
+  String     archiveName;
+  Errors     error;
+  StorageArchiveHandle storageArchiveHandle;
+  uint64     storageSize;
 
   assert(createInfo != NULL);
-#ifndef WERROR
-#warning XXXXXXXXXXXXXXX
-#endif
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
-UNUSED_VARIABLE(indexHandle);
-UNUSED_VARIABLE(entityId);
-UNUSED_VARIABLE(createInfo);
-UNUSED_VARIABLE(error);
+  UNUSED_VARIABLE(indexHandle);
+  UNUSED_VARIABLE(entityId);
+  UNUSED_VARIABLE(createInfo);
 
-  // set database storage name and uuid
-  if (storageId != DATABASE_ID_NONE)
+  storageSize = 0LL;
+
+  // get archive file name
+  archiveName = String_new();
+  error = formatArchiveFileName(archiveName,
+                                FORMAT_MODE_ARCHIVE_FILE_NAME,
+                                createInfo->storageSpecifier->archiveName,
+                                createInfo->archiveType,
+                                createInfo->scheduleTitle,
+                                createInfo->scheduleCustomText,
+                                createInfo->startTime,
+                                partNumber
+                               );
+  if (error != ERROR_NONE)
   {
+    String_delete(archiveName);
+    return 0LL;
   }
+  DEBUG_TESTCODE("getArchiveSize1") { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
 
-  return ERROR_NONE;
+  // get storage size
+  error = Storage_open(&storageArchiveHandle,&createInfo->storageHandle,archiveName);
+  if (error != ERROR_NONE)
+  {
+    String_delete(archiveName);
+    return 0LL;
+  }
+  storageSize = Storage_getSize(&storageArchiveHandle);
+  Storage_close(&storageArchiveHandle);
+
+  // free resources
+  String_delete(archiveName);
+
+  return storageSize;
 }
 
 /***********************************************************************\
 * Name   : storeArchiveFile
-* Purpose: call back to store created archive
+* Purpose: call back to store archive file
 * Input  : userData     - user data
 *          indexHandle  - index handle or NULL if no index
 *          entityId     - database id of entity
+*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
+*                         single part
 *          storageId    - database id of storage
 *          tmpFileName  - temporary archive file name
 *          entries      - number of entries
 *          size         - size of archive
-*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
-*                         single part
-*          lastPartFlag - TRUE iff last archive part, FALSE otherwise
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -3300,18 +3322,16 @@ LOCAL Errors storeArchiveFile(void        *userData,
                               IndexHandle *indexHandle,
                               DatabaseId  entityId,
                               DatabaseId  storageId,
+                              int         partNumber,
                               String      tmpFileName,
                               uint64      entries,
-                              uint64      size,
-                              int         partNumber,
-                              bool        lastPartFlag
+                              uint64      size
                              )
 {
   CreateInfo    *createInfo = (CreateInfo*)userData;
   Errors        error;
   FileInfo      fileInfo;
-  String        destinationFileName;
-  String        storageName;
+  String        archiveName;
   ConstString   printableStorageName;
   StorageMsg    storageMsg;
   SemaphoreLock semaphoreLock;
@@ -3329,32 +3349,28 @@ LOCAL Errors storeArchiveFile(void        *userData,
     return error;
   }
 
-  // get destination file name, storage name, printable storage name
-  destinationFileName  = String_new();
-  storageName          = String_new();
-  error = formatArchiveFileName(destinationFileName,
+  // get archive file name
+  archiveName = String_new();
+  error = formatArchiveFileName(archiveName,
                                 FORMAT_MODE_ARCHIVE_FILE_NAME,
                                 createInfo->storageSpecifier->archiveName,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
                                 createInfo->scheduleCustomText,
                                 createInfo->startTime,
-                                partNumber,
-                                lastPartFlag
+                                partNumber
                                );
   if (error != ERROR_NONE)
   {
-    String_delete(storageName);
-    String_delete(destinationFileName);
+    String_delete(archiveName);
     return error;
   }
-  String_set(storageName,Storage_getName(createInfo->storageSpecifier,destinationFileName));
-  DEBUG_TESTCODE("storeArchiveFile1") { String_delete(storageName); String_delete(destinationFileName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE("storeArchiveFile1") { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
 
   if (storageId != DATABASE_ID_NONE)
   {
     // set database storage name
-    printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,destinationFileName);
+    printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,archiveName);
     error = Index_storageUpdate(indexHandle,
                                 storageId,
                                 printableStorageName,
@@ -3367,27 +3383,24 @@ LOCAL Errors storeArchiveFile(void        *userData,
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
-      String_delete(storageName);
-      String_delete(destinationFileName);
       return error;
     }
   }
 
-  // send to storage controller
-  storageMsg.entityId            = entityId;
-  storageMsg.storageId           = storageId;
-  storageMsg.fileName            = String_duplicate(tmpFileName);
-  storageMsg.entries             = entries;
-  storageMsg.size                = size;
-  storageMsg.destinationFileName = destinationFileName;
+  // send to storage thread
+  storageMsg.entityId    = entityId;
+  storageMsg.storageId   = storageId;
+  storageMsg.fileName    = String_duplicate(tmpFileName);
+  storageMsg.entries     = entries;
+  storageMsg.size        = size;
+  storageMsg.archiveName = archiveName;
   storageInfoIncrement(createInfo,fileInfo.size);
   if (!MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
   {
     freeStorageMsg(&storageMsg,NULL);
-    String_delete(storageName);
     return ERROR_NONE;
   }
-  DEBUG_TESTCODE("storeArchiveFile2") { String_delete(storageName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE("storeArchiveFile2") { return DEBUG_TESTCODE_ERROR(); }
 
   // update status info
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -3412,7 +3425,6 @@ LOCAL Errors storeArchiveFile(void        *userData,
   }
 
   // free resources
-  String_delete(storageName);
 
   return ERROR_NONE;
 }
@@ -3532,9 +3544,8 @@ fprintf(stderr,"%s, %d: purge sotrage %lld\n",__FILE__,__LINE__,oldestStorageId)
         Storage_done(&storageHandle);
         break;
       }
-      (void)Storage_pruneDirectories(&storageHandle,
-                                     NULL  // archiveName
-                                    );
+#warning TODO
+      (void)Storage_pruneDirectories(&storageHandle);
       Storage_done(&storageHandle);
 
       // delete database entry
@@ -3587,6 +3598,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   FileInfo                   fileInfo;
   FileHandle                 fileHandle;
   uint                       retryCount;
+  StorageArchiveHandle       storageArchiveHandle;
   ulong                      bufferLength;
   SemaphoreLock              semaphoreLock;
   String                     pattern;
@@ -3619,7 +3631,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       pauseStorage(createInfo);
 
       // initial pre-process
-      error = Storage_preProcess(&createInfo->storageHandle,TRUE);
+      error = Storage_preProcess(&createInfo->storageHandle,NULL,TRUE);
       if (error != ERROR_NONE)
       {
         printError("Cannot pre-process storage (error: %s)!\n",
@@ -3651,7 +3663,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     pauseStorage(createInfo);
 
     // pre-process
-    error = Storage_preProcess(&createInfo->storageHandle,FALSE);
+    error = Storage_preProcess(&createInfo->storageHandle,storageMsg.archiveName,FALSE);
     if (error != ERROR_NONE)
     {
       printError("Cannot pre-process file '%s' (error: %s)!\n",
@@ -3666,7 +3678,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     DEBUG_TESTCODE("storageThreadCode1") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
     // get printable storage name
-    String_set(storageName,Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.destinationFileName));
+    String_set(storageName,Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName));
 
     // get file info
     error = File_getFileInfo(storageMsg.fileName,&fileInfo);
@@ -3732,8 +3744,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       pauseStorage(createInfo);
 
       // create storage file
-      error = Storage_create(&createInfo->storageHandle,
-                             storageMsg.destinationFileName,
+      error = Storage_create(&storageArchiveHandle,
+                             &createInfo->storageHandle,
+                             storageMsg.archiveName,
                              fileInfo.size
                             );
       if (error != ERROR_NONE)
@@ -3783,7 +3796,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         DEBUG_TESTCODE("storageThreadCode6") { error = DEBUG_TESTCODE_ERROR(); break; }
 
         // store data
-        error = Storage_write(&createInfo->storageHandle,buffer,bufferLength);
+        error = Storage_write(&storageArchiveHandle,buffer,bufferLength);
         if (error != ERROR_NONE)
         {
           if (retryCount <= MAX_RETRIES)
@@ -3815,7 +3828,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             );
 
       // close storage
-      Storage_close(&createInfo->storageHandle);
+      Storage_close(&storageArchiveHandle);
     }
     while (   (error != ERROR_NONE)
            && (retryCount <= MAX_RETRIES)
@@ -3846,6 +3859,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // update index database and set state
     if (storageMsg.storageId != DATABASE_ID_NONE)
     {
+#warning TODO
+#if 0
       // delete old indizes for same storage file
       oldStorageName = String_new();
       error = Index_initListStorage(&indexQueryHandle,
@@ -3899,6 +3914,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
         continue;
       }
+#endif
 
       // set database storage entries and size
       error = Index_storageUpdate(indexHandle,
@@ -3944,7 +3960,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     }
 
     // post-process
-    error = Storage_postProcess(&createInfo->storageHandle,FALSE);
+    error = Storage_postProcess(&createInfo->storageHandle,storageMsg.archiveName,FALSE);
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process storage file '%s' (error: %s)!\n",
@@ -3965,8 +3981,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       continue;
     }
 
-    // add to list of stored storage files
-    StringList_append(&createInfo->storageFileList,storageMsg.destinationFileName);
+    // add to list of stored archive files
+#warning TODO
+//    StringList_append(&createInfo->storageFileList,storageMsg.destinationFileName);
 
     // delete temporary storage file
     error = File_delete(storageMsg.fileName,FALSE);
@@ -3995,7 +4012,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // pause
     pauseStorage(createInfo);
 
-    error = Storage_postProcess(&createInfo->storageHandle,TRUE);
+    error = Storage_postProcess(&createInfo->storageHandle,NULL,TRUE);
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process storage (error: %s)!\n",
@@ -4021,8 +4038,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                     createInfo->scheduleTitle,
                                     createInfo->scheduleCustomText,
                                     createInfo->startTime,
-                                    ARCHIVE_PART_NUMBER_NONE,
-                                    FALSE
+                                    ARCHIVE_PART_NUMBER_NONE
                                    );
       if (error == ERROR_NONE)
       {
@@ -4048,7 +4064,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             {
               if (StringList_find(&createInfo->storageFileList,fileName) == NULL)
               {
-                Storage_delete(&createInfo->storageHandle,fileName);
+#warning XXXX
+//                Storage_delete(&createInfo->storageHandle,fileName);
               }
             }
           }
@@ -6040,7 +6057,9 @@ Errors Command_create(ConstString                     jobUUID,
                          jobUUID,
                          scheduleUUID,
                          archiveType,
-                         CALLBACK(newArchiveFile,&createInfo),
+                         CALLBACK(NULL,NULL),  // archiveInitFunction
+                         CALLBACK(NULL,NULL),  // archiveDoneFunction
+                         CALLBACK(getArchiveSize,&createInfo),
                          CALLBACK(storeArchiveFile,&createInfo),
                          CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData),
                          logHandle
