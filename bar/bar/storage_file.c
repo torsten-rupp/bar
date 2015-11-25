@@ -176,6 +176,7 @@ LOCAL bool StorageFile_isServerAllocationPending(StorageHandle *storageHandle)
 }
 
 LOCAL Errors StorageFile_preProcess(StorageHandle *storageHandle,
+                                    ConstString   archiveName,
                                     bool          initialFlag
                                    )
 {
@@ -192,8 +193,8 @@ LOCAL Errors StorageFile_preProcess(StorageHandle *storageHandle,
     if (!initialFlag)
     {
       // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",  storageHandle->fileSystem.fileHandle.name);
-      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber              );
+      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName                );
+      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber);
 
       if (globalOptions.file.writePreProcessCommand != NULL)
       {
@@ -217,6 +218,7 @@ LOCAL Errors StorageFile_preProcess(StorageHandle *storageHandle,
 }
 
 LOCAL Errors StorageFile_postProcess(StorageHandle *storageHandle,
+                                     ConstString   archiveName,
                                      bool          finalFlag
                                     )
 {
@@ -233,8 +235,8 @@ LOCAL Errors StorageFile_postProcess(StorageHandle *storageHandle,
     if (!finalFlag)
     {
       // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",  storageHandle->fileSystem.fileHandle.name);
-      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber              );
+      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName                );
+      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber);
 
       if (globalOptions.file.writePostProcessCommand != NULL)
       {
@@ -257,7 +259,7 @@ LOCAL Errors StorageFile_postProcess(StorageHandle *storageHandle,
   return error;
 }
 
-LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
+LOCAL Errors StorageFile_create(StorageArchiveHandle *storageArchiveHandle,
                                 ConstString   archiveName,
                                 uint64        archiveSize
                                )
@@ -265,23 +267,26 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
   Errors error;
   String directoryName;
 
-  assert(storageHandle != NULL);
-  assert(archiveName != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageArchiveHandle != NULL);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(archiveSize);
 
   // check if archive file exists
-  if (   (storageHandle->jobOptions != NULL)
-      && (storageHandle->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
-      && (storageHandle->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
-      && !storageHandle->jobOptions->archiveFileModeOverwriteFlag
-      && File_exists(archiveName))
+fprintf(stderr,"%s, %d: archiveFileMode=%d exot=%d archiveFileModeOverwriteFlag=%d\n",__FILE__,__LINE__,storageArchiveHandle->storageHandle->jobOptions->archiveFileMode,File_exists(archiveName),storageArchiveHandle->storageHandle->jobOptions->archiveFileModeOverwriteFlag);
+  if (   (storageArchiveHandle->storageHandle->jobOptions != NULL)
+      && (storageArchiveHandle->storageHandle->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
+      && (storageArchiveHandle->storageHandle->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
+      && !storageArchiveHandle->storageHandle->jobOptions->archiveFileModeOverwriteFlag
+      && File_exists(archiveName)
+     )
   {
     return ERRORX_(FILE_EXISTS_,0,String_cString(archiveName));
   }
 
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
   {
     // create directory if not existing
     directoryName = File_getFilePathName(String_new(),archiveName);
@@ -300,42 +305,43 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
     }
     String_delete(directoryName);
 
-    // open file
-    error = File_open(&storageHandle->fileSystem.fileHandle,
+    // create/append file
+    error = File_open(&storageArchiveHandle->fileSystem.fileHandle,
                       archiveName,
-                      (   (storageHandle->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
-                       && !storageHandle->jobOptions->archiveFileModeOverwriteFlag
+                      (   (storageArchiveHandle->storageHandle->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
+                       && !storageArchiveHandle->storageHandle->jobOptions->archiveFileModeOverwriteFlag
                       )
                         ? FILE_OPEN_APPEND
                         : FILE_OPEN_CREATE
                      );
     if (error != ERROR_NONE)
     {
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %s\n",__FILE__,__LINE__,String_cString(archiveName));
       return error;
     }
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,
+File_getSize(&storageArchiveHandle->fileSystem.fileHandle)
+);
 
-    DEBUG_ADD_RESOURCE_TRACE("storage create file",&storageHandle->fileSystem);
+    DEBUG_ADD_RESOURCE_TRACE(&storageArchiveHandle->fileSystem,sizeof(storageArchiveHandle->fileSystem));
   }
 
   return error;
 }
 
-LOCAL Errors StorageFile_open(StorageHandle *storageHandle, ConstString archiveName)
+LOCAL Errors StorageFile_open(StorageArchiveHandle *storageArchiveHandle,
+                              ConstString archiveName
+                             )
 {
   Errors error;
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageArchiveHandle != NULL);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(!String_isEmpty(archiveName));
 
   // init variables
-  storageHandle->mode = STORAGE_MODE_READ;
-
-  // get file name
-  if (archiveName == NULL) archiveName = storageHandle->storageSpecifier.archiveName;
-  if (String_isEmpty(archiveName))
-  {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
-  }
+  storageArchiveHandle->mode = STORAGE_MODE_READ;
 
   // check if file exists
   if (!File_exists(archiveName))
@@ -344,7 +350,7 @@ LOCAL Errors StorageFile_open(StorageHandle *storageHandle, ConstString archiveN
   }
 
   // open file
-  error = File_open(&storageHandle->fileSystem.fileHandle,
+  error = File_open(&storageArchiveHandle->fileSystem.fileHandle,
                     archiveName,
                     FILE_OPEN_READ
                    );
@@ -353,30 +359,32 @@ LOCAL Errors StorageFile_open(StorageHandle *storageHandle, ConstString archiveN
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("storage open file",&storageHandle->fileSystem);
+  DEBUG_ADD_RESOURCE_TRACE(&storageArchiveHandle->fileSystem,sizeof(storageArchiveHandle->fileSystem));
 
   return ERROR_NONE;
 }
 
-LOCAL void StorageFile_close(StorageHandle *storageHandle)
+LOCAL void StorageFile_close(StorageArchiveHandle *storageArchiveHandle)
 {
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->fileSystem);
+  DEBUG_REMOVE_RESOURCE_TRACE(&storageArchiveHandle->fileSystem,sizeof(storageArchiveHandle->fileSystem));
 
-  switch (storageHandle->mode)
+  switch (storageArchiveHandle->mode)
   {
     case STORAGE_MODE_UNKNOWN:
       break;
     case STORAGE_MODE_WRITE:
-      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+      if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
       {
-        File_close(&storageHandle->fileSystem.fileHandle);
+        File_close(&storageArchiveHandle->fileSystem.fileHandle);
       }
       break;
     case STORAGE_MODE_READ:
-      File_close(&storageHandle->fileSystem.fileHandle);
+      File_close(&storageArchiveHandle->fileSystem.fileHandle);
       break;
     #ifndef NDEBUG
       default:
@@ -386,15 +394,17 @@ LOCAL void StorageFile_close(StorageHandle *storageHandle)
   }
 }
 
-LOCAL bool StorageFile_eof(StorageHandle *storageHandle)
+LOCAL bool StorageFile_eof(StorageArchiveHandle *storageArchiveHandle)
 {
-  assert(storageHandle != NULL);
-  assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
   {
-    return File_eof(&storageHandle->fileSystem.fileHandle);
+    return File_eof(&storageArchiveHandle->fileSystem.fileHandle);
   }
   else
   {
@@ -402,7 +412,7 @@ LOCAL bool StorageFile_eof(StorageHandle *storageHandle)
   }
 }
 
-LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
+LOCAL Errors StorageFile_read(StorageArchiveHandle *storageArchiveHandle,
                               void          *buffer,
                               ulong         size,
                               ulong         *bytesRead
@@ -410,94 +420,104 @@ LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
 {
   Errors error;
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->mode == STORAGE_MODE_READ);
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
   assert(buffer != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 
   error = ERROR_NONE;
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
   {
-    error = File_read(&storageHandle->fileSystem.fileHandle,buffer,size,bytesRead);
+    error = File_read(&storageArchiveHandle->fileSystem.fileHandle,buffer,size,bytesRead);
   }
 
   return error;
 }
 
-LOCAL Errors StorageFile_write(StorageHandle *storageHandle,
+LOCAL Errors StorageFile_write(StorageArchiveHandle *storageArchiveHandle,
                                const void    *buffer,
                                ulong         size
                               )
 {
   Errors error;
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->mode == STORAGE_MODE_WRITE);
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->mode == STORAGE_MODE_WRITE);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
   assert(buffer != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 
   error = ERROR_NONE;
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
   {
-    error = File_write(&storageHandle->fileSystem.fileHandle,buffer,size);
+    error = File_write(&storageArchiveHandle->fileSystem.fileHandle,buffer,size);
   }
 
   return error;
 }
 
-LOCAL uint64 StorageFile_getSize(StorageHandle *storageHandle)
-{
-  uint64 size;
-
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
-
-  size = 0LL;
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-  {
-    size = File_getSize(&storageHandle->fileSystem.fileHandle);
-  }
-
-  return size;
-}
-
-LOCAL Errors StorageFile_tell(StorageHandle *storageHandle,
+LOCAL Errors StorageFile_tell(StorageArchiveHandle *storageArchiveHandle,
                               uint64        *offset
                              )
 {
   Errors error;
 
-  assert(storageHandle != NULL);
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
   assert(offset != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 
   (*offset) = 0LL;
 
   error = ERROR_NONE;
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
   {
-    error = File_tell(&storageHandle->fileSystem.fileHandle,offset);
+    error = File_tell(&storageArchiveHandle->fileSystem.fileHandle,offset);
   }
 
   return error;
 }
 
-LOCAL Errors StorageFile_seek(StorageHandle *storageHandle,
+LOCAL Errors StorageFile_seek(StorageArchiveHandle *storageArchiveHandle,
                               uint64        offset
                              )
 {
   Errors error;
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 
   error = ERROR_NONE;
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
   {
-    error = File_seek(&storageHandle->fileSystem.fileHandle,offset);
+    error = File_seek(&storageArchiveHandle->fileSystem.fileHandle,offset);
   }
 
   return error;
+}
+
+LOCAL uint64 StorageFile_getSize(StorageArchiveHandle *storageArchiveHandle)
+{
+  uint64 size;
+
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+
+  size = 0LL;
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+  {
+    size = File_getSize(&storageArchiveHandle->fileSystem.fileHandle);
+  }
+
+  return size;
 }
 
 LOCAL Errors StorageFile_delete(StorageHandle *storageHandle,
@@ -507,9 +527,8 @@ LOCAL Errors StorageFile_delete(StorageHandle *storageHandle,
   Errors error;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
-  assert(archiveName != NULL);
+  assert(!String_isEmpty(archiveName));
 
   error = ERROR_NONE;
   if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
@@ -554,7 +573,7 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FILESYSTEM);
-  assert(archiveName != NULL);
+  assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);

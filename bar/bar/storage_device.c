@@ -421,11 +421,9 @@ LOCAL Errors StorageDevice_init(StorageHandle          *storageHandle,
     storageHandle->device.newVolumeFlag = FALSE;
   }
   StringList_init(&storageHandle->device.fileNameList);
-  storageHandle->device.fileName               = String_new();
   storageHandle->device.totalSize              = 0LL;
   AUTOFREE_ADD(&autoFreeList,storageHandle->device.directory,{ String_delete(storageHandle->device.directory); });
   AUTOFREE_ADD(&autoFreeList,&storageHandle->device.fileNameList,{ StringList_done(&storageHandle->device.fileNameList); });
-  AUTOFREE_ADD(&autoFreeList,storageHandle->device.fileName,{ String_delete(storageHandle->device.directory); });
 
   // create temporary directory for device files
   error = File_getTmpDirectoryName(storageHandle->device.directory,NULL,tmpDirectory);
@@ -469,7 +467,6 @@ LOCAL Errors StorageDevice_done(StorageHandle *storageHandle)
   File_delete(storageHandle->device.directory,FALSE);
 
   // free resources
-  String_delete(storageHandle->device.fileName);
   StringList_done(&storageHandle->device.fileNameList);
   String_delete(storageHandle->device.directory);
 
@@ -477,6 +474,7 @@ LOCAL Errors StorageDevice_done(StorageHandle *storageHandle)
 }
 
 LOCAL Errors StorageDevice_preProcess(StorageHandle *storageHandle,
+                                      ConstString   archiveName,
                                       bool          initialFlag
                                      )
 {
@@ -510,6 +508,7 @@ LOCAL Errors StorageDevice_preProcess(StorageHandle *storageHandle,
 }
 
 LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
+                                       ConstString   archiveName,
                                        bool          finalFlag
                                       )
 {
@@ -690,28 +689,31 @@ LOCAL Errors StorageDevice_unloadVolume(StorageHandle *storageHandle)
   return error;
 }
 
-LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
+LOCAL Errors StorageDevice_create(StorageArchiveHandle *storageArchiveHandle,
                                   ConstString   archiveName,
                                   uint64        archiveSize
                                  )
 {
   Errors error;
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
-  assert(archiveName != NULL);
+  assert(storageArchiveHandle != NULL);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
+  assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(archiveSize);
 
   // create file name
-  String_set(storageHandle->device.fileName,storageHandle->device.directory);
-  File_appendFileName(storageHandle->device.fileName,archiveName);
+  // init variables
+  storageArchiveHandle->device.fileName = String_new();
+  String_set(storageArchiveHandle->device.fileName,storageArchiveHandle->storageHandle->device.directory);
+  File_appendFileName(storageArchiveHandle->device.fileName,archiveName);
 
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
   {
     // open file
-    error = File_open(&storageHandle->device.fileHandle,
-                      storageHandle->device.fileName,
+    error = File_open(&storageArchiveHandle->device.fileHandle,
+                      storageArchiveHandle->device.fileName,
                       FILE_OPEN_CREATE
                      );
     if (error != ERROR_NONE)
@@ -720,21 +722,24 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
     }
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("storage create device",&storageHandle->device);
+  DEBUG_ADD_RESOURCE_TRACE(&storageArchiveHandle->device,sizeof(storageArchiveHandle->device));
 
   return ERROR_NONE;
 }
 
-LOCAL Errors StorageDevice_open(StorageHandle *storageHandle, ConstString archiveName)
+LOCAL Errors StorageDevice_open(StorageArchiveHandle *storageArchiveHandle,
+                                ConstString archiveName
+                               )
 {
-//  Errors error;
-
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
+  assert(storageArchiveHandle != NULL);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
+  assert(!String_isEmpty(archiveName));
 
   // init variables
+  storageArchiveHandle->device.fileName = String_new();
 
-UNUSED_VARIABLE(storageHandle);
+UNUSED_VARIABLE(storageArchiveHandle);
 UNUSED_VARIABLE(archiveName);
 
   // open file
@@ -742,7 +747,7 @@ UNUSED_VARIABLE(archiveName);
 #warning TODO still not implemented
 #endif
 #if 0
-  error = File_open(&storageHandle->fileSystem.fileHandle,
+  error = File_open(&storageArchiveHandle->fileSystem.fileHandle,
                     archiveName,
                     FILE_OPEN_READ
                    );
@@ -751,34 +756,38 @@ UNUSED_VARIABLE(archiveName);
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("storage open device",&storageHandle->device);
+  DEBUG_ADD_RESOURCE_TRACE(&storageArchiveHandle->device,sizeof(storageArchiveHandle->device));
 #endif /* 0 */
   return ERROR_FUNCTION_NOT_SUPPORTED;
 
   return ERROR_NONE;
 }
 
-LOCAL void StorageDevice_close(StorageHandle *storageHandle)
+LOCAL void StorageDevice_close(StorageArchiveHandle *storageArchiveHandle)
 {
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->device);
+  DEBUG_REMOVE_RESOURCE_TRACE(&storageArchiveHandle->device,sizeof(storageArchiveHandle->device));
 
-  switch (storageHandle->mode)
+  switch (storageArchiveHandle->mode)
   {
-    case STORAGE_MODE_UNKNOWN:
+    case STORAGE_MODE_READ:
+      storageArchiveHandle->storageHandle->device.totalSize += File_getSize(&storageArchiveHandle->device.fileHandle);
+      File_close(&storageArchiveHandle->device.fileHandle);
+      String_delete(storageArchiveHandle->device.fileName);
       break;
     case STORAGE_MODE_WRITE:
-      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+      if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
       {
-        storageHandle->device.totalSize += File_getSize(&storageHandle->device.fileHandle);
-        File_close(&storageHandle->device.fileHandle);
+        storageArchiveHandle->storageHandle->device.totalSize += File_getSize(&storageArchiveHandle->device.fileHandle);
+        File_close(&storageArchiveHandle->device.fileHandle);
       }
+      String_delete(storageArchiveHandle->device.fileName);
       break;
-    case STORAGE_MODE_READ:
-      storageHandle->device.totalSize += File_getSize(&storageHandle->device.fileHandle);
-      File_close(&storageHandle->device.fileHandle);
+    case STORAGE_MODE_UNKNOWN:
       break;
     #ifndef NDEBUG
       default:
@@ -786,18 +795,20 @@ LOCAL void StorageDevice_close(StorageHandle *storageHandle)
         break; /* not reached */
     #endif /* NDEBUG */
   }
-  StringList_append(&storageHandle->device.fileNameList,storageHandle->device.fileName);
+  StringList_append(&storageArchiveHandle->storageHandle->device.fileNameList,storageArchiveHandle->device.fileName);
 }
 
-LOCAL bool StorageDevice_eof(StorageHandle *storageHandle)
+LOCAL bool StorageDevice_eof(StorageArchiveHandle *storageArchiveHandle)
 {
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
-  assert(storageHandle->mode == STORAGE_MODE_READ);
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
   {
-    return File_eof(&storageHandle->device.fileHandle);
+    return File_eof(&storageArchiveHandle->device.fileHandle);
   }
   else
   {
@@ -805,7 +816,7 @@ LOCAL bool StorageDevice_eof(StorageHandle *storageHandle)
   }
 }
 
-LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
+LOCAL Errors StorageDevice_read(StorageArchiveHandle *storageArchiveHandle,
                                 void          *buffer,
                                 ulong         size,
                                 ulong         *bytesRead
@@ -813,100 +824,110 @@ LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
 {
   Errors error;
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
-  assert(storageHandle->mode == STORAGE_MODE_READ);
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(buffer != NULL);
 
 //fprintf(stderr,"%s,%d: size=%lu\n",__FILE__,__LINE__,size);
   if (bytesRead != NULL) (*bytesRead) = 0L;
   error = ERROR_NONE;
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
   {
-    error = File_read(&storageHandle->device.fileHandle,buffer,size,bytesRead);
+    error = File_read(&storageArchiveHandle->device.fileHandle,buffer,size,bytesRead);
   }
   assert(error != ERROR_UNKNOWN);
 
   return error;
 }
 
-LOCAL Errors StorageDevice_write(StorageHandle *storageHandle,
+LOCAL Errors StorageDevice_write(StorageArchiveHandle *storageArchiveHandle,
                                  const void    *buffer,
                                  ulong         size
                                 )
 {
   Errors error;
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
-  assert(storageHandle->mode == STORAGE_MODE_WRITE);
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->mode == STORAGE_MODE_WRITE);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
   {
-    error = File_write(&storageHandle->device.fileHandle,buffer,size);
+    error = File_write(&storageArchiveHandle->device.fileHandle,buffer,size);
   }
   assert(error != ERROR_UNKNOWN);
 
   return error;
 }
 
-LOCAL uint64 StorageDevice_getSize(StorageHandle *storageHandle)
-{
-  uint64 size;
-
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
-
-  size = 0LL;
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
-  {
-    size = File_getSize(&storageHandle->device.fileHandle);
-  }
-
-  return size;
-}
-
-LOCAL Errors StorageDevice_tell(StorageHandle *storageHandle,
+LOCAL Errors StorageDevice_tell(StorageArchiveHandle *storageArchiveHandle,
                                 uint64        *offset
                                )
 {
   Errors error;
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(offset != NULL);
 
   (*offset) = 0LL;
 
   error = ERROR_NONE;
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
   {
-    error = File_tell(&storageHandle->device.fileHandle,offset);
+    error = File_tell(&storageArchiveHandle->device.fileHandle,offset);
   }
   assert(error != ERROR_UNKNOWN);
 
   return error;
 }
 
-LOCAL Errors StorageDevice_seek(StorageHandle *storageHandle,
+LOCAL Errors StorageDevice_seek(StorageArchiveHandle *storageArchiveHandle,
                                 uint64        offset
                                )
 {
   Errors error;
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
   error = ERROR_NONE;
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
   {
-    error = File_seek(&storageHandle->device.fileHandle,offset);
+    error = File_seek(&storageArchiveHandle->device.fileHandle,offset);
   }
   assert(error != ERROR_UNKNOWN);
 
   return error;
+}
+
+LOCAL uint64 StorageDevice_getSize(StorageArchiveHandle *storageArchiveHandle)
+{
+  uint64 size;
+
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
+
+  size = 0LL;
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+  {
+    size = File_getSize(&storageArchiveHandle->device.fileHandle);
+  }
+
+  return size;
 }
 
 LOCAL Errors StorageDevice_delete(StorageHandle *storageHandle,
@@ -916,7 +937,7 @@ LOCAL Errors StorageDevice_delete(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
-  assert(archiveName != NULL);
+  assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageHandle);
   UNUSED_VARIABLE(archiveName);
@@ -956,7 +977,7 @@ LOCAL Errors StorageDevice_openDirectoryList(StorageDirectoryListHandle *storage
 {
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
-  assert(archiveName != NULL);
+  assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageDirectoryListHandle);
   UNUSED_VARIABLE(storageSpecifier);

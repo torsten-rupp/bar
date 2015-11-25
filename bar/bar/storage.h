@@ -192,7 +192,8 @@ typedef struct
 // storage handle
 typedef struct
 {
-  StorageModes                 mode;                       // storage mode: READ, WRITE
+#warning remove: trace resource problem storageSpecifier,storagehandle haben gleiche adrese
+int x;
   StorageSpecifier             storageSpecifier;           // storage specifier data
   const JobOptions             *jobOptions;
 
@@ -212,7 +213,6 @@ typedef struct
     // file storage
     struct
     {
-      FileHandle fileHandle;                               // file handle
     } fileSystem;
 
     #if defined(HAVE_CURL)
@@ -220,44 +220,13 @@ typedef struct
       struct
       {
         Server                  *server;
-        CURLM                   *curlMultiHandle;
-        CURL                    *curlHandle;
-//        int                     runningHandles;            // curl number of active handles (1 or 0)
-        uint64                  index;                     // current read/write index in file [0..n-1]
-        uint64                  size;                      // size of file [bytes]
-        struct                                             // read-ahead buffer
-        {
-          byte   *data;
-          uint64 offset;
-          ulong  length;
-        } readAheadBuffer;
         StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
-        void                    *buffer;                   // next data to write/read
-        ulong                   length;                    // length of data to write/read
-        ulong                   transferedBytes;           // number of data bytes read/written
       } ftp;
 
       // WebDAV storage
       struct
       {
         Server                  *server;
-        CURLM                   *curlMultiHandle;
-        CURL                    *curlHandle;
-        uint64                  index;                     // current read/write index in file [0..n-1]
-        uint64                  size;                      // size of file [bytes]
-        struct                                             // receive buffer
-        {
-          byte   *data;                                    // data received
-          ulong  size;                                     // buffer size [bytes]
-          uint64 offset;                                   // data offset
-          ulong  length;                                   // length of data received
-        } receiveBuffer;
-        struct                                             // send buffer
-        {
-          const byte *data;                                // data to send
-          ulong      index;                                // data index
-          ulong      length;                               // length of data to send
-        } sendBuffer;
         StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
       } webdav;
     #elif defined(HAVE_FTP)
@@ -265,6 +234,7 @@ typedef struct
       struct
       {
         Server                  *server;
+#if 0
         netbuf                  *control;
         netbuf                  *data;
         uint64                  index;                     // current read/write index in file [0..n-1]
@@ -275,6 +245,7 @@ typedef struct
           uint64 offset;
           ulong  length;
         } readAheadBuffer;
+#endif
         StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
       } ftp;
     #endif /* HAVE_CURL || HAVE_FTP */
@@ -292,13 +263,6 @@ typedef struct
 //        String                  sshPrivateKeyFileName;     // ssh private key file name
         Key                     publicKey;                   // ssh public key data (ssh,scp,sftp)
         Key                     privateKey;                  // ssh private key data (ssh,scp,sftp)
-
-        SocketHandle            socketHandle;
-        LIBSSH2_CHANNEL         *channel;                  // ssh channel
-        LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)
-        LIBSSH2_RECV_FUNC((*oldReceiveCallback));          // libssh2 callback to receive data (used to track received bytes)
-        uint64                  totalSentBytes;            // total sent bytes
-        uint64                  totalReceivedBytes;        // total received bytes
         StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
       } ssh;
 
@@ -310,21 +274,6 @@ typedef struct
         String                  sshPrivateKeyFileName;     // ssh private key file name
         Key                     publicKey;                 // ssh public key data (ssh,scp,sftp)
         Key                     privateKey;                // ssh private key data (ssh,scp,sftp)
-
-        SocketHandle            socketHandle;
-        LIBSSH2_CHANNEL         *channel;                  // scp channel
-        LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)
-        LIBSSH2_RECV_FUNC((*oldReceiveCallback));          // libssh2 callback to receive data (used to track received bytes)
-        uint64                  totalSentBytes;            // total sent bytes
-        uint64                  totalReceivedBytes;        // total received bytes
-        uint64                  index;                     // current read/write index in file [0..n-1]
-        uint64                  size;                      // size of file [bytes]
-        struct                                             // read-ahead buffer
-        {
-          byte   *data;
-          uint64 offset;
-          ulong  length;
-        } readAheadBuffer;
         StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
       } scp;
 
@@ -336,22 +285,6 @@ typedef struct
         String                  sshPrivateKeyFileName;     // ssh private key file name
         Key                     publicKey;                 // ssh public key data (ssh,scp,sftp)
         Key                     privateKey;                // ssh private key data (ssh,scp,sftp)
-
-        SocketHandle            socketHandle;
-        LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)
-        LIBSSH2_RECV_FUNC((*oldReceiveCallback));          // libssh2 callback to receive data (used to track received bytes)
-        uint64                  totalSentBytes;            // total sent bytes
-        uint64                  totalReceivedBytes;        // total received bytes
-        LIBSSH2_SFTP            *sftp;                     // sftp session
-        LIBSSH2_SFTP_HANDLE     *sftpHandle;               // sftp handle
-        uint64                  index;                     // current read/write index in file [0..n-1]
-        uint64                  size;                      // size of file [bytes]
-        struct                                             // read-ahead buffer
-        {
-          byte   *data;
-          uint64 offset;
-          ulong  length;
-        } readAheadBuffer;
         StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
       } sftp;
     #endif /* HAVE_SSH2 */
@@ -363,16 +296,6 @@ typedef struct
       struct
       {
         #ifdef HAVE_ISO9660
-          iso9660_t      *iso9660Handle;                   // ISO9660 image handle
-          iso9660_stat_t *iso9660Stat;                     // ISO9660 file handle
-          uint64         index;                            // current read/write index in ISO image [0..n-1]
-
-          struct                                           // read buffer
-          {
-            byte   *data;
-            uint64 blockIndex;                             // ISO9660 block index
-            ulong  length;
-          } buffer;
         #endif /* HAVE_ISO9660 */
       } read;
 
@@ -404,8 +327,6 @@ typedef struct
         uint       number;                                 // current cd/dvd/bd number
         bool       newVolumeFlag;                          // TRUE iff new cd/dvd/bd volume needed
         StringList fileNameList;                           // list with file names
-        String     fileName;                               // current file name
-        FileHandle fileHandle;
         uint64     totalSize;                              // current size of cd/dvd/bd [bytes]
       } write;
     } opticalDisk;
@@ -432,14 +353,183 @@ typedef struct
       uint       number;                                   // volume number
       bool       newVolumeFlag;                            // TRUE iff new volume needed
       StringList fileNameList;                             // list with file names
-      String     fileName;                                 // current file name
-      FileHandle fileHandle;
       uint64     totalSize;                                // current size [bytes]
     } device;
   };
 
   StorageStatusInfo runningInfo;
 } StorageHandle;
+
+// storage handle
+typedef struct
+{
+#warning remove: trace resource problem storageSpecifier,storagehandle haben gleiche adrese
+int x;
+  StorageHandle                *storageHandle;
+  StorageModes                 mode;                       // storage mode: READ, WRITE
+  String                       archiveName;                // archive name
+
+  bool                         mountedDeviceFlag;          // true iff device was mounted
+
+  union
+  {
+    // file storage
+    struct
+    {
+      FileHandle fileHandle;                               // file handle
+    } fileSystem;
+
+    #if defined(HAVE_CURL)
+      // FTP storage
+      struct
+      {
+        CURLM                   *curlMultiHandle;
+        CURL                    *curlHandle;
+//        int                     runningHandles;            // curl number of active handles (1 or 0)
+        uint64                  index;                     // current read/write index in file [0..n-1]
+        uint64                  size;                      // size of file [bytes]
+        struct                                             // read-ahead buffer
+        {
+          byte   *data;
+          uint64 offset;
+          ulong  length;
+        } readAheadBuffer;
+        StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
+        void                    *buffer;                   // next data to write/read
+        ulong                   length;                    // length of data to write/read
+        ulong                   transferedBytes;           // number of data bytes read/written
+      } ftp;
+
+      // WebDAV storage
+      struct
+      {
+        CURLM                   *curlMultiHandle;
+        CURL                    *curlHandle;
+        uint64                  index;                     // current read/write index in file [0..n-1]
+        uint64                  size;                      // size of file [bytes]
+        struct                                             // receive buffer
+        {
+          byte   *data;                                    // data received
+          ulong  size;                                     // buffer size [bytes]
+          uint64 offset;                                   // data offset
+          ulong  length;                                   // length of data received
+        } receiveBuffer;
+        struct                                             // send buffer
+        {
+          const byte *data;                                // data to send
+          ulong      index;                                // data index
+          ulong      length;                               // length of data to send
+        } sendBuffer;
+//        StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
+      } webdav;
+    #elif defined(HAVE_FTP)
+      // FTP storage
+      struct
+      {
+        netbuf                  *control;
+        netbuf                  *data;
+        uint64                  index;                     // current read/write index in file [0..n-1]
+        uint64                  size;                      // size of file [bytes]
+        struct                                             // read-ahead buffer
+        {
+          byte   *data;
+          uint64 offset;
+          ulong  length;
+        } readAheadBuffer;
+//        StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
+      } ftp;
+    #endif /* HAVE_CURL || HAVE_FTP */
+
+    #ifdef HAVE_SSH2
+      // ssh storage (remote BAR)
+      struct
+      {
+        SocketHandle            socketHandle;
+        LIBSSH2_CHANNEL         *channel;                  // ssh channel
+        LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)
+        LIBSSH2_RECV_FUNC((*oldReceiveCallback));          // libssh2 callback to receive data (used to track received bytes)
+        uint64                  totalSentBytes;            // total sent bytes
+        uint64                  totalReceivedBytes;        // total received bytes
+        StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
+      } ssh;
+
+      // scp storage
+      struct
+      {
+        SocketHandle            socketHandle;
+        LIBSSH2_CHANNEL         *channel;                  // scp channel
+        LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)
+        LIBSSH2_RECV_FUNC((*oldReceiveCallback));          // libssh2 callback to receive data (used to track received bytes)
+        uint64                  totalSentBytes;            // total sent bytes
+        uint64                  totalReceivedBytes;        // total received bytes
+        uint64                  index;                     // current read/write index in file [0..n-1]
+        uint64                  size;                      // size of file [bytes]
+        struct                                             // read-ahead buffer
+        {
+          byte   *data;
+          uint64 offset;
+          ulong  length;
+        } readAheadBuffer;
+      } scp;
+
+      // sftp storage
+      struct
+      {
+        SocketHandle            socketHandle;
+        LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)
+        LIBSSH2_RECV_FUNC((*oldReceiveCallback));          // libssh2 callback to receive data (used to track received bytes)
+        uint64                  totalSentBytes;            // total sent bytes
+        uint64                  totalReceivedBytes;        // total received bytes
+        LIBSSH2_SFTP            *sftp;                     // sftp session
+        LIBSSH2_SFTP_HANDLE     *sftpHandle;               // sftp handle
+        uint64                  index;                     // current read/write index in file [0..n-1]
+        uint64                  size;                      // size of file [bytes]
+        struct                                             // read-ahead buffer
+        {
+          byte   *data;
+          uint64 offset;
+          ulong  length;
+        } readAheadBuffer;
+//        StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
+      } sftp;
+    #endif /* HAVE_SSH2 */
+
+    // cd/dvd/bd storage
+    struct
+    {
+      // read cd/dvd/bd
+      struct
+      {
+        #ifdef HAVE_ISO9660
+          iso9660_t      *iso9660Handle;                   // ISO9660 image handle
+          iso9660_stat_t *iso9660Stat;                     // ISO9660 file handle
+          uint64         index;                            // current read/write index in ISO image [0..n-1]
+
+          struct                                           // read buffer
+          {
+            byte   *data;
+            uint64 blockIndex;                             // ISO9660 block index
+            ulong  length;
+          } buffer;
+        #endif /* HAVE_ISO9660 */
+      } read;
+
+      // write cd/dvd/bd
+      struct
+      {
+        String     fileName;                               // current file name
+        FileHandle fileHandle;
+      } write;
+    } opticalDisk;
+
+    // device storage
+    struct
+    {
+      String     fileName;                                 // current file name
+      FileHandle fileHandle;
+    } device;
+  };
+} StorageArchiveHandle;
 
 // directory list handle
 typedef struct
@@ -551,6 +641,9 @@ typedef struct
   #define Storage_doneSpecifier(...)      __Storage_doneSpecifier(__FILE__,__LINE__,__VA_ARGS__)
   #define Storage_init(...)               __Storage_init(__FILE__,__LINE__,__VA_ARGS__)
   #define Storage_done(...)               __Storage_done(__FILE__,__LINE__,__VA_ARGS__)
+  #define Storage_create(...)             __Storage_create(__FILE__,__LINE__,__VA_ARGS__)
+  #define Storage_open(...)               __Storage_open(__FILE__,__LINE__,__VA_ARGS__)
+  #define Storage_close(...)              __Storage_close(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -903,7 +996,7 @@ Errors Storage_prepare(const String     storageName,
 /***********************************************************************\
 * Name   : Storage_init
 * Purpose: init new storage
-* Input  : storageHandle                - storage handle variable
+* Input  : storageHandle                - storage storage variable
 *          storageSpecifier             - storage specifier structure
 *          jobOptions                   - job options or NULL
 *          maxBandWidthList             - list with max. band width to
@@ -949,7 +1042,7 @@ Errors Storage_prepare(const String     storageName,
 /***********************************************************************\
 * Name   : Storage_done
 * Purpose: deinit storage
-* Input  : storageHandle - storage handle variable
+* Input  : storageHandle - storage handle
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -998,6 +1091,7 @@ const StorageSpecifier *Storage_getStorageSpecifier(const StorageHandle *storage
 \***********************************************************************/
 
 Errors Storage_preProcess(StorageHandle *storageHandle,
+                          ConstString   archiveName,
                           bool          initialFlag
                          );
 
@@ -1012,6 +1106,7 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
 \***********************************************************************/
 
 Errors Storage_postProcess(StorageHandle *storageHandle,
+                           ConstString   archiveName,
                            bool          finalFlag
                           );
 
@@ -1054,30 +1149,55 @@ Errors Storage_unloadVolume(StorageHandle *storageHandle);
 /***********************************************************************\
 * Name   : Storage_create
 * Purpose: create new storage file
-* Input  : storageHandle - storage handle
-*          archiveName   - archive file name
-*          archiveSize   - archive file size [bytes]
+* Input  : storageArchiveHandle - storage archive handle variable
+*          storageHandle        - storage info
+*          archiveName          - archive file name
+*          archiveSize          - archive file size [bytes]
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_create(StorageHandle *storageHandle,
-                      ConstString   archiveName,
-                      uint64        archiveSize
-                     );
+#ifdef NDEBUG
+  Errors Storage_create(StorageArchiveHandle *storageArchiveHandle,
+                        StorageHandle *storageHandle,
+                        ConstString   archiveName,
+                        uint64        archiveSize
+                       );
+#else /* not NDEBUG */
+  Errors __Storage_create(const char    *__fileName__,
+                          ulong         __lineNb__,
+                          StorageArchiveHandle *storageArchiveHandle,
+                          StorageHandle *storageHandle,
+                          ConstString   archiveName,
+                          uint64        archiveSize
+                         );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Storage_open
 * Purpose: open storage file
-* Input  : storageHandle - storage handle
-*          archiveName   - archive name or NULL
+* Input  : storageArchiveHandle - storage archive handle variable
+*          storageHandle        - storage handle
+*          archiveName          - archive name or NULL
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName);
+#ifdef NDEBUG
+  Errors Storage_open(StorageArchiveHandle *storageArchiveHandle,
+                      StorageHandle *storageHandle,
+                      ConstString   archiveName
+                     );
+#else /* not NDEBUG */
+  Errors __Storage_open(const char    *__fileName__,
+                        ulong         __lineNb__,
+                        StorageArchiveHandle *storageArchiveHandle,
+                        StorageHandle *storageHandle,
+                        ConstString   archiveName
+                       );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Storage_close
@@ -1088,7 +1208,14 @@ Errors Storage_open(StorageHandle *storageHandle, ConstString archiveName);
 * Notes  : -
 \***********************************************************************/
 
-void Storage_close(StorageHandle *storageHandle);
+#ifdef NDEBUG
+  void Storage_close(StorageArchiveHandle *storageArchiveHandle);
+#else /* not NDEBUG */
+  void __Storage_close(const char    *__fileName__,
+                       ulong         __lineNb__,
+                       StorageArchiveHandle *storageArchiveHandle
+                      );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Storage_eof
@@ -1099,7 +1226,7 @@ void Storage_close(StorageHandle *storageHandle);
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_eof(StorageHandle *storageHandle);
+bool Storage_eof(StorageArchiveHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_read
@@ -1113,7 +1240,7 @@ bool Storage_eof(StorageHandle *storageHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_read(StorageHandle *storageHandle,
+Errors Storage_read(StorageArchiveHandle *storageHandle,
                     void          *buffer,
                     ulong         size,
                     ulong         *bytesRead
@@ -1130,21 +1257,10 @@ Errors Storage_read(StorageHandle *storageHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_write(StorageHandle *storageHandle,
+Errors Storage_write(StorageArchiveHandle *storageHandle,
                      const void    *buffer,
                      ulong         size
                     );
-
-/***********************************************************************\
-* Name   : Storage_getSize
-* Purpose: get storage file size
-* Input  : storageHandle - storage handle
-* Output : -
-* Return : size of storage
-* Notes  : -
-\***********************************************************************/
-
-uint64 Storage_getSize(StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_tell
@@ -1155,7 +1271,7 @@ uint64 Storage_getSize(StorageHandle *storageHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_tell(StorageHandle *storageHandle,
+Errors Storage_tell(StorageArchiveHandle *storageHandle,
                     uint64        *offset
                    );
 
@@ -1169,9 +1285,20 @@ Errors Storage_tell(StorageHandle *storageHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_seek(StorageHandle *storageHandle,
+Errors Storage_seek(StorageArchiveHandle *storageHandle,
                     uint64        offset
                    );
+
+/***********************************************************************\
+* Name   : Storage_getSize
+* Purpose: get storage file size
+* Input  : storageHandle - storage handle
+* Output : -
+* Return : size of storage
+* Notes  : -
+\***********************************************************************/
+
+uint64 Storage_getSize(StorageArchiveHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_delete
@@ -1183,13 +1310,9 @@ Errors Storage_seek(StorageHandle *storageHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_delete(StorageHandle *storageHandle,
-                      ConstString   archiveName
-                     );
+Errors Storage_delete(StorageHandle *storageHandle, ConstString archiveName);
 
-Errors Storage_pruneDirectories(StorageHandle *storageHandle,
-                                ConstString   archiveName
-                               );
+Errors Storage_pruneDirectories(StorageHandle *storageHandle);
 
 #if 0
 still not complete
@@ -1205,7 +1328,6 @@ still not complete
 \***********************************************************************/
 
 Errors Storage_getFileInfo(StorageHandle *storageHandle,
-                           ConstString   archiveName,
                            FileInfo      *fileInfo
                           );
 #endif /* 0 */
