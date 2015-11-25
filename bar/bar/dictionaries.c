@@ -571,9 +571,9 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   dictionary->dictionaryCompareUserData = dictionaryCompareUserData;
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE("dictionary",dictionary);
+    DEBUG_ADD_RESOURCE_TRACE(dictionary,sizeof(Dictionary));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"dictionary",dictionary);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,dictionary,sizeof(Dictionary));
   #endif /* NDEBUG */
 
   return TRUE;
@@ -597,7 +597,7 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(dictionary);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,dictionary);
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,dictionary,sizeof(Dictionary));
   #endif /* NDEBUG */
 
   // free resources
@@ -1127,7 +1127,7 @@ void Dictionary_initIterator(DictionaryIterator *dictionaryIterator,
   dictionaryIterator->i          = 0;
   dictionaryIterator->j          = 0;
 
-  DEBUG_ADD_RESOURCE_TRACE("dictionary iterator",dictionaryIterator);
+  DEBUG_ADD_RESOURCE_TRACE(dictionaryIterator,sizeof(DictionaryIterator));
 
   Semaphore_forceLock(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ);
 }
@@ -1137,7 +1137,7 @@ void Dictionary_doneIterator(DictionaryIterator *dictionaryIterator)
   assert(dictionaryIterator != NULL);
   assert(dictionaryIterator->dictionary != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(dictionaryIterator);
+  DEBUG_REMOVE_RESOURCE_TRACE(dictionaryIterator,sizeof(DictionaryIterator));
 
   Semaphore_unlock(&dictionaryIterator->dictionary->lock);
 }

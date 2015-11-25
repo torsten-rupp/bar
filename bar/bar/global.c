@@ -65,6 +65,7 @@
     #endif /* HAVE_BACKTRACE */
     const char *typeName;
     const void *resource;
+    uint       size;
   } DebugResourceNode;
 
   typedef struct
@@ -411,7 +412,8 @@ void debugLocalResource(const char *__fileName__,
 void debugAddResourceTrace(const char *__fileName__,
                            uint       __lineNb__,
                            const char *typeName,
-                           const void *resource
+                           const void *resource,
+                           uint       size
                           )
 {
   DebugResourceNode *debugResourceNode;
@@ -422,7 +424,7 @@ void debugAddResourceTrace(const char *__fileName__,
   {
     // check for duplicate initialization in allocated list
     debugResourceNode = debugResourceAllocList.head;
-    while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
+    while ((debugResourceNode != NULL) && ((debugResourceNode->resource != resource) || (debugResourceNode->size != size)))
     {
       debugResourceNode = debugResourceNode->next;
     }
@@ -474,6 +476,7 @@ void debugAddResourceTrace(const char *__fileName__,
     #endif /* HAVE_BACKTRACE */
     debugResourceNode->typeName = typeName;
     debugResourceNode->resource = resource;
+    debugResourceNode->size     = size;
 
     // add resource to allocated-list
     List_append(&debugResourceAllocList,debugResourceNode);
@@ -483,7 +486,8 @@ void debugAddResourceTrace(const char *__fileName__,
 
 void debugRemoveResourceTrace(const char *__fileName__,
                               uint       __lineNb__,
-                              const void *resource
+                              const void *resource,
+                              uint       size
                              )
 {
   DebugResourceNode *debugResourceNode;
@@ -494,7 +498,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
   {
     // find in free-list to check for duplicate free
     debugResourceNode = debugResourceFreeList.head;
-    while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
+    while ((debugResourceNode != NULL) && ((debugResourceNode->resource != resource) || (debugResourceNode->size != size)))
     {
       debugResourceNode = debugResourceNode->next;
     }
@@ -694,6 +698,9 @@ void debugResourceCheck(void)
                 debugResourceNode->allocFileName,
                 debugResourceNode->allocLineNb
                );
+        #ifdef HAVE_BACKTRACE
+          debugDumpStackTrace(stderr,0,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize,0);
+        #endif /* HAVE_BACKTRACE */
       }
       fprintf(stderr,"DEBUG: %lu resource(s) lost\n",
               List_count(&debugResourceAllocList)

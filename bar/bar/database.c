@@ -825,9 +825,9 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
   #endif
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE("database",databaseHandle);
+    DEBUG_ADD_RESOURCE_TRACE(databaseHandle,sizeof(DatabaseHandle));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"database",databaseHandle);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseHandle,sizeof(DatabaseHandle));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -846,9 +846,9 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
   assert(databaseHandle->handle != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(databaseHandle);
+    DEBUG_REMOVE_RESOURCE_TRACE(databaseHandle,sizeof(DatabaseHandle));
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseHandle);
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseHandle,sizeof(DatabaseHandle));
   #endif /* NDEBUG */
 
   #ifdef DATABASE_DEBUG
@@ -1752,9 +1752,9 @@ String_delete(s);
   String_delete(sqlString);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE("prepare",databaseQueryHandle);
+    DEBUG_ADD_RESOURCE_TRACE(databaseQueryHandle,sizeof(DatabaseQueryHandle));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"prepare",databaseQueryHandle);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseQueryHandle,sizeof(DatabaseQueryHandle));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -2031,9 +2031,9 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle->databaseHandle->handle != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(databaseQueryHandle);
+    DEBUG_REMOVE_RESOURCE_TRACE(databaseQueryHandle,sizeof(DatabaseQueryHandle));
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseQueryHandle);
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseQueryHandle,sizeof(DatabaseQueryHandle));
   #endif /* NDEBUG */
 
   BLOCK_DO(sqlite3_mutex_enter(sqlite3_db_mutex(databaseQueryHandle->databaseHandle->handle)),

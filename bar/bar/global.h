@@ -1061,32 +1061,35 @@ typedef struct
 \***********************************************************************/
 
 #ifndef NDEBUG
+  // 2 macros necessary, because of "string"-construction
+  #define __DEBUG_ADD_RESOURCE_TRACE__STRING1(z) __DEBUG_ADD_RESOURCE_TRACE__STRING2(z)
+  #define __DEBUG_ADD_RESOURCE_TRACE__STRING2(z) #z
 
-  #define DEBUG_ADD_RESOURCE_TRACE(typeName,resource) \
+  #define DEBUG_ADD_RESOURCE_TRACE(resource,size) \
     do \
     { \
-      debugAddResourceTrace(__FILE__,__LINE__,typeName,resource); \
+      debugAddResourceTrace(__FILE__,__LINE__,__DEBUG_ADD_RESOURCE_TRACE__STRING1(resource),resource,size); \
     } \
     while (0)
 
-  #define DEBUG_REMOVE_RESOURCE_TRACE(resource) \
+  #define DEBUG_REMOVE_RESOURCE_TRACE(resource,size) \
     do \
     { \
-      debugRemoveResourceTrace(__FILE__,__LINE__,resource); \
+      debugRemoveResourceTrace(__FILE__,__LINE__,resource,size); \
     } \
     while (0)
 
-  #define DEBUG_ADD_RESOURCE_TRACEX(fileName,lineNb,typeName,resource) \
+  #define DEBUG_ADD_RESOURCE_TRACEX(fileName,lineNb,resource,size) \
     do \
     { \
-      debugAddResourceTrace(fileName,lineNb,typeName,resource); \
+      debugAddResourceTrace(fileName,lineNb,__DEBUG_ADD_RESOURCE_TRACE__STRING1(resource),resource,size); \
     } \
     while (0)
 
-  #define DEBUG_REMOVE_RESOURCE_TRACEX(fileName,lineNb,resource) \
+  #define DEBUG_REMOVE_RESOURCE_TRACEX(fileName,lineNb,resource,size) \
     do \
     { \
-      debugRemoveResourceTrace(fileName,lineNb,resource); \
+      debugRemoveResourceTrace(fileName,lineNb,resource,size); \
     } \
     while (0)
 
@@ -1106,7 +1109,7 @@ typedef struct
 
 #else /* NDEBUG */
 
-  #define DEBUG_ADD_RESOURCE_TRACE(typeName,resource) \
+  #define DEBUG_ADD_RESOURCE_TRACE(resource,size) \
     do \
     { \
     } \
@@ -1118,7 +1121,7 @@ typedef struct
     } \
     while (0)
 
-  #define DEBUG_ADD_RESOURCE_TRACEX(fileName,lineNb,typeName,resource) \
+  #define DEBUG_ADD_RESOURCE_TRACEX(fileName,lineNb,resource,size) \
     do \
     { \
     } \
@@ -1642,7 +1645,8 @@ void debugLocalResource(const char *__fileName__,
 void debugAddResourceTrace(const char *__fileName__,
                            uint       __lineNb__,
                            const char *typeName,
-                           const void *resource
+                           const void *resource,
+                           uint       size
                           );
 
 /***********************************************************************\
@@ -1658,7 +1662,8 @@ void debugAddResourceTrace(const char *__fileName__,
 
 void debugRemoveResourceTrace(const char *__fileName__,
                               uint       __lineNb__,
-                              const void *resource
+                              const void *resource,
+                              uint       size
                              );
 
 /***********************************************************************\

@@ -3058,7 +3058,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
   return error;
 }
@@ -3182,7 +3182,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
   return error;
 }
@@ -3393,7 +3393,7 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
   return error;
 }
@@ -4014,7 +4014,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
   return error;
 }
@@ -4143,7 +4143,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
   return error;
 }
@@ -4266,7 +4266,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
   return error;
 }
@@ -4390,7 +4390,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
   return error;
 }
@@ -4518,7 +4518,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
 
   return error;
@@ -4648,7 +4648,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("indexQueryHandle",indexQueryHandle);
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
   return error;
 }
@@ -4709,7 +4709,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle)
 {
   assert(indexQueryHandle != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(indexQueryHandle);
+  DEBUG_REMOVE_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
   Database_finalize(&indexQueryHandle->databaseQueryHandle);
   doneIndexQueryHandle(indexQueryHandle);

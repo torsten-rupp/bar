@@ -762,10 +762,10 @@ bool Compress_isValidAlgorithm(uint16 n)
   }
   assert(error != ERROR_UNKNOWN);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"compress",compressInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(compressInfo,sizeof(CompressInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("compress",compressInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,compressInfo,sizeof(CompressInfo));
   #endif /* NDEBUG */
 
   return error;
@@ -783,7 +783,7 @@ bool Compress_isValidAlgorithm(uint16 n)
   assert(compressInfo != NULL);
 
   #ifndef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,compressInfo);
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,compressInfo,sizeof(CompressInfo));
   #else /* not NDEBUG */
     DEBUG_REMOVE_RESOURCE_TRACE(compressInfo);
   #endif /* NDEBUG */

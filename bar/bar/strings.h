@@ -544,7 +544,7 @@ INLINE ulong String_length(ConstString string)
 
 /***********************************************************************\
 * Name   : String_isEmpty
-* Purpose: check if string is empty
+* Purpose: check if string is NULL or empty
 * Input  : string - string
 * Output : -
 * Return : TRUE iff string is empty, FALSE otherwise

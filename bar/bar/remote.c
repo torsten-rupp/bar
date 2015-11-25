@@ -266,14 +266,14 @@ void Remote_initHost(RemoteHost *remoteHost)
   remoteHost->port     = 0;
   remoteHost->forceSSL = FALSE;
 
-  DEBUG_ADD_RESOURCE_TRACE("remote host",remoteHost);
+  DEBUG_ADD_RESOURCE_TRACE(remoteHost,sizeof(RemoteHost));
 }
 
 void Remote_doneHost(RemoteHost *remoteHost)
 {
   assert(remoteHost != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(remoteHost);
+  DEBUG_REMOVE_RESOURCE_TRACE(remoteHost,sizeof(RemoteHost));
 
   String_delete(remoteHost->name);
 }

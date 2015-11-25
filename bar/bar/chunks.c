@@ -289,7 +289,7 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
       break; /* not reached */
   }
 
-  DEBUG_ADD_RESOURCE_TRACE("chunk buffer",chunkBuffer);
+  DEBUG_ADD_RESOURCE_TRACE(chunkBuffer,sizeof(ChunkBuffer));
 
   return ERROR_NONE;
 }
@@ -307,7 +307,7 @@ LOCAL void doneChunkBuffer(ChunkBuffer *chunkBuffer)
 {
   assert(chunkBuffer != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(chunkBuffer);
+  DEBUG_REMOVE_RESOURCE_TRACE(chunkBuffer,sizeof(ChunkBuffer));
 
   free(chunkBuffer->buffer);
 }
@@ -542,10 +542,10 @@ LOCAL void initDefinition(const int *definition,
                           void      *chunkData
                          )
 #else /* not NDEBUG */
-LOCAL void initDefinition(const char    *__fileName__,
-                          ulong         __lineNb__,
-                          const int *definition,
-                          void      *chunkData
+LOCAL void initDefinition(const char *__fileName__,
+                          ulong      __lineNb__,
+                          const int  *definition,
+                          void       *chunkData
                          )
 #endif /* NDEBUG */
 {
@@ -635,7 +635,7 @@ LOCAL void initDefinition(const char    *__fileName__,
     }
   }
 
-  DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"definition data",chunkData);
+  DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkData,sizeof(chunkData));
 }
 
 /***********************************************************************\
@@ -663,9 +663,9 @@ LOCAL Errors doneDefinition(const char *__fileName__,
   uint i;
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(chunkData);
+    DEBUG_REMOVE_RESOURCE_TRACE(chunkData,sizeof(chunkData));
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkData);
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkData,sizeof(chunkData));
   #endif /* NDEBUG */
 
   if (definition != NULL)
@@ -1739,9 +1739,9 @@ Errors __Chunk_init(const char    *__fileName__,
   #endif /* NDEBUG */
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE("chunk",chunkInfo);
+    DEBUG_ADD_RESOURCE_TRACE(chunkInfo,sizeof(ChunkInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"chunk",chunkInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkInfo,sizeof(ChunkInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -1759,9 +1759,9 @@ void __Chunk_done(const char *__fileName__,
   assert(chunkInfo != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(chunkInfo);
+    DEBUG_REMOVE_RESOURCE_TRACE(chunkInfo,sizeof(ChunkInfo));
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkInfo);
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkInfo,sizeof(ChunkInfo));
   #endif /* NDEBUG */
 
   if (chunkInfo->mode == CHUNK_MODE_READ)
@@ -1940,9 +1940,9 @@ Errors __Chunk_open(const char *__fileName__,
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE("open chunk",&chunkInfo->mode);
+    DEBUG_ADD_RESOURCE_TRACE(&chunkInfo->mode,sizeof(chunkInfo->mode));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"open chunk",&chunkInfo->mode);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,&chunkInfo->mode,sizeof(chunkInfo->mode));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -2035,9 +2035,9 @@ Errors __Chunk_create(const char *__fileName__,
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE("create chunk",&chunkInfo->mode);
+    DEBUG_ADD_RESOURCE_TRACE(&chunkInfo->mode,sizeof(chunkInfo->mode));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"create chunk",&chunkInfo->mode);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,&chunkInfo->mode,sizeof(chunkInfo->mode));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -2061,7 +2061,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
     case CHUNK_MODE_UNKNOWN:
       break;
     case CHUNK_MODE_WRITE:
-      DEBUG_REMOVE_RESOURCE_TRACE(&chunkInfo->mode);
+      DEBUG_REMOVE_RESOURCE_TRACE(&chunkInfo->mode,sizeof(chunkInfo->mode));
 
       // save offset
       error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
@@ -2100,7 +2100,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       }
       break;
     case CHUNK_MODE_READ:
-      DEBUG_REMOVE_RESOURCE_TRACE(&chunkInfo->mode);
+      DEBUG_REMOVE_RESOURCE_TRACE(&chunkInfo->mode,sizeof(chunkInfo->mode));
 
       // check chunk size value
       error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);

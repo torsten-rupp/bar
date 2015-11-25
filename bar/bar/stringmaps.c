@@ -302,9 +302,9 @@ StringMap __StringMap_new(const char *__fileName__, ulong __lineNb__)
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE("stringMap",stringMap);
+    DEBUG_ADD_RESOURCE_TRACE(stringMap,sizeof(struct __StringMap));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"stringMap",stringMap);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,stringMap,sizeof(struct __StringMap));
   #endif /* NDEBUG */
 
   return stringMap;
@@ -368,9 +368,9 @@ void __StringMap_delete(const char *__fileName__, ulong __lineNb__, StringMap st
   assert(stringMap != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(stringMap);
+    DEBUG_REMOVE_RESOURCE_TRACE(stringMap,sizeof(struct __StringMap));
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,stringMap);
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,stringMap,sizeof(struct __StringMap));
   #endif /* NDEBUG */
 
   for (i = 0; i < stringMap->size; i++)
