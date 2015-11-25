@@ -551,7 +551,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   // deprecated
   CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",                JobNode,scheduleList,                           configValueParseSchedule,NULL,NULL,NULL,NULL),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files", JobNode,jobOptions.archiveFileModeOverwriteFlag ),
+//  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files", JobNode,jobOptions.archiveFileModeOverwriteFlag ),
+  CONFIG_STRUCT_VALUE_IGNORE   ("overwrite-archive-files"                                                  ),
 };
 
 /***************************** Variables *******************************/
@@ -4112,9 +4113,8 @@ LOCAL Errors deleteStorage(DatabaseId storageId)
                                       );
 
           // prune empty directories
-          Storage_pruneDirectories(&storageHandle,
-                                   storageSpecifier.archiveName
-                                  );
+#warning TODO
+          Storage_pruneDirectories(&storageHandle);
 
           // close storage
           Storage_done(&storageHandle);
