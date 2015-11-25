@@ -460,6 +460,8 @@ LOCAL Errors initCryptPassword(ArchiveInfo *archiveInfo)
   return ERROR_NONE;
 }
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : chunkHeaderEOF
 * Purpose: check if chunk header end-of-file
@@ -534,9 +536,27 @@ LOCAL void ungetNextChunkHeader(ArchiveInfo *archiveInfo, ChunkHeader *chunkHead
   archiveInfo->nextChunkHeader         = (*chunkHeader);
 }
 
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : isSplittedArchive
+* Purpose: check if archive should be splitted
+* Input  : archiveInfo - archive info data
+* Output : -
+* Return : TRUE iff archive should be splitted
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isSplittedArchive(const ArchiveInfo *archiveInfo)
+{
+  assert(archiveInfo != NULL);
+
+  return (archiveInfo->jobOptions->archivePartSize > 0LL);
+}
+
 /***********************************************************************\
 * Name   : isNewPartNeeded
-* Purpose: check if new file part should be created
+* Purpose: check if new archive part should be created
 * Input  : archiveInfo - archive info data
 *          headerLength      - length of header data to write
 *          headerWrittenFlag - TRUE iff header already written
@@ -548,8 +568,6 @@ LOCAL void ungetNextChunkHeader(ArchiveInfo *archiveInfo, ChunkHeader *chunkHead
 \***********************************************************************/
 
 LOCAL bool isNewPartNeeded(ArchiveInfo *archiveInfo,
-                           ulong       headerLength,
-                           bool        headerWrittenFlag,
                            ulong       minBytes
                           )
 {
@@ -564,9 +582,9 @@ LOCAL bool isNewPartNeeded(ArchiveInfo *archiveInfo,
   assert(Semaphore_isOwned(&archiveInfo->chunkIOLock));
 
   newPartFlag = FALSE;
-  if (archiveInfo->jobOptions->archivePartSize > 0LL)
+  if (isSplittedArchive(archiveInfo))
   {
-    // get file size
+    // get current archive size
     if (archiveInfo->file.openFlag)
     {
       archiveFileSize = archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData);
@@ -575,16 +593,9 @@ LOCAL bool isNewPartNeeded(ArchiveInfo *archiveInfo,
     {
       archiveFileSize = 0LL;
     }
+//fprintf(stderr,"%s, %d: archiveFileSize=%llu %lu %llu\n",__FILE__,__LINE__,archiveFileSize,minBytes,archiveInfo->archiveFileSize);
 
-    if      (   !headerWrittenFlag
-             && (archiveFileSize+headerLength >= archiveInfo->jobOptions->archivePartSize)
-            )
-    {
-//fprintf(stderr,"%s, %d: archiveFileSize=%lld minBytes=%lld\n",__FILE__,__LINE__,archiveFileSize,minBytes);
-      // file header cannot be written without fragmentation -> new part
-      newPartFlag = TRUE;
-    }
-    else if ((archiveFileSize+minBytes) >= archiveInfo->jobOptions->archivePartSize)
+    if ((archiveInfo->archiveFileSize+archiveFileSize+minBytes) >= archiveInfo->jobOptions->archivePartSize)
     {
 //fprintf(stderr,"%s, %d: archiveFileSize=%lld minBytes=%lld\n",__FILE__,__LINE__,archiveFileSize,minBytes);
       // less than min. number of bytes left in part -> create new part
@@ -594,6 +605,43 @@ LOCAL bool isNewPartNeeded(ArchiveInfo *archiveInfo,
 
   return newPartFlag;
 }
+
+/***********************************************************************\
+* Name   : findNextArchivePart
+* Purpose: find next suitable archive part
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void findNextArchivePart(ArchiveInfo *archiveInfo)
+{
+  uint64 storageSize;
+
+  // find next suitable archive name
+  if (isSplittedArchive(archiveInfo))
+  {
+    do
+    {
+      storageSize = archiveInfo->archiveGetSizeFunction(archiveInfo->archiveGetSizeUserData,
+                                                archiveInfo->indexHandle,
+                                                archiveInfo->entityId,
+                                                archiveInfo->storageId,
+                                                archiveInfo->partNumber
+                                               );
+      if (storageSize > archiveInfo->jobOptions->archivePartSize)
+      {
+        archiveInfo->partNumber++;
+      }
+    }
+    while (storageSize > archiveInfo->jobOptions->archivePartSize);
+
+    archiveInfo->archiveFileSize = storageSize;
+  }
+}
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : readEncryptionKey
@@ -839,6 +887,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
+  assert(!archiveInfo->file.openFlag);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -847,98 +896,98 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
   {
     AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_unlock(&archiveInfo->chunkIOLock); });
 
-    if (!archiveInfo->file.openFlag)
+    // get intermediate data filename
+    error = File_getTmpFileName(archiveInfo->file.fileName,NULL,tmpDirectory);
+    if (error != ERROR_NONE)
     {
-      // get output filename
-      error = File_getTmpFileName(archiveInfo->file.fileName,NULL,tmpDirectory);
-      if (error != ERROR_NONE)
-      {
-        AutoFree_cleanup(&autoFreeList);
-        return error;
-      }
-      AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileName,{ File_delete(archiveInfo->file.fileName,FALSE); });
-      DEBUG_TESTCODE("createArchiveFile1") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-
-      // create file
-      error = File_open(&archiveInfo->file.fileHandle,
-                        archiveInfo->file.fileName,
-                        FILE_OPEN_CREATE
-                       );
-      if (error != ERROR_NONE)
-      {
-        AutoFree_cleanup(&autoFreeList);
-        return error;
-      }
-      AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileHandle,{ File_close(&archiveInfo->file.fileHandle); });
-      DEBUG_TESTCODE("createArchiveFile2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-
-      // write BAR file info header
-      error = writeFileInfo(archiveInfo);
-      if (error != ERROR_NONE)
-      {
-        AutoFree_cleanup(&autoFreeList);
-        return error;
-      }
-      DEBUG_TESTCODE("createArchiveFile3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-
-      // write encrypted key if asymmetric encryption enabled
-      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
-      {
-        error = writeEncryptionKey(archiveInfo);
-        if (error != ERROR_NONE)
-        {
-          AutoFree_cleanup(&autoFreeList);
-          return error;
-        }
-        DEBUG_TESTCODE("createArchiveFile4") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-      }
-
-      if (   (archiveInfo->indexHandle != NULL)
-          && !archiveInfo->jobOptions->noIndexDatabaseFlag
-          && !archiveInfo->jobOptions->dryRunFlag
-          && !archiveInfo->jobOptions->noStorageFlag
-         )
-      {
-        // create index
-        error = Index_newStorage(archiveInfo->indexHandle,
-                                 archiveInfo->entityId,
-                                 NULL, // storageName
-                                 INDEX_STATE_CREATE,
-                                 INDEX_MODE_MANUAL,
-                                 &archiveInfo->storageId
-                                );
-        if (error != ERROR_NONE)
-        {
-          AutoFree_cleanup(&autoFreeList);
-          return error;
-        }
-        AUTOFREE_ADD(&autoFreeList,&archiveInfo->storageId,{ Index_deleteStorage(archiveInfo->indexHandle,archiveInfo->storageId); });
-      }
-      else
-      {
-        // no index
-        archiveInfo->storageId = DATABASE_ID_NONE;
-      }
-
-      // call back for new archive
-      if (archiveInfo->archiveNewFunction != NULL)
-      {
-        error = archiveInfo->archiveNewFunction(archiveInfo->archiveNewUserData,
-                                                archiveInfo->indexHandle,
-                                                archiveInfo->entityId,
-                                                archiveInfo->storageId
-                                               );
-        if (error != ERROR_NONE)
-        {
-          AutoFree_cleanup(&autoFreeList);
-          return error;
-        }
-        DEBUG_TESTCODE("createArchiveFile5") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-      }
-
-      // mark archive file "open"
-      archiveInfo->file.openFlag = TRUE;
+      AutoFree_cleanup(&autoFreeList);
+      return error;
     }
+    AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileName,{ File_delete(archiveInfo->file.fileName,FALSE); });
+    DEBUG_TESTCODE("createArchiveFile1") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+
+    // create file
+    error = File_open(&archiveInfo->file.fileHandle,
+                      archiveInfo->file.fileName,
+                      FILE_OPEN_CREATE
+                     );
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileHandle,{ File_close(&archiveInfo->file.fileHandle); });
+    DEBUG_TESTCODE("createArchiveFile2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+
+    // write BAR file info header
+    error = writeFileInfo(archiveInfo);
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    DEBUG_TESTCODE("createArchiveFile3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+
+    // write encrypted key if asymmetric encryption enabled
+    if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    {
+      error = writeEncryptionKey(archiveInfo);
+      if (error != ERROR_NONE)
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+      DEBUG_TESTCODE("createArchiveFile4") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+    }
+
+    if (   (archiveInfo->indexHandle != NULL)
+        && !archiveInfo->jobOptions->noIndexDatabaseFlag
+        && !archiveInfo->jobOptions->dryRunFlag
+        && !archiveInfo->jobOptions->noStorageFlag
+       )
+    {
+      // create index
+      error = Index_newStorage(archiveInfo->indexHandle,
+                               archiveInfo->entityId,
+                               NULL, // storageName
+                               INDEX_STATE_CREATE,
+                               INDEX_MODE_MANUAL,
+                               &archiveInfo->storageId
+                              );
+      if (error != ERROR_NONE)
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+      AUTOFREE_ADD(&autoFreeList,&archiveInfo->storageId,{ Index_deleteStorage(archiveInfo->indexHandle,archiveInfo->storageId); });
+    }
+    else
+    {
+      // no index
+      archiveInfo->storageId = DATABASE_ID_NONE;
+    }
+
+    // call back for init archive
+    if (archiveInfo->archiveInitFunction != NULL)
+    {
+      error = archiveInfo->archiveInitFunction(archiveInfo->archiveInitUserData,
+                                               archiveInfo->indexHandle,
+                                               archiveInfo->entityId,
+                                               archiveInfo->storageId,
+                                               isSplittedArchive(archiveInfo)
+                                                 ? (int)archiveInfo->partNumber
+                                                 : ARCHIVE_PART_NUMBER_NONE
+                                              );
+      if (error != ERROR_NONE)
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+      DEBUG_TESTCODE("createArchiveFile5") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+    }
+
+    // mark archive file "open"
+    archiveInfo->file.openFlag = TRUE;
   }
 
   // free resources
@@ -951,15 +1000,12 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
 * Name   : closeArchiveFile
 * Purpose: close archive file
 * Input  : archiveInfo  - archive info data
-*          lastPartFlag - TRUE iff last archive part, FALSE otherwise
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
-                              bool        lastPartFlag
-                             )
+LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo)
 {
   SemaphoreLock semaphoreLock;
   Errors        error;
@@ -967,45 +1013,63 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
+#warning TODO: nicht offen wenn keine datei archiviert wurde
+//  assert(archiveInfo->file.openFlag);
+if (!archiveInfo->file.openFlag) return ERROR_NONE;
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    if (archiveInfo->file.openFlag)
+    // close file
+    (void)File_close(&archiveInfo->file.fileHandle);
+
+    // mark archive file "closed"
+    archiveInfo->file.openFlag = FALSE;
+
+    // call back to store archive
+    if (archiveInfo->archiveStoreFunction != NULL)
     {
-      // close file
-      (void)File_close(&archiveInfo->file.fileHandle);
-
-      // mark archive file "closed"
-      archiveInfo->file.openFlag = FALSE;
-
-      // call back for created archive
-      if (archiveInfo->archiveCreatedFunction != NULL)
+      error = archiveInfo->archiveStoreFunction(archiveInfo->archiveStoreUserData,
+                                                archiveInfo->indexHandle,
+                                                archiveInfo->entityId,
+                                                archiveInfo->storageId,
+                                                isSplittedArchive(archiveInfo)
+                                                  ? (int)archiveInfo->partNumber
+                                                  : ARCHIVE_PART_NUMBER_NONE,
+                                                archiveInfo->file.fileName,
+                                                Archive_getEntries(archiveInfo),
+                                                Archive_getSize(archiveInfo)
+                                               );
+      if (error != ERROR_NONE)
       {
-        error = archiveInfo->archiveCreatedFunction(archiveInfo->archiveCreatedUserData,
-                                                    archiveInfo->indexHandle,
-                                                    archiveInfo->entityId,
-                                                    archiveInfo->storageId,
-                                                    archiveInfo->file.fileName,
-                                                    Archive_getEntries(archiveInfo),
-                                                    Archive_getSize(archiveInfo),
-                                                    (archiveInfo->jobOptions->archivePartSize > 0LL)
-                                                      ? (int)archiveInfo->partNumber
-                                                      : ARCHIVE_PART_NUMBER_NONE,
-                                                    lastPartFlag
-                                                   );
-        if (error != ERROR_NONE)
-        {
-          Semaphore_unlock(&archiveInfo->chunkIOLock);
-          return error;
-        }
-        DEBUG_TESTCODE("closeArchiveFile") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
+        Semaphore_unlock(&archiveInfo->chunkIOLock);
+        return error;
       }
+      DEBUG_TESTCODE("closeArchiveFile1") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
+    }
 
-      // increment part number
-      if (archiveInfo->jobOptions->archivePartSize > 0LL)
+    // call back for done archive
+    if (archiveInfo->archiveDoneFunction != NULL)
+    {
+      error = archiveInfo->archiveDoneFunction(archiveInfo->archiveDoneUserData,
+                                               archiveInfo->indexHandle,
+                                               archiveInfo->entityId,
+                                               archiveInfo->storageId,
+                                               isSplittedArchive(archiveInfo)
+                                                 ? (int)archiveInfo->partNumber
+                                                 : ARCHIVE_PART_NUMBER_NONE
+                                              );
+      if (error != ERROR_NONE)
       {
-        archiveInfo->partNumber++;
+        Semaphore_unlock(&archiveInfo->chunkIOLock);
+        return error;
       }
+      DEBUG_TESTCODE("closeArchiveFile2") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
+    }
+
+    // increment part number
+    if (isSplittedArchive(archiveInfo))
+    {
+      archiveInfo->partNumber++;
     }
   }
 
@@ -1033,10 +1097,8 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
   assert(Semaphore_isOwned(&archiveInfo->chunkIOLock));
 
-  // check if split necessary
+  // check if split is necessary
   if (isNewPartNeeded(archiveInfo,
-                      0,
-                      FALSE,
                       minBytes
                      )
      )
@@ -1044,7 +1106,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
     // split needed -> close archive file
     if (archiveInfo->file.openFlag)
     {
-      error = closeArchiveFile(archiveInfo,FALSE);
+      error = closeArchiveFile(archiveInfo);
       if (error != ERROR_NONE)
       {
         return error;
@@ -1052,7 +1114,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
     }
   }
 
-  // create new file if needed
+  // create new archive if needed
   if (!archiveInfo->file.openFlag)
   {
     error = createArchiveFile(archiveInfo);
@@ -1262,7 +1324,7 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
-      // create new part (if not already created)
+      // write header (if not already written)
       if (!archiveEntryInfo->file.headerWrittenFlag)
       {
         error = writeFileChunks(archiveEntryInfo);
@@ -1291,7 +1353,7 @@ assert(byteLength > 0L);
 
       if (byteLength > 0L)
       {
-        // create new part (if not already created)
+        // write header (if not already written)
         if (!archiveEntryInfo->file.headerWrittenFlag)
         {
           error = writeFileChunks(archiveEntryInfo);
@@ -1319,7 +1381,7 @@ assert(byteLength > 0L);
           }
         #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
-        // store block into chunk
+        // write data block
 //fprintf(stderr,"%s, %d: write %d\n",__FILE__,__LINE__,byteLength);
         error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
                                 archiveEntryInfo->file.byteBuffer,
@@ -1385,10 +1447,10 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                  blockCount*archiveEntryInfo->file.byteCompressInfo.blockLength,
 //                                 archiveEntryInfo->file.byteCompressInfo.blockLength,
                                  &byteLength
-                                 );
+                                );
 
-      // calculate min. bytes to write to archive
-      minBytes = (ulong)File_getSize(&archiveEntryInfo->file.tmpFileHandle)+byteLength;
+      // calculate min. bytes to tramsfer to archive
+      minBytes = (ulong)File_getSize(&archiveEntryInfo->file.intermediateFileHandle)+byteLength;
 
       // lock
       Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
@@ -1396,9 +1458,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // check if split is allowed and necessary
       newPartFlag =    allowNewPartFlag
                     && isNewPartNeeded(archiveEntryInfo->archiveInfo,
-                                       archiveEntryInfo->file.headerLength,
-                                       archiveEntryInfo->file.headerWrittenFlag,
-                                       minBytes
+                                       (!archiveEntryInfo->file.headerWrittenFlag ? archiveEntryInfo->file.headerLength : 0) + minBytes
                                       );
 
       // split
@@ -1407,7 +1467,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // write last compressed block (if any)
         if (byteLength > 0L)
         {
-          // create new part (if not already created)
+          // write header (if not already written)
           if (!archiveEntryInfo->file.headerWrittenFlag)
           {
             error = writeFileChunks(archiveEntryInfo);
@@ -1535,25 +1595,30 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
           return error;
         }
-
-        // transfer temporary data and close archive file
         assert(archiveEntryInfo->file.headerWrittenFlag);
 
-        // create archive file if needed
-        if (!archiveEntryInfo->archiveInfo->file.openFlag)
+        // find archive with enough space or create new
+
+        // create archive file
+        error = createArchiveFile(archiveEntryInfo->archiveInfo);
+        if (error != ERROR_NONE)
         {
-          error = createArchiveFile(archiveEntryInfo->archiveInfo);
-          if (error != ERROR_NONE)
-          {
-            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-            return error;
-          }
+          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+          return error;
         }
 
-        // transfer temporary data into archive
+        // transfer intermediate data into archive
         error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
-                                        &archiveEntryInfo->file.tmpFileHandle
+                                        &archiveEntryInfo->file.intermediateFileHandle
                                        );
+        if (error != ERROR_NONE)
+        {
+          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+          return error;
+        }
+
+        // close archive
+        error = closeArchiveFile(archiveEntryInfo->archiveInfo);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -1562,14 +1627,6 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         // mark header "not written"
         archiveEntryInfo->file.headerWrittenFlag = FALSE;
-
-        // close archive
-        error = closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
-        if (error != ERROR_NONE)
-        {
-          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-          return error;
-        }
 
         // store fragment offset, count for next fragment
         archiveEntryInfo->file.chunkFileData.fragmentOffset += archiveEntryInfo->file.chunkFileData.fragmentSize;
@@ -1590,6 +1647,9 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         Compress_reset(&archiveEntryInfo->file.byteCompressInfo);
         Crypt_reset(&archiveEntryInfo->file.cryptInfo,0);
 
+        // find next suitable archive part
+        findNextArchivePart(archiveEntryInfo->archiveInfo);
+
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
       }
@@ -1600,7 +1660,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         if (byteLength > 0L)
         {
-          // create new part (if not already created)
+          // write header (if not already written)
           if (!archiveEntryInfo->file.headerWrittenFlag)
           {
             error = writeFileChunks(archiveEntryInfo);
@@ -1628,7 +1688,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
             }
           #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
-          // write block to temporary file
+          // write data block
 //fprintf(stderr,"%s, %d: write %d\n",__FILE__,__LINE__,byteLength);
           error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
                                   archiveEntryInfo->file.byteBuffer,
@@ -1939,8 +1999,8 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                  &byteLength
                                 );
 
-      // calculate min. bytes to write to archive
-      minBytes = (ulong)File_getSize(&archiveEntryInfo->image.tmpFileHandle)+byteLength;
+      // calculate min. bytes to tramsfer to archive
+      minBytes = (ulong)File_getSize(&archiveEntryInfo->image.intermediateFileHandle)+byteLength;
 
       // lock
       Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
@@ -1948,9 +2008,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // check if split is allowed and necessary
       newPartFlag =    allowNewPartFlag
                     && isNewPartNeeded(archiveEntryInfo->archiveInfo,
-                                       archiveEntryInfo->image.headerLength,
-                                       archiveEntryInfo->image.headerWrittenFlag,
-                                       minBytes
+                                       (!archiveEntryInfo->image.headerWrittenFlag ? archiveEntryInfo->image.headerLength : 0) + minBytes
                                       );
 
       // split
@@ -2084,25 +2142,28 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
           return error;
         }
-
-        // transfer temporary data and close archive file
         assert(archiveEntryInfo->image.headerWrittenFlag);
 
-        // create archive file if needed
-        if (!archiveEntryInfo->archiveInfo->file.openFlag)
+        // create archive file
+        error = createArchiveFile(archiveEntryInfo->archiveInfo);
+        if (error != ERROR_NONE)
         {
-          error = createArchiveFile(archiveEntryInfo->archiveInfo);
-          if (error != ERROR_NONE)
-          {
-            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-            return error;
-          }
+          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+          return error;
         }
 
-        // transfer temporary data into archive
+        // transfer intermediate data into archive
         error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
-                                        &archiveEntryInfo->image.tmpFileHandle
+                                        &archiveEntryInfo->image.intermediateFileHandle
                                        );
+        if (error != ERROR_NONE)
+        {
+          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+          return error;
+        }
+
+        // close archive
+        error = closeArchiveFile(archiveEntryInfo->archiveInfo);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -2111,14 +2172,6 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         // mark header "not written"
         archiveEntryInfo->image.headerWrittenFlag = FALSE;
-
-        // close archive
-        error = closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
-        if (error != ERROR_NONE)
-        {
-          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-          return error;
-        }
 
         // store block offset, count for next fragment
         archiveEntryInfo->image.chunkImageData.blockOffset += archiveEntryInfo->image.chunkImageData.blockCount;
@@ -2149,10 +2202,14 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         if (byteLength > 0L)
         {
-          // create new part (if not already created)
+          // write header (if not already written)
           if (!archiveEntryInfo->image.headerWrittenFlag)
           {
-            writeImageChunks(archiveEntryInfo);
+            error = writeImageChunks(archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
           }
 
           // encrypt block
@@ -2523,8 +2580,8 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                  &byteLength
                                 );
 
-      // calculate min. bytes to write to archive
-      minBytes = (ulong)File_getSize(&archiveEntryInfo->hardLink.tmpFileHandle)+byteLength;
+      // calculate min. bytes to tramsfer to archive
+      minBytes = (ulong)File_getSize(&archiveEntryInfo->hardLink.intermediateFileHandle)+byteLength;
 
       // lock
       Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
@@ -2532,9 +2589,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // check if split is allowed and necessary
       newPartFlag =    allowNewPartFlag
                     && isNewPartNeeded(archiveEntryInfo->archiveInfo,
-                                       archiveEntryInfo->hardLink.headerLength,
-                                       archiveEntryInfo->hardLink.headerWrittenFlag,
-                                       minBytes
+                                       (!archiveEntryInfo->hardLink.headerWrittenFlag ? archiveEntryInfo->hardLink.headerLength : 0) + minBytes
                                       );
 
       // split
@@ -2667,25 +2722,28 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
           return error;
         }
-
-        // close archive file
         assert(archiveEntryInfo->hardLink.headerWrittenFlag);
 
-        // create archive file if needed
-        if (!archiveEntryInfo->archiveInfo->file.openFlag)
+        // create archive file
+        error = createArchiveFile(archiveEntryInfo->archiveInfo);
+        if (error != ERROR_NONE)
         {
-          error = createArchiveFile(archiveEntryInfo->archiveInfo);
-          if (error != ERROR_NONE)
-          {
-            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-            return error;
-          }
+          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+          return error;
         }
 
-        // transfer temporary data into archive
+        // transfer intermediate data into archive
         error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
-                                        &archiveEntryInfo->hardLink.tmpFileHandle
+                                        &archiveEntryInfo->hardLink.intermediateFileHandle
                                        );
+        if (error != ERROR_NONE)
+        {
+          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+          return error;
+        }
+
+        // close archive
+        error = closeArchiveFile(archiveEntryInfo->archiveInfo);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -2694,14 +2752,6 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         // mark header "not written"
         archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
-
-        // close archive
-        error = closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
-        if (error != ERROR_NONE)
-        {
-          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-          return error;
-        }
 
         // store fragment offset, count for next fragment
         archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset += archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
@@ -2732,10 +2782,14 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         if (byteLength > 0L)
         {
-          // create new part (if not already created)
+          // write header (if not already written)
           if (!archiveEntryInfo->hardLink.headerWrittenFlag)
           {
-            writeHardLinkChunks(archiveEntryInfo);
+            error = writeHardLinkChunks(archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
           }
 
           // encrypt block
@@ -2963,10 +3017,14 @@ const Password *Archive_appendDecryptPassword(const Password *password)
                         ConstString                     jobUUID,
                         ConstString                     scheduleUUID,
                         ArchiveTypes                    archiveType,
-                        ArchiveNewFunction              archiveNewFunction,
-                        void                            *archiveNewUserData,
-                        ArchiveCreatedFunction          archiveCreatedFunction,
-                        void                            *archiveCreatedUserData,
+                        ArchiveInitFunction             archiveInitFunction,
+                        void                            *archiveInitUserData,
+                        ArchiveDoneFunction             archiveDoneFunction,
+                        void                            *archiveDoneUserData,
+                        ArchiveGetSizeFunction          archiveGetSizeFunction,
+                        void                            *archiveGetSizeUserData,
+                        ArchiveStoreFunction            archiveStoreFunction,
+                        void                            *archiveStoreUserData,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData,
                         LogHandle                       *logHandle
@@ -2981,10 +3039,14 @@ const Password *Archive_appendDecryptPassword(const Password *password)
                           ConstString                     jobUUID,
                           ConstString                     scheduleUUID,
                           ArchiveTypes                    archiveType,
-                          ArchiveNewFunction              archiveNewFunction,
-                          void                            *archiveNewUserData,
-                          ArchiveCreatedFunction          archiveCreatedFunction,
-                          void                            *archiveCreatedUserData,
+                          ArchiveInitFunction             archiveInitFunction,
+                          void                            *archiveInitUserData,
+                          ArchiveDoneFunction             archiveDoneFunction,
+                          void                            *archiveDoneUserData,
+                          ArchiveGetSizeFunction          archiveGetSizeFunction,
+                          void                            *archiveGetSizeUserData,
+                          ArchiveStoreFunction            archiveStoreFunction,
+                          void                            *archiveStoreUserData,
                           ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                           void                            *archiveGetCryptPasswordUserData,
                           LogHandle                       *logHandle
@@ -2997,7 +3059,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   ulong        maxCryptKeyDataLength;
 
   assert(archiveInfo != NULL);
-  assert(archiveCreatedFunction != NULL);
+  assert(archiveStoreFunction != NULL);
   assert(jobOptions != NULL);
 
   // init variables
@@ -3020,10 +3082,14 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   // init archive info
   archiveInfo->deltaSourceList                 = deltaSourceList;
   archiveInfo->jobOptions                      = jobOptions;
-  archiveInfo->archiveNewFunction              = archiveNewFunction;
-  archiveInfo->archiveNewUserData              = archiveNewUserData;
-  archiveInfo->archiveCreatedFunction          = archiveCreatedFunction;
-  archiveInfo->archiveCreatedUserData          = archiveCreatedUserData;
+  archiveInfo->archiveInitFunction             = archiveInitFunction;
+  archiveInfo->archiveInitUserData             = archiveInitUserData;
+  archiveInfo->archiveDoneFunction             = archiveDoneFunction;
+  archiveInfo->archiveDoneUserData             = archiveDoneUserData;
+  archiveInfo->archiveGetSizeFunction          = archiveGetSizeFunction;
+  archiveInfo->archiveGetSizeUserData          = archiveGetSizeUserData;
+  archiveInfo->archiveStoreFunction            = archiveStoreFunction;
+  archiveInfo->archiveStoreUserData            = archiveStoreUserData;
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
   archiveInfo->logHandle                       = logHandle;
@@ -3038,7 +3104,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->ioType                          = ARCHIVE_IO_TYPE_FILE;
   archiveInfo->file.fileName                   = String_new();
   archiveInfo->file.openFlag                   = FALSE;
-  archiveInfo->printableName                   = NULL;
+  archiveInfo->printableStorageName            = NULL;
   Semaphore_init(& archiveInfo->chunkIOLock);
   archiveInfo->chunkIO                         = &CHUNK_IO_FILE;
   archiveInfo->chunkIOUserData                 = &archiveInfo->file.fileHandle;
@@ -3048,6 +3114,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->storageId                       = DATABASE_ID_NONE;
 
   archiveInfo->entries                         = 0LL;
+  archiveInfo->archiveFileSize                 = 0LL;
   archiveInfo->partNumber                      = 0;
 
   archiveInfo->pendingError                    = ERROR_NONE;
@@ -3165,10 +3232,10 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     }
   #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive create",archiveInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveInfo,sizeof(ArchiveInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive create",archiveInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveInfo,sizeof(ArchiveInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -3212,10 +3279,12 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   archiveInfo->deltaSourceList                 = deltaSourceList;
   archiveInfo->jobOptions                      = jobOptions;
-  archiveInfo->archiveNewFunction              = NULL;
-  archiveInfo->archiveNewUserData              = NULL;
-  archiveInfo->archiveCreatedFunction          = NULL;
-  archiveInfo->archiveCreatedUserData          = NULL;
+  archiveInfo->archiveInitFunction             = NULL;
+  archiveInfo->archiveInitUserData             = NULL;
+  archiveInfo->archiveDoneFunction             = NULL;
+  archiveInfo->archiveDoneUserData             = NULL;
+  archiveInfo->archiveStoreFunction            = NULL;
+  archiveInfo->archiveStoreUserData            = NULL;
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
   archiveInfo->logHandle                       = logHandle;
@@ -3230,16 +3299,17 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->ioType                          = ARCHIVE_IO_TYPE_STORAGE_FILE;
   Storage_duplicateSpecifier(&archiveInfo->storage.storageSpecifier,storageSpecifier);
   archiveInfo->storage.storageHandle           = storageHandle;
-  archiveInfo->printableName                   = String_duplicate(Storage_getPrintableName(storageSpecifier,fileName));
+  archiveInfo->printableStorageName            = String_duplicate(Storage_getPrintableName(storageSpecifier,fileName));
   Semaphore_init(&archiveInfo->chunkIOLock);
   archiveInfo->chunkIO                         = &CHUNK_IO_STORAGE_FILE;
-  archiveInfo->chunkIOUserData                 = storageHandle;
+  archiveInfo->chunkIOUserData                 = &archiveInfo->storage.storageArchiveHandle;
 
   archiveInfo->indexHandle                     = NULL;
   archiveInfo->entityId                        = DATABASE_ID_NONE;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
 
   archiveInfo->entries                         = 0LL;
+  archiveInfo->archiveFileSize                 = 0LL;
   archiveInfo->partNumber                      = 0;
 
   archiveInfo->pendingError                    = ERROR_NONE;
@@ -3249,16 +3319,19 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->interrupt.offset                = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->passwordLock,{ Semaphore_done(&archiveInfo->passwordLock); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->storage.storageSpecifier,{ Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier); });
-  AUTOFREE_ADD(&autoFreeList,archiveInfo->printableName,{ String_delete(archiveInfo->printableName); });
+  AUTOFREE_ADD(&autoFreeList,archiveInfo->printableStorageName,{ String_delete(archiveInfo->printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
 
-  error = Storage_open(archiveInfo->storage.storageHandle,fileName);
+  error = Storage_open(&archiveInfo->storage.storageArchiveHandle,
+                       archiveInfo->storage.storageHandle,
+                       fileName
+                      );
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storageHandle,{ Storage_close(archiveInfo->storage.storageHandle); });
+  AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storageHandle,{ Storage_close(&archiveInfo->storage.storageArchiveHandle); });
   DEBUG_TESTCODE("Archive_open2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // check if BAR archive file
@@ -3287,10 +3360,10 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // free resources
   AutoFree_done(&autoFreeList);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive open",archiveInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveInfo,sizeof(ArchiveInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive open",archiveInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveInfo,sizeof(ArchiveInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -3310,9 +3383,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   assert(archiveInfo != NULL);
 
   #ifndef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveInfo);
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveInfo,sizeof(ArchiveInfo));
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACE(archiveInfo);
+    DEBUG_REMOVE_RESOURCE_TRACE(archiveInfo,sizeof(ArchiveInfo));
   #endif /* NDEBUG */
 
   // init variables
@@ -3322,10 +3395,10 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      error = closeArchiveFile(archiveInfo,TRUE);
+      error = closeArchiveFile(archiveInfo);
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      Storage_close(archiveInfo->storage.storageHandle);
+      Storage_close(&archiveInfo->storage.storageArchiveHandle);
       error = ERROR_NONE;
       break;
     #ifndef NDEBUG
@@ -3346,7 +3419,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   Semaphore_done(&archiveInfo->chunkIOLock);
   if (archiveInfo->cryptPassword  != NULL) Password_delete(archiveInfo->cryptPassword);
-  if (archiveInfo->printableName != NULL) String_delete(archiveInfo->printableName);
+  String_delete(archiveInfo->printableStorageName);
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
@@ -3392,12 +3465,12 @@ Errors Archive_storageInterrupt(ArchiveInfo *archiveInfo)
       }
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      error = Storage_tell(archiveInfo->storage.storageHandle,&archiveInfo->interrupt.offset);
+      error = Storage_tell(&archiveInfo->storage.storageArchiveHandle,&archiveInfo->interrupt.offset);
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Storage_close(archiveInfo->storage.storageHandle);
+      Storage_close(&archiveInfo->storage.storageArchiveHandle);
       break;
     #ifndef NDEBUG
       default:
@@ -3438,12 +3511,15 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
       }
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      error = Storage_open(archiveInfo->storage.storageHandle,NULL);
+      error = Storage_open(&archiveInfo->storage.storageArchiveHandle,
+                           archiveInfo->storage.storageHandle,
+                           NULL  // archiveName
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      error = Storage_tell(archiveInfo->storage.storageHandle,&archiveInfo->interrupt.offset);
+      error = Storage_tell(&archiveInfo->storage.storageArchiveHandle,&archiveInfo->interrupt.offset);
       if (error != ERROR_NONE)
       {
         return error;
@@ -3596,7 +3672,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
               printWarning("Skipped unknown chunk '%s' (offset %llu) in '%s'. Switch to scan mode.\n",
                            Chunk_idToString(chunkHeader.id),
                            chunkHeader.offset,
-                           String_cString(archiveInfo->printableName)
+                           String_cString(archiveInfo->printableStorageName)
                           );
             }
 
@@ -3617,7 +3693,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
           printWarning("Skipped unknown chunk '%s' (offset %llu) in '%s'. Switch to scan mode.\n",
                        Chunk_idToString(chunkHeader.id),
                        chunkHeader.offset,
-                       String_cString(archiveInfo->printableName)
+                       String_cString(archiveInfo->printableStorageName)
                       );
           return FALSE;
         }
@@ -3701,15 +3777,15 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveEntryInfo->file.deltaBuffer               = NULL;
   archiveEntryInfo->file.deltaBufferSize           = 0L;
 
-  // get temporary output file
-  error = File_getTmpFile(&archiveEntryInfo->file.tmpFileHandle,NULL,tmpDirectory);
+  // get intermediate output file
+  error = File_getTmpFile(&archiveEntryInfo->file.intermediateFileHandle,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry1") { (void)File_close(&archiveEntryInfo->file.tmpFileHandle); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.tmpFileHandle,{ (void)File_close(&archiveEntryInfo->file.tmpFileHandle); });
+  DEBUG_TESTCODE("Archive_newFileEntry1") { (void)File_close(&archiveEntryInfo->file.intermediateFileHandle); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.intermediateFileHandle,{ (void)File_close(&archiveEntryInfo->file.intermediateFileHandle); });
 
   // allocate buffers
   archiveEntryInfo->file.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -3763,7 +3839,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   error = Chunk_init(&archiveEntryInfo->file.chunkFile.info,
                      NULL,  // parentChunkInfo
                      &CHUNK_IO_FILE,
-                     &archiveEntryInfo->file.tmpFileHandle,
+                     &archiveEntryInfo->file.intermediateFileHandle,
                      CHUNK_ID_FILE,
                      CHUNK_DEFINITION_FILE,
                      0,  // alignment
@@ -3986,9 +4062,12 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                                         );
   }
 
+  // find next suitable archive part
+  findNextArchivePart(archiveEntryInfo->archiveInfo);
+
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
-    // create new part
+    // write header
     error = writeFileChunks(archiveEntryInfo);
     if (error != ERROR_NONE)
     {
@@ -3997,13 +4076,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     }
   }
 
+
   // done resources
   AutoFree_done(&autoFreeList);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive file entry",archiveEntryInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive file entry",archiveEntryInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -4076,15 +4156,15 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveEntryInfo->image.deltaBuffer            = NULL;
   archiveEntryInfo->image.deltaBufferSize        = 0L;
 
-  // get temporary output file
-  error = File_getTmpFile(&archiveEntryInfo->image.tmpFileHandle,NULL,tmpDirectory);
+  // get intermediate output file
+  error = File_getTmpFile(&archiveEntryInfo->image.intermediateFileHandle,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newImageEntry1") { (void)File_close(&archiveEntryInfo->image.tmpFileHandle); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.tmpFileHandle,{ (void)File_close(&archiveEntryInfo->image.tmpFileHandle); });
+  DEBUG_TESTCODE("Archive_newImageEntry1") { (void)File_close(&archiveEntryInfo->image.intermediateFileHandle); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.intermediateFileHandle,{ (void)File_close(&archiveEntryInfo->image.intermediateFileHandle); });
 
   // allocate buffers
   archiveEntryInfo->image.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -4140,7 +4220,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   error = Chunk_init(&archiveEntryInfo->image.chunkImage.info,
                      NULL,  // parentChunkInfo
                      &CHUNK_IO_FILE,
-                     &archiveEntryInfo->image.tmpFileHandle,
+                     &archiveEntryInfo->image.intermediateFileHandle,
                      CHUNK_ID_IMAGE,
                      CHUNK_DEFINITION_IMAGE,
                      0,  // alignment
@@ -4319,9 +4399,12 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                                          );
   }
 
+  // find next suitable archive part
+  findNextArchivePart(archiveEntryInfo->archiveInfo);
+
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
-    // create new part
+    // write header
     error = writeImageChunks(archiveEntryInfo);
     if (error != ERROR_NONE)
     {
@@ -4330,13 +4413,16 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     }
   }
 
+  // find next suitable archive part
+  findNextArchivePart(archiveEntryInfo->archiveInfo);
+
   // done resources
   AutoFree_done(&autoFreeList);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive image entry",archiveEntryInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive image entry",archiveEntryInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -4488,6 +4574,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                  );
   }
 
+  // find next suitable archive part
+  findNextArchivePart(archiveEntryInfo->archiveInfo);
+
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
     // lock archive
@@ -4551,10 +4640,10 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // done resources
   AutoFree_done(&autoFreeList);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive directory entry",archiveEntryInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive directory entry",archiveEntryInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -4709,6 +4798,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                  );
   }
 
+
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
     // lock archive
@@ -4772,10 +4862,10 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // done resources
   AutoFree_done(&autoFreeList);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive link entry",archiveEntryInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive link entry",archiveEntryInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -4851,14 +4941,15 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveEntryInfo->hardLink.deltaBuffer               = NULL;
   archiveEntryInfo->hardLink.deltaBufferSize           = 0L;
 
-  // get temporary output file
-  error = File_getTmpFile(&archiveEntryInfo->hardLink.tmpFileHandle,NULL,tmpDirectory);
+  // get intermediate output file
+  error = File_getTmpFile(&archiveEntryInfo->hardLink.intermediateFileHandle,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry14") { (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE("Archive_newFileEntry14") { (void)File_close(&archiveEntryInfo->hardLink.intermediateFileHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.intermediateFileHandle,{ (void)File_close(&archiveEntryInfo->hardLink.intermediateFileHandle); });
 
   // allocate buffers
   archiveEntryInfo->hardLink.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -4916,7 +5007,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLink.info,
                      NULL,  // parentChunkInfo
                      &CHUNK_IO_FILE,
-                     &archiveEntryInfo->hardLink.tmpFileHandle,
+                     &archiveEntryInfo->hardLink.intermediateFileHandle,
                      CHUNK_ID_HARDLINK,
                      CHUNK_DEFINITION_HARDLINK,
                      0,  // alignment
@@ -5163,6 +5254,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                                             );
   }
 
+  // find next suitable archive part
+  findNextArchivePart(archiveEntryInfo->archiveInfo);
+
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
     // create new part
@@ -5177,10 +5271,10 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // done resources
   AutoFree_done(&autoFreeList);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive hardlink entry",archiveEntryInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive hardlink entry",archiveEntryInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -5335,6 +5429,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                  );
   }
 
+  // find next suitable archive part
+  findNextArchivePart(archiveEntryInfo->archiveInfo);
+
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
     // lock archive
@@ -5398,10 +5495,10 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   // done resources
   AutoFree_done(&autoFreeList);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive special entry",archiveEntryInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive special entry",archiveEntryInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -5539,7 +5636,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
               printWarning("Skipped unknown chunk '%s' (offset %llu) in '%s'. Switch to scan mode.\n",
                            Chunk_idToString(chunkHeader.id),
                            chunkHeader.offset,
-                           String_cString(archiveInfo->printableName)
+                           String_cString(archiveInfo->printableStorageName)
                           );
             }
 
@@ -6113,7 +6210,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               printWarning("Skipped unknown sub-chunk '%s' (offset %llu) in '%s'.\n",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
-                           String_cString(archiveInfo->printableName)
+                           String_cString(archiveInfo->printableStorageName)
                           );
             }
             error = Chunk_skipSub(&archiveEntryInfo->file.chunkFile.info,&subChunkHeader);
@@ -6196,10 +6293,10 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   AutoFree_done(&autoFreeList2);
   AutoFree_done(&autoFreeList1);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive file entry",archiveEntryInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive file entry",archiveEntryInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -6625,7 +6722,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               printWarning("Skipped unknown sub-chunk '%s' (offset %llu) in '%s'.\n",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
-                           String_cString(archiveInfo->printableName)
+                           String_cString(archiveInfo->printableStorageName)
                           );
             }
             error = Chunk_skipSub(&archiveEntryInfo->image.chunkImage.info,&subChunkHeader);
@@ -6708,10 +6805,10 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   AutoFree_done(&autoFreeList2);
   AutoFree_done(&autoFreeList1);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive image entry",archiveEntryInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive image entry",archiveEntryInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -7026,7 +7123,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               printWarning("Skipped unknown sub-chunk '%s' (offset %llu).\n",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
-                           String_cString(archiveInfo->printableName)
+                           String_cString(archiveInfo->printableStorageName)
                           );
             }
             error = Chunk_skipSub(&archiveEntryInfo->directory.chunkDirectory.info,&subChunkHeader);
@@ -7090,10 +7187,10 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   AutoFree_done(&autoFreeList2);
   AutoFree_done(&autoFreeList1);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive directory entry",archiveEntryInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive directory entry",archiveEntryInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -7414,7 +7511,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               printWarning("Skipped unknown sub-chunk '%s' (offset %llu).\n",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
-                           String_cString(archiveInfo->printableName)
+                           String_cString(archiveInfo->printableStorageName)
                           );
             }
             error = Chunk_skipSub(&archiveEntryInfo->link.chunkLink.info,&subChunkHeader);
@@ -7478,10 +7575,10 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   AutoFree_done(&autoFreeList2);
   AutoFree_done(&autoFreeList1);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive link entry",archiveEntryInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive link entry",archiveEntryInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -8024,7 +8121,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               printWarning("Skipped unknown sub-chunk '%s' (offset %llu).\n",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
-                           String_cString(archiveInfo->printableName)
+                           String_cString(archiveInfo->printableStorageName)
                           );
             }
             error = Chunk_skipSub(&archiveEntryInfo->hardLink.chunkHardLink.info,&subChunkHeader);
@@ -8107,10 +8204,10 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   AutoFree_done(&autoFreeList2);
   AutoFree_done(&autoFreeList1);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive hardlink entry",archiveEntryInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive hardlink entry",archiveEntryInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -8431,7 +8528,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               printWarning("Skipped unknown sub-chunk '%s' (offset %llu).\n",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
-                           String_cString(archiveInfo->printableName)
+                           String_cString(archiveInfo->printableStorageName)
                           );
             }
             error = Chunk_skipSub(&archiveEntryInfo->special.chunkSpecial.info,&subChunkHeader);
@@ -8495,10 +8592,10 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   AutoFree_done(&autoFreeList2);
   AutoFree_done(&autoFreeList1);
 
-  #ifndef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"archive special entry",archiveEntryInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACE("archive special entry",archiveEntryInfo);
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -8523,9 +8620,9 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   assert(archiveEntryInfo->archiveInfo->jobOptions != NULL);
 
   #ifndef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo);
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACE(archiveEntryInfo);
+    DEBUG_REMOVE_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
   #endif /* NDEBUG */
 
   error = ERROR_NONE;
@@ -8606,7 +8703,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               }
 
-              // append to archive
+              // transfer to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file if needed
@@ -8621,9 +8718,9 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                   }
                 }
 
-                // transfer temporary data
+                // transfer intermediate data into archive
                 tmpError = transferArchiveFileData(archiveEntryInfo->archiveInfo,
-                                                   &archiveEntryInfo->file.tmpFileHandle
+                                                   &archiveEntryInfo->file.intermediateFileHandle
                                                   );
                 if (tmpError != ERROR_NONE)
                 {
@@ -8683,7 +8780,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             free(archiveEntryInfo->file.deltaBuffer);
             free(archiveEntryInfo->file.byteBuffer);
 
-            (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+            (void)File_close(&archiveEntryInfo->file.intermediateFileHandle);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
@@ -8760,7 +8857,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               }
 
-              // append to archive
+              // transfer to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file if needed
@@ -8775,9 +8872,9 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                   }
                 }
 
-                // transfer temporary data
+                // transfer intermediate data into archive
                 tmpError = transferArchiveFileData(archiveEntryInfo->archiveInfo,
-                                                   &archiveEntryInfo->image.tmpFileHandle
+                                                   &archiveEntryInfo->image.intermediateFileHandle
                                                   );
                 if (tmpError != ERROR_NONE)
                 {
@@ -8831,7 +8928,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             free(archiveEntryInfo->image.deltaBuffer);
             free(archiveEntryInfo->image.byteBuffer);
 
-            File_close(&archiveEntryInfo->image.tmpFileHandle);
+            File_close(&archiveEntryInfo->image.intermediateFileHandle);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
@@ -8998,7 +9095,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               }
 
-              // append to archive
+              // transfer to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file if needed
@@ -9013,9 +9110,9 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                   }
                 }
 
-                // transfer data
+                // transfer intermediate data into archive
                 tmpError = transferArchiveFileData(archiveEntryInfo->archiveInfo,
-                                                   &archiveEntryInfo->hardLink.tmpFileHandle
+                                                   &archiveEntryInfo->hardLink.intermediateFileHandle
                                                   );
                 if (tmpError != ERROR_NONE)
                 {
@@ -9081,7 +9178,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             free(archiveEntryInfo->hardLink.deltaBuffer);
             free(archiveEntryInfo->hardLink.byteBuffer);
 
-            (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
+            (void)File_close(&archiveEntryInfo->hardLink.intermediateFileHandle);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
@@ -10920,9 +11017,9 @@ Errors Archive_copy(ConstString                     storageName,
   error = Archive_create(&destinationArchiveInfo,
 //                        DeltaSourceList                 *deltaSourceList,
                          jobOptions,
-archiveInfo->archiveNewFunction              = NULL;
-archiveInfo->archiveNewUserData              = NULL;
-                         ArchiveCreatedFunction          archiveCreatedFunction,
+archiveInfo->archiveInitFunction              = NULL;
+archiveInfo->archiveInitUserData              = NULL;
+                         archiveStoreFunction          archiveStoreFunction,
                          void                            *archiveNewFileUserData,
                          CALLBACK(NULL,NULL)
                          NULL, // indexHandle

@@ -64,52 +64,95 @@ typedef enum
   ARCHIVE_ENTRY_TYPE_UNKNOWN
 } ArchiveEntryTypes;
 
-/******************************************************************** ***\
-* Name   : ArchiveNewFunction
-* Purpose: call back when archive file is created/written
-* Input  : userData    - user data
-*          indexHandle - index handle or NULL if no index
-*          entityId    - database id of entity
-*          storageId   - database id of storage
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-typedef Errors(*ArchiveNewFunction)(void        *userData,
-                                    IndexHandle *indexHandle,
-                                    DatabaseId  entityId,
-                                    DatabaseId  storageId
-                                   );
-
 /***********************************************************************\
-* Name   : ArchiveCreatedFunction
-* Purpose: call back when archive file is created/written
+* Name   : ArchiveInitFunction
+* Purpose: call back before store archive file
 * Input  : userData     - user data
 *          indexHandle  - index handle or NULL if no index
 *          entityId     - database id of entity
 *          storageId    - database id of storage
-*          fileName     - archive file name
-*          entries      - number of entries
-*          size         - size of archive [bytes]
-*          partNumber   - part number or -1 if no parts
-*          lastPartFlag - TRUE iff last archive part, FALSE
-*                         otherwise
+*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
+*                         single part
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveCreatedFunction)(void        *userData,
+typedef Errors(*ArchiveInitFunction)(void        *userData,
+                                     IndexHandle *indexHandle,
+                                     DatabaseId  entityId,
+                                     DatabaseId  storageId,
+                                     int         partNumber
+                                    );
+
+/***********************************************************************\
+* Name   : ArchiveDoneFunction
+* Purpose: call back after store archive file
+* Input  : userData     - user data
+*          indexHandle  - index handle or NULL if no index
+*          entityId     - database id of entity
+*          storageId    - database id of storage
+*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
+*                         single part
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+typedef Errors(*ArchiveDoneFunction)(void        *userData,
+                                     IndexHandle *indexHandle,
+                                     DatabaseId  entityId,
+                                     DatabaseId  storageId,
+                                     int         partNumber
+                                    );
+
+/******************************************************************** ***\
+* Name   : ArchiveGetSizeFunction
+* Purpose: call back to get size of archive file
+* Input  : userData     - user data
+*          indexHandle  - index handle or NULL if no index
+*          entityId     - database id of entity
+*          storageId    - database id of storage
+*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
+*                         single part
+* Output : -
+* Return : archive size or 0 if not exist
+* Notes  : -
+\***********************************************************************/
+
+typedef uint64(*ArchiveGetSizeFunction)(void        *userData,
                                         IndexHandle *indexHandle,
                                         DatabaseId  entityId,
                                         DatabaseId  storageId,
-                                        String      fileName,
-                                        uint64      entries,
-                                        uint64      size,
-                                        int         partNumber,
-                                        bool        lastPartFlag
+                                        int         partNumber
                                        );
+
+/***********************************************************************\
+* Name   : ArchiveStoreFunction
+* Purpose: call back to store archive
+* Input  : userData     - user data
+*          indexHandle  - index handle or NULL if no index
+*          entityId     - database id of entity
+*          storageId    - database id of storage
+*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
+*                         single part
+*          fileName     - archive file name
+*          entries      - number of entries
+*          size         - size of archive [bytes]
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+typedef Errors(*ArchiveStoreFunction)(void        *userData,
+                                      IndexHandle *indexHandle,
+                                      DatabaseId  entityId,
+                                      DatabaseId  storageId,
+                                      int         partNumber,
+                                      String      fileName,
+                                      uint64      entries,
+                                      uint64      size
+                                     );
 
 /***********************************************************************\
 * Name   : ArchiveGetCryptPasswordFunction
@@ -139,10 +182,14 @@ typedef struct
 {
   DeltaSourceList                 *deltaSourceList;                    // list with delta sources
   const JobOptions                *jobOptions;
-  ArchiveNewFunction              archiveNewFunction;                  // call back for new archive file
-  void                            *archiveNewUserData;                 // user data for call back for new archive file
-  ArchiveCreatedFunction          archiveCreatedFunction;              // call back for created archive file
-  void                            *archiveCreatedUserData;             // user data for call back for created archive file
+  ArchiveInitFunction             archiveInitFunction;                 // call back to initialize archive file
+  void                            *archiveInitUserData;                // user data for call back to initialize archive file
+  ArchiveDoneFunction             archiveDoneFunction;                 // call back to deinitialize archive file
+  void                            *archiveDoneUserData;                // user data for call back to deinitialize archive file
+  ArchiveGetSizeFunction          archiveGetSizeFunction;              // call back to get archive size
+  void                            *archiveGetSizeUserData;             // user data for call back to get archive size
+  ArchiveStoreFunction            archiveStoreFunction;                // call back to store data info archive file
+  void                            *archiveStoreUserData;               // user data for call back to store data info archive file
   ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;     // call back to get crypt password
   void                            *archiveGetCryptPasswordUserData;    // user data for call back to get crypt password
   LogHandle                       *logHandle;                          // log handle
@@ -160,21 +207,24 @@ typedef struct
   ArchiveIOTypes                  ioType;                              // i/o type
   union
   {
+    // local file
     struct
     {
+      String                      appendFileName;
       String                      fileName;                            // file name
       FileHandle                  fileHandle;                          // file handle
       bool                        openFlag;                            // TRUE iff archive file is open
     } file;
+    // local or remote storage
     struct
     {
       StorageSpecifier            storageSpecifier;                    // storage specifier structure
-      String                      storageFileName;                     // storage file name
+      String                      storageFileName;                     // storage storage name
       StorageHandle               *storageHandle;                      // storage handle
+      StorageArchiveHandle        storageArchiveHandle;
     } storage;
   };
-  String                          printableName;                       // printable file/storage name (without password) or NULL
-  String                          uuid;                                // unique id to store
+  String                          printableStorageName;                // printable storage name
   Semaphore                       chunkIOLock;                         // chunk i/o functions lock
   const ChunkIO                   *chunkIO;                            // chunk i/o functions
   void                            *chunkIOUserData;                    // chunk i/o functions data
@@ -184,7 +234,8 @@ typedef struct
   DatabaseId                      storageId;                           // database id of storage
 
   uint64                          entries;                             // number of entries
-  uint                            partNumber;                          // file part number
+  uint64                          archiveFileSize;                     // size of current archive file part
+  uint                            partNumber;                          // current archive part number
 
   Errors                          pendingError;                        // pending error or ERROR_NONE
   bool                            nextChunkHeaderReadFlag;             // TRUE iff next chunk header read
@@ -242,7 +293,7 @@ typedef struct ArchiveEntryInfo
       uint                            headerLength;                    // length of header
       bool                            headerWrittenFlag;               // TRUE iff header written
 
-      FileHandle                      tmpFileHandle;                   // temporary file handle
+      FileHandle                      intermediateFileHandle;          // file handle for intermediate entry data
       byte                            *byteBuffer;                     // buffer for processing byte data
       ulong                           byteBufferSize;                  // size of byte buffer
       byte                            *deltaBuffer;                    // buffer for processing delta data
@@ -272,7 +323,7 @@ typedef struct ArchiveEntryInfo
       uint                            headerLength;                    // length of header
       bool                            headerWrittenFlag;               // TRUE iff header written
 
-      FileHandle                      tmpFileHandle;                   // temporary file handle
+      FileHandle                      intermediateFileHandle;          // file handle for intermediate entry data
       byte                            *byteBuffer;                     // buffer for processing byte data
       ulong                           byteBufferSize;                  // size of byte buffer
       byte                            *deltaBuffer;                    // buffer for processing delta data
@@ -317,7 +368,7 @@ typedef struct ArchiveEntryInfo
       uint                            headerLength;                    // length of header
       bool                            headerWrittenFlag;               // TRUE iff header written
 
-      FileHandle                      tmpFileHandle;                   // temporary file handle
+      FileHandle                      intermediateFileHandle;          // file handle for intermediate entry data
       byte                            *byteBuffer;                     // buffer for processing byte data
       ulong                           byteBufferSize;                  // size of byte buffer
       byte                            *deltaBuffer;                    // buffer for processing delta data
@@ -451,12 +502,15 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 *          scheduleUUID                    - unique schedule id or NULL
 *          archiveType                     - archive type
 *          jobOptions                      - job option settings
-*          archiveNewFunction              - call back for new archive
-*                                            file
-*          archiveNewUserData              - user data for call back
-*          archiveCreatedFunction          - call back for created
+*          archiveInitFunction             - call back to initialize
 *                                            archive file
-*          archiveCreatedUserData          - user data for call back
+*          archiveInitUserData             - user data for call back
+*          archiveDoneFunction             - call back to deinitialize
+*                                            archive file
+*          archiveDoneUserData             - user data for call back
+*          archiveStoreFunction            - call back to store archive
+*                                            file
+*          archiveStoreUserData            - user data for call back
 *          archiveGetCryptPasswordFunction - get password call back (can
 *                                            be NULL)
 *          archiveGetCryptPasswordData     - user data for get password
@@ -475,10 +529,14 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                         ConstString                     jobUUID,
                         ConstString                     scheduleUUID,
                         ArchiveTypes                    archiveType,
-                        ArchiveNewFunction              archiveNewFunction,
-                        void                            *archiveNewUserData,
-                        ArchiveCreatedFunction          archiveCreatedFunction,
-                        void                            *archiveCreatedUserData,
+                        ArchiveInitFunction             archiveInitFunction,
+                        void                            *archiveInitUserData,
+                        ArchiveDoneFunction             archiveDoneFunction,
+                        void                            *archiveDoneUserData,
+                        ArchiveGetSizeFunction          archiveGetSizeFunction,
+                        void                            *archiveGetSizeUserData,
+                        ArchiveStoreFunction            archiveStoreFunction,
+                        void                            *archiveStoreUserData,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData,
                         LogHandle                       *logHandle
@@ -493,10 +551,14 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                           ConstString                     jobUUID,
                           ConstString                     scheduleUUID,
                           ArchiveTypes                    archiveType,
-                          ArchiveNewFunction              archiveNewFunction,
-                          void                            *archiveNewUserData,
-                          ArchiveCreatedFunction          archiveCreatedFunction,
-                          void                            *archiveCreatedUserData,
+                          ArchiveInitFunction             archiveInitFunction,
+                          void                            *archiveInitUserData,
+                          ArchiveDoneFunction             archiveDoneFunction,
+                          void                            *archiveDoneUserData,
+                          ArchiveGetSizeFunction          archiveGetSizeFunction,
+                          void                            *archiveGetSizeUserData,
+                          ArchiveStoreFunction            archiveStoreFunction,
+                          void                            *archiveStoreUserData,
                           ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                           void                            *archiveGetCryptPasswordUserData,
                           LogHandle                       *logHandle
@@ -1235,7 +1297,7 @@ Errors Archive_seek(ArchiveInfo *archiveInfo,
 
 /***********************************************************************\
 * Name   : Archive_getEntries
-* Purpose: get number of entries in archive file
+* Purpose: get number of entries stored into archive file
 * Input  : archiveInfo - archive info data
 * Output : -
 * Return : number of entries
