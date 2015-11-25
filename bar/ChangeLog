@@ -1,3 +1,85 @@
+2015-10-?? 0.20
+  * TLS port is now optional: if possible as SSL protected
+    connection is establed via the standard plain port, too.
+  * added option --archive-file-mode: stop, append or
+    override; removed configurationm option
+    overwrite-archive-files (deprecated)
+  * BARControl: file requester with remote file list
+    local file requester with CTRL+click
+  * added option --archive-file-mode=<mode>
+  * BARControl: added support to connect to different servers;
+    added connect menu
+  * BARControl: added unit TByte/TB
+  * added option --log-format for log date format, standard
+    log date format is now YYYY-MM-DD hh:mm:ss
+
+2015-11-22 0.19b
+  * fixed reading job files with none-LF at end
+  * try to delete temporary directory also on Ctrl-C or
+    a crash
+  * fixed index auto-update: search for .bar files in
+    directory and all sub-directories
+  * BARControl: fixed possible null-pointer-exception
+    on Windows
+  * BARControl: fixed layout buttons
+  * BARControl: fixed translation
+  * BARControl: fixed multi language support (language files
+    were missing in distribution)
+  * fixed scanning for .bar-archives: scan in sub-directories,
+    too
+  * BARControl: fixed typing error in help
+  * BARControl: fixed null-pointer-exception when delete
+    entity in restore tab
+  * fixed init scripts
+
+2015-10-31 0.19a
+  * changed upgrade database: do not lock database
+  * added support to output stacktraces! Press Ctrl-\
+    or send signal SIGQUIT to BAR
+  * improved error handling in database
+  * always unmount mounted device if init storage fail
+  * fixed typing error in scp protocol init
+  * fixed init SSH default password
+  * fixed some compilation errors when packages are
+    disabled
+  * added barserver.service for systemd
+  * fixed init.d-start script for Fedora
+  * fixed install init-scripts
+  * fixed --quiet option
+  * upgraded libgpg-error to 1.20: fixed problem with
+    pre-processor and newer gcc versions
+  * upgraded libgcrypt to 1.6.4: fixed problem with
+    pre-processor and newer gcc versions
+  * improved error message when ssh login fail
+  * fixed possible dead-lock in server when file
+    .nobackup cannot be created
+  * improved error message when SSL authentification
+    fail
+  * fixed compiling ring buffer when no backtrace()
+    function is available
+  * removed wrong assert in server.c
+  * fixed compiling without ulong
+  * fixed unintialized data with unknown job UUIDs
+  * fixed unintialized data in database access
+  * BARControl: fixed number format exception when BAR
+    and BARControl use different locales
+  * fixed memory corruption when stringmaps are
+    enlarged
+  * fixed error message for wrong double config values
+  * fixed exitcode list archives
+  * fixed possible deadlock in server when started as
+    a daemon
+  * fixed possible crash when index database could not
+    be opened or is created
+  * BARControl: fixed output of --list
+  * fixed possible crash when decompress broken archive
+    compressed with LZO
+  * upgraded LZO to 2.09
+  * use LZO safe-decompress, fixed valgrind warning
+  * disabled test Serpient for CentOS 5: do not use!
+    Probably bug in gcc 4.1 together with -O2; solved
+    in newer versions of gcc.
+
 2015-05-01 0.19
   * added LZO compression
   * added LZ4 compression
