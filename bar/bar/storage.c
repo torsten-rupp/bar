@@ -2500,16 +2500,21 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return error;
 }
 
-Errors Storage_pruneDirectories(StorageHandle *storageHandle)
+Errors Storage_pruneDirectories(StorageHandle *storageHandle, ConstString archiveName)
 {
   String                     name;
   bool                       isEmpty;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
 
-#warning TODO
-String archiveName=NULL;
-  // delete empty directories
+  // get archive name
+  if (archiveName == NULL) archiveName = storageHandle->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(archiveName));
+
   name = File_getFilePathName(String_new(),archiveName);
   do
   {
@@ -2658,15 +2663,15 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
 
-  #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && (!defined(HAVE_CURL) || !defined(HAVE_MXML))
-    UNUSED_VARIABLE(serverConnectionPriority);
-  #endif
+  // get archive name
+  if (archiveName == NULL) archiveName = storageDirectoryListHandle->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
 
   // initialize variables
   Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
-
-  // get archive name
-  if (archiveName == NULL) archiveName = storageDirectoryListHandle->storageSpecifier.archiveName;
 
   // open directory listing
   error = ERROR_UNKNOWN;
@@ -2719,12 +2724,16 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
     return error;
   }
 
+  DEBUG_ADD_RESOURCE_TRACE(storageDirectoryListHandle,sizeof(StorageDirectoryListHandle));
+
   return ERROR_NONE;
 }
 
 void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
   assert(storageDirectoryListHandle != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(storageDirectoryListHandle,sizeof(StorageDirectoryListHandle));
 
   switch (storageDirectoryListHandle->type)
   {
@@ -2773,6 +2782,7 @@ bool Storage_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryList
   bool endOfDirectoryFlag;
 
   assert(storageDirectoryListHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageDirectoryListHandle);
 
   endOfDirectoryFlag = TRUE;
   switch (storageDirectoryListHandle->type)
@@ -2826,6 +2836,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   Errors error;
 
   assert(storageDirectoryListHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageDirectoryListHandle);
 
   error = ERROR_NONE;
   switch (storageDirectoryListHandle->type)

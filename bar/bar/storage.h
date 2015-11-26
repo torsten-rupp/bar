@@ -192,8 +192,6 @@ typedef struct
 // storage handle
 typedef struct
 {
-#warning remove: trace resource problem storageSpecifier,storagehandle haben gleiche adrese
-int x;
   StorageSpecifier             storageSpecifier;           // storage specifier data
   const JobOptions             *jobOptions;
 
@@ -363,8 +361,6 @@ int x;
 // storage handle
 typedef struct
 {
-#warning remove: trace resource problem storageSpecifier,storagehandle haben gleiche adrese
-int x;
   StorageHandle                *storageHandle;
   StorageModes                 mode;                       // storage mode: READ, WRITE
   String                       archiveName;                // archive name
@@ -534,6 +530,7 @@ int x;
 // directory list handle
 typedef struct
 {
+//int x;
   StorageSpecifier storageSpecifier;                       // storage specifier data
 
   StorageTypes type;
@@ -1312,7 +1309,17 @@ uint64 Storage_getSize(StorageArchiveHandle *storageHandle);
 
 Errors Storage_delete(StorageHandle *storageHandle, ConstString archiveName);
 
-Errors Storage_pruneDirectories(StorageHandle *storageHandle);
+/***********************************************************************\
+* Name   : Storage_pruneDirectories
+* Purpose: delete empty directories in path
+* Input  : storageHandle - storage handle
+*          archiveName   - archive file name (can be NULL)
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_pruneDirectories(StorageHandle *storageHandle, ConstString archiveName);
 
 #if 0
 still not complete
