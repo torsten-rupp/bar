@@ -430,9 +430,10 @@ void debugAddResourceTrace(const char *__fileName__,
     }
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG WARNING: multiple init of resource '%s' %p at %s, %u which was previously initialized at %s, %ld!\n",
+      fprintf(stderr,"DEBUG WARNING: multiple init of resource '%s' %p (%d bytes) at %s, %u which was previously initialized at %s, %ld!\n",
               typeName,
               resource,
+              size,
               __fileName__,
               __lineNb__,
               debugResourceNode->allocFileName,
@@ -446,7 +447,7 @@ void debugAddResourceTrace(const char *__fileName__,
 
     // find resource in free-list; reuse or allocate new debug node
     debugResourceNode = debugResourceFreeList.head;
-    while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
+    while ((debugResourceNode != NULL) && ((debugResourceNode->resource != resource) || (debugResourceNode->size != size)))
     {
       debugResourceNode = debugResourceNode->next;
     }
@@ -504,9 +505,10 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG ERROR: multiple free of resource '%s' %p at %s, %u and previously at %s, %lu which was allocated at %s, %ld!\n",
+      fprintf(stderr,"DEBUG ERROR: multiple free of resource '%s' %p (%d bytes) at %s, %u and previously at %s, %lu which was allocated at %s, %ld!\n",
               debugResourceNode->typeName,
               debugResourceNode->resource,
+              debugResourceNode->size,
               __fileName__,
               __lineNb__,
               debugResourceNode->freeFileName,
@@ -523,9 +525,9 @@ void debugRemoveResourceTrace(const char *__fileName__,
       HALT_INTERNAL_ERROR("remove resource trace fail");
     }
 
-    // remove resource from allocated list, add resource to free-list, shorten list
+    // remove resource from allocated list, add resource to free-list, shorten free-list
     debugResourceNode = debugResourceAllocList.head;
-    while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
+    while ((debugResourceNode != NULL) && ((debugResourceNode->resource != resource) || (debugResourceNode->size != size)))
     {
       debugResourceNode = debugResourceNode->next;
     }
@@ -551,8 +553,9 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
     else
     {
-      fprintf(stderr,"DEBUG ERROR: resource '%p' not found in debug list at %s, line %u\n",
+      fprintf(stderr,"DEBUG ERROR: resource '%p' (%d bytes) not found in debug list at %s, line %u\n",
               resource,
+              size,
               __fileName__,
               __lineNb__
              );
@@ -592,9 +595,10 @@ void debugCheckResourceTrace(const char *__fileName__,
       }
       if (debugResourceNode != NULL)
       {
-        fprintf(stderr,"DEBUG ERROR: resource '%s' %p invalid at %s, %u which was allocated at %s, %ld and freed at %s, %ld!\n",
+        fprintf(stderr,"DEBUG ERROR: resource '%s' %p (%d bytes) invalid at %s, %u which was allocated at %s, %ld and freed at %s, %ld!\n",
                 debugResourceNode->typeName,
                 debugResourceNode->resource,
+                debugResourceNode->size,
                 __fileName__,
                 __lineNb__,
                 debugResourceNode->allocFileName,
@@ -650,9 +654,10 @@ void debugResourceDumpInfo(FILE *handle)
   {
     LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
     {
-      fprintf(handle,"DEBUG: resource '%s' %p allocated at %s, line %ld\n",
+      fprintf(handle,"DEBUG: resource '%s' %p (%d bytes) allocated at %s, line %ld\n",
               debugResourceNode->typeName,
               debugResourceNode->resource,
+              debugResourceNode->size,
               debugResourceNode->allocFileName,
               debugResourceNode->allocLineNb
              );
@@ -692,9 +697,10 @@ void debugResourceCheck(void)
     {
       LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
       {
-        fprintf(stderr,"DEBUG: lost resource '%s' %p allocated at %s, line %ld\n",
+        fprintf(stderr,"DEBUG: lost resource '%s' %p (%d bytes) allocated at %s, line %ld\n",
                 debugResourceNode->typeName,
                 debugResourceNode->resource,
+                debugResourceNode->size,
                 debugResourceNode->allocFileName,
                 debugResourceNode->allocLineNb
                );
