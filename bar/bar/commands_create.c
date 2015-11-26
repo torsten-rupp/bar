@@ -402,7 +402,7 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
 {
   assert(createInfo != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(createInfo,sizeof(createInfo));
+  DEBUG_REMOVE_RESOURCE_TRACE(createInfo,sizeof(CreateInfo));
 
   Semaphore_done(&createInfo->statusInfoNameLock);
   Semaphore_done(&createInfo->statusInfoLock);
