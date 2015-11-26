@@ -4109,12 +4109,13 @@ LOCAL Errors deleteStorage(DatabaseId storageId)
         {
           // delete storage
           resultError = Storage_delete(&storageHandle,
-                                       storageSpecifier.archiveName
+                                       NULL  // archiveName
                                       );
 
           // prune empty directories
-#warning TODO
-          Storage_pruneDirectories(&storageHandle);
+          Storage_pruneDirectories(&storageHandle,
+                                   NULL  // archiveName
+                                  );
 
           // close storage
           Storage_done(&storageHandle);

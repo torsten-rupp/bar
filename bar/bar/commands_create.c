@@ -3544,8 +3544,7 @@ fprintf(stderr,"%s, %d: purge sotrage %lld\n",__FILE__,__LINE__,oldestStorageId)
         Storage_done(&storageHandle);
         break;
       }
-#warning TODO
-      (void)Storage_pruneDirectories(&storageHandle);
+      (void)Storage_pruneDirectories(&storageHandle,oldestStorageName);
       Storage_done(&storageHandle);
 
       // delete database entry
