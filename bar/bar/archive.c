@@ -1599,12 +1599,16 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         // find archive with enough space or create new
 
-        // create archive file
-        error = createArchiveFile(archiveEntryInfo->archiveInfo);
-        if (error != ERROR_NONE)
+assert(archiveEntryInfo->archiveInfo->file.openFlag);
+        if (!archiveEntryInfo->archiveInfo->file.openFlag)
         {
-          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-          return error;
+          // create archive file
+          error = createArchiveFile(archiveEntryInfo->archiveInfo);
+          if (error != ERROR_NONE)
+          {
+            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+            return error;
+          }
         }
 
         // transfer intermediate data into archive
@@ -2144,6 +2148,9 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
         assert(archiveEntryInfo->image.headerWrittenFlag);
 
+assert(archiveEntryInfo->archiveInfo->file.openFlag);
+        if (!archiveEntryInfo->archiveInfo->file.openFlag)
+        {
         // create archive file
         error = createArchiveFile(archiveEntryInfo->archiveInfo);
         if (error != ERROR_NONE)
@@ -2151,6 +2158,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
           return error;
         }
+}
 
         // transfer intermediate data into archive
         error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
@@ -2725,12 +2733,16 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         assert(archiveEntryInfo->hardLink.headerWrittenFlag);
 
         // create archive file
+assert(archiveEntryInfo->archiveInfo->file.openFlag);
+        if (!archiveEntryInfo->archiveInfo->file.openFlag)
+        {
         error = createArchiveFile(archiveEntryInfo->archiveInfo);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
           return error;
         }
+}
 
         // transfer intermediate data into archive
         error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
@@ -8707,6 +8719,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file if needed
+assert(archiveEntryInfo->archiveInfo->file.openFlag);
                 if (!archiveEntryInfo->archiveInfo->file.openFlag)
                 {
                   tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
@@ -8861,6 +8874,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file if needed
+assert(archiveEntryInfo->archiveInfo->file.openFlag);
                 if (!archiveEntryInfo->archiveInfo->file.openFlag)
                 {
                   tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
@@ -9099,6 +9113,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file if needed
+assert(archiveEntryInfo->archiveInfo->file.openFlag);
                 if (!archiveEntryInfo->archiveInfo->file.openFlag)
                 {
                   tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
