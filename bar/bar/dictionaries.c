@@ -595,7 +595,7 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   assert(dictionary->entryTables != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(dictionary);
+    DEBUG_REMOVE_RESOURCE_TRACE(dictionary,sizeof(Dictionary));
   #else /* not NDEBUG */
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,dictionary,sizeof(Dictionary));
   #endif /* NDEBUG */

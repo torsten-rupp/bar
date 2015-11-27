@@ -628,7 +628,7 @@ Errors __Crypt_init(const char    *__fileName__,
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(cryptInfo,cryptInfo,sizeof(CryptInfo));
+    DEBUG_ADD_RESOURCE_TRACE(cryptInfo,sizeof(CryptInfo));
   #else /* not NDEBUG */
     DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptInfo,sizeof(CryptInfo));
   #endif /* NDEBUG */
@@ -648,7 +648,7 @@ void __Crypt_done(const char *__fileName__,
   assert(cryptInfo != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(cryptInfo);
+    DEBUG_REMOVE_RESOURCE_TRACE(cryptInfo,sizeof(CryptInfo));
   #else /* not NDEBUG */
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptInfo,sizeof(CryptInfo));
   #endif /* NDEBUG */

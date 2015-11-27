@@ -782,10 +782,10 @@ bool Compress_isValidAlgorithm(uint16 n)
 {
   assert(compressInfo != NULL);
 
-  #ifndef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,compressInfo,sizeof(CompressInfo));
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(compressInfo,sizeof(CompressInfo));
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACE(compressInfo);
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,compressInfo,sizeof(CompressInfo));
   #endif /* NDEBUG */
 
   switch (compressInfo->compressAlgorithm)
