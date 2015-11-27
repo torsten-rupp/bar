@@ -1115,7 +1115,7 @@ typedef struct
     } \
     while (0)
 
-  #define DEBUG_REMOVE_RESOURCE_TRACE(resource) \
+  #define DEBUG_REMOVE_RESOURCE_TRACE(resource,size) \
     do \
     { \
     } \
@@ -1127,7 +1127,7 @@ typedef struct
     } \
     while (0)
 
-  #define DEBUG_REMOVE_RESOURCE_TRACEX(fileName,lineNb,resource) \
+  #define DEBUG_REMOVE_RESOURCE_TRACEX(fileName,lineNb,resource,size) \
     do \
     { \
     } \
