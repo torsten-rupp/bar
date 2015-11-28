@@ -1808,10 +1808,12 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         break;
       case CONFIG_VALUE_TYPE_IGNORE:
         // nothing to do
+        return FALSE;
         break;
       case CONFIG_VALUE_TYPE_BEGIN_SECTION:
       case CONFIG_VALUE_TYPE_END_SECTION:
         // nothing to do
+        return FALSE;
         break;
       #ifndef NDEBUG
         default:
