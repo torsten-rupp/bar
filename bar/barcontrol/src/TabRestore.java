@@ -4178,8 +4178,8 @@ Dprintf.dprintf("");
             widgetStorageTreeToolTip = null;
           }
 
-          // show if tree item available and mouse is in the left side
-          if ((treeItem != null) && (mouseEvent.x < tree.getBounds().width/2))
+          // show if tree item available and mouse is in the right side
+          if ((treeItem != null) && (mouseEvent.x > tree.getBounds().width/2))
           {
             if      (treeItem.getData() instanceof UUIDIndexData)
             {
@@ -4347,8 +4347,8 @@ Dprintf.dprintf("");
             widgetStorageTableToolTip = null;
           }
 
-          // show if table item available and mouse is in the left side
-          if ((tableItem != null) && (mouseEvent.x < table.getBounds().width/2))
+          // show if table item available and mouse is in the right side
+          if ((tableItem != null) && (mouseEvent.x > table.getBounds().width/2))
           {
             StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
 

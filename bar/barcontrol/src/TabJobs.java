@@ -2411,8 +2411,8 @@ Dprintf.dprintf("");
               widgetFileTreeToolTip = null;
             }
 
-            // show if table item available and mouse is in the left side
-            if (mouseEvent.x < 64)
+            // show if table item available and mouse is in the right side
+            if (mouseEvent.x > tree.getBounds().width/2)
             {
               Label       label;
 
@@ -5135,6 +5135,118 @@ Dprintf.dprintf("");
               label = Widgets.newLabel(subComposite,BARControl.tr("Max. storage size")+":");
               Widgets.layout(label,0,0,TableLayoutData.W);
 
+              combo = Widgets.newCombo(subComposite);
+              combo.setToolTipText(BARControl.tr("Size limit for one storage file part."));
+              combo.setItems(new String[]{"32M","64M","128M","140M","256M","280M","512M","600M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"});
+              combo.setData("showedErrorDialog",false);
+              Widgets.layout(combo,0,1,TableLayoutData.W);
+              combo.addModifyListener(new ModifyListener()
+              {
+                public void modifyText(ModifyEvent modifyEvent)
+                {
+                  Combo widget = (Combo)modifyEvent.widget;
+                  Color color  = COLOR_MODIFIED;
+                  try
+                  {
+                    long n = Units.parseByteSize(widget.getText());
+                    if (maxStorageSize.getLong() == n) color = null;
+                  }
+                  catch (NumberFormatException exception)
+                  {
+                  }
+                  widget.setBackground(color);
+                  widget.setData("showedErrorDialog",false);
+                }
+              });
+              combo.addSelectionListener(new SelectionListener()
+              {
+                public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                {
+                  Combo  widget = (Combo)selectionEvent.widget;
+                  String string = widget.getText();
+                  try
+                  {
+                    long n = Units.parseByteSize(string);
+                    maxStorageSize.set(n);
+                    BARServer.setJobOption(selectedJobData.uuid,"max-storage-size",n);
+                    widget.setText(Units.formatByteSize(n));
+                    widget.setBackground(null);
+                  }
+                  catch (NumberFormatException exception)
+                  {
+                    if (!(Boolean)widget.getData("showedErrorDialog"))
+                    {
+                      widget.setData("showedErrorDialog",true);
+                      Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                      widget.forceFocus();
+                    }
+                  }
+                }
+                public void widgetSelected(SelectionEvent selectionEvent)
+                {
+                  Combo  widget = (Combo)selectionEvent.widget;
+                  String string = widget.getText();
+                  try
+                  {
+                    long  n = Units.parseByteSize(string);
+                    maxStorageSize.set(n);
+                    BARServer.setJobOption(selectedJobData.uuid,"max-storage-size",n);
+                    widget.setText(Units.formatByteSize(n));
+                    widget.setBackground(null);
+                  }
+                  catch (NumberFormatException exception)
+                  {
+                    if (!(Boolean)widget.getData("showedErrorDialog"))
+                    {
+                      widget.setData("showedErrorDialog",true);
+                      Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                      widget.forceFocus();
+                    }
+                  }
+                }
+              });
+              combo.addFocusListener(new FocusListener()
+              {
+                public void focusGained(FocusEvent focusEvent)
+                {
+                  Combo widget = (Combo)focusEvent.widget;
+                  widget.setData("showedErrorDialog",false);
+                }
+                public void focusLost(FocusEvent focusEvent)
+                {
+                  Combo  widget = (Combo)focusEvent.widget;
+                  String string = widget.getText();
+                  try
+                  {
+                    long n = Units.parseByteSize(string);
+                    maxStorageSize.set(n);
+                    BARServer.setJobOption(selectedJobData.uuid,"max-storage-size",n);
+                    widget.setText(Units.formatByteSize(n));
+                    widget.setBackground(null);
+                  }
+                  catch (NumberFormatException exception)
+                  {
+                    if (!(Boolean)widget.getData("showedErrorDialog"))
+                    {
+                      widget.setData("showedErrorDialog",true);
+                      Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                      widget.forceFocus();
+                    }
+                  }
+                }
+              });
+              Widgets.addModifyListener(new WidgetModifyListener(combo,maxStorageSize)
+              {
+                public String getString(WidgetVariable variable)
+                {
+                  return Units.formatByteSize(variable.getLong());
+                }
+              });
+
+              label = Widgets.newLabel(subComposite,BARControl.tr("bytes"));
+              Widgets.layout(label,0,2,TableLayoutData.W);
+
+/*
               spinner = Widgets.newSpinner(subComposite);
               spinner.setToolTipText(BARControl.tr("Total size limit for storage."));
               spinner.setMinimum(0);
@@ -5241,6 +5353,7 @@ Dprintf.dprintf("");
 
               label = Widgets.newLabel(subComposite,"GB");
               Widgets.layout(label,0,2,TableLayoutData.W);
+*/
             }
 
             subComposite = Widgets.newComposite(composite,SWT.NONE);
@@ -7099,7 +7212,6 @@ Dprintf.dprintf("");
           {
             Table     table     = (Table)mouseEvent.widget;
             TableItem tableItem = table.getItem(new Point(mouseEvent.x,mouseEvent.y));
-//Dprintf.dprintf("table=%s %d %d",table,mouseEvent.x,table.getBounds().width/2);
 
             if (widgetScheduleTableToolTip != null)
             {
@@ -7107,8 +7219,8 @@ Dprintf.dprintf("");
               widgetScheduleTableToolTip = null;
             }
 
-            // show if tree item available and mouse is in the left side
-            if ((tableItem != null) && (mouseEvent.x < table.getBounds().width/2))
+            // show if tree item available and mouse is in the right side
+            if ((tableItem != null) && (mouseEvent.x > table.getBounds().width/2))
             {
               ScheduleData scheduleData = (ScheduleData)tableItem.getData();
               Label        label;
@@ -7940,7 +8052,7 @@ throw new Error("NYI");
       preCommand.set(BARServer.getStringJobOption(selectedJobData.uuid,"pre-command"));
       postCommand.set(BARServer.getStringJobOption(selectedJobData.uuid,"post-command"));
       mountDeviceName.set(BARServer.getStringJobOption(selectedJobData.uuid,"mount-device"));
-      maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"max-storage-size"),0)/(1024L*1024L*1024L));
+      maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"max-storage-size"),0));
 
       updateFileTreeImages();
       updateDeviceImages();
