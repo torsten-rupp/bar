@@ -887,111 +887,113 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
-  assert(!archiveInfo->file.openFlag);
 
-  // init variables
-  AutoFree_init(&autoFreeList);
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  if (!archiveInfo->file.openFlag)
   {
-    AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_unlock(&archiveInfo->chunkIOLock); });
+    // init variables
+    AutoFree_init(&autoFreeList);
 
-    // get intermediate data filename
-    error = File_getTmpFileName(archiveInfo->file.fileName,NULL,tmpDirectory);
-    if (error != ERROR_NONE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-    AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileName,{ File_delete(archiveInfo->file.fileName,FALSE); });
-    DEBUG_TESTCODE("createArchiveFile1") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+      AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_unlock(&archiveInfo->chunkIOLock); });
 
-    // create file
-    error = File_open(&archiveInfo->file.fileHandle,
-                      archiveInfo->file.fileName,
-                      FILE_OPEN_CREATE
-                     );
-    if (error != ERROR_NONE)
-    {
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-    AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileHandle,{ File_close(&archiveInfo->file.fileHandle); });
-    DEBUG_TESTCODE("createArchiveFile2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-
-    // write BAR file info header
-    error = writeFileInfo(archiveInfo);
-    if (error != ERROR_NONE)
-    {
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-    DEBUG_TESTCODE("createArchiveFile3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-
-    // write encrypted key if asymmetric encryption enabled
-    if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
-    {
-      error = writeEncryptionKey(archiveInfo);
+      // get intermediate data filename
+      error = File_getTmpFileName(archiveInfo->file.fileName,NULL,tmpDirectory);
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-      DEBUG_TESTCODE("createArchiveFile4") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-    }
+      AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileName,{ File_delete(archiveInfo->file.fileName,FALSE); });
+      DEBUG_TESTCODE("createArchiveFile1") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-    if (   (archiveInfo->indexHandle != NULL)
-        && !archiveInfo->jobOptions->noIndexDatabaseFlag
-        && !archiveInfo->jobOptions->dryRunFlag
-        && !archiveInfo->jobOptions->noStorageFlag
-       )
-    {
-      // create index
-      error = Index_newStorage(archiveInfo->indexHandle,
-                               archiveInfo->entityId,
-                               NULL, // storageName
-                               INDEX_STATE_CREATE,
-                               INDEX_MODE_MANUAL,
-                               &archiveInfo->storageId
-                              );
+      // create file
+      error = File_open(&archiveInfo->file.fileHandle,
+                        archiveInfo->file.fileName,
+                        FILE_OPEN_CREATE
+                       );
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-      AUTOFREE_ADD(&autoFreeList,&archiveInfo->storageId,{ Index_deleteStorage(archiveInfo->indexHandle,archiveInfo->storageId); });
-    }
-    else
-    {
-      // no index
-      archiveInfo->storageId = DATABASE_ID_NONE;
-    }
+      AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileHandle,{ File_close(&archiveInfo->file.fileHandle); });
+      DEBUG_TESTCODE("createArchiveFile2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-    // call back for init archive
-    if (archiveInfo->archiveInitFunction != NULL)
-    {
-      error = archiveInfo->archiveInitFunction(archiveInfo->archiveInitUserData,
-                                               archiveInfo->indexHandle,
-                                               archiveInfo->entityId,
-                                               archiveInfo->storageId,
-                                               isSplittedArchive(archiveInfo)
-                                                 ? (int)archiveInfo->partNumber
-                                                 : ARCHIVE_PART_NUMBER_NONE
-                                              );
+      // write BAR file info header
+      error = writeFileInfo(archiveInfo);
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-      DEBUG_TESTCODE("createArchiveFile5") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+      DEBUG_TESTCODE("createArchiveFile3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+
+      // write encrypted key if asymmetric encryption enabled
+      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      {
+        error = writeEncryptionKey(archiveInfo);
+        if (error != ERROR_NONE)
+        {
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        DEBUG_TESTCODE("createArchiveFile4") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+      }
+
+      if (   (archiveInfo->indexHandle != NULL)
+          && !archiveInfo->jobOptions->noIndexDatabaseFlag
+          && !archiveInfo->jobOptions->dryRunFlag
+          && !archiveInfo->jobOptions->noStorageFlag
+         )
+      {
+        // create index
+        error = Index_newStorage(archiveInfo->indexHandle,
+                                 archiveInfo->entityId,
+                                 NULL, // storageName
+                                 INDEX_STATE_CREATE,
+                                 INDEX_MODE_MANUAL,
+                                 &archiveInfo->storageId
+                                );
+        if (error != ERROR_NONE)
+        {
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        AUTOFREE_ADD(&autoFreeList,&archiveInfo->storageId,{ Index_deleteStorage(archiveInfo->indexHandle,archiveInfo->storageId); });
+      }
+      else
+      {
+        // no index
+        archiveInfo->storageId = DATABASE_ID_NONE;
+      }
+
+      // call back for init archive
+      if (archiveInfo->archiveInitFunction != NULL)
+      {
+        error = archiveInfo->archiveInitFunction(archiveInfo->archiveInitUserData,
+                                                 archiveInfo->indexHandle,
+                                                 archiveInfo->entityId,
+                                                 archiveInfo->storageId,
+                                                 isSplittedArchive(archiveInfo)
+                                                   ? (int)archiveInfo->partNumber
+                                                   : ARCHIVE_PART_NUMBER_NONE
+                                                );
+        if (error != ERROR_NONE)
+        {
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        DEBUG_TESTCODE("createArchiveFile5") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+      }
+
+      // mark archive file "open"
+      archiveInfo->file.openFlag = TRUE;
     }
 
-    // mark archive file "open"
-    archiveInfo->file.openFlag = TRUE;
+    // free resources
+    AutoFree_done(&autoFreeList);
   }
-
-  // free resources
-  AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
 }
@@ -1114,14 +1116,11 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
     }
   }
 
-  // create new archive if needed
-  if (!archiveInfo->file.openFlag)
+  // create new archive
+  error = createArchiveFile(archiveInfo);
+  if (error != ERROR_NONE)
   {
-    error = createArchiveFile(archiveInfo);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    return error;
   }
 
   return ERROR_NONE;
@@ -1597,18 +1596,12 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
         assert(archiveEntryInfo->file.headerWrittenFlag);
 
-        // find archive with enough space or create new
-
-assert(archiveEntryInfo->archiveInfo->file.openFlag);
-        if (!archiveEntryInfo->archiveInfo->file.openFlag)
+        // create archive file
+        error = createArchiveFile(archiveEntryInfo->archiveInfo);
+        if (error != ERROR_NONE)
         {
-          // create archive file
-          error = createArchiveFile(archiveEntryInfo->archiveInfo);
-          if (error != ERROR_NONE)
-          {
-            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-            return error;
-          }
+          Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+          return error;
         }
 
         // transfer intermediate data into archive
@@ -2148,9 +2141,6 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
         assert(archiveEntryInfo->image.headerWrittenFlag);
 
-assert(archiveEntryInfo->archiveInfo->file.openFlag);
-        if (!archiveEntryInfo->archiveInfo->file.openFlag)
-        {
         // create archive file
         error = createArchiveFile(archiveEntryInfo->archiveInfo);
         if (error != ERROR_NONE)
@@ -2158,7 +2148,6 @@ assert(archiveEntryInfo->archiveInfo->file.openFlag);
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
           return error;
         }
-}
 
         // transfer intermediate data into archive
         error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
@@ -2199,6 +2188,9 @@ assert(archiveEntryInfo->archiveInfo->file.openFlag);
         Compress_reset(&archiveEntryInfo->image.deltaCompressInfo);
         Compress_reset(&archiveEntryInfo->image.byteCompressInfo);
         Crypt_reset(&archiveEntryInfo->image.cryptInfo,0);
+
+        // find next suitable archive part
+        findNextArchivePart(archiveEntryInfo->archiveInfo);
 
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -2733,16 +2725,12 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         assert(archiveEntryInfo->hardLink.headerWrittenFlag);
 
         // create archive file
-assert(archiveEntryInfo->archiveInfo->file.openFlag);
-        if (!archiveEntryInfo->archiveInfo->file.openFlag)
-        {
         error = createArchiveFile(archiveEntryInfo->archiveInfo);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
           return error;
         }
-}
 
         // transfer intermediate data into archive
         error = transferArchiveFileData(archiveEntryInfo->archiveInfo,
@@ -2783,6 +2771,9 @@ assert(archiveEntryInfo->archiveInfo->file.openFlag);
         Compress_reset(&archiveEntryInfo->hardLink.deltaCompressInfo);
         Compress_reset(&archiveEntryInfo->hardLink.byteCompressInfo);
         Crypt_reset(&archiveEntryInfo->hardLink.cryptInfo,0);
+
+        // find next suitable archive part
+        findNextArchivePart(archiveEntryInfo->archiveInfo);
 
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -4088,7 +4079,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     }
   }
 
-
   // done resources
   AutoFree_done(&autoFreeList);
 
@@ -4960,7 +4950,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry14") { (void)File_close(&archiveEntryInfo->hardLink.intermediateFileHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE("__Archive_newHardLinkEntry1") { (void)File_close(&archiveEntryInfo->hardLink.intermediateFileHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.intermediateFileHandle,{ (void)File_close(&archiveEntryInfo->hardLink.intermediateFileHandle); });
 
   // allocate buffers
@@ -8718,17 +8708,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               // transfer to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
-                // create archive file if needed
-assert(archiveEntryInfo->archiveInfo->file.openFlag);
-                if (!archiveEntryInfo->archiveInfo->file.openFlag)
+                // create archive file
+                tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
+                if (tmpError != ERROR_NONE)
                 {
-                  tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
-                  if (tmpError != ERROR_NONE)
-                  {
-                    if (error == ERROR_NONE) error = tmpError;
-                    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-                    break;
-                  }
+                  if (error == ERROR_NONE) error = tmpError;
+                  Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+                  break;
                 }
 
                 // transfer intermediate data into archive
@@ -8874,16 +8860,12 @@ assert(archiveEntryInfo->archiveInfo->file.openFlag);
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file if needed
-assert(archiveEntryInfo->archiveInfo->file.openFlag);
-                if (!archiveEntryInfo->archiveInfo->file.openFlag)
+                tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
+                if (tmpError != ERROR_NONE)
                 {
-                  tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
-                  if (tmpError != ERROR_NONE)
-                  {
-                    if (error == ERROR_NONE) error = tmpError;
-                    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-                    break;
-                  }
+                  if (error == ERROR_NONE) error = tmpError;
+                  Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+                  break;
                 }
 
                 // transfer intermediate data into archive
@@ -9113,16 +9095,12 @@ assert(archiveEntryInfo->archiveInfo->file.openFlag);
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file if needed
-assert(archiveEntryInfo->archiveInfo->file.openFlag);
-                if (!archiveEntryInfo->archiveInfo->file.openFlag)
+                tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
+                if (tmpError != ERROR_NONE)
                 {
-                  tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
-                  if (tmpError != ERROR_NONE)
-                  {
-                    if (error == ERROR_NONE) error = tmpError;
-                    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-                    break;
-                  }
+                  if (error == ERROR_NONE) error = tmpError;
+                  Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+                  break;
                 }
 
                 // transfer intermediate data into archive
