@@ -1889,6 +1889,58 @@ Errors Storage_unloadVolume(StorageHandle *storageHandle)
   return error;
 }
 
+bool Storage_exists(StorageHandle *storageHandle, ConstString archiveName)
+{
+  bool existsFlag;
+
+  assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+
+  // get archive name
+  if (archiveName == NULL) archiveName = storageHandle->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
+
+  switch (storageHandle->storageSpecifier.type)
+  {
+    case STORAGE_TYPE_FILESYSTEM:
+      existsFlag = StorageFile_exists(storageHandle,archiveName);
+      break;
+    case STORAGE_TYPE_FTP:
+      existsFlag = StorageFTP_exists(storageHandle,archiveName);
+      break;
+    case STORAGE_TYPE_SSH:
+      existsFlag = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_SCP:
+      existsFlag = StorageSCP_exists(storageHandle,archiveName);
+      break;
+    case STORAGE_TYPE_SFTP:
+      existsFlag = StorageSFTP_exists(storageHandle,archiveName);
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      existsFlag = StorageWebDAV_exists(storageHandle,archiveName);
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      existsFlag = StorageOptical_exists(storageHandle,archiveName);
+      break;
+    case STORAGE_TYPE_DEVICE:
+      existsFlag = StorageDevice_exists(storageHandle,archiveName);
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+
+  return existsFlag;
+}
+
 #ifdef NDEBUG
   Errors Storage_create(StorageArchiveHandle *storageArchiveHandle,
                         StorageHandle *storageHandle,
@@ -2583,6 +2635,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
          && isEmpty
          && !String_isEmpty(name)
         );
+  String_delete(name);
 
   return error;
 }
@@ -2925,7 +2978,10 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  error = Storage_open(&storageArchiveHandle,&storageHandle,NULL);
+  error = Storage_open(&storageArchiveHandle,
+                       &storageHandle,
+                       NULL  // archiveName
+                      );
   if (error != ERROR_NONE)
   {
     (void)Storage_done(&storageHandle);

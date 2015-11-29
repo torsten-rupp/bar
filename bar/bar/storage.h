@@ -123,6 +123,7 @@ typedef enum
 {
   STORAGE_MODE_READ,
   STORAGE_MODE_WRITE,
+//  STORAGE_MODE_APPEND,
 
   STORAGE_MODE_UNKNOWN,
 } StorageModes;
@@ -962,7 +963,8 @@ const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
 *          archiveName            - archive name (can be NULL)
 * Output : -
 * Return : storage name
-* Notes  : if fileName is NULL file name from storageSpecifier is used
+* Notes  : if archiveName is NULL file name from storageSpecifier is
+*          used
 \***********************************************************************/
 
 // String is a pointer type. Why can't this be a pointer to a const struct?
@@ -1144,8 +1146,20 @@ void Storage_setVolumeNumber(StorageHandle *storageHandle,
 Errors Storage_unloadVolume(StorageHandle *storageHandle);
 
 /***********************************************************************\
+* Name   : Storage_exists
+* Purpose: check if storage file exists
+* Input  : storageHandle - storage handle
+*          archiveName   - archive file name (can be NULL)
+* Output : -
+* Return : TRUE iff exists
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_exists(StorageHandle *storageHandle, ConstString archiveName);
+
+/***********************************************************************\
 * Name   : Storage_create
-* Purpose: create new storage file
+* Purpose: create new/append to storage
 * Input  : storageArchiveHandle - storage archive handle variable
 *          storageHandle        - storage info
 *          archiveName          - archive file name
@@ -1173,7 +1187,7 @@ Errors Storage_unloadVolume(StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_open
-* Purpose: open storage file
+* Purpose: open storage for reading
 * Input  : storageArchiveHandle - storage archive handle variable
 *          storageHandle        - storage handle
 *          archiveName          - archive name or NULL

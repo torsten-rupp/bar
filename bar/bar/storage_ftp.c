@@ -1374,6 +1374,204 @@ LOCAL Errors StorageFTP_unloadVolume(StorageHandle *storageHandle)
   return ERROR_NONE;
 }
 
+bool StorageFTP_exists(StorageHandle *storageHandle, ConstString archiveName)
+{
+  assert(storageHandle != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  bool existsFlag;
+  #if   defined(HAVE_CURL)
+    CURL            *curlHandle;
+    String          pathName,baseName;
+    String          url;
+    CURLcode        curlCode;
+    CURLMcode       curlMCode;
+    StringTokenizer nameTokenizer;
+    ConstString     token;
+    double          fileSize;
+    int             runningHandles;
+  #elif defined(HAVE_FTP)
+    netbuf     *control;
+    const char *plainLoginPassword;
+    String     tmpFileName;
+    FileHandle fileHandle;
+    bool       foundFlag;
+    String     line;
+    int        size;
+  #else /* not HAVE_CURL || HAVE_FTP */
+  #endif /* HAVE_CURL || HAVE_FTP */
+
+  assert(storageHandle != NULL);
+  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(!String_isEmpty(archiveName));
+
+  existsFlag = FALSE;
+
+  #if   defined(HAVE_CURL)
+    // open Curl handles
+    curlHandle = curl_easy_init();
+    if (curlHandle == NULL)
+    {
+      return ERROR_FTP_SESSION_FAIL;
+    }
+
+    // get pathname, basename
+    pathName = File_getFilePathName(String_new(),archiveName);
+    baseName = File_getFileBaseName(String_new(),archiveName);
+
+    // get URL
+    url = String_format(String_new(),"ftp://%S",storageHandle->storageSpecifier.hostName);
+    if (storageHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageSpecifier.hostPort);
+    File_initSplitFileName(&nameTokenizer,pathName);
+    while (File_getNextSplitFileName(&nameTokenizer,&token))
+    {
+      String_appendChar(url,'/');
+      String_append(url,token);
+    }
+    File_doneSplitFileName(&nameTokenizer);
+    String_append(url,baseName);
+
+    // set FTP connect
+    curlCode = initFTPHandle(curlHandle,
+                             url,
+                             storageHandle->storageSpecifier.loginName,
+                             storageHandle->storageSpecifier.loginPassword,
+                             FTP_TIMEOUT
+                            );
+    if (curlCode != CURLE_OK)
+    {
+      String_delete(url);
+      String_delete(baseName);
+      String_delete(pathName);
+      (void)curl_easy_cleanup(curlHandle);
+      return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+    }
+
+    // check if file exists (Note: by default curl use passive FTP)
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_perform(curlHandle);
+    }
+    existsFlag = (curlCode == CURLE_OK);
+
+    // close FTP connection
+    (void)curl_easy_cleanup(curlHandle);
+
+    // free resources
+    String_delete(url);
+    String_delete(baseName);
+    String_delete(pathName);
+  #elif defined(HAVE_FTP)
+    // initialize variables
+
+    // FTP connect
+    if (!Network_hostExists(storageHandle->storageSpecifier.hostName))
+    {
+      return ERRORX_(HOST_NOT_FOUND,0,String_cString(storageHandle->storageSpecifier.hostName));
+    }
+    if (FtpConnect(String_cString(storageHandle->storageSpecifier.hostName),&control) != 1)
+    {
+      return ERROR_FTP_SESSION_FAIL;
+    }
+
+    // FTP login
+    plainLoginPassword = Password_deploy(storageHandle->storageSpecifier.loginPassword);
+    if (FtpLogin(String_cString(storageHandle->storageSpecifier.loginName),
+                 plainLoginPassword,
+                 control
+                ) != 1
+       )
+    {
+      Password_undeploy(storageHandle->storageSpecifier.loginPassword);
+      FtpClose(control);
+      return ERROR_FTP_AUTHENTICATION;
+    }
+    Password_undeploy(storageHandle->storageSpecifier.loginPassword);
+
+    // check if file exists: first try non-passive, then passive mode
+    tmpFileName = File_newFileName();
+    error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
+    if (error != ERROR_NONE)
+    {
+      FtpClose(control);
+      return error;
+    }
+    FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,control);
+    if (FtpDir(String_cString(tmpFileName),String_cString(fileName),control) != 1)
+    {
+      FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,control);
+      if (FtpDir(String_cString(tmpFileName),String_cString(fileName),control) != 1)
+      {
+        File_delete(tmpFileName,FALSE);
+        File_deleteFileName(tmpFileName);
+        FtpClose(control);
+        return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
+      }
+    }
+    error = File_open(&fileHandle,tmpFileName,FILE_OPEN_READ);
+    if (error != ERROR_NONE)
+    {
+      File_delete(tmpFileName,FALSE);
+      File_deleteFileName(tmpFileName);
+      FtpClose(control);
+      return error;
+    }
+    foundFlag = FALSE;
+    line = String_new();
+    while (!File_eof(&fileHandle) && !foundFlag)
+    {
+      error = File_readLine(&fileHandle,line);
+      if (error == ERROR_NONE)
+      {
+        foundFlag =   String_parse(line,
+                                   STRING_BEGIN,
+                                   "%32s %* %* %* %llu %d-%d-%d %d:%d %S",
+                                   NULL,
+                                   NULL,
+                                   NULL,
+                                   NULL,NULL,NULL,
+                                   NULL,NULL,
+                                   NULL
+                                  )
+                   || String_parse(line,
+                                   STRING_BEGIN,
+                                   "%32s %* %* %* %llu %* %* %*:%* %S",
+                                   NULL,
+                                   NULL,
+                                   NULL,
+                                   NULL
+                                  )
+                   || String_parse(line,
+                                   STRING_BEGIN,
+                                   "%32s %* %* %* %llu %* %* %* %S",
+                                   NULL,
+                                   NULL,
+                                   NULL,
+                                   NULL
+                                  );
+      }
+    }
+    String_delete(line);
+    File_close(&fileHandle);
+    File_delete(tmpFileName,FALSE);
+    File_deleteFileName(tmpFileName);
+    if (!foundFlag)
+    {
+      FtpClose(control);
+      return ERRORX_(FILE_NOT_FOUND_,0,String_cString(archiveName));
+    }
+
+    // close FTP connection
+    FtpClose(control);
+  #else /* not HAVE_CURL || HAVE_FTP */
+    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(archiveName);
+  #endif /* HAVE_CURL || HAVE_FTP */
+
+  return existsFlag;
+}
+
 LOCAL Errors StorageFTP_create(StorageArchiveHandle *storageArchiveHandle,
                                ConstString          archiveName,
                                uint64               archiveSize
@@ -1413,6 +1611,7 @@ LOCAL Errors StorageFTP_create(StorageArchiveHandle *storageArchiveHandle,
     storageArchiveHandle->ftp.transferedBytes        = 0L;
 
     // allocate read-ahead buffer
+#warning not needed for crate
     storageArchiveHandle->ftp.readAheadBuffer.data = (byte*)malloc(BUFFER_SIZE);
     if (storageArchiveHandle->ftp.readAheadBuffer.data == NULL)
     {

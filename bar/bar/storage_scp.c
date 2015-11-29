@@ -574,6 +574,17 @@ LOCAL Errors StorageSCP_postProcess(StorageHandle *storageHandle,
   return error;
 }
 
+bool StorageSCP_exists(StorageHandle *storageHandle, ConstString archiveName)
+{
+  assert(storageHandle != NULL);
+  assert(!String_isEmpty(archiveName));
+
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+  UNUSED_VARIABLE(storageHandle);
+
+  return File_exists(archiveName);
+}
+
 LOCAL Errors StorageSCP_create(StorageArchiveHandle *storageArchiveHandle,
                                ConstString   archiveName,
                                uint64        archiveSize

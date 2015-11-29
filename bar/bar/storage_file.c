@@ -259,6 +259,16 @@ LOCAL Errors StorageFile_postProcess(StorageHandle *storageHandle,
   return error;
 }
 
+bool StorageFile_exists(StorageHandle *storageHandle, ConstString archiveName)
+{
+  assert(storageHandle != NULL);
+  assert(!String_isEmpty(archiveName));
+
+  UNUSED_VARIABLE(storageHandle);
+
+  return File_exists(archiveName);
+}
+
 LOCAL Errors StorageFile_create(StorageArchiveHandle *storageArchiveHandle,
                                 ConstString   archiveName,
                                 uint64        archiveSize
@@ -330,7 +340,7 @@ File_getSize(&storageArchiveHandle->fileSystem.fileHandle)
 }
 
 LOCAL Errors StorageFile_open(StorageArchiveHandle *storageArchiveHandle,
-                              ConstString archiveName
+                              ConstString  archiveName
                              )
 {
   Errors error;

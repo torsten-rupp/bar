@@ -829,6 +829,17 @@ LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
   return error;
 }
 
+bool StorageWebDAV_exists(StorageHandle *storageHandle, ConstString archiveName)
+{
+  assert(storageHandle != NULL);
+  assert(!String_isEmpty(archiveName));
+
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+  UNUSED_VARIABLE(storageHandle);
+
+  return File_exists(archiveName);
+}
+
 LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
                                   ConstString   archiveName,
                                   uint64        archiveSize
@@ -1125,7 +1136,8 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
 }
 
 LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
-                                ConstString archiveName)
+                                ConstString archiveName
+                               )
 {
   #ifdef HAVE_CURL
     String          baseURL;
