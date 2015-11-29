@@ -1212,6 +1212,34 @@ Errors Index_assignTo(IndexHandle *indexHandle,
                       DatabaseId  toStorageId
                      );
 
+/***********************************************************************\
+* Name   : Index_pruneStorage
+* Purpose: delete storage from index if not used anymore (empty)
+* Input  : indexHandle - index handle
+*          storageId   - storage id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_pruneStorage(IndexHandle *indexHandle,
+                          DatabaseId  storageId
+                         );
+
+/***********************************************************************\
+* Name   : Index_pruneEntity
+* Purpose: delete entity from index if not used anymore (empty)
+* Input  : indexHandle - index handle
+*          storageId   - storage id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_pruneEntity(IndexHandle *indexHandle,
+                         DatabaseId  entityId
+                        );
+
 #ifdef __cplusplus
   }
 #endif

@@ -336,7 +336,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                error = Index_newEntity(newIndexHandle,
                                                        Misc_getUUID(jobUUID),
-                                                       NULL,
+                                                       NULL,  // scheduleUUID
                                                        ARCHIVE_TYPE_FULL,
                                                        &entityId
                                                       );
@@ -498,7 +498,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                error = Index_newEntity(newIndexHandle,
                                                        Misc_getUUID(jobUUID),
-                                                       NULL,
+                                                       NULL,  // scheduleUUID
                                                        ARCHIVE_TYPE_FULL,
                                                        &entityId
                                                       );
@@ -687,7 +687,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                error = Index_newEntity(newIndexHandle,
                                                        Misc_getUUID(jobUUID),
-                                                       NULL,
+                                                       NULL,  // scheduleUUID
                                                        ARCHIVE_TYPE_FULL,
                                                        &entityId
                                                       );
@@ -985,7 +985,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                error = Index_newEntity(newIndexHandle,
                                                        Misc_getUUID(jobUUID),
-                                                       NULL,
+                                                       NULL,  // scheduleUUID
                                                        ARCHIVE_TYPE_FULL,
                                                        &entityId
                                                       );
@@ -2401,155 +2401,6 @@ LOCAL const char *getOrderingString(DatabaseOrdering ordering)
 }
 
 /***********************************************************************\
-* Name   : pruneStorage
-* Purpose: delete storage from index if not used anymore (empty)
-* Input  : indexHandle - index handle
-*          storageId   - storage id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneStorage(IndexHandle *indexHandle,
-                          DatabaseId  storageId
-                         )
-{
-  bool       existsFlag;
-  uint       i;
-  DatabaseId id;
-  Errors     error;
-
-  // check if storage entries exists
-  existsFlag = FALSE;
-  for (i = 0; i < SIZE_OF_ARRAY(ENTRY_TABLE_NAMES); i++)
-  {
-    if (Database_exists(&indexHandle->databaseHandle,
-                        ENTRY_TABLE_NAMES[i],
-                        "id",
-                        "WHERE storageId=%lld",
-                        storageId
-                       )
-       )
-    {
-      existsFlag = TRUE;
-      break;
-    }
-    UNUSED_VARIABLE(id);
-  }
-
-  if (!existsFlag)
-  {
-    // delete old entity (now empty)
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM storage WHERE id=%lld;",
-                             storageId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : pruneEntity
-* Purpose: delete entity from index if not used anymore (empty)
-* Input  : indexHandle - index handle
-*          storageId   - storage id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneEntity(IndexHandle *indexHandle,
-                         DatabaseId  entityId
-                         )
-{
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  DatabaseId       storageId;
-  bool             existsFlag;
-
-  // prune storage of entity
-  error = Index_initListStorage(&indexQueryHandle,
-                                indexHandle,
-                                NULL, // uuid
-                                entityId,
-                                STORAGE_TYPE_ANY,
-                                NULL, // storageName
-                                NULL, // hostName
-                                NULL, // loginName
-                                NULL, // deviceName
-                                NULL, // fileName
-                                INDEX_STATE_SET_ALL
-                               );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  while (Index_getNextStorage(&indexQueryHandle,
-                              &storageId,
-                              NULL, // entity id
-                              NULL, // job UUID
-                              NULL, // schedule UUID
-                              NULL, // archive type
-                              NULL, // storageName,
-                              NULL, // createdDateTime
-                              NULL, // entries
-                              NULL, // size
-                              NULL, // indexState
-                              NULL, // indexMode
-                              NULL, // lastCheckedDateTime
-                              NULL  // errorMessage
-                             )
-        )
-  {
-    error = pruneStorage(indexHandle,storageId);
-    if (error != ERROR_NONE)
-    {
-      break;
-    }
-  }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // check if storages exists
-  existsFlag = FALSE;
-  if (Database_exists(&indexHandle->databaseHandle,
-                      "storage",
-                      "id",
-                      "WHERE entityId=%lld",
-                      entityId
-                     )
-     )
-  {
-    existsFlag = TRUE;
-  }
-  UNUSED_VARIABLE(storageId);
-
-  if (!existsFlag)
-  {
-    // delete old entity (now empty)
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entity WHERE id=%lld;",
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
 * Name   : assignStorageToStorage
 * Purpose: assign storage entries to other storage
 * Input  : indexHandle - index handle
@@ -2588,7 +2439,7 @@ LOCAL Errors assignStorageToStorage(IndexHandle *indexHandle,
   }
 
   // delete storage if empty
-  error = pruneStorage(indexHandle,storageId);
+  error = Index_pruneStorage(indexHandle,storageId);
   if (error != ERROR_NONE)
   {
     return error;
@@ -2659,7 +2510,7 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
     }
 
     // delete storage if empty
-    error = pruneStorage(indexHandle,storageId);
+    error = Index_pruneStorage(indexHandle,storageId);
     if (error != ERROR_NONE)
     {
       return error;
@@ -2668,7 +2519,7 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
   Index_doneList(&indexQueryHandle);
 
   // delete entity if empty
-  error = pruneEntity(indexHandle,entityId);
+  error = Index_pruneEntity(indexHandle,entityId);
   if (error != ERROR_NONE)
   {
     return error;
@@ -2803,7 +2654,7 @@ LOCAL Errors assignEntityToEntity(IndexHandle *indexHandle,
   }
 
   // delete entity if empty
-  error = pruneEntity(indexHandle,entityId);
+  error = Index_pruneEntity(indexHandle,entityId);
   if (error != ERROR_NONE)
   {
     return error;
@@ -5618,6 +5469,136 @@ Errors Index_assignTo(IndexHandle *indexHandle,
       {
         return error;
       }
+    }
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Index_pruneStorage(IndexHandle *indexHandle,
+                          DatabaseId  storageId
+                         )
+{
+  bool       existsFlag;
+  uint       i;
+  DatabaseId id;
+  Errors     error;
+
+  // check if storage entries exists
+  existsFlag = FALSE;
+  for (i = 0; i < SIZE_OF_ARRAY(ENTRY_TABLE_NAMES); i++)
+  {
+    if (Database_exists(&indexHandle->databaseHandle,
+                        ENTRY_TABLE_NAMES[i],
+                        "id",
+                        "WHERE storageId=%lld",
+                        storageId
+                       )
+       )
+    {
+      existsFlag = TRUE;
+      break;
+    }
+    UNUSED_VARIABLE(id);
+  }
+
+  if (!existsFlag)
+  {
+    // delete old entity (now empty)
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM storage WHERE id=%lld;",
+                             storageId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Index_pruneEntity(IndexHandle *indexHandle,
+                         DatabaseId  entityId
+                         )
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       storageId;
+  bool             existsFlag;
+
+  // prune storage of entity
+  error = Index_initListStorage(&indexQueryHandle,
+                                indexHandle,
+                                NULL, // uuid
+                                entityId,
+                                STORAGE_TYPE_ANY,
+                                NULL, // storageName
+                                NULL, // hostName
+                                NULL, // loginName
+                                NULL, // deviceName
+                                NULL, // fileName
+                                INDEX_STATE_SET_ALL
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  while (Index_getNextStorage(&indexQueryHandle,
+                              &storageId,
+                              NULL, // entity id
+                              NULL, // job UUID
+                              NULL, // schedule UUID
+                              NULL, // archive type
+                              NULL, // storageName,
+                              NULL, // createdDateTime
+                              NULL, // entries
+                              NULL, // size
+                              NULL, // indexState
+                              NULL, // indexMode
+                              NULL, // lastCheckedDateTime
+                              NULL  // errorMessage
+                             )
+        )
+  {
+    error = Index_pruneStorage(indexHandle,storageId);
+    if (error != ERROR_NONE)
+    {
+      break;
+    }
+  }
+  Index_doneList(&indexQueryHandle);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // check if storage exists
+  existsFlag = FALSE;
+  if (Database_exists(&indexHandle->databaseHandle,
+                      "storage",
+                      "id",
+                      "WHERE entityId=%lld",
+                      entityId
+                     )
+     )
+  {
+    existsFlag = TRUE;
+  }
+  UNUSED_VARIABLE(storageId);
+
+  if (!existsFlag)
+  {
+    // delete old entity (now empty)
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entities WHERE id=%lld;",
+                             entityId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
     }
   }
 
