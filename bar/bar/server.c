@@ -4386,11 +4386,13 @@ LOCAL void purgeExpiredEntities(void)
                     plogMessage(NULL,  // logHandle,
                                 LOG_TYPE_INDEX,
                                 "INDEX",
-                                "Purged expired entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
+                                "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                                 String_cString(jobName),
                                 ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL),
                                 String_cString(dateTime),
                                 totalEntries,
+                                BYTES_SHORT(totalSize),
+                                BYTES_UNIT(totalSize),
                                 totalSize
                                );
                   }
@@ -4432,11 +4434,13 @@ LOCAL void purgeExpiredEntities(void)
                   plogMessage(NULL,  // logHandle,
                               LOG_TYPE_INDEX,
                               "INDEX",
-                              "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%llu bytes\n",
+                              "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                               String_cString(jobName),
                               ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL),
                               String_cString(dateTime),
                               totalEntries,
+                              BYTES_SHORT(totalSize),
+                              BYTES_UNIT(totalSize),
                               totalSize
                              );
                 }
@@ -4924,9 +4928,11 @@ LOCAL void indexThreadCode(void)
           plogMessage(NULL,  // logHandle,
                       LOG_TYPE_INDEX,
                       "INDEX",
-                      "Created index for '%s', %llu entries/%llu bytes\n",
+                      "Created index for '%s', %llu entries/%.1f%s (%llu bytes)\n",
                       String_cString(printableStorageName),
                       totalEntries,
+                      BYTES_SHORT(totalSize),
+                      BYTES_UNIT(totalSize),
                       totalSize
                      );
         }
@@ -5148,11 +5154,11 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                            storageSpecifier.loginName,
                                            storageSpecifier.deviceName,
                                            fileName,
-                                           NULL, // jobUUID
-                                           NULL, // scheduleUUID
+                                           NULL,  // jobUUID
+                                           NULL,  // scheduleUUID
                                            &storageId,
                                            &indexState,
-                                           NULL
+                                           NULL  // lastCheckedTimestamp
                                           )
                          )
                       {
@@ -12112,12 +12118,13 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
     if      (toEntityId != DATABASE_ID_NONE)
     {
       // assign all storage of all entities of job to other entity
-      error = Index_storageAssignTo(indexHandle,
-                                    jobUUID,
-                                    DATABASE_ID_NONE,  // entityId,
-                                    DATABASE_ID_NONE,  // storageId
-                                    toEntityId
-                                   );
+      error = Index_assignTo(indexHandle,
+                             jobUUID,
+                             DATABASE_ID_NONE,  // entityId,
+                             DATABASE_ID_NONE,  // storageId
+                             toEntityId,
+                             DATABASE_ID_NONE  // toStorageId
+                            );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
@@ -12140,12 +12147,13 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
       }
 
       // assign all storage of all entities of job to other entity
-      error = Index_storageAssignTo(indexHandle,
-                                    jobUUID,
-                                    DATABASE_ID_NONE,  // entityId
-                                    DATABASE_ID_NONE,  // storageId
-                                    toEntityId
-                                   );
+      error = Index_assignTo(indexHandle,
+                             jobUUID,
+                             DATABASE_ID_NONE,  // entityId
+                             DATABASE_ID_NONE,  // storageId
+                             toEntityId,
+                             DATABASE_ID_NONE  // toStorageId
+                            );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
@@ -12160,12 +12168,13 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
     if      (toEntityId != DATABASE_ID_NONE)
     {
       // assign all storage of entity to other entity
-      error = Index_storageAssignTo(indexHandle,
-                                    NULL,  // jobUUID
-                                    entityId,
-                                    DATABASE_ID_NONE,  // storageId
-                                    toEntityId
-                                   );
+      error = Index_assignTo(indexHandle,
+                             NULL,  // jobUUID
+                             entityId,
+                             DATABASE_ID_NONE,  // storageId
+                             toEntityId,
+                             DATABASE_ID_NONE  // toStorageId
+                            );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
@@ -12188,12 +12197,13 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
       }
 
       // assign all storage of entity to other entity
-      error = Index_storageAssignTo(indexHandle,
-                                    NULL,  // jobUUID
-                                    DATABASE_ID_NONE,  // entityId
-                                    storageId,
-                                    toEntityId
-                                   );
+      error = Index_assignTo(indexHandle,
+                             NULL,  // jobUUID
+                             DATABASE_ID_NONE,  // entityId
+                             storageId,
+                             toEntityId,
+                             DATABASE_ID_NONE  // toStorageId
+                            );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
@@ -12207,12 +12217,13 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
     if      (toEntityId != DATABASE_ID_NONE)
     {
       // assign storage to another entity
-      error = Index_storageAssignTo(indexHandle,
-                                    NULL,  // jobUUID
-                                    DATABASE_ID_NONE,  // entityId
-                                    storageId,
-                                    toEntityId
-                                   );
+      error = Index_assignTo(indexHandle,
+                             NULL,  // jobUUID
+                             DATABASE_ID_NONE,  // entityId
+                             storageId,
+                             toEntityId,
+                             DATABASE_ID_NONE  // toStorageId
+                            );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
@@ -12235,12 +12246,13 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
       }
 
       // assign storage to another entity
-      error = Index_storageAssignTo(indexHandle,
-                                    NULL,  // jobUUID
-                                    DATABASE_ID_NONE,  // entityId
-                                    storageId,
-                                    toEntityId
-                                   );
+      error = Index_assignTo(indexHandle,
+                             NULL,  // jobUUID
+                             DATABASE_ID_NONE,  // entityId
+                             storageId,
+                             toEntityId,
+                             DATABASE_ID_NONE  // toStorageId
+                            );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
