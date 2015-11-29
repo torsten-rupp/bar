@@ -3659,7 +3659,7 @@ Dprintf.dprintf("");
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,5,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetEntryTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),entryData.size,Units.formatByteSize(entryData.size)));
+    label = Widgets.newLabel(widgetEntryTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(entryData.size),entryData.size));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,5,1,TableLayoutData.WE);
@@ -3750,7 +3750,7 @@ Dprintf.dprintf("");
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,3,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%d bytes (%s)"),entityIndexData.size,Units.formatByteSize(entityIndexData.size)));
+    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(entityIndexData.size),entityIndexData.size));
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,3,1,TableLayoutData.WE);
@@ -3861,7 +3861,7 @@ Dprintf.dprintf("");
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,5,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),storageIndexData.size,Units.formatByteSize(storageIndexData.size)));
+    label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(storageIndexData.size),storageIndexData.size));
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,5,1,TableLayoutData.WE);
