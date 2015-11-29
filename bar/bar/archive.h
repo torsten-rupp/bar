@@ -137,8 +137,7 @@ typedef uint64(*ArchiveGetSizeFunction)(void        *userData,
 *          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
 *                         single part
 *          fileName     - archive file name
-*          entries      - number of entries
-*          size         - size of archive [bytes]
+*          fileSize     - archive size [bytes]
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -150,8 +149,7 @@ typedef Errors(*ArchiveStoreFunction)(void        *userData,
                                       DatabaseId  storageId,
                                       int         partNumber,
                                       String      fileName,
-                                      uint64      entries,
-                                      uint64      size
+                                      uint64      fileSize
                                      );
 
 /***********************************************************************\

@@ -947,7 +947,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
           && !archiveInfo->jobOptions->noStorageFlag
          )
       {
-        // create index
+        // create storage index
         error = Index_newStorage(archiveInfo->indexHandle,
                                  archiveInfo->entityId,
                                  NULL, // storageName
@@ -1038,7 +1038,6 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
                                                   ? (int)archiveInfo->partNumber
                                                   : ARCHIVE_PART_NUMBER_NONE,
                                                 archiveInfo->file.fileName,
-                                                Archive_getEntries(archiveInfo),
                                                 Archive_getSize(archiveInfo)
                                                );
       if (error != ERROR_NONE)
@@ -3504,6 +3503,7 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
           {
             return error;
           }
+#warning seek?
           error = File_seek(&archiveInfo->file.fileHandle,archiveInfo->interrupt.offset);
           if (error != ERROR_NONE)
           {
@@ -3522,7 +3522,8 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
       {
         return error;
       }
-      error = Storage_tell(&archiveInfo->storage.storageArchiveHandle,&archiveInfo->interrupt.offset);
+#warning seek?
+      error = Storage_seek(&archiveInfo->storage.storageArchiveHandle,&archiveInfo->interrupt.offset);
       if (error != ERROR_NONE)
       {
         return error;
@@ -10870,8 +10871,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       // update temporary entries, size (ignore error)
       Index_storageUpdate(indexHandle,
                           storageId,
-                          NULL,              // storageName
-                          Archive_getEntries(&archiveInfo),
+                          NULL,  // storageName
                           Archive_getSize(&archiveInfo)
                          );
     }
@@ -10935,7 +10935,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     error = Index_storageUpdate(indexHandle,
                                 storageId,
                                 storageName,
-                                Archive_getEntries(&archiveInfo),
                                 Archive_getSize(&archiveInfo)
                                );
     if (error != ERROR_NONE)
