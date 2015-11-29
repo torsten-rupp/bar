@@ -61,6 +61,17 @@ LOCAL const struct
   { "*",      INDEX_MODE_ALL    }
 };
 
+// entry table names
+const char *ENTRY_TABLE_NAMES[] =
+{
+  "files",
+  "images",
+  "directories",
+  "links",
+  "hardlinks",
+  "special"
+};
+
 // sleep time [s]
 #define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
 
@@ -283,8 +294,6 @@ LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
 * Return : -
 * Notes  : -
 \***********************************************************************/
-
-#include "sqlite3.h"
 
 LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIndexHandle)
 {
@@ -1728,7 +1737,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
 
 /***********************************************************************\
 * Name   : cleanUpStorageNoEntity
-* Purpose: assing entitry to storage entries without entity
+* Purpose: assign entity to storage entries without any entity
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1925,7 +1934,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   String           printableStorageName;
   ulong            n;
   DatabaseId       storageId;
-  bool             deletedIndex;
+  bool             deletedIndexFlag;
   IndexQueryHandle indexQueryHandle1,indexQueryHandle2;
   int64            duplicateStorageId;
 
@@ -1947,7 +1956,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   n = 0L;
   do
   {
-    deletedIndex = FALSE;
+    deletedIndexFlag = FALSE;
 
     // get storage entry
     error = Index_initListStorage(&indexQueryHandle1,
@@ -1967,7 +1976,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
       break;
     }
     while (   !indexHandle->quitFlag
-           && !deletedIndex
+           && !deletedIndexFlag
            && Index_getNextStorage(&indexQueryHandle1,
                                    &storageId,
                                    NULL, // entity id
@@ -2003,6 +2012,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
         continue;
       }
       while (   !indexHandle->quitFlag
+             && !deletedIndexFlag
              && Index_getNextStorage(&indexQueryHandle2,
                                      &duplicateStorageId,
                                      NULL, // entity id
@@ -2025,16 +2035,17 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
            )
         {
           // get printable name (if possible)
-          error = Storage_parseName(&storageSpecifier,storageName);
+          error = Storage_parseName(&storageSpecifier,duplicateStorageName);
           if (error == ERROR_NONE)
           {
             String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
           }
           else
           {
-            String_set(printableStorageName,storageName);
+            String_set(printableStorageName,duplicateStorageName);
           }
 
+          // delete storage
           error = Index_deleteStorage(indexHandle,duplicateStorageId);
           if (error == ERROR_NONE)
           {
@@ -2046,23 +2057,35 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                         String_cString(printableStorageName)
                        );
             n++;
-            break;
+            deletedIndexFlag = TRUE;
           }
-          deletedIndex = TRUE;
-          break;
         }
       }
       Index_doneList(&indexQueryHandle2);
+
+      // request update index
+      if (deletedIndexFlag)
+      {
+        (void)Index_setState(indexHandle,
+                             storageId,
+                             INDEX_STATE_UPDATE_REQUESTED,
+                             0LL,  // lastCheckedTimestamp
+                             NULL  // errorMessage
+                            );
+      }
     }
     Index_doneList(&indexQueryHandle1);
   }
-  while (!indexHandle->quitFlag &&  deletedIndex);
-  if (n > 0L) plogMessage(NULL,  // logHandle
-                          LOG_TYPE_INDEX,
-                          "INDEX",
-                          "Cleaned %lu duplicate indizes\n",
-                          n
-                         );
+  while (!indexHandle->quitFlag && deletedIndexFlag);
+  if (n > 0L)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Cleaned %lu duplicate indizes\n",
+                n
+               );
+  }
 
   // free resources
   String_delete(printableStorageName);
@@ -2375,6 +2398,511 @@ LOCAL const char *getOrderingString(DatabaseOrdering ordering)
   }
 
   return s;
+}
+
+/***********************************************************************\
+* Name   : pruneStorage
+* Purpose: delete storage from index if not used anymore (empty)
+* Input  : indexHandle - index handle
+*          storageId   - storage id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneStorage(IndexHandle *indexHandle,
+                          DatabaseId  storageId
+                         )
+{
+  bool       existsFlag;
+  uint       i;
+  DatabaseId id;
+  Errors     error;
+
+  // check if storage entries exists
+  existsFlag = FALSE;
+  for (i = 0; i < SIZE_OF_ARRAY(ENTRY_TABLE_NAMES); i++)
+  {
+    if (Database_exists(&indexHandle->databaseHandle,
+                        ENTRY_TABLE_NAMES[i],
+                        "id",
+                        "WHERE storageId=%lld",
+                        storageId
+                       )
+       )
+    {
+      existsFlag = TRUE;
+      break;
+    }
+    UNUSED_VARIABLE(id);
+  }
+
+  if (!existsFlag)
+  {
+    // delete old entity (now empty)
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM storage WHERE id=%lld;",
+                             storageId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : pruneEntity
+* Purpose: delete entity from index if not used anymore (empty)
+* Input  : indexHandle - index handle
+*          storageId   - storage id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneEntity(IndexHandle *indexHandle,
+                         DatabaseId  entityId
+                         )
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       storageId;
+  bool             existsFlag;
+
+  // prune storage of entity
+  error = Index_initListStorage(&indexQueryHandle,
+                                indexHandle,
+                                NULL, // uuid
+                                entityId,
+                                STORAGE_TYPE_ANY,
+                                NULL, // storageName
+                                NULL, // hostName
+                                NULL, // loginName
+                                NULL, // deviceName
+                                NULL, // fileName
+                                INDEX_STATE_SET_ALL
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  while (Index_getNextStorage(&indexQueryHandle,
+                              &storageId,
+                              NULL, // entity id
+                              NULL, // job UUID
+                              NULL, // schedule UUID
+                              NULL, // archive type
+                              NULL, // storageName,
+                              NULL, // createdDateTime
+                              NULL, // entries
+                              NULL, // size
+                              NULL, // indexState
+                              NULL, // indexMode
+                              NULL, // lastCheckedDateTime
+                              NULL  // errorMessage
+                             )
+        )
+  {
+    error = pruneStorage(indexHandle,storageId);
+    if (error != ERROR_NONE)
+    {
+      break;
+    }
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // check if storages exists
+  existsFlag = FALSE;
+  if (Database_exists(&indexHandle->databaseHandle,
+                      "storage",
+                      "id",
+                      "WHERE entityId=%lld",
+                      entityId
+                     )
+     )
+  {
+    existsFlag = TRUE;
+  }
+  UNUSED_VARIABLE(storageId);
+
+  if (!existsFlag)
+  {
+    // delete old entity (now empty)
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entity WHERE id=%lld;",
+                             entityId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : assignStorageToStorage
+* Purpose: assign storage entries to other storage
+* Input  : indexHandle - index handle
+*          storageId   - storage id
+*          toStorageId - to storage id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors assignStorageToStorage(IndexHandle *indexHandle,
+                                    DatabaseId  storageId,
+                                    DatabaseId  toStorageId
+                                   )
+{
+  Errors           error;
+  uint             i;
+
+  // assign storage entries to other storage
+  for (i = 0; i < SIZE_OF_ARRAY(ENTRY_TABLE_NAMES); i++)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "UPDATE %s \
+                              SET storageId=%lld \
+                              WHERE storageId=%lld;\
+                             ",
+                             ENTRY_TABLE_NAMES[i],
+                             toStorageId,
+                             storageId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
+  // delete storage if empty
+  error = pruneStorage(indexHandle,storageId);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : assignEntityToStorage
+* Purpose: assign all storage entries of entity to other storage
+* Input  : indexHandle - index handle
+*          storageId   - storage id
+*          toStorageId - to storage id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
+                                   DatabaseId  entityId,
+                                   DatabaseId  toStorageId
+                                  )
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       storageId;
+
+  error = Index_initListStorage(&indexQueryHandle,
+                                indexHandle,
+                                NULL, // uuid
+                                entityId,
+                                STORAGE_TYPE_ANY,
+                                NULL, // storageName
+                                NULL, // hostName
+                                NULL, // loginName
+                                NULL, // deviceName
+                                NULL, // fileName
+                                INDEX_STATE_SET_ALL
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  while (Index_getNextStorage(&indexQueryHandle,
+                              &storageId,
+                              NULL, // entity id
+                              NULL, // job UUID
+                              NULL, // schedule UUID
+                              NULL, // archive type
+                              NULL, // storageName
+                              NULL, // createdDateTime
+                              NULL, // entries
+                              NULL, // size
+                              NULL, // indexState
+                              NULL, // indexMode
+                              NULL, // lastCheckedDateTime
+                              NULL  // errorMessage
+                             )
+        )
+  {
+    // assign storage entries to other storage
+    error = assignStorageToStorage(indexHandle,storageId,toStorageId);
+    if (error != ERROR_NONE)
+    {
+      Index_doneList(&indexQueryHandle);
+      return error;
+    }
+
+    // delete storage if empty
+    error = pruneStorage(indexHandle,storageId);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  Index_doneList(&indexQueryHandle);
+
+  // delete entity if empty
+  error = pruneEntity(indexHandle,entityId);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : assignJobToStorage
+* Purpose: assign all storage entries of all entities of job to other
+*          storage
+* Input  : indexHandle - index handle
+*          storageId   - storage id
+*          toStorageId - to storage id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
+                                ConstString jobUUID,
+                                DatabaseId  toStorageId
+                               )
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       entityId;
+
+  error = Index_initListEntities(&indexQueryHandle,
+                                 indexHandle,
+                                 jobUUID,
+                                 NULL, // scheduldUUID
+                                 DATABASE_ORDERING_ASCENDING,
+                                 0LL   // offset
+                                );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  while (Index_getNextEntity(&indexQueryHandle,
+                             &entityId,
+                             NULL,  // jobUUID,
+                             NULL,  // scheduleUUID,
+                             NULL,  // createdDateTime,
+                             NULL,  // archiveType,
+                             NULL,  // totalEntries,
+                             NULL,  // totalSize,
+                             NULL   // lastErrorMessage
+                            )
+        )
+  {
+    // assign all storage entries of entity to other storage
+    error = assignEntityToStorage(indexHandle,entityId,toStorageId);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  Index_doneList(&indexQueryHandle);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : assignStorageToStorage
+* Purpose: assign storage entries to other entity
+* Input  : indexHandle - index handle
+*          storageId   - storage id
+*          toEntityId  - to entity id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
+                                   DatabaseId  storageId,
+                                   DatabaseId  toEntityId
+                                  )
+{
+  Errors error;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "UPDATE storage \
+                            SET entityId=%lld \
+                            WHERE id=%lld;\
+                           ",
+                           toEntityId,
+                           storageId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : assignEntityToEntity
+* Purpose: assign all storage entries of entity to other entity
+* Input  : indexHandle - index handle
+*          entityId    - entity id
+*          toEntityId  - to entity id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors assignEntityToEntity(IndexHandle *indexHandle,
+                                  DatabaseId  entityId,
+                                  DatabaseId  toEntityId
+                                 )
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       storageId;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "UPDATE storage \
+                            SET entityId=%lld \
+                            WHERE entityId=%lld;\
+                           ",
+                           toEntityId,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // delete entity if empty
+  error = pruneEntity(indexHandle,entityId);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : assignJobToEntity
+* Purpose: assign all entities of job to other entity
+* Input  : indexHandle - index handle
+*          jobUUID     - job UUID
+*          toEntityId  - to entity id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors assignJobToEntity(IndexHandle *indexHandle,
+                               ConstString jobUUID,
+                               DatabaseId  toEntityId
+                              )
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       entityId;
+
+  error = Index_initListEntities(&indexQueryHandle,
+                                 indexHandle,
+                                 jobUUID,
+                                 NULL, // scheduldUUID
+                                 DATABASE_ORDERING_ASCENDING,
+                                 0LL   // offset
+                                );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  while (Index_getNextEntity(&indexQueryHandle,
+                             &entityId,
+                             NULL,  // jobUUID,
+                             NULL,  // scheduleUUID,
+                             NULL,  // createdDateTime,
+                             NULL,  // archiveType,
+                             NULL,  // totalEntries,
+                             NULL,  // totalSize,
+                             NULL   // lastErrorMessage
+                            )
+        )
+  {
+    // assign all storage entries of entity to other entity
+    error = assignEntityToEntity(indexHandle,entityId,toEntityId);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  Index_doneList(&indexQueryHandle);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : assignJobToJob
+* Purpose: assign all entities of job to other job
+*          entity
+* Input  : indexHandle - index handle
+*          jobUUID     - job UUID
+*          toJobUUID   - to job UUID
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors assignJobToJob(IndexHandle *indexHandle,
+                            ConstString jobUUID,
+                            ConstString toJobUUID
+                           )
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       entityId;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "UPDATE entity \
+                            SET jobUUID=%'S \
+                            WHERE jobUUID=%'S;\
+                           ",
+                           toJobUUID,
+                           jobUUID
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 /*---------------------------------------------------------------------*/
@@ -2711,7 +3239,8 @@ bool Index_findByName(IndexHandle  *indexHandle,
   storageName = String_new();
   Storage_initSpecifier(&storageSpecifier);
   foundFlag   = FALSE;
-  while (   Database_getNextRow(&databaseQueryHandle,
+  while (   !foundFlag
+         && Database_getNextRow(&databaseQueryHandle,
                                 "%S %S %lld %S %d %llu",
                                 jobUUID,
                                 scheduleUUID,
@@ -2720,7 +3249,6 @@ bool Index_findByName(IndexHandle  *indexHandle,
                                 indexState,
                                 lastCheckedTimestamp
                                )
-         && !foundFlag
         )
   {
     if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
@@ -3701,135 +4229,6 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
 }
 
 
-Errors Index_storageAssignTo(IndexHandle *indexHandle,
-                             ConstString jobUUID,
-                             DatabaseId  entityId,
-                             DatabaseId  storageId,
-                             DatabaseId  toEntityId
-                            )
-{
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-
-  assert(indexHandle != NULL);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  if (storageId != DATABASE_ID_NONE)
-  {
-    // assign storage to entity
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "UPDATE storage \
-                              SET entityId=%lld \
-                              WHERE id=%lld;\
-                             ",
-                             toEntityId,
-                             storageId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
-
-  if (entityId != DATABASE_ID_NONE)
-  {
-    // assign all storage of entity to other entity
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "UPDATE storage \
-                              SET entityId=%lld \
-                              WHERE entityId=%lld;\
-                             ",
-                             toEntityId,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    if (entityId != toEntityId)
-    {
-      // delete old entity (now empty)
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "DELETE FROM entities WHERE id=%lld;",
-                               entityId
-                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-    }
-  }
-
-  if (!String_isEmpty(jobUUID))
-  {
-    // assign all storage of all entities of job to other entity
-    error = Index_initListEntities(&indexQueryHandle,
-                                   indexHandle,
-                                   jobUUID,
-                                   NULL, // scheduldUUID
-                                   DATABASE_ORDERING_ASCENDING,
-                                   0LL   // offset
-                                  );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    while (Index_getNextEntity(&indexQueryHandle,
-                               &entityId,
-                               NULL,  // jobUUID,
-                               NULL,  // scheduleUUID,
-                               NULL,  // createdDateTime,
-                               NULL,  // archiveType,
-                               NULL,  // totalEntries,
-                               NULL,  // totalSize,
-                               NULL   // lastErrorMessage
-                              )
-          )
-    {
-      // assign all storage of entity to other entity
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "UPDATE storage \
-                                SET entityId=%lld \
-                                WHERE entityId=%lld;\
-                               ",
-                               toEntityId,
-                               entityId
-                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      if (entityId != toEntityId)
-      {
-        // delete entity (now empty)
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),
-                                 "DELETE FROM entities WHERE id=%lld;",
-                                 entityId
-                                );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-      }
-    }
-  }
-
-  return ERROR_NONE;
-}
-
 Errors Index_getStorage(IndexHandle *indexHandle,
                         DatabaseId  storageId,
                         String      storageName,
@@ -3896,11 +4295,13 @@ Errors Index_getStorage(IndexHandle *indexHandle,
 Errors Index_storageUpdate(IndexHandle *indexHandle,
                            DatabaseId  storageId,
                            ConstString storageName,
-                           uint64      entries,
                            uint64      size
                           )
 {
   Errors error;
+  uint64 entries;
+  uint   i;
+  int64  n;
 
   assert(indexHandle != NULL);
 
@@ -3910,6 +4311,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
+  // update name
   if (storageName != NULL)
   {
     error = Database_execute(&indexHandle->databaseHandle,
@@ -3926,15 +4328,45 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
       return error;
     }
   }
+
+  // update size
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "UPDATE storage \
-                            SET entries=%llu, \
-                                size=%llu \
+                            SET size=%llu \
+                            WHERE id=%lld;\
+                           ",
+                           size,
+                           storageId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // count and update entries
+  entries = 0LL;
+  for (i = 0; i < SIZE_OF_ARRAY(ENTRY_TABLE_NAMES); i++)
+  {
+    if (Database_getInteger64(&indexHandle->databaseHandle,
+                              &n,
+                              ENTRY_TABLE_NAMES[i],
+                              "COUNT(id)",
+                              "WHERE storageId=%lld",
+                              storageId
+                             ) == ERROR_NONE
+       )
+    {
+      entries += (uint64)n;
+    }
+  }
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "UPDATE storage \
+                            SET entries=%llu \
                             WHERE id=%lld;\
                            ",
                            entries,
-                           size,
                            storageId
                           );
   if (error != ERROR_NONE)
@@ -5088,6 +5520,108 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                           major,
                           minor
                          );
+}
+
+Errors Index_assignTo(IndexHandle *indexHandle,
+                      ConstString jobUUID,
+                      DatabaseId  entityId,
+                      DatabaseId  storageId,
+                      DatabaseId  toEntityId,
+                      DatabaseId  toStorageId
+                     )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  if      (toEntityId != DATABASE_ID_NONE)
+  {
+    // assign to other entity
+
+    if (storageId != DATABASE_ID_NONE)
+    {
+      // assign storage to other entity
+      error = assignStorageToEntity(indexHandle,
+                                    storageId,
+                                    toEntityId
+                                   );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+
+    if (entityId != DATABASE_ID_NONE)
+    {
+      // assign all storage entries of entity to other entity
+      error = assignEntityToEntity(indexHandle,
+                                   entityId,
+                                   toEntityId
+                                  );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+
+    if (!String_isEmpty(jobUUID))
+    {
+      // assign all entities of job to other entity
+      error = assignJobToEntity(indexHandle,
+                                jobUUID,
+                                toEntityId
+                               );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+  }
+  else if (toStorageId != DATABASE_ID_NONE)
+  {
+    // assign to other storage
+
+    if (storageId != DATABASE_ID_NONE)
+    {
+      // assign storage entries to other storage
+      error = assignStorageToStorage(indexHandle,storageId,toStorageId);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+
+    if (entityId != DATABASE_ID_NONE)
+    {
+      // assign all storage entries of entity to other storage
+      error = assignEntityToStorage(indexHandle,entityId,toStorageId);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+
+    if (!String_isEmpty(jobUUID))
+    {
+      // assign all storage entries of all entities of job to other storage
+      error = assignJobToStorage(indexHandle,
+                                 jobUUID,
+                                 toStorageId
+                                );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+  }
+
+  return ERROR_NONE;
 }
 
 #ifdef __cplusplus

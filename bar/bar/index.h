@@ -595,28 +595,6 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
                          );
 
 /***********************************************************************\
-* Name   : Index_storageAssignTo
-* Purpose: assign storage to entity
-* Input  : indexHandle - index handle
-*          jobUUID     - job UUID (can be NULL)
-*          entityId    - database id of entity index (can be
-*                        DATABASE_ID_NONE)
-*          storageId   - database id of storage index (can be
-*                        DATABASE_ID_NONE)
-*          toEntityId  - to entity id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_storageAssignTo(IndexHandle *indexHandle,
-                             ConstString jobUUID,
-                             DatabaseId  entityId,
-                             DatabaseId  storageId,
-                             DatabaseId  toEntityId
-                            );
-
-/***********************************************************************\
 * Name   : Index_getStorage
 * Purpose: get storage index name/entries/size
 * Input  : indexHandle - index handle
@@ -651,16 +629,15 @@ Errors Index_getStorage(IndexHandle *indexHandle,
 * Input  : indexHandle - index handle
 *          storageId   - database id of storage index
 *          storageName - storage name (can be NULL)
-*          entries     - number of entries
 *          size        - size [bytes]
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
+
 Errors Index_storageUpdate(IndexHandle *indexHandle,
                            DatabaseId  storageId,
                            ConstString storageName,
-                           uint64      entries,
                            uint64      size
                           );
 
@@ -1210,6 +1187,30 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                         uint32           major,
                         uint32           minor
                        );
+
+/***********************************************************************\
+* Name   : Index_assignTo
+* Purpose: assign job/entity/storage to other entity/storage
+* Input  : indexHandle - index handle
+*          jobUUID     - job UUID (can be NULL)
+*          entityId    - database id of entity index (can be
+*                        DATABASE_ID_NONE)
+*          storageId   - database id of storage index (can be
+*                        DATABASE_ID_NONE)
+*          toEntityId  - to entity id (can be DATABASE_ID_NONE)
+*          toStorageId - to storage id (can be DATABASE_ID_NONE)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_assignTo(IndexHandle *indexHandle,
+                      ConstString jobUUID,
+                      DatabaseId  entityId,
+                      DatabaseId  storageId,
+                      DatabaseId  toEntityId,
+                      DatabaseId  toStorageId
+                     );
 
 #ifdef __cplusplus
   }
