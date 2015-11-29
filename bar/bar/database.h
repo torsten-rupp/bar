@@ -376,6 +376,27 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Database_exists
+* Purpose: check if value exists database table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : -
+* Return : TRUE iff value exists
+* Notes  : -
+\***********************************************************************/
+
+bool Database_exists(DatabaseHandle *databaseHandle,
+                     const char     *tableName,
+                     const char     *columnName,
+                     const char     *additional,
+                     ...
+                    );
+
+/***********************************************************************\
 * Name   : Database_getInteger64
 * Purpose: get int64 value from database table
 * Input  : databaseHandle - database handle
@@ -384,7 +405,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
 *          additional     - additional string (e. g. WHERE...)
 *                           special functions:
 *                             REGEXP(pattern,case-flag,text)
-* Output : value - int64 value or DATABASE_ID_NONE if not found
+* Output : value - int64 value
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -396,28 +417,6 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
                              const char     *additional,
                              ...
                             );
-
-/***********************************************************************\
-* Name   : Database_getString
-* Purpose: get string value from database table
-* Input  : databaseHandle - database handle
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
-* Output : value - string value or empty if not found
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Database_getString(DatabaseHandle *databaseHandle,
-                          String         value,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
-                         );
 
 /***********************************************************************\
 * Name   : Database_setInteger64
@@ -441,6 +440,28 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
                              const char     *additional,
                              ...
                             );
+
+/***********************************************************************\
+* Name   : Database_getString
+* Purpose: get string value from database table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : value - string value
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getString(DatabaseHandle *databaseHandle,
+                          String         value,
+                          const char     *tableName,
+                          const char     *columnName,
+                          const char     *additional,
+                          ...
+                         );
 
 /***********************************************************************\
 * Name   : Database_setString

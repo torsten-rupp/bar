@@ -2046,6 +2046,79 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   #endif /* not NDEBUG */
 }
 
+bool Database_exists(DatabaseHandle *databaseHandle,
+                     const char     *tableName,
+                     const char     *columnName,
+                     const char     *additional,
+                     ...
+                    )
+{
+  bool         existsFlag;
+  String       sqlString;
+  va_list      arguments;
+  sqlite3_stmt *handle;
+  int          sqliteResult;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
+  existsFlag = FALSE;
+
+  // format SQL command string
+  sqlString = formatSQLString(String_new(),
+                              "SELECT %s \
+                               FROM %s \
+                              ",
+                              columnName,
+                              tableName
+                             );
+  if (additional != NULL)
+  {
+    String_appendChar(sqlString,' ');
+    va_start(arguments,additional);
+    vformatSQLString(sqlString,
+                     additional,
+                     arguments
+                    );
+    va_end(arguments);
+  }
+  String_appendCString(sqlString," LIMIT 0,1");
+
+  // execute SQL command
+  BLOCK_DOX(existsFlag,
+            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
+            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+  {
+    bool existsFlag = FALSE;
+
+    DATABASE_DEBUG_SQLX(databaseHandle,"get int64",sqlString);
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+                                      String_cString(sqlString),
+                                      -1,
+                                      &handle,
+                                      NULL
+                                     );
+    if (sqliteResult == SQLITE_OK)
+    {
+      if (sqlite3_step(handle) == SQLITE_ROW)
+      {
+        existsFlag = TRUE;
+      }
+    }
+
+    sqlite3_finalize(handle);
+
+    return existsFlag;
+  });
+
+  // free resources
+  String_delete(sqlString);
+
+  return existsFlag;
+}
+
 Errors Database_getInteger64(DatabaseHandle *databaseHandle,
                              int64          *value,
                              const char     *tableName,
@@ -2110,88 +2183,6 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
     if (sqlite3_step(handle) == SQLITE_ROW)
     {
       (*value) = (int64)sqlite3_column_int64(handle,0);
-    }
-
-    sqlite3_finalize(handle);
-
-    return error;
-  });
-  if (error != ERROR_NONE)
-  {
-    String_delete(sqlString);
-    return error;
-  }
-
-  // free resources
-  String_delete(sqlString);
-
-  return ERROR_NONE;
-}
-
-Errors Database_getString(DatabaseHandle *databaseHandle,
-                          String         value,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
-                         )
-{
-  String       sqlString;
-  va_list      arguments;
-  Errors       error;
-  sqlite3_stmt *handle;
-  int          sqliteResult;
-
-  assert(databaseHandle != NULL);
-  assert(databaseHandle->handle != NULL);
-  assert(value != NULL);
-  assert(tableName != NULL);
-  assert(columnName != NULL);
-
-  // format SQL command string
-  sqlString = formatSQLString(String_new(),
-                              "SELECT %s \
-                               FROM %s \
-                              ",
-                              columnName,
-                              tableName
-                             );
-  if (additional != NULL)
-  {
-    String_appendChar(sqlString,' ');
-    va_start(arguments,additional);
-    vformatSQLString(sqlString,
-                     additional,
-                     arguments
-                    );
-    va_end(arguments);
-  }
-  String_appendCString(sqlString," LIMIT 0,1");
-
-  // execute SQL command
-  BLOCK_DOX(error,
-            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
-            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
-  {
-    DATABASE_DEBUG_SQLX(databaseHandle,"get string",sqlString);
-    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
-                                      String_cString(sqlString),
-                                      -1,
-                                      &handle,
-                                      NULL
-                                     );
-    if (sqliteResult == SQLITE_OK)
-    {
-      error = ERROR_NONE;
-    }
-    else
-    {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
-    }
-
-    if (sqlite3_step(handle) == SQLITE_ROW)
-    {
-      String_setCString(value,(const char*)sqlite3_column_text(handle,0));
     }
 
     sqlite3_finalize(handle);
@@ -2317,6 +2308,88 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
 
     String_delete(sqlString);
 
+    return error;
+  }
+
+  // free resources
+  String_delete(sqlString);
+
+  return ERROR_NONE;
+}
+
+Errors Database_getString(DatabaseHandle *databaseHandle,
+                          String         value,
+                          const char     *tableName,
+                          const char     *columnName,
+                          const char     *additional,
+                          ...
+                         )
+{
+  String       sqlString;
+  va_list      arguments;
+  Errors       error;
+  sqlite3_stmt *handle;
+  int          sqliteResult;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(value != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
+  // format SQL command string
+  sqlString = formatSQLString(String_new(),
+                              "SELECT %s \
+                               FROM %s \
+                              ",
+                              columnName,
+                              tableName
+                             );
+  if (additional != NULL)
+  {
+    String_appendChar(sqlString,' ');
+    va_start(arguments,additional);
+    vformatSQLString(sqlString,
+                     additional,
+                     arguments
+                    );
+    va_end(arguments);
+  }
+  String_appendCString(sqlString," LIMIT 0,1");
+
+  // execute SQL command
+  BLOCK_DOX(error,
+            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
+            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+  {
+    DATABASE_DEBUG_SQLX(databaseHandle,"get string",sqlString);
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+                                      String_cString(sqlString),
+                                      -1,
+                                      &handle,
+                                      NULL
+                                     );
+    if (sqliteResult == SQLITE_OK)
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    }
+
+    if (sqlite3_step(handle) == SQLITE_ROW)
+    {
+      String_setCString(value,(const char*)sqlite3_column_text(handle,0));
+    }
+
+    sqlite3_finalize(handle);
+
+    return error;
+  });
+  if (error != ERROR_NONE)
+  {
+    String_delete(sqlString);
     return error;
   }
 
