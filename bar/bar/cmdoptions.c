@@ -1915,7 +1915,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             printSpaces(outputHandle,maxValueLength-strlen(select->name));
             (void)fputs(": ",outputHandle);
             (void)fputs(select->description,outputHandle);
-            if (commandLineOptions[i].selectOption.selects[j].value == commandLineOptions[i].defaultValue.select)
+            if (select->value == commandLineOptions[i].defaultValue.select)
             {
               (void)fputs(" (default)",outputHandle);
             }
