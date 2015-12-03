@@ -2692,6 +2692,8 @@ const char *File_userIdToUserName(char *name, uint nameSize, uint32 userId)
   assert(name != NULL);
   assert(nameSize > 0);
 
+  name[0] = '\0';
+
   #if defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R)
     // allocate buffer
     bufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
@@ -2792,6 +2794,8 @@ const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId)
 
   assert(name != NULL);
   assert(nameSize > 0);
+
+  name[0] = '\0';
 
   #if defined(HAVE_SYSCONF) && defined(HAVE_GETGRGID_R)
     // allocate buffer
