@@ -270,23 +270,23 @@ download()
   downloadPackage "$OSC_URL/$OSC_PATH/CentOS_CentOS-5/x86_64" 'bar-.*\.rpm'     bar-$version-centos5_x86_64.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/CentOS_CentOS-6/i686"   'bar-.*\.rpm'     bar-$version-centos6_i686.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/CentOS_CentOS-6/x86_64" 'bar-.*\.rpm'     bar-$version-centos6_x86_64.rpm
-#  downloadPackage "$OSC_URL/$OSC_PATH/CentOS_CentOS-7/x86_64" 'bar-.*\.rpm'     bar-$version-centos7_x86_64.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/CentOS_7/x86_64"        'bar-.*\.rpm'     bar-$version-centos7_x86_64.rpm
 
   downloadPackage "$OSC_URL/$OSC_PATH/Fedora_20/i686"         'bar-.*\.rpm'     bar-$version-fedora20_i686.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/Fedora_20/x86_64"       'bar-.*\.rpm'     bar-$version-fedora20_x86_64.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/Fedora_21/i686"         'bar-.*\.rpm'     bar-$version-fedora21_i686.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/Fedora_21/x86_64"       'bar-.*\.rpm'     bar-$version-fedora21_x86_64.rpm
-#  downloadPackage "$OSC_URL/$OSC_PATH/Fedora_22/i686"         'bar-.*\.rpm'     bar-$version-fedora22_i686.rpm
-#  downloadPackage "$OSC_URL/$OSC_PATH/Fedora_22/x86_64"       'bar-.*\.rpm'     bar-$version-fedora22_x86_64.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/Fedora_22/i686"         'bar-.*\.rpm'     bar-$version-fedora22_i686.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/Fedora_22/x86_64"       'bar-.*\.rpm'     bar-$version-fedora22_x86_64.rpm
 
   downloadPackage "$OSC_URL/$OSC_PATH/RedHat_RHEL-6/i686"     'bar-.*\.rpm'     bar-$version-redhat6_i686.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/RedHat_RHEL-6/x86_64"   'bar-.*\.rpm'     bar-$version-redhat6_x86_64.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/RHEL_7/x86_64"   'bar-.*\.rpm'     bar-$version-redhat7_x86_64.rpm
 
-#  downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP4/i586"        'bar-.*\.rpm'     bar-$version-sle11_i586.rpm
-#  downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP4/x86_64"      'bar-.*\.rpm'     bar-$version-sle11_x86_64.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP4/i586"        'bar-.*\.rpm'     bar-$version-sle11_i586.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/SLE_11_SP4/x86_64"      'bar-.*\.rpm'     bar-$version-sle11_x86_64.rpm
 #  downloadPackage "$OSC_URL/$OSC_PATH/SLE_12/i586"            'bar-.*\.rpm'     bar-$version-sle12_i586.rpm
-#  downloadPackage "$OSC_URL/$OSC_PATH/SLE_12/x86_64"          'bar-.*\.rpm'     bar-$version-sle12_x86_64.rpm
+  downloadPackage "$OSC_URL/$OSC_PATH/SLE_12/x86_64"          'bar-.*\.rpm'     bar-$version-sle12_x86_64.rpm
 
   downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_13.1/i586"     'bar-.*\.rpm'     bar-$version-opensuse13.1_i586.rpm
   downloadPackage "$OSC_URL/$OSC_PATH/openSUSE_13.1/x86_64"   'bar-.*\.rpm'     bar-$version-opensuse13.1_x86_64.rpm
@@ -379,44 +379,53 @@ EOT
   htmlCodeEntry "CentOS 5, 64bit x86_64" "" bar-$version-centos5_x86_64.rpm
   htmlCodeEntry "CentOS 6, 32bit"        "" bar-$version-centos6_i686.rpm
   htmlCodeEntry "CentOS 6, 64bit x86_64" "" bar-$version-centos6_x86_64.rpm
+  htmlCodeEntry "CentOS 7, 64bit x86_64" "" bar-$version-centos7_x86_64.rpm
 
-  htmlCodeEntry "Fedora 19, 32bit"        "" bar-$version-fedora19_i686.rpm
-  htmlCodeEntry "Fedora 19, 64bit x86_64" "" bar-$version-fedora19_x86_64.rpm
   htmlCodeEntry "Fedora 20, 32bit"        "" bar-$version-fedora20_i686.rpm
   htmlCodeEntry "Fedora 20, 64bit x86_64" "" bar-$version-fedora20_x86_64.rpm
+  htmlCodeEntry "Fedora 21, 32bit"        "" bar-$version-fedora21_i686.rpm
+  htmlCodeEntry "Fedora 21, 64bit x86_64" "" bar-$version-fedora21_x86_64.rpm
+  htmlCodeEntry "Fedora 22, 32bit"        "" bar-$version-fedora22_i686.rpm
+  htmlCodeEntry "Fedora 22, 64bit x86_64" "" bar-$version-fedora22_x86_64.rpm
 
   htmlCodeEntry "RedHat 6, 32bit"        "" bar-$version-redhat6_i686.rpm
   htmlCodeEntry "RedHat 6, 64bit x86_64" "" bar-$version-redhat6_x86_64.rpm
+  htmlCodeEntry "RedHat 7, 64bit x86_64" "" bar-$version-redhat7_x86_64.rpm
 
   htmlCodeEntry "SLE 11, 32bit"        "" bar-$version-sle11_i586.rpm
   htmlCodeEntry "SLE 11, 64bit x86_64" "" bar-$version-sle11_x86_64.rpm
+  htmlCodeEntry "SLE 12, 64bit x86_64" "" bar-$version-sle12_x86_64.rpm
 
-  htmlCodeEntry "openSuSE 12.2, 32bit"        "" bar-$version-opensuse12.2_i586.rpm
-  htmlCodeEntry "openSuSE 12.2, 64bit x86_64" "" bar-$version-opensuse12.2_x86_64.rpm
   htmlCodeEntry "openSuSE 13.1, 32bit"        "" bar-$version-opensuse13.1_i586.rpm
   htmlCodeEntry "openSuSE 13.1, 64bit x86_64" "" bar-$version-opensuse13.1_x86_64.rpm
+  htmlCodeEntry "openSuSE 13.2, 32bit"        "" bar-$version-opensuse13.2_i586.rpm
+  htmlCodeEntry "openSuSE 13.2, 64bit x86_64" "" bar-$version-opensuse13.2_x86_64.rpm
 
-  htmlCodeEntry "Debian 6, 32bit"        CMD bar-$version-debian6_i386.deb
-  htmlCodeEntry "Debian 6, 32bit"        GUI bar-gui-$version-debian6_i386.deb
-  htmlCodeEntry "Debian 6, 64bit x86_64" CMD bar-$version-debian6_amd64.deb
-  htmlCodeEntry "Debian 6, 64bit x86_64" GUI bar-gui-$version-debian6_amd64.deb
   htmlCodeEntry "Debian 7, 32bit"        CMD bar-$version-debian7_i386.deb
   htmlCodeEntry "Debian 7, 32bit"        GUI bar-gui-$version-debian7_i386.deb
   htmlCodeEntry "Debian 7, 64bit x86_64" CMD bar-$version-debian7_amd64.deb
   htmlCodeEntry "Debian 7, 64bit x86_64" GUI bar-gui-$version-debian7_amd64.deb
+  htmlCodeEntry "Debian 8, 32bit"        CMD bar-$version-debian8_i386.deb
+  htmlCodeEntry "Debian 8, 32bit"        GUI bar-gui-$version-debian8_i386.deb
+  htmlCodeEntry "Debian 8, 64bit x86_64" CMD bar-$version-debian8_amd64.deb
+  htmlCodeEntry "Debian 8, 64bit x86_64" GUI bar-gui-$version-debian8_amd64.deb
 
   htmlCodeEntry "Ubuntu 12.04, 32bit"        CMD bar-$version-ubuntu12.04_i386.deb
   htmlCodeEntry "Ubuntu 12.04, 32bit"        GUI bar-gui-$version-ubuntu12.04_i386.deb
   htmlCodeEntry "Ubuntu 12.04, 64bit x86_64" CMD bar-$version-ubuntu12.04_amd64.deb
   htmlCodeEntry "Ubuntu 12.04, 64bit x86_64" GUI bar-gui-$version-ubuntu12.04_amd64.deb
-  htmlCodeEntry "Ubuntu 13.04, 32bit"        CMD bar-$version-ubuntu13.04_i386.deb
-  htmlCodeEntry "Ubuntu 13.04, 32bit"        GUI bar-gui-$version-ubuntu13.04_i386.deb
-  htmlCodeEntry "Ubuntu 13.04, 64bit x86_64" CMD bar-$version-ubuntu13.04_amd64.deb
-  htmlCodeEntry "Ubuntu 13.04, 64bit x86_64" GUI bar-gui-$version-ubuntu13.04_amd64.deb
-  htmlCodeEntry "Ubuntu 13.10, 32bit"        CMD bar-$version-ubuntu13.10_i386.deb
-  htmlCodeEntry "Ubuntu 13.10, 32bit"        GUI bar-gui-$version-ubuntu13.10_i386.deb
-  htmlCodeEntry "Ubuntu 13.10, 64bit x86_64" CMD bar-$version-ubuntu13.10_amd64.deb
-  htmlCodeEntry "Ubuntu 13.10, 64bit x86_64" GUI bar-gui-$version-ubuntu13.10_amd64.deb
+  htmlCodeEntry "Ubuntu 14.04, 32bit"        CMD bar-$version-ubuntu14.04_i386.deb
+  htmlCodeEntry "Ubuntu 14.04, 32bit"        GUI bar-gui-$version-ubuntu14.04_i386.deb
+  htmlCodeEntry "Ubuntu 14.04, 64bit x86_64" CMD bar-$version-ubuntu14.04_amd64.deb
+  htmlCodeEntry "Ubuntu 14.04, 64bit x86_64" GUI bar-gui-$version-ubuntu14.04_amd64.deb
+  htmlCodeEntry "Ubuntu 14.10, 32bit"        CMD bar-$version-ubuntu14.10_i386.deb
+  htmlCodeEntry "Ubuntu 14.10, 32bit"        GUI bar-gui-$version-ubuntu14.10_i386.deb
+  htmlCodeEntry "Ubuntu 14.10, 64bit x86_64" CMD bar-$version-ubuntu14.10_amd64.deb
+  htmlCodeEntry "Ubuntu 14.10, 64bit x86_64" GUI bar-gui-$version-ubuntu14.10_amd64.deb
+  htmlCodeEntry "Ubuntu 15.04, 32bit"        CMD bar-$version-ubuntu15.04_i386.deb
+  htmlCodeEntry "Ubuntu 15.04, 32bit"        GUI bar-gui-$version-ubuntu15.04_i386.deb
+  htmlCodeEntry "Ubuntu 15.04, 64bit x86_64" CMD bar-$version-ubuntu15.04_amd64.deb
+  htmlCodeEntry "Ubuntu 15.04, 64bit x86_64" GUI bar-gui-$version-ubuntu15.04_amd64.deb
 
   $CAT <<EOT
       </TABLE>
