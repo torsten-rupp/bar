@@ -626,7 +626,7 @@ LOCAL void findNextArchivePart(ArchiveInfo *archiveInfo)
     {
       storageSize = archiveInfo->archiveGetSizeFunction(archiveInfo->archiveGetSizeUserData,
                                                 archiveInfo->indexHandle,
-                                                archiveInfo->entityId,
+//                                                archiveInfo->entityId,
                                                 archiveInfo->storageId,
                                                 archiveInfo->partNumber
                                                );
@@ -949,7 +949,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
       {
         // create storage index
         error = Index_newStorage(archiveInfo->indexHandle,
-                                 archiveInfo->entityId,
+                                 DATABASE_ID_NONE,  // entityId,
                                  NULL, // storageName
                                  INDEX_STATE_CREATE,
                                  INDEX_MODE_MANUAL,
@@ -973,7 +973,10 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
       {
         error = archiveInfo->archiveInitFunction(archiveInfo->archiveInitUserData,
                                                  archiveInfo->indexHandle,
-                                                 archiveInfo->entityId,
+                                                 archiveInfo->jobUUID,
+                                                 archiveInfo->scheduleUUID,
+                                                 archiveInfo->archiveType,
+//                                                 archiveInfo->entityId,
                                                  archiveInfo->storageId,
                                                  isSplittedArchive(archiveInfo)
                                                    ? (int)archiveInfo->partNumber
@@ -1032,7 +1035,10 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
     {
       error = archiveInfo->archiveStoreFunction(archiveInfo->archiveStoreUserData,
                                                 archiveInfo->indexHandle,
-                                                archiveInfo->entityId,
+                                                archiveInfo->jobUUID,
+                                                archiveInfo->scheduleUUID,
+                                                archiveInfo->archiveType,
+//                                                archiveInfo->entityId,
                                                 archiveInfo->storageId,
                                                 isSplittedArchive(archiveInfo)
                                                   ? (int)archiveInfo->partNumber
@@ -1053,7 +1059,10 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
     {
       error = archiveInfo->archiveDoneFunction(archiveInfo->archiveDoneUserData,
                                                archiveInfo->indexHandle,
-                                               archiveInfo->entityId,
+                                                archiveInfo->jobUUID,
+                                                archiveInfo->scheduleUUID,
+                                                archiveInfo->archiveType,
+//                                                archiveInfo->entityId,
                                                archiveInfo->storageId,
                                                isSplittedArchive(archiveInfo)
                                                  ? (int)archiveInfo->partNumber
@@ -3112,7 +3121,10 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   archiveInfo->chunkIOUserData                 = &archiveInfo->file.fileHandle;
 
   archiveInfo->indexHandle                     = indexHandle;
-  archiveInfo->entityId                        = DATABASE_ID_NONE;
+  archiveInfo->jobUUID                         = String_duplicate(jobUUID);
+  archiveInfo->scheduleUUID                    = String_duplicate(scheduleUUID);
+  archiveInfo->archiveType                     = archiveType;
+//  archiveInfo->entityId                        = DATABASE_ID_NONE;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
 
   archiveInfo->entries                         = 0LL;
@@ -3201,6 +3213,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #endif /* 0 */
   }
 
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+#if 0
   // create index
   if (   (archiveInfo->indexHandle != NULL)
       && !archiveInfo->jobOptions->noIndexDatabaseFlag
@@ -3222,7 +3236,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
         return error;
       }
     }
+fprintf(stderr,"%s, %d:crate emn %llu \n",__FILE__,__LINE__,archiveInfo->entityId);
   }
+#endif   
 
   // free resources
   AutoFree_done(&autoFreeList);
@@ -3307,7 +3323,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->chunkIOUserData                 = &archiveInfo->storage.storageArchiveHandle;
 
   archiveInfo->indexHandle                     = NULL;
-  archiveInfo->entityId                        = DATABASE_ID_NONE;
+  archiveInfo->jobUUID                         = NULL;
+  archiveInfo->scheduleUUID                    = NULL;
+//  archiveInfo->entityId                        = DATABASE_ID_NONE;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
 
   archiveInfo->entries                         = 0LL;
@@ -3418,6 +3436,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     free(archiveInfo->cryptKeyData);
     Crypt_doneKey(&archiveInfo->cryptKey);
   }
+
+  if (archiveInfo->jobUUID != NULL) String_delete(archiveInfo->jobUUID);
+  if (archiveInfo->scheduleUUID != NULL) String_delete(archiveInfo->scheduleUUID);
 
   Semaphore_done(&archiveInfo->chunkIOLock);
   if (archiveInfo->cryptPassword  != NULL) Password_delete(archiveInfo->cryptPassword);

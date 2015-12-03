@@ -80,7 +80,10 @@ typedef enum
 
 typedef Errors(*ArchiveInitFunction)(void        *userData,
                                      IndexHandle *indexHandle,
-                                     DatabaseId  entityId,
+                                     ConstString jobUUID,
+                                     ConstString scheduleUUID,
+                                     ArchiveTypes archiveType,
+//                                     DatabaseId  entityId,
                                      DatabaseId  storageId,
                                      int         partNumber
                                     );
@@ -101,7 +104,10 @@ typedef Errors(*ArchiveInitFunction)(void        *userData,
 
 typedef Errors(*ArchiveDoneFunction)(void        *userData,
                                      IndexHandle *indexHandle,
-                                     DatabaseId  entityId,
+                                     ConstString jobUUID,
+                                     ConstString scheduleUUID,
+                                     ArchiveTypes archiveType,
+//                                     DatabaseId  entityId,
                                      DatabaseId  storageId,
                                      int         partNumber
                                     );
@@ -122,7 +128,7 @@ typedef Errors(*ArchiveDoneFunction)(void        *userData,
 
 typedef uint64(*ArchiveGetSizeFunction)(void        *userData,
                                         IndexHandle *indexHandle,
-                                        DatabaseId  entityId,
+//                                        DatabaseId  entityId,
                                         DatabaseId  storageId,
                                         int         partNumber
                                        );
@@ -145,7 +151,10 @@ typedef uint64(*ArchiveGetSizeFunction)(void        *userData,
 
 typedef Errors(*ArchiveStoreFunction)(void        *userData,
                                       IndexHandle *indexHandle,
-                                      DatabaseId  entityId,
+                                     ConstString jobUUID,
+                                     ConstString scheduleUUID,
+                                     ArchiveTypes archiveType,
+//                                      DatabaseId  entityId,
                                       DatabaseId  storageId,
                                       int         partNumber,
                                       String      fileName,
@@ -228,7 +237,10 @@ typedef struct
   void                            *chunkIOUserData;                    // chunk i/o functions data
 
   IndexHandle                     *indexHandle;                        // index handle
-  DatabaseId                      entityId;                            // database id of entity
+  String                          jobUUID;
+  String                          scheduleUUID;
+  ArchiveTypes                    archiveType;
+//  DatabaseId                      entityId;                            // database id of entity
   DatabaseId                      storageId;                           // database id of storage
 
   uint64                          entries;                             // number of entries
