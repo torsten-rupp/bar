@@ -116,6 +116,8 @@ typedef struct ScheduleNode
   uint               maxAge;                   // max. age [days]
   bool               noStorage;                // TRUE to skip storage, only create incremental data file
   bool               enabled;                  // TRUE iff enabled
+  String             preProcessScript;         // script to execute before start of job
+  String             postProcessScript;        // script to execute after after termination of job
 } ScheduleNode;
 
 typedef struct
@@ -504,8 +506,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_STRUCT_VALUE_STRING   ("mount-device",            JobNode,jobOptions.mountDeviceName              ),
 
-  CONFIG_STRUCT_VALUE_STRING   ("pre-command",             JobNode,jobOptions.preProcessCommand            ),
-  CONFIG_STRUCT_VALUE_STRING   ("post-command",            JobNode,jobOptions.postProcessCommand           ),
+  CONFIG_STRUCT_VALUE_STRING   ("pre-command",             JobNode,jobOptions.preProcessScript             ),
+  CONFIG_STRUCT_VALUE_STRING   ("post-command",            JobNode,jobOptions.postProcessScript            ),
 
   CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",          JobNode,jobOptions.ftpServer.loginName          ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
@@ -2733,8 +2735,8 @@ LOCAL bool readJob(JobNode *jobNode)
   clearKey(&jobNode->jobOptions.sshServer.publicKey);
   clearKey(&jobNode->jobOptions.sshServer.privateKey);
   String_clear(jobNode->jobOptions.mountDeviceName);
-  String_clear(jobNode->jobOptions.preProcessCommand);
-  String_clear(jobNode->jobOptions.postProcessCommand);
+  String_clear(jobNode->jobOptions.preProcessScript);
+  String_clear(jobNode->jobOptions.postProcessScript);
   jobNode->jobOptions.device.volumeSize            = 0LL;
   jobNode->jobOptions.waitFirstVolumeFlag          = FALSE;
   jobNode->jobOptions.errorCorrectionCodesFlag     = FALSE;
@@ -3351,9 +3353,9 @@ fprintf(stderr,"%s, %d: start %s: %s\n",__FILE__,__LINE__,String_cString(jobNode
     if (jobNode->runningInfo.error == ERROR_NONE)
     {
       TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name));
-      if (jobNode->jobOptions.preProcessCommand != NULL)
+      if (jobNode->jobOptions.preProcessScript != NULL)
       {
-        jobNode->runningInfo.error = Misc_executeScript(String_cString(jobNode->jobOptions.preProcessCommand),
+        jobNode->runningInfo.error = Misc_executeScript(String_cString(jobNode->jobOptions.preProcessScript),
                                                         textMacros,SIZE_OF_ARRAY(textMacros),
                                                         CALLBACK(executeIOOutput,NULL),
                                                         CALLBACK(executeIOOutput,NULL)
@@ -3534,9 +3536,9 @@ NULL,//                                                        scheduleTitle,
     if (jobNode->runningInfo.error == ERROR_NONE)
     {
       TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name));
-      if (jobNode->jobOptions.postProcessCommand != NULL)
+      if (jobNode->jobOptions.postProcessScript != NULL)
       {
-        jobNode->runningInfo.error = Misc_executeScript(String_cString(jobNode->jobOptions.postProcessCommand),
+        jobNode->runningInfo.error = Misc_executeScript(String_cString(jobNode->jobOptions.postProcessScript),
                                                         textMacros,SIZE_OF_ARRAY(textMacros),
                                                         CALLBACK(executeIOOutput,NULL),
                                                         CALLBACK(executeIOOutput,NULL)
