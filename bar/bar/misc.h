@@ -336,19 +336,21 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize);
 /***********************************************************************\
 * Name   : Misc_expandMacrosCString
 * Purpose: expand macros %<name>:<format> in string
-* Input  : string        - string variable
-*          macroTemplate - string with macros
-*          macros        - array with macro definitions
-*          macroCount    - number of macro definitions
+* Input  : string               - string variable
+*          templateStruing      - template string with macros
+*          macros               - array with macro definitions
+*          macroCount           - number of macro definitions
+*          expandMacroCharacter - TRUE to expand %% -> %
 * Output : s - string with expanded macros
 * Return : expanded string
 * Notes  : -
 \***********************************************************************/
 
 String Misc_expandMacros(String          string,
-                         const char      *macroTemplate,
+                         const char      *templateString,
                          const TextMacro macros[],
-                         uint            macroCount
+                         uint            macroCount,
+                         bool            expandMacroCharacter
                         );
 
 /*---------------------------------------------------------------------*/

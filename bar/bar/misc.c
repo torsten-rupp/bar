@@ -820,9 +820,10 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
 /*---------------------------------------------------------------------*/
 
 String Misc_expandMacros(String          string,
-                         const char      *macroTemplate,
+                         const char      *templateString,
                          const TextMacro macros[],
-                         uint            macroCount
+                         uint            macroCount,
+                         bool            expandMacroCharacter
                         )
 {
   #define APPEND_CHAR(string,index,ch) \
@@ -848,28 +849,37 @@ String Misc_expandMacros(String          string,
     } \
     while (0)
 
-  bool  macroFlag;
-  ulong i;
-  uint  j;
-  char  name[128];
-  char  format[128];
+  String expanded;
+  bool   macroFlag;
+  ulong  i;
+  uint   j;
+  char   name[128];
+  char   format[128];
 
-  assert(macroTemplate != NULL);
+  assert(string != NULL);
+  assert(templateString != NULL);
   assert((macroCount == 0) || (macros != NULL));
 
-  String_clear(string);
+  expanded = String_new();
   i = 0;
   do
   {
     // add prefix string
     macroFlag = FALSE;
-    while ((macroTemplate[i] != '\0') && !macroFlag)
+    while ((templateString[i] != '\0') && !macroFlag)
     {
-      if (macroTemplate[i] == '%')
+      if (templateString[i] == '%')
       {
-        if ((macroTemplate[i+1] == '%'))
+        if ((templateString[i+1] == '%'))
         {
-          String_appendChar(string,'%');
+          if (expandMacroCharacter)
+          {
+            String_appendChar(expanded,'%');
+          } 
+          else
+          {
+            String_appendCString(expanded,"%%");
+          }
           i+=2;
         }
         else
@@ -880,7 +890,7 @@ String Misc_expandMacros(String          string,
       }
       else
       {
-        String_appendChar(string,macroTemplate[i]);
+        String_appendChar(expanded,templateString[i]);
         i++;
       }
     }
@@ -888,60 +898,60 @@ String Misc_expandMacros(String          string,
     if (macroFlag)
     {
       // skip spaces
-      SKIP_SPACES(macroTemplate,i);
+      SKIP_SPACES(templateString,i);
 
       // get macro name
       j = 0;
-      if (   (macroTemplate[i] != '\0')
-          && isalpha(macroTemplate[i])
+      if (   (templateString[i] != '\0')
+          && isalpha(templateString[i])
          )
       {
         APPEND_CHAR(name,j,'%');
         do
         {
-          APPEND_CHAR(name,j,macroTemplate[i]);
+          APPEND_CHAR(name,j,templateString[i]);
           i++;
         }
-        while (   (macroTemplate[i] != '\0')
-               && isalnum(macroTemplate[i])
+        while (   (templateString[i] != '\0')
+               && isalnum(templateString[i])
               );
       }
       name[j] = '\0';
 
       // get format data (if any)
       j = 0;
-      if (macroTemplate[i] == ':')
+      if (templateString[i] == ':')
       {
         // skip ':'
         i++;
 
         // skip spaces
-        SKIP_SPACES(macroTemplate,i);
+        SKIP_SPACES(templateString,i);
 
         // get format string
         APPEND_CHAR(format,j,'%');
-        while (   (macroTemplate[i] != '\0')
-               && (   isdigit(macroTemplate[i])
-                   || (macroTemplate[i] == '-')
-                   || (macroTemplate[i] == '.')
+        while (   (templateString[i] != '\0')
+               && (   isdigit(templateString[i])
+                   || (templateString[i] == '-')
+                   || (templateString[i] == '.')
                   )
               )
         {
-          APPEND_CHAR(format,j,macroTemplate[i]);
+          APPEND_CHAR(format,j,templateString[i]);
           i++;
         }
-        while (   (macroTemplate[i] != '\0')
-               && (strchr("l",macroTemplate[i]) != NULL)
+        while (   (templateString[i] != '\0')
+               && (strchr("l",templateString[i]) != NULL)
               )
         {
-          APPEND_CHAR(format,j,macroTemplate[i]);
+          APPEND_CHAR(format,j,templateString[i]);
           i++;
         }
-        if (   (macroTemplate[i] != '\0')
-            && (strchr("duxfsS",macroTemplate[i]) != NULL)
+        if (   (templateString[i] != '\0')
+            && (strchr("duxfsS",templateString[i]) != NULL)
            )
         {
-          APPEND_CHAR(format,j,macroTemplate[i]);
+          APPEND_CHAR(format,j,templateString[i]);
           i++;
         }
       }
@@ -993,19 +1003,19 @@ String Misc_expandMacros(String          string,
           switch (macros[j].type)
           {
             case TEXT_MACRO_TYPE_INTEGER:
-              String_format(string,format,macros[j].value.i);
+              String_format(expanded,format,macros[j].value.i);
               break;
             case TEXT_MACRO_TYPE_INTEGER64:
-              String_format(string,format,macros[j].value.l);
+              String_format(expanded,format,macros[j].value.l);
               break;
             case TEXT_MACRO_TYPE_DOUBLE:
-              String_format(string,format,macros[j].value.d);
+              String_format(expanded,format,macros[j].value.d);
               break;
             case TEXT_MACRO_TYPE_CSTRING:
-              String_format(string,format,macros[j].value.s);
+              String_format(expanded,format,macros[j].value.s);
               break;
             case TEXT_MACRO_TYPE_STRING:
-              String_format(string,format,macros[j].value.string);
+              String_format(expanded,format,macros[j].value.string);
               break;
             #ifndef NDEBUG
               default:
@@ -1017,17 +1027,23 @@ String Misc_expandMacros(String          string,
         else
         {
           // keep unknown macro
-          String_appendCString(string,name);
+          String_appendCString(expanded,name);
         }
       }
       else
       {
         // empty macro: add empty string
-        String_format(string,format,"");
+        String_format(expanded,format,"");
       }
     }
   }
   while (macroFlag);
+
+  // store result
+  String_set(string,expanded);
+
+  // free resources
+  String_delete(expanded);
 
   return string;
 
@@ -1096,7 +1112,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
     StringList_init(&argumentList);
 
     // expand command line
-    Misc_expandMacros(commandLine,commandTemplate,macros,macroCount);
+    Misc_expandMacros(commandLine,commandTemplate,macros,macroCount,TRUE);
     printInfo(3,"Execute command '%s'...",String_cString(commandLine));
 
     // parse command line
@@ -1200,9 +1216,10 @@ Errors Misc_executeScript(const char        *scriptTemplate,
     tmpFileName = String_new();
 
     // expand script
-    Misc_expandMacros(script,scriptTemplate,macros,macroCount);
+    Misc_expandMacros(script,scriptTemplate,macros,macroCount,TRUE);
     printInfo(3,"Execute script...");
 
+#warning todo
 #if 0
     // parse script #!-line
     String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
