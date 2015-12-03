@@ -1829,9 +1829,12 @@ public class TabRestore
         {
           for (TreeItem treeItem : removeEntityTreeItemSet)
           {
-            IndexData indexData = (IndexData)treeItem.getData();
-            Widgets.removeTreeItem(widgetStorageTree,treeItem);
-            indexData.clearTreeItem();
+            if (!treeItem.isDisposed())
+            {
+              IndexData indexData = (IndexData)treeItem.getData();
+              Widgets.removeTreeItem(widgetStorageTree,treeItem);
+              indexData.clearTreeItem();
+            }
           }
         }
       });
@@ -6326,8 +6329,7 @@ Dprintf.dprintf("");
       {
         if (Dialogs.confirm(shell,BARControl.tr("Remove {0} {0,choice,0#indizes|1#index|1<indizes} with error state?",errorCount)))
         {
-          final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes with error",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
-          busyDialog.autoAnimate();
+          final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes with error",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE);
           busyDialog.setMaximum(errorCount);
 
           new BackgroundTask(busyDialog)
@@ -6999,7 +7001,14 @@ Dprintf.dprintf("");
   {
     BARControl.waitCursor();
 
-    final BusyDialog busyDialog = new BusyDialog(shell,"Restore entries",500,100,null,BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR1);
+    final BusyDialog busyDialog = new BusyDialog(shell,
+                                                 !directory.isEmpty() ? BARControl.tr("Restore entries to: {0}",directory) : BARControl.tr("Restore entries"),
+                                                 500,
+                                                 300,
+                                                 null,
+                                                 BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST
+                                                );
+    busyDialog.updateText(2,BARControl.tr("Failed entries:"));
 
     new BackgroundTask(busyDialog,new Object[]{entryData,directory,overwriteFiles})
     {
@@ -7017,16 +7026,16 @@ Dprintf.dprintf("");
         // restore entries
         try
         {
+          long  errorCount            = 0;
+          final boolean skipAllFlag[] = new boolean[]{false};
+          int n = 0;
           for (final EntryData entryData : entryData_)
           {
-            if (!directory.isEmpty())
+//            if (directory.isEmpty())
             {
-              busyDialog.updateText(0,"'"+entryData.name+"' into '"+directory+"'");
+              busyDialog.updateText(0,entryData.storageName);
             }
-            else
-            {
-              busyDialog.updateText(0,"'"+entryData.name+"'");
-            }
+            busyDialog.updateProgressBar(0,((double)n*100.0)/(double)entryData_.length);
 
             Command command;
             boolean retryFlag;
@@ -7230,14 +7239,40 @@ Dprintf.dprintf("");
             {
               if (command.getErrorCode() != Errors.NONE)
               {
-                final String errorText = command.getErrorText();
-                display.syncExec(new Runnable()
+                busyDialog.updateList(entryData.name);
+                errorCount++;
+
+                if (!skipAllFlag[0])
                 {
-                  public void run()
+                  final String errorText = command.getErrorText();
+                  display.syncExec(new Runnable()
                   {
-                    Dialogs.error(shell,BARControl.tr("Cannot restore entry\n\n''{0}''\n\nfrom archive\n\n''{1}''\n\n(error: {2})",entryData.name,entryData.storageName,errorText));
-                  }
-                });
+                    public void run()
+                    {
+                      switch (Dialogs.select(shell,
+                                             BARControl.tr("Confirmation"),
+                                             BARControl.tr("Cannot restore entry\n\n''{0}''\n\nfrom archive\n\n''{1}''\n\n(error: {2})",
+                                                           entryData.name,
+                                                           entryData.storageName,
+                                                           errorText
+                                                          ),
+                                             new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                             0
+                                            )
+                             )
+                      {
+                        case 0:
+                          break;
+                        case 1:
+                          skipAllFlag[0] = true;
+                          break;
+                        case 2:
+                          busyDialog.abort();
+                          break;
+                      }
+                    }
+                  });
+                }
               }
             }
             else
@@ -7246,16 +7281,25 @@ Dprintf.dprintf("");
               command.abort();
               break;
             }
+
+            n++;
           }
 
-          // close busy dialog, restore cursor
+          // close/done busy dialog, restore cursor
+          if (errorCount == 0)
+          {
+            busyDialog.close();
+          }
+          else
+          {
+            busyDialog.done();
+          }
           display.syncExec(new Runnable()
           {
             public void run()
             {
-              busyDialog.close();
               BARControl.resetCursor();
-             }
+            }
           });
         }
         catch (CommunicationError error)
