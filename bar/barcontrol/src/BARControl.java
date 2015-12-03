@@ -816,12 +816,11 @@ class Units
    */
   public static String getByteShortUnit(double n)
   {
-    if      (n >= 1024L*1024L*1024L*1024L*1024L) return "T";
-    if      (n >=       1024L*1024L*1024L*1024L) return "G";
-    else if (n >=             1024L*1024L*1024L) return "G";
-    else if (n >=                   1024L*1024L) return "M";
-    else if (n >=                         1024L) return "K";
-    else                                         return "";
+    if      (n >= 1024L*1024L*1024L*1024L) return "T";
+    else if (n >=       1024L*1024L*1024L) return "G";
+    else if (n >=             1024L*1024L) return "M";
+    else if (n >=                   1024L) return "K";
+    else                            return "";
   }
 
   /** parse byte size string
@@ -834,45 +833,52 @@ class Units
     string = string.toUpperCase();
 
     // try to parse with default locale
-    if      (string.endsWith("TB"))
+    try
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-2))*1024L*1024L*1024L*1024L);
+      if      (string.endsWith("TB"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*1024L*1024L*1024L*1024L);
+      }
+      else if (string.endsWith("T"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*1024L*1024L*1024L*1024L);
+      }
+      else if (string.endsWith("GB"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*1024L*1024L*1024L);
+      }
+      else if (string.endsWith("G"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*1024L*1024L*1024L);
+      }
+      else if (string.endsWith("MB"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*1024L*1024L);
+      }
+      else if (string.endsWith("M"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*1024L*1024L);
+      }
+      else if (string.endsWith("KB"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*1024L);
+      }
+      else if (string.endsWith("K"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*1024L);
+      }
+      else if (string.endsWith("B"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue());
+      }
+      else
+      {
+        return (long)NumberFormat.getInstance().parse(string).doubleValue();
+      }
     }
-    else if (string.endsWith("T"))
+    catch (ParseException exception)
     {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-1))*1024L*1024L*1024L*1024L);
-    }
-    else if (string.endsWith("GB"))
-    {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-2))*1024L*1024L*1024L);
-    }
-    else if (string.endsWith("G"))
-    {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-1))*1024L*1024L*1024L);
-    }
-    else if (string.endsWith("MB"))
-    {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-2))*1024L*1024L);
-    }
-    else if (string.endsWith("M"))
-    {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-1))*1024L*1024L);
-    }
-    else if (string.endsWith("KB"))
-    {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-2))*1024L);
-    }
-    else if (string.endsWith("K"))
-    {
-      return (long)(Double.parseDouble(string.substring(0,string.length()-1))*1024L);
-    }
-    else if (string.endsWith("B"))
-    {
-      return (long)Double.parseDouble(string.substring(0,string.length()-1));
-    }
-    else
-    {
-      return (long)Double.parseDouble(string);
+      throw new NumberFormatException(exception.getMessage());
     }
   }
 
@@ -927,7 +933,7 @@ public class BARControl
      */
     LoginData(String serverName, int port, int tlsPort)
     {
-      this.serverName = serverName;
+      this.serverName = !serverName.equals("") ? serverName : ((Settings.serverNames.size() > 0) ? Settings.serverNames.toArray(new String[1])[0] : "");
       this.password   = Settings.serverPassword;
       this.port       = (port != 0) ? port    : Settings.serverPort;
       this.tlsPort    = (port != 0) ? tlsPort : Settings.serverTLSPort;
