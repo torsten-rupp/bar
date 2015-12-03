@@ -445,9 +445,24 @@ LOCAL void printFileInfo(ConstString        storageName,
     snprintf(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
   }
 
-  File_userIdToUserName(userName,sizeof(userName),userId);
-  File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
-  File_permissionToString(permissionString,sizeof(permissionString),permission);
+  if (globalOptions.numericUIDGIDFlag)
+  {
+    snprintf(userName,sizeof(userName),"%d",userId);
+    snprintf(groupName,sizeof(groupName),"%d",groupId);
+  }
+  else
+  {
+    File_userIdToUserName(userName,sizeof(userName),userId);
+    File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
+  }
+  if (globalOptions.numericPermissionFlag)
+  {
+    snprintf(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+  }
+  else
+  {
+    File_permissionToString(permissionString,sizeof(permissionString),permission);
+  }
 
   if (globalOptions.longFormatFlag)
   {
@@ -754,9 +769,24 @@ LOCAL void printDirectoryInfo(ConstString     storageName,
   // format
   Misc_formatDateTime(dateTimeString,timeModified,NULL);
 
-  File_userIdToUserName(userName,sizeof(userName),userId);
-  File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
-  File_permissionToString(permissionString,sizeof(permissionString),permission);
+  if (globalOptions.numericUIDGIDFlag)
+  {
+    snprintf(userName,sizeof(userName),"%d",userId);
+    snprintf(groupName,sizeof(groupName),"%d",groupId);
+  }
+  else
+  {
+    File_userIdToUserName(userName,sizeof(userName),userId);
+    File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
+  }
+  if (globalOptions.numericPermissionFlag)
+  {
+    snprintf(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+  }
+  else
+  {
+    File_permissionToString(permissionString,sizeof(permissionString),permission);
+  }
 
   if (globalOptions.longFormatFlag)
   {
@@ -940,9 +970,24 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
     snprintf(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%llu",deltaSourceSize);
   }
 
-  File_userIdToUserName(userName,sizeof(userName),userId);
-  File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
-  File_permissionToString(permissionString,sizeof(permissionString),permission);
+  if (globalOptions.numericUIDGIDFlag)
+  {
+    snprintf(userName,sizeof(userName),"%d",userId);
+    snprintf(groupName,sizeof(groupName),"%d",groupId);
+  }
+  else
+  {
+    File_userIdToUserName(userName,sizeof(userName),userId);
+    File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
+  }
+  if (globalOptions.numericPermissionFlag)
+  {
+    snprintf(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+  }
+  else
+  {
+    File_permissionToString(permissionString,sizeof(permissionString),permission);
+  }
 
   if (globalOptions.longFormatFlag)
   {
@@ -1146,9 +1191,24 @@ LOCAL void printSpecialInfo(ConstString      storageName,
       break; /* not reached */
   }
 
-  File_userIdToUserName(userName,sizeof(userName),userId);
-  File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
-  File_permissionToString(permissionString,sizeof(permissionString),permission);
+  if (globalOptions.numericUIDGIDFlag)
+  {
+    snprintf(userName,sizeof(userName),"%d",userId);
+    snprintf(groupName,sizeof(groupName),"%d",groupId);
+  }
+  else
+  {
+    File_userIdToUserName(userName,sizeof(userName),userId);
+    File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
+  }
+  if (globalOptions.numericPermissionFlag)
+  {
+    snprintf(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+  }
+  else
+  {
+    File_permissionToString(permissionString,sizeof(permissionString),permission);
+  }
 
   TEXT_MACRO_N_STRING (textMacros[ 0],"%storageName",storageName);
   TEXT_MACRO_N_CSTRING(textMacros[ 1],"%type",       type);
@@ -3497,9 +3557,24 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
       }
       Misc_formatDateTime(dateTimeString,fileInfo.timeModified,NULL);
 
-      File_userIdToUserName(userName,sizeof(userName),fileInfo.userId);
-      File_groupIdToGroupName(groupName,sizeof(groupName),fileInfo.groupId);
-      File_permissionToString(permissionString,sizeof(permissionString),fileInfo.permission);
+      if (globalOptions.numericUIDGIDFlag)
+      {
+        snprintf(userName,sizeof(userName),"%d",fileInfo.userId);
+        snprintf(groupName,sizeof(groupName),"%d",fileInfo.groupId);
+      }
+      else
+      {
+        File_userIdToUserName(userName,sizeof(userName),fileInfo.userId);
+        File_groupIdToGroupName(groupName,sizeof(groupName),fileInfo.groupId);
+      }
+      if (globalOptions.numericPermissionFlag)
+      {
+        snprintf(permissionString,sizeof(permissionString),"%4o",fileInfo.permission & FILE_PERMISSION_ALL);
+      }
+      else
+      {
+        File_permissionToString(permissionString,sizeof(permissionString),fileInfo.permission);
+      }
 
       TEXT_MACRO_N_STRING (textMacros[2],"%dateTime",  dateTimeString);
       TEXT_MACRO_N_CSTRING(textMacros[3],"%user",      userName);

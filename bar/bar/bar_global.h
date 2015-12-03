@@ -392,6 +392,8 @@ typedef struct
   bool                   allFlag;                             // TRUE iff all entries should be listed/restored
   bool                   longFormatFlag;                      // TRUE iff long format list
   bool                   humanFormatFlag;                     // TRUE iff human format list
+  bool                   numericUIDGIDFlag;                   // TRUE for numeric user/group ids list
+  bool                   numericPermissionFlag;               // TRUE for numeric permission list
   bool                   noHeaderFooterFlag;                  // TRUE iff no header/footer should be printed in list
   bool                   deleteOldArchiveFilesFlag;           // TRUE iff old archive files should be deleted after creating new files
   bool                   ignoreNoBackupFileFlag;              // TRUE iff .nobackup/.NOBACKUP file should be ignored
@@ -450,8 +452,8 @@ struct JobOptions
   String                       cryptPublicKeyFileName;
   String                       cryptPrivateKeyFileName;
 
-  String                       preProcessCommand;             // command to execute before start of job
-  String                       postProcessCommand;            // command to execute after after termination of job
+  String                       preProcessScript;              // script to execute before start of job
+  String                       postProcessScript;             // script to execute after after termination of job
 
   String                       mountDeviceName;               // device to mount/unmount
   FTPServer                    ftpServer;                     // job specific FTP server settings

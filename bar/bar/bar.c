@@ -557,8 +557,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_STRING       ("mount-device",                 0,  1,2,jobOptions.mountDeviceName,                                                                             "device to mount/unmount","name"                                           ),
 
-  CMD_OPTION_STRING       ("pre-command",                  0,  1,1,jobOptions.preProcessCommand,                                                                           "pre-process command","command"                                            ),
-  CMD_OPTION_STRING       ("post-command",                 0,  1,1,jobOptions.postProcessCommand,                                                                          "post-process command","command"                                           ),
+  CMD_OPTION_STRING       ("pre-command",                  0,  1,1,jobOptions.preProcessScript,                                                                           "pre-process command","command"                                            ),
+  CMD_OPTION_STRING       ("post-command",                 0,  1,1,jobOptions.postProcessScript,                                                                          "post-process command","command"                                           ),
 
   CMD_OPTION_STRING       ("file-write-pre-command",       0,  1,1,globalOptions.file.writePreProcessCommand,                                                              "write file pre-process command","command"                                 ),
   CMD_OPTION_STRING       ("file-write-post-command",      0,  1,1,globalOptions.file.writePostProcessCommand,                                                             "write file post-process command","command"                                ),
@@ -660,6 +660,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("all",                          0,  0,1,globalOptions.allFlag,                                                                                  "show all files"                                                           ),
   CMD_OPTION_BOOLEAN      ("long-format",                  'L',0,1,globalOptions.longFormatFlag,                                                                           "list in long format"                                                      ),
   CMD_OPTION_BOOLEAN      ("human-format",                 'H',0,1,globalOptions.humanFormatFlag,                                                                          "list in human readable format"                                            ),
+  CMD_OPTION_BOOLEAN      ("numeric-uid-gid",              0,  0,1,globalOptions.numericUIDGIDFlag,                                                                        "print numeric user/group ids"                                             ),
+  CMD_OPTION_BOOLEAN      ("numeric-permission",           0,  0,1,globalOptions.numericPermissionFlag,                                                                    "print numeric permission"                                                 ),
   CMD_OPTION_BOOLEAN      ("no-header-footer",             0,  0,1,globalOptions.noHeaderFooterFlag,                                                                       "output no header/footer in list"                                          ),
   CMD_OPTION_BOOLEAN      ("delete-old-archive-files",     0,  1,1,globalOptions.deleteOldArchiveFilesFlag,                                                                "delete old archive files after creating new files"                        ),
   CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,2,globalOptions.ignoreNoBackupFileFlag,                                                                   "ignore .nobackup/.NOBACKUP file"                                          ),
@@ -959,8 +961,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_END_SECTION(),
 
   // commands
-  CONFIG_VALUE_STRING   ("pre-command",                  &jobOptions.preProcessCommand,-1                               ),
-  CONFIG_VALUE_STRING   ("post-command",                 &jobOptions.postProcessCommand,-1                              ),
+  CONFIG_VALUE_STRING   ("pre-command",                  &jobOptions.preProcessScript,-1                               ),
+  CONFIG_VALUE_STRING   ("post-command",                 &jobOptions.postProcessScript,-1                              ),
 
   CONFIG_VALUE_STRING   ("file-write-pre-command",       &globalOptions.file.writePreProcessCommand,-1                  ),
   CONFIG_VALUE_STRING   ("file-write-post-command",      &globalOptions.file.writePostProcessCommand,-1                 ),
@@ -3370,6 +3372,7 @@ void logPostProcess(LogHandle        *logHandle,
                     ConstString      scheduleCustomText
                    )
 {
+  String     command;
   TextMacro  textMacros[5];
   StringList stderrList;
   Errors     error;
@@ -3385,17 +3388,24 @@ void logPostProcess(LogHandle        *logHandle,
   {
     if (logHandle != NULL)
     {
+      // init variables
+      command = String_new();
+
       // close job log file
       fclose(logHandle->logFile);
 
       // log post command for job log file
-      printInfo(2,"Log post process '%s'...\n",logPostCommand);
-
       TEXT_MACRO_N_STRING (textMacros[0],"%file",logHandle->logFileName              );
       TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName                             );
       TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeName(archiveType)     );
       TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortName(archiveType));
       TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText                  );
+      Misc_expandMacros(command,
+                        logPostCommand,
+                        textMacros,SIZE_OF_ARRAY(textMacros),
+                        TRUE
+                       );
+      printInfo(2,"Log post process '%s'...\n",String_cString(command));
 
       StringList_init(&stderrList);
       error = Misc_executeCommand(logPostCommand,
@@ -3415,6 +3425,9 @@ void logPostProcess(LogHandle        *logHandle,
 
       // reset and reopen job log file
       logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
+      
+      // free resources
+      String_delete(command);
     }
   }
 }
@@ -3442,8 +3455,8 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->cryptPublicKeyFileName          = NULL;
   jobOptions->cryptPrivateKeyFileName         = NULL;
   jobOptions->mountDeviceName                 = NULL;
-  jobOptions->preProcessCommand               = NULL;
-  jobOptions->postProcessCommand              = NULL;
+  jobOptions->preProcessScript                = NULL;
+  jobOptions->postProcessScript               = NULL;
   jobOptions->maxStorageSize                  = 0LL;
   jobOptions->volumeSize                      = 0LL;
   jobOptions->skipUnreadableFlag              = TRUE;
@@ -3488,8 +3501,8 @@ void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions)
 
   toJobOptions->mountDeviceName                     = String_duplicate(fromJobOptions->mountDeviceName);
 
-  toJobOptions->preProcessCommand                   = String_duplicate(fromJobOptions->preProcessCommand);
-  toJobOptions->postProcessCommand                  = String_duplicate(fromJobOptions->postProcessCommand);
+  toJobOptions->preProcessScript                    = String_duplicate(fromJobOptions->preProcessScript);
+  toJobOptions->postProcessScript                   = String_duplicate(fromJobOptions->postProcessScript);
 
   toJobOptions->ftpServer.loginName                 = String_duplicate(fromJobOptions->ftpServer.loginName);
   toJobOptions->ftpServer.password                  = Password_duplicate(fromJobOptions->ftpServer.password);
@@ -3572,8 +3585,8 @@ void doneJobOptions(JobOptions *jobOptions)
   Password_delete(jobOptions->ftpServer.password);
   String_delete(jobOptions->ftpServer.loginName);
 
-  String_delete(jobOptions->postProcessCommand);
-  String_delete(jobOptions->preProcessCommand);
+  String_delete(jobOptions->postProcessScript);
+  String_delete(jobOptions->preProcessScript);
 
   String_delete(jobOptions->mountDeviceName);
 
