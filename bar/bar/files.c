@@ -2836,6 +2836,55 @@ const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId)
   return name;
 }
 
+FilePermission File_stringToPermission(const char *string)
+{
+  FilePermission permission;
+  uint           stringLength;
+
+  assert(string != NULL);
+
+  permission = FILE_PERMISSION_NONE;
+
+  stringLength = strlen(string);
+  if ((stringLength >= 1) && (toupper(string[0]) == 'R')) permission |= FILE_PERMISSION_USER_READ;
+  if ((stringLength >= 2) && (toupper(string[1]) == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
+  if ((stringLength >= 3) && (toupper(string[2]) == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
+  if ((stringLength >= 3) && (toupper(string[2]) == 'S')) permission |= FILE_PERMISSION_USER_SET_ID;
+  if ((stringLength >= 4) && (toupper(string[3]) == 'R')) permission |= FILE_PERMISSION_GROUP_READ;
+  if ((stringLength >= 5) && (toupper(string[4]) == 'W')) permission |= FILE_PERMISSION_GROUP_WRITE;
+  if ((stringLength >= 6) && (toupper(string[5]) == 'X')) permission |= FILE_PERMISSION_GROUP_EXECUTE;
+  if ((stringLength >= 6) && (toupper(string[5]) == 'S')) permission |= FILE_PERMISSION_GROUP_SET_ID;
+  if ((stringLength >= 7) && (toupper(string[6]) == 'R')) permission |= FILE_PERMISSION_OTHER_READ;
+  if ((stringLength >= 8) && (toupper(string[7]) == 'W')) permission |= FILE_PERMISSION_OTHER_WRITE;
+  if ((stringLength >= 9) && (toupper(string[8]) == 'X')) permission |= FILE_PERMISSION_OTHER_EXECUTE;
+  if ((stringLength >= 9) && (toupper(string[8]) == 'T')) permission |= FILE_PERMISSION_STICKY_BIT;
+  
+  return permission;
+}
+
+const char *File_permissionToString(char *string, uint stringSize, FilePermission permission)
+{
+  assert(string != NULL);
+  assert(stringSize > 0);
+
+  memset(string,'-',stringSize-1);
+  if ((stringSize >= 1) && ((permission & FILE_PERMISSION_USER_READ    ) != 0)) string[0] = 'r';
+  if ((stringSize >= 2) && ((permission & FILE_PERMISSION_USER_WRITE   ) != 0)) string[1] = 'w';
+  if ((stringSize >= 3) && ((permission & FILE_PERMISSION_USER_EXECUTE ) != 0)) string[2] = 'x';
+  if ((stringSize >= 3) && ((permission & FILE_PERMISSION_USER_SET_ID  ) != 0)) string[2] = 's';
+  if ((stringSize >= 4) && ((permission & FILE_PERMISSION_GROUP_READ   ) != 0)) string[3] = 'r';
+  if ((stringSize >= 5) && ((permission & FILE_PERMISSION_GROUP_WRITE  ) != 0)) string[4] = 'w';
+  if ((stringSize >= 6) && ((permission & FILE_PERMISSION_GROUP_EXECUTE) != 0)) string[5] = 'x';
+  if ((stringSize >= 6) && ((permission & FILE_PERMISSION_GROUP_SET_ID ) != 0)) string[5] = 's';
+  if ((stringSize >= 7) && ((permission & FILE_PERMISSION_OTHER_READ   ) != 0)) string[6] = 'r';
+  if ((stringSize >= 8) && ((permission & FILE_PERMISSION_OTHER_WRITE  ) != 0)) string[7] = 'w';
+  if ((stringSize >= 9) && ((permission & FILE_PERMISSION_OTHER_EXECUTE) != 0)) string[8] = 'x';
+  if ((stringSize >= 9) && ((permission & FILE_PERMISSION_STICKY_BIT   ) != 0)) string[8] = 't';
+  string[stringSize-1] = '\0';
+
+  return string;
+}
+
 FileTypes File_getType(ConstString fileName)
 {
   FileStat fileStat;
