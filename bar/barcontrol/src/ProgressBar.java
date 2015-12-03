@@ -132,14 +132,17 @@ class ProgressBar extends Canvas
   {
     GC gc;
 
-    value = Math.min(Math.max(((maximum-minimum)>0.0)?(n-minimum)/(maximum-minimum):0.0,minimum),maximum);
+    if (!isDisposed())
+    {
+      value = Math.min(Math.max(((maximum-minimum)>0.0)?(n-minimum)/(maximum-minimum):0.0,minimum),maximum);
 
-    gc = new GC(this);
-    text = String.format("%.1f%%",value*100.0);
-    textSize = gc.stringExtent(text);
-    gc.dispose();
+      gc = new GC(this);
+      text = String.format("%.1f%%",value*100.0);
+      textSize = gc.stringExtent(text);
+      gc.dispose();
 
-    redraw();
+      redraw();
+    }
   }
 
   /** free allocated resources
