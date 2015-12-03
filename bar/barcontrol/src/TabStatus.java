@@ -1869,8 +1869,7 @@ Dprintf.dprintf("");
 
     if (!selectedJobData.state.equals("running") || Dialogs.confirm(shell,BARControl.tr("Abort running job ''{0}''?",selectedJobData.name),false))
     {
-      final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Abort"),300,100,BARControl.tr("Abort job")+" '"+selectedJobData.name+"'...",BusyDialog.TEXT0);
-      busyDialog.autoAnimate();
+      final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Abort"),300,100,BARControl.tr("Abort job")+" '"+selectedJobData.name+"'...",BusyDialog.TEXT0|BusyDialog.AUTO_ANIMATE);
 
       new BackgroundTask(busyDialog)
       {
