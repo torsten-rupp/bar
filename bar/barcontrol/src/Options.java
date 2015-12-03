@@ -10,6 +10,8 @@
 
 /****************************** Imports ********************************/
 import java.lang.reflect.Field;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.Locale;
 
 /****************************** Classes ********************************/
@@ -157,9 +159,9 @@ public class Options
               case DOUBLE:
                 try
                 {
-                  field.setDouble(null,Double.parseDouble(value));
+                  field.setDouble(null,NumberFormat.getInstance().parse(value).doubleValue());
                 }
-                catch (NumberFormatException exception)
+                catch (ParseException exception)
                 {
                   printError("Invalid number '%s' for option %s",value,option.name);
                   System.exit(1);
@@ -167,7 +169,7 @@ public class Options
                 break;
               case BOOLEAN:
                 field.setBoolean(null,
-                                    value.equals("1") 
+                                    value.equals("1")
                                  || value.equalsIgnoreCase("true")
                                  || value.equalsIgnoreCase("yes")
                                  || value.equalsIgnoreCase("on")
