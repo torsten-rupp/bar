@@ -430,6 +430,15 @@
 /* S_IRUSR available */
 #undef HAVE_S_IRUSR
 
+/* S_ISGID available */
+#undef HAVE_S_ISGID
+
+/* S_ISUID available */
+#undef HAVE_S_ISUID
+
+/* S_ISVTX available */
+#undef HAVE_S_ISVTX
+
 /* S_IWGRP available */
 #undef HAVE_S_IWGRP
 
