@@ -2,3 +2,6 @@
 
 chmod 700 /etc/bar
 chmod 600 /etc/bar/bar.cfg
+
+chkconfig --add barserver
+chkconfig barserver on

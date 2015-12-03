@@ -11,55 +11,66 @@
 # Short-Description: BAR server daemon 
 # Description:       Start BAR server for backup/restore
 ### END INIT INFO
+
+NAME=bar
+DAEMON=/usr/bin/$NAME
+PIDFILE=/var/run/$NAME.pid
+CONFIGFILE=/etc/bar/bar.cfg
+DAEMON_ARGS="-c $CONFIGFILE --daemon --pid-file=$PIDFILE --verbose=0 --quiet"
+PIDFILE=/var/run/$NAME.pid
+SCRIPTNAME=/etc/init.d/barserver
  
 # source LSB init functions
 #. /lib/lsb/init-functions
 
-# shell functions sourced from /etc/rc.status:
-. /etc/rc.status
+# sourced shell functions
+if test -f /etc/rc.status; then
+  . /etc/rc.status
+fi
+if test -f /etc/init.d/functions; then
+  . /etc/init.d/functions
+fi
 
 # check for binaries
-BAR_BIN=/usr/bin/bar
-if test ! -x $BAR_BIN; then
-  echo "$BAR_BIN not installed"
+if test ! -x $DAEMON; then
+  echo "$DAEMON not installed"
   exit 5
 fi
 
-# check for existence of needed config file
-BAR_CONFIG=/etc/bar/bar.cfg
-if test ! -r $BAR_CONFIG; then
-  echo "$BAR_CONFIG cannot be read"
+# check for config file
+if test ! -r $CONFIGFILE; then
+  echo "$CONFIGFILE cannot be read"
   exit 6
 fi
 
 case "$1" in
     start)
 	echo -n "Starting BAR server "
-	startproc $BAR_BIN --daemon --verbose=3
-	rc_status -v
+	daemon $DAEMON $DAEMON_ARGS
 	;;
     stop)
 	echo -n "Shutting down BAR server "
-	killproc -TERM $BAR_BIN
-	rc_status -v
+	killproc -p $PIDFILE -TERM $DAEMON
 	;;
     reload)
-        rc_failed 3
-	rc_status -v
+        failure
 	;;
     restart)
 	$0 stop
 	$0 start
-	rc_status -v
 	;;
     status)
-	echo -n "Checking for service BAR server "
-	checkproc $BAR_BIN
-	rc_status -v
+	echo -n "Checking for service BAR server: "
+	if test ! -f $PIDFILE; then
+          echo "stopped"
+        elif test ! -d /proc/`cat $PIDFILE`; then
+          echo "stopped"
+        else
+          echo "running"
+        fi
 	;;
     *)
 	echo "Usage: $0 {start|stop|reload|restart|status}"
 	exit 1
 	;;
 esac
-rc_exit

@@ -1,3 +1,13 @@
+bar (0.19a) stable; urgency=low
+  * improved error handling in database
+  * always unmount mounted device if init storage fail
+  * fixed typing error in scp protocol init
+  * fixed init SSH default password
+  * fixed some compilation errors when packages are
+    disabled
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 09 Aug 2015 00:00:00 +0200
+
 bar (0.19) stable; urgency=low
   * added LZO compression
   * added LZ4 compression
@@ -504,9 +514,9 @@ bar (0.15d) stable; urgency=low
 
 bar (0.15c) stable; urgency=low
   * fixes for MacOSX:
-     - fix SWT start thread problem
-     - use "java" without any path
-     - fix out-dated JAR archives
+    - fix SWT start thread problem
+    - use "java" without any path
+    - fix out-dated JAR archives
   * added missing documentation images to distribution
   * fix creation of BARControl/BARControl*.jar
   * fix error message when archive file already exists
@@ -550,10 +560,10 @@ bar (0.15) stable; urgency=low
   * added command line option --job to execute a job from a job
     file with BAR
   * clean-up BAR command line options:
-     - replaced -a|--crypt-asymmetric -> --crypt-type=<name>
-     - added option --normal to select normal archive type
-       (required to overwrite setting in job file)
-     - fixed ordering of options in help
+    - replaced -a|--crypt-asymmetric -> --crypt-type=<name>
+    - added option --normal to select normal archive type
+    (required to overwrite setting in job file)
+    - fixed ordering of options in help
   * added support for CD and BD (options --cd-.../--bd-... and configuration
     entries cd-.../bd-...)
   * clean-up BARControl command line options:
@@ -565,14 +575,14 @@ bar (0.15) stable; urgency=low
   * set key valid time to 365 days when created with openssl
   * BARControl: added tool tips help
   * BARControl: complete redesign of restore tab
-     - added database of stored files to BAR (sqlite based)
-     - search for created archives in database
-     - search for stored files in archives in database
-     - restore archives or single files
-     - automatic indexing of already created archives which are stored
-       in file system or on an external server
-     Note: to use this new feature, you must add the database-*
-           configuration options in bar.cfg!
+    - added database of stored files to BAR (sqlite based)
+    - search for created archives in database
+    - search for stored files in archives in database
+    - restore archives or single files
+    - automatic indexing of already created archives which are stored
+    in file system or on an external server
+    Note: to use this new feature, you must add the database-*
+    configuration options in bar.cfg!
   * temporary base directory is now named bar-XXXXXX
   * BARControl: improved pause-function: settings for create, storage,
     restore and update index. See menu in BARControl. By default create
@@ -778,10 +788,10 @@ bar (0.11) stable; urgency=low
   * fixed detection of size of current archive (was always 0)
   * new scheme to build a incremental file name from an
     archive file name if no incremental file name is given:
-      - discard all %-macros
-      - discard all #
-      - remove - and _ between macros
-      - replace file name extension .bar by .bid
+    - discard all %-macros
+    - discard all #
+    - remove - and _ between macros
+    - replace file name extension .bar by .bid
     A name like backup/system-%type-%a-####%last.bar will
     be transformed to backup/system.bid
   * improved error messages
@@ -809,7 +819,7 @@ bar (0.10) stable; urgency=low
     output to most recent entries if not given option --all.
     Add archive name in group mode. Usage: find most recent
     file 'foo' in a set of backups, e. g.
-    bar *.bar -# "*/foo" -g
+  * .bar -# "*/foo" -g
   * added option --all: list all entries in group
   * BARControl: fixed Java exception when scheduling date/time
     can not be parsed
@@ -1027,7 +1037,7 @@ bar (0.05a) stable; urgency=low
 
  -- Torsten Rupp <torsten.rupp@gmx.net>  Fri, 18 Jan 2008 00:00:00 +0100
 
-bar (0.05 (New Years Eve edition)) stable; urgency=low
+bar (0.05) stable; urgency=low
   * added macros %type, %last to archive file name
   * fixed path in bid-file name
   * removed option create-list-file; option --full create a list
@@ -1134,4 +1144,3 @@ bar (0.01) stable; urgency=low
   * initial release
 
  -- Torsten Rupp <torsten.rupp@gmx.net>  Thu, 01 Nov 2007 00:00:00 +0100
-
