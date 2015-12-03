@@ -1441,17 +1441,18 @@ class Dialogs
         // message
         final Button widgetShowAgain;
         composite = new Composite(dialog,SWT.NONE);
-        composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+        composite.setLayout(new TableLayout(new double[]{0.0,0.0,1.0,0.0},new double[]{0.0,1.0},4));
         composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
         {
+          int row = 0;
+
           label = new Label(composite,SWT.LEFT);
           label.setImage(IMAGE);
-          label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
-
+          label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W,0,0,10));
           text = new Text(composite,SWT.LEFT|SWT.WRAP|SWT.READ_ONLY);
           text.setText(message);
           text.setBackground(composite.getBackground());
-          text.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
+          text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4));
           text.addMouseListener(new MouseListener()
           {
             public void mouseDoubleClick(MouseEvent mouseEvent)
@@ -1467,19 +1468,18 @@ class Dialogs
             {
             }
           });
-
-          int row = 1;
+          row++;
 
           if (extendedMessage != null)
           {
             label = new Label(composite,SWT.LEFT);
-//TODO
             label.setText(Dialogs.tr("Extended error:"));
-            label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4)); row++;
-
-            text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.READ_ONLY);
+            label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4));
+            row++;
+            text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.READ_ONLY);
             text.setText(StringUtils.join(extendedMessage,text.DELIMITER));
-            text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,100)); row++;
+            text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,100));
+            row++;
           }
 
           if (showAgainFieldFlag != null)
@@ -1487,7 +1487,8 @@ class Dialogs
             widgetShowAgain = new Button(composite,SWT.CHECK);
             widgetShowAgain.setText(Dialogs.tr("show again"));
             widgetShowAgain.setSelection(true);
-            widgetShowAgain.setLayoutData(new TableLayoutData(row,1,TableLayoutData.W)); row++;
+            widgetShowAgain.setLayoutData(new TableLayoutData(row,1,TableLayoutData.W));
+            row++;
           }
           else
           {
