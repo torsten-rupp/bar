@@ -5343,12 +5343,129 @@ Dprintf.dprintf("");
     {
       case 0:
         // tree view
-        for (TreeItem treeItem : widgetStorageTree.getItems())
+        for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
         {
-          StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
-          if ((storageIndexData != null) && !treeItem.getGrayed() && treeItem.getChecked())
+          UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
+
+          if      (uuidIndexData.isChecked())
           {
-            storageNamesHashSet.add(storageIndexData.name);
+            Command  command1;
+            String[] errorMessage1 = new String[1];
+            ValueMap resultMap1    = new ValueMap();
+
+            command1 = BARServer.runCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S pattern='*'",
+                                                                uuidIndexData.jobUUID
+                                                               ),
+                                           0
+                                          );
+            while (!command1.endOfData())
+            {
+              if (command1.getNextResult(errorMessage1,
+                                         resultMap1,
+                                         Command.TIMEOUT
+                                        ) == Errors.NONE
+                 )
+              {
+                try
+                {
+                  Command  command2;
+                  String[] errorMessage2 = new String[1];
+                  ValueMap resultMap2    = new ValueMap();
+
+                  long entityId = resultMap1.getLong("entityId");
+
+                  command2 = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d indexState='OK' indexMode='*' pattern='*'",
+                                                                      entityId
+                                                                     ),
+                                                  0
+                                                 );
+                  while (!command2.endOfData())
+                  {
+                    if (command2.getNextResult(errorMessage2,
+                                               resultMap2,
+                                               Command.TIMEOUT
+                                              ) == Errors.NONE
+                       )
+                    {
+                      try
+                      {
+                        String name = resultMap2.getString("name");
+
+                        storageNamesHashSet.add(name);
+                      }
+                      catch (IllegalArgumentException exception)
+                      {
+                        if (Settings.debugLevel > 0)
+                        {
+                          System.err.println("ERROR: "+exception.getMessage());
+                        }
+                      }
+                    }
+                  }
+                }
+                catch (IllegalArgumentException exception)
+                {
+                  if (Settings.debugLevel > 0)
+                  {
+                    System.err.println("ERROR: "+exception.getMessage());
+                  }
+                }
+              }
+            }
+          }
+          else if (uuidTreeItem.getExpanded())
+          {
+            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
+            {
+              EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
+
+              if      (entityIndexData.isChecked())
+              {
+                Command  command;
+                String[] errorMessage = new String[1];
+                ValueMap resultMap    = new ValueMap();
+
+                command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d indexState='OK' indexMode='*' pattern='*'",
+                                                                   entityIndexData.entityId
+                                                                  ),
+                                               0
+                                              );
+                while (!command.endOfData())
+                {
+                  if (command.getNextResult(errorMessage,
+                                            resultMap,
+                                            Command.TIMEOUT
+                                           ) == Errors.NONE
+                     )
+                  {
+                    try
+                    {
+                      String name = resultMap.getString("name");
+
+                      storageNamesHashSet.add(name);
+                    }
+                    catch (IllegalArgumentException exception)
+                    {
+                      if (Settings.debugLevel > 0)
+                      {
+                        System.err.println("ERROR: "+exception.getMessage());
+                      }
+                    }
+                  }
+                }
+              }
+              else if (entityTreeItem.getExpanded())
+              {
+                for (TreeItem storageTreeItem : entityTreeItem.getItems())
+                {
+                  StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
+                  if (storageIndexData.isChecked())
+                  {
+                    storageNamesHashSet.add(storageIndexData.name);
+                  }
+                }
+              }
+            }
           }
         }
         break;
@@ -6628,7 +6745,15 @@ Dprintf.dprintf("");
   private void restoreArchives(HashSet<String> storageNamesHashSet, String directory, boolean overwriteFiles)
   {
     BARControl.waitCursor();
-    final BusyDialog busyDialog = new BusyDialog(shell,"Restore archives",500,100,null,BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR1);
+
+    final BusyDialog busyDialog = new BusyDialog(shell,
+                                                 !directory.isEmpty() ? BARControl.tr("Restore archives to: {0}",directory) : BARControl.tr("Restore archives"),
+                                                 500,
+                                                 300,
+                                                 null,
+                                                 BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST
+                                                );
+    busyDialog.updateText(2,BARControl.tr("Failed entries:"));
 
     new BackgroundTask(busyDialog,new Object[]{storageNamesHashSet,directory,overwriteFiles})
     {
@@ -6643,16 +6768,13 @@ Dprintf.dprintf("");
         // restore entries
         try
         {
+          long  errorCount            = 0;
+          final boolean skipAllFlag[] = new boolean[]{false};
+          int n = 0;
           for (final String storageName : storageNamesHashSet)
           {
-            if (!directory.equals(""))
-            {
-              busyDialog.updateText(0,"'"+storageName+"' into '"+directory+"'");
-            }
-            else
-            {
-              busyDialog.updateText(0,"'"+storageName+"'");
-            }
+            busyDialog.updateText(0,storageName);
+            busyDialog.updateProgressBar(0,((double)n*100.0)/(double)storageNamesHashSet.size());
 
             Command command;
             boolean retryFlag;
@@ -6672,24 +6794,24 @@ Dprintf.dprintf("");
 
               // read results, update/add data
               String[] errorMessage = new String[1];
-              ValueMap valueMap     = new ValueMap();
+              ValueMap resultMap    = new ValueMap();
               while (   !command.endOfData()
                      && !busyDialog.isAborted()
                     )
               {
                 if (command.getNextResult(errorMessage,
-                                          valueMap,
+                                          resultMap,
                                           60*1000
                                          ) == Errors.NONE
                    )
                 {
                   try
                   {
-                    String name              = valueMap.getString("name"            );
-                    long   entryDoneBytes    = valueMap.getLong  ("entryDoneBytes"  );
-                    long   entryTotalBytes   = valueMap.getLong  ("entryTotalBytes" );
-  //                  long   storageDoneBytes  = valueMap.getLong("storageDoneBytes" );
-  //                  long   storageTotalBytes = valueMap.getLong("storageTotalBytes");
+                    String name              = resultMap.getString("name"            );
+                    long   entryDoneBytes    = resultMap.getLong  ("entryDoneBytes"  );
+                    long   entryTotalBytes   = resultMap.getLong  ("entryTotalBytes" );
+  //                  long   storageDoneBytes  = resultMap.getLong("storageDoneBytes" );
+  //                  long   storageTotalBytes = resultMap.getLong("storageTotalBytes");
 
                     busyDialog.updateText(1,name);
                     busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
@@ -6746,14 +6868,39 @@ Dprintf.dprintf("");
             {
               if (command.getErrorCode() != Errors.NONE)
               {
-                final String errorText = command.getErrorText();
-                display.syncExec(new Runnable()
+                busyDialog.updateList(storageName);
+                errorCount++;
+
+                if (!skipAllFlag[0])
                 {
-                  public void run()
+                  final String errorText = command.getErrorText();
+                  display.syncExec(new Runnable()
                   {
-                    Dialogs.error(shell,BARControl.tr("Cannot restore archive\n\n''{0}''\n\n(error: {1})",storageName,errorText));
-                  }
-                });
+                    public void run()
+                    {
+                      switch (Dialogs.select(shell,
+                                             BARControl.tr("Confirmation"),
+                                             BARControl.tr("Cannot restore archive\n\n''{0}''\n\n(error: {1})",
+                                                           storageName,
+                                                           errorText
+                                                          ),
+                                             new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                             0
+                                            )
+                             )
+                      {
+                        case 0:
+                          break;
+                        case 1:
+                          skipAllFlag[0] = true;
+                          break;
+                        case 2:
+                          busyDialog.abort();
+                          break;
+                      }
+                    }
+                  });
+                };
               }
             }
             else
@@ -6764,12 +6911,19 @@ Dprintf.dprintf("");
             }
           }
 
-          // close busy dialog, restore cursor
+          // close/done busy dialog, restore cursor
+          if (errorCount == 0)
+          {
+            busyDialog.close();
+          }
+          else
+          {
+            busyDialog.done();
+          }
           display.syncExec(new Runnable()
           {
             public void run()
             {
-              busyDialog.close();
               BARControl.resetCursor();
             }
           });
