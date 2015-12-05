@@ -201,25 +201,19 @@ class Command
    */
   public synchronized boolean endOfData()
   {
-    if (result.size() == 0)
+    while ((result.size() == 0) && !completedFlag)
     {
-      if (!completedFlag)
+      try
       {
-        try
-        {
-          this.wait();
-        }
-        catch (InterruptedException exception)
-        {
-          // ignored
-        }
+        this.wait();
       }
-      return (result.size() == 0) && completedFlag;
+      catch (InterruptedException exception)
+      {
+        // ignored
+      }
     }
-    else
-    {
-      return false;
-    }
+
+    return (result.size() == 0) && completedFlag;
   }
 
   /** check if completed
