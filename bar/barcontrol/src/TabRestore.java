@@ -1628,72 +1628,71 @@ public class TabRestore
                                                         ),
                                      0
                                     );
-      while (!command.endOfData() && !triggeredFlag)
+      while (   !command.endOfData()
+             && !triggeredFlag
+             && command.getNextResult(errorMessage,
+                                      valueMap,
+                                      Command.TIMEOUT
+                                     ) == Errors.NONE
+            )
       {
-        if (command.getNextResult(errorMessage,
-                                  valueMap,
-                                  Command.TIMEOUT
-                                 ) == Errors.NONE
-           )
+        try
         {
-          try
+          String jobUUID          = valueMap.getString("jobUUID"         );
+          String name             = valueMap.getString("name"            );
+          long   lastDateTime     = valueMap.getLong  ("lastDateTime"    );
+          long   totalEntries     = valueMap.getLong  ("totalEntries"    );
+          long   totalSize        = valueMap.getLong  ("totalSize"       );
+          String lastErrorMessage = valueMap.getString("lastErrorMessage");
+
+          // add/update index map
+          final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
+                                                                               name,
+                                                                               lastDateTime,
+                                                                               totalEntries,
+                                                                               totalSize,
+                                                                               lastErrorMessage
+                                                                              );
+
+          // update/insert tree item
+          display.syncExec(new Runnable()
           {
-            String jobUUID          = valueMap.getString("jobUUID"         );
-            String name             = valueMap.getString("name"            );
-            long   lastDateTime     = valueMap.getLong  ("lastDateTime"    );
-            long   totalEntries     = valueMap.getLong  ("totalEntries"    );
-            long   totalSize        = valueMap.getLong  ("totalSize"       );
-            String lastErrorMessage = valueMap.getString("lastErrorMessage");
-
-            // add/update index map
-            final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
-                                                                                 name,
-                                                                                 lastDateTime,
-                                                                                 totalEntries,
-                                                                                 totalSize,
-                                                                                 lastErrorMessage
-                                                                                );
-
-            // update/insert tree item
-            display.syncExec(new Runnable()
+            public void run()
             {
-              public void run()
+              TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,uuidIndexData);
+              if (uuidTreeItem == null)
               {
-                TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,uuidIndexData);
-                if (uuidTreeItem == null)
-                {
-                  // insert tree item
-                  uuidTreeItem = Widgets.insertTreeItem(widgetStorageTree,
-                                                        findStorageTreeIndex(uuidIndexData),
-                                                        (Object)uuidIndexData,
-                                                        true
-                                                       );
-                  uuidIndexData.setTreeItem(uuidTreeItem);
-                }
-                else
-                {
-                  assert uuidTreeItem.getData() instanceof UUIDIndexData;
-
-                  // keep tree item
-                  removeUUIDTreeItemSet.remove(uuidTreeItem);
-                }
-                if (uuidTreeItem.getExpanded())
-                {
-                  uuidTreeItems.add(uuidTreeItem);
-                }
-
-                // update view
-                uuidIndexData.update();
+                // insert tree item
+                uuidTreeItem = Widgets.insertTreeItem(widgetStorageTree,
+                                                      findStorageTreeIndex(uuidIndexData),
+                                                      (Object)uuidIndexData,
+                                                      true
+                                                     );
+                uuidIndexData.setTreeItem(uuidTreeItem);
               }
-            });
+              else
+              {
+                assert uuidTreeItem.getData() instanceof UUIDIndexData;
 
-          }
-          catch (IllegalArgumentException exception)
-          {
-            if (Settings.debugLevel > 0)
-            {
-              System.err.println("ERROR: "+exception.getMessage());
+                // keep tree item
+                removeUUIDTreeItemSet.remove(uuidTreeItem);
+              }
+              if (uuidTreeItem.getExpanded())
+              {
+                uuidTreeItems.add(uuidTreeItem);
+              }
+
+              // update view
+              uuidIndexData.update();
             }
+          });
+
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
           }
         }
       }
@@ -1751,73 +1750,71 @@ public class TabRestore
                                                         ),
                                      0
                                     );
-      while (!command.endOfData())
+      while (   !command.endOfData()
+             && command.getNextResult(errorMessage,
+                                      valueMap,
+                                      Command.TIMEOUT
+                                     ) == Errors.NONE
+            )
       {
-        if (command.getNextResult(errorMessage,
-                                  valueMap,
-                                  Command.TIMEOUT
-                                 ) == Errors.NONE
-           )
+        try
         {
-          try
+          long                  entityId         = valueMap.getLong  ("entityId"                               );
+          String                jobUUID          = valueMap.getString("jobUUID"                                );
+          String                scheduleUUID     = valueMap.getString("scheduleUUID"                           );
+          Settings.ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+          long                  lastDateTime     = valueMap.getLong  ("lastDateTime"                           );
+          long                  totalEntries     = valueMap.getLong  ("totalEntries"                           );
+          long                  totalSize        = valueMap.getLong  ("totalSize"                              );
+          String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
+
+          // add/update job data index
+          final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
+                                                                                     archiveType,
+                                                                                     lastDateTime,
+                                                                                     totalEntries,
+                                                                                     totalSize,
+                                                                                     lastErrorMessage
+                                                                                    );
+
+          // insert/update tree item
+          display.syncExec(new Runnable()
           {
-            long                  entityId         = valueMap.getLong  ("entityId"                               );
-            String                jobUUID          = valueMap.getString("jobUUID"                                );
-            String                scheduleUUID     = valueMap.getString("scheduleUUID"                           );
-            Settings.ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-            long                  lastDateTime     = valueMap.getLong  ("lastDateTime"                           );
-            long                  totalEntries     = valueMap.getLong  ("totalEntries"                           );
-            long                  totalSize        = valueMap.getLong  ("totalSize"                              );
-            String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
-
-            // add/update job data index
-            final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
-                                                                                       archiveType,
-                                                                                       lastDateTime,
-                                                                                       totalEntries,
-                                                                                       totalSize,
-                                                                                       lastErrorMessage
-                                                                                      );
-
-            // insert/update tree item
-            display.syncExec(new Runnable()
+            public void run()
             {
-              public void run()
+              TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
+              if (entityTreeItem == null)
               {
-                TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
-                if (entityTreeItem == null)
-                {
-                  // insert tree item
-                  entityTreeItem = Widgets.insertTreeItem(uuidTreeItem,
-                                                          findStorageTreeIndex(uuidTreeItem,entityIndexData),
-                                                          (Object)entityIndexData,
-                                                          true
-                                                         );
-                  entityIndexData.setTreeItem(entityTreeItem);
-                }
-                else
-                {
-                  assert entityTreeItem.getData() instanceof EntityIndexData;
-
-                  // keep tree item
-                  removeEntityTreeItemSet.remove(entityTreeItem);
-                }
-                if (entityTreeItem.getExpanded())
-                {
-                  entityTreeItems.add(entityTreeItem);
-                }
-
-                // update view
-                entityIndexData.update();
+                // insert tree item
+                entityTreeItem = Widgets.insertTreeItem(uuidTreeItem,
+                                                        findStorageTreeIndex(uuidTreeItem,entityIndexData),
+                                                        (Object)entityIndexData,
+                                                        true
+                                                       );
+                entityIndexData.setTreeItem(entityTreeItem);
               }
-            });
-          }
-          catch (IllegalArgumentException exception)
-          {
-            if (Settings.debugLevel > 0)
-            {
-              System.err.println("ERROR: "+exception.getMessage());
+              else
+              {
+                assert entityTreeItem.getData() instanceof EntityIndexData;
+
+                // keep tree item
+                removeEntityTreeItemSet.remove(entityTreeItem);
+              }
+              if (entityTreeItem.getExpanded())
+              {
+                entityTreeItems.add(entityTreeItem);
+              }
+
+              // update view
+              entityIndexData.update();
             }
+          });
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
           }
         }
       }
@@ -1891,77 +1888,75 @@ public class TabRestore
                                                         ),
                                      0
                                     );
-      while (!command.endOfData())
+      while (   !command.endOfData()
+             && command.getNextResult(errorMessage,
+                                      valueMap,
+                                      Command.TIMEOUT
+                                     ) == Errors.NONE
+            )
       {
-        if (command.getNextResult(errorMessage,
-                                  valueMap,
-                                  Command.TIMEOUT
-                                 ) == Errors.NONE
-           )
+        try
         {
-          try
+          long                  storageId           = valueMap.getLong  ("storageId"                              );
+          String                jobUUID             = valueMap.getString("jobUUID"                                );
+          String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
+          String                jobName             = valueMap.getString("jobName"                                );
+          Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+          String                name                = valueMap.getString("name"                                   );
+          long                  dateTime            = valueMap.getLong  ("dateTime"                               );
+          long                  entries             = valueMap.getLong  ("entries"                                );
+          long                  size                = valueMap.getLong  ("size"                                   );
+          IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
+          IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
+          long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
+          String                errorMessage_       = valueMap.getString("errorMessage"                           );
+
+          // add/update storage data
+          final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
+                                                                                        jobName,
+                                                                                        archiveType,
+                                                                                        name,
+                                                                                        dateTime,
+                                                                                        entries,
+                                                                                        size,
+                                                                                        indexState,
+                                                                                        indexMode,
+                                                                                        lastCheckedDateTime,
+                                                                                        errorMessage_
+                                                                                       );
+
+          // insert/update tree item
+          display.syncExec(new Runnable()
           {
-            long                  storageId           = valueMap.getLong  ("storageId"                              );
-            String                jobUUID             = valueMap.getString("jobUUID"                                );
-            String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
-            String                jobName             = valueMap.getString("jobName"                                );
-            Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-            String                name                = valueMap.getString("name"                                   );
-            long                  dateTime            = valueMap.getLong  ("dateTime"                               );
-            long                  entries             = valueMap.getLong  ("entries"                                );
-            long                  size                = valueMap.getLong  ("size"                                   );
-            IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
-            IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
-            long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
-            String                errorMessage_       = valueMap.getString("errorMessage"                           );
-
-            // add/update storage data
-            final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-                                                                                          jobName,
-                                                                                          archiveType,
-                                                                                          name,
-                                                                                          dateTime,
-                                                                                          entries,
-                                                                                          size,
-                                                                                          indexState,
-                                                                                          indexMode,
-                                                                                          lastCheckedDateTime,
-                                                                                          errorMessage_
-                                                                                         );
-
-            // insert/update tree item
-            display.syncExec(new Runnable()
+            public void run()
             {
-              public void run()
+              TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,storageIndexData);
+              if (storageTreeItem == null)
               {
-                TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,storageIndexData);
-                if (storageTreeItem == null)
-                {
-                  // insert tree item
-                  storageTreeItem = Widgets.insertTreeItem(entityTreeItem,
-                                                           findStorageTreeIndex(entityTreeItem,storageIndexData),
-                                                           (Object)storageIndexData,
-                                                           false
-                                                          );
-                  storageIndexData.setTreeItem(storageTreeItem);
-                }
-                else
-                {
-                  // keep tree item
-                  removeStorageTreeItemSet.remove(storageTreeItem);
-                }
-
-                // update view
-                storageIndexData.update();
+                // insert tree item
+                storageTreeItem = Widgets.insertTreeItem(entityTreeItem,
+                                                         findStorageTreeIndex(entityTreeItem,storageIndexData),
+                                                         (Object)storageIndexData,
+                                                         false
+                                                        );
+                storageIndexData.setTreeItem(storageTreeItem);
               }
-            });
-          }
-          catch (IllegalArgumentException exception)
-          {
-            if (Settings.debugLevel > 0)
-            {
-              System.err.println("ERROR: "+exception.getMessage());
+              else
+              {
+                // keep tree item
+                removeStorageTreeItemSet.remove(storageTreeItem);
+              }
+
+              // update view
+              storageIndexData.update();
             }
+          });
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
           }
         }
       }
@@ -2039,76 +2034,75 @@ public class TabRestore
                                                         ),
                                      0
                                     );
-      while (!command.endOfData() && !triggeredFlag)
+      while (   !command.endOfData()
+             && !triggeredFlag
+             && command.getNextResult(errorMessage,
+                                      valueMap,
+                                      Command.TIMEOUT
+                                     ) == Errors.NONE
+            )
       {
-        if (command.getNextResult(errorMessage,
-                                  valueMap,
-                                  Command.TIMEOUT
-                                 ) == Errors.NONE
-           )
+        try
         {
-          try
+          long                  storageId           = valueMap.getLong  ("storageId"                              );
+          String                jobUUID             = valueMap.getString("jobUUID"                                );
+          String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
+          String                jobName             = valueMap.getString("jobName"                                );
+          Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+          String                name                = valueMap.getString("name"                                   );
+          long                  dateTime            = valueMap.getLong  ("dateTime"                               );
+          long                  entries             = valueMap.getLong  ("entries"                                );
+          long                  size                = valueMap.getLong  ("size"                                   );
+          IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
+          IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
+          long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
+          String                errorMessage_       = valueMap.getString("errorMessage"                           );
+
+          // add/update to index map
+          final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
+                                                                                        jobName,
+                                                                                        archiveType,
+                                                                                        name,
+                                                                                        dateTime,
+                                                                                        entries,
+                                                                                        size,
+                                                                                        indexState,
+                                                                                        indexMode,
+                                                                                        lastCheckedDateTime,
+                                                                                        errorMessage_
+                                                                                       );
+
+          // insert/update table item
+          display.syncExec(new Runnable()
           {
-            long                  storageId           = valueMap.getLong  ("storageId"                              );
-            String                jobUUID             = valueMap.getString("jobUUID"                                );
-            String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
-            String                jobName             = valueMap.getString("jobName"                                );
-            Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-            String                name                = valueMap.getString("name"                                   );
-            long                  dateTime            = valueMap.getLong  ("dateTime"                               );
-            long                  entries             = valueMap.getLong  ("entries"                                );
-            long                  size                = valueMap.getLong  ("size"                                   );
-            IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
-            IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
-            long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
-            String                errorMessage_       = valueMap.getString("errorMessage"                           );
-
-            // add/update to index map
-            final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-                                                                                          jobName,
-                                                                                          archiveType,
-                                                                                          name,
-                                                                                          dateTime,
-                                                                                          entries,
-                                                                                          size,
-                                                                                          indexState,
-                                                                                          indexMode,
-                                                                                          lastCheckedDateTime,
-                                                                                          errorMessage_
-                                                                                         );
-
-            // insert/update table item
-            display.syncExec(new Runnable()
+            public void run()
             {
-              public void run()
+              TableItem tableItem = Widgets.getTableItem(widgetStorageTable,(Object)storageIndexData);
+              if (tableItem == null)
               {
-                TableItem tableItem = Widgets.getTableItem(widgetStorageTable,(Object)storageIndexData);
-                if (tableItem == null)
-                {
-                  // insert table item
-                  tableItem = Widgets.insertTableItem(widgetStorageTable,
-                                                      findStorageTableIndex(storageIndexData),
-                                                      (Object)storageIndexData
-                                                     );
-                  storageIndexData.setTableItem(tableItem);
-                }
-                else
-                {
-                  // keep table item
-                  removeTableItemSet.remove(tableItem);
-                }
-
-                // update view
-                storageIndexData.update();
+                // insert table item
+                tableItem = Widgets.insertTableItem(widgetStorageTable,
+                                                    findStorageTableIndex(storageIndexData),
+                                                    (Object)storageIndexData
+                                                   );
+                storageIndexData.setTableItem(tableItem);
               }
-            });
-          }
-          catch (IllegalArgumentException exception)
-          {
-            if (Settings.debugLevel > 0)
-            {
-              System.err.println("ERROR: "+exception.getMessage());
+              else
+              {
+                // keep table item
+                removeTableItemSet.remove(tableItem);
+              }
+
+              // update view
+              storageIndexData.update();
             }
+          });
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
           }
         }
       }
@@ -2162,122 +2156,121 @@ public class TabRestore
       command = BARServer.runCommand(StringParser.format("INDEX_UUID_LIST pattern=*"),
                                      0
                                     );
-      while (!command.endOfData() && !triggeredFlag)
+      while (   !command.endOfData()
+             && !triggeredFlag
+             && command.getNextResult(errorMessage,
+                                      valueMap,
+                                      Command.TIMEOUT
+                                     ) == Errors.NONE
+            )
       {
-        if (command.getNextResult(errorMessage,
-                                  valueMap,
-                                  Command.TIMEOUT
-                                 ) == Errors.NONE
-           )
+        try
         {
-          try
+          String jobUUID          = valueMap.getString("jobUUID"         );
+          String name             = valueMap.getString("name"            );
+          long   lastDateTime     = valueMap.getLong  ("lastDateTime"    );
+          long   totalEntries     = valueMap.getLong  ("totalEntries"    );
+          long   totalSize        = valueMap.getLong  ("totalSize"       );
+          String lastErrorMessage = valueMap.getString("lastErrorMessage");
+
+          // add/update index map
+          final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
+                                                                               name,
+                                                                               lastDateTime,
+                                                                               totalEntries,
+                                                                               totalSize,
+                                                                               lastErrorMessage
+                                                                              );
+
+          // update/insert menu item
+          display.syncExec(new Runnable()
           {
-            String jobUUID          = valueMap.getString("jobUUID"         );
-            String name             = valueMap.getString("name"            );
-            long   lastDateTime     = valueMap.getLong  ("lastDateTime"    );
-            long   totalEntries     = valueMap.getLong  ("totalEntries"    );
-            long   totalSize        = valueMap.getLong  ("totalSize"       );
-            String lastErrorMessage = valueMap.getString("lastErrorMessage");
-
-            // add/update index map
-            final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
-                                                                                 name,
-                                                                                 lastDateTime,
-                                                                                 totalEntries,
-                                                                                 totalSize,
-                                                                                 lastErrorMessage
-                                                                                );
-
-            // update/insert menu item
-            display.syncExec(new Runnable()
+            public void run()
             {
-              public void run()
+              Menu subMenu = Widgets.getMenu(widgetStorageTreeAssignToMenu,uuidIndexData);
+              if (subMenu == null)
               {
-                Menu subMenu = Widgets.getMenu(widgetStorageTreeAssignToMenu,uuidIndexData);
-                if (subMenu == null)
-                {
-                  MenuItem menuItem;
+                MenuItem menuItem;
 
-                  // insert sub-menu
-                  subMenu = Widgets.insertMenu(widgetStorageTreeAssignToMenu,
-                                               findStorageMenuIndex(uuidIndexData),
-                                               (Object)uuidIndexData,
-                                               uuidIndexData.name
+                // insert sub-menu
+                subMenu = Widgets.insertMenu(widgetStorageTreeAssignToMenu,
+                                             findStorageMenuIndex(uuidIndexData),
+                                             (Object)uuidIndexData,
+                                             uuidIndexData.name
+                                            );
+                menuItem = Widgets.addMenuItem(subMenu,
+                                               null,
+                                               BARControl.tr("new full")
                                               );
-                  menuItem = Widgets.addMenuItem(subMenu,
-                                                 null,
-                                                 BARControl.tr("new full")
-                                                );
-                  menuItem.addSelectionListener(new SelectionListener()
-                  {
-                    public void widgetDefaultSelected(SelectionEvent selectionEvent)
-                    {
-                    }
-                    public void widgetSelected(SelectionEvent selectionEvent)
-                    {
-                      MenuItem widget = (MenuItem)selectionEvent.widget;
-
-                      UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
-                      assignStorage(uuidIndexData,Settings.ArchiveTypes.FULL);
-                    }
-                  });
-                  menuItem = Widgets.addMenuItem(subMenu,
-                                                 null,
-                                                 BARControl.tr("new incremental")
-                                                );
-                  menuItem.addSelectionListener(new SelectionListener()
-                  {
-                    public void widgetDefaultSelected(SelectionEvent selectionEvent)
-                    {
-                    }
-                    public void widgetSelected(SelectionEvent selectionEvent)
-                    {
-                      MenuItem widget = (MenuItem)selectionEvent.widget;
-
-                      UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
-                      assignStorage(uuidIndexData,Settings.ArchiveTypes.INCREMENTAL);
-                    }
-                  });
-                  menuItem = Widgets.addMenuItem(subMenu,
-                                                 null,
-                                                 BARControl.tr("new differenial")
-                                                );
-                  menuItem.addSelectionListener(new SelectionListener()
-                  {
-                    public void widgetDefaultSelected(SelectionEvent selectionEvent)
-                    {
-                    }
-                    public void widgetSelected(SelectionEvent selectionEvent)
-                    {
-                      MenuItem widget = (MenuItem)selectionEvent.widget;
-
-                      UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
-                      assignStorage(uuidIndexData,Settings.ArchiveTypes.DIFFERENTIAL);
-                    }
-                  });
-                  Widgets.addMenuSeparator(subMenu);
-
-                  uuidIndexData.setSubMenu(subMenu);
-                }
-                else
+                menuItem.addSelectionListener(new SelectionListener()
                 {
-                  assert subMenu.getData() instanceof UUIDIndexData;
+                  public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                  {
+                  }
+                  public void widgetSelected(SelectionEvent selectionEvent)
+                  {
+                    MenuItem widget = (MenuItem)selectionEvent.widget;
 
-                  // keep menu item
-                  removeUUIDMenuSet.remove(subMenu);
-                }
+                    UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
+                    assignStorage(uuidIndexData,Settings.ArchiveTypes.FULL);
+                  }
+                });
+                menuItem = Widgets.addMenuItem(subMenu,
+                                               null,
+                                               BARControl.tr("new incremental")
+                                              );
+                menuItem.addSelectionListener(new SelectionListener()
+                {
+                  public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                  {
+                  }
+                  public void widgetSelected(SelectionEvent selectionEvent)
+                  {
+                    MenuItem widget = (MenuItem)selectionEvent.widget;
 
-                uuidIndexDataSet.add(uuidIndexData);
+                    UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
+                    assignStorage(uuidIndexData,Settings.ArchiveTypes.INCREMENTAL);
+                  }
+                });
+                menuItem = Widgets.addMenuItem(subMenu,
+                                               null,
+                                               BARControl.tr("new differenial")
+                                              );
+                menuItem.addSelectionListener(new SelectionListener()
+                {
+                  public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                  {
+                  }
+                  public void widgetSelected(SelectionEvent selectionEvent)
+                  {
+                    MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                    UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
+                    assignStorage(uuidIndexData,Settings.ArchiveTypes.DIFFERENTIAL);
+                  }
+                });
+                Widgets.addMenuSeparator(subMenu);
+
+                uuidIndexData.setSubMenu(subMenu);
               }
-            });
+              else
+              {
+                assert subMenu.getData() instanceof UUIDIndexData;
 
-          }
-          catch (IllegalArgumentException exception)
-          {
-            if (Settings.debugLevel > 0)
-            {
-              System.err.println("ERROR: "+exception.getMessage());
+                // keep menu item
+                removeUUIDMenuSet.remove(subMenu);
+              }
+
+              uuidIndexDataSet.add(uuidIndexData);
             }
+          });
+
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
           }
         }
       }
@@ -2330,80 +2323,79 @@ public class TabRestore
                                                           ),
                                        0
                                       );
-        while (!command.endOfData() && !triggeredFlag)
+        while (   !command.endOfData()
+               && !triggeredFlag
+               && command.getNextResult(errorMessage,
+                                        valueMap,
+                                        Command.TIMEOUT
+                                       ) == Errors.NONE
+              )
         {
-          if (command.getNextResult(errorMessage,
-                                    valueMap,
-                                    Command.TIMEOUT
-                                   ) == Errors.NONE
-             )
+          try
           {
-            try
+            long                  entityId         = valueMap.getLong  ("entityId"                               );
+            String                jobUUID          = valueMap.getString("jobUUID"                                );
+            String                scheduleUUID     = valueMap.getString("scheduleUUID"                           );
+            Settings.ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+            long                  lastDateTime     = valueMap.getLong  ("lastDateTime"                           );
+            long                  totalEntries     = valueMap.getLong  ("totalEntries"                           );
+            long                  totalSize        = valueMap.getLong  ("totalSize"                              );
+            String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
+
+            // add/update job data index
+            final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
+                                                                                       archiveType,
+                                                                                       lastDateTime,
+                                                                                       totalEntries,
+                                                                                       totalSize,
+                                                                                       lastErrorMessage
+                                                                                      );
+
+            // update/insert menu item
+            display.syncExec(new Runnable()
             {
-              long                  entityId         = valueMap.getLong  ("entityId"                               );
-              String                jobUUID          = valueMap.getString("jobUUID"                                );
-              String                scheduleUUID     = valueMap.getString("scheduleUUID"                           );
-              Settings.ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-              long                  lastDateTime     = valueMap.getLong  ("lastDateTime"                           );
-              long                  totalEntries     = valueMap.getLong  ("totalEntries"                           );
-              long                  totalSize        = valueMap.getLong  ("totalSize"                              );
-              String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
-
-              // add/update job data index
-              final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
-                                                                                         archiveType,
-                                                                                         lastDateTime,
-                                                                                         totalEntries,
-                                                                                         totalSize,
-                                                                                         lastErrorMessage
-                                                                                        );
-
-              // update/insert menu item
-              display.syncExec(new Runnable()
+              public void run()
               {
-                public void run()
+                MenuItem menuItem = Widgets.getMenuItem(subMenu,entityIndexData);
+                if (menuItem == null)
                 {
-                  MenuItem menuItem = Widgets.getMenuItem(subMenu,entityIndexData);
-                  if (menuItem == null)
+                  // insert menu item
+                  menuItem = Widgets.insertMenuItem(subMenu,
+                                                    findStorageMenuIndex(subMenu,entityIndexData),
+                                                    (Object)entityIndexData,
+                                                    ((entityIndexData.dateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L)) : "-")+", "+entityIndexData.archiveType.toString()
+                                                   );
+                  menuItem.addSelectionListener(new SelectionListener()
                   {
-                    // insert menu item
-                    menuItem = Widgets.insertMenuItem(subMenu,
-                                                      findStorageMenuIndex(subMenu,entityIndexData),
-                                                      (Object)entityIndexData,
-                                                      ((entityIndexData.dateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.dateTime*1000L)) : "-")+", "+entityIndexData.archiveType.toString()
-                                                     );
-                    menuItem.addSelectionListener(new SelectionListener()
+                    public void widgetDefaultSelected(SelectionEvent selectionEvent)
                     {
-                      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-                      {
-                      }
-                      public void widgetSelected(SelectionEvent selectionEvent)
-                      {
-                        MenuItem widget = (MenuItem)selectionEvent.widget;
+                    }
+                    public void widgetSelected(SelectionEvent selectionEvent)
+                    {
+                      MenuItem widget = (MenuItem)selectionEvent.widget;
 
-                        EntityIndexData entityIndexData = (EntityIndexData)widget.getData();
+                      EntityIndexData entityIndexData = (EntityIndexData)widget.getData();
 
-                        assignStorage(entityIndexData);
-                      }
-                    });
-                    entityIndexData.setMenuItem(menuItem);
-                  }
-                  else
-                  {
-                    assert menuItem.getData() instanceof EntityIndexData;
-
-                    // keep menu item
-                    removeEntityMenuItemSet.remove(menuItem);
-                  }
+                      assignStorage(entityIndexData);
+                    }
+                  });
+                  entityIndexData.setMenuItem(menuItem);
                 }
-              });
-            }
-            catch (IllegalArgumentException exception)
-            {
-              if (Settings.debugLevel > 0)
-              {
-                System.err.println("ERROR: "+exception.getMessage());
+                else
+                {
+                  assert menuItem.getData() instanceof EntityIndexData;
+
+                  // keep menu item
+                  removeEntityMenuItemSet.remove(menuItem);
+                }
               }
+            });
+          }
+          catch (IllegalArgumentException exception)
+          {
+            if (Settings.debugLevel > 0)
+            {
+              System.err.println("ERROR: "+exception.getMessage());
             }
           }
         }
@@ -2927,305 +2919,304 @@ public class TabRestore
                                             );
       String[] errorMessage = new String[1];
       ValueMap valueMap     = new ValueMap();
-      while (!command.endOfData() && !triggeredFlag)
+      while (   !command.endOfData()
+             && !triggeredFlag
+             && command.getNextResult(errorMessage,
+                                      valueMap,
+                                      Command.TIMEOUT
+                                     ) == Errors.NONE
+            )
       {
-        if (command.getNextResult(errorMessage,
-                                  valueMap,
-                                  Command.TIMEOUT
-                                 ) == Errors.NONE
-           )
+        try
         {
-          try
+          switch (valueMap.getEnum("entryType",EntryTypes.class))
           {
-            switch (valueMap.getEnum("entryType",EntryTypes.class))
-            {
-              case FILE:
+            case FILE:
+              {
+                String storageName     = valueMap.getString("storageName"    );
+                long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                String fileName        = valueMap.getString("name"           );
+                long   dateTime        = valueMap.getLong  ("dateTime"       );
+                long   size            = valueMap.getLong  ("size"           );
+                long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
+                long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
+
+                // add/update entry data map
+                final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.FILE,fileName,dateTime,size);
+
+                // update/insert table item
+                display.syncExec(new Runnable()
                 {
-                  String storageName     = valueMap.getString("storageName"    );
-                  long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                  String fileName        = valueMap.getString("name"           );
-                  long   dateTime        = valueMap.getLong  ("dateTime"       );
-                  long   size            = valueMap.getLong  ("size"           );
-                  long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
-                  long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
-
-                  // add/update entry data map
-                  final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.FILE,fileName,dateTime,size);
-
-                  // update/insert table item
-                  display.syncExec(new Runnable()
+                  public void run()
                   {
-                    public void run()
+                    TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
+                    if (tableItem == null)
                     {
-                      TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
-                      if (tableItem == null)
-                      {
-                        // insert tree item
-                        tableItem = Widgets.insertTableItem(widgetEntryTable,
-                                                            findEntryListIndex(entryData),
-                                                            (Object)entryData
-                                                           );
-                      }
-                      else
-                      {
-                        assert tableItem.getData() instanceof EntryData;
-
-                        // keep tree item
-                        removeTableItemSet.remove(tableItem);
-                      }
-
-                      // update view
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryData,
-                                              entryData.storageName,
-                                              entryData.name,
-                                              "FILE",
-                                              Units.formatByteSize(entryData.size),
-                                              simpleDateFormat.format(new Date(entryData.dateTime*1000L))
-                                             );
+                      // insert tree item
+                      tableItem = Widgets.insertTableItem(widgetEntryTable,
+                                                          findEntryListIndex(entryData),
+                                                          (Object)entryData
+                                                         );
                     }
-                  });
-                }
-                break;
-              case IMAGE:
+                    else
+                    {
+                      assert tableItem.getData() instanceof EntryData;
+
+                      // keep tree item
+                      removeTableItemSet.remove(tableItem);
+                    }
+
+                    // update view
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryData,
+                                            entryData.storageName,
+                                            entryData.name,
+                                            "FILE",
+                                            Units.formatByteSize(entryData.size),
+                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                           );
+                  }
+                });
+              }
+              break;
+            case IMAGE:
+              {
+                String storageName     = valueMap.getString("storageName"    );
+                long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                String imageName       = valueMap.getString("name"           );
+                long   size            = valueMap.getLong  ("size"           );
+                long   blockOffset     = valueMap.getLong  ("blockOffset"    );
+                long   blockCount      = valueMap.getLong  ("blockCount"     );
+
+                // add/update entry data map
+                final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.IMAGE,imageName,0L,size);
+
+                // update/insert table item
+                display.syncExec(new Runnable()
                 {
-                  String storageName     = valueMap.getString("storageName"    );
-                  long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                  String imageName       = valueMap.getString("name"           );
-                  long   size            = valueMap.getLong  ("size"           );
-                  long   blockOffset     = valueMap.getLong  ("blockOffset"    );
-                  long   blockCount      = valueMap.getLong  ("blockCount"     );
-
-                  // add/update entry data map
-                  final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.IMAGE,imageName,0L,size);
-
-                  // update/insert table item
-                  display.syncExec(new Runnable()
+                  public void run()
                   {
-                    public void run()
+                    TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
+                    if (tableItem == null)
                     {
-                      TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
-                      if (tableItem == null)
-                      {
-                        // insert tree item
-                        tableItem = Widgets.insertTableItem(widgetEntryTable,
-                                                            findEntryListIndex(entryData),
-                                                            (Object)entryData
-                                                           );
-                      }
-                      else
-                      {
-                        assert tableItem.getData() instanceof EntryData;
-
-                        // keep tree item
-                        removeTableItemSet.remove(tableItem);
-                      }
-
-                      // update view
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryData,
-                                              entryData.storageName,
-                                              entryData.name,
-                                              "IMAGE",
-                                              Units.formatByteSize(entryData.size),
-                                              simpleDateFormat.format(new Date(entryData.dateTime*1000L))
-                                             );
+                      // insert tree item
+                      tableItem = Widgets.insertTableItem(widgetEntryTable,
+                                                          findEntryListIndex(entryData),
+                                                          (Object)entryData
+                                                         );
                     }
-                  });
-                }
-                break;
-              case DIRECTORY:
+                    else
+                    {
+                      assert tableItem.getData() instanceof EntryData;
+
+                      // keep tree item
+                      removeTableItemSet.remove(tableItem);
+                    }
+
+                    // update view
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryData,
+                                            entryData.storageName,
+                                            entryData.name,
+                                            "IMAGE",
+                                            Units.formatByteSize(entryData.size),
+                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                           );
+                  }
+                });
+              }
+              break;
+            case DIRECTORY:
+              {
+                String storageName     = valueMap.getString("storageName"    );
+                long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                String directoryName   = valueMap.getString("name"           );
+                long   dateTime        = valueMap.getLong  ("dateTime"       );
+
+                // add/update entry data map
+                final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.DIRECTORY,directoryName,dateTime);
+
+                // update/insert table item
+                display.syncExec(new Runnable()
                 {
-                  String storageName     = valueMap.getString("storageName"    );
-                  long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                  String directoryName   = valueMap.getString("name"           );
-                  long   dateTime        = valueMap.getLong  ("dateTime"       );
-
-                  // add/update entry data map
-                  final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.DIRECTORY,directoryName,dateTime);
-
-                  // update/insert table item
-                  display.syncExec(new Runnable()
+                  public void run()
                   {
-                    public void run()
+                    TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
+                    if (tableItem == null)
                     {
-                      TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
-                      if (tableItem == null)
-                      {
-                        // insert tree item
-                        tableItem = Widgets.insertTableItem(widgetEntryTable,
-                                                            findEntryListIndex(entryData),
-                                                            (Object)entryData
-                                                           );
-                      }
-                      else
-                      {
-                        assert tableItem.getData() instanceof EntryData;
-
-                        // keep tree item
-                        removeTableItemSet.remove(tableItem);
-                      }
-
-                      // update view
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryData,
-                                              entryData.storageName,
-                                              entryData.name,
-                                              "DIR",
-                                              "",
-                                              simpleDateFormat.format(new Date(entryData.dateTime*1000L))
-                                             );
+                      // insert tree item
+                      tableItem = Widgets.insertTableItem(widgetEntryTable,
+                                                          findEntryListIndex(entryData),
+                                                          (Object)entryData
+                                                         );
                     }
-                  });
-                }
-                break;
-              case LINK:
+                    else
+                    {
+                      assert tableItem.getData() instanceof EntryData;
+
+                      // keep tree item
+                      removeTableItemSet.remove(tableItem);
+                    }
+
+                    // update view
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryData,
+                                            entryData.storageName,
+                                            entryData.name,
+                                            "DIR",
+                                            "",
+                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                           );
+                  }
+                });
+              }
+              break;
+            case LINK:
+              {
+                String storageName     = valueMap.getString("storageName"    );
+                long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                String linkName        = valueMap.getString("name"           );
+                String destinationName = valueMap.getString("destinationName");
+                long   dateTime        = valueMap.getLong  ("dateTime"       );
+
+                // add/update entry data map
+                final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.LINK,linkName,dateTime);
+
+                // update/insert table item
+                display.syncExec(new Runnable()
                 {
-                  String storageName     = valueMap.getString("storageName"    );
-                  long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                  String linkName        = valueMap.getString("name"           );
-                  String destinationName = valueMap.getString("destinationName");
-                  long   dateTime        = valueMap.getLong  ("dateTime"       );
-
-                  // add/update entry data map
-                  final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.LINK,linkName,dateTime);
-
-                  // update/insert table item
-                  display.syncExec(new Runnable()
+                  public void run()
                   {
-                    public void run()
+                    TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
+                    if (tableItem == null)
                     {
-                      TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
-                      if (tableItem == null)
-                      {
-                        // insert tree item
-                        tableItem = Widgets.insertTableItem(widgetEntryTable,
-                                                            findEntryListIndex(entryData),
-                                                            (Object)entryData
-                                                           );
-                      }
-                      else
-                      {
-                        assert tableItem.getData() instanceof EntryData;
-
-                        // keep tree item
-                        removeTableItemSet.remove(tableItem);
-                      }
-
-                      // update view
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryData,
-                                              entryData.storageName,
-                                              entryData.name,
-                                              "LINK",
-                                              "",
-                                              simpleDateFormat.format(new Date(entryData.dateTime*1000L))
-                                             );
+                      // insert tree item
+                      tableItem = Widgets.insertTableItem(widgetEntryTable,
+                                                          findEntryListIndex(entryData),
+                                                          (Object)entryData
+                                                         );
                     }
-                  });
-                }
-                break;
-              case HARDLINK:
+                    else
+                    {
+                      assert tableItem.getData() instanceof EntryData;
+
+                      // keep tree item
+                      removeTableItemSet.remove(tableItem);
+                    }
+
+                    // update view
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryData,
+                                            entryData.storageName,
+                                            entryData.name,
+                                            "LINK",
+                                            "",
+                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                           );
+                  }
+                });
+              }
+              break;
+            case HARDLINK:
+              {
+                String storageName     = valueMap.getString("storageName"    );
+                long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                String fileName        = valueMap.getString("name"           );
+                long   dateTime        = valueMap.getLong  ("dateTime"       );
+                long   size            = valueMap.getLong  ("size"           );
+                long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
+                long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
+
+                // add/update entry data map
+                final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.HARDLINK,fileName,dateTime,size);
+
+                // update/insert table item
+                display.syncExec(new Runnable()
                 {
-                  String storageName     = valueMap.getString("storageName"    );
-                  long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                  String fileName        = valueMap.getString("name"           );
-                  long   dateTime        = valueMap.getLong  ("dateTime"       );
-                  long   size            = valueMap.getLong  ("size"           );
-                  long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
-                  long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
-
-                  // add/update entry data map
-                  final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.HARDLINK,fileName,dateTime,size);
-
-                  // update/insert table item
-                  display.syncExec(new Runnable()
+                  public void run()
                   {
-                    public void run()
+                    TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
+                    if (tableItem == null)
                     {
-                      TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
-                      if (tableItem == null)
-                      {
-                        // insert tree item
-                        tableItem = Widgets.insertTableItem(widgetEntryTable,
-                                                            findEntryListIndex(entryData),
-                                                            (Object)entryData
-                                                           );
-                      }
-                      else
-                      {
-                        assert tableItem.getData() instanceof EntryData;
-
-                        // keep tree item
-                        removeTableItemSet.remove(tableItem);
-                      }
-
-                      // update view
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryData,
-                                              entryData.storageName,
-                                              entryData.name,
-                                              "HARDLINK",
-                                              Units.formatByteSize(entryData.size),
-                                              simpleDateFormat.format(new Date(entryData.dateTime*1000L))
-                                             );
+                      // insert tree item
+                      tableItem = Widgets.insertTableItem(widgetEntryTable,
+                                                          findEntryListIndex(entryData),
+                                                          (Object)entryData
+                                                         );
                     }
-                  });
-                }
-                break;
-              case SPECIAL:
+                    else
+                    {
+                      assert tableItem.getData() instanceof EntryData;
+
+                      // keep tree item
+                      removeTableItemSet.remove(tableItem);
+                    }
+
+                    // update view
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryData,
+                                            entryData.storageName,
+                                            entryData.name,
+                                            "HARDLINK",
+                                            Units.formatByteSize(entryData.size),
+                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                           );
+                  }
+                });
+              }
+              break;
+            case SPECIAL:
+              {
+                String storageName     = valueMap.getString("storageName"    );
+                long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                String name            = valueMap.getString("name"           );
+                long   dateTime        = valueMap.getLong  ("dateTime"       );
+
+                // add/update entry data map
+                final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.SPECIAL,name,dateTime);
+
+                // update/insert table item
+                display.syncExec(new Runnable()
                 {
-                  String storageName     = valueMap.getString("storageName"    );
-                  long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                  String name            = valueMap.getString("name"           );
-                  long   dateTime        = valueMap.getLong  ("dateTime"       );
-
-                  // add/update entry data map
-                  final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.SPECIAL,name,dateTime);
-
-                  // update/insert table item
-                  display.syncExec(new Runnable()
+                  public void run()
                   {
-                    public void run()
+                    TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
+                    if (tableItem == null)
                     {
-                      TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
-                      if (tableItem == null)
-                      {
-                        // insert tree item
-                        tableItem = Widgets.insertTableItem(widgetEntryTable,
-                                                            findEntryListIndex(entryData),
-                                                            (Object)entryData
-                                                           );
-                      }
-                      else
-                      {
-                        assert tableItem.getData() instanceof EntryData;
-
-                        // keep tree item
-                        removeTableItemSet.remove(tableItem);
-                      }
-
-                      // update view
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryData,
-                                              entryData.storageName,
-                                              entryData.name,
-                                              "DEVICE",
-                                              Units.formatByteSize(entryData.size),
-                                              simpleDateFormat.format(new Date(entryData.dateTime*1000L))
-                                             );
+                      // insert tree item
+                      tableItem = Widgets.insertTableItem(widgetEntryTable,
+                                                          findEntryListIndex(entryData),
+                                                          (Object)entryData
+                                                         );
                     }
-                  });
-                }
-                break;
-            }
+                    else
+                    {
+                      assert tableItem.getData() instanceof EntryData;
+
+                      // keep tree item
+                      removeTableItemSet.remove(tableItem);
+                    }
+
+                    // update view
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryData,
+                                            entryData.storageName,
+                                            entryData.name,
+                                            "DEVICE",
+                                            Units.formatByteSize(entryData.size),
+                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                           );
+                  }
+                });
+              }
+              break;
           }
-          catch (IllegalArgumentException exception)
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
           {
-            if (Settings.debugLevel > 0)
-            {
-              System.err.println("ERROR: "+exception.getMessage());
-            }
+            System.err.println("ERROR: "+exception.getMessage());
           }
         }
       }
@@ -5430,26 +5421,24 @@ Dprintf.dprintf("");
                                                                   ),
                                                0
                                               );
-                while (!command.endOfData())
+                while (   !command.endOfData()
+                       && command.getNextResult(errorMessage,
+                                                resultMap,
+                                                Command.TIMEOUT
+                                               ) == Errors.NONE
+                      )
                 {
-                  if (command.getNextResult(errorMessage,
-                                            resultMap,
-                                            Command.TIMEOUT
-                                           ) == Errors.NONE
-                     )
+                  try
                   {
-                    try
-                    {
-                      String name = resultMap.getString("name");
+                    String name = resultMap.getString("name");
 
-                      storageNamesHashSet.add(name);
-                    }
-                    catch (IllegalArgumentException exception)
+                    storageNamesHashSet.add(name);
+                  }
+                  catch (IllegalArgumentException exception)
+                  {
+                    if (Settings.debugLevel > 0)
                     {
-                      if (Settings.debugLevel > 0)
-                      {
-                        System.err.println("ERROR: "+exception.getMessage());
-                      }
+                      System.err.println("ERROR: "+exception.getMessage());
                     }
                   }
                 }
@@ -5697,69 +5686,67 @@ Dprintf.dprintf("");
                                                                     ),
                                                  0
                                                 );
-          while (!command.endOfData())
+          while (   !command.endOfData()
+                 && command.getNextResult(errorMessage,
+                                          valueMap,
+                                          Command.TIMEOUT
+                                         ) == Errors.NONE
+                )
           {
-            if (command.getNextResult(errorMessage,
-                                      valueMap,
-                                      Command.TIMEOUT
-                                     ) == Errors.NONE
-               )
+            try
             {
-              try
+              long                  entityId         = valueMap.getLong  ("entityId"                               );
+              String                jobUUID          = valueMap.getString("jobUUID"                                );
+              String                scheuduleUUID    = valueMap.getString("scheduleUUID"                           );
+              Settings.ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+              long                  lastDateTime     = valueMap.getLong  ("lastDateTime"                           );
+              long                  totalEntries     = valueMap.getLong  ("totalEntries"                           );
+              long                  totalSize        = valueMap.getLong  ("totalSize"                              );
+              String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
+
+              // add/update job data index
+              final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
+                                                                                         archiveType,
+                                                                                         lastDateTime,
+                                                                                         totalEntries,
+                                                                                         totalSize,
+                                                                                         lastErrorMessage
+                                                                                        );
+
+              // insert/update tree item
+              display.syncExec(new Runnable()
               {
-                long                  entityId         = valueMap.getLong  ("entityId"                               );
-                String                jobUUID          = valueMap.getString("jobUUID"                                );
-                String                scheuduleUUID    = valueMap.getString("scheduleUUID"                           );
-                Settings.ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-                long                  lastDateTime     = valueMap.getLong  ("lastDateTime"                           );
-                long                  totalEntries     = valueMap.getLong  ("totalEntries"                           );
-                long                  totalSize        = valueMap.getLong  ("totalSize"                              );
-                String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
-
-                // add/update job data index
-                final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
-                                                                                           archiveType,
-                                                                                           lastDateTime,
-                                                                                           totalEntries,
-                                                                                           totalSize,
-                                                                                           lastErrorMessage
-                                                                                          );
-
-                // insert/update tree item
-                display.syncExec(new Runnable()
+                public void run()
                 {
-                  public void run()
+                  TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
+                  if (entityTreeItem == null)
                   {
-                    TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
-                    if (entityTreeItem == null)
-                    {
-                      // insert tree item
-                      entityTreeItem = Widgets.insertTreeItem(treeItem,
-                                                              findStorageTreeIndex(treeItem,entityIndexData),
-                                                              (Object)entityIndexData,
-                                                              true
-                                                             );
-                      entityIndexData.setTreeItem(entityTreeItem);
-                    }
-                    else
-                    {
-                      assert entityTreeItem.getData() instanceof EntityIndexData;
-
-                      // keep tree item
-                      removeEntityTreeItemSet.remove(entityTreeItem);
-                    }
-
-                    // update view
-                    entityIndexData.update();
+                    // insert tree item
+                    entityTreeItem = Widgets.insertTreeItem(treeItem,
+                                                            findStorageTreeIndex(treeItem,entityIndexData),
+                                                            (Object)entityIndexData,
+                                                            true
+                                                           );
+                    entityIndexData.setTreeItem(entityTreeItem);
                   }
-                });
-              }
-              catch (IllegalArgumentException exception)
-              {
-                if (Settings.debugLevel > 0)
-                {
-                  System.err.println("ERROR: "+exception.getMessage());
+                  else
+                  {
+                    assert entityTreeItem.getData() instanceof EntityIndexData;
+
+                    // keep tree item
+                    removeEntityTreeItemSet.remove(entityTreeItem);
+                  }
+
+                  // update view
+                  entityIndexData.update();
                 }
+              });
+            }
+            catch (IllegalArgumentException exception)
+            {
+              if (Settings.debugLevel > 0)
+              {
+                System.err.println("ERROR: "+exception.getMessage());
               }
             }
           }
@@ -5806,77 +5793,75 @@ Dprintf.dprintf("");
                                                                     ),
                                                  0
                                                 );
-          while (!command.endOfData())
+          while (   !command.endOfData()
+                 && command.getNextResult(errorMessage,
+                                          valueMap,
+                                          Command.TIMEOUT
+                                         ) == Errors.NONE
+                )
           {
-            if (command.getNextResult(errorMessage,
-                                      valueMap,
-                                      Command.TIMEOUT
-                                     ) == Errors.NONE
-               )
+            try
             {
-              try
+              long                  storageId           = valueMap.getLong  ("storageId"                              );
+              String                jobUUID             = valueMap.getString("jobUUID"                                );
+              String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
+              String                jobName             = valueMap.getString("jobName"                                );
+              Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+              String                name                = valueMap.getString("name"                                   );
+              long                  dateTime            = valueMap.getLong  ("dateTime"                               );
+              long                  entries             = valueMap.getLong  ("entries"                                );
+              long                  size                = valueMap.getLong  ("size"                                   );
+              IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
+              IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
+              long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
+              String                errorMessage_       = valueMap.getString("errorMessage"                           );
+
+              // add/update storage data
+              final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
+                                                                                            jobName,
+                                                                                            archiveType,
+                                                                                            name,
+                                                                                            dateTime,
+                                                                                            entries,
+                                                                                            size,
+                                                                                            indexState,
+                                                                                            indexMode,
+                                                                                            lastCheckedDateTime,
+                                                                                            errorMessage_
+                                                                                           );
+
+              // insert/update tree item
+              display.syncExec(new Runnable()
               {
-                long                  storageId           = valueMap.getLong  ("storageId"                              );
-                String                jobUUID             = valueMap.getString("jobUUID"                                );
-                String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
-                String                jobName             = valueMap.getString("jobName"                                );
-                Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-                String                name                = valueMap.getString("name"                                   );
-                long                  dateTime            = valueMap.getLong  ("dateTime"                               );
-                long                  entries             = valueMap.getLong  ("entries"                                );
-                long                  size                = valueMap.getLong  ("size"                                   );
-                IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
-                IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
-                long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
-                String                errorMessage_       = valueMap.getString("errorMessage"                           );
-
-                // add/update storage data
-                final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
-                                                                                              jobName,
-                                                                                              archiveType,
-                                                                                              name,
-                                                                                              dateTime,
-                                                                                              entries,
-                                                                                              size,
-                                                                                              indexState,
-                                                                                              indexMode,
-                                                                                              lastCheckedDateTime,
-                                                                                              errorMessage_
-                                                                                             );
-
-                // insert/update tree item
-                display.syncExec(new Runnable()
+                public void run()
                 {
-                  public void run()
+                  TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,storageIndexData);
+                  if (storageTreeItem == null)
                   {
-                    TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,storageIndexData);
-                    if (storageTreeItem == null)
-                    {
-                      // insert tree item
-                      storageTreeItem = Widgets.insertTreeItem(treeItem,
-                                                               findStorageTreeIndex(treeItem,storageIndexData),
-                                                               (Object)storageIndexData,
-                                                               false
-                                                              );
-                      storageIndexData.setTreeItem(storageTreeItem);
-                    }
-                    else
-                    {
-                      // keep tree item
-                      removeStorageTreeItemSet.remove(storageTreeItem);
-                    }
-
-                    // update view
-                    storageIndexData.update();
+                    // insert tree item
+                    storageTreeItem = Widgets.insertTreeItem(treeItem,
+                                                             findStorageTreeIndex(treeItem,storageIndexData),
+                                                             (Object)storageIndexData,
+                                                             false
+                                                            );
+                    storageIndexData.setTreeItem(storageTreeItem);
                   }
-                });
-              }
-              catch (IllegalArgumentException exception)
-              {
-                if (Settings.debugLevel > 0)
-                {
-                  System.err.println("ERROR: "+exception.getMessage());
+                  else
+                  {
+                    // keep tree item
+                    removeStorageTreeItemSet.remove(storageTreeItem);
+                  }
+
+                  // update view
+                  storageIndexData.update();
                 }
+              });
+            }
+            catch (IllegalArgumentException exception)
+            {
+              if (Settings.debugLevel > 0)
+              {
+                System.err.println("ERROR: "+exception.getMessage());
               }
             }
           }
@@ -6462,47 +6447,46 @@ Dprintf.dprintf("");
                 Command command = BARServer.runCommand("INDEX_REMOVE state=ERROR storageId=0",0);
 
                 long n = 0;
-                while (!command.endOfData() && !busyDialog.isAborted())
+                while (   !command.endOfData()
+                       && !busyDialog.isAborted()
+                       && command.getNextResult(errorMessage,
+                                                valueMap,
+                                                Command.TIMEOUT
+                                               ) == Errors.NONE
+                      )
                 {
-                  if (command.getNextResult(errorMessage,
-                                            valueMap,
-                                            Command.TIMEOUT
-                                           ) == Errors.NONE
-                     )
+                  try
                   {
-                    try
-                    {
-                      long        storageId = valueMap.getLong  ("storageId");
-                      String      name      = valueMap.getString("name"     );
+                    long        storageId = valueMap.getLong  ("storageId");
+                    String      name      = valueMap.getString("name"     );
 
-                      busyDialog.updateText(String.format("%d: %s",storageId,name));
+                    busyDialog.updateText(String.format("%d: %s",storageId,name));
 
-                      n++;
-                      busyDialog.updateProgressBar(n);
-                    }
-                    catch (IllegalArgumentException exception)
+                    n++;
+                    busyDialog.updateProgressBar(n);
+                  }
+                  catch (IllegalArgumentException exception)
+                  {
+                    if (Settings.debugLevel > 0)
                     {
-                      if (Settings.debugLevel > 0)
-                      {
-                        System.err.println("ERROR: "+exception.getMessage());
-                      }
+                      System.err.println("ERROR: "+exception.getMessage());
                     }
                   }
-                  else
+                }
+                if (command.getErrorCode() != Errors.NONE)
+                {
+                  display.syncExec(new Runnable()
                   {
-                    display.syncExec(new Runnable()
+                    public void run()
                     {
-                      public void run()
-                      {
-                        busyDialog.close();
-                        Dialogs.error(shell,BARControl.tr("Cannot remove database indizes with error state (error: {0})",errorMessage[0]));
-                      }
-                    });
+                      busyDialog.close();
+                      Dialogs.error(shell,BARControl.tr("Cannot remove database indizes with error state (error: {0})",errorMessage[0]));
+                    }
+                  });
 
-                    updateStorageThread.triggerUpdate();
+                  updateStorageThread.triggerUpdate();
 
-                    return;
-                  }
+                  return;
                 }
                 if (busyDialog.isAborted())
                 {
@@ -6797,31 +6781,28 @@ Dprintf.dprintf("");
               ValueMap resultMap    = new ValueMap();
               while (   !command.endOfData()
                      && !busyDialog.isAborted()
+                     && command.getNextResult(errorMessage,
+                                              resultMap,
+                                              60*1000
+                                             ) == Errors.NONE
                     )
               {
-                if (command.getNextResult(errorMessage,
-                                          resultMap,
-                                          60*1000
-                                         ) == Errors.NONE
-                   )
+                try
                 {
-                  try
-                  {
-                    String name              = resultMap.getString("name"            );
-                    long   entryDoneBytes    = resultMap.getLong  ("entryDoneBytes"  );
-                    long   entryTotalBytes   = resultMap.getLong  ("entryTotalBytes" );
-  //                  long   storageDoneBytes  = resultMap.getLong("storageDoneBytes" );
-  //                  long   storageTotalBytes = resultMap.getLong("storageTotalBytes");
+                  String name              = resultMap.getString("name"            );
+                  long   entryDoneBytes    = resultMap.getLong  ("entryDoneBytes"  );
+                  long   entryTotalBytes   = resultMap.getLong  ("entryTotalBytes" );
+//                  long   storageDoneBytes  = resultMap.getLong("storageDoneBytes" );
+//                  long   storageTotalBytes = resultMap.getLong("storageTotalBytes");
 
-                    busyDialog.updateText(1,name);
-                    busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
-                  }
-                  catch (IllegalArgumentException exception)
+                  busyDialog.updateText(1,new File(directory,name).getPath());
+                  busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                }
+                catch (IllegalArgumentException exception)
+                {
+                  if (Settings.debugLevel > 0)
                   {
-                    if (Settings.debugLevel > 0)
-                    {
-                      System.err.println("ERROR: "+exception.getMessage());
-                    }
+                    System.err.println("ERROR: "+exception.getMessage());
                   }
                 }
               }
@@ -7185,10 +7166,7 @@ Dprintf.dprintf("");
           int n = 0;
           for (final EntryData entryData : entryData_)
           {
-//            if (directory.isEmpty())
-            {
-              busyDialog.updateText(0,entryData.storageName);
-            }
+            busyDialog.updateText(0,entryData.storageName);
             busyDialog.updateProgressBar(0,((double)n*100.0)/(double)entryData_.length);
 
             Command command;
@@ -7216,36 +7194,29 @@ Dprintf.dprintf("");
               ValueMap valueMap     = new ValueMap();
               while (   !command.endOfData()
                      && !busyDialog.isAborted()
+                     && command.getNextResult(errorMessage,
+                                              valueMap,
+                                              60*1000
+                                             ) == Errors.NONE
                     )
               {
-                if (command.getNextResult(errorMessage,
-                                          valueMap,
-                                          60*1000
-                                         ) == Errors.NONE
-                   )
+                try
                 {
-                  try
-                  {
-                    String name              = valueMap.getString("name"            );
-                    long   entryDoneBytes    = valueMap.getLong("entryDoneBytes"    );
-                    long   entryTotalBytes   = valueMap.getLong("entryTotalBytes"   );
-  //                  long   storageDoneBytes  = valueMap.getLong("storageDoneBytes" );
-  //                  long   storageTotalBytes = valueMap.getLong("storageTotalBytes");
+                  String name              = valueMap.getString("name"            );
+                  long   entryDoneBytes    = valueMap.getLong("entryDoneBytes"    );
+                  long   entryTotalBytes   = valueMap.getLong("entryTotalBytes"   );
+//                  long   storageDoneBytes  = valueMap.getLong("storageDoneBytes" );
+//                  long   storageTotalBytes = valueMap.getLong("storageTotalBytes");
 
-                    busyDialog.updateText(1,name);
-                    busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
-                  }
-                  catch (IllegalArgumentException exception)
-                  {
-                    if (Settings.debugLevel > 0)
-                    {
-                      System.err.println("ERROR: "+exception.getMessage());
-                    }
-                  }
+                  busyDialog.updateText(1,new File(directory,name).getPath());
+                  busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
                 }
-                else
+                catch (IllegalArgumentException exception)
                 {
-                  busyDialog.update();
+                  if (Settings.debugLevel > 0)
+                  {
+                    System.err.println("ERROR: "+exception.getMessage());
+                  }
                 }
               }
 
