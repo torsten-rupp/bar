@@ -4510,6 +4510,227 @@ class Dialogs
     }
   }
 
+  /** simple list select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param values value to list
+   * @param value current value
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
+   * @return string or null on cancel
+   */
+  public static String list(Shell  parentShell,
+                            String title,
+                            String text,
+                            String values[],
+                            String value,
+                            String okText,
+                            String cancelText,
+                            String toolTipText
+                           )
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+
+    if (!parentShell.isDisposed())
+    {
+      final String[] result = new String[1];
+
+      final Shell dialog = openModal(parentShell,title,450,SWT.DEFAULT);
+      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+      double[] rowWeights = new double[2];
+      int row = 0;
+      if (text != null)
+      {
+        rowWeights[row] = 0.0; row++;
+      }
+      rowWeights[row] = 1.0; row++;
+
+      // list
+      final List   widgetList;
+      final Button widgetOkButton;
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(rowWeights,1.0,4));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+      {
+        row = 0;
+        if (text != null)
+        {
+          label = new Label(composite,SWT.LEFT);
+          label.setText(text);
+          label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W));
+          row++;
+        }
+
+        widgetList = new List(composite,SWT.BORDER|SWT.V_SCROLL);
+        if (toolTipText != null) widgetList.setToolTipText(toolTipText);
+        widgetList.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        row++;
+
+        int index = -1;
+        for (int i = 0; i < values.length; i++)
+        {
+          widgetList.add(values[i]);
+          if (value.equals(values[i])) index = i;
+        }
+        if (index >= 0) widgetList.setSelection(index);
+      }
+
+      // buttons
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+      {
+        widgetOkButton = new Button(composite,SWT.CENTER);
+        widgetOkButton.setText(okText);
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        widgetOkButton.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            String selection[] = widgetList.getSelection();
+            close(dialog,(selection.length > 0) ? selection[0] : (String)null);
+          }
+        });
+
+        button = new Button(composite,SWT.CENTER);
+        button.setText(cancelText);
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,null);
+          }
+        });
+      }
+
+      // install handlers
+      widgetList.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          List widget = (List)selectionEvent.widget;
+
+          widgetOkButton.setFocus();
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      widgetList.addMouseListener(new MouseListener()
+      {
+        public void mouseDoubleClick(MouseEvent mouseEvent)
+        {
+          List widget = (List)mouseEvent.widget;
+
+          String selection[] = widgetList.getSelection();
+          close(dialog,(selection.length > 0) ? selection[0] : (String)null);
+        }
+        public void mouseDown(MouseEvent mouseEvent)
+        {
+        }
+        public void mouseUp(MouseEvent mouseEvent)
+        {
+        }
+      });
+
+      widgetList.setFocus();
+      return (String)run(dialog,null);
+    }
+    else
+    {
+      return null;
+    }
+  }
+
+  /** simple list select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param values value to list
+   * @param value current value
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
+   * @return string or null on cancel
+   */
+  public static String list(Shell  parentShell,
+                            String title,
+                            String text,
+                            String values[],
+                            String value,
+                            String okText,
+                            String cancelText
+                           )
+  {
+    return list(parentShell,title,text,values,value,okText,cancelText,(String)null);
+  }
+
+  /** simple list select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param values value to list
+   * @param value current value
+   * @param okText OK button text
+   * @return string or null on cancel
+   */
+  public static String list(Shell  parentShell,
+                            String title,
+                            String text,
+                            String values[],
+                            String value,
+                            String okText
+                           )
+  {
+    return list(parentShell,title,text,values,value,okText,Dialogs.tr("Cancel"));
+  }
+
+  /** simple list select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param values value to list
+   * @param value current value
+   * @return string or null on cancel
+   */
+  public static String list(Shell  parentShell,
+                            String title,
+                            String text,
+                            String values[],
+                            String value
+                           )
+  {
+    return list(parentShell,title,text,values,value,Dialogs.tr("Select"));
+  }
+
+  /** simple list select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param values value to list
+   * @return string or null on cancel
+   */
+  public static String list(Shell  parentShell,
+                            String title,
+                            String text,
+                            String values[]
+                           )
+  {
+    return list(parentShell,title,text,values,(String)null);
+  }
+
   /** open simple busy dialog
    * @param parentShell parent shell
    * @param title title text
