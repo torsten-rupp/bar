@@ -229,6 +229,8 @@ Options: -c|--create                                           create new files 
          --all                                                 show all files
          -L|--long-format                                      list in long format
          -H|--human-format                                     list in human readable format
+         --numeric-uid-gid                                     print numeric user/group ids
+         --numeric-permission                                  print numeric file/directory permissions
          --no-header-footer                                    output no header/footer in list
          --delete-old-archive-files                            delete old archive files after creating new files
          --ignore-no-backup-file                               ignore .nobackup/.NOBACKUP file
