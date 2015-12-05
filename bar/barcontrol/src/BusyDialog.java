@@ -57,7 +57,7 @@ class BusyDialog
 
   private Display     display;
 
-  private int         animateInterval;
+  private int         animateInterval = 100;  // [ms]
   private long        animateTimestamp;
   private Image       animateImages[] = new Image[2];
   private int         animateImageIndex;
