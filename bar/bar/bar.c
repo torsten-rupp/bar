@@ -661,7 +661,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("long-format",                  'L',0,1,globalOptions.longFormatFlag,                                                                           "list in long format"                                                      ),
   CMD_OPTION_BOOLEAN      ("human-format",                 'H',0,1,globalOptions.humanFormatFlag,                                                                          "list in human readable format"                                            ),
   CMD_OPTION_BOOLEAN      ("numeric-uid-gid",              0,  0,1,globalOptions.numericUIDGIDFlag,                                                                        "print numeric user/group ids"                                             ),
-  CMD_OPTION_BOOLEAN      ("numeric-permission",           0,  0,1,globalOptions.numericPermissionFlag,                                                                    "print numeric permission"                                                 ),
+  CMD_OPTION_BOOLEAN      ("numeric-permission",           0,  0,1,globalOptions.numericPermissionFlag,                                                                    "print numeric file/directory permissions"                                 ),
   CMD_OPTION_BOOLEAN      ("no-header-footer",             0,  0,1,globalOptions.noHeaderFooterFlag,                                                                       "output no header/footer in list"                                          ),
   CMD_OPTION_BOOLEAN      ("delete-old-archive-files",     0,  1,1,globalOptions.deleteOldArchiveFilesFlag,                                                                "delete old archive files after creating new files"                        ),
   CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,2,globalOptions.ignoreNoBackupFileFlag,                                                                   "ignore .nobackup/.NOBACKUP file"                                          ),
@@ -3425,7 +3425,7 @@ void logPostProcess(LogHandle        *logHandle,
 
       // reset and reopen job log file
       logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
-      
+
       // free resources
       String_delete(command);
     }
