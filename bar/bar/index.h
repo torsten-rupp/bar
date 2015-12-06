@@ -490,6 +490,8 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 *          deviceName       - device name pattern (glob) or NULL
 *          fileName         - file name pattern (glob) or NULL
 *          indexStateSet    - index state set
+*          storageIds       - storage ids or NULL
+*          storageIdCount   - storage id count or 0
 * Output : IndexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -505,7 +507,9 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              ConstString      loginName,
                              ConstString      deviceName,
                              ConstString      fileName,
-                             IndexStateSet    indexStateSet
+                             IndexStateSet    indexStateSet,
+                             const DatabaseId storageIds[],
+                             uint             storageIdCount
                             );
 
 /***********************************************************************\

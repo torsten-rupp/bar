@@ -1691,7 +1691,9 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                 NULL, // loginName
                                 NULL, // deviceName
                                 NULL, // fileName
-                                INDEX_STATE_SET_ALL
+                                INDEX_STATE_SET_ALL,
+                                NULL, // storageIds
+                                0  // storageIdCount
                                );
   if (error == ERROR_NONE)
   {
@@ -1969,7 +1971,9 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                   NULL, // loginName
                                   NULL, // deviceName
                                   NULL, // fileName
-                                  INDEX_STATE_SET_ALL
+                                  INDEX_STATE_SET_ALL,
+                                  NULL, // storageIds
+                                  0  // storageIdCount
                                  );
     if (error != ERROR_NONE)
     {
@@ -2005,7 +2009,9 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                     NULL, // loginName
                                     NULL, // deviceName
                                     NULL, // fileName
-                                    INDEX_STATE_SET_ALL
+                                    INDEX_STATE_SET_ALL,
+                                    NULL, // storageIds
+                                    0  // storageIdCount
                                    );
       if (error != ERROR_NONE)
       {
@@ -2478,7 +2484,9 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
                                 NULL, // loginName
                                 NULL, // deviceName
                                 NULL, // fileName
-                                INDEX_STATE_SET_ALL
+                                INDEX_STATE_SET_ALL,
+                                NULL, // storageIds
+                                0  // storageIdCount
                                );
   if (error != ERROR_NONE)
   {
@@ -3422,6 +3430,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
+#if 0
                            "SELECT entities.jobUUID, \
                                    STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1)), \
                                    (SELECT SUM(entries) FROM storage LEFT JOIN entities AS storageEntities ON storage.entityId=storageEntities.id WHERE storageEntities.jobUUID=entities.jobUUID), \
@@ -3430,6 +3439,63 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                             FROM entities \
                             GROUP BY entities.jobUUID; \
                            "
+#else
+                           "SELECT entities.jobUUID, \
+                                   STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1)), \
+                                   ( \
+                                      (SELECT COUNT(id) FROM files WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId IN \
+                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                        ) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM images WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId IN \
+                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                        ) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM directories WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId IN \
+                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                        ) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM links WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId IN \
+                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                        ) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM hardlinks WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId IN \
+                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                        ) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM special WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId IN \
+                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                        ) \
+                                      ) \
+                                   ), \
+                                   ( \
+                                      (SELECT TOTAL(size) FROM files WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId IN \
+                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                        ) \
+                                      ) \
+                                     +(SELECT TOTAL(size) FROM images WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId IN \
+                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                        ) \
+                                      ) \
+                                     +(SELECT TOTAL(size) FROM hardlinks WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId IN \
+                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                        ) \
+                                      ) \
+                                   ), \
+                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
+                            FROM entities \
+                            GROUP BY entities.jobUUID; \
+                           "
+#endif
                           );
   if (error != ERROR_NONE)
   {
@@ -3450,6 +3516,8 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        String           lastErrorMessage
                       )
 {
+  double d0;
+
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
 
@@ -3459,6 +3527,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
 
+#if 0
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%S %llu %llu %llu %S",
                              jobUUID,
@@ -3467,6 +3536,24 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                              totalSize,
                              lastErrorMessage
                             );
+#else
+  if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
+                           "%S %llu %llu %lf %S",
+                           jobUUID,
+                           lastCreatedDateTime,
+                           totalEntries,
+                           &d0,
+                           lastErrorMessage
+                          )
+     )
+  {
+    return FALSE;
+  }
+//fprintf(stderr,"%s, %d: %s t=%llu %llu %lf\n",__FILE__,__LINE__,String_cString(jobUUID),lastCreatedDateTime,*totalSize,d0);
+  if (totalSize != NULL) (*totalSize) = (uint64)d0;
+
+  return TRUE;
+#endif
 }
 
 Errors Index_deleteUUID(IndexHandle *indexHandle,
@@ -3529,11 +3616,49 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   {
     return indexHandle->upgradeError;
   }
+/*
+                                        (SELECT id FROM storage WHERE entityId IN \
+                                          (SELECT id FROM entities WHERE (%d OR jobUUID=%'S) AND (%d OR scheduleUUID=%'S)) \
+                                        ) \
+
+                                   ( \
+                                      (SELECT COUNT(id) FROM files WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM images WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM directories WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM links WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM hardlinks WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM special WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                   ), \
+                                   ( \
+                                      (SELECT TOTAL(size) FROM files WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT TOTAL(size) FROM images WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT TOTAL(size) FROM hardlinks WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                   ), \
+*/
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
+#if 0
                            "SELECT entities.id, \
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
@@ -3554,6 +3679,45 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                            scheduleUUID,
                            getOrderingString(ordering),
                            offset
+#else
+                           "SELECT entities.id, \
+                                   entities.jobUUID, \
+                                   entities.scheduleUUID, \
+                                   STRFTIME('%%s',entities.created), \
+                                   entities.type, \
+                                   ( \
+                                      (SELECT COUNT(id) FROM files WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM images WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM directories WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM links WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM hardlinks WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT COUNT(id) FROM special WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                   ), \
+                                   (SELECT TOTAL(size) FROM storage WHERE entityId=entities.id), \
+                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
+                            FROM entities \
+                            WHERE     (%d OR jobUUID=%'S) \
+                                  AND (%d OR scheduleUUID=%'S) \
+                            ORDER BY entities.created %s \
+                            LIMIT -1 OFFSET %lu \
+                           ",
+                           String_isEmpty(jobUUID     ) ? 1 : 0, jobUUID,
+                           String_isEmpty(scheduleUUID) ? 1 : 0, scheduleUUID,
+                           getOrderingString(ordering),
+                           offset
+#endif
                           );
   if (error != ERROR_NONE)
   {
@@ -3577,6 +3741,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          String           lastErrorMessage
                         )
 {
+  double d0;
+
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
 
@@ -3586,6 +3752,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
 
+#if 0
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                              "%lld %S %S %llu %u %llu %llu %S",
                              databaseId,
@@ -3597,6 +3764,27 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                              totalSize,
                              lastErrorMessage
                             );
+#else
+  if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
+                           "%lld %S %S %llu %u %lf %lf %S",
+                           databaseId,
+                           jobUUID,
+                           scheduleUUID,
+                           createdDateTime,
+                           archiveType,
+                           totalEntries,
+                           &d0,  // totalSize,
+                           lastErrorMessage
+                          )
+     )
+  {
+    return FALSE;
+  }
+//fprintf(stderr,"%s, %d: id=%llu %s type=%d t=%llu %llu %lf\n",__FILE__,__LINE__,*databaseId,String_cString(jobUUID),archiveType!=NULL?*archiveType:0,createdDateTime!=NULL?*createdDateTime:0,totalEntries!=NULL?*totalEntries:0,d0);
+  if (totalSize != NULL) (*totalSize) = (uint64)d0;
+
+  return TRUE;
+#endif
 }
 
 Errors Index_newEntity(IndexHandle  *indexHandle,
@@ -3647,6 +3835,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
     return error;
   }
   (*entityId) = Database_getLastRowId(&indexHandle->databaseHandle);
+fprintf(stderr,"%s, %d: >>>>>>>>>>>>>>>>Index_newEntity %llu\n",__FILE__,__LINE__,(*entityId));
 
   return ERROR_NONE;
 }
@@ -3713,11 +3902,15 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                              ConstString      loginName,
                              ConstString      deviceName,
                              ConstString      fileName,
-                             IndexStateSet    indexStateSet
+                             IndexStateSet    indexStateSet,
+                             const DatabaseId storageIds[],
+                             uint             storageIdCount
                             )
 {
   Errors error;
   String indexStateSetString;
+  String storageIdsString;
+  uint   i;
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
@@ -3737,8 +3930,23 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
   if (fileName    != NULL) indexQueryHandle->storage.fileNamePattern    = Pattern_new(fileName,   PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
 
   indexStateSetString = String_new();
+  if (storageIds != NULL)
+  {
+    storageIdsString = String_newCString("(storage.id IN (");
+    for (i = 0; i < storageIdCount; i++)
+    {
+      if (i > 0) String_appendChar(storageIdsString,',');
+      String_format(storageIdsString,"%d",storageIds[i]);
+    }
+    String_appendCString(storageIdsString,"))");
+  }
+  else
+  {
+    storageIdsString = String_newCString("1");
+  }
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
+#if 0
                            "SELECT storage.id, \
                                    storage.entityId, \
                                    entities.jobUUID, \
@@ -3757,14 +3965,47 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                             WHERE     (%d OR (entities.jobUUID='%S')) \
                                   AND (%d OR (storage.entityId=%lld)) \
                                   AND storage.state IN (%S) \
+                                  AND %S \
                             ORDER BY storage.created DESC \
                            ",
+#else
+                           "SELECT storage.id, \
+                                   storage.entityId, \
+                                   entities.jobUUID, \
+                                   entities.scheduleUUID, \
+                                   entities.type, \
+                                   storage.name, \
+                                   STRFTIME('%%s',storage.created), \
+                                   ( \
+                                      (SELECT COUNT(id) FROM files       WHERE storageId=storage.id) \
+                                     +(SELECT COUNT(id) FROM images      WHERE storageId=storage.id) \
+                                     +(SELECT COUNT(id) FROM directories WHERE storageId=storage.id) \
+                                     +(SELECT COUNT(id) FROM links       WHERE storageId=storage.id) \
+                                     +(SELECT COUNT(id) FROM hardlinks   WHERE storageId=storage.id) \
+                                     +(SELECT COUNT(id) FROM special     WHERE storageId=storage.id) \
+                                   ), \
+                                   storage.size, \
+                                   storage.state, \
+                                   storage.mode, \
+                                   STRFTIME('%%s',storage.lastChecked), \
+                                   storage.errorMessage \
+                            FROM storage \
+                            LEFT JOIN entities ON entities.id=storage.entityId \
+                            WHERE     (%d OR (entities.jobUUID='%S')) \
+                                  AND (%d OR (storage.entityId=%lld)) \
+                                  AND storage.state IN (%S) \
+                                  AND %S \
+                            ORDER BY storage.created DESC \
+                           ",
+#endif
                            String_isEmpty(jobUUID) ? 1 : 0,
                            jobUUID,
                            (entityId == DATABASE_ID_ANY) ? 1 : 0,
                            entityId,
-                           getIndexStateSetString(indexStateSetString,indexStateSet)
+                           getIndexStateSetString(indexStateSetString,indexStateSet),
+                           storageIdsString
                           );
+  String_delete(storageIdsString);
   String_delete(indexStateSetString);
   if (error != ERROR_NONE)
   {
@@ -4105,6 +4346,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
+#if 0
                            "SELECT storage.name, \
                                    STRFTIME('%%s',storage.created), \
                                    storage.entries, \
@@ -4116,6 +4358,26 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                             FROM storage \
                             WHERE id=%d \
                            ",
+#else
+                           "SELECT storage.name, \
+                                   STRFTIME('%%s',storage.created), \
+                                   ( \
+                                      (SELECT COUNT(id) FROM files       WHERE storageId=storage.id) \
+                                     +(SELECT COUNT(id) FROM images      WHERE storageId=storage.id) \
+                                     +(SELECT COUNT(id) FROM directories WHERE storageId=storage.id) \
+                                     +(SELECT COUNT(id) FROM links       WHERE storageId=storage.id) \
+                                     +(SELECT COUNT(id) FROM hardlinks   WHERE storageId=storage.id) \
+                                     +(SELECT COUNT(id) FROM special     WHERE storageId=storage.id) \
+                                   ), \
+                                   storage.size, \
+                                   storage.state, \
+                                   storage.mode, \
+                                   STRFTIME('%%s',storage.lastChecked), \
+                                   storage.errorMessage \
+                            FROM storage \
+                            WHERE id=%d \
+                           ",
+#endif
                            storageId
                           );
   if (error != ERROR_NONE)
@@ -4195,6 +4457,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
     return error;
   }
 
+#if 0
   // count and update entries
   entries = 0LL;
   for (i = 0; i < SIZE_OF_ARRAY(ENTRY_TABLE_NAMES); i++)
@@ -4224,6 +4487,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
   {
     return error;
   }
+#endif
 
   return ERROR_NONE;
 }
@@ -4238,7 +4502,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   Errors error;
   String regexpString;
   String storageIdsString;
-  uint   z;
+  uint   i;
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
@@ -4252,14 +4516,13 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
   regexpString = getREGEXPString(String_new(),"files.name",pattern);
-
   if (storageIds != NULL)
   {
     storageIdsString = String_newCString("(storage.id IN (");
-    for (z = 0; z < storageIdCount; z++)
+    for (i = 0; i < storageIdCount; i++)
     {
-      if (z > 0) String_appendChar(storageIdsString,',');
-      String_format(storageIdsString,"%d",storageIds[z]);
+      if (i > 0) String_appendChar(storageIdsString,',');
+      String_format(storageIdsString,"%d",storageIds[i]);
     }
     String_appendCString(storageIdsString,"))");
   }
@@ -5484,7 +5747,7 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
   DatabaseId id;
   Errors     error;
 
-  // check if storage entries exists
+  // check if entries exists for storage
   existsFlag = FALSE;
   for (i = 0; i < SIZE_OF_ARRAY(ENTRY_TABLE_NAMES); i++)
   {
@@ -5528,6 +5791,8 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
   DatabaseId       storageId;
   bool             existsFlag;
 
+fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
+
   // prune storage of entity
   error = Index_initListStorage(&indexQueryHandle,
                                 indexHandle,
@@ -5539,7 +5804,9 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
                                 NULL, // loginName
                                 NULL, // deviceName
                                 NULL, // fileName
-                                INDEX_STATE_SET_ALL
+                                INDEX_STATE_SET_ALL,
+                                NULL,  // storageIds
+                                0   // storageIdCount
                                );
   if (error != ERROR_NONE)
   {
@@ -5590,7 +5857,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
 
   if (!existsFlag)
   {
-    // delete old entity (now empty)
+fprintf(stderr,"%s, %d: prune entiry %llu\n",__FILE__,__LINE__,entityId);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entities WHERE id=%lld;",
