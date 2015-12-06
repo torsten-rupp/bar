@@ -219,7 +219,7 @@ typedef struct JobNode
     double            storageBytesPerSecond;            // average processed storage bytes per second last 10s
     uint64            archiveBytes;                     // number of bytes stored in archive
     double            compressionRatio;                 // compression ratio: saved "space" [%]
-    String            name;                             // current entry
+    String            entryName;                        // current entry name
     uint64            entryDoneBytes;                   // current entry bytes done
     uint64            entryTotalBytes;                  // current entry bytes total
     String            storageName;                      // current storage name
@@ -283,6 +283,7 @@ typedef struct IndexNode
   LIST_NODE_HEADER(struct IndexNode);
 
   ArchiveEntryTypes type;
+  DatabaseId        databaseId;
   String            storageName;
   uint64            storageDateTime;
   String            name;
@@ -388,6 +389,7 @@ typedef struct
   AuthorizationFailNode *authorizationFailNode;
 
   uint                  abortCommandId;                    // command id to abort
+bool abortFlag;
 
   union
   {
@@ -419,7 +421,14 @@ typedef struct
   DeltaSourceList     deltaSourceList;
   JobOptions          jobOptions;
   DirectoryInfoList   directoryInfoList;
-  Array               storageIdArray;
+
+  Array               storageIdArray;                      // ids of storage archives to list/restore
+  Array               fileIdArray;                         // ids of file entries to restore
+  Array               imageIdArray;                        // ids of image entries to restore
+  Array               directoryIdArray;                    // ids of directory entries to restore
+  Array               linkIdArray;                         // ids of link entries to restore
+  Array               hardLinkIdArray;                     // ids of hardlink entries to restore
+  Array               specialIdArray;                      // ids of special entries to restore
 } ClientInfo;
 
 // client node
@@ -1601,7 +1610,7 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
   jobNode->runningInfo.volumeNumber        = 0;
   jobNode->runningInfo.volumeProgress      = 0.0;
 
-  String_clear(jobNode->runningInfo.name       );
+  String_clear(jobNode->runningInfo.entryName  );
   String_clear(jobNode->runningInfo.storageName);
   String_clear(jobNode->runningInfo.message    );
 
@@ -1634,7 +1643,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   String_delete(jobNode->runningInfo.message);
   String_delete(jobNode->runningInfo.storageName);
-  String_delete(jobNode->runningInfo.name);
+  String_delete(jobNode->runningInfo.entryName);
 
   String_delete(jobNode->schedule.customText);
   String_delete(jobNode->schedule.uuid);
@@ -1725,7 +1734,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   jobNode->volumeNumber                   = 0;
   jobNode->volumeUnloadFlag               = FALSE;
 
-  jobNode->runningInfo.name               = String_new();
+  jobNode->runningInfo.entryName          = String_new();
   jobNode->runningInfo.storageName        = String_new();
   jobNode->runningInfo.message            = String_new();
 
@@ -1800,7 +1809,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->volumeNumber                   = 0;
   newJobNode->volumeUnloadFlag               = FALSE;
 
-  newJobNode->runningInfo.name               = String_new();
+  newJobNode->runningInfo.entryName          = String_new();
   newJobNode->runningInfo.storageName        = String_new();
   newJobNode->runningInfo.message            = String_new();
 
@@ -3112,7 +3121,7 @@ LOCAL void updateCreateJobStatus(JobNode                *jobNode,
 
   assert(jobNode != NULL);
   assert(createStatusInfo != NULL);
-  assert(createStatusInfo->name != NULL);
+  assert(createStatusInfo->entryName != NULL);
   assert(createStatusInfo->storageName != NULL);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -3158,7 +3167,7 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
     jobNode->runningInfo.archiveBytes          = createStatusInfo->archiveBytes;
     jobNode->runningInfo.compressionRatio      = createStatusInfo->compressionRatio;
     jobNode->runningInfo.estimatedRestTime     = estimatedRestTime;
-    String_set(jobNode->runningInfo.name,createStatusInfo->name);
+    String_set(jobNode->runningInfo.entryName,createStatusInfo->entryName);
     jobNode->runningInfo.entryDoneBytes        = createStatusInfo->entryDoneBytes;
     jobNode->runningInfo.entryTotalBytes       = createStatusInfo->entryTotalBytes;
     String_set(jobNode->runningInfo.storageName,createStatusInfo->storageName);
@@ -3194,8 +3203,8 @@ LOCAL void updateRestoreJobStatus(JobNode                 *jobNode,
 
   assert(jobNode != NULL);
   assert(restoreStatusInfo != NULL);
-  assert(restoreStatusInfo->name != NULL);
   assert(restoreStatusInfo->storageName != NULL);
+  assert(restoreStatusInfo->entryName != NULL);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -3223,7 +3232,7 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
     jobNode->runningInfo.archiveBytes          = 0LL;
     jobNode->runningInfo.compressionRatio      = 0.0;
     jobNode->runningInfo.estimatedRestTime     = 0;
-    String_set(jobNode->runningInfo.name,restoreStatusInfo->name);
+    String_set(jobNode->runningInfo.entryName,restoreStatusInfo->entryName);
     jobNode->runningInfo.entryDoneBytes        = restoreStatusInfo->entryDoneBytes;
     jobNode->runningInfo.entryTotalBytes       = restoreStatusInfo->entryTotalBytes;
     String_set(jobNode->runningInfo.storageName,restoreStatusInfo->storageName);
@@ -3260,6 +3269,7 @@ LOCAL void jobThreadCode(void)
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   String           scheduleCustomText;
   StringList       archiveFileNameList;
+  ConstString      script;
   TextMacro        textMacros[1];
   StaticString     (s,64);
   uint             n;
@@ -3352,11 +3362,19 @@ fprintf(stderr,"%s, %d: start %s: %s\n",__FILE__,__LINE__,String_cString(jobNode
     // pre-process command
     if (jobNode->runningInfo.error == ERROR_NONE)
     {
-      TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name));
       if (jobNode->jobOptions.preProcessScript != NULL)
       {
-        jobNode->runningInfo.error = Misc_executeScript(String_cString(jobNode->jobOptions.preProcessScript),
-                                                        textMacros,SIZE_OF_ARRAY(textMacros),
+        // expand script
+        TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name),NULL);
+        script = Misc_expandMacros(String_new(),
+                                  jobNode->jobOptions.preProcessScript,
+                                  EXPAND_MACRO_MODE_STRING,
+                                  textMacros,SIZE_OF_ARRAY(textMacros),
+                                  TRUE
+                                 );
+
+        // execute script
+        jobNode->runningInfo.error = Misc_executeScript2(script,
                                                         CALLBACK(executeIOOutput,NULL),
                                                         CALLBACK(executeIOOutput,NULL)
                                                        );
@@ -3535,11 +3553,19 @@ NULL,//                                                        scheduleTitle,
     // post-process command
     if (jobNode->runningInfo.error == ERROR_NONE)
     {
-      TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name));
       if (jobNode->jobOptions.postProcessScript != NULL)
       {
-        jobNode->runningInfo.error = Misc_executeScript(String_cString(jobNode->jobOptions.postProcessScript),
-                                                        textMacros,SIZE_OF_ARRAY(textMacros),
+        // expand script
+        TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name),NULL);
+        script = Misc_expandMacros(String_new(),
+                                  jobNode->jobOptions.postProcessScript,
+                                  EXPAND_MACRO_MODE_STRING,
+                                  textMacros,SIZE_OF_ARRAY(textMacros),
+                                  TRUE
+                                 );
+
+        // execute script
+        jobNode->runningInfo.error = Misc_executeScript2(script,
                                                         CALLBACK(executeIOOutput,NULL),
                                                         CALLBACK(executeIOOutput,NULL)
                                                        );
@@ -3986,7 +4012,7 @@ LOCAL void remoteThreadCode(void)
             StringMap_getUInt64(resultMap,"archiveBytes",         &jobNode->runningInfo.archiveBytes,0L);
             StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
             StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
-            StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.name,NULL);
+            StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
             StringMap_getUInt64(resultMap,"entryDoneBytes",       &jobNode->runningInfo.entryDoneBytes,0L);
             StringMap_getUInt64(resultMap,"entryTotalBytes",      &jobNode->runningInfo.entryTotalBytes,0L);
             StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
@@ -4168,7 +4194,9 @@ LOCAL Errors deleteEntity(DatabaseId entityId)
                                 NULL, // loginName
                                 NULL, // deviceName
                                 NULL, // fileName
-                                INDEX_STATE_SET_ALL
+                                INDEX_STATE_SET_ALL,
+                                NULL,  // storageIds
+                                0   // storageIdCount
                                );
   if (error != ERROR_NONE)
   {
@@ -5227,7 +5255,9 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                   NULL, // loginName
                                   NULL, // deviceName
                                   NULL, // fileName
-                                  INDEX_STATE_SET_ALL
+                                  INDEX_STATE_SET_ALL,
+                                  NULL,  // storageIds
+                                  0   // storageIdCount
                                  );
     if (error == ERROR_NONE)
     {
@@ -6284,6 +6314,8 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const StringMap 
 
   // abort command
   clientInfo->abortCommandId = commandId;
+//TODO:
+clientInfo->abortFlag = TRUE;
 
   // format result
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -7756,7 +7788,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMa
                      jobNode->runningInfo.archiveBytes,
                      jobNode->runningInfo.compressionRatio,
                      jobNode->runningInfo.estimatedRestTime,
-                     jobNode->runningInfo.name,
+                     jobNode->runningInfo.entryName,
                      jobNode->runningInfo.entryDoneBytes,
                      jobNode->runningInfo.entryTotalBytes,
                      jobNode->runningInfo.storageName,
@@ -10953,7 +10985,9 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                   NULL, // loginName
                                   NULL, // deviceName
                                   NULL, // fileName
-                                  INDEX_STATE_SET_ALL
+                                  INDEX_STATE_SET_ALL,
+                                  NULL,  // storageIds
+                                  0   // storageIdCount
                                  );
     if (error != ERROR_NONE)
     {
@@ -10995,7 +11029,9 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                   NULL, // loginName
                                   NULL, // deviceName
                                   NULL, // fileName
-                                  INDEX_STATE_SET_ALL
+                                  INDEX_STATE_SET_ALL,
+                                  NULL,  // storageIds
+                                  0   // storageIdCount
                                  );
     if (error != ERROR_NONE)
     {
@@ -11125,20 +11161,58 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            storageName=<name>
-*            destinationDirectory=<name>
+*            destination=<name>
 *            isOverwrite=yes|no
-*            name=<name>
+*            [storageName=<name>]
+*            [entryName=<name>]
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
+  typedef enum
+  {
+    ARCHIVES,
+    ENTRIES,
+    UNKNOWN
+  } Types;
+
   typedef struct
   {
     ClientInfo *clientInfo;
     uint       id;
   } RestoreCommandInfo;
+
+  /***********************************************************************\
+  * Name   : parseType
+  * Purpose: parse restore type
+  * Input  : naem - name
+  *          type - type variable
+  * Output : type - type
+  * Return : TRUE iff parsed
+  * Notes  : -
+  \***********************************************************************/
+
+  bool parseType(const char *name, Types *type)
+  {
+    assert(name != NULL);
+    assert(type != NULL);
+
+    if      (stringEqualsIgnoreCase("archives",name))
+    {
+      (*type) = ARCHIVES;
+      return TRUE;
+    }
+    else if (stringEqualsIgnoreCase("entries",name))
+    {
+      (*type) = ENTRIES;
+      return TRUE;
+    }
+    else
+    {
+      return FALSE;
+    }
+  }
 
   /***********************************************************************\
   * Name   : updateRestoreCommandStatus
@@ -11158,7 +11232,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   {
     assert(restoreCommandInfo != NULL);
     assert(restoreStatusInfo != NULL);
-    assert(restoreStatusInfo->name != NULL);
+    assert(restoreStatusInfo->entryName != NULL);
     assert(restoreStatusInfo->storageName != NULL);
 
     UNUSED_VARIABLE(error);
@@ -11167,20 +11241,23 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                      restoreCommandInfo->id,
                      FALSE,
                      ERROR_NONE,
-                     "name=%'S entryDoneBytes=%llu entryTotalBytes=%llu storageDoneBytes=%llu storageTotalBytes=%llu",
-                     restoreStatusInfo->name,
-                     restoreStatusInfo->entryDoneBytes,
-                     restoreStatusInfo->entryTotalBytes,
+                     "storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu",
+                     restoreStatusInfo->storageName,
                      restoreStatusInfo->storageDoneBytes,
-                     restoreStatusInfo->storageTotalBytes
+                     restoreStatusInfo->storageTotalBytes,
+                     restoreStatusInfo->entryName,
+                     restoreStatusInfo->entryDoneBytes,
+                     restoreStatusInfo->entryTotalBytes
                     );
 
     return !isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
   }
 
+  Types              type;
   String             storageName;
-  String             name;
+  String             entryName;
   StringList         storageNameList;
+  IndexQueryHandle   indexQueryHandle;
   EntryList          restoreEntryList;
   RestoreCommandInfo restoreCommandInfo;
   Errors             error;
@@ -11188,37 +11265,324 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get archive name, destination, overwrite flag, files
-  storageName = String_new();
-  if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
+  // get type, destination, overwrite flag, archive, entry name
+  if (!StringMap_getEnum(argumentMap,"type",&type,(StringMapParseEnumFunction)parseType,UNKNOWN))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageName=<name>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type=ARCHIVES|ENTRIES");
     return;
   }
-  clientInfo->jobOptions.destination = String_new();
   if (!StringMap_getString(argumentMap,"destination",clientInfo->jobOptions.destination,NULL))
   {
+    String_delete(clientInfo->jobOptions.destination);
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination=<name>");
-    String_delete(storageName);
     return;
   }
   if (!StringMap_getBool(argumentMap,"overwriteFiles",&clientInfo->jobOptions.overwriteFilesFlag,FALSE))
   {
+    String_delete(clientInfo->jobOptions.destination);
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected overwriteFiles=yes|no");
-    String_delete(storageName);
     return;
   }
-  name = String_new();
-  StringMap_getString(argumentMap,"name",name,NULL);
+  storageName = String_new();
+  StringMap_getString(argumentMap,"storageName",storageName,NULL);
+  entryName = String_new();
+  StringMap_getString(argumentMap,"entryName",entryName,NULL);
+
+  // get storage/entry list
+  StringList_init(&storageNameList);
+  EntryList_init(&restoreEntryList);
+  switch (type)
+  {
+    case ARCHIVES:
+      if (String_isEmpty(storageName))
+      {
+        error = Index_initListStorage(&indexQueryHandle,
+                                      indexHandle,
+                                      NULL,  // uuid,
+                                      DATABASE_ID_ANY,
+                                      STORAGE_TYPE_ANY,
+                                      NULL,  // storageName,
+                                      NULL,  // hostName,
+                                      NULL,  // loginName,
+                                      NULL,  // deviceName,
+                                      NULL,  // fileName,
+                                      INDEX_STATE_SET_ALL,
+                                      Array_cArray(&clientInfo->storageIdArray),
+                                      Array_length(&clientInfo->storageIdArray)
+                                     );
+        if (error != ERROR_NONE)
+        {
+          String_delete(entryName);
+          String_delete(storageName);
+          StringList_done(&storageNameList);
+          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
+          return;
+        }
+        while (Index_getNextStorage(&indexQueryHandle,
+                                    NULL, // storageId,
+                                    NULL, // entity id
+                                    NULL, // job UUID
+                                    NULL, // schedule UUID
+                                    NULL, // archive type
+                                    storageName,
+                                    NULL, // createdDateTime
+                                    NULL, // entries
+                                    NULL, // size
+                                    NULL, // indexState,
+                                    NULL, // indexMode,
+                                    NULL, // lastCheckedDateTime,
+                                    NULL  // errorMessage
+                                   )
+              )
+        {
+          StringList_append(&storageNameList,storageName);
+        }
+        Index_doneList(&indexQueryHandle);
+      }
+      else
+      {
+        StringList_append(&storageNameList,storageName);
+      }
+      break;
+    case ENTRIES:
+      if (String_isEmpty(entryName))
+      {
+        error = Index_initListFiles(&indexQueryHandle,
+                                    indexHandle,
+                                    NULL, // Array_cArray(clientInfo->storageIdArray),
+                                    0, // Array_length(clientInfo->storageIdArray),
+                                    Array_cArray(&clientInfo->fileIdArray),
+                                    Array_length(&clientInfo->fileIdArray),
+                                    NULL // pattern
+                                   );
+        if (error != ERROR_NONE)
+        {
+          String_delete(entryName);
+          String_delete(storageName);
+          StringList_done(&storageNameList);
+          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
+          return;
+        }
+        while (Index_getNextFile(&indexQueryHandle,
+                                    NULL, // databaseId,
+                                    storageName, // storageName
+                                    NULL, // storageDateTime
+                                    entryName,
+                                    NULL, // size
+                                    NULL, // timeModified
+                                    NULL, // userId
+                                    NULL, // groupId
+                                    NULL, // permission
+                                    NULL, // fragmentOffset
+                                    NULL  // fragmentSize
+                                   )
+              )
+        {
+          if (!StringList_contain(&storageNameList,storageName))
+          {
+            StringList_append(&storageNameList,storageName);
+          }
+          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB);
+        }
+        Index_doneList(&indexQueryHandle);
+
+        error = Index_initListImages(&indexQueryHandle,
+                                     indexHandle,
+                                     NULL, // Array_cArray(clientInfo->storageIdArray),
+                                     0, // Array_length(clientInfo->storageIdArray),
+                                     Array_cArray(&clientInfo->imageIdArray),
+                                     Array_length(&clientInfo->imageIdArray),
+                                     NULL // pattern
+                                    );
+        if (error != ERROR_NONE)
+        {
+          String_delete(entryName);
+          String_delete(storageName);
+          StringList_done(&storageNameList);
+          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
+          return;
+        }
+        while (Index_getNextImage(&indexQueryHandle,
+                                  NULL, // databaseId,
+                                  storageName, // storageName
+                                  NULL, // storageDateTime
+                                  entryName,
+                                  NULL, // fileSystemType
+                                  NULL, // size
+                                  NULL, // blockOffset
+                                  NULL // blockCount
+                                 )
+              )
+        {
+          if (!StringList_contain(&storageNameList,storageName))
+          {
+            StringList_append(&storageNameList,storageName);
+          }
+          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB);
+        }
+        Index_doneList(&indexQueryHandle);
+
+        error = Index_initListDirectories(&indexQueryHandle,
+                                          indexHandle,
+                                          NULL, // Array_cArray(clientInfo->storageIdArray),
+                                          0, // Array_length(clientInfo->storageIdArray),
+                                          Array_cArray(&clientInfo->directoryIdArray),
+                                          Array_length(&clientInfo->directoryIdArray),
+                                          NULL // pattern
+                                         );
+        if (error != ERROR_NONE)
+        {
+          String_delete(entryName);
+          String_delete(storageName);
+          StringList_done(&storageNameList);
+          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
+          return;
+        }
+        while (Index_getNextDirectory(&indexQueryHandle,
+                                      NULL, // databaseId,
+                                      storageName, // storageName
+                                      NULL, // storageDateTime
+                                      entryName,
+                                      NULL, // timeModified
+                                      NULL, // userId
+                                      NULL, // groupId
+                                      NULL // permission
+                                     )
+              )
+        {
+          if (!StringList_contain(&storageNameList,storageName))
+          {
+            StringList_append(&storageNameList,storageName);
+          }
+          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB);
+        }
+        Index_doneList(&indexQueryHandle);
+
+        error = Index_initListLinks(&indexQueryHandle,
+                                    indexHandle,
+                                    NULL, // Array_cArray(clientInfo->storageIdArray),
+                                    0, // Array_length(clientInfo->storageIdArray),
+                                    Array_cArray(&clientInfo->linkIdArray),
+                                    Array_length(&clientInfo->linkIdArray),
+                                    NULL // pattern
+                                   );
+        if (error != ERROR_NONE)
+        {
+          String_delete(entryName);
+          String_delete(storageName);
+          StringList_done(&storageNameList);
+          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
+          return;
+        }
+        while (Index_getNextLink(&indexQueryHandle,
+                                 NULL, // databaseId,
+                                 storageName, // storageName
+                                 NULL, // storageDateTime
+                                 entryName,
+                                 NULL, // destinationName
+                                 NULL, // timeModified
+                                 NULL, // userId
+                                 NULL, // groupId
+                                 NULL // permission
+                                )
+              )
+        {
+          if (!StringList_contain(&storageNameList,storageName))
+          {
+            StringList_append(&storageNameList,storageName);
+          }
+          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB);
+        }
+        Index_doneList(&indexQueryHandle);
+
+        error = Index_initListHardLinks(&indexQueryHandle,
+                                        indexHandle,
+                                        NULL, // Array_cArray(clientInfo->storageIdArray),
+                                        0, // Array_length(clientInfo->storageIdArray),
+                                        Array_cArray(&clientInfo->hardLinkIdArray),
+                                        Array_length(&clientInfo->hardLinkIdArray),
+                                        NULL // pattern
+                                       );
+        if (error != ERROR_NONE)
+        {
+          String_delete(entryName);
+          String_delete(storageName);
+          StringList_done(&storageNameList);
+          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
+          return;
+        }
+        while (Index_getNextHardLink(&indexQueryHandle,
+                                     NULL, // databaseId,
+                                     storageName, // storageName
+                                     NULL, // storageDateTime
+                                     entryName,
+                                     NULL, // size
+                                     NULL, // timeModified
+                                     NULL, // userId
+                                     NULL, // groupId
+                                     NULL, // permission
+                                     NULL, // fragmentOffset
+                                     NULL  // fragmentSize
+                                    )
+              )
+        {
+          if (!StringList_contain(&storageNameList,storageName))
+          {
+            StringList_append(&storageNameList,storageName);
+          }
+          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB);
+        }
+        Index_doneList(&indexQueryHandle);
+
+        error = Index_initListSpecial(&indexQueryHandle,
+                                      indexHandle,
+                                      NULL, // Array_cArray(clientInfo->storageIdArray),
+                                      0, // Array_length(clientInfo->storageIdArray),
+                                      Array_cArray(&clientInfo->specialIdArray),
+                                      Array_length(&clientInfo->specialIdArray),
+                                      NULL // pattern
+                                     );
+        if (error != ERROR_NONE)
+        {
+          String_delete(entryName);
+          String_delete(storageName);
+          StringList_done(&storageNameList);
+          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
+          return;
+        }
+        while (Index_getNextSpecial(&indexQueryHandle,
+                                    NULL, // databaseId,
+                                    storageName, // storageName
+                                    NULL, // storageDateTime
+                                    entryName,
+                                    NULL, // timeModified
+                                    NULL, // userId
+                                    NULL, // groupId
+                                    NULL // permission
+                                   )
+              )
+        {
+          if (!StringList_contain(&storageNameList,storageName))
+          {
+            StringList_append(&storageNameList,storageName);
+          }
+          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB);
+        }
+        Index_doneList(&indexQueryHandle);
+      }
+      else
+      {
+        EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB);
+      }
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
 
   // restore
-  StringList_init(&storageNameList);
-  StringList_append(&storageNameList,storageName);
-  EntryList_init(&restoreEntryList);
-  if (!String_isEmpty(name))
-  {
-    EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,name,PATTERN_TYPE_GLOB);
-  }
   restoreCommandInfo.clientInfo = clientInfo;
   restoreCommandInfo.id         = id;
   error = Command_restore(&storageNameList,
@@ -11229,14 +11593,19 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                           CALLBACK(NULL,NULL),  // archiveGetCryptPasswordFunction
                           CALLBACK((RestoreStatusInfoFunction)updateRestoreCommandStatus,&restoreCommandInfo),
                           NULL,  // pauseFlag
-                          NULL,  // requestAbortFlag
+//TODO: callback
+                          &restoreCommandInfo.clientInfo->abortFlag,
                           NULL  // logHandle
                          );
+restoreCommandInfo.clientInfo->abortFlag = FALSE;
   sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
   EntryList_done(&restoreEntryList);
   StringList_done(&storageNameList);
 
   // free resources
+  EntryList_done(&restoreEntryList);
+  StringList_done(&storageNameList);
+  String_delete(entryName);
   String_delete(storageName);
 }
 
@@ -11887,7 +12256,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                 NULL, // loginName
                                 NULL, // deviceName
                                 NULL, // fileName
-                                indexStateSet
+                                indexStateSet,
+                                NULL,  // storageIds
+                                0   // storageIdCount
                                );
   if (error != ERROR_NONE)
   {
@@ -12342,7 +12713,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                   NULL, // loginName
                                   NULL, // deviceName
                                   NULL, // fileName
-                                  INDEX_STATE_SET_ALL
+                                  INDEX_STATE_SET_ALL,
+                                  NULL,  // storageIds
+                                  0   // storageIdCount
                                  );
     if (error != ERROR_NONE)
     {
@@ -12394,7 +12767,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                   NULL, // loginName
                                   NULL, // deviceName
                                   NULL, // fileName
-                                  INDEX_STATE_SET_ALL
+                                  INDEX_STATE_SET_ALL,
+                                  NULL,  // storageIds
+                                  0   // storageIdCount
                                  );
     if (error != ERROR_NONE)
     {
@@ -12442,7 +12817,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                   NULL, // loginName
                                   NULL, // deviceName
                                   NULL, // fileName
-                                  INDEX_STATE_SET_ALL
+                                  INDEX_STATE_SET_ALL,
+                                  NULL,  // storageIds
+                                  0   // storageIdCount
                                  );
     if (error != ERROR_NONE)
     {
@@ -12576,7 +12953,9 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
                                   NULL, // loginName
                                   NULL, // deviceName
                                   NULL, // fileName
-                                  INDEX_STATE_SET_ALL
+                                  INDEX_STATE_SET_ALL,
+                                  NULL,  // storageIds
+                                  0   // storageIdCount
                                  );
     if (error != ERROR_NONE)
     {
@@ -12696,32 +13075,33 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 *            isNewestEntriesOnly=0|1
 *            entryPattern=<pattern>
 *          Result:
-*            entryType=FILE storageName=<name> storageDateTime=<time stamp> name=<name> size=<n [bytes]> dateTime=<time stamp> \
+*            entryType=FILE entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> size=<n [bytes]> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
 *
-*            entryType=IMAGE storageName=<name> storageDateTime=<time stamp> name=<name> size=<n [bztes]> dateTime=<time stamp> \
+*            entryType=IMAGE entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> size=<n [bztes]> dateTime=<time stamp> \
 *            blockOffset=<n [bytes]> blockCount=<n>
 *
-*            entryType=DIRECTORY storageName=<name> storageDateTime=<time stamp> name=<name> dateTime=<time stamp> \
+*            entryType=DIRECTORY entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n>
 *
-*            entryType=LINK storageName=<name> storageDateTime=<time stamp> linkName=<name> name=<name> \
+*            entryType=LINK entryId=<n> storageName=<name> storageDateTime=<time stamp> linkName=<name> name=<name> \
 *            dateTime=<time stamp> userId=<n> groupId=<n> permission=<n>
 *
-*            entryType=HARDLINK storageName=<name> storageDateTime=<time stamp> name=<name> dateTime=<time stamp>
+*            entryType=HARDLINK entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> dateTime=<time stamp>
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
 *
-*            entryType=SPECIAL storageName=<name> storageDateTime=<time stamp> name=<name> dateTime=<time stamp> \
+*            entryType=SPECIAL entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  #define SEND_FILE_ENTRY(storageName,storageDateTime,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
+  #define SEND_FILE_ENTRY(entryId,storageName,storageDateTime,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=FILE storageName=%'S storageDateTime=%llu name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                       "entryType=FILE entryId=%lld storageName=%'S storageDateTime=%llu name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                       entryId, \
                        storageName, \
                        storageDateTime, \
                        name, \
@@ -12735,11 +13115,12 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                       ); \
     } \
     while (0)
-  #define SEND_IMAGE_ENTRY(storageName,storageDateTime,name,fileSystemType,size,blockOffset,blockCount) \
+  #define SEND_IMAGE_ENTRY(entryId,storageName,storageDateTime,name,fileSystemType,size,blockOffset,blockCount) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=IMAGE storageName=%'S storageDateTime=%llu name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
+                       "entryType=IMAGE entryId=%lld storageName=%'S storageDateTime=%llu name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
+                       entryId, \
                        storageName, \
                        storageDateTime, \
                        name, \
@@ -12750,11 +13131,12 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                       ); \
     } \
     while (0)
-  #define SEND_DIRECTORY_ENTRY(storageName,storageDateTime,name,dateTime,userId,groupId,permission) \
+  #define SEND_DIRECTORY_ENTRY(entryId,storageName,storageDateTime,name,dateTime,userId,groupId,permission) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=DIRECTORY storageName=%'S storageDateTime=%llu name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       "entryType=DIRECTORY entryId=%lld storageName=%'S storageDateTime=%llu name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       entryId, \
                        storageName, \
                        storageDateTime, \
                        name, \
@@ -12765,11 +13147,12 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                       ); \
     } \
     while (0)
-  #define SEND_LINK_ENTRY(storageName,storageDateTime,name,destinationName,dateTime,userId,groupId,permission) \
+  #define SEND_LINK_ENTRY(entryId,storageName,storageDateTime,name,destinationName,dateTime,userId,groupId,permission) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=LINK storageName=%'S storageDateTime=%llu name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       "entryType=LINK entryId=%lld storageName=%'S storageDateTime=%llu name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       entryId, \
                        storageName, \
                        storageDateTime, \
                        name, \
@@ -12781,11 +13164,12 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                       ); \
     } \
     while (0)
-  #define SEND_HARDLINK_ENTRY(storageName,storageDateTime,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
+  #define SEND_HARDLINK_ENTRY(entryId,storageName,storageDateTime,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=HARDLINK storageName=%'S storageDateTime=%llu name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                       "entryType=HARDLINK entryId=%lld storageName=%'S storageDateTime=%llu name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                       entryId, \
                        storageName, \
                        storageDateTime, \
                        name, \
@@ -12799,11 +13183,12 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                       ); \
     } \
     while (0)
-  #define SEND_SPECIAL_ENTRY(storageName,storageDateTime,name,dateTime,userId,groupId,permission) \
+  #define SEND_SPECIAL_ENTRY(entryId,storageName,storageDateTime,name,dateTime,userId,groupId,permission) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=SPECIAL storageName=%'S storageDateTime=%llu name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       "entryType=SPECIAL entryId=%lld storageName=%'S storageDateTime=%llu name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       entryId, \
                        storageName, \
                        storageDateTime, \
                        name, \
@@ -12865,6 +13250,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   * Purpose: create new index entry node
   * Input  : indexList        - index list
   *          archiveEntryType - archive entry type
+  *          databaseId       - database id
   *          storageName      - storage name
   *          name             - entry name
   *          timeModified     - modification time stamp [s]
@@ -12875,6 +13261,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
 
   IndexNode *newIndexEntryNode(IndexList         *indexList,
                                ArchiveEntryTypes archiveEntryType,
+                               DatabaseId        databaseId,
                                const String      storageName,
                                const String      name,
                                uint64            timeModified
@@ -12893,6 +13280,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
 
     // initialize
     indexNode->type         = archiveEntryType;
+    indexNode->databaseId   = databaseId;
     indexNode->storageName  = String_duplicate(storageName);
     indexNode->name         = String_duplicate(name);
     indexNode->timeModified = timeModified;
@@ -12970,9 +13358,9 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   \***********************************************************************/
 
   IndexNode *findIndexEntryNode(IndexList         *indexList,
-                                      ArchiveEntryTypes type,
-                                      const String      name
-                                     )
+                                ArchiveEntryTypes type,
+                                const String      name
+                               )
   {
     IndexNode *foundIndexNode;
     IndexNode *indexNode;
@@ -13073,7 +13461,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     return;
   }
 
-  // check if index database is available
+  // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
@@ -13097,6 +13485,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                   indexHandle,
                                   Array_cArray(&clientInfo->storageIdArray),
                                   Array_length(&clientInfo->storageIdArray),
+                                  NULL,  // entryIds
+                                  0,  // entryIdCount
                                   entryPattern
                                  );
     }
@@ -13104,8 +13494,10 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       error = Index_initListFiles(&indexQueryHandle,
                                   indexHandle,
-                                  NULL,        // storage ids
-                                  0,           // storage id count
+                                  NULL,  // storageIds
+                                  0,  // storageIdCount
+                                  NULL,  // entryIds
+                                  0,  // entryIdCount
                                   entryPattern
                                  );
     }
@@ -13142,7 +13534,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,name);
         if (indexNode == NULL)
         {
-          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,storageName,name,timeModified);
+          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,databaseId,storageName,name,timeModified);
           entryCount++;
         }
         if (indexNode == NULL) break;
@@ -13150,6 +13542,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         // update index node
         if (timeModified >= indexNode->timeModified)
         {
+          indexNode->databaseId          = databaseId;
           String_set(indexNode->storageName,storageName);
           indexNode->storageDateTime     = storageDateTime;
           indexNode->timeModified        = timeModified;
@@ -13163,7 +13556,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       else
       {
-        SEND_FILE_ENTRY(storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
+        SEND_FILE_ENTRY(databaseId,storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
         entryCount++;
       }
     }
@@ -13178,6 +13571,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                    indexHandle,
                                    Array_cArray(&clientInfo->storageIdArray),
                                    Array_length(&clientInfo->storageIdArray),
+                                   NULL,  // entryIds
+                                   0,  // entryIdCount
                                    entryPattern
                                   );
     }
@@ -13185,8 +13580,10 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       error = Index_initListImages(&indexQueryHandle,
                                    indexHandle,
-                                   NULL,        // storage ids
-                                   0,           // storage id count
+                                   NULL,  // storageIds
+                                   0,  // storageIdCount
+                                   NULL,  // entryIds
+                                   0,  // entryIdCount
                                    entryPattern
                                   );
     }
@@ -13220,7 +13617,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,name);
         if (indexNode == NULL)
         {
-          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,storageName,name,timeModified);
+          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,databaseId,storageName,name,timeModified);
           entryCount++;
         }
         if (indexNode == NULL) break;
@@ -13228,6 +13625,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         // update index node
         if (timeModified >= indexNode->timeModified)
         {
+          indexNode->databaseId           = databaseId;
           String_set(indexNode->storageName,storageName);
           indexNode->storageDateTime      = storageDateTime;
           indexNode->timeModified         = timeModified;
@@ -13239,7 +13637,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       else
       {
-        SEND_IMAGE_ENTRY(storageName,storageDateTime,name,fileSystemType,size,blockOffset,blockCount);
+        SEND_IMAGE_ENTRY(databaseId,storageName,storageDateTime,name,fileSystemType,size,blockOffset,blockCount);
         entryCount++;
       }
     }
@@ -13254,6 +13652,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                         indexHandle,
                                         Array_cArray(&clientInfo->storageIdArray),
                                         Array_length(&clientInfo->storageIdArray),
+                                        NULL,  // entryIds
+                                        0,  // entryIdCount
                                         entryPattern
                                        );
     }
@@ -13261,8 +13661,10 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       error = Index_initListDirectories(&indexQueryHandle,
                                         indexHandle,
-                                        NULL,        // storage ids
-                                        0,           // storage id count
+                                        NULL,  // storageIds
+                                        0,  // storageIdCount
+                                        NULL,  // entryIds
+                                        0,  // entryIdCount
                                         entryPattern
                                        );
     }
@@ -13296,7 +13698,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,name);
         if (indexNode == NULL)
         {
-          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,storageName,name,timeModified);
+          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,databaseId,storageName,name,timeModified);
           entryCount++;
         }
         if (indexNode == NULL) break;
@@ -13304,6 +13706,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         // update index node
         if (timeModified >= indexNode->timeModified)
         {
+          indexNode->databaseId           = databaseId;
           String_set(indexNode->storageName,storageName);
           indexNode->storageDateTime      = storageDateTime;
           indexNode->timeModified         = timeModified;
@@ -13314,7 +13717,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       else
       {
-        SEND_DIRECTORY_ENTRY(storageName,storageDateTime,name,timeModified,userId,groupId,permission);
+        SEND_DIRECTORY_ENTRY(databaseId,storageName,storageDateTime,name,timeModified,userId,groupId,permission);
         entryCount++;
       }
     }
@@ -13329,6 +13732,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                   indexHandle,
                                   Array_cArray(&clientInfo->storageIdArray),
                                   Array_length(&clientInfo->storageIdArray),
+                                  NULL,  // entryIds
+                                  0,  // entryIdCount
                                   entryPattern
                                  );
     }
@@ -13336,8 +13741,10 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       error = Index_initListLinks(&indexQueryHandle,
                                   indexHandle,
-                                  NULL,        // storage ids
-                                  0,           // storage id count
+                                  NULL,  // storageIds
+                                  0,  // storageIdCount
+                                  NULL,  // entryIds
+                                  0,  // entryIdCount
                                   entryPattern
                                  );
     }
@@ -13373,7 +13780,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,name);
         if (indexNode == NULL)
         {
-          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,storageName,name,timeModified);
+          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,databaseId,storageName,name,timeModified);
           entryCount++;
         }
         if (indexNode == NULL) break;
@@ -13381,6 +13788,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         // update index node
         if (timeModified >= indexNode->timeModified)
         {
+          indexNode->databaseId           = databaseId;
           String_set(indexNode->storageName,storageName);
           indexNode->storageDateTime      = storageDateTime;
           indexNode->timeModified         = timeModified;
@@ -13392,7 +13800,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       else
       {
-        SEND_LINK_ENTRY(storageName,storageDateTime,name,destinationName,timeModified,userId,groupId,permission);
+        SEND_LINK_ENTRY(databaseId,storageName,storageDateTime,name,destinationName,timeModified,userId,groupId,permission);
         entryCount++;
       }
     }
@@ -13408,6 +13816,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                       indexHandle,
                                       Array_cArray(&clientInfo->storageIdArray),
                                       Array_length(&clientInfo->storageIdArray),
+                                      NULL,  // storageIds
+                                      0,  // storageIdCount
                                       entryPattern
                                      );
     }
@@ -13415,8 +13825,10 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       error = Index_initListHardLinks(&indexQueryHandle,
                                       indexHandle,
-                                      NULL,        // storage ids
-                                      0,           // storage id count
+                                      NULL,  // storageIds
+                                      0,  // storageIdCount
+                                      NULL,  // entryIds
+                                      0,  // entryIdCount
                                       entryPattern
                                      );
     }
@@ -13454,7 +13866,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,name);
         if (indexNode == NULL)
         {
-          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,storageName,name,timeModified);
+          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,databaseId,storageName,name,timeModified);
           entryCount++;
         }
         if (indexNode == NULL) break;
@@ -13462,6 +13874,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         // update index node
         if (timeModified >= indexNode->timeModified)
         {
+          indexNode->databaseId              = databaseId;
           String_set(indexNode->storageName,storageName);
           indexNode->storageDateTime         = storageDateTime;
           indexNode->timeModified            = timeModified;
@@ -13475,7 +13888,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       else
       {
-        SEND_HARDLINK_ENTRY(storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
+        SEND_HARDLINK_ENTRY(databaseId,storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
         entryCount++;
       }
     }
@@ -13491,6 +13904,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                     indexHandle,
                                     Array_cArray(&clientInfo->storageIdArray),
                                     Array_length(&clientInfo->storageIdArray),
+                                    NULL,  // entryIds
+                                    0,  // entryIdCount
                                     entryPattern
                                    );
     }
@@ -13498,8 +13913,10 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       error = Index_initListSpecial(&indexQueryHandle,
                                     indexHandle,
-                                    NULL,        // storage ids
-                                    0,           // storage id count
+                                    NULL,  // storageIds
+                                    0,  // storageIdCount
+                                    NULL,  // entryIds
+                                    0,  // entryIdCount
                                     entryPattern
                                    );
     }
@@ -13533,7 +13950,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,name);
         if (indexNode == NULL)
         {
-          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,storageName,name,timeModified);
+          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,databaseId,storageName,name,timeModified);
           entryCount++;
         }
         if (indexNode == NULL) break;
@@ -13541,6 +13958,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         // update index node
         if (timeModified >= indexNode->timeModified)
         {
+          indexNode->databaseId         = databaseId;
           String_set(indexNode->storageName,storageName);
           indexNode->storageDateTime    = storageDateTime;
           indexNode->timeModified       = timeModified;
@@ -13551,7 +13969,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       else
       {
-        SEND_SPECIAL_ENTRY(storageName,storageDateTime,name,timeModified,userId,groupId,permission);
+        SEND_SPECIAL_ENTRY(databaseId,storageName,storageDateTime,name,timeModified,userId,groupId,permission);
         entryCount++;
       }
     }
@@ -13569,7 +13987,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       case ARCHIVE_ENTRY_TYPE_NONE:
         break;
       case ARCHIVE_ENTRY_TYPE_FILE:
-        SEND_FILE_ENTRY(indexNode->storageName,
+        SEND_FILE_ENTRY(indexNode->databaseId,
+                        indexNode->storageName,
                         indexNode->storageDateTime,
                         indexNode->name,
                         indexNode->file.size,
@@ -13582,7 +14001,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                        );
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
-        SEND_IMAGE_ENTRY(indexNode->storageName,
+        SEND_IMAGE_ENTRY(indexNode->databaseId,
+                         indexNode->storageName,
                          indexNode->storageDateTime,
                          indexNode->name,
                          indexNode->image.fileSystemType,
@@ -13592,7 +14012,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                         );
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        SEND_DIRECTORY_ENTRY(indexNode->storageName,
+        SEND_DIRECTORY_ENTRY(indexNode->databaseId,
+                             indexNode->storageName,
                              indexNode->storageDateTime,
                              indexNode->name,
                              indexNode->timeModified,
@@ -13602,7 +14023,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                             );
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
-        SEND_LINK_ENTRY(indexNode->storageName,
+        SEND_LINK_ENTRY(indexNode->databaseId,
+                        indexNode->storageName,
                         indexNode->storageDateTime,
                         indexNode->name,
                         indexNode->link.destinationName,
@@ -13613,7 +14035,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                        );
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
-        SEND_HARDLINK_ENTRY(indexNode->storageName,
+        SEND_HARDLINK_ENTRY(indexNode->databaseId,
+                            indexNode->storageName,
                             indexNode->storageDateTime,
                             indexNode->name,
                             indexNode->hardLink.size,
@@ -13626,7 +14049,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                            );
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        SEND_SPECIAL_ENTRY(indexNode->storageName,
+        SEND_SPECIAL_ENTRY(indexNode->databaseId,
+                           indexNode->storageName,
                            indexNode->storageDateTime,
                            indexNode->name,
                            indexNode->timeModified,
@@ -14099,6 +14523,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
   clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
   clientInfo->authorizationFailNode = NULL;
   clientInfo->abortCommandId        = 0;
+clientInfo->abortFlag = FALSE;
 
   EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
@@ -14106,7 +14531,13 @@ LOCAL void initClient(ClientInfo *clientInfo)
   DeltaSourceList_init(&clientInfo->deltaSourceList);
   initJobOptions(&clientInfo->jobOptions);
   List_init(&clientInfo->directoryInfoList);
-  Array_init(&clientInfo->storageIdArray,sizeof(DatabaseId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->storageIdArray,  sizeof(DatabaseId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->fileIdArray,     sizeof(DatabaseId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->imageIdArray,    sizeof(DatabaseId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->directoryIdArray,sizeof(DatabaseId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->linkIdArray,     sizeof(DatabaseId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->hardLinkIdArray, sizeof(DatabaseId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->specialIdArray,  sizeof(DatabaseId),64,CALLBACK_NULL,CALLBACK_NULL);
 }
 
 /***********************************************************************\
@@ -14227,7 +14658,13 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       break;
   }
 
-  Array_done(&clientInfo->storageIdArray);
+  Array_delete(&clientInfo->specialIdArray);
+  Array_delete(&clientInfo->hardLinkIdArray);
+  Array_delete(&clientInfo->linkIdArray);
+  Array_delete(&clientInfo->directoryIdArray);
+  Array_delete(&clientInfo->imageIdArray);
+  Array_delete(&clientInfo->fileIdArray);
+  Array_delete(&clientInfo->storageIdArray);
   List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
   doneJobOptions(&clientInfo->jobOptions);
   DeltaSourceList_done(&clientInfo->deltaSourceList);
