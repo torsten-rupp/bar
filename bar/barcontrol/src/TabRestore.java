@@ -2300,13 +2300,14 @@ public class TabRestore
           for (UUIDIndexData uuidIndexData : uuidIndexDataSet)
           {
             Menu subMenu = uuidIndexData.getSubMenu();
-            assert subMenu != null;
-
-            MenuItem menuItems[] = subMenu.getItems();
-            for (int i =4; i < menuItems.length; i++)
+            if (subMenu != null)
             {
-              assert menuItems[i].getData() instanceof EntityIndexData;
-              removeEntityMenuItemSet.add(menuItems[i]);
+              MenuItem menuItems[] = subMenu.getItems();
+              for (int i =4; i < menuItems.length; i++)
+              {
+                assert menuItems[i].getData() instanceof EntityIndexData;
+                removeEntityMenuItemSet.add(menuItems[i]);
+              }
             }
           }
         }
@@ -2447,6 +2448,7 @@ public class TabRestore
    */
   class EntryData
   {
+    long          databaseId;
     String        storageName;
     long          storageDateTime;
     EntryTypes    entryType;
@@ -2457,15 +2459,17 @@ public class TabRestore
     RestoreStates restoreState;
 
     /** create entry data
-     * @param storageName archive name
+     * @param databaseId database id
+     * @param storageName storage archive name
      * @param storageDateTime archive date/time (timestamp)
      * @param entryType entry type
      * @param name entry name
      * @param dateTime date/time (timestamp)
      * @param size size [bytes]
      */
-    EntryData(String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
+    EntryData(long databaseId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
     {
+      this.databaseId      = databaseId;
       this.storageName     = storageName;
       this.storageDateTime = storageDateTime;
       this.entryType       = entryType;
@@ -2477,15 +2481,16 @@ public class TabRestore
     }
 
     /** create entry data
+     * @param databaseId database id
      * @param storageName archive name
      * @param storageDateTime archive date/time (timestamp)
      * @param entryType entry type
      * @param name entry name
      * @param dateTime date/time (timestamp)
      */
-    EntryData(String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
+    EntryData(long databaseId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
     {
-      this(storageName,storageDateTime,entryType,name,dateTime,0L);
+      this(databaseId,storageName,storageDateTime,entryType,name,dateTime,0L);
     }
 
     /** set restore state of entry
@@ -2526,6 +2531,7 @@ public class TabRestore
   class EntryDataMap extends HashMap<String,WeakReference<EntryData>>
   {
     /** update entry data
+     * @param databaseId database id
      * @param storageName archive name
      * @param storageDateTime archive date/time (timestamp)
      * @param entryType entry type
@@ -2533,7 +2539,7 @@ public class TabRestore
      * @param dateTime date/time (timestamp)
      * @param size size [bytes]
      */
-    synchronized public EntryData update(String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
+    synchronized public EntryData update(long databaseId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
     {
       String hashKey = getHashKey(storageName,entryType,name);
 
@@ -2541,6 +2547,7 @@ public class TabRestore
       EntryData entryData = (reference != null) ? get(hashKey).get() : null;
       if (entryData != null)
       {
+        entryData.databaseId      = databaseId;
         entryData.storageName     = storageName;
         entryData.storageDateTime = storageDateTime;
         entryData.entryType       = entryType;
@@ -2550,7 +2557,8 @@ public class TabRestore
       }
       else
       {
-        entryData = new EntryData(storageName,
+        entryData = new EntryData(databaseId,
+                                  storageName,
                                   storageDateTime,
                                   entryType,
                                   name,
@@ -2570,7 +2578,7 @@ public class TabRestore
      * @param name entry name
      * @param dateTime date/time (timestamp)
      */
-    synchronized public EntryData update(String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
+    synchronized public EntryData update(long databaseId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
     {
       String hashKey = getHashKey(storageName,entryType,name);
 
@@ -2578,6 +2586,7 @@ public class TabRestore
       EntryData entryData = (reference != null) ? get(hashKey).get() : null;
       if (entryData != null)
       {
+        entryData.databaseId      = databaseId;
         entryData.storageName     = storageName;
         entryData.storageDateTime = storageDateTime;
         entryData.entryType       = entryType;
@@ -2586,7 +2595,8 @@ public class TabRestore
       }
       else
       {
-        entryData = new EntryData(storageName,
+        entryData = new EntryData(databaseId,
+                                  storageName,
                                   storageDateTime,
                                   entryType,
                                   name,
@@ -2933,6 +2943,7 @@ public class TabRestore
           {
             case FILE:
               {
+                long   entryId         = valueMap.getLong  ("entryId"        );
                 String storageName     = valueMap.getString("storageName"    );
                 long   storageDateTime = valueMap.getLong  ("storageDateTime");
                 String fileName        = valueMap.getString("name"           );
@@ -2942,7 +2953,7 @@ public class TabRestore
                 long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
 
                 // add/update entry data map
-                final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.FILE,fileName,dateTime,size);
+                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.FILE,fileName,dateTime,size);
 
                 // update/insert table item
                 display.syncExec(new Runnable()
@@ -2981,6 +2992,7 @@ public class TabRestore
               break;
             case IMAGE:
               {
+                long   entryId         = valueMap.getLong  ("entryId"        );
                 String storageName     = valueMap.getString("storageName"    );
                 long   storageDateTime = valueMap.getLong  ("storageDateTime");
                 String imageName       = valueMap.getString("name"           );
@@ -2989,7 +3001,7 @@ public class TabRestore
                 long   blockCount      = valueMap.getLong  ("blockCount"     );
 
                 // add/update entry data map
-                final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.IMAGE,imageName,0L,size);
+                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.IMAGE,imageName,0L,size);
 
                 // update/insert table item
                 display.syncExec(new Runnable()
@@ -3028,13 +3040,14 @@ public class TabRestore
               break;
             case DIRECTORY:
               {
+                long   entryId         = valueMap.getLong  ("entryId"        );
                 String storageName     = valueMap.getString("storageName"    );
                 long   storageDateTime = valueMap.getLong  ("storageDateTime");
                 String directoryName   = valueMap.getString("name"           );
                 long   dateTime        = valueMap.getLong  ("dateTime"       );
 
                 // add/update entry data map
-                final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.DIRECTORY,directoryName,dateTime);
+                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.DIRECTORY,directoryName,dateTime);
 
                 // update/insert table item
                 display.syncExec(new Runnable()
@@ -3073,6 +3086,7 @@ public class TabRestore
               break;
             case LINK:
               {
+                long   entryId         = valueMap.getLong  ("entryId"        );
                 String storageName     = valueMap.getString("storageName"    );
                 long   storageDateTime = valueMap.getLong  ("storageDateTime");
                 String linkName        = valueMap.getString("name"           );
@@ -3080,7 +3094,7 @@ public class TabRestore
                 long   dateTime        = valueMap.getLong  ("dateTime"       );
 
                 // add/update entry data map
-                final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.LINK,linkName,dateTime);
+                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.LINK,linkName,dateTime);
 
                 // update/insert table item
                 display.syncExec(new Runnable()
@@ -3119,6 +3133,7 @@ public class TabRestore
               break;
             case HARDLINK:
               {
+                long   entryId         = valueMap.getLong  ("entryId"        );
                 String storageName     = valueMap.getString("storageName"    );
                 long   storageDateTime = valueMap.getLong  ("storageDateTime");
                 String fileName        = valueMap.getString("name"           );
@@ -3128,7 +3143,7 @@ public class TabRestore
                 long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
 
                 // add/update entry data map
-                final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.HARDLINK,fileName,dateTime,size);
+                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.HARDLINK,fileName,dateTime,size);
 
                 // update/insert table item
                 display.syncExec(new Runnable()
@@ -3167,13 +3182,15 @@ public class TabRestore
               break;
             case SPECIAL:
               {
+
+                long   entryId         = valueMap.getLong  ("entryId"        );
                 String storageName     = valueMap.getString("storageName"    );
                 long   storageDateTime = valueMap.getLong  ("storageDateTime");
                 String name            = valueMap.getString("name"           );
                 long   dateTime        = valueMap.getLong  ("dateTime"       );
 
                 // add/update entry data map
-                final EntryData entryData = entryDataMap.update(storageName,storageDateTime,EntryTypes.SPECIAL,name,dateTime);
+                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.SPECIAL,name,dateTime);
 
                 // update/insert table item
                 display.syncExec(new Runnable()
@@ -4797,6 +4814,10 @@ Dprintf.dprintf("");
             entryData.setChecked(tableItem.getChecked());
           }
 
+          // update checked entry list
+          updateCheckedEntryList();
+
+          // trigger update checked
           checkedEntryEvent.trigger();
         }
       });
@@ -4854,7 +4875,7 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            setCheckedEntries(true);
+            setCheckedAllEntries(true);
           }
         });
 
@@ -4867,7 +4888,7 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            setCheckedEntries(false);
+            setCheckedAllEntries(false);
           }
         });
 
@@ -4952,13 +4973,13 @@ Dprintf.dprintf("");
             Button button = (Button)selectionEvent.widget;
             if (isSomeEntryChecked())
             {
-              setCheckedEntries(false);
+              setCheckedAllEntries(false);
               button.setImage(IMAGE_MARK_ALL);
               button.setToolTipText(BARControl.tr("Mark all entries in list."));
             }
             else
             {
-              setCheckedEntries(true);
+              setCheckedAllEntries(true);
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
             }
@@ -6583,8 +6604,8 @@ Dprintf.dprintf("");
     {
       public void run(final BusyDialog busyDialog, Object userData)
       {
-        final String  directory      = (String )((Object[])userData)[1];
-        final boolean overwriteFiles = (Boolean)((Object[])userData)[2];
+        final String  directory      = (String )((Object[])userData)[0];
+        final boolean overwriteFiles = (Boolean)((Object[])userData)[1];
 
         int errorCode;
 
@@ -6772,10 +6793,25 @@ Dprintf.dprintf("");
 
   //-----------------------------------------------------------------------
 
+  /** update list of checked storage entries
+   */
+  private void updateCheckedEntryList()
+  {
+    BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),0);
+    for (TableItem tableItem : widgetEntryTable.getItems())
+    {
+      EntryData entryData = (EntryData)tableItem.getData();
+      if (entryData.isChecked())
+      {
+        BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD archiveEntryType=%s entryId=%d",entryData.entryType,entryData.databaseId),0);
+      }
+    }
+  }
+
   /** set/clear tagging of all entries
    * @param checked true for set checked, false for clear checked
    */
-  private void setCheckedEntries(boolean checked)
+  private void setCheckedAllEntries(boolean checked)
   {
     for (TableItem tableItem : widgetEntryTable.getItems())
     {
@@ -6785,6 +6821,10 @@ Dprintf.dprintf("");
       entryData.setChecked(checked);
     }
 
+    // update checked entry list
+    updateCheckedEntryList();
+
+    // trigger update checked
     checkedEntryEvent.trigger();
   }
 
@@ -7005,6 +7045,7 @@ Dprintf.dprintf("");
           {
             busyDialog.updateText(0,"%s",entryData.storageName);
             busyDialog.updateProgressBar(0,((double)n*100.0)/(double)entryData_.length);
+            busyDialog.updateText(1,"%s",new File(directory,entryData.name).getPath());
 
             Command command;
             boolean retryFlag;
@@ -7016,6 +7057,7 @@ Dprintf.dprintf("");
             {
               retryFlag = false;
 
+//TODO: restore with one command: send entry list before
               // start restore
               command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destination=%'S overwriteFiles=%y name=%'S",
                                                                  entryData.storageName,
@@ -7040,13 +7082,16 @@ Dprintf.dprintf("");
                 // parse and update progresss
                 try
                 {
-                  String name              = valueMap.getString("name"            );
-                  long   entryDoneBytes    = valueMap.getLong("entryDoneBytes"    );
-                  long   entryTotalBytes   = valueMap.getLong("entryTotalBytes"   );
-//                  long   storageDoneBytes  = valueMap.getLong("storageDoneBytes" );
-//                  long   storageTotalBytes = valueMap.getLong("storageTotalBytes");
+                  String storageName       = valueMap.getString("storageName"      );
+//                  long   storageDoneBytes  = valueMap.getLong  ("storageDoneBytes" );
+//                  long   storageTotalBytes = valueMap.getLong  ("storageTotalBytes");
+                  String entryName         = valueMap.getString("entryName"        );
+                  long   entryDoneBytes    = valueMap.getLong  ("entryDoneBytes"   );
+                  long   entryTotalBytes   = valueMap.getLong  ("entryTotalBytes"  );
 
-                  busyDialog.updateText(1,"%s",new File(directory,name).getPath());
+                  busyDialog.updateText(0,"%s",storageName);
+//                  busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
+                  busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
                   busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
                 }
                 catch (IllegalArgumentException exception)
