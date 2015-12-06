@@ -250,7 +250,6 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
 
   assert(storageSpecifier != NULL);
   assert(includeEntryList != NULL);
-  assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
   assert(fragmentList != NULL);
   assert(restoreInfo != NULL);
@@ -302,6 +301,8 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
     return error;
   }
   String_set(restoreInfo->statusInfo.storageName,Storage_getPrintableName(storageSpecifier,archiveName));
+  restoreInfo->statusInfo.storageDoneBytes  = 0LL;
+  restoreInfo->statusInfo.storageTotalBytes = Storage_getSize(&storageHandle);
   updateStatusInfo(restoreInfo);
 
   // read archive entries
@@ -331,6 +332,10 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
       if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = error;
       break;
     }
+
+    // update storage status
+    (void)Storage_tell(&storageHandle,&restoreInfo->statusInfo.storageDoneBytes);
+    updateStatusInfo(restoreInfo);
 
     switch (archiveEntryType)
     {
@@ -386,7 +391,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
               && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
              )
           {
-            String_set(restoreInfo->statusInfo.name,fileName);
+            String_set(restoreInfo->statusInfo.entryName,fileName);
             restoreInfo->statusInfo.entryDoneBytes  = 0LL;
             restoreInfo->statusInfo.entryTotalBytes = fragmentSize;
             updateStatusInfo(restoreInfo);
@@ -495,6 +500,10 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
 
             if (!jobOptions->dryRunFlag)
             {
+              // temporary change owern+permission for writing (ignore errors)
+              (void)File_setPermission(destinationFileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
+              (void)File_setOwner(destinationFileName,FILE_OWN_USER_ID,FILE_OWN_GROUP_ID);
+
               // open file
               error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
               if (error != ERROR_NONE)
@@ -762,7 +771,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
               && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT))
              )
           {
-            String_set(restoreInfo->statusInfo.name,deviceName);
+            String_set(restoreInfo->statusInfo.entryName,deviceName);
             restoreInfo->statusInfo.entryDoneBytes  = 0LL;
             restoreInfo->statusInfo.entryTotalBytes = blockCount;
             updateStatusInfo(restoreInfo);
@@ -882,6 +891,10 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
               }
               else
               {
+                // temporary change owern+permission for writing (ignore errors)
+                (void)File_setPermission(destinationDeviceName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
+                (void)File_setOwner(destinationDeviceName,FILE_OWN_USER_ID,FILE_OWN_GROUP_ID);
+
                 // open file
                 error = File_open(&fileHandle,destinationDeviceName,FILE_OPEN_WRITE);
                 if (error != ERROR_NONE)
@@ -1152,7 +1165,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
               && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
              )
           {
-            String_set(restoreInfo->statusInfo.name,directoryName);
+            String_set(restoreInfo->statusInfo.entryName,directoryName);
             restoreInfo->statusInfo.entryDoneBytes  = 0LL;
             restoreInfo->statusInfo.entryTotalBytes = 0LL;
             updateStatusInfo(restoreInfo);
@@ -1318,7 +1331,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
               && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
              )
           {
-            String_set(restoreInfo->statusInfo.name,linkName);
+            String_set(restoreInfo->statusInfo.entryName,linkName);
             restoreInfo->statusInfo.entryDoneBytes  = 0LL;
             restoreInfo->statusInfo.entryTotalBytes = 0LL;
             updateStatusInfo(restoreInfo);
@@ -1558,7 +1571,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
                 && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
                )
             {
-              String_set(restoreInfo->statusInfo.name,fileName);
+              String_set(restoreInfo->statusInfo.entryName,fileName);
               restoreInfo->statusInfo.entryDoneBytes  = 0LL;
               restoreInfo->statusInfo.entryTotalBytes = fragmentSize;
               updateStatusInfo(restoreInfo);
@@ -1672,6 +1685,10 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
 
                 if (!jobOptions->dryRunFlag)
                 {
+                  // temporary change owern+permission for writing (ignore errors)
+                  (void)File_setPermission(destinationFileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
+                  (void)File_setOwner(destinationFileName,FILE_OWN_USER_ID,FILE_OWN_GROUP_ID);
+
                   // open file
                   error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
                   if (error != ERROR_NONE)
@@ -1990,7 +2007,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
               && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
              )
           {
-            String_set(restoreInfo->statusInfo.name,fileName);
+            String_set(restoreInfo->statusInfo.entryName,fileName);
             restoreInfo->statusInfo.entryDoneBytes  = 0LL;
             restoreInfo->statusInfo.entryTotalBytes = 0LL;
             updateStatusInfo(restoreInfo);
@@ -2175,6 +2192,10 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
         #endif /* NDEBUG */
         break; /* not reached */
     }
+
+    // update storage status
+    (void)Storage_tell(&storageHandle,&restoreInfo->statusInfo.storageDoneBytes);
+    updateStatusInfo(restoreInfo);
   }
 
   // close archive
@@ -2225,18 +2246,18 @@ Errors Command_restore(const StringList                *storageNameList,
   restoreInfo.failError                     = ERROR_NONE;
   restoreInfo.statusInfoFunction            = restoreStatusInfoFunction;
   restoreInfo.statusInfoUserData            = restoreStatusInfoUserData;
+  restoreInfo.statusInfo.storageName        = String_new();
+  restoreInfo.statusInfo.storageDoneBytes   = 0LL;
+  restoreInfo.statusInfo.storageTotalBytes  = 0LL;
   restoreInfo.statusInfo.doneEntries        = 0L;
   restoreInfo.statusInfo.doneBytes          = 0LL;
   restoreInfo.statusInfo.skippedEntries     = 0L;
   restoreInfo.statusInfo.skippedBytes       = 0LL;
   restoreInfo.statusInfo.errorEntries       = 0L;
   restoreInfo.statusInfo.errorBytes         = 0LL;
-  restoreInfo.statusInfo.name               = String_new();
+  restoreInfo.statusInfo.entryName          = String_new();
   restoreInfo.statusInfo.entryDoneBytes     = 0LL;
   restoreInfo.statusInfo.entryTotalBytes    = 0LL;
-  restoreInfo.statusInfo.storageName        = String_new();
-  restoreInfo.statusInfo.storageDoneBytes   = 0LL;
-  restoreInfo.statusInfo.storageTotalBytes  = 0LL;
   FragmentList_init(&fragmentList);
   Storage_initSpecifier(&storageSpecifier);
 
@@ -2250,7 +2271,7 @@ Errors Command_restore(const StringList                *storageNameList,
       Misc_udelay(500L*1000L);
     }
 
-    // parse storage name, get printable name
+    // parse storage name
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
@@ -2283,6 +2304,7 @@ Errors Command_restore(const StringList                *storageNameList,
     }
     else
     {
+      // restore all matching archives content
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
                                         jobOptions,
@@ -2365,7 +2387,10 @@ Errors Command_restore(const StringList                *storageNameList,
             printInfo(2,"  Fragments:\n");
             FragmentList_print(stdout,4,fragmentNode);
           }
-          if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = ERROR_ENTRY_INCOMPLETE;
+          if (restoreInfo.failError == ERROR_NONE)
+          {
+            restoreInfo.failError = ERRORX_(ENTRY_INCOMPLETE,0,String_cString(fragmentNode->name));
+          }
         }
 
         if (fragmentNode->userData != NULL)
@@ -2403,8 +2428,8 @@ Errors Command_restore(const StringList                *storageNameList,
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
   FragmentList_done(&fragmentList);
+  String_delete(restoreInfo.statusInfo.entryName);
   String_delete(restoreInfo.statusInfo.storageName);
-  String_delete(restoreInfo.statusInfo.name);
 
   if ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
   {

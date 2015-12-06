@@ -34,18 +34,18 @@
 /* status info data */
 typedef struct
 {
+  String storageName;                      // current storage name
+  uint64 storageDoneBytes;                 // number of bytes processed of current archive
+  uint64 storageTotalBytes;                // total bytes of current archive
   ulong  doneEntries;                      // number of entries processed
   uint64 doneBytes;                        // number of bytes processed
   ulong  skippedEntries;                   // number of skipped entries
   uint64 skippedBytes;                     // sum of skipped bytes
   ulong  errorEntries;                     // number of entries with errors
   uint64 errorBytes;                       // sum of byste in entries with errors
-  String name;                             // current file name
+  String entryName;                        // current entry name
   uint64 entryDoneBytes;                   // number of bytes processed of current entry
   uint64 entryTotalBytes;                  // total number of bytes of current entry
-  String storageName;                      // current storage name
-  uint64 storageDoneBytes;                 // number of bytes processed of current archive
-  uint64 storageTotalBytes;                // total bytes of current archive
 } RestoreStatusInfo;
 
 /***********************************************************************\
