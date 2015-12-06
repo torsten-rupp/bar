@@ -213,7 +213,7 @@ class Command
       }
     }
 
-    return completedFlag || (result.size() == 0);
+    return completedFlag && (result.size() == 0);
   }
 
   /** check if completed
