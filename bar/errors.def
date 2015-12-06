@@ -492,16 +492,53 @@ ERROR CRC_
   }
   errorText[sizeof(errorText)-1] = '\0';
 
-ERROR ENTRY_NOT_FOUND                "entry not found"
-ERROR ENTRY_INCOMPLETE               "entry is incomplete"
-ERROR WRONG_ENTRY_TYPE               "wrong entry type"
-ERROR ENTRIES_DIFFER                 "entries differ"
+ERROR ENTRY_NOT_FOUND
+  strncpy(errorText,"entry not found",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": '",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR ENTRY_INCOMPLETE
+  strncpy(errorText,"entry is incomplete",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": '",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR WRONG_ENTRY_TYPE
+  strncpy(errorText,"wrong entry type",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": '",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR ENTRIES_DIFFER
+  strncpy(errorText,"entries differ",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": '",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
 ERROR CORRUPT_DATA
   strncpy(errorText,"corrupt data or invalid password",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText," ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,"; '",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
   }
   errorText[sizeof(errorText)-1] = '\0';
 
