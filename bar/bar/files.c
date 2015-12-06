@@ -2946,7 +2946,7 @@ FilePermission File_stringToPermission(const char *string)
   if ((stringLength >= 8) && (toupper(string[7]) == 'W')) permission |= FILE_PERMISSION_OTHER_WRITE;
   if ((stringLength >= 9) && (toupper(string[8]) == 'X')) permission |= FILE_PERMISSION_OTHER_EXECUTE;
   if ((stringLength >= 9) && (toupper(string[8]) == 'T')) permission |= FILE_PERMISSION_STICKY_BIT;
-  
+
   return permission;
 }
 
@@ -3912,14 +3912,22 @@ Errors File_setOwner(ConstString fileName,
                      uint32      groupId
                     )
 {
+  #ifdef HAVE_CHOWN
+    uid_t uid;
+    gid_t gid;
+  #endif /* HAVE_CHOWN */
+
   assert(fileName != NULL);
 
   #ifdef HAVE_CHOWN
-    if (chown(String_cString(fileName),
-              (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : (uid_t)(-1),
-              (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : (gid_t)(-1)
-             ) != 0
-       )
+    if      (userId == FILE_OWN_USER_ID     ) uid = getuid();
+    else if (userId == FILE_DEFAULT_USER_ID ) uid = -1;
+    else                                      uid = (uid_t)userId;
+    if      (userId == FILE_OWN_GROUP_ID    ) gid = getgid();
+    else if (userId == FILE_DEFAULT_GROUP_ID) gid = -1;
+    else                                      gid = (uid_t)groupId;
+
+    if (chown(String_cString(fileName),uid,gid) != 0)
     {
       return ERRORX_(IO_ERROR,errno,String_cString(fileName));
     }
@@ -4006,8 +4014,13 @@ Errors File_makeDirectory(ConstString    pathName,
        )
     {
       #ifdef HAVE_CHOWN
-        uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : (uid_t)(-1);
-        gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : (gid_t)(-1);
+        if      (userId == FILE_OWN_USER_ID     ) uid = getuid();
+        else if (userId == FILE_DEFAULT_USER_ID ) uid = -1;
+        else                                      uid = (uid_t)userId;
+        if      (userId == FILE_OWN_GROUP_ID    ) gid = getgid();
+        else if (userId == FILE_DEFAULT_GROUP_ID) gid = -1;
+        else                                      gid = (uid_t)groupId;
+
         if (chown(String_cString(directoryName),uid,gid) != 0)
         {
           error = ERRORX_(IO_ERROR,errno,String_cString(directoryName));
@@ -4109,8 +4122,13 @@ Errors File_makeDirectory(ConstString    pathName,
         {
           // set owner
           #ifdef HAVE_CHOWN
-            uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : (uid_t)(-1);
-            gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : (gid_t)(-1);
+            if      (userId == FILE_OWN_USER_ID     ) uid = getuid();
+            else if (userId == FILE_DEFAULT_USER_ID ) uid = -1;
+            else                                      uid = (uid_t)userId;
+            if      (userId == FILE_OWN_GROUP_ID    ) gid = getgid();
+            else if (userId == FILE_DEFAULT_GROUP_ID) gid = -1;
+            else                                      gid = (uid_t)groupId;
+
             if (chown(String_cString(directoryName),uid,gid) != 0)
             {
               error = ERRORX_(IO_ERROR,errno,String_cString(directoryName));
