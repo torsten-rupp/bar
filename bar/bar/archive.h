@@ -472,6 +472,17 @@ Errors Archive_initAll(void);
 void Archive_doneAll(void);
 
 /***********************************************************************\
+* Name   : Archive_parseArchiveEntryType
+* Purpose: get archive entry type
+* Input  : name - name of archive entry type
+* Output : archiveEntryType - archive entry type
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Archive_parseArchiveEntryType(const char *name, ArchiveEntryTypes *archiveEntryType);
+
+/***********************************************************************\
 * Name   : Archive_isArchiveFile
 * Purpose: check if archive file
 * Input  : fileName - file name

@@ -42,6 +42,21 @@
 
 /***************************** Constants *******************************/
 
+// archive entry types
+LOCAL const struct
+{
+  const char        *name;
+  ArchiveEntryTypes archiveEntryType;
+} ARCHIVE_ENTRY_TYPES[] =
+{
+  { "file",     ARCHIVE_ENTRY_TYPE_FILE      },
+  { "image",    ARCHIVE_ENTRY_TYPE_IMAGE     },
+  { "directory",ARCHIVE_ENTRY_TYPE_DIRECTORY },
+  { "link",     ARCHIVE_ENTRY_TYPE_LINK      },
+  { "hardlink", ARCHIVE_ENTRY_TYPE_HARDLINK  },
+  { "special",  ARCHIVE_ENTRY_TYPE_SPECIAL   }
+};
+
 // size of buffer for processing data
 #define MAX_BUFFER_SIZE (64*1024)
 
@@ -716,7 +731,7 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
     free(archiveInfo->cryptKeyData); archiveInfo->cryptKeyData = NULL;
     Chunk_close(&chunkInfoKey);
     Chunk_done(&chunkInfoKey);
-    return ERROR_CORRUPT_DATA;
+    return ERRORX_(CORRUPT_DATA,0,String_cString(archiveInfo->printableStorageName));
   }
 
   // close chunk
@@ -2948,6 +2963,31 @@ void Archive_doneAll(void)
   Semaphore_done(&decryptPasswordList.lock);
 }
 
+bool Archive_parseArchiveEntryType(const char *name, ArchiveEntryTypes *archiveEntryType)
+{
+  uint z;
+
+  assert(name != NULL);
+  assert(archiveEntryType != NULL);
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(ARCHIVE_ENTRY_TYPES))
+         && !stringEqualsIgnoreCase(ARCHIVE_ENTRY_TYPES[z].name,name)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(ARCHIVE_ENTRY_TYPES))
+  {
+    (*archiveEntryType) = ARCHIVE_ENTRY_TYPES[z].archiveEntryType;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 bool Archive_isArchiveFile(ConstString fileName)
 {
   FileHandle  fileHandle;
@@ -3238,7 +3278,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
     }
 fprintf(stderr,"%s, %d:crate emn %llu \n",__FILE__,__LINE__,archiveInfo->entityId);
   }
-#endif   
+#endif
 
   // free resources
   AutoFree_done(&autoFreeList);
