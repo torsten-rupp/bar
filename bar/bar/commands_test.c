@@ -287,7 +287,10 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
             {
               printInfo(1,"FAIL!\n");
               printError("unexpected data at end of file entry '%S'!\n",fileName);
-              if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
+              if (failError == ERROR_NONE)
+              {
+                failError = ERRORX_(CORRUPT_DATA,0,fileName);
+              }
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               break;
@@ -445,7 +448,10 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
             {
               printInfo(1,"FAIL!\n");
               printError("unexpected data at end of image entry '%S'!\n",deviceName);
-              if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
+              if (failError == ERROR_NONE)
+              {
+                failError = ERRORX_(CORRUPT_DATA,0,deviceName);
+              }
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(deviceName);
               break;
@@ -514,7 +520,10 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
               printError("unexpected data at end of directory entry '%S'!\n",directoryName);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(directoryName);
-              if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
+              if (failError == ERROR_NONE)
+              {
+                failError = ERRORX_(CORRUPT_DATA,0,directoryName);
+              }
               break;
             }
 
@@ -588,7 +597,10 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               String_delete(linkName);
-              if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
+              if (failError == ERROR_NONE)
+              {
+                failError = ERRORX_(CORRUPT_DATA,0,linkName);
+              }
               break;
             }
 
@@ -740,7 +752,10 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
                     && !Archive_eofData(&archiveEntryInfo))
                 {
                   printError("unexpected data at end of hard link entry '%S'!\n",fileName);
-                  if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
+                  if (failError == ERROR_NONE)
+                  {
+                    failError = ERRORX_(CORRUPT_DATA,0,fileName);
+                  }
                   break;
                 }
 
@@ -828,7 +843,10 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
               printError("unexpected data at end of special entry '%S'!\n",fileName);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
+              if (failError == ERROR_NONE)
+              {
+                failError = ERRORX_(CORRUPT_DATA,0,fileName);
+              }
               break;
             }
 
