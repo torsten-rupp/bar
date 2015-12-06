@@ -1656,7 +1656,10 @@ Errors Command_compare(const StringList                *storageNameList,
           printInfo(2,"  Fragments:\n");
           FragmentList_print(stdout,4,fragmentNode);
         }
-        if (failError == ERROR_NONE) failError = ERROR_ENTRY_INCOMPLETE;
+        if (failError == ERROR_NONE)
+        {
+          failError = ERRORX_(ENTRY_INCOMPLETE,0,String_cString(fragmentNode->name));;
+        }
       }
     }
   }
