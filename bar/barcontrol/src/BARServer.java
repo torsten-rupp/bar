@@ -34,10 +34,10 @@ import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.spec.RSAPublicKeySpec;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
@@ -150,7 +150,7 @@ class Command
   public  int                errorCode;         // error code
   public  String             errorText;         // error text
   public  boolean            completedFlag;     // true iff command completed
-  public  LinkedList<String> result;            // result
+  public  ArrayDeque<String> result;            // result
   public  int                debugLevel;        // debug level
 
   private long               timeoutTimestamp;  // timeout timestamp [ms]
@@ -172,7 +172,7 @@ class Command
     this.errorText        = "";
     this.completedFlag    = false;
     this.processResult    = processResult;
-    this.result           = new LinkedList<String>();
+    this.result           = new ArrayDeque<String>();
     this.debugLevel       = debugLevel;
     this.timeoutTimestamp = (timeout != 0) ? System.currentTimeMillis()+timeout : 0L;
   }
@@ -201,7 +201,7 @@ class Command
    */
   public synchronized boolean endOfData()
   {
-    while ((result.size() == 0) && !completedFlag)
+    while (!completedFlag && (result.size() == 0))
     {
       try
       {
@@ -213,7 +213,7 @@ class Command
       }
     }
 
-    return (result.size() == 0) && completedFlag;
+    return completedFlag || (result.size() == 0);
   }
 
   /** check if completed
@@ -352,9 +352,7 @@ class Command
    */
   public synchronized String getNextResult(long timeout)
   {
-    if (   !completedFlag
-        && (result.size() == 0)
-       )
+    while (!completedFlag && (result.size() == 0))
     {
       try
       {
@@ -366,7 +364,7 @@ class Command
       }
     }
 
-    return (result.size() > 0) ? result.removeFirst() : null;
+    return result.pollFirst();
   }
 
   /** get next result
@@ -374,7 +372,7 @@ class Command
    */
   public synchronized String getNextResult()
   {
-    return (result.size() > 0) ? result.removeFirst() : null;
+    return result.pollFirst();
   }
 
   /** get result string array
@@ -385,7 +383,7 @@ class Command
   {
     if (errorCode == Errors.NONE)
     {
-      result[0] = (this.result.size() > 0) ? this.result.removeFirst() : "";
+      result[0] = (this.result.size() > 0) ? this.result.pollFirst() : "";
     }
     else
     {
@@ -435,7 +433,7 @@ class Command
       // parse next line
       if (result.size() > 0)
       {
-        String line = result.removeFirst();
+        String line = result.pollFirst();
         if ((valueMap != null) && !line.isEmpty())
         {
           valueMap.clear();
@@ -556,6 +554,13 @@ class Command
   public synchronized int getResult()
   {
     return errorCode;
+  }
+
+  /** purge all results
+   */
+  public synchronized void purgeResults()
+  {
+    result.clear();
   }
 
   /** abort command
