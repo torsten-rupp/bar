@@ -650,6 +650,10 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 * Purpose: list file entries
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
+*          storageIds       - storage ids or NULL
+*          storageIdCount   - storage id count or 0
+*          entryIds         - entry ids or NULL
+*          entryIdCount     - entry id count or 0
 *          pattern          - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
@@ -660,6 +664,8 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
                            const DatabaseId storageIds[],
                            uint             storageIdCount,
+                           const DatabaseId entryIds[],
+                           uint             entryIdCount,
                            String           pattern
                           );
 
@@ -711,8 +717,12 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : Index_initListImages
 * Purpose: list image entries
-* Input  : indexHandle - index handle
-*          pattern     - name pattern (glob, can be NULL)
+* Input  : indexHandle    - index handle
+*          storageIds     - storage ids or NULL
+*          storageIdCount - storage id count or 0
+*          entryIds       - entry ids or NULL
+*          entryIdCount   - entry id count or 0
+*          pattern        - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -722,6 +732,8 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             IndexHandle      *indexHandle,
                             const DatabaseId *storageIds,
                             uint             storageIdCount,
+                            const DatabaseId entryIds[],
+                            uint             entryIdCount,
                             String           pattern
                            );
 
@@ -766,8 +778,12 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : Index_initListDirectories
 * Purpose: list directory entries
-* Input  : indexHandle - index handle
-*          pattern     - name pattern (glob, can be NULL)
+* Input  : indexHandle    - index handle
+*          storageIds     - storage ids or NULL
+*          storageIdCount - storage id count or 0
+*          entryIds       - entry ids or NULL
+*          entryIdCount   - entry id count or 0
+*          pattern        - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -777,6 +793,8 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                  IndexHandle      *indexHandle,
                                  const DatabaseId *storageIds,
                                  uint             storageIdCount,
+                                 const DatabaseId entryIds[],
+                                 uint             entryIdCount,
                                  String           pattern
                                 );
 
@@ -822,8 +840,12 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : Index_initListLinks
 * Purpose: list link entries
-* Input  : indexHandle - index handle
-*          pattern     - name pattern (glob, can be NULL)
+* Input  : indexHandle    - index handle
+*          storageIds     - storage ids or NULL
+*          storageIdCount - storage id count or 0
+*          entryIds       - entry ids or NULL
+*          entryIdCount   - entry id count or 0
+*          pattern        - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - inxe query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -833,6 +855,8 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
                            const DatabaseId *storageIds,
                            uint             storageIdCount,
+                           const DatabaseId entryIds[],
+                           uint             entryIdCount,
                            String           pattern
                           );
 
@@ -880,8 +904,12 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : Index_initListHardLinks
 * Purpose: list hard link entries
-* Input  : indexHandle - index handle
-*          pattern     - name pattern (glob, can be NULL)
+* Input  : indexHandle    - index handle
+*          storageIds     - storage ids or NULL
+*          storageIdCount - storage id count or 0
+*          entryIds       - entry ids or NULL
+*          entryIdCount   - entry id count or 0
+*          pattern        - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - indxe query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -891,6 +919,8 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                IndexHandle      *indexHandle,
                                const DatabaseId *storageIds,
                                uint             storageIdCount,
+                               const DatabaseId entryIds[],
+                               uint             entryIdCount,
                                String           pattern
                                );
 
@@ -943,8 +973,12 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : Index_initListSpecial
 * Purpose: list special entries
-* Input  : indexHandle - index handle
-*          pattern     - name pattern (glob, can be NULL)
+* Input  : indexHandle    - index handle
+*          storageIds     - storage ids or NULL
+*          storageIdCount - storage id count or 0
+*          entryIds       - entry ids or NULL
+*          entryIdCount   - entry id count or 0
+*          pattern        - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -954,6 +988,8 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
                              const DatabaseId *storageIds,
                              uint             storageIdCount,
+                             const DatabaseId entryIds[],
+                             uint             entryIdCount,
                              String           pattern
                             );
 
