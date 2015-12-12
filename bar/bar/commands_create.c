@@ -257,7 +257,7 @@ LOCAL void initStatusInfo(CreateStatusInfo *statusInfo)
   statusInfo->errorBytes          = 0LL;
   statusInfo->archiveBytes        = 0LL;
   statusInfo->compressionRatio    = 0.0;
-  statusInfo->name                = String_new();
+  statusInfo->entryName           = String_new();
   statusInfo->entryDoneBytes      = 0LL;
   statusInfo->entryTotalBytes     = 0LL;
   statusInfo->storageName         = String_new();
@@ -416,7 +416,7 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
   MsgQueue_done(&createInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
 
   String_delete(createInfo->statusInfo.storageName);
-  String_delete(createInfo->statusInfo.name);
+  String_delete(createInfo->statusInfo.entryName);
   StringList_done(&createInfo->storageFileList);
 }
 
@@ -1096,29 +1096,30 @@ LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
 /***********************************************************************\
 * Name   : formatArchiveFileName
 * Purpose: get archive file name
-* Input  : fileName              - file name variable
-*          formatMode            - format mode; see FORMAT_MODE_*
-*          templateFileName      - template file name
-*          archiveType           - archive type; see ARCHIVE_TYPE_*
-*          scheduleTitle         - schedule title or NULL
-*          scheduleCustomText    - schedule custom text or NULL
-*          time                  - time
-*          partNumber            - part number (>=0 for parts,
-*                                  ARCHIVE_PART_NUMBER_NONE for single
-*                                  part archive)
+* Input  : fileName           - file name variable
+*          templateFileName   - template file name
+*          expandMacroMode    - expand macro mode; see
+*                               EXPAND_MACRO_MODE_*
+*          archiveType        - archive type; see ARCHIVE_TYPE_*
+*          scheduleTitle      - schedule title or NULL
+*          scheduleCustomText - schedule custom text or NULL
+*          time               - time
+*          partNumber         - part number (>=0 for parts,
+*                               ARCHIVE_PART_NUMBER_NONE for single
+*                               part archive)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors formatArchiveFileName(String       fileName,
-                                   FormatModes  formatMode,
-                                   ConstString  templateFileName,
-                                   ArchiveTypes archiveType,
-                                   ConstString  scheduleTitle,
-                                   ConstString  scheduleCustomText,
-                                   time_t       time,
-                                   int          partNumber
+LOCAL Errors formatArchiveFileName(String            fileName,
+                                   ConstString       templateFileName,
+                                   ExpandMacroModes  expandMacroMode,
+                                   ArchiveTypes      archiveType,
+                                   ConstString       scheduleTitle,
+                                   ConstString       scheduleCustomText,
+                                   time_t            time,
+                                   int               partNumber
                                   )
 {
   TextMacro textMacros[10];
@@ -1153,38 +1154,16 @@ LOCAL Errors formatArchiveFileName(String       fileName,
   weekNumberW = (uint)atoi(buffer);
 
   // expand named macros
-  switch (formatMode)
-  {
-    case FORMAT_MODE_ARCHIVE_FILE_NAME:
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%type", getArchiveTypeName(archiveType)     );
-      TEXT_MACRO_N_CSTRING(textMacros[1],"%T",    getArchiveTypeShortName(archiveType));
-      TEXT_MACRO_N_CSTRING(textMacros[3],"%uuid", String_cString(uuid));
-      TEXT_MACRO_N_CSTRING(textMacros[4],"%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "");
-      TEXT_MACRO_N_CSTRING(textMacros[5],"%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "");
-      TEXT_MACRO_N_INTEGER(textMacros[6],"%U2",   (weekNumberU%2)+1);
-      TEXT_MACRO_N_INTEGER(textMacros[7],"%U4",   (weekNumberU%4)+1);
-      TEXT_MACRO_N_INTEGER(textMacros[8],"%W2",   (weekNumberW%2)+1);
-      TEXT_MACRO_N_INTEGER(textMacros[9],"%W4",   (weekNumberW%4)+1);
-      Misc_expandMacros(fileName,String_cString(templateFileName),textMacros,SIZE_OF_ARRAY(textMacros),TRUE);
-      break;
-    case FORMAT_MODE_PATTERN:
-      TEXT_MACRO_N_CSTRING(textMacros[0],"%type", "\\S+");
-      TEXT_MACRO_N_CSTRING(textMacros[1],"%T",    ".");
-      TEXT_MACRO_N_CSTRING(textMacros[3],"%uuid", "[-0-9a-fA-F]+");
-      TEXT_MACRO_N_CSTRING(textMacros[4],"%title","\\S+");
-      TEXT_MACRO_N_CSTRING(textMacros[5],"%text", "\\S+");
-      TEXT_MACRO_N_CSTRING(textMacros[6],"%U2",   "[12]");
-      TEXT_MACRO_N_CSTRING(textMacros[7],"%U4",   "[1234]");
-      TEXT_MACRO_N_CSTRING(textMacros[8],"%W2",   "[12]");
-      TEXT_MACRO_N_CSTRING(textMacros[9],"%W4",   "[1234]");
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-      #endif /* NDEBUG */
-  }
-  Misc_expandMacros(fileName,String_cString(templateFileName),textMacros,SIZE_OF_ARRAY(textMacros),TRUE);
+  TEXT_MACRO_N_CSTRING(textMacros[0],"%type", getArchiveTypeName(archiveType)     ,TEXT_MACRO_PATTERN_CSTRING);
+  TEXT_MACRO_N_CSTRING(textMacros[1],"%T",    getArchiveTypeShortName(archiveType),".");
+  TEXT_MACRO_N_CSTRING(textMacros[3],"%uuid", String_cString(uuid),TEXT_MACRO_PATTERN_CSTRING);
+  TEXT_MACRO_N_CSTRING(textMacros[4],"%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "",TEXT_MACRO_PATTERN_CSTRING);
+  TEXT_MACRO_N_CSTRING(textMacros[5],"%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "",TEXT_MACRO_PATTERN_CSTRING);
+  TEXT_MACRO_N_INTEGER(textMacros[6],"%U2",   (weekNumberU%2)+1,"[12]");
+  TEXT_MACRO_N_INTEGER(textMacros[7],"%U4",   (weekNumberU%4)+1,"[1234]");
+  TEXT_MACRO_N_INTEGER(textMacros[8],"%W2",   (weekNumberW%2)+1,"[12]");
+  TEXT_MACRO_N_INTEGER(textMacros[9],"%W4",   (weekNumberW%4)+1,"[1234]");
+  Misc_expandMacros(fileName,String_cString(templateFileName),expandMacroMode,textMacros,SIZE_OF_ARRAY(textMacros),TRUE);
 
   // expand date/time macros, part number
   partNumberFlag = FALSE;
@@ -1234,13 +1213,13 @@ LOCAL Errors formatArchiveFileName(String       fileName,
               length = strftime(buffer,sizeof(buffer)-1,format,tm); buffer[sizeof(buffer)-1] = '\0';
 
               // insert into string
-              switch (formatMode)
+              switch (expandMacroMode)
               {
-                case FORMAT_MODE_ARCHIVE_FILE_NAME:
+                case EXPAND_MACRO_MODE_STRING:
                   String_insertBuffer(fileName,i,buffer,length);
                   i += length;
                   break;
-                case FORMAT_MODE_PATTERN:
+                case EXPAND_MACRO_MODE_PATTERN:
                   for (z = 0 ; z < length; z++)
                   {
                     if (strchr("*+?{}():[].^$|",buffer[z]) != NULL)
@@ -1269,9 +1248,9 @@ LOCAL Errors formatArchiveFileName(String       fileName,
         break;
       case '#':
         // #...#
-        switch (formatMode)
+        switch (expandMacroMode)
         {
-          case FORMAT_MODE_ARCHIVE_FILE_NAME:
+          case EXPAND_MACRO_MODE_STRING:
             if (partNumber != ARCHIVE_PART_NUMBER_NONE)
             {
               // find #...# and get max. divisor for part number
@@ -1309,7 +1288,7 @@ LOCAL Errors formatArchiveFileName(String       fileName,
               i += 1L;
             }
             break;
-          case FORMAT_MODE_PATTERN:
+          case EXPAND_MACRO_MODE_PATTERN:
             // replace by "."
             String_replaceChar(fileName,i,1,'.');
             i += 1L;
@@ -1330,12 +1309,12 @@ LOCAL Errors formatArchiveFileName(String       fileName,
   // append part number if multipart mode and there is no part number in format string
   if ((partNumber != ARCHIVE_PART_NUMBER_NONE) && !partNumberFlag)
   {
-    switch (formatMode)
+    switch (expandMacroMode)
     {
-      case FORMAT_MODE_ARCHIVE_FILE_NAME:
+      case EXPAND_MACRO_MODE_STRING:
         String_format(fileName,".%06d",partNumber);
         break;
-      case FORMAT_MODE_PATTERN:
+      case EXPAND_MACRO_MODE_PATTERN:
         String_appendCString(fileName,"......");
         break;
       #ifndef NDEBUG
@@ -3273,8 +3252,8 @@ LOCAL Errors getArchiveSize(void        *userData,
   // get archive file name
   archiveName = String_new();
   error = formatArchiveFileName(archiveName,
-                                FORMAT_MODE_ARCHIVE_FILE_NAME,
                                 createInfo->storageSpecifier->archiveName,
+                                EXPAND_MACRO_MODE_STRING,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
                                 createInfo->scheduleCustomText,
@@ -3355,8 +3334,8 @@ ArchiveTypes archiveType,
   // get archive file name
   archiveName = String_new();
   error = formatArchiveFileName(archiveName,
-                                FORMAT_MODE_ARCHIVE_FILE_NAME,
                                 createInfo->storageSpecifier->archiveName,
+                                EXPAND_MACRO_MODE_STRING,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
                                 createInfo->scheduleCustomText,
@@ -3472,7 +3451,9 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
                                   NULL,  // fileName,
                                     INDEX_STATE_SET(INDEX_STATE_OK)
                                   | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
-                                  | INDEX_STATE_SET(INDEX_STATE_ERROR)
+                                  | INDEX_STATE_SET(INDEX_STATE_ERROR),
+                                  NULL,  // storageIds
+                                  0   // storageIdCount
                                  );
     if (error != ERROR_NONE)
     {
@@ -4162,8 +4143,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // get archive name pattern
       pattern = String_new();
       error = formatArchiveFileName(pattern,
-                                    FORMAT_MODE_PATTERN,
                                     createInfo->storageSpecifier->archiveName,
+                                    EXPAND_MACRO_MODE_PATTERN,
                                     createInfo->archiveType,
                                     createInfo->scheduleTitle,
                                     createInfo->scheduleCustomText,
@@ -4239,7 +4220,7 @@ LOCAL bool setStatusEntryDoneInfo(CreateInfo *createInfo, ConstString name, uint
   {
     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
-      String_set(createInfo->statusInfo.name,name);
+      String_set(createInfo->statusInfo.entryName,name);
       createInfo->statusInfo.entryDoneBytes  = 0LL;
       createInfo->statusInfo.entryTotalBytes = size;
       updateStatusInfo(createInfo);
@@ -4469,7 +4450,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
               if (statusEntryDoneLocked)
               {
-                String_set(createInfo->statusInfo.name,fileName);
+                String_set(createInfo->statusInfo.entryName,fileName);
                 createInfo->statusInfo.entryDoneBytes  = entryDoneBytes;
                 createInfo->statusInfo.entryTotalBytes = fileInfo.size;
               }
@@ -4822,7 +4803,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
             createInfo->statusInfo.doneBytes += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             if (statusEntryDoneLocked)
             {
-              String_set(createInfo->statusInfo.name,deviceName);
+              String_set(createInfo->statusInfo.entryName,deviceName);
               createInfo->statusInfo.entryDoneBytes  = entryDoneBytes;
               createInfo->statusInfo.entryTotalBytes = deviceInfo.size;
             }
@@ -5494,7 +5475,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
               createInfo->statusInfo.doneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
               if (statusEntryDoneLocked)
               {
-                String_set(createInfo->statusInfo.name,StringList_first(nameList,NULL));
+                String_set(createInfo->statusInfo.entryName,StringList_first(nameList,NULL));
                 createInfo->statusInfo.entryDoneBytes  = entryDoneBytes;
                 createInfo->statusInfo.entryTotalBytes = fileInfo.size;
               }
