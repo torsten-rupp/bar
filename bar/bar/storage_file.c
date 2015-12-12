@@ -193,8 +193,8 @@ LOCAL Errors StorageFile_preProcess(StorageHandle *storageHandle,
     if (!initialFlag)
     {
       // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName                );
-      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber);
+      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber,NULL);
 
       if (globalOptions.file.writePreProcessCommand != NULL)
       {
@@ -235,8 +235,8 @@ LOCAL Errors StorageFile_postProcess(StorageHandle *storageHandle,
     if (!finalFlag)
     {
       // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName                );
-      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber);
+      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber,NULL);
 
       if (globalOptions.file.writePostProcessCommand != NULL)
       {

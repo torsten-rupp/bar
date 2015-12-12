@@ -123,8 +123,8 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
   bool                  mediumRequestedFlag;
   StorageRequestResults storageRequestResult;
 
-  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageHandle->storageSpecifier.deviceName);
-  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->requestedVolumeNumber      );
+  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageHandle->storageSpecifier.deviceName,NULL);
+  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->requestedVolumeNumber,      NULL);
 
   if (   (storageHandle->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
       || (storageHandle->volumeState == STORAGE_VOLUME_STATE_LOADED)
@@ -870,11 +870,11 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
       }
 
       // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageHandle->storageSpecifier.deviceName);
-      TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageHandle->opticalDisk.write.directory);
-      TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName                                 );
-      TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",  0                                             );
-      TEXT_MACRO_N_INTEGER(textMacros[4],"%number",   storageHandle->volumeNumber               );
+      TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageHandle->storageSpecifier.deviceName,NULL);
+      TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageHandle->opticalDisk.write.directory,NULL);
+      TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName,                             NULL);
+      TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",  0,                                         NULL);
+      TEXT_MACRO_N_INTEGER(textMacros[4],"%number",   storageHandle->volumeNumber,               NULL);
 
       if ((storageHandle->jobOptions != NULL) && (storageHandle->jobOptions->alwaysCreateImageFlag || storageHandle->jobOptions->errorCorrectionCodesFlag))
       {
@@ -924,7 +924,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
         // get number of image sectors
         if (File_getFileInfo(imageFileName,&fileInfo) == ERROR_NONE)
         {
-          TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",(ulong)(fileInfo.size/2048LL));
+          TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",(ulong)(fileInfo.size/2048LL),NULL);
         }
 
         // check if new medium is required
@@ -1087,7 +1087,7 @@ LOCAL Errors StorageOptical_unloadVolume(StorageHandle *storageHandle)
 
   error = ERROR_UNKNOWN;
 
-  TEXT_MACRO_N_STRING(textMacros[0],"%device",storageHandle->storageSpecifier.deviceName);
+  TEXT_MACRO_N_STRING(textMacros[0],"%device",storageHandle->storageSpecifier.deviceName,NULL);
   error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.unloadVolumeCommand),
                               textMacros,SIZE_OF_ARRAY(textMacros),
                               CALLBACK(executeIOOutput,NULL),

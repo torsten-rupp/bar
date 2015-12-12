@@ -83,8 +83,8 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
   bool                  volumeRequestedFlag;
   StorageRequestResults storageRequestResult;
 
-  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageHandle->storageSpecifier.deviceName);
-  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->requestedVolumeNumber);
+  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageHandle->storageSpecifier.deviceName,NULL);
+  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->requestedVolumeNumber,      NULL);
 
   if (   (storageHandle->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
       || (storageHandle->volumeState == STORAGE_VOLUME_STATE_LOADED)
@@ -365,8 +365,7 @@ LOCAL Errors StorageDevice_init(StorageHandle          *storageHandle,
                                 const JobOptions       *jobOptions
                                )
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
+  Errors         error;
   Device         device;
   FileSystemInfo fileSystemInfo;
 
@@ -375,25 +374,6 @@ LOCAL Errors StorageDevice_init(StorageHandle          *storageHandle,
   assert(storageSpecifier != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
-
-  // get device settings
-  getDeviceSettings(storageHandle->storageSpecifier.deviceName,jobOptions,&device);
-
-  // check space in temporary directory: 2x volumeSize
-  error = File_getFileSystemInfo(&fileSystemInfo,tmpDirectory);
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  if (fileSystemInfo.freeBytes < (device.volumeSize*2))
-  {
-    printWarning("Insufficient space in temporary directory '%s' (%.1lf%s free, %.1lf%s recommended)!\n",
-                 String_cString(tmpDirectory),
-                 BYTES_SHORT(fileSystemInfo.freeBytes),BYTES_UNIT(fileSystemInfo.freeBytes),
-                 BYTES_SHORT(device.volumeSize*2),BYTES_UNIT(device.volumeSize*2)
-                );
-  }
 
   // init variables
   storageHandle->device.requestVolumeCommand   = device.requestVolumeCommand;
@@ -422,14 +402,31 @@ LOCAL Errors StorageDevice_init(StorageHandle          *storageHandle,
   }
   StringList_init(&storageHandle->device.fileNameList);
   storageHandle->device.totalSize              = 0LL;
-  AUTOFREE_ADD(&autoFreeList,storageHandle->device.directory,{ String_delete(storageHandle->device.directory); });
-  AUTOFREE_ADD(&autoFreeList,&storageHandle->device.fileNameList,{ StringList_done(&storageHandle->device.fileNameList); });
+
+  // get device settings
+  getDeviceSettings(storageHandle->storageSpecifier.deviceName,jobOptions,&device);
+
+  // check space in temporary directory: 2x volumeSize
+  error = File_getFileSystemInfo(&fileSystemInfo,tmpDirectory);
+  if (error != ERROR_NONE)
+  {
+    StringList_done(&storageHandle->device.fileNameList);
+    return error;
+  }
+  if (fileSystemInfo.freeBytes < (device.volumeSize*2))
+  {
+    printWarning("Insufficient space in temporary directory '%s' (%.1lf%s free, %.1lf%s recommended)!\n",
+                 String_cString(tmpDirectory),
+                 BYTES_SHORT(fileSystemInfo.freeBytes),BYTES_UNIT(fileSystemInfo.freeBytes),
+                 BYTES_SHORT(device.volumeSize*2),BYTES_UNIT(device.volumeSize*2)
+                );
+  }
 
   // create temporary directory for device files
   error = File_getTmpDirectoryName(storageHandle->device.directory,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
-    AutoFree_cleanup(&autoFreeList);
+    StringList_done(&storageHandle->device.fileNameList);
     return error;
   }
 
@@ -555,10 +552,10 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
       }
 
       // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageHandle->storageSpecifier.deviceName);
-      TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageHandle->device.directory           );
-      TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName                                 );
-      TEXT_MACRO_N_INTEGER(textMacros[3],"%number",   storageHandle->volumeNumber               );
+      TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageHandle->storageSpecifier.deviceName,NULL);
+      TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageHandle->device.directory,           NULL);
+      TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName,                             NULL);
+      TEXT_MACRO_N_INTEGER(textMacros[3],"%number",   storageHandle->volumeNumber,               NULL);
 
       // create image
       if (error == ERROR_NONE)
@@ -679,7 +676,7 @@ LOCAL Errors StorageDevice_unloadVolume(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
-  TEXT_MACRO_N_STRING(textMacros[0],"%device",storageHandle->storageSpecifier.deviceName);
+  TEXT_MACRO_N_STRING(textMacros[0],"%device",storageHandle->storageSpecifier.deviceName,NULL);
   error = Misc_executeCommand(String_cString(storageHandle->device.unloadVolumeCommand),
                               textMacros,SIZE_OF_ARRAY(textMacros),
                               CALLBACK(executeIOOutput,NULL),
@@ -764,11 +761,13 @@ UNUSED_VARIABLE(archiveName);
                    );
   if (error != ERROR_NONE)
   {
+    String_delete(storageArchiveHandle->device.fileName);
     return error;
   }
 
   DEBUG_ADD_RESOURCE_TRACE(&storageArchiveHandle->device,sizeof(storageArchiveHandle->device));
 #endif /* 0 */
+String_delete(storageArchiveHandle->device.fileName);
   return ERROR_FUNCTION_NOT_SUPPORTED;
 
   return ERROR_NONE;

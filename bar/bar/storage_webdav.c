@@ -751,7 +751,7 @@ LOCAL Errors StorageWebDAV_preProcess(StorageHandle *storageHandle,
       if (!initialFlag)
       {
         // init macros
-        TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber              );
+        TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber,NULL);
 
         if (globalOptions.ftp.writePreProcessCommand != NULL)
         {
@@ -800,7 +800,7 @@ LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
       if (!finalFlag)
       {
         // init macros
-        TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber);
+        TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber,NULL);
 
         if (globalOptions.ftp.writePostProcessCommand != NULL)
         {
