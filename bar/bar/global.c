@@ -779,7 +779,7 @@ void debugDumpStackTrace(FILE       *handle,
     {
       return;
     }
-    assert(n < sizeof(executableName));
+    assert((size_t)n < sizeof(executableName));
     executableName[n] = '\0';
 
     // output stack trace
