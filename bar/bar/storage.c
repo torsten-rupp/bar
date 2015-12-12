@@ -2008,6 +2008,10 @@ bool Storage_exists(StorageHandle *storageHandle, ConstString archiveName)
       #endif /* NDEBUG */
       break;
   }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(storageArchiveHandle,sizeof(StorageArchiveHandle));
@@ -2717,7 +2721,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   assert(storageSpecifier != NULL);
 
   // get archive name
-  if (archiveName == NULL) archiveName = storageDirectoryListHandle->storageSpecifier.archiveName;
+  if (archiveName == NULL) archiveName = storageSpecifier->archiveName;
   if (String_isEmpty(archiveName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
