@@ -289,7 +289,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
               printError("unexpected data at end of file entry '%S'!\n",fileName);
               if (failError == ERROR_NONE)
               {
-                failError = ERRORX_(CORRUPT_DATA,0,fileName);
+                failError = ERRORX_(CORRUPT_DATA,0,String_cString(fileName));
               }
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
@@ -450,7 +450,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
               printError("unexpected data at end of image entry '%S'!\n",deviceName);
               if (failError == ERROR_NONE)
               {
-                failError = ERRORX_(CORRUPT_DATA,0,deviceName);
+                failError = ERRORX_(CORRUPT_DATA,0,String_cString(deviceName));
               }
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(deviceName);
@@ -522,7 +522,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
               String_delete(directoryName);
               if (failError == ERROR_NONE)
               {
-                failError = ERRORX_(CORRUPT_DATA,0,directoryName);
+                failError = ERRORX_(CORRUPT_DATA,0,String_cString(directoryName));
               }
               break;
             }
@@ -599,7 +599,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
               String_delete(linkName);
               if (failError == ERROR_NONE)
               {
-                failError = ERRORX_(CORRUPT_DATA,0,linkName);
+                failError = ERRORX_(CORRUPT_DATA,0,String_cString(linkName));
               }
               break;
             }
@@ -754,7 +754,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
                   printError("unexpected data at end of hard link entry '%S'!\n",fileName);
                   if (failError == ERROR_NONE)
                   {
-                    failError = ERRORX_(CORRUPT_DATA,0,fileName);
+                    failError = ERRORX_(CORRUPT_DATA,0,String_cString(fileName));
                   }
                   break;
                 }
@@ -845,7 +845,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
               String_delete(fileName);
               if (failError == ERROR_NONE)
               {
-                failError = ERRORX_(CORRUPT_DATA,0,fileName);
+                failError = ERRORX_(CORRUPT_DATA,0,String_cString(fileName));
               }
               break;
             }
