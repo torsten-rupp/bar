@@ -68,7 +68,7 @@ typedef struct
   uint64 errorBytes;                       // sum of byste in entries with errors
   uint64 archiveBytes;                     // number of bytes in stored in archive
   double compressionRatio;                 // compression ratio
-  String name;                             // current name
+  String entryName;                        // current entry name
   uint64 entryDoneBytes;                   // number of bytes processed of current entry
   uint64 entryTotalBytes;                  // total number of bytes of current entry
   String storageName;                      // current storage name
