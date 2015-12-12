@@ -302,6 +302,14 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
 void plogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, ...);
 void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 
+String expandTemplate(String           string,
+                      const char       *templateString,
+                      ExpandMacroModes expandMacroMode,
+                      const TextMacro  macros[],
+                      uint             macroCount
+                     );
+
+
 /***********************************************************************\
 * Name   : logPostProcess
 * Purpose: log post processing
