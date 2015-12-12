@@ -65,8 +65,16 @@ typedef enum
 // length of UUID string (xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx)
 #define MISC_UUID_STRING_LENGTH 36
 
+// text macro patterns
+#define TEXT_MACRO_PATTERN_INTEGER   "[+-]{0,1}\\d+"
+#define TEXT_MACRO_PATTERN_INTEGER64 "[+-]{0,1}\\d+"
+#define TEXT_MACRO_PATTERN_DOUBLE    "[+-]{0,1}(\\d+|\\d+\.\\d*|\\d*\.\\d+)"
+#define TEXT_MACRO_PATTERN_CSTRING   "\\S+"
+#define TEXT_MACRO_PATTERN_STRING    "\\S+"
+
 /***************************** Datatypes *******************************/
-// text macro definitions
+
+// text macros
 typedef enum
 {
   TEXT_MACRO_TYPE_INTEGER,
@@ -88,18 +96,38 @@ typedef struct
     const char     *s;
     String         string;
   } value;
+  const char *pattern;
 } TextMacro;
+
+// expand types
+typedef enum
+{
+  EXPAND_MACRO_MODE_STRING,
+  EXPAND_MACRO_MODE_PATTERN
+} ExpandMacroModes;
+
+/***********************************************************************\
+* Name   : ExecuteIOFunction
+* Purpose: call back for read line
+* Input  : userData - user data
+*          line     - line
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 typedef void(*ExecuteIOFunction)(void        *userData,
                                  ConstString line
                                 );
 
+// performance values
 typedef struct
 {
   uint64 timeStamp;
   double value;
 } PerformanceValue;
 
+// performance filter (average of time range)
 typedef struct
 {
   uint             maxSeconds;
@@ -114,25 +142,28 @@ typedef struct
 
 /****************************** Macros *********************************/
 
-#define TEXT_MACRO_INTEGER(name,value) \
+#define TEXT_MACRO_INTEGER(name,value,pattern) \
   { \
     TEXT_MACRO_TYPE_INTEGER, \
     name, \
-    {value,0LL,0.0,NULL,NULL} \
+    {value,0LL,0.0,NULL,NULL}, \
+    pattern \
   }
-#define TEXT_MACRO_INTEGER64(name,value) \
+#define TEXT_MACRO_INTEGER64(name,value,pattern) \
   { \
     TEXT_MACRO_TYPE_INTEGER64, \
     name, \
-    {0,value,0.0,NULL,NULL} \
+    {0,value,0.0,NULL,NULL}, \
+    pattern \
   }
-#define TEXT_MACRO_DOUBLE(name,value) \
+#define TEXT_MACRO_DOUBLE(name,value,pattern) \
   { \
     TEXT_MACRO_TYPE_DOUBLE, \
     name, \
-    {0,0LL,value,NULL,NULL} \
+    {0,0LL,value,NULL,NULL}, \
+    pattern \
   }
-#define TEXT_MACRO_CSTRING(name,value) \
+#define TEXT_MACRO_CSTRING(name,value,pattern) \
   { \
     TEXT_MACRO_TYPE_CSTRING, \
     name, \
@@ -145,35 +176,40 @@ typedef struct
     {0,0LL,0.0,NULL,value} \
   }
 
-#define TEXT_MACRO_N_INTEGER(macro,_name,_value) \
+#define TEXT_MACRO_N_INTEGER(macro,_name,_value,_pattern) \
   do { \
     macro.type    = TEXT_MACRO_TYPE_INTEGER; \
     macro.name    = _name; \
     macro.value.i = _value; \
+    macro.pattern = _pattern; \
   } while (0)
-#define TEXT_MACRO_N_INTEGER64(macro,_name,_value) \
+#define TEXT_MACRO_N_INTEGER64(macro,_name,_value,_pattern) \
   do { \
     macro.type    = TEXT_MACRO_TYPE_INTEGER64; \
     macro.name    = _name; \
     macro.value.l = _value; \
+    macro.pattern = _pattern; \
   } while (0)
-#define TEXT_MACRO_N_DOUBLE(macro,_name,_value) \
+#define TEXT_MACRO_N_DOUBLE(macro,_name,_value,_pattern) \
   do { \
     macro.type    = TEXT_MACRO_TYPE_DOUBLE; \
     macro.name    = _name; \
     macro.value.d = _value; \
+    macro.pattern = _pattern; \
   } while (0)
-#define TEXT_MACRO_N_CSTRING(macro,_name,_value) \
+#define TEXT_MACRO_N_CSTRING(macro,_name,_value,_pattern) \
   do { \
     macro.type    = TEXT_MACRO_TYPE_CSTRING; \
     macro.name    = _name; \
     macro.value.s = _value; \
+    macro.pattern = _pattern; \
   } while (0)
-#define TEXT_MACRO_N_STRING(macro,_name,_value) \
+#define TEXT_MACRO_N_STRING(macro,_name,_value,_pattern) \
   do { \
     macro.type         = TEXT_MACRO_TYPE_STRING; \
     macro.name         = _name; \
     macro.value.string = (String)_value; \
+    macro.pattern = _pattern; \
   } while (0)
 
 /***************************** Forwards ********************************/
@@ -334,7 +370,7 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize);
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : Misc_expandMacrosCString
+* Name   : Misc_expandMacros
 * Purpose: expand macros %<name>:<format> in string
 * Input  : string               - string variable
 *          templateStruing      - template string with macros
@@ -346,11 +382,12 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize);
 * Notes  : -
 \***********************************************************************/
 
-String Misc_expandMacros(String          string,
-                         const char      *templateString,
-                         const TextMacro macros[],
-                         uint            macroCount,
-                         bool            expandMacroCharacter
+String Misc_expandMacros(String           string,
+                         const char       *templateString,
+                         ExpandMacroModes expandMacroMode,
+                         const TextMacro  macros[],
+                         uint             macroCount,
+                         bool             expandMacroCharacter
                         );
 
 /*---------------------------------------------------------------------*/
@@ -411,6 +448,12 @@ Errors Misc_executeCommand(const char        *commandTemplate,
 Errors Misc_executeScript(const char        *scriptTemplate,
                           const TextMacro   macros[],
                           uint              macroCount,
+                          ExecuteIOFunction stdoutExecuteIOFunction,
+                          void              *stdoutExecuteIOUserData,
+                          ExecuteIOFunction stderrExecuteIOFunction,
+                          void              *stderrExecuteIOUserData
+                         );
+Errors Misc_executeScript2(const char       *script,
                           ExecuteIOFunction stdoutExecuteIOFunction,
                           void              *stdoutExecuteIOUserData,
                           ExecuteIOFunction stderrExecuteIOFunction,

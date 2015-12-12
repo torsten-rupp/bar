@@ -819,11 +819,12 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
 
 /*---------------------------------------------------------------------*/
 
-String Misc_expandMacros(String          string,
-                         const char      *templateString,
-                         const TextMacro macros[],
-                         uint            macroCount,
-                         bool            expandMacroCharacter
+String Misc_expandMacros(String           string,
+                         const char       *templateString,
+                         ExpandMacroModes expandMacroMode,
+                         const TextMacro  macros[],
+                         uint             macroCount,
+                         bool             expandMacroCharacter
                         )
 {
   #define APPEND_CHAR(string,index,ch) \
@@ -875,7 +876,7 @@ String Misc_expandMacros(String          string,
           if (expandMacroCharacter)
           {
             String_appendChar(expanded,'%');
-          } 
+          }
           else
           {
             String_appendCString(expanded,"%%");
@@ -971,57 +972,71 @@ String Misc_expandMacros(String          string,
 
         if (j < macroCount)
         {
-          // get default format if no format given
-          if (strlen(format) == 0)
+          switch (expandMacroMode)
           {
-            switch (macros[j].type)
-            {
-              case TEXT_MACRO_TYPE_INTEGER:
-                strcpy(format,"%d");
-                break;
-              case TEXT_MACRO_TYPE_INTEGER64:
-                strcpy(format,"%lld");
-                break;
-              case TEXT_MACRO_TYPE_DOUBLE:
-                strcpy(format,"%lf");
-                break;
-              case TEXT_MACRO_TYPE_CSTRING:
-                strcpy(format,"%s");
-                break;
-              case TEXT_MACRO_TYPE_STRING:
-                strcpy(format,"%S");
-                break;
-              #ifndef NDEBUG
-                default:
-                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  break; /* not reached */
-              #endif /* NDEBUG */
-            }
-          }
+            case EXPAND_MACRO_MODE_STRING:
+              // get default format if no format given
+              if (strlen(format) == 0)
+              {
+                switch (macros[j].type)
+                {
+                  case TEXT_MACRO_TYPE_INTEGER:
+                    strcpy(format,"%d");
+                    break;
+                  case TEXT_MACRO_TYPE_INTEGER64:
+                    strcpy(format,"%lld");
+                    break;
+                  case TEXT_MACRO_TYPE_DOUBLE:
+                    strcpy(format,"%lf");
+                    break;
+                  case TEXT_MACRO_TYPE_CSTRING:
+                    strcpy(format,"%s");
+                    break;
+                  case TEXT_MACRO_TYPE_STRING:
+                    strcpy(format,"%S");
+                    break;
+                  #ifndef NDEBUG
+                    default:
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                      break; /* not reached */
+                  #endif /* NDEBUG */
+                }
+              }
 
-          // expand macro
-          switch (macros[j].type)
-          {
-            case TEXT_MACRO_TYPE_INTEGER:
-              String_format(expanded,format,macros[j].value.i);
+              // expand macro into string
+              switch (macros[j].type)
+              {
+                case TEXT_MACRO_TYPE_INTEGER:
+                  String_format(expanded,format,macros[j].value.i);
+                  break;
+                case TEXT_MACRO_TYPE_INTEGER64:
+                  String_format(expanded,format,macros[j].value.l);
+                  break;
+                case TEXT_MACRO_TYPE_DOUBLE:
+                  String_format(expanded,format,macros[j].value.d);
+                  break;
+                case TEXT_MACRO_TYPE_CSTRING:
+                  String_format(expanded,format,macros[j].value.s);
+                  break;
+                case TEXT_MACRO_TYPE_STRING:
+                  String_format(expanded,format,macros[j].value.string);
+                  break;
+                #ifndef NDEBUG
+                  default:
+                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    break; /* not reached */
+                #endif /* NDEBUG */
+              }
               break;
-            case TEXT_MACRO_TYPE_INTEGER64:
-              String_format(expanded,format,macros[j].value.l);
-              break;
-            case TEXT_MACRO_TYPE_DOUBLE:
-              String_format(expanded,format,macros[j].value.d);
-              break;
-            case TEXT_MACRO_TYPE_CSTRING:
-              String_format(expanded,format,macros[j].value.s);
-              break;
-            case TEXT_MACRO_TYPE_STRING:
-              String_format(expanded,format,macros[j].value.string);
+            case EXPAND_MACRO_MODE_PATTERN:
+              // expand macro into pattern
+              String_appendCString(expanded,macros[j].pattern);
               break;
             #ifndef NDEBUG
               default:
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
                 break; /* not reached */
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
           }
         }
         else
@@ -1112,7 +1127,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
     StringList_init(&argumentList);
 
     // expand command line
-    Misc_expandMacros(commandLine,commandTemplate,macros,macroCount,TRUE);
+    Misc_expandMacros(commandLine,commandTemplate,EXPAND_MACRO_MODE_STRING,macros,macroCount,TRUE);
     printInfo(3,"Execute command '%s'...",String_cString(commandLine));
 
     // parse command line
@@ -1216,7 +1231,7 @@ Errors Misc_executeScript(const char        *scriptTemplate,
     tmpFileName = String_new();
 
     // expand script
-    Misc_expandMacros(script,scriptTemplate,macros,macroCount,TRUE);
+    Misc_expandMacros(script,scriptTemplate,EXPAND_MACRO_MODE_STRING,macros,macroCount,TRUE);
     printInfo(3,"Execute script...");
 
 #warning todo
@@ -1294,6 +1309,107 @@ String_setCString(command,"/bin/sh");
     String_delete(tmpFileName);
     String_delete(command);
     String_delete(script);
+  }
+
+  return error;
+}
+
+Errors Misc_executeScript2(const char        *script,
+                          ExecuteIOFunction stdoutExecuteIOFunction,
+                          void              *stdoutExecuteIOUserData,
+                          ExecuteIOFunction stderrExecuteIOFunction,
+                          void              *stderrExecuteIOUserData
+                         )
+{
+  Errors          error;
+  String          command;
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+  String          tmpFileName;
+  const char      *path;
+  String          fileName;
+  bool            foundFlag;
+  FileHandle      fileHandle;
+  char const      *arguments[3];
+
+  error = ERROR_NONE;
+  if (script != NULL)
+  {
+    command     = String_new();
+    tmpFileName = String_new();
+
+#warning todo
+#if 0
+    // parse script #!-line
+    String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
+    if (!String_getNextToken(&stringTokenizer,&token,NULL))
+    {
+      String_doneTokenizer(&stringTokenizer);
+      String_delete(command);
+      String_delete(script);
+      return ERRORX_PARSE_COMMAND;
+    }
+    File_setFileName(command,token);
+#endif
+String_setCString(command,"/bin/sh");
+
+    // find command in PATH
+    path = getenv("PATH");
+    if (path != NULL)
+    {
+      fileName  = File_newFileName();
+      foundFlag = FALSE;
+      String_initTokenizerCString(&stringTokenizer,path,":","",FALSE);
+      while (String_getNextToken(&stringTokenizer,&token,NULL) && !foundFlag)
+      {
+        File_setFileName(fileName,token);
+        File_appendFileName(fileName,command);
+        if (File_exists(fileName))
+        {
+          File_setFileName(command,fileName);
+          foundFlag = TRUE;
+        }
+      }
+      String_doneTokenizer(&stringTokenizer);
+      File_deleteFileName(fileName);
+    }
+
+    // create temporary script file
+    File_getTmpFileName(tmpFileName,NULL,NULL);
+    error = File_open(&fileHandle,tmpFileName,FILE_OPEN_WRITE);
+    if (error != ERROR_NONE)
+    {
+      (void)File_delete(tmpFileName,FALSE);
+      String_delete(tmpFileName);
+      String_delete(command);
+      return ERROR_OPEN_FILE;
+    }
+    error = File_write(&fileHandle,script,strlen(script));
+    if (error != ERROR_NONE)
+    {
+      (void)File_delete(tmpFileName,FALSE);
+      String_delete(tmpFileName);
+      String_delete(command);
+      return ERROR_OPEN_FILE;
+    }
+    File_close(&fileHandle);
+
+    // get arguments
+    arguments[0] = String_cString(command);
+    arguments[1] = String_cString(tmpFileName);
+    arguments[2] = NULL;
+
+    // execute command
+    error = execute(String_cString(command),
+                    arguments,
+                    CALLBACK(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
+                    CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData)
+                   );
+
+    // free resources
+    (void)File_delete(tmpFileName,FALSE);
+    String_delete(tmpFileName);
+    String_delete(command);
   }
 
   return error;
