@@ -302,7 +302,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
   }
   String_set(restoreInfo->statusInfo.storageName,Storage_getPrintableName(storageSpecifier,archiveName));
   restoreInfo->statusInfo.storageDoneBytes  = 0LL;
-  restoreInfo->statusInfo.storageTotalBytes = Storage_getSize(&storageHandle);
+  restoreInfo->statusInfo.storageTotalBytes = Archive_getSize(&archiveInfo);
   updateStatusInfo(restoreInfo);
 
   // read archive entries
@@ -334,7 +334,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
     }
 
     // update storage status
-    (void)Storage_tell(&storageHandle,&restoreInfo->statusInfo.storageDoneBytes);
+    restoreInfo->statusInfo.storageDoneBytes = Archive_tell(&archiveInfo);
     updateStatusInfo(restoreInfo);
 
     switch (archiveEntryType)
@@ -2194,7 +2194,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
     }
 
     // update storage status
-    (void)Storage_tell(&storageHandle,&restoreInfo->statusInfo.storageDoneBytes);
+    restoreInfo->statusInfo.storageDoneBytes = Archive_tell(&archiveInfo);
     updateStatusInfo(restoreInfo);
   }
 
