@@ -80,6 +80,17 @@ typedef struct
   String lastOutputLine;
 } ConsoleSave;
 
+// template expand handle
+typedef struct
+{
+  const char       *templateString;
+  ExpandMacroModes expandMacroMode;
+  time_t           time;
+  bool             initFinalFlag;
+  const TextMacro  *textMacros;
+  uint             textMacroCount;
+} TemplateHandle;
+
 /***************************** Variables *******************************/
 extern GlobalOptions globalOptions;          // global options
 extern String        tmpDirectory;           // temporary directory
@@ -302,13 +313,76 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
 void plogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, ...);
 void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 
-String expandTemplate(String           string,
-                      const char       *templateString,
-                      ExpandMacroModes expandMacroMode,
-                      const TextMacro  macros[],
-                      uint             macroCount
-                     );
+/***********************************************************************\
+* Name   : templateInit
+* Purpose: init template
+* Input  : templateHandle  - template handle variable
+*          templateString  - template string
+*          expandMacroMode - expand macro mode
+*          time            - time or 0
+* Output : templateHandle  - template handle
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
+void templateInit(TemplateHandle   *templateHandle,
+                  const char       *templateString,
+                  ExpandMacroModes expandMacroMode,
+                  time_t           time,
+                  bool             initFinalFlag
+                 );
+
+/***********************************************************************\
+* Name   : templateMacros
+* Purpose: add template macros
+* Input  : templateHandle - template handle
+*          textMacros     - macros array
+*          textMacroCount - number of macros
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void templateMacros(TemplateHandle   *templateHandle,
+                    const TextMacro  textMacros[],
+                    uint             textMacroCount
+                   );
+
+/***********************************************************************\
+* Name   : templateDone
+* Purpose: template done
+* Input  : templateHandle - template handle
+*          string         - string variable (can be NULL)
+* Output : -
+* Return : expanded templated string
+* Notes  : if string variable is NULL, new string is allocated and must
+*          be freed!
+\***********************************************************************/
+
+String templateDone(TemplateHandle *templateHandle,
+                    String         string
+                   );
+
+/***********************************************************************\
+* Name   : expandTemplate
+* Purpose: expand template
+* Input  : templateString  - template string
+*          expandMacroMode - expand macro mode
+*          time            - time or 0
+*          textMacros      - macros array
+*          textMacroCount  - number of macros
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+String expandTemplate(const char       *templateString,
+                      ExpandMacroModes expandMacroMode,
+                      time_t           time,
+                      bool             initFinalFlag,
+                      const TextMacro  textMacros[],
+                      uint             textMacroCount
+                     );
 
 /***********************************************************************\
 * Name   : logPostProcess

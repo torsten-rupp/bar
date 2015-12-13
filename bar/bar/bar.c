@@ -1080,8 +1080,22 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
 LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
 {
+  struct sigaction signalAction;
+
   UNUSED_VARIABLE(siginfo);
   UNUSED_VARIABLE(context);
+
+  // deinstall signal handlers
+  sigfillset(&signalAction.sa_mask);
+  signalAction.sa_flags   = 0;
+  signalAction.sa_handler = SIG_DFL;
+  sigaction(SIGINT,&signalAction,NULL);
+  sigaction(SIGQUIT,&signalAction,NULL);
+  sigaction(SIGTERM,&signalAction,NULL);
+  sigaction(SIGBUS,&signalAction,NULL);
+  sigaction(SIGILL,&signalAction,NULL);
+  sigaction(SIGFPE,&signalAction,NULL);
+  sigaction(SIGSEGV,&signalAction,NULL);
 
   // delete pid file
   deletePIDFile();
@@ -3339,15 +3353,52 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...)
   va_end(arguments);
 }
 
-String expandTemplate(String           string,
-                      const char       *templateString,
-                      ExpandMacroModes expandMacroMode,
-                      const TextMacro  macros[],
-                      uint             macroCount
-                     )
+void templateInit(TemplateHandle   *templateHandle,
+                  const char       *templateString,
+                  ExpandMacroModes expandMacroMode,
+                  time_t           time,
+                  bool             initFinalFlag
+                 )
 {
-  TextMacro *textMacros;
-  uint      textMacroCount;
+  assert(templateHandle != NULL);
+
+  // init variables
+  templateHandle->templateString  = templateString;
+  templateHandle->expandMacroMode = expandMacroMode;
+  templateHandle->time            = time;
+  templateHandle->initFinalFlag   = initFinalFlag;
+  templateHandle->textMacros      = NULL;
+  templateHandle->textMacroCount  = 0;
+}
+
+void templateMacros(TemplateHandle   *templateHandle,
+                    const TextMacro  textMacros[],
+                    uint             textMacroCount
+                   )
+{
+  TextMacro *newTextMacros;
+  uint      newTextMacroCount;
+
+  assert(templateHandle != NULL);
+
+  // add macros
+  newTextMacroCount = templateHandle->textMacroCount+textMacroCount;
+  newTextMacros = (TextMacro*)realloc(templateHandle->textMacros,newTextMacroCount*sizeof(TextMacro));
+  if (newTextMacros == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  memcpy(&newTextMacros[templateHandle->textMacroCount],textMacros,textMacroCount*sizeof(TextMacro));
+  templateHandle->textMacros     = newTextMacros;
+  templateHandle->textMacroCount = newTextMacroCount;
+}
+
+String templateDone(TemplateHandle *templateHandle,
+                    String         string
+                   )
+{
+  TextMacro *newTextMacros;
+  uint      newTextMacroCount;
   #ifdef HAVE_LOCALTIME_R
     struct tm tmBuffer;
   #endif /* HAVE_LOCALTIME_R */
@@ -3362,11 +3413,16 @@ String expandTemplate(String           string,
   uint      z;
   int       d;
 
+  assert(templateHandle != NULL);
+
+  // init variables
+  if (string == NULL) string = String_new();
+
   // get week numbers
   #ifdef HAVE_LOCALTIME_R
-    tm = localtime_r(&time,&tmBuffer);
+    tm = localtime_r(&templateHandle->time,&tmBuffer);
   #else /* not HAVE_LOCALTIME_R */
-    tm = localtime(&time);
+    tm = localtime(&templateHandle->time);
   #endif /* HAVE_LOCALTIME_R */
   assert(tm != NULL);
   strftime(buffer,sizeof(buffer)-1,"%U",tm); buffer[sizeof(buffer)-1] = '\0';
@@ -3374,27 +3430,30 @@ String expandTemplate(String           string,
   strftime(buffer,sizeof(buffer)-1,"%W",tm); buffer[sizeof(buffer)-1] = '\0';
   weekNumberW = (uint)atoi(buffer);
 
-  // expand macros
-  textMacros = (TextMacro*)malloc((macroCount+4)*sizeof(TextMacro));
-  if (textMacros == NULL)
+  // add week macros
+  newTextMacroCount = templateHandle->textMacroCount+4;
+  newTextMacros = (TextMacro*)realloc(templateHandle->textMacros,newTextMacroCount*sizeof(TextMacro));
+  if (newTextMacros == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  memcpy(textMacros,macros,macroCount*sizeof(TextMacro));
-  TEXT_MACRO_N_INTEGER(textMacros[macroCount+0],"%U2",(weekNumberU%2)+1,"[12]"  );
-  TEXT_MACRO_N_INTEGER(textMacros[macroCount+1],"%U4",(weekNumberU%4)+1,"[1234]");
-  TEXT_MACRO_N_INTEGER(textMacros[macroCount+2],"%W2",(weekNumberW%2)+1,"[12]"  );
-  TEXT_MACRO_N_INTEGER(textMacros[macroCount+3],"%W4",(weekNumberW%4)+1,"[1234]");
+  TEXT_MACRO_N_INTEGER(newTextMacros[templateHandle->textMacroCount+0],"%U2",(weekNumberU%2)+1,"[12]"  );
+  TEXT_MACRO_N_INTEGER(newTextMacros[templateHandle->textMacroCount+1],"%U4",(weekNumberU%4)+1,"[1234]");
+  TEXT_MACRO_N_INTEGER(newTextMacros[templateHandle->textMacroCount+2],"%W2",(weekNumberW%2)+1,"[12]"  );
+  TEXT_MACRO_N_INTEGER(newTextMacros[templateHandle->textMacroCount+3],"%W4",(weekNumberW%4)+1,"[1234]");
+  templateHandle->textMacros     = newTextMacros;
+  templateHandle->textMacroCount = newTextMacroCount;
+
+  // expand macros
   Misc_expandMacros(string,
-                    templateString,
-                    expandMacroMode,
-                    textMacros,
-                    macroCount+4,
+                    templateHandle->templateString,
+                    templateHandle->expandMacroMode,
+                    templateHandle->textMacros,
+                    templateHandle->textMacroCount,
                     FALSE
                    );
-  free(textMacros);
 
-  // expand date/time macros, replace %% -> %, %# -> #
+  // expand date/time macros, replace %% -> %
   i = 0L;
   while (i < String_length(string))
   {
@@ -3410,12 +3469,49 @@ String expandTemplate(String           string,
               String_remove(string,i,1);
               i += 1L;
               break;
-            case '#':
-              // %# -> #
-              String_remove(string,i,1);
-              i += 1L;
-              break;
-            default:
+            case 'a':
+            case 'A':
+            case 'b':
+            case 'B':
+            case 'c':
+            case 'C':
+            case 'd':
+            case 'D':
+            case 'e':
+            case 'E':
+            case 'F':
+            case 'g':
+            case 'G':
+            case 'h':
+            case 'H':
+            case 'I':
+            case 'j':
+            case 'k':
+            case 'l':
+            case 'm':
+            case 'M':
+            case 'n':
+            case 'O':
+            case 'p':
+            case 'P':
+            case 'r':
+            case 'R':
+            case 's':
+            case 'S':
+            case 't':
+            case 'T':
+            case 'u':
+            case 'U':
+            case 'V':
+            case 'w':
+            case 'W':
+            case 'x':
+            case 'X':
+            case 'y':
+            case 'Y':
+            case 'z':
+            case 'Z':
+            case '+':
               // format date/time part
               switch (String_index(string,i+1))
               {
@@ -3441,7 +3537,7 @@ String expandTemplate(String           string,
               length = strftime(buffer,sizeof(buffer)-1,format,tm); buffer[sizeof(buffer)-1] = '\0';
 
               // insert into string
-              switch (expandMacroMode)
+              switch (templateHandle->expandMacroMode)
               {
                 case EXPAND_MACRO_MODE_STRING:
                   String_insertBuffer(string,i,buffer,length);
@@ -3466,11 +3562,16 @@ String expandTemplate(String           string,
                   #endif /* NDEBUG */
               }
               break;
+            default:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+              // keep %x
+              i += 2L;
+              break;
           }
         }
         else
         {
-          // % at end of string
+          // keep % at end of string
           i += 1L;
         }
         break;
@@ -3480,7 +3581,36 @@ String expandTemplate(String           string,
     }
   }
 
+  // free resources
+  free(templateHandle->textMacros);
+
   return string;
+}
+
+String expandTemplate(const char       *templateString,
+                      ExpandMacroModes expandMacroMode,
+                      time_t           time,
+                      bool             initFinalFlag,
+                      const TextMacro  textMacros[],
+                      uint             textMacroCount
+                     )
+{
+  TemplateHandle templateHandle;
+
+  templateInit(&templateHandle,
+               templateString,
+               expandMacroMode,
+               time,
+               initFinalFlag
+              );
+  templateMacros(&templateHandle,
+                 textMacros,
+                 textMacroCount
+                );
+
+  return templateDone(&templateHandle,
+                      NULL  // string
+                     );
 }
 
 /***********************************************************************\
