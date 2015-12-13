@@ -733,12 +733,14 @@ LOCAL bool StorageWebDAV_isServerAllocationPending(StorageHandle *storageHandle)
 
 LOCAL Errors StorageWebDAV_preProcess(StorageHandle *storageHandle,
                                       ConstString   archiveName,
+                                      time_t        timestamp,
                                       bool          initialFlag
                                      )
 {
   Errors error;
   #ifdef HAVE_CURL
     TextMacro textMacros[1];
+    String    script;
   #endif /* HAVE_CURL */
 
   assert(storageHandle != NULL);
@@ -759,12 +761,29 @@ LOCAL Errors StorageWebDAV_preProcess(StorageHandle *storageHandle,
           if (error == ERROR_NONE)
           {
             printInfo(0,"Write pre-processing...");
-            error = Misc_executeCommand(String_cString(globalOptions.webdav.writePreProcessCommand),
-                                        textMacros,
-                                        SIZE_OF_ARRAY(textMacros),
-                                        CALLBACK(executeIOOutput,NULL),
-                                        CALLBACK(executeIOOutput,NULL)
-                                       );
+
+            // get script
+            script = expandTemplate(String_cString(globalOptions.webdav.writePreProcessCommand),
+                                    EXPAND_MACRO_MODE_STRING,
+                                    timestamp,
+                                    initialFlag,
+                                    textMacros,
+                                    SIZE_OF_ARRAY(textMacros)
+                                   );
+            if (script != NULL)
+            {
+              // execute script
+              error = Misc_executeScript(String_cString(script),
+                                         CALLBACK(executeIOOutput,NULL),
+                                         CALLBACK(executeIOOutput,NULL)
+                                        );
+              String_delete(script);
+            }
+            else
+            {
+              error = ERROR_EXPAND_TEMPLATE;
+            }
+
             printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
           }
         }
@@ -782,12 +801,14 @@ LOCAL Errors StorageWebDAV_preProcess(StorageHandle *storageHandle,
 
 LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
                                        ConstString   archiveName,
+                                       time_t        timestamp,
                                        bool          finalFlag
                                       )
 {
   Errors error;
   #ifdef HAVE_CURL
     TextMacro textMacros[1];
+    String    script;
   #endif /* HAVE_CURL */
 
   assert(storageHandle != NULL);
@@ -808,12 +829,29 @@ LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
           if (error == ERROR_NONE)
           {
             printInfo(0,"Write post-processing...");
-            error = Misc_executeCommand(String_cString(globalOptions.webdav.writePostProcessCommand),
-                                        textMacros,
-                                        SIZE_OF_ARRAY(textMacros),
-                                        CALLBACK(executeIOOutput,NULL),
-                                        CALLBACK(executeIOOutput,NULL)
-                                       );
+
+            // get script
+            script = expandTemplate(String_cString(globalOptions.webdav.writePostProcessCommand),
+                                    EXPAND_MACRO_MODE_STRING,
+                                    timestamp,
+                                    finalFlag,
+                                    textMacros,
+                                    SIZE_OF_ARRAY(textMacros)
+                                   );
+            if (script != NULL)
+            {
+              // execute script
+              error = Misc_executeScript(String_cString(script),
+                                         CALLBACK(executeIOOutput,NULL),
+                                         CALLBACK(executeIOOutput,NULL)
+                                        );
+              String_delete(script);
+            }
+            else
+            {
+              error = ERROR_EXPAND_TEMPLATE;
+            }
+
             printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
           }
         }

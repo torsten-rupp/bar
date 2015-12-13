@@ -471,10 +471,15 @@ LOCAL bool StorageSFTP_isServerAllocationPending(StorageHandle *storageHandle)
 
 LOCAL Errors StorageSFTP_preProcess(StorageHandle *storageHandle,
                                     ConstString   archiveName,
+                                    time_t        timestamp,
                                     bool          initialFlag
                                    )
 {
   Errors error;
+  #ifdef HAVE_SSH2
+    TextMacro textMacros[1];
+    String    script;
+  #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
@@ -482,8 +487,6 @@ LOCAL Errors StorageSFTP_preProcess(StorageHandle *storageHandle,
   error = ERROR_NONE;
   #ifdef HAVE_SSH2
     {
-      TextMacro textMacros[1];
-
       if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
         if (!initialFlag)
@@ -497,12 +500,29 @@ LOCAL Errors StorageSFTP_preProcess(StorageHandle *storageHandle,
             if (error == ERROR_NONE)
             {
               printInfo(0,"Write pre-processing...");
-              error = Misc_executeCommand(String_cString(globalOptions.sftp.writePreProcessCommand),
-                                          textMacros,
-                                          SIZE_OF_ARRAY(textMacros),
-                                          CALLBACK(executeIOOutput,NULL),
-                                          CALLBACK(executeIOOutput,NULL)
-                                         );
+
+              // get script
+              script = expandTemplate(String_cString(globalOptions.sftp.writePreProcessCommand),
+                                      EXPAND_MACRO_MODE_STRING,
+                                      timestamp,
+                                      initialFlag,
+                                      textMacros,
+                                      SIZE_OF_ARRAY(textMacros)
+                                     );
+              if (script != NULL)
+              {
+                // execute script
+                error = Misc_executeScript(String_cString(script),
+                                           CALLBACK(executeIOOutput,NULL),
+                                           CALLBACK(executeIOOutput,NULL)
+                                          );
+                String_delete(script);
+              }
+              else
+              {
+                error = ERROR_EXPAND_TEMPLATE;
+              }
+
               printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
           }
@@ -518,10 +538,15 @@ LOCAL Errors StorageSFTP_preProcess(StorageHandle *storageHandle,
 
 LOCAL Errors StorageSFTP_postProcess(StorageHandle *storageHandle,
                                      ConstString   archiveName,
+                                     time_t        timestamp,
                                      bool          finalFlag
                                     )
 {
   Errors error;
+  #ifdef HAVE_SSH2
+    TextMacro textMacros[1];
+    String    script;
+  #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
@@ -529,7 +554,6 @@ LOCAL Errors StorageSFTP_postProcess(StorageHandle *storageHandle,
   error = ERROR_NONE;
   #ifdef HAVE_SSH2
     {
-      TextMacro textMacros[1];
 
       if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
       {
@@ -544,12 +568,29 @@ LOCAL Errors StorageSFTP_postProcess(StorageHandle *storageHandle,
             if (error == ERROR_NONE)
             {
               printInfo(0,"Write post-processing...");
-              error = Misc_executeCommand(String_cString(globalOptions.sftp.writePostProcessCommand),
-                                          textMacros,
-                                          SIZE_OF_ARRAY(textMacros),
-                                          CALLBACK(executeIOOutput,NULL),
-                                          CALLBACK(executeIOOutput,NULL)
-                                         );
+
+              // get script
+              script = expandTemplate(String_cString(globalOptions.sftp.writePostProcessCommand),
+                                      EXPAND_MACRO_MODE_STRING,
+                                      timestamp,
+                                      finalFlag,
+                                      textMacros,
+                                      SIZE_OF_ARRAY(textMacros)
+                                     );
+              if (script != NULL)
+              {
+                // execute script
+                error = Misc_executeScript(String_cString(script),
+                                           CALLBACK(executeIOOutput,NULL),
+                                           CALLBACK(executeIOOutput,NULL)
+                                          );
+                String_delete(script);
+              }
+              else
+              {
+                error = ERROR_EXPAND_TEMPLATE;
+              }
+
               printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
           }

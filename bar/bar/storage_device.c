@@ -472,6 +472,7 @@ LOCAL Errors StorageDevice_done(StorageHandle *storageHandle)
 
 LOCAL Errors StorageDevice_preProcess(StorageHandle *storageHandle,
                                       ConstString   archiveName,
+                                      time_t        timestamp,
                                       bool          initialFlag
                                      )
 {
@@ -506,6 +507,7 @@ LOCAL Errors StorageDevice_preProcess(StorageHandle *storageHandle,
 
 LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
                                        ConstString   archiveName,
+                                       time_t        timestamp,
                                        bool          finalFlag
                                       )
 {

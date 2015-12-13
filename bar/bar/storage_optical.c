@@ -794,10 +794,13 @@ LOCAL Errors StorageOptical_done(StorageHandle *storageHandle)
 
 LOCAL Errors StorageOptical_preProcess(StorageHandle *storageHandle,
                                        ConstString   archiveName,
+                                       time_t        timestamp,
                                        bool          initialFlag
                                       )
 {
-  Errors error;
+  TextMacro textMacros[2];
+  Errors    error;
+  String    script;
 
   assert(storageHandle != NULL);
   assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
@@ -822,6 +825,32 @@ LOCAL Errors StorageOptical_preProcess(StorageHandle *storageHandle,
       // request load new medium
       error = requestNewOpticalMedium(storageHandle,FALSE);
     }
+
+    // init macros
+    TEXT_MACRO_N_STRING (textMacros[0],"%device",storageHandle->storageSpecifier.deviceName,NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->requestedVolumeNumber,      NULL);
+
+    // get pre script
+    script = expandTemplate(String_cString(storageHandle->opticalDisk.write.writePreProcessCommand),
+                            EXPAND_MACRO_MODE_STRING,
+                            timestamp,
+                            initialFlag,
+                            textMacros,
+                            SIZE_OF_ARRAY(textMacros)
+                           );
+    if (script != NULL)
+    {
+      // execute script
+      error = Misc_executeScript(String_cString(script),
+                                 CALLBACK(executeIOOutput,NULL),
+                                 CALLBACK(executeIOOutput,NULL)
+                                );
+      String_delete(script);
+    }
+    else
+    {
+      error = ERROR_EXPAND_TEMPLATE;
+    }
   }
 
   return error;
@@ -829,6 +858,7 @@ LOCAL Errors StorageOptical_preProcess(StorageHandle *storageHandle,
 
 LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
                                         ConstString   archiveName,
+                                        time_t        timestamp,
                                         bool          finalFlag
                                        )
 {
@@ -839,6 +869,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
   String     fileName;
   FileInfo   fileInfo;
   bool       retryFlag;
+  String     script;
 
   assert(storageHandle != NULL);
   assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
@@ -1064,6 +1095,28 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
 
       // free resources
       StringList_done(&stderrList);
+    }
+
+    // get post script
+    script = expandTemplate(String_cString(storageHandle->opticalDisk.write.writePostProcessCommand),
+                            EXPAND_MACRO_MODE_STRING,
+                            timestamp,
+                            finalFlag,
+                            textMacros,
+                            SIZE_OF_ARRAY(textMacros)
+                           );
+    if (script != NULL)
+    {
+      // execute script
+      error = Misc_executeScript(String_cString(script),
+                                 CALLBACK(executeIOOutput,NULL),
+                                 CALLBACK(executeIOOutput,NULL)
+                                );
+      String_delete(script);
+    }
+    else
+    {
+      error = ERROR_EXPAND_TEMPLATE;
     }
   }
   else

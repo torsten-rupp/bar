@@ -3268,8 +3268,9 @@ LOCAL void jobThreadCode(void)
   ArchiveTypes     archiveType;
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   String           scheduleCustomText;
+  String           script;
+  time_t           startTime;
   StringList       archiveFileNameList;
-  ConstString      script;
   TextMacro        textMacros[1];
   StaticString     (s,64);
   uint             n;
@@ -3283,6 +3284,7 @@ LOCAL void jobThreadCode(void)
   PatternList_init(&compressExcludePatternList);
   DeltaSourceList_init(&deltaSourceList);
   scheduleCustomText = String_new();
+  script             = String_new();
 
   while (!quitFlag)
   {
@@ -3334,6 +3336,7 @@ fprintf(stderr,"%s, %d: start %s: %s\n",__FILE__,__LINE__,String_cString(jobNode
       String_clear(scheduleCustomText);
       jobOptions.noStorageFlag = FALSE;
     }
+    startTime = time(NULL);
 
     // unlock (Note: job is now protected by running state)
     Semaphore_unlock(&jobList.lock);
@@ -3364,20 +3367,30 @@ fprintf(stderr,"%s, %d: start %s: %s\n",__FILE__,__LINE__,String_cString(jobNode
     {
       if (jobNode->jobOptions.preProcessScript != NULL)
       {
-        // expand script
         TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name),NULL);
-        script = Misc_expandMacros(String_new(),
-                                  jobNode->jobOptions.preProcessScript,
-                                  EXPAND_MACRO_MODE_STRING,
-                                  textMacros,SIZE_OF_ARRAY(textMacros),
-                                  TRUE
-                                 );
 
-        // execute script
-        jobNode->runningInfo.error = Misc_executeScript2(script,
-                                                        CALLBACK(executeIOOutput,NULL),
-                                                        CALLBACK(executeIOOutput,NULL)
-                                                       );
+        // get script
+        script = expandTemplate(jobNode->jobOptions.preProcessScript,
+                                EXPAND_MACRO_MODE_STRING,
+                                startTime,
+                                TRUE,
+                                textMacros,
+                                SIZE_OF_ARRAY(textMacros)
+                               );
+        if (script != NULL)
+        {
+          // execute script
+          jobNode->runningInfo.error = Misc_executeScript(script,
+                                                          CALLBACK(executeIOOutput,NULL),
+                                                          CALLBACK(executeIOOutput,NULL)
+                                                         );
+          String_delete(script);
+        }
+        else
+        {
+          jobNode->runningInfo.error = ERROR_EXPAND_TEMPLATE;
+        }
+
         if (jobNode->runningInfo.error != ERROR_NONE)
         {
           logMessage(&logHandle,
@@ -3555,20 +3568,30 @@ NULL,//                                                        scheduleTitle,
     {
       if (jobNode->jobOptions.postProcessScript != NULL)
       {
-        // expand script
         TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name),NULL);
-        script = Misc_expandMacros(String_new(),
-                                  jobNode->jobOptions.postProcessScript,
-                                  EXPAND_MACRO_MODE_STRING,
-                                  textMacros,SIZE_OF_ARRAY(textMacros),
-                                  TRUE
-                                 );
 
-        // execute script
-        jobNode->runningInfo.error = Misc_executeScript2(script,
-                                                        CALLBACK(executeIOOutput,NULL),
-                                                        CALLBACK(executeIOOutput,NULL)
-                                                       );
+        // get script
+        script = expandTemplate(jobNode->jobOptions.postProcessScript,
+                                EXPAND_MACRO_MODE_STRING,
+                                startTime,
+                                TRUE,
+                                textMacros,
+                                SIZE_OF_ARRAY(textMacros)
+                               );
+        if (script != NULL)
+        {
+          // execute script
+          jobNode->runningInfo.error = Misc_executeScript(script,
+                                                          CALLBACK(executeIOOutput,NULL),
+                                                          CALLBACK(executeIOOutput,NULL)
+                                                         );
+          String_delete(script);
+        }
+        else
+        {
+          jobNode->runningInfo.error = ERROR_EXPAND_TEMPLATE;
+        }
+
         if (jobNode->runningInfo.error != ERROR_NONE)
         {
           logMessage(&logHandle,
@@ -3614,6 +3637,7 @@ NULL,//                                                        scheduleTitle,
   }
 
   // free resources
+  String_delete(script);
   String_delete(scheduleCustomText);
   DeltaSourceList_done(&deltaSourceList);
   PatternList_done(&compressExcludePatternList);
