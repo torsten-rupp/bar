@@ -1226,9 +1226,10 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
                                )
 #endif /* NDEBUG */
 {
-  char   *s;
-  int    handle;
-  Errors error;
+  const char *tmpDirectory;
+  char       *s;
+  int        handle;
+  Errors     error;
   #ifndef NDEBUG
     DebugFileNode *debugFileNode;
   #endif /* not NDEBUG */
@@ -1246,17 +1247,26 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
     }
     strcpy(s,String_cString(directory));
     strcat(s,FILE_SEPARATOR_STRING);
-    strcat(s,pattern);
   }
   else
   {
-    s = (char*)malloc(strlen(pattern)+1);
+    tmpDirectory = getenv("TMP");
+    s = (char*)malloc(((tmpDirectory != NULL) ? strlen(tmpDirectory)+1 : 0)+strlen(pattern)+1);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    strcpy(s,pattern);
+    if (tmpDirectory != NULL)
+    {
+      strcpy(s,tmpDirectory);
+      strcat(s,FILE_SEPARATOR_STRING);
+    }
+    else
+    {
+      s[0] = '\0';
+    }
   }
+  strcat(s,pattern);
 
   #ifdef HAVE_MKSTEMP
     handle = mkstemp(s);
@@ -1396,9 +1406,10 @@ Errors File_getTmpFileName(String fileName, ConstString pattern, ConstString dir
 
 Errors File_getTmpFileNameCString(String fileName, const char *pattern, ConstString directory)
 {
-  char   *s;
-  int    handle;
-  Errors error;
+  const char *tmpDirectory;
+  char       *s;
+  int        handle;
+  Errors     error;
 
   assert(fileName != NULL);
 
@@ -1413,17 +1424,27 @@ Errors File_getTmpFileNameCString(String fileName, const char *pattern, ConstStr
     }
     strcpy(s,String_cString(directory));
     strcat(s,FILE_SEPARATOR_STRING);
-    strcat(s,pattern);
   }
   else
   {
-    s = (char*)malloc(strlen(pattern)+1);
+    tmpDirectory = getenv("TMP");
+    s = (char*)malloc(((tmpDirectory != NULL) ? strlen(tmpDirectory)+1 : 0)+strlen(pattern)+1);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    strcpy(s,pattern);
+    if (tmpDirectory != NULL)
+    {
+      strcpy(s,tmpDirectory);
+      strcat(s,FILE_SEPARATOR_STRING);
+    }
+    else
+    {
+      s[0] = '\0';
+    }
   }
+  strcat(s,pattern);
+
 
   #ifdef HAVE_MKSTEMP
     handle = mkstemp(s);
