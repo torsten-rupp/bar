@@ -1047,8 +1047,8 @@ String Misc_expandMacros(String           string,
       }
       else
       {
-        // empty macro: add empty string
-        String_format(expanded,format,"");
+        // empty macro: keep macro
+        String_appendChar(expanded,'%');
       }
     }
   }
@@ -1202,7 +1202,7 @@ stringNode = stringNode->next;
   return error;
 }
 
-Errors Misc_executeScript(const char        *scriptTemplate,
+Errors Misc_executeScriptX(const char        *scriptTemplate,
                           const TextMacro   macros[],
                           uint              macroCount,
                           ExecuteIOFunction stdoutExecuteIOFunction,
@@ -1314,13 +1314,14 @@ String_setCString(command,"/bin/sh");
   return error;
 }
 
-Errors Misc_executeScript2(const char        *script,
+Errors Misc_executeScript(const char        *script,
                           ExecuteIOFunction stdoutExecuteIOFunction,
                           void              *stdoutExecuteIOUserData,
                           ExecuteIOFunction stderrExecuteIOFunction,
                           void              *stderrExecuteIOUserData
                          )
 {
+  const char      *shellCommand;
   Errors          error;
   String          command;
   StringTokenizer stringTokenizer;
@@ -1338,20 +1339,10 @@ Errors Misc_executeScript2(const char        *script,
     command     = String_new();
     tmpFileName = String_new();
 
-#warning todo
-#if 0
-    // parse script #!-line
-    String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
-    if (!String_getNextToken(&stringTokenizer,&token,NULL))
-    {
-      String_doneTokenizer(&stringTokenizer);
-      String_delete(command);
-      String_delete(script);
-      return ERRORX_PARSE_COMMAND;
-    }
-    File_setFileName(command,token);
-#endif
-String_setCString(command,"/bin/sh");
+    // get shell-command
+    shellCommand = getenv("SHELL");
+    if (shellCommand == NULL) shellCommand = "/bin/sh";
+    String_setCString(command,shellCommand);
 
     // find command in PATH
     path = getenv("PATH");
