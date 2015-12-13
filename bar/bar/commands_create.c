@@ -1122,50 +1122,48 @@ LOCAL Errors formatArchiveFileName(String            fileName,
                                    int               partNumber
                                   )
 {
-  TextMacro textMacros[10];
+  TextMacro textMacros[5];
 
-  StaticString (uuid,MISC_UUID_STRING_LENGTH);
-  bool         partNumberFlag;
-  #ifdef HAVE_LOCALTIME_R
-    struct tm tmBuffer;
-  #endif /* HAVE_LOCALTIME_R */
-  struct tm    *tm;
-  uint         weekNumberU,weekNumberW;
-  ulong        i,j;
-  char         format[4];
-  char         buffer[256];
-  size_t       length;
-  ulong        divisor;
-  ulong        n;
-  uint         z;
-  int          d;
+  StaticString   (uuid,MISC_UUID_STRING_LENGTH);
+  bool           partNumberFlag;
+  TemplateHandle templateHandle;
+  Errors         error;
+  ulong          i,j;
+  char           buffer[256];
+  ulong          divisor;
+  ulong          n;
+  uint           z;
+  int            d;
 
   // init variables
   Misc_getUUID(uuid);
-  #ifdef HAVE_LOCALTIME_R
-    tm = localtime_r(&time,&tmBuffer);
-  #else /* not HAVE_LOCALTIME_R */
-    tm = localtime(&time);
-  #endif /* HAVE_LOCALTIME_R */
-  assert(tm != NULL);
-  strftime(buffer,sizeof(buffer)-1,"%U",tm); buffer[sizeof(buffer)-1] = '\0';
-  weekNumberU = (uint)atoi(buffer);
-  strftime(buffer,sizeof(buffer)-1,"%W",tm); buffer[sizeof(buffer)-1] = '\0';
-  weekNumberW = (uint)atoi(buffer);
 
-  // expand named macros
-  TEXT_MACRO_N_CSTRING(textMacros[0],"%type", getArchiveTypeName(archiveType)     ,TEXT_MACRO_PATTERN_CSTRING);
+  // init template
+  templateInit(&templateHandle,
+               String_cString(templateFileName),
+               expandMacroMode,
+               time,
+               FALSE
+              );
+
+  // expand template
+  TEXT_MACRO_N_CSTRING(textMacros[0],"%type", getArchiveTypeName(archiveType),TEXT_MACRO_PATTERN_CSTRING);
   TEXT_MACRO_N_CSTRING(textMacros[1],"%T",    getArchiveTypeShortName(archiveType),".");
-  TEXT_MACRO_N_CSTRING(textMacros[3],"%uuid", String_cString(uuid),TEXT_MACRO_PATTERN_CSTRING);
-  TEXT_MACRO_N_CSTRING(textMacros[4],"%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "",TEXT_MACRO_PATTERN_CSTRING);
-  TEXT_MACRO_N_CSTRING(textMacros[5],"%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "",TEXT_MACRO_PATTERN_CSTRING);
-  TEXT_MACRO_N_INTEGER(textMacros[6],"%U2",   (weekNumberU%2)+1,"[12]");
-  TEXT_MACRO_N_INTEGER(textMacros[7],"%U4",   (weekNumberU%4)+1,"[1234]");
-  TEXT_MACRO_N_INTEGER(textMacros[8],"%W2",   (weekNumberW%2)+1,"[12]");
-  TEXT_MACRO_N_INTEGER(textMacros[9],"%W4",   (weekNumberW%4)+1,"[1234]");
-  Misc_expandMacros(fileName,String_cString(templateFileName),expandMacroMode,textMacros,SIZE_OF_ARRAY(textMacros),TRUE);
+  TEXT_MACRO_N_CSTRING(textMacros[2],"%uuid", String_cString(uuid),TEXT_MACRO_PATTERN_CSTRING);
+  TEXT_MACRO_N_CSTRING(textMacros[3],"%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "",TEXT_MACRO_PATTERN_CSTRING);
+  TEXT_MACRO_N_CSTRING(textMacros[4],"%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "",TEXT_MACRO_PATTERN_CSTRING);
+  templateMacros(&templateHandle,
+                 textMacros,
+                 SIZE_OF_ARRAY(textMacros)
+                );
 
-  // expand date/time macros, part number
+  // done template
+  if (templateDone(&templateHandle,fileName) == NULL)
+  {
+    return error;
+  }
+
+  // expand part number
   partNumberFlag = FALSE;
   i = 0L;
   while (i < String_length(fileName))
@@ -1178,71 +1176,19 @@ LOCAL Errors formatArchiveFileName(String            fileName,
           switch (String_index(fileName,i+1))
           {
             case '%':
-              // %% -> %
-              String_remove(fileName,i,1);
-              i += 1L;
+              // keep %%
+              i += 2L;
               break;
             case '#':
               // %# -> #
               String_remove(fileName,i,1);
               i += 1L;
               break;
-            default:
-              // format date/time part
-              switch (String_index(fileName,i+1))
-              {
-                case 'E':
-                case 'O':
-                  // %Ex, %Ox: extended date/time macros
-                  format[0] = '%';
-                  format[1] = String_index(fileName,i+1);
-                  format[2] = String_index(fileName,i+2);
-                  format[3] = '\0';
-
-                  String_remove(fileName,i,3);
-                  break;
-                default:
-                  // %x: date/time macros
-                  format[0] = '%';
-                  format[1] = String_index(fileName,i+1);
-                  format[2] = '\0';
-
-                  String_remove(fileName,i,2);
-                  break;
-              }
-              length = strftime(buffer,sizeof(buffer)-1,format,tm); buffer[sizeof(buffer)-1] = '\0';
-
-              // insert into string
-              switch (expandMacroMode)
-              {
-                case EXPAND_MACRO_MODE_STRING:
-                  String_insertBuffer(fileName,i,buffer,length);
-                  i += length;
-                  break;
-                case EXPAND_MACRO_MODE_PATTERN:
-                  for (z = 0 ; z < length; z++)
-                  {
-                    if (strchr("*+?{}():[].^$|",buffer[z]) != NULL)
-                    {
-                      String_insertChar(fileName,i,'\\');
-                      i += 1L;
-                    }
-                    String_insertChar(fileName,i,buffer[z]);
-                    i += 1L;
-                  }
-                  break;
-                #ifndef NDEBUG
-                  default:
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                    break; /* not reached */
-                  #endif /* NDEBUG */
-              }
-              break;
           }
         }
         else
         {
-          // % at end of string
+          // keep % at end of string
           i += 1L;
         }
         break;
@@ -3630,7 +3576,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       pauseStorage(createInfo);
 
       // initial pre-process
-      error = Storage_preProcess(&createInfo->storageHandle,NULL,TRUE);
+      error = Storage_preProcess(&createInfo->storageHandle,NULL,TRUE,createInfo->startTime);
       if (error != ERROR_NONE)
       {
         printError("Cannot pre-process storage (error: %s)!\n",
@@ -3669,7 +3615,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
 
     // pre-process
-    error = Storage_preProcess(&createInfo->storageHandle,storageMsg.archiveName,FALSE);
+    error = Storage_preProcess(&createInfo->storageHandle,storageMsg.archiveName,FALSE,createInfo->startTime);
     if (error != ERROR_NONE)
     {
       printError("Cannot pre-process file '%s' (error: %s)!\n",
@@ -4072,7 +4018,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
 
     // post-process
-    error = Storage_postProcess(&createInfo->storageHandle,storageMsg.archiveName,FALSE);
+    error = Storage_postProcess(&createInfo->storageHandle,storageMsg.archiveName,FALSE,createInfo->startTime);
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process storage file '%s' (error: %s)!\n",
@@ -4123,7 +4069,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // pause
     pauseStorage(createInfo);
 
-    error = Storage_postProcess(&createInfo->storageHandle,NULL,TRUE);
+    error = Storage_postProcess(&createInfo->storageHandle,NULL,TRUE,createInfo->startTime);
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process storage (error: %s)!\n",
