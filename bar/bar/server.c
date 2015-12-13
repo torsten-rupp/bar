@@ -3370,7 +3370,7 @@ fprintf(stderr,"%s, %d: start %s: %s\n",__FILE__,__LINE__,String_cString(jobNode
         TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name),NULL);
 
         // get script
-        script = expandTemplate(jobNode->jobOptions.preProcessScript,
+        script = expandTemplate(String_cString(jobNode->jobOptions.preProcessScript),
                                 EXPAND_MACRO_MODE_STRING,
                                 startTime,
                                 TRUE,
@@ -3380,7 +3380,7 @@ fprintf(stderr,"%s, %d: start %s: %s\n",__FILE__,__LINE__,String_cString(jobNode
         if (script != NULL)
         {
           // execute script
-          jobNode->runningInfo.error = Misc_executeScript(script,
+          jobNode->runningInfo.error = Misc_executeScript(String_cString(script),
                                                           CALLBACK(executeIOOutput,NULL),
                                                           CALLBACK(executeIOOutput,NULL)
                                                          );
@@ -3571,7 +3571,7 @@ NULL,//                                                        scheduleTitle,
         TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name),NULL);
 
         // get script
-        script = expandTemplate(jobNode->jobOptions.postProcessScript,
+        script = expandTemplate(String_cString(jobNode->jobOptions.postProcessScript),
                                 EXPAND_MACRO_MODE_STRING,
                                 startTime,
                                 TRUE,
@@ -3581,7 +3581,7 @@ NULL,//                                                        scheduleTitle,
         if (script != NULL)
         {
           // execute script
-          jobNode->runningInfo.error = Misc_executeScript(script,
+          jobNode->runningInfo.error = Misc_executeScript(String_cString(script),
                                                           CALLBACK(executeIOOutput,NULL),
                                                           CALLBACK(executeIOOutput,NULL)
                                                          );
@@ -14682,13 +14682,13 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       break;
   }
 
-  Array_delete(&clientInfo->specialIdArray);
-  Array_delete(&clientInfo->hardLinkIdArray);
-  Array_delete(&clientInfo->linkIdArray);
-  Array_delete(&clientInfo->directoryIdArray);
-  Array_delete(&clientInfo->imageIdArray);
-  Array_delete(&clientInfo->fileIdArray);
-  Array_delete(&clientInfo->storageIdArray);
+  Array_done(&clientInfo->specialIdArray);
+  Array_done(&clientInfo->hardLinkIdArray);
+  Array_done(&clientInfo->linkIdArray);
+  Array_done(&clientInfo->directoryIdArray);
+  Array_done(&clientInfo->imageIdArray);
+  Array_done(&clientInfo->fileIdArray);
+  Array_done(&clientInfo->storageIdArray);
   List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
   doneJobOptions(&clientInfo->jobOptions);
   DeltaSourceList_done(&clientInfo->deltaSourceList);
