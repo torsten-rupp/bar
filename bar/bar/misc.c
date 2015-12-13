@@ -133,6 +133,7 @@ LOCAL bool readProcessIO(int fd, String line)
 
 LOCAL Errors execute(const char        *command,
                      const char const  **arguments,
+                     const char        *errorText,
                      ExecuteIOFunction stdoutExecuteIOFunction,
                      void              *stdoutExecuteIOUserData,
                      ExecuteIOFunction stderrExecuteIOFunction,
@@ -168,19 +169,19 @@ t++;
     // create i/o pipes
     if (pipe(pipeStdin) != 0)
     {
-      error = ERRORX_(IO_REDIRECT_FAIL,errno,command);
+      error = ERRORX_(IO_REDIRECT_FAIL,errno,errorText);
       return error;
     }
     if (pipe(pipeStdout) != 0)
     {
-      error = ERRORX_(IO_REDIRECT_FAIL,errno,command);
+      error = ERRORX_(IO_REDIRECT_FAIL,errno,errorText);
       close(pipeStdin[0]);
       close(pipeStdin[1]);
       return error;
     }
     if (pipe(pipeStderr) != 0)
     {
-      error = ERRORX_(IO_REDIRECT_FAIL,errno,command);
+      error = ERRORX_(IO_REDIRECT_FAIL,errno,errorText);
       close(pipeStdout[0]);
       close(pipeStdout[1]);
       close(pipeStdin[0]);
@@ -221,7 +222,7 @@ t++;
     }
     else if (pid < 0)
     {
-      error = ERRORX_(EXEC_FAIL,errno,command);
+      error = ERRORX_(EXEC_FAIL,errno,errorText);
 
       close(pipeStderr[0]);
       close(pipeStderr[1]);
@@ -300,14 +301,14 @@ error = ERROR_NONE;
       else
       {
         printInfo(3,"FAIL (exitcode %d)\n",exitcode);
-        error = ERRORX_(EXEC_FAIL,exitcode,command);
+        error = ERRORX_(EXEC_FAIL,exitcode,errorText);
         return error;
       }
     }
     else if (WIFSIGNALED(status))
     {
       terminateSignal = WTERMSIG(status);
-      error = ERRORX_(EXEC_FAIL,terminateSignal,command);
+      error = ERRORX_(EXEC_FAIL,terminateSignal,errorText);
       printInfo(3,"FAIL (signal %d)\n",terminateSignal);
       return error;
     }
@@ -1187,6 +1188,7 @@ stringNode = stringNode->next;
     // execute command
     error = execute(String_cString(command),
                     arguments,
+                    String_cString(command),
                     CALLBACK(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
                     CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData)
                    );
@@ -1197,118 +1199,6 @@ stringNode = stringNode->next;
     String_delete(command);
     String_delete(name);
     String_delete(commandLine);
-  }
-
-  return error;
-}
-
-Errors Misc_executeScriptX(const char        *scriptTemplate,
-                          const TextMacro   macros[],
-                          uint              macroCount,
-                          ExecuteIOFunction stdoutExecuteIOFunction,
-                          void              *stdoutExecuteIOUserData,
-                          ExecuteIOFunction stderrExecuteIOFunction,
-                          void              *stderrExecuteIOUserData
-                         )
-{
-  Errors          error;
-  String          script;
-  String          command;
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-  String          tmpFileName;
-  const char      *path;
-  String          fileName;
-  bool            foundFlag;
-  FileHandle      fileHandle;
-  char const      *arguments[3];
-
-  error = ERROR_NONE;
-  if (scriptTemplate != NULL)
-  {
-    script      = String_new();
-    command     = String_new();
-    tmpFileName = String_new();
-
-    // expand script
-    Misc_expandMacros(script,scriptTemplate,EXPAND_MACRO_MODE_STRING,macros,macroCount,TRUE);
-    printInfo(3,"Execute script...");
-
-#warning todo
-#if 0
-    // parse script #!-line
-    String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
-    if (!String_getNextToken(&stringTokenizer,&token,NULL))
-    {
-      String_doneTokenizer(&stringTokenizer);
-      String_delete(command);
-      String_delete(script);
-      return ERRORX_PARSE_COMMAND;
-    }
-    File_setFileName(command,token);
-#endif
-String_setCString(command,"/bin/sh");
-
-    // find command in PATH
-    path = getenv("PATH");
-    if (path != NULL)
-    {
-      fileName  = File_newFileName();
-      foundFlag = FALSE;
-      String_initTokenizerCString(&stringTokenizer,path,":","",FALSE);
-      while (String_getNextToken(&stringTokenizer,&token,NULL) && !foundFlag)
-      {
-        File_setFileName(fileName,token);
-        File_appendFileName(fileName,command);
-        if (File_exists(fileName))
-        {
-          File_setFileName(command,fileName);
-          foundFlag = TRUE;
-        }
-      }
-      String_doneTokenizer(&stringTokenizer);
-      File_deleteFileName(fileName);
-    }
-
-    // create temporary script file
-    File_getTmpFileName(tmpFileName,NULL,NULL);
-    error = File_open(&fileHandle,tmpFileName,FILE_OPEN_WRITE);
-    if (error != ERROR_NONE)
-    {
-      (void)File_delete(tmpFileName,FALSE);
-      String_delete(tmpFileName);
-      String_delete(command);
-      String_delete(script);
-      return ERROR_OPEN_FILE;
-    }
-    error = File_writeLine(&fileHandle,script);
-    if (error != ERROR_NONE)
-    {
-      (void)File_delete(tmpFileName,FALSE);
-      String_delete(tmpFileName);
-      String_delete(command);
-      String_delete(script);
-      return ERROR_OPEN_FILE;
-    }
-    File_close(&fileHandle);
-
-    // get arguments
-    arguments[0] = String_cString(command);
-    arguments[1] = String_cString(tmpFileName);
-    arguments[2] = NULL;
-
-    // execute command
-    error = execute(String_cString(command),
-                    arguments,
-                    CALLBACK(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
-                    CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData)
-                   );
-
-    // free resources
-    (void)File_delete(tmpFileName,FALSE);
-    String_delete(tmpFileName);
-    String_delete(command);
-    String_delete(script);
   }
 
   return error;
@@ -1393,6 +1283,7 @@ Errors Misc_executeScript(const char        *script,
     // execute command
     error = execute(String_cString(command),
                     arguments,
+                    script,
                     CALLBACK(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
                     CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData)
                    );
