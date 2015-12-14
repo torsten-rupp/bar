@@ -1729,6 +1729,7 @@ const StorageSpecifier *Storage_getStorageSpecifier(const StorageHandle *storage
 
 Errors Storage_preProcess(StorageHandle *storageHandle,
                           ConstString   archiveName,
+                          time_t        time,
                           bool          initialFlag
                          )
 {
@@ -1743,29 +1744,29 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = StorageFile_preProcess(storageHandle,archiveName,initialFlag);
+      error = StorageFile_preProcess(storageHandle,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_preProcess(storageHandle,archiveName,initialFlag);
+      error = StorageFTP_preProcess(storageHandle,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_SSH:
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_preProcess(storageHandle,archiveName,initialFlag);
+      error = StorageSCP_preProcess(storageHandle,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_preProcess(storageHandle,archiveName,initialFlag);
+      error = StorageSFTP_preProcess(storageHandle,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_preProcess(storageHandle,archiveName,initialFlag);
+      error = StorageWebDAV_preProcess(storageHandle,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_preProcess(storageHandle,archiveName,initialFlag);
+      error = StorageOptical_preProcess(storageHandle,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_preProcess(storageHandle,archiveName,initialFlag);
+      error = StorageDevice_preProcess(storageHandle,archiveName,time,initialFlag);
       break;
     default:
       #ifndef NDEBUG
@@ -1779,6 +1780,7 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
 
 Errors Storage_postProcess(StorageHandle *storageHandle,
                            ConstString   archiveName,
+                           time_t        time,
                            bool          finalFlag
                           )
 {
@@ -1793,29 +1795,29 @@ Errors Storage_postProcess(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = StorageFile_postProcess(storageHandle,archiveName,finalFlag);
+      error = StorageFile_postProcess(storageHandle,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_postProcess(storageHandle,archiveName,finalFlag);
+      error = StorageFTP_postProcess(storageHandle,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_SSH:
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_postProcess(storageHandle,archiveName,finalFlag);
+      error = StorageSCP_postProcess(storageHandle,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_postProcess(storageHandle,archiveName,finalFlag);
+      error = StorageSFTP_postProcess(storageHandle,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_postProcess(storageHandle,archiveName,finalFlag);
+      error = StorageWebDAV_postProcess(storageHandle,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_postProcess(storageHandle,archiveName,finalFlag);
+      error = StorageOptical_postProcess(storageHandle,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_postProcess(storageHandle,archiveName,finalFlag);
+      error = StorageDevice_postProcess(storageHandle,archiveName,time,finalFlag);
       break;
     default:
       #ifndef NDEBUG
