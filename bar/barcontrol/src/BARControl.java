@@ -1334,31 +1334,42 @@ public class BARControl
   {
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
-    Composite       composite;
+    Composite       composite,subComposite;
     Label           label;
     Button          button;
 
     final Shell dialog = Dialogs.openModal(new Shell(),BARControl.tr("Login BAR server"),250,SWT.DEFAULT);
 
     // password
-    final Combo  widgetServerName;
-    final Text   widgetPassword;
-    final Button widgetLoginButton;
+    final Combo   widgetServerName;
+    final Spinner widgetServerPort;
+    final Text    widgetPassword;
+    final Button  widgetLoginButton;
     composite = new Composite(dialog,SWT.NONE);
-    tableLayout = new TableLayout(null,new double[]{0.0,1.0},2);
-    composite.setLayout(tableLayout);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},2));
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
     {
       label = new Label(composite,SWT.LEFT);
       label.setText(BARControl.tr("Server")+":");
       label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
 
-      widgetServerName = new Combo(composite,SWT.LEFT|SWT.BORDER);
-      String serverNames[] = Settings.serverNames.toArray(new String[Settings.serverNames.size()]);
-      Arrays.sort(serverNames);
-      widgetServerName.setItems(serverNames);
-      if (loginData.serverName != null) widgetServerName.setText(loginData.serverName);
-      widgetServerName.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
+      subComposite = new Composite(dialog,SWT.NONE);
+      subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0},2));
+      subComposite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+      {
+        widgetServerName = new Combo(subComposite,SWT.LEFT|SWT.BORDER);
+        String serverNames[] = Settings.serverNames.toArray(new String[Settings.serverNames.size()]);
+        Arrays.sort(serverNames);
+        widgetServerName.setItems(serverNames);
+        if (loginData.serverName != null) widgetServerName.setText(loginData.serverName);
+        widgetServerName.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+
+        widgetServerPort = new Spinner(subComposite,SWT.RIGHT|SWT.BORDER);
+        widgetServerPort.setMinimum(0);
+        widgetServerPort.setMaximum(65535);
+        widgetServerPort.setSelection(loginData.port);
+        widgetServerPort.setLayoutData(new TableLayoutData(0,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT));
+      }
 
       label = new Label(composite,SWT.LEFT);
       label.setText(BARControl.tr("Password")+":");
@@ -1384,6 +1395,7 @@ public class BARControl
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           loginData.serverName = widgetServerName.getText();
+          loginData.port       = widgetServerPort.getSelection();
           loginData.password   = widgetPassword.getText();
           Dialogs.close(dialog,true);
         }
