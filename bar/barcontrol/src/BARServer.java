@@ -560,7 +560,9 @@ class Command
    */
   public synchronized void purgeResults()
   {
+    String lastResult = result.pollLast();
     result.clear();
+    if (lastResult != null) result.add(lastResult);
   }
 
   /** abort command
