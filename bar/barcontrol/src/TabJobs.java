@@ -10306,9 +10306,8 @@ throw new Error("NYI");
 
         addDragAndDrop(composite,"%type","archive type: full,incremental,differential",10,0);
         addDragAndDrop(composite,"%T","archive type short: F, I, D",                   11,0);
-        addDragAndDrop(composite,"%last","'-last' if last archive part",               12,0);
-        addDragAndDrop(composite,"%uuid","universally unique identifier",              13,0);
-        addDragAndDrop(composite,"%text","schedule custom text",                       14,0);
+        addDragAndDrop(composite,"%uuid","universally unique identifier",              12,0);
+        addDragAndDrop(composite,"%text","schedule custom text",                       13,0);
 
         // column 2
         addDragAndDrop(composite,"%d","day 01..31",                                    0, 1);
