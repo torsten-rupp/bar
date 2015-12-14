@@ -1353,9 +1353,9 @@ public class BARControl
       label.setText(BARControl.tr("Server")+":");
       label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
 
-      subComposite = new Composite(dialog,SWT.NONE);
+      subComposite = new Composite(composite,SWT.NONE);
       subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0},2));
-      subComposite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+      subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
       {
         widgetServerName = new Combo(subComposite,SWT.LEFT|SWT.BORDER);
         String serverNames[] = Settings.serverNames.toArray(new String[Settings.serverNames.size()]);
