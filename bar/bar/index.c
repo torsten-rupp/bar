@@ -3717,7 +3717,17 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                         (SELECT id FROM storage WHERE entityId=entities.id) \
                                       ) \
                                    ), \
-                                   (SELECT TOTAL(size) FROM storage WHERE entityId=entities.id), \
+                                   ( \
+                                      (SELECT TOTAL(size) FROM files WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT TOTAL(size) FROM images WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                     +(SELECT TOTAL(size) FROM hardlinks WHERE storageId IN \
+                                        (SELECT id FROM storage WHERE entityId=entities.id) \
+                                      ) \
+                                   ), \
                                    (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
                             FROM entities \
                             WHERE     (%d OR jobUUID=%'S) \
@@ -3996,7 +4006,11 @@ Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
                                      +(SELECT COUNT(id) FROM hardlinks   WHERE storageId=storage.id) \
                                      +(SELECT COUNT(id) FROM special     WHERE storageId=storage.id) \
                                    ), \
-                                   storage.size, \
+                                   ( \
+                                      (SELECT TOTAL(size) FROM files     WHERE storageId=storage.id) \
+                                     +(SELECT TOTAL(size) FROM images    WHERE storageId=storage.id) \
+                                     +(SELECT TOTAL(size) FROM hardlinks WHERE storageId=storage.id) \
+                                   ), \
                                    storage.state, \
                                    storage.mode, \
                                    STRFTIME('%%s',storage.lastChecked), \
@@ -4048,6 +4062,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 {
   StorageSpecifier storageSpecifier;
   bool             foundFlag;
+  double           d0;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -4061,6 +4076,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   Storage_initSpecifier(&storageSpecifier);
   foundFlag = FALSE;
   while (   !foundFlag
+#if 0
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                                 "%lld %lld %S %S %d %S %llu %llu %llu %d %d %llu %S",
                                 storageId,
@@ -4077,6 +4093,24 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                                 lastCheckedDateTime,
                                 errorMessage
                                )
+#else
+         && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
+                                "%lld %lld %S %S %d %S %llu %llu %lf %d %d %llu %S",
+                                storageId,
+                                entityId,
+                                jobUUID,
+                                scheduleUUID,
+                                archiveType,
+                                storageName,
+                                createdDateTime,
+                                entries,
+                                &d0,  // size
+                                indexState,
+                                indexMode,
+                                lastCheckedDateTime,
+                                errorMessage
+                               )
+#endif
         )
   {
     if (   (storageName != NULL)
@@ -4155,6 +4189,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
       foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_FILESYSTEM))
                   && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName,PATTERN_MATCH_MODE_ANY));
     }
+    if (size != NULL) (*size) = (uint64)d0;
   }
   Storage_doneSpecifier(&storageSpecifier);
 
