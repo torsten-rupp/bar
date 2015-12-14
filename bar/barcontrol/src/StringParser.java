@@ -97,7 +97,21 @@ class ValueMap extends HashMap<String,Object>
     {
       if (object instanceof String)
       {
-        return Integer.parseInt((String)object);
+        try
+        {
+          return Integer.parseInt((String)object);
+        }
+        catch (NumberFormatException exception)
+        {
+          if (defaultValue != null)
+          {
+            return defaultValue;
+          }
+          else
+          {
+            throw new IllegalArgumentException(exception);
+          }
+        }
       }
       else
       {
@@ -137,7 +151,21 @@ class ValueMap extends HashMap<String,Object>
     {
       if (object instanceof String)
       {
-        return Long.parseLong((String)object);
+        try
+        {
+          return Long.parseLong((String)object);
+        }
+        catch (NumberFormatException exception)
+        {
+          if (defaultValue != null)
+          {
+            return defaultValue;
+          }
+          else
+          {
+            throw new IllegalArgumentException(exception);
+          }
+        }
       }
       else
       {
@@ -183,7 +211,14 @@ class ValueMap extends HashMap<String,Object>
         }
         catch (ParseException exception)
         {
-          throw new IllegalArgumentException(exception);
+          if (defaultValue != null)
+          {
+            return defaultValue;
+          }
+          else
+          {
+            throw new IllegalArgumentException(exception);
+          }
         }
       }
       else
