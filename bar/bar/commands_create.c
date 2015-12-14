@@ -3576,7 +3576,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       pauseStorage(createInfo);
 
       // initial pre-process
-      error = Storage_preProcess(&createInfo->storageHandle,NULL,TRUE,createInfo->startTime);
+      error = Storage_preProcess(&createInfo->storageHandle,NULL,createInfo->startTime,TRUE);
       if (error != ERROR_NONE)
       {
         printError("Cannot pre-process storage (error: %s)!\n",
@@ -3615,11 +3615,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
 
     // pre-process
-    error = Storage_preProcess(&createInfo->storageHandle,storageMsg.archiveName,FALSE,createInfo->startTime);
+    error = Storage_preProcess(&createInfo->storageHandle,storageMsg.archiveName,createInfo->startTime,FALSE);
     if (error != ERROR_NONE)
     {
       printError("Cannot pre-process file '%s' (error: %s)!\n",
-                 String_cString(storageMsg.fileName),
+                 String_cString(printableStorageName),
                  Error_getText(error)
                 );
       createInfo->failError = error;
@@ -4018,7 +4018,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
 
     // post-process
-    error = Storage_postProcess(&createInfo->storageHandle,storageMsg.archiveName,FALSE,createInfo->startTime);
+    error = Storage_postProcess(&createInfo->storageHandle,storageMsg.archiveName,createInfo->startTime,FALSE);
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process storage file '%s' (error: %s)!\n",
@@ -4069,7 +4069,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // pause
     pauseStorage(createInfo);
 
-    error = Storage_postProcess(&createInfo->storageHandle,NULL,TRUE,createInfo->startTime);
+    error = Storage_postProcess(&createInfo->storageHandle,NULL,createInfo->startTime,TRUE);
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process storage (error: %s)!\n",
