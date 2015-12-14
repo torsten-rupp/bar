@@ -1091,6 +1091,7 @@ const StorageSpecifier *Storage_getStorageSpecifier(const StorageHandle *storage
 
 Errors Storage_preProcess(StorageHandle *storageHandle,
                           ConstString   archiveName,
+                          time_t        time,
                           bool          initialFlag
                          );
 
@@ -1106,6 +1107,7 @@ Errors Storage_preProcess(StorageHandle *storageHandle,
 
 Errors Storage_postProcess(StorageHandle *storageHandle,
                            ConstString   archiveName,
+                           time_t        time,
                            bool          finalFlag
                           );
 
