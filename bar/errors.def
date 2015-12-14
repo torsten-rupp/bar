@@ -556,6 +556,7 @@ ERROR LOAD_VOLUME_FAIL               "load volume fail"
 
 // --- exec -------------------------------------------------------------
 ERROR PARSE_COMMAND                  "parse command fail"
+ERROR EXPAND_TEMPLATE                "expand command fail"
 ERROR FORK_FAIL                      "fork for execute external program fail"
 ERROR IO_REDIRECT_FAIL
   strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
