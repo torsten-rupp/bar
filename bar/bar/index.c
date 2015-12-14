@@ -3452,60 +3452,60 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                             GROUP BY entities.jobUUID; \
                            "
 #else
-                           "SELECT entities.jobUUID, \
-                                   STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1)), \
+                           "SELECT entities1.jobUUID, \
+                                   STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities1.id ORDER BY created DESC LIMIT 0,1)), \
                                    ( \
                                       (SELECT COUNT(id) FROM files WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId IN \
-                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                          (SELECT id FROM entities AS entities2 WHERE entities2.jobUUID=entities1.jobUUID) \
                                         ) \
                                       ) \
                                      +(SELECT COUNT(id) FROM images WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId IN \
-                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                          (SELECT id FROM entities AS entities2 WHERE entities2.jobUUID=entities1.jobUUID) \
                                         ) \
                                       ) \
                                      +(SELECT COUNT(id) FROM directories WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId IN \
-                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                          (SELECT id FROM entities AS entities2 WHERE entities2.jobUUID=entities1.jobUUID) \
                                         ) \
                                       ) \
                                      +(SELECT COUNT(id) FROM links WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId IN \
-                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                          (SELECT id FROM entities AS entities2 WHERE entities2.jobUUID=entities1.jobUUID) \
                                         ) \
                                       ) \
                                      +(SELECT COUNT(id) FROM hardlinks WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId IN \
-                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                          (SELECT id FROM entities AS entities2 WHERE entities2.jobUUID=entities1.jobUUID) \
                                         ) \
                                       ) \
                                      +(SELECT COUNT(id) FROM special WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId IN \
-                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                          (SELECT id FROM entities AS entities2 WHERE entities2.jobUUID=entities1.jobUUID) \
                                         ) \
                                       ) \
                                    ), \
                                    ( \
                                       (SELECT TOTAL(size) FROM files WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId IN \
-                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                          (SELECT id FROM entities AS entities2 WHERE entities2.jobUUID=entities1.jobUUID) \
                                         ) \
                                       ) \
                                      +(SELECT TOTAL(size) FROM images WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId IN \
-                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                          (SELECT id FROM entities AS entities2 WHERE entities2.jobUUID=entities1.jobUUID) \
                                         ) \
                                       ) \
                                      +(SELECT TOTAL(size) FROM hardlinks WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId IN \
-                                          (SELECT id FROM entities WHERE jobUUID=entities.jobUUID) \
+                                          (SELECT id FROM entities AS entities2 WHERE entities2.jobUUID=entities1.jobUUID) \
                                         ) \
                                       ) \
                                    ), \
-                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
-                            FROM entities \
-                            GROUP BY entities.jobUUID; \
+                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities1.id ORDER BY created DESC LIMIT 0,1) \
+                            FROM entities AS entities1 \
+                            GROUP BY entities1.jobUUID; \
                            "
 #endif
                           );
@@ -3554,7 +3554,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                            jobUUID,
                            lastCreatedDateTime,
                            totalEntries,
-                           &d0,
+                           &d0,  // totalSize
                            lastErrorMessage
                           )
      )
@@ -3778,7 +3778,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                             );
 #else
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %S %llu %u %lf %lf %S",
+                           "%lld %S %S %llu %u %llu %lf %S",
                            databaseId,
                            jobUUID,
                            scheduleUUID,
