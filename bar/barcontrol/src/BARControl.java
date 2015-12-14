@@ -987,7 +987,7 @@ public class BARControl
   private static final HostSystems hostSystem;
 
   // command line options
-  private static final OptionEnumeration[] archiveTypeEnumeration =
+  private static final OptionEnumeration[] ARCHIVE_TYPE_ENUMERATION =
   {
     new OptionEnumeration("normal",      Settings.ArchiveTypes.NORMAL),
     new OptionEnumeration("full",        Settings.ArchiveTypes.FULL),
@@ -995,7 +995,7 @@ public class BARControl
     new OptionEnumeration("differential",Settings.ArchiveTypes.DIFFERENTIAL),
   };
 
-  private static final Option[] options =
+  private static final Option[] OPTIONS =
   {
     new Option("--password",                   null,Options.Types.STRING,     "serverPassword"),
     new Option("--port",                       "-p",Options.Types.INTEGER,    "serverPort"),
@@ -1005,7 +1005,7 @@ public class BARControl
     new Option("--login-dialog",               null,Options.Types.BOOLEAN,    "loginDialogFlag"),
 
     new Option("--job",                        "-j",Options.Types.STRING,     "runJobName"),
-    new Option("--archive-type",               null,Options.Types.ENUMERATION,"archiveType",archiveTypeEnumeration),
+    new Option("--archive-type",               null,Options.Types.ENUMERATION,"archiveType",ARCHIVE_TYPE_ENUMERATION),
     new Option("--abort",                      null,Options.Types.STRING,     "abortJobName"),
     new Option("--index-database-add",         null,Options.Types.STRING,     "indexDatabaseAddStorageName"),
     new Option("--index-database-remove",      null,Options.Types.STRING,     "indexDatabaseRemoveStorageName"),
@@ -1226,7 +1226,7 @@ public class BARControl
       }
       else if (!endOfOptions && (args[z].startsWith("--") || args[z].startsWith("-")))
       {
-        int i = Options.parse(options,args,z,Settings.class);
+        int i = Options.parse(OPTIONS,args,z,Settings.class);
         if (i < 0)
         {
           throw new Error("Unknown option '"+args[z]+"'!");
@@ -2397,7 +2397,12 @@ public class BARControl
         display = new Display();
 
         // connect to server
-        LoginData loginData = new LoginData(Settings.serverPort,Settings.serverTLSPort);
+        LoginData loginData = new LoginData((Settings.serverNames.size() > 0)
+                                               ? Settings.serverNames.toArray(new String[Settings.serverNames.size()])[Settings.serverNames.size()-1]
+                                               : "",
+                                            Settings.serverPort,
+                                            Settings.serverTLSPort
+                                           );
         boolean connectOkFlag = false;
         if (   (loginData.serverName != null)
             && !loginData.serverName.equals("")
