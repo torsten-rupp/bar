@@ -1009,6 +1009,7 @@ public class BARControl
     new Option("--abort",                      null,Options.Types.STRING,     "abortJobName"),
     new Option("--index-database-add",         null,Options.Types.STRING,     "indexDatabaseAddStorageName"),
     new Option("--index-database-remove",      null,Options.Types.STRING,     "indexDatabaseRemoveStorageName"),
+    new Option("--index-database-refresh",     null,Options.Types.STRING,     "indexDatabaseRefreshStorageName"),
     new Option("--index-database-storage-list","-a",Options.Types.STRING,     "indexDatabaseStorageListPattern"),
     new Option("--index-database-entries-list","-e",Options.Types.STRING,     "indexDatabaseEntriesListPattern"),
     new Option("--pause",                      "-t",Options.Types.INTEGER,    "pauseTime"),
@@ -1907,6 +1908,7 @@ public class BARControl
           || (Settings.abortJobName != null)
           || (Settings.indexDatabaseAddStorageName != null)
           || (Settings.indexDatabaseRemoveStorageName != null)
+          || (Settings.indexDatabaseRefreshStorageName != null)
           || (Settings.indexDatabaseStorageListPattern != null)
           || (Settings.indexDatabaseEntriesListPattern != null)
           || (Settings.pauseTime > 0)
@@ -1974,7 +1976,9 @@ public class BARControl
           String[] errorMessage  = new String[1];
 
           // add index for storage
-          error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD name=%S",Settings.indexDatabaseAddStorageName),
+          error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD patternType=GLOB pattern=%'S",
+                                                               Settings.indexDatabaseAddStorageName
+                                                              ),
                                            0,
                                            errorMessage
                                           );
@@ -1985,13 +1989,34 @@ public class BARControl
             System.exit(1);
           }
         }
+        if (Settings.indexDatabaseRefreshStorageName != null)
+        {
+          int      error;
+          String[] errorMessage  = new String[1];
+
+          // remote index for storage
+          error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH name=%'S",
+                                                               Settings.indexDatabaseRemoveStorageName
+                                                              ),
+                                           0,
+                                           errorMessage
+                                          );
+          if (error != Errors.NONE)
+          {
+            printError("cannot refresh index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,errorMessage[0]);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+        }
         if (Settings.indexDatabaseRemoveStorageName != null)
         {
           int      error;
           String[] errorMessage  = new String[1];
 
           // remote index for storage
-          error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE name=%S",Settings.indexDatabaseRemoveStorageName),
+          error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE name=%'S",
+                                                               Settings.indexDatabaseRemoveStorageName
+                                                              ),
                                            0,
                                            errorMessage
                                           );
@@ -2012,7 +2037,14 @@ public class BARControl
           ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
 
           // list storage index
-          Command command = BARServer.runCommand("INDEX_STORAGE_LIST 0 * * "+StringUtils.escape(Settings.indexDatabaseStorageListPattern),0);
+          Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%llu indexState=%s indexMode=%s name='%S",
+                                                                     0L,
+                                                                     "*",
+                                                                     "*",
+                                                                     Settings.indexDatabaseStorageListPattern
+                                                                    ),
+                                                                    0
+                                                );
           String   line;
           Object[] data = new Object[8];
           while (!command.endOfData())
@@ -2226,7 +2258,10 @@ public class BARControl
           String[] errorMessage  = new String[1];
 
           // suspend
-          error = BARServer.executeCommand(StringParser.format("SUSPEND"),0,errorMessage);
+          error = BARServer.executeCommand(StringParser.format("SUSPEND"),
+                                           0,
+                                           errorMessage
+                                          );
           if (error != Errors.NONE)
           {
             printError("cannot suspend (error: %s)",Settings.runJobName,errorMessage[0]);
@@ -2240,7 +2275,10 @@ public class BARControl
           String[] errorMessage  = new String[1];
 
           // continue
-          error = BARServer.executeCommand(StringParser.format("CONTINUE"),0,errorMessage);
+          error = BARServer.executeCommand(StringParser.format("CONTINUE"),
+                                           0,
+                                           errorMessage
+                                          );
           if (error != Errors.NONE)
           {
             printError("cannot continue (error: %s)",Settings.runJobName,errorMessage[0]);
@@ -2263,7 +2301,9 @@ public class BARControl
           }
 
           // abort job
-          error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",jobUUID),
+          error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",
+                                                               jobUUID
+                                                              ),
                                            0,
                                            errorMessage
                                           );
@@ -2284,10 +2324,10 @@ public class BARControl
           // get server state
           String serverState = null;
           error = BARServer.executeCommand(StringParser.format("STATUS"),
-                                               0,
-                                               errorMessage,
-                                               resultMap
-                                              );
+                                           0,
+                                           errorMessage,
+                                           resultMap
+                                          );
           if (error != Errors.NONE)
           {
             printError("cannot get state (error: %s)",errorMessage[0]);
