@@ -4062,111 +4062,6 @@ LOCAL void remoteThreadCode(void)
 
 /*---------------------------------------------------------------------*/
 
-typedef Errors(*StorageFunction)(ConstString storageName, const FileInfo *fileInfo, void *userData);
-
-LOCAL Errors forAllStorage(ConstString storagePattern, StorageFunction storageFunction, void *storageUserData)
-{
-  StorageSpecifier           storageSpecifier;
-  JobOptions                 jobOptions;
-  StringList                 directoryList;
-  String                     fileName;
-  String                     printableStorageName;
-  String                     storageName;
-  String                     storageDirectoryName;
-  Errors                     error;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  FileInfo                   fileInfo;
-
-  assert(storageName != NULL);
-  assert(storageFunction != NULL);
-
-  Storage_initSpecifier(&storageSpecifier);
-  initJobOptions(&jobOptions);
-  copyJobOptions(serverDefaultJobOptions,&jobOptions);
-  StringList_init(&directoryList);
-  fileName             = String_new();
-  printableStorageName = String_new();
-  storageName          = String_new();
-
-  error = Storage_parseName(&storageSpecifier,storagePattern);
-  if (error == ERROR_NONE)
-  {
-    // get base directory
-    String_set(fileName,storageSpecifier.archiveName);
-    do
-    {
-      error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                        &storageSpecifier,
-                                        &jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_HIGH,
-                                        fileName
-                                       );
-      if (error == ERROR_NONE)
-      {
-        StringList_append(&directoryList,fileName);
-        Storage_closeDirectoryList(&storageDirectoryListHandle);
-      }
-      else
-      {
-        File_getFilePathName(fileName,fileName);
-      }
-    }
-    while ((error != ERROR_NONE) && !String_isEmpty(fileName));
-
-    // read directory and scan all sub-directories
-    while (!StringList_isEmpty(&directoryList))
-    {
-      StringList_getLast(&directoryList,fileName);
-
-      // open directory
-      error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                        &storageSpecifier,
-                                        &jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_LOW,
-                                        fileName
-                                       );
-
-      if (error == ERROR_NONE)
-      {
-        // read directory
-        while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
-               && (error == ERROR_NONE)
-              )
-        {
-          // read next directory entry
-          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
-          if (error != ERROR_NONE)
-          {
-            continue;
-          }
-
-          // check entry type and file name
-          if (fileInfo.type == FILE_TYPE_DIRECTORY)
-          {
-            StringList_append(&directoryList,fileName);
-          }
-
-          // callback
-          error = storageFunction(Storage_getName(&storageSpecifier,fileName),&fileInfo,storageUserData);
-        }
-
-        // close directory
-        Storage_closeDirectoryList(&storageDirectoryListHandle);
-      }
-    }
-  }
-
-  // free resources
-  String_delete(storageName);
-  String_delete(printableStorageName);
-  String_delete(fileName);
-  StringList_done(&directoryList);
-  doneJobOptions(&jobOptions);
-  Storage_doneSpecifier(&storageSpecifier);
-
-  return error;
-}
-
 /***********************************************************************\
 * Name   : deleteStorage
 * Purpose: delete storage
@@ -12523,7 +12418,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
   }
 
   // create index for matching files
-  error = forAllStorage(pattern,
+  error = Storage_forAll(pattern,
                         CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData)
                         {
                           StorageSpecifier storageSpecifier;

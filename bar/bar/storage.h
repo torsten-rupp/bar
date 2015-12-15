@@ -629,6 +629,20 @@ typedef struct
   };
 } StorageDirectoryListHandle;
 
+/***********************************************************************\
+* Name   : StorageFunction
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef Errors(*StorageFunction)(ConstString    storageName,
+                                 const FileInfo *fileInfo,
+                                 void           *userData
+                                );
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -1448,6 +1462,19 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
                     void                         *storageStatusInfoUserData,
                     ConstString                  localFileName
                    );
+
+/***********************************************************************\
+* Name   : Storage_forAll
+* Purpose: execute callback for all storage files
+* Input  : storagePattern - storage pattern
+*          storageFunction - storage callback function
+*          storageUserData - storage callback user data
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_forAll(ConstString storagePattern, StorageFunction storageFunction, void *storageUserData);
 
 #ifdef __cplusplus
   }

@@ -3046,6 +3046,102 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
   return ERROR_NONE;
 }
 
+Errors Storage_forAll(ConstString storagePattern, StorageFunction storageFunction, void *storageUserData)
+{
+  StorageSpecifier           storageSpecifier;
+  JobOptions                 jobOptions;
+  StringList                 directoryList;
+  String                     fileName;
+  Errors                     error;
+  StorageDirectoryListHandle storageDirectoryListHandle;
+  FileInfo                   fileInfo;
+
+  assert(storagePattern != NULL);
+  assert(storageFunction != NULL);
+
+  Storage_initSpecifier(&storageSpecifier);
+  initJobOptions(&jobOptions);
+//  copyJobOptions(serverDefaultJobOptions,&jobOptions);
+  StringList_init(&directoryList);
+  fileName = String_new();
+
+  error = Storage_parseName(&storageSpecifier,storagePattern);
+  if (error == ERROR_NONE)
+  {
+    // get base directory
+    String_set(fileName,storageSpecifier.archiveName);
+    do
+    {
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        &jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_HIGH,
+                                        fileName
+                                       );
+      if (error == ERROR_NONE)
+      {
+        StringList_append(&directoryList,fileName);
+        Storage_closeDirectoryList(&storageDirectoryListHandle);
+      }
+      else
+      {
+        File_getFilePathName(fileName,fileName);
+      }
+    }
+    while ((error != ERROR_NONE) && !String_isEmpty(fileName));
+
+    // read directory and scan all sub-directories
+    while (!StringList_isEmpty(&directoryList))
+    {
+      StringList_getLast(&directoryList,fileName);
+
+      // open directory
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        &jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_LOW,
+                                        fileName
+                                       );
+
+      if (error == ERROR_NONE)
+      {
+        // read directory
+        while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
+               && (error == ERROR_NONE)
+              )
+        {
+          // read next directory entry
+          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
+          if (error != ERROR_NONE)
+          {
+            continue;
+          }
+
+          // check entry type and file name
+          if (fileInfo.type == FILE_TYPE_DIRECTORY)
+          {
+            StringList_append(&directoryList,fileName);
+          }
+
+          // callback
+          error = storageFunction(Storage_getName(&storageSpecifier,fileName),&fileInfo,storageUserData);
+        }
+
+        // close directory
+        Storage_closeDirectoryList(&storageDirectoryListHandle);
+      }
+    }
+  }
+
+  // free resources
+  String_delete(fileName);
+  StringList_done(&directoryList);
+  doneJobOptions(&jobOptions);
+  Storage_doneSpecifier(&storageSpecifier);
+
+  return error;
+}
+
 #ifdef __cplusplus
   }
 #endif
