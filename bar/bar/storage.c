@@ -693,7 +693,15 @@ void Storage_doneAll(void)
   destinationStorageSpecifier->loginPassword        = Password_duplicate(sourceStorageSpecifier->loginPassword);
   destinationStorageSpecifier->deviceName           = String_duplicate(sourceStorageSpecifier->deviceName);
   destinationStorageSpecifier->archiveName          = String_duplicate(sourceStorageSpecifier->archiveName);
-  destinationStorageSpecifier->archivePatternString = String_duplicate(sourceStorageSpecifier->archivePatternString);
+  if (!String_isEmpty(sourceStorageSpecifier->archivePatternString))
+  {
+    destinationStorageSpecifier->archivePatternString = String_duplicate(sourceStorageSpecifier->archivePatternString);
+    Pattern_copy(&destinationStorageSpecifier->archivePattern,&sourceStorageSpecifier->archivePattern);
+  }
+  else
+  {
+    destinationStorageSpecifier->archivePatternString = NULL;
+  }
   destinationStorageSpecifier->storageName          = String_new();
   destinationStorageSpecifier->printableStorageName = String_new();
 
@@ -724,6 +732,10 @@ void Storage_doneAll(void)
 
   String_delete(storageSpecifier->printableStorageName);
   String_delete(storageSpecifier->storageName);
+  if (!String_isEmpty(storageSpecifier->archivePatternString))
+  {
+    Pattern_done(&storageSpecifier->archivePattern);
+  }
   String_delete(storageSpecifier->archivePatternString);
   String_delete(storageSpecifier->archiveName);
   String_delete(storageSpecifier->deviceName);
@@ -908,6 +920,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   bool            hasPatternFlag;
   StringTokenizer archiveNameTokenizer;
   ConstString     token;
+  Errors          error;
 
   assert(storageSpecifier != NULL);
   assert(storageName != NULL);
@@ -1237,12 +1250,39 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   {
     File_initSplitFileName(&archiveNameTokenizer,archiveName);
     {
-      while (File_getNextSplitFileName(&archiveNameTokenizer,&token))
+      if (File_getNextSplitFileName(&archiveNameTokenizer,&token))
       {
-        File_appendFileName(storageSpecifier->archivePatternString,token);
+        if (!String_isEmpty(token))
+        {
+          File_setFileName(storageSpecifier->archivePatternString,token);
+        }
+        else
+        {
+          File_setFileNameChar(storageSpecifier->archivePatternString,FILE_SEPARATOR_CHAR);
+        }
+        while (File_getNextSplitFileName(&archiveNameTokenizer,&token))
+        {
+          File_appendFileName(storageSpecifier->archivePatternString,token);
+        }
       }
     }
     File_doneSplitFileName(&archiveNameTokenizer);
+  }
+
+  // parse file pattern
+  if (!String_isEmpty(storageSpecifier->archivePatternString))
+  {
+    error = Pattern_init(&storageSpecifier->archivePattern,
+                         storageSpecifier->archivePatternString,
+//TODO: glob? parameter?
+                         PATTERN_TYPE_GLOB,
+                         PATTERN_FLAG_NONE
+                        );
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
   }
 
   // free resources
@@ -3068,6 +3108,7 @@ Errors Storage_forAll(ConstString storagePattern, StorageFunction storageFunctio
   error = Storage_parseName(&storageSpecifier,storagePattern);
   if (error == ERROR_NONE)
   {
+#if 0
     // get base directory
     String_set(fileName,storageSpecifier.archiveName);
     do
@@ -3131,6 +3172,55 @@ Errors Storage_forAll(ConstString storagePattern, StorageFunction storageFunctio
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
     }
+#else
+    // read directory and scan all sub-directories
+    StringList_append(&directoryList,storageSpecifier.archiveName);
+    while (!StringList_isEmpty(&directoryList))
+    {
+      StringList_getLast(&directoryList,fileName);
+
+      // open directory
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        &jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_LOW,
+                                        fileName
+                                       );
+
+      if (error == ERROR_NONE)
+      {
+        // read directory
+        while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
+               && (error == ERROR_NONE)
+              )
+        {
+          // read next directory entry
+          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
+          if (error != ERROR_NONE)
+          {
+            continue;
+          }
+
+          // check if sub-directory
+          if (fileInfo.type == FILE_TYPE_DIRECTORY)
+          {
+            StringList_append(&directoryList,fileName);
+          }
+
+          // match pattern and call callback
+//fprintf(stderr,"%s, %d: %s -- %s: %d\n",__FILE__,__LINE__,String_cString(storageSpecifier.archivePatternString),String_cString(fileName),Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT));
+          if (Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
+          {
+            // callback
+            error = storageFunction(Storage_getName(&storageSpecifier,fileName),&fileInfo,storageUserData);
+          }
+        }
+
+        // close directory
+        Storage_closeDirectoryList(&storageDirectoryListHandle);
+      }
+    }
+#endif
   }
 
   // free resources

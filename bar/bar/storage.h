@@ -162,6 +162,7 @@ typedef struct
   Password     *loginPassword;                             // login name
   String       deviceName;                                 // device name
   String       archiveName;                                // archive base name
+  Pattern      archivePattern;
   String       archivePatternString;                       // archive pattern string or empty if no pattern
 
   String       storageName;                                // storage name (returned by Storage_getStorageName())
