@@ -67,7 +67,7 @@ typedef enum
 typedef struct
 {
   PatternTypes type;
-  String       matchString;             // regular expression match string
+  String       regexString;             // regular expression string
   int          regexFlags;              // regular expression flags
   regex_t      regexBegin;              // regular expression for matching begin
   regex_t      regexEnd;                // regular expression for matching end

@@ -65,13 +65,13 @@ LOCAL const struct
 * Input  : pattern      - pattern to compile
 *          patternType  - pattern type
 *          patternFlags - pattern flags
-* Output : matchString - match string
+* Output : regexString - match string
 *          regexFlags  - regular expression flags
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void getRegularExpression(String       matchString,
+LOCAL void getRegularExpression(String       regexString,
                                 int          *regexFlags,
                                 const char   *pattern,
                                 PatternTypes patternType,
@@ -80,7 +80,7 @@ LOCAL void getRegularExpression(String       matchString,
 {
   ulong i;
 
-  assert(matchString != NULL);
+  assert(regexString != NULL);
   assert(regexFlags != NULL);
   assert(pattern != NULL);
 
@@ -95,19 +95,19 @@ LOCAL void getRegularExpression(String       matchString,
         switch (pattern[i])
         {
           case '*':
-            String_appendCString(matchString,".*");
+            String_appendCString(regexString,".*");
             i++;
             break;
           case '?':
-            String_appendChar(matchString,'.');
+            String_appendChar(regexString,'.');
             i++;
             break;
           case '.':
-            String_appendCString(matchString,"\\.");
+            String_appendCString(regexString,"\\.");
             i++;
             break;
           case '\\':
-            String_appendCString(matchString,"\\\\");
+            String_appendCString(regexString,"\\\\");
             i++;
             break;
           case '[':
@@ -120,22 +120,22 @@ LOCAL void getRegularExpression(String       matchString,
           case '}':
           case '+':
           case '|':
-            String_appendChar(matchString,'\\');
-            String_appendChar(matchString,pattern[i]);
+            String_appendChar(regexString,'\\');
+            String_appendChar(regexString,pattern[i]);
             i++;
             break;
           default:
-            String_appendChar(matchString,pattern[i]);
+            String_appendChar(regexString,pattern[i]);
             i++;
             break;
         }
       }
       break;
     case PATTERN_TYPE_REGEX:
-      String_setCString(matchString,pattern);
+      String_setCString(regexString,pattern);
       break;
     case PATTERN_TYPE_EXTENDED_REGEX:
-      String_setCString(matchString,pattern);
+      String_setCString(regexString,pattern);
       (*regexFlags) |= REG_EXTENDED;
       break;
     default:
@@ -160,7 +160,7 @@ LOCAL void getRegularExpression(String       matchString,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors compilePattern(ConstString matchString,
+LOCAL Errors compilePattern(ConstString regexString,
                             int         regexFlags,
                             regex_t     *regexBegin,
                             regex_t     *regexEnd,
@@ -168,65 +168,65 @@ LOCAL Errors compilePattern(ConstString matchString,
                             regex_t     *regexAny
                            )
 {
-  String regexString;
+  String string;
   int    error;
   char   buffer[256];
 
-  assert(matchString != NULL);
+  assert(regexString != NULL);
   assert(regexBegin != NULL);
   assert(regexEnd != NULL);
   assert(regexExact != NULL);
   assert(regexAny != NULL);
 
   // init variables
-  regexString = String_new();
+  string = String_new();
 
   // compile regular expression
-  String_set(regexString,matchString);
-  if (String_index(regexString,STRING_BEGIN) != '^') String_insertChar(regexString,STRING_BEGIN,'^');
-  error = regcomp(regexBegin,String_cString(regexString),regexFlags);
+  String_set(string,regexString);
+  if (String_index(string,STRING_BEGIN) != '^') String_insertChar(string,STRING_BEGIN,'^');
+  error = regcomp(regexBegin,String_cString(string),regexFlags);
   if (error != 0)
   {
     regerror(error,regexBegin,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
-    String_delete(regexString);
+    String_delete(string);
     return ERRORX_(INVALID_PATTERN,0,buffer);
   }
 
-  String_set(regexString,matchString);
-  if (String_index(regexString,STRING_END) != '$') String_insertChar(regexString,STRING_BEGIN,'$');
-  if (regcomp(regexEnd,String_cString(regexString),regexFlags) != 0)
+  String_set(string,regexString);
+  if (String_index(string,STRING_END) != '$') String_insertChar(string,STRING_BEGIN,'$');
+  if (regcomp(regexEnd,String_cString(string),regexFlags) != 0)
   {
     regerror(error,regexEnd,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
     regfree(regexBegin);
-    String_delete(regexString);
+    String_delete(string);
     return ERRORX_(INVALID_PATTERN,0,buffer);
   }
 
-  String_set(regexString,matchString);
-  if (String_index(regexString,STRING_BEGIN) != '^') String_insertChar(regexString,STRING_BEGIN,'^');
-  if (String_index(regexString,STRING_END) != '$') String_insertChar(regexString,STRING_END,'$');
-  if (regcomp(regexExact,String_cString(regexString),regexFlags) != 0)
+  String_set(string,regexString);
+  if (String_index(string,STRING_BEGIN) != '^') String_insertChar(string,STRING_BEGIN,'^');
+  if (String_index(string,STRING_END) != '$') String_insertChar(string,STRING_END,'$');
+  if (regcomp(regexExact,String_cString(string),regexFlags) != 0)
   {
     regerror(error,regexExact,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
     regfree(regexEnd);
     regfree(regexBegin);
-    String_delete(regexString);
+    String_delete(string);
     return ERRORX_(INVALID_PATTERN,0,buffer);
   }
 
-  String_set(regexString,matchString);
-  if (regcomp(regexAny,String_cString(regexString),regexFlags) != 0)
+  String_set(string,regexString);
+  if (regcomp(regexAny,String_cString(string),regexFlags) != 0)
   {
     regerror(error,regexAny,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
     regfree(regexExact);
     regfree(regexEnd);
     regfree(regexBegin);
-    String_delete(regexString);
+    String_delete(string);
     return ERRORX_(INVALID_PATTERN,0,buffer);
   }
 
   // free resources
-  String_delete(regexString);
+  String_delete(string);
 
   return ERROR_NONE;
 }
@@ -304,11 +304,11 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
 
   // initialize variables
   pattern->type        = patternType;
-  pattern->matchString = String_new();
+  pattern->regexString = String_new();
   pattern->regexFlags  = 0;
 
   // get regular expression
-  getRegularExpression(pattern->matchString,
+  getRegularExpression(pattern->regexString,
                        &pattern->regexFlags,
                        string,
                        patternType,
@@ -316,7 +316,7 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
                       );
 
   // compile pattern
-  error = compilePattern(pattern->matchString,
+  error = compilePattern(pattern->regexString,
                          pattern->regexFlags,
                          &pattern->regexBegin,
                          &pattern->regexEnd,
@@ -339,7 +339,7 @@ void Pattern_done(Pattern *pattern)
   regfree(&pattern->regexExact);
   regfree(&pattern->regexEnd);
   regfree(&pattern->regexBegin);
-  String_delete(pattern->matchString);
+  String_delete(pattern->regexString);
 }
 
 Pattern *Pattern_new(ConstString string, PatternTypes patternType, uint patternFlags)
@@ -405,11 +405,11 @@ Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern)
 
   // initialize variables
   pattern->type        = fromPattern->type;
-  pattern->matchString = String_duplicate(fromPattern->matchString);
+  pattern->regexString = String_duplicate(fromPattern->regexString);
   pattern->regexFlags  = fromPattern->regexFlags;
 
   // compile pattern
-  error = compilePattern(pattern->matchString,
+  error = compilePattern(pattern->regexString,
                          pattern->regexFlags,
                          &pattern->regexBegin,
                          &pattern->regexEnd,
@@ -418,7 +418,7 @@ Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern)
                         );
   if (error != ERROR_NONE)
   {
-    String_delete(pattern->matchString);
+    String_delete(pattern->regexString);
     return error;
   }
 
