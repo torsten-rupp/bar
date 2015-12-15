@@ -1320,7 +1320,7 @@ public class TabRestore
     MenuItem            menuItems[]         = widgetStorageTreeAssignToMenu.getItems();
     IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
-    int index = 0;
+    int index = STORAGE_TREE_MENU_START_INDEX;
     while (   (index < menuItems.length)
            && (indexDataComparator.compare(uuidIndexData,(UUIDIndexData)menuItems[index].getData()) > 0)
           )
@@ -1341,7 +1341,7 @@ public class TabRestore
     MenuItem            menuItems[]         = subMenu.getItems();
     IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
-    int index = 4;
+    int index = STORAGE_LIST_MENU_START_INDEX;
     while (   (index < menuItems.length)
            && (indexDataComparator.compare(entityIndexData,(EntityIndexData)menuItems[index].getData()) > 0)
           )
@@ -2115,9 +2115,12 @@ public class TabRestore
         {
           for (TableItem tableItem : removeTableItemSet)
           {
-            IndexData indexData = (IndexData)tableItem.getData();
-            Widgets.removeTableItem(widgetStorageTable,tableItem);
-            indexData.clearTableItem();
+            if (!tableItem.isDisposed())
+            {
+              IndexData indexData = (IndexData)tableItem.getData();
+              Widgets.removeTableItem(widgetStorageTable,tableItem);
+              indexData.clearTableItem();
+            }
           }
         }
       });
@@ -2249,6 +2252,23 @@ public class TabRestore
                     assignStorage(uuidIndexData,Settings.ArchiveTypes.DIFFERENTIAL);
                   }
                 });
+                menuItem = Widgets.addMenuItem(subMenu,
+                                               null,
+                                               BARControl.tr("new continuous")
+                                              );
+                menuItem.addSelectionListener(new SelectionListener()
+                {
+                  public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                  {
+                  }
+                  public void widgetSelected(SelectionEvent selectionEvent)
+                  {
+                    MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                    UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
+                    assignStorage(uuidIndexData,Settings.ArchiveTypes.CONTINUOUS);
+                  }
+                });
                 Widgets.addMenuSeparator(subMenu);
 
                 uuidIndexData.setSubMenu(subMenu);
@@ -2303,7 +2323,7 @@ public class TabRestore
             if (subMenu != null)
             {
               MenuItem menuItems[] = subMenu.getItems();
-              for (int i =4; i < menuItems.length; i++)
+              for (int i = 5; i < menuItems.length; i++)
               {
                 assert menuItems[i].getData() instanceof EntityIndexData;
                 removeEntityMenuItemSet.add(menuItems[i]);
@@ -3246,9 +3266,12 @@ public class TabRestore
         {
           for (TableItem tableItem : removeTableItemSet)
           {
-            EntryData entryData = (EntryData)tableItem.getData();
-            Widgets.removeTableItem(widgetEntryTable,tableItem);
-            entryDataMap.remove(entryData);
+            if (!tableItem.isDisposed())
+            {
+              EntryData entryData = (EntryData)tableItem.getData();
+              Widgets.removeTableItem(widgetEntryTable,tableItem);
+              entryDataMap.remove(entryData);
+            }
           }
         }
       });
@@ -3295,6 +3318,9 @@ public class TabRestore
     SPECIAL,
     UNKNOWN
   };
+
+  private final int STORAGE_TREE_MENU_START_INDEX = 0;
+  private final int STORAGE_LIST_MENU_START_INDEX = 5;  // entry 0..3: new "..."; entry 4: separator
 
   // --------------------------- variables --------------------------------
 
@@ -4318,6 +4344,7 @@ Dprintf.dprintf("");
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
+Dprintf.dprintf("");
           TableItem tabletem = (TableItem)selectionEvent.item;
           if ((tabletem != null) && (selectionEvent.detail == SWT.NONE))
           {
@@ -4375,6 +4402,7 @@ Dprintf.dprintf("");
         }
         public void keyReleased(KeyEvent keyEvent)
         {
+Dprintf.dprintf("");
           if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
           {
             refreshStorageIndex();
@@ -4382,6 +4410,20 @@ Dprintf.dprintf("");
           else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
           {
             removeStorageIndex();
+          }
+          else if (Widgets.isAccelerator(keyEvent,SWT.SPACE))
+          {
+            // toggle check
+            for (TableItem tableItem : widgetStorageTable.getSelection())
+            {
+              IndexData indexData = (IndexData)tableItem.getData();
+              indexData.setChecked(!indexData.isChecked());
+
+              Event treeEvent = new Event();
+              treeEvent.item   = tableItem;
+              treeEvent.detail = SWT.CHECK;
+              widgetStorageTable.notifyListeners(SWT.Selection,treeEvent);
+            }
           }
         }
       });
@@ -5256,7 +5298,7 @@ Dprintf.dprintf("");
         for (TableItem tableItem : widgetStorageTable.getItems())
         {
           StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
-              if (storageIndexData.isChecked())
+          if (storageIndexData.isChecked())
           {
             BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageId=%d",storageIndexData.storageId),0);
           }
