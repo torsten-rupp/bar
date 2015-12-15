@@ -1976,7 +1976,7 @@ public class BARControl
           String[] errorMessage  = new String[1];
 
           // add index for storage
-          error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD patternType=GLOB pattern=%'S",
+          error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB",
                                                                Settings.indexDatabaseAddStorageName
                                                               ),
                                            0,
@@ -1995,7 +1995,7 @@ public class BARControl
           String[] errorMessage  = new String[1];
 
           // remote index for storage
-          error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH name=%'S",
+          error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH pattern=%'S patternType=GLOB",
                                                                Settings.indexDatabaseRefreshStorageName
                                                               ),
                                            0,
@@ -2014,7 +2014,7 @@ public class BARControl
           String[] errorMessage  = new String[1];
 
           // remote index for storage
-          error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE name=%'S",
+          error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE pattern=%'S patternType=GLOB",
                                                                Settings.indexDatabaseRemoveStorageName
                                                               ),
                                            0,
